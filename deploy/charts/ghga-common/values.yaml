@@ -30,10 +30,13 @@ exports:
 
     namespaceOverride: ""
 
-    annotations: {}
-
-    labels: {}
-
+    # Merged onto every rendered resource's metadata - Deployment, CronJob, Job,
+    # Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount,
+    # NetworkPolicy, KafkaUser. There is deliberately no separate, narrower
+    # per-workload-only labels/annotations value: Service is the one resource that
+    # regularly needs its own (LB/ingress-controller annotations, scrape labels,
+    # ...), and that's what service.labels/service.annotations below are for: for
+    # anything else, add it here.
     commonLabels: {}
 
     commonAnnotations: {}
@@ -178,6 +181,9 @@ exports:
     service:
       enabled: true
       type: ClusterIP
+      # Also applied to DestinationRule, which shares the Service's own address.
+      labels: {}
+      annotations: {}
 
     serviceAccount:
       create: true

@@ -35,6 +35,13 @@ kind: KafkaUser
 metadata:
   labels:
     strimzi.io/cluster: {{ .Values.kafkaUser.clusterName }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations:
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
   name: {{ .Release.Namespace }}-{{ include "common.names.fullname" . }}
   namespace: {{ .Values.kafkaUser.clusterNamespace }}
 spec:

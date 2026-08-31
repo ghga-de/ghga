@@ -1,0 +1,9 @@
+commonLabels:
+  team: archive
+commonAnnotations:
+  common-ann: common-value
+service:
+  labels:
+    svc-only: svc-label-value
+  annotations:
+    svc-ann: svc-ann-value

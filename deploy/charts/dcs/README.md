@@ -30,10 +30,8 @@ full set of configurable values.
 | `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
 | `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
 | `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
-| `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
-| `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
-| `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
-| `commonAnnotations` | Annotations merged onto the same broad set of resources as commonLabels | `{}` |
+| `commonLabels` | Labels merged onto every rendered resource's metadata - Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount, NetworkPolicy, KafkaUser. No separate, narrower per-workload-only value: use service.labels below for Service/DestinationRule-only labels | `{}` |
+| `commonAnnotations` | Annotations merged onto the same set of resources as commonLabels (see there); use service.annotations below for Service/DestinationRule-only annotations | `{}` |
 | `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
 | `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/dcs"` |
 | `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
@@ -103,6 +101,8 @@ full set of configurable values.
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
 | `service.enabled` | Render the Service resource | `true` |
 | `service.type` |  | `"ClusterIP"` |
+| `service.labels` | Extra labels on just the Service (and DestinationRule, which shares its address) | `{}` |
+| `service.annotations` | Extra annotations on just the Service (and DestinationRule, which shares its address) - e.g. cloud load-balancer or ingress-controller annotations | `{}` |
 | `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
 | `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
 | `autoscaling.minReplicas` |  | `3` |
@@ -185,7 +185,5 @@ full set of configurable values.
 | `config.auth_check_claims` | A dict of all GHGA internal claims that shall be verified. | `{"work_type": null, "file_id": null, "user_public_crypt4gh_key": null, "iat": null, "exp": null}` |
 | `config.auth_map_claims` | A mapping of claims to attributes in the GHGA auth context. | `{}` |
 | `config.port` | Port to expose the server on the specified host | `8080` |
-| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
-| `config.workers` | Number of workers processes to run. | `1` |
 
 > Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/dcs/values.schema.json).

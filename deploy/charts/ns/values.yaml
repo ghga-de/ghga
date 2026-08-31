@@ -22,8 +22,6 @@ cronjobs:
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
-annotations: {}
-labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
@@ -114,6 +112,8 @@ envVarsSecret: ""
 service:
   enabled: false
   type: ClusterIP
+  labels: {}
+  annotations: {}
 serviceAccount:
   create: true
 autoscaling:

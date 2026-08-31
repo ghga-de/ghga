@@ -100,27 +100,15 @@
       "description": "Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`)",
       "default": ""
     },
-    "annotations": {
-      "type": "object",
-      "description": "Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below)",
-      "additionalProperties": true,
-      "default": {}
-    },
-    "labels": {
-      "type": "object",
-      "description": "Extra labels added to the same resources' own metadata (narrower reach than commonLabels below)",
-      "additionalProperties": true,
-      "default": {}
-    },
     "commonLabels": {
       "type": "object",
-      "description": "Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe)",
+      "description": "Labels merged onto every rendered resource's metadata - Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount, NetworkPolicy, KafkaUser. No separate, narrower per-workload-only value: use service.labels below for Service/DestinationRule-only labels",
       "additionalProperties": true,
       "default": {}
     },
     "commonAnnotations": {
       "type": "object",
-      "description": "Annotations merged onto the same broad set of resources as commonLabels",
+      "description": "Annotations merged onto the same set of resources as commonLabels (see there); use service.annotations below for Service/DestinationRule-only annotations",
       "additionalProperties": true,
       "default": {}
     },
@@ -566,6 +554,18 @@
         "type": {
           "type": "string",
           "default": "ClusterIP"
+        },
+        "labels": {
+          "type": "object",
+          "description": "Extra labels on just the Service (and DestinationRule, which shares its address)",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Extra annotations on just the Service (and DestinationRule, which shares its address) - e.g. cloud load-balancer or ingress-controller annotations",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },

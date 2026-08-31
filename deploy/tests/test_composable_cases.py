@@ -1,6 +1,29 @@
 """Composable render cases for the ghga-common library chart."""
 
 
+def test_common_labels_reach_every_resource_service_labels_stay_scoped(rendered_chart):
+    """commonLabels/commonAnnotations land on every rendered resource - there is no
+    separate, narrower per-workload-only labels/annotations value anymore. service.
+    labels/service.annotations are the deliberate exception: Service-only (and
+    DestinationRule, which shares its address), not merged into anything else.
+    """
+    manifests = rendered_chart("common.yaml", "common_and_service_labels.yaml")
+
+    for kind in ("Deployment", "Service", "ConfigMap", "ServiceAccount"):
+        meta = manifests[kind]["metadata"]
+        assert meta["labels"]["team"] == "archive"
+        assert meta["annotations"]["common-ann"] == "common-value"
+
+    service_meta = manifests["Service"]["metadata"]
+    assert service_meta["labels"]["svc-only"] == "svc-label-value"
+    assert service_meta["annotations"]["svc-ann"] == "svc-ann-value"
+
+    for kind in ("Deployment", "ConfigMap", "ServiceAccount"):
+        meta = manifests[kind]["metadata"]
+        assert "svc-only" not in meta["labels"]
+        assert "svc-ann" not in meta.get("annotations", {})
+
+
 def test_pull_secrets_combine_global_and_image(rendered_chart):
     """global.imagePullSecrets and image.pullSecrets both land on imagePullSecrets,
     routed through the vendored common.images.renderPullSecrets helper - not the
