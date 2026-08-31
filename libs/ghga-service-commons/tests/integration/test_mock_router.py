@@ -186,6 +186,19 @@ def test_query_string_is_left_out_of_the_matching():
     assert response.json() == {"expected": "ball"}
 
 
+def test_path_variables_the_endpoint_cannot_take_are_left_out():
+    """Make sure an endpoint ignoring the path variables is not passed them anyway."""
+    throwaway: MockRouter = MockRouter()
+
+    @throwaway.get("/items/{item_name}")
+    def get_item() -> httpx2.Response:
+        """Answer without looking at the item name."""
+        return httpx2.Response(status_code=204)
+
+    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
+        assert client.get("/items/ball").status_code == 204
+
+
 def test_handler_errors_filtering():
     """Make sure only the specified errors are passed to the handler.
 

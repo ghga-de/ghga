@@ -289,6 +289,11 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         # type-cast based on type-hinting info
         typed_parameters: dict[str, Any] = {}
         for parameter_name, value in parsed_url_parameters.items():
+            if parameter_name not in signature_parameters:
+                # a path variable the endpoint does not name: leave it out rather than
+                # passing an argument the function cannot take
+                continue
+
             parameter_type = signature_parameters[parameter_name]
 
             if parameter_type is not str:
