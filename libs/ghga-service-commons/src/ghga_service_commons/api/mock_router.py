@@ -55,6 +55,19 @@ def _compile_regex_url(path: str) -> str:
     return f"{url}$"
 
 
+def _url_to_match(request: httpx2.Request) -> str:
+    """Get the URL of a request in the form the endpoint patterns are matched against.
+
+    The query string and fragment are left off. Endpoints are registered by path, and
+    the compiled patterns are anchored at the end, so a request carrying a query string
+    would otherwise miss the endpoint serving it - or, where the path ends in a variable,
+    be matched with the query string swallowed into that variable's value.
+
+    This function is not intended to be used outside the module.
+    """
+    return str(request.url.copy_with(query=None, fragment=None))
+
+
 def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     """Retrieve the typed parameter info from function signature minus return type.
 
@@ -90,6 +103,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     The only parameter types allowed in the endpoint functions are primitives
     that can be stored in the url string: int, float, str, bool, None, and complex.
     The one exception is "request", which will be passed in automatically if specified.
+
+    Patterns are matched against the request URL without its query string, so an
+    endpoint serves the calls to its path whether they carry query parameters or not.
     """
 
     def __init__(
@@ -351,7 +367,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         Based on the endpoint matched, build the typed parameter dictionary and
         return the loaded partial function.
         """
-        url = str(request.url)
+        url = _url_to_match(request)
 
         # get endpoint object that corresponds to the request URL
         endpoint = self._get_registered_endpoint(url=url, method=request.method)
