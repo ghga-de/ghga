@@ -327,8 +327,9 @@ jobs:
   # <package>-chart repo package-charts' own overview step owns. Source is the service's
   # own hand-authored README.md (services/tools/libs/frontend), not a generated file, so
   # unlike the chart overview there's nothing to regenerate first - just trim if oversized
-  # and PATCH (scripts/update_dockerhub_overview.py, shared with package-charts' own
-  # overview step below - same API shape, only the repo name and README source differ).
+  # and PATCH. scripts/update_dockerhub_overview.py is shared with package-charts' own
+  # overview step below (same API shape, only the repo name and README source differ) and
+  # authenticates once for the whole batch it's handed, not once per repo.
   #
   # A single job looping over every member (not a step inside build-images' matrix):
   # build-images runs one runner per member in parallel, which would mean one token
@@ -344,35 +345,20 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      # Same OAT auth flow as package-charts' "Exchange..." step below - see its comment
-      # for why this needs the namespace-scoped API path and a /v2/auth/token exchange
-      # rather than the personal-login flow. Fetched once here and reused for every
-      # member below, not re-fetched per repo.
-      - name: Exchange the org access token for a bearer token
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          token=$(curl -sf -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg id "$DOCKERHUB_USERNAME" --arg secret "$DOCKERHUB_TOKEN" \
-                        '{identifier: $id, secret: $secret}')" \
-            https://hub.docker.com/v2/auth/token | jq -r .access_token)
-          echo "::add-mask::$token"
-          echo "DOCKERHUB_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
       - name: Update Docker Hub image overviews
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          # Piped through an env var, not interpolated into the script below, so a
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          # Piped through an env var, not interpolated into the jq filter below, so a
           # description containing a quote or backtick is inert data, not shell syntax.
           IMAGES_JSON: ${{ needs.resolve.outputs.images }}
         run: |
-          while read -r member; do
-            package=$(jq -r '.package' <<<"$member")
-            path=$(jq -r '.path' <<<"$member")
-            description=$(jq -r '.description' <<<"$member")
-            python3 scripts/update_dockerhub_overview.py "$package" "${path}/README.md" \
-              "$description" "https://github.com/ghga-de/ghga/blob/main/${path}/README.md"
-          done < <(jq -c '.[]' <<<"$IMAGES_JSON")
+          jq '[.[] | {
+                repo: .package,
+                readme: (.path + "/README.md"),
+                description,
+                source_url: ("https://github.com/ghga-de/ghga/blob/main/" + .path + "/README.md")
+              }]' <<<"$IMAGES_JSON" | python3 scripts/update_dockerhub_overview.py
 
   # -------- platform lane: package every chart, stamped; push only on request -----------
   package-charts:
@@ -508,51 +494,27 @@ jobs:
       # README.md content changed. Requires the repo to already exist on Docker Hub (the
       # Push step above creates it on first publish), so this runs after Push.
       #
-      # DOCKERHUB_TOKEN is an Organization Access Token (the ghga org), not a Personal
-      # Access Token - confirmed against the real API, and it needs two things a
-      # personal-user login doesn't:
-      #   1. Exchange it for a short-lived bearer token via POST /v2/auth/token with
-      #      {identifier, secret} (identifier = the org name for an OAT). NOT
-      #      POST /v2/users/login/ with {username, password}: that's the personal-
-      #      login flow, and it rejects org accounts outright regardless of
-      #      credentials ("Cannot log into an organization account").
-      #   2. Send that bearer token only against the *namespace-scoped* API path
-      #      (/v2/namespaces/{org}/repositories/{repo}) - the legacy path
-      #      (/v2/repositories/{org}/{repo}/) rejects every OAT-derived token outright
-      #      per Docker's own docs (403 "token issued from organization access token
-      #      is not allowed"), which is also why Basic Auth against the legacy path
-      #      (tried first, since it matches how this workflow's "Login to Docker Hub"
-      #      step already authenticates) failed too, regardless of username or scope.
-      # Verified end-to-end against the real ghga/wps-chart repo before landing this.
-      # Fetched once here and reused for every chart below, not re-fetched per repo -
-      # same split, and the same reasoning, as update-image-overviews' own two steps.
-      - name: Exchange the org access token for a bearer token
+      # scripts/update_dockerhub_overview.py - shared with update-image-overviews' own
+      # overview step, same Docker Hub API shape, only the repo name (<name>-chart vs
+      # <name>) and README source (this generated chart README vs a hand-authored service
+      # one) differ - owns the OAT auth flow (see its docstring for why a ghga org Access
+      # Token needs the namespace-scoped API path and a /v2/auth/token exchange rather
+      # than the personal-login flow) and authenticates once for the whole batch below,
+      # not once per chart. Verified end-to-end against the real ghga/wps-chart repo
+      # before landing this.
+      - name: Update Docker Hub overviews
         if: ${{ inputs.push }}
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          token=$(curl -sf -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg id "$DOCKERHUB_USERNAME" --arg secret "$DOCKERHUB_TOKEN" \
-                        '{identifier: $id, secret: $secret}')" \
-            https://hub.docker.com/v2/auth/token | jq -r .access_token)
-          echo "::add-mask::$token"
-          echo "DOCKERHUB_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
-      # Uses scripts/update_dockerhub_overview.py, shared with update-image-overviews'
-      # own overview step - same Docker Hub API shape, only the repo name (<name>-chart
-      # vs <name>) and README source (this generated chart README vs a hand-authored
-      # service one) differ.
-      - name: Update Docker Hub overviews
-        if: ${{ inputs.push }}
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: |
           while read -r name _ _; do
-            description=$(yq '.description' "deploy/charts/${name}/Chart.yaml")
-            python3 scripts/update_dockerhub_overview.py "${name}-chart" \
-              "deploy/charts/${name}/README.md" "$description" \
-              "https://github.com/ghga-de/ghga/tree/main/deploy/charts/${name}"
-          done < dist/manifest.txt
+            jq -n --arg repo "${name}-chart" \
+                  --arg readme "deploy/charts/${name}/README.md" \
+                  --arg description "$(yq '.description' "deploy/charts/${name}/Chart.yaml")" \
+                  --arg source_url "https://github.com/ghga-de/ghga/tree/main/deploy/charts/${name}" \
+                  '{repo: $repo, readme: $readme, description: $description, source_url: $source_url}'
+          done < dist/manifest.txt | jq -s '.' | python3 scripts/update_dockerhub_overview.py
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then
