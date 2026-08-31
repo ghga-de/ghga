@@ -7,15 +7,10 @@ ARG BASE=dhi.io/node:${NODE_BASE}
 
 # BUILDER: a container to build the service dist directory
 #
-# Pinned to --platform=$BUILDPLATFORM: the compiled Angular bundle (JS/CSS/HTML) is
-# architecture-independent, so there is no reason to ever run pnpm install/ng build
-# under QEMU emulation for a non-native --platform target. Without this pin, buildx
-# ran this whole stage once per requested target platform, including a full Node/pnpm
-# toolchain run (esbuild, @parcel/watcher, lmdb, ... all build/run native code in
-# postinstall) under QEMU for arm64 - slow, and QEMU's user-mode emulation is known to
-# crash on exactly this kind of native-code-heavy JS build ("illegal instruction").
-# Building natively here removes that whole class of flakiness; only the lightweight
-# SWS/RUNNER stages below still run per target platform.
+# Pinned to --platform=$BUILDPLATFORM: everything this stage hands to RUNNER (the
+# Angular bundle, package.json.run, the js-yaml copy) is architecture-independent,
+# so it is built once natively rather than once per target platform under QEMU.
+# Drop the pin only if this stage starts producing arch-specific output.
 # hadolint ignore=DL3006
 FROM --platform=$BUILDPLATFORM ${BASE}-sfw-ent-dev AS builder
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
