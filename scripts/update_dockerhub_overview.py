@@ -35,6 +35,21 @@ import urllib.request
 
 from prep_dockerhub_overview import prep_overview
 
+DESCRIPTION_MAX_BYTES = 100
+
+
+def _truncate_utf8(text: str, max_bytes: int) -> str:
+    """Cut `text` to at most `max_bytes` once UTF-8 encoded, not `max_bytes`
+    characters - Docker Hub's `description` field validates on bytes, and a
+    character can be up to 4 bytes (an em dash alone is 3), so a plain
+    `text[:max_bytes]` can still come out over the limit. `errors="ignore"`
+    drops a multi-byte sequence left dangling by the byte-level cut instead of
+    raising, which is exactly the "always valid, never over" behavior wanted
+    here - confirmed against a real PATCH rejection ("Exceeded max number of
+    bytes 100 - actual 102") before landing this.
+    """
+    return text.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
+
 
 def _urlopen(request: urllib.request.Request):
     """urlopen, but a rejection prints Docker Hub's actual error body - a bare
@@ -73,7 +88,10 @@ def update_overview(
     text = open(readme_path, encoding="utf-8").read()
     full_description = prep_overview(text, source_url)
     body = json.dumps(
-        {"full_description": full_description, "description": description[:100]}
+        {
+            "full_description": full_description,
+            "description": _truncate_utf8(description, DESCRIPTION_MAX_BYTES),
+        }
     ).encode()
     request = urllib.request.Request(
         f"https://hub.docker.com/v2/namespaces/{namespace}/repositories/{repo}",
