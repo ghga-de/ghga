@@ -69,6 +69,7 @@ env:
 jobs:
   resolve:
     runs-on: ubuntu-latest
+    timeout-minutes: 60 # covers the CI wait below plus the checks around it
     permissions:
       contents: read
       actions: read # to read this commit's CI run conclusion
@@ -105,16 +106,39 @@ jobs:
             exit 1
           fi
 
-          # `status=completed` excludes runs still in flight, so a release racing its own
-          # CI reads as "no evidence" rather than passing on a partial result.
-          runs=$(gh api --paginate \
-            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA&status=completed" \
-            --jq '.workflow_runs[] | {updated_at, conclusion, html_url}' | jq -s 'sort_by(.updated_at)')
+          # A tag pushed right after the merge — or alongside it — races the very CI run it
+          # depends on, and GitHub sequences nothing between the branch-push run and this
+          # tag-push run. Waiting is the only ordering available, so poll until CI settles
+          # rather than reading an in-flight run as "no evidence". Two windows, because the
+          # two ways this ends deserve different messages: the run has to appear at all
+          # (it may not exist yet when tag and branch are pushed together), then it has to
+          # finish. A main-branch CI run takes well under 15m.
+          appear_deadline=$((SECONDS + 5 * 60))
+          settle_deadline=$((SECONDS + 45 * 60))
+          while :; do
+            runs=$(gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yaml/runs?head_sha=$GITHUB_SHA" \
+              --jq '.workflow_runs[] | {updated_at, status, conclusion, html_url}' | jq -s 'sort_by(.updated_at)')
+            total=$(echo "$runs" | jq 'length')
+            in_flight=$(echo "$runs" | jq '[.[] | select(.status != "completed")] | length')
 
-          if [ "$(echo "$runs" | jq 'length')" -eq 0 ]; then
-            echo "::error::no completed CI run for ${GITHUB_SHA::12} — nothing proves this commit works"
-            exit 1
-          fi
+            # Nothing in flight settles the answer — including a re-run started while we
+            # waited, which is why this counts in-flight runs rather than taking the first
+            # completed one it sees.
+            if [ "$total" -gt 0 ] && [ "$in_flight" -eq 0 ]; then
+              break
+            fi
+            if [ "$total" -eq 0 ] && [ "$SECONDS" -ge "$appear_deadline" ]; then
+              echo "::error::no CI run for ${GITHUB_SHA::12} appeared within 5m — nothing proves this commit works"
+              exit 1
+            fi
+            if [ "$SECONDS" -ge "$settle_deadline" ]; then
+              echo "::error::CI for ${GITHUB_SHA::12} was still running after 45m — $(echo "$runs" | jq -r 'last.html_url')"
+              exit 1
+            fi
+            echo "waiting for CI on ${GITHUB_SHA::12}: $in_flight of $total run(s) still in flight"
+            sleep 30
+          done
 
           # The latest result wins: a red run that was re-run green is green.
           latest=$(echo "$runs" | jq -r 'last')
