@@ -37,7 +37,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - Two branches must be kept in sync. Every hotfix must be merged back into `dev`, lest the next release be cursed.
 - Work merged to `dev` is not released until the next release merge.
 - We gain the ability to continuously deploy to staging from `dev`, including the platform release candidates, which now come from `dev` — while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
-- CI and tooling assume a single branch today and have to be updated (see below).
+- PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needs updating is the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
 
 ### Necessary changes
 
@@ -46,18 +46,18 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - Rebase all unmerged work which previously targeted `main` onto `dev`, and retarget open PRs.
 
 **GitHub configuration**
-- Protect `dev` the same way we protect `main`, and keep `main` protected: with releases landing there by merge, nothing should reach it any other way.
-- Make `dev` the default branch, so new branches and PRs are cut against it without anyone having to remember.
-- `security-scan.yaml` opens its automated lockfile PR with `base: main`; that becomes `dev`.
+- Protect `dev` like we protect `main`, and keep `main` protected too.
+- Make `dev` the default branch so new branches and PRs target it automatically.
+- `security-scan.yaml` opens its lockfile PR against `main`. That needs to become `dev`.
 
 **pre-commit**
-- `no-commit-to-branch` (`.pre-commit-config.yaml`) guards `main` only and must also guard `dev`; its comment ("this repo has only `main`") and the corresponding note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
+- `no-commit-to-branch` in `.pre-commit-config.yaml` only guards `main`, it should guard `dev` too. Its comment ("this repo has only `main`") and the matching note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
 
 **Workflows**
-- `ci.yaml` and `integration.yaml` trigger on `push: branches: [main]`; both need to cover `dev`, which is where merges will land. Their `pull_request` triggers are branch-agnostic and need no change.
-- `dev-images.yaml` publishes the `:dev` image tags on every push to `main`. That should follow `dev` instead — under this strategy `main` moves only at a release, and the `:dev` tags are meant to track integration.
-- `release.yaml`'s `resolve` job currently asserts the tagged commit is on `main` *before* it routes the lanes, meaning both platform release candidates and lib/tool PyPI tags are releasable only once `dev` has merged to `main`. To get the desired behavior, it has to move behind the routing step and become per-lane: final platform tags (e.g. `ghga/X.Y.Z`) on `main` only, pre-release platform tags and PyPI-lane tags on `main` or `dev`. The CI half of the check is branch-independent and runs for every tag.
-- [ADR-0004](0004-versioning-and-release-by-tag.md) needs an amendment for the above: it says the release workflow "asserts the tagged commit is on `main`" and describes `ghga/X.Y.Z-rc.N` as a normal platform-lane ref, but that was written back when we only had `main`. It should be updated to reflect that release candidates are cut from `dev`. `release.yaml`'s header comment needs the same treatment.
+- Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, an rc tag on `dev` would fail the CI check even though everything passed.
+- `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
+- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every tag, rc and PyPI ones included. It has to move after the routing and go per-lane: final platform tags on `main` only, rc and PyPI tags on `main` or `dev`. The CI-is-green half doesn't care about branches and can stay as-is.
+- [ADR-0004](0004-versioning-and-release-by-tag.md) needs an amendment to match, since it says releases come from `main` and treats `ghga/X.Y.Z-rc.N` as a normal platform tag. That was written when `main` was all we had. `release.yaml`'s header comment needs the same treatment.
 
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
