@@ -11,7 +11,8 @@ helm install dhfs oci://registry-1.docker.io/ghga/dhfs-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/datahub-file-service). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/datahub-file-service/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 

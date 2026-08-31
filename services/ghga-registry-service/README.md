@@ -7,9 +7,11 @@ GHGA Registry Service - a service for ingesting and archiving metadata from data
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service. -->
-
-Here you should provide a short summary of the purpose of this microservice.
+Metadata submitted for a study - administrative details, experimental metadata,
+publications, and datasets - is validated, assigned a permanent accession number, and
+kept immutable once the study is archived. The service also orchestrates the upload of
+the research data files that metadata describes, and enforces access control over both
+the metadata and the upload process.
 
 
 ## Installation

@@ -11,7 +11,8 @@ helm install fis oci://registry-1.docker.io/ghga/fis-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/fis). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/fis/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 
@@ -180,4 +181,4 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `config.data_hub_auth_keys` | Mapping of storage (data hub) aliases to their public token signature validation keys | `null` |
 | `config.dhfs_version_constraint` | A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error. | `null` |
 
-> **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/fis/values.schema.json).

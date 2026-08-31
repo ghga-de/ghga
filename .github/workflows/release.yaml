@@ -322,6 +322,43 @@ jobs:
       # its own Dockerfile; charts are packaged and pushed as OCI artifacts with
       # version/appVersion = the platform version (Phase B).
 
+  # -------- platform lane: refresh each image repo's Docker Hub overview ----------------
+  # docker.io/ghga/<package> - the bare image repo build-images just pushed to, not the
+  # <package>-chart repo package-charts' own overview step owns. Source is the service's
+  # own hand-authored README.md (services/tools/libs/frontend), not a generated file, so
+  # unlike the chart overview there's nothing to regenerate first - just trim if oversized
+  # and PATCH. scripts/update_dockerhub_overview.py is shared with package-charts' own
+  # overview step below (same API shape, only the repo name and README source differ) and
+  # authenticates once for the whole batch it's handed, not once per repo.
+  #
+  # A single job looping over every member (not a step inside build-images' matrix):
+  # build-images runs one runner per member in parallel, which would mean one token
+  # exchange per member for no benefit - the overview PATCH has no dependency on that
+  # member's own build finishing first, only on ITS repo existing, which build-images as
+  # a whole already guarantees by the time this job's `needs` is satisfied.
+  update-image-overviews:
+    needs: [resolve, build-images]
+    if: ${{ needs.resolve.outputs.lane == 'platform' && inputs.push }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Update Docker Hub image overviews
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          # Piped through an env var, not interpolated into the jq filter below, so a
+          # description containing a quote or backtick is inert data, not shell syntax.
+          IMAGES_JSON: ${{ needs.resolve.outputs.images }}
+        run: |
+          jq '[.[] | {
+                repo: .package,
+                readme: (.path + "/README.md"),
+                description,
+                source_url: ("https://github.com/ghga-de/ghga/blob/main/" + .path + "/README.md")
+              }]' <<<"$IMAGES_JSON" | python3 scripts/update_dockerhub_overview.py
 
   # -------- platform lane: package every chart, stamped; push only on request -----------
   package-charts:
@@ -450,22 +487,34 @@ jobs:
             helm package "$work/${name}-chart" -d "$work"
             helm push "$work/${name}-chart-"*.tgz "oci://${CHART_REGISTRY}"
           done < dist/to-push.txt
+      # Keyed off manifest.txt, not to-push.txt: a chart's Docker Hub repository overview
+      # isn't the immutable, per-version OCI artifact the "Refuse to overwrite" step
+      # guards — an independently-versioned chart (aai, ghga-common) that skipped its push
+      # this run (unchanged version) should still get a refreshed overview if its
+      # README.md content changed. Requires the repo to already exist on Docker Hub (the
+      # Push step above creates it on first publish), so this runs after Push.
+      #
+      # scripts/update_dockerhub_overview.py - shared with update-image-overviews' own
+      # overview step, same Docker Hub API shape, only the repo name (<name>-chart vs
+      # <name>) and README source (this generated chart README vs a hand-authored service
+      # one) differ - owns the OAT auth flow (see its docstring for why a ghga org Access
+      # Token needs the namespace-scoped API path and a /v2/auth/token exchange rather
+      # than the personal-login flow) and authenticates once for the whole batch below,
+      # not once per chart. Verified end-to-end against the real ghga/wps-chart repo
+      # before landing this.
       - name: Update Docker Hub overviews
         if: ${{ inputs.push }}
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          jwt=$(curl -sf -H 'Content-Type: application/json' \
-            -d "{\"username\":\"$DOCKERHUB_USERNAME\",\"password\":\"$DOCKERHUB_TOKEN\"}" \
-            https://hub.docker.com/v2/auth/token | jq -r .access_token)
           while read -r name _ _; do
-            short=$(yq '.description' "deploy/charts/${name}/Chart.yaml" | head -c 100)
-            curl -sf -X PATCH -H "Authorization: Bearer $jwt" -H 'Content-Type: application/json' \
-              --data "$(jq -n --rawfile r "deploy/charts/${name}/README.md" --arg d "$short" \
-                              '{full_description: $r, description: $d}')" \
-              "https://hub.docker.com/v2/repositories/ghga/${name}-chart/"
-          done < dist/manifest.txt
+            jq -n --arg repo "${name}-chart" \
+                  --arg readme "deploy/charts/${name}/README.md" \
+                  --arg description "$(yq '.description' "deploy/charts/${name}/Chart.yaml")" \
+                  --arg source_url "https://github.com/ghga-de/ghga/tree/main/deploy/charts/${name}" \
+                  '{repo: $repo, readme: $readme, description: $description, source_url: $source_url}'
+          done < dist/manifest.txt | jq -s '.' | python3 scripts/update_dockerhub_overview.py
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then

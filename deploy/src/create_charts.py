@@ -562,7 +562,8 @@ helm install {name} oci://{chart_registry}/{name}-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/{path}/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 
@@ -580,10 +581,12 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). S
             break
         kept.append(line)
     note = (
-        "\n\n> **Note**: this chart has more parameters than fit under Docker Hub's"
-        f" {README_LENGTH_LIMIT}-character overview limit, so the table above has been"
-        " trimmed. See [values.schema.json](values.schema.json) in this chart for"
-        " every parameter."
+        "\n\n> Docker Hub caps this overview at"
+        f" {README_LENGTH_LIMIT} characters, so the table above stops partway through"
+        " this chart's parameters. The full list, with defaults and descriptions, is"
+        " in"
+        f" [values.schema.json](https://github.com/ghga-de/ghga/blob/main/{path}"
+        "/values.schema.json)."
     )
     return header + "\n".join(kept) + note + "\n"
 
