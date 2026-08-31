@@ -827,6 +827,10 @@ class UploadController(UploadControllerPort):
 
         Returns an instance of BoxRequeueResult containing the IDs of files that
         were requeued and the ones that were skipped.
+
+        Raises:
+        - `BoxNotFoundError` if the FileUploadBox isn't found.
+        - `BoxStateError` if the box exists but is archived.
         """
         # Verify that the box exists and isn't archived
         box = await self._get_box(box_id=box_id, require_unlocked=False)
