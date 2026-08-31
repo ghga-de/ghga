@@ -6,7 +6,6 @@ exports:
     global:
       imageRegistry: ""
       imagePullSecrets: []
-      storageClass: ""
       _topics: {}
 
     commandPrefix: /usr/local/bin/
@@ -61,6 +60,7 @@ exports:
     migrationInitContainer:
       enabled: false
       image: ""
+      imagePullPolicy: null
       executable: ""
       executableArgs: []
       env: []
@@ -129,8 +129,17 @@ exports:
       initialDelaySeconds: 30
       periodSeconds: 15
 
+    # Like livenessProbe/readinessProbe above, `enabled` alone isn't enough to render
+    # anything: the template only emits a probe when there's at least one field besides
+    # `enabled` to render. tcpSocket/periodSeconds/failureThreshold below exist so
+    # `startupProbe.enabled: true` actually works out of the box, the same way it does
+    # for its two siblings - not just a documented no-op.
     startupProbe:
       enabled: false
+      tcpSocket:
+        port: 8080
+      periodSeconds: 10
+      failureThreshold: 30
 
     containerSecurityContext:
       enabled: true

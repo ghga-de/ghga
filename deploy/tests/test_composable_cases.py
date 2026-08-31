@@ -1,6 +1,17 @@
 """Composable render cases for the ghga-common library chart."""
 
 
+def test_pull_secrets_combine_global_and_image(rendered_chart):
+    """global.imagePullSecrets and image.pullSecrets both land on imagePullSecrets,
+    routed through the vendored common.images.renderPullSecrets helper - not the
+    unrelated, undocumented top-level `imagePullSecrets` value the Deployment/Job/
+    CronJob templates used to hand-roll a check against instead.
+    """
+    manifests = rendered_chart("common.yaml", "pull_secrets.yaml")
+    secrets = manifests["Deployment"]["spec"]["template"]["spec"]["imagePullSecrets"]
+    assert sorted(s["name"] for s in secrets) == ["from-global", "from-image"]
+
+
 def test_config(rendered_chart, expected, release_name):
     """Config map, volume and mount render from the config values."""
     manifests = rendered_chart("common.yaml", "config.yaml")

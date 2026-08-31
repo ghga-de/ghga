@@ -51,9 +51,7 @@ spec:
       backoffLimit: {{ .Values.backoffLimit }}
       {{- end }}
       serviceAccountName: {{ include "common.names.fullname" . }}
-      {{- if .Values.imagePullSecrets }}
-      imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 8 }}
-      {{- end }}
+      {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
       containers:
         - name: {{ .Release.Name }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}

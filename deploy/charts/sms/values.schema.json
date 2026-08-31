@@ -109,13 +109,8 @@
         },
         "imagePullSecrets": {
           "type": "array",
-          "description": "Pull secrets applied to every workload in the umbrella (same helper as above)",
+          "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
-        },
-        "storageClass": {
-          "type": "string",
-          "description": "Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here)",
-          "default": ""
         },
         "_topics": {
           "type": "object",
@@ -301,6 +296,10 @@
           "type": "string",
           "description": "Image for the migration init container; defaults to the main container's image when empty",
           "default": ""
+        },
+        "imagePullPolicy": {
+          "description": "imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset",
+          "default": null
         },
         "executable": {
           "type": "string",
@@ -506,6 +505,24 @@
           "type": "boolean",
           "description": "Render a container startupProbe from this block (minus `enabled`)",
           "default": false
+        },
+        "tcpSocket": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "number",
+              "default": 8080
+            }
+          }
+        },
+        "periodSeconds": {
+          "type": "number",
+          "default": 10
+        },
+        "failureThreshold": {
+          "type": "number",
+          "default": 30
         }
       }
     },

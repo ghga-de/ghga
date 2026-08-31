@@ -63,9 +63,7 @@ spec:
           restartPolicy: "OnFailure"
           serviceAccountName: {{ include "common.names.fullname" $ }}
           shareProcessNamespace: {{ $.Values.shareProcessNamespace }}
-          {{- if $.Values.imagePullSecrets }}
-          imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" $.Values.imagePullSecrets "context" $) | nindent 12 }}
-          {{- end }}
+          {{- include "common.images.renderPullSecrets" (dict "images" (list $.Values.image) "context" $) | nindent 10 }}
           containers:
           - image: {{ include "common.images.image" (dict "imageRoot" $.Values.image "global" $.Values.global "chart" $.Chart ) }}
             imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}

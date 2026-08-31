@@ -7,7 +7,6 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
-  storageClass: ""
   _topics: {}
 commandPrefix: ''
 commandStyle: exec
@@ -44,6 +43,7 @@ initContainers: []
 migrationInitContainer:
   enabled: false
   image: ""
+  imagePullPolicy:
   executable: rts
   executableArgs:
   - migrate-db
@@ -85,6 +85,10 @@ readinessProbe:
   periodSeconds: 15
 startupProbe:
   enabled: false
+  tcpSocket:
+    port: 8080
+  periodSeconds: 10
+  failureThreshold: 30
 containerSecurityContext:
   enabled: true
   runAsUser: 1000

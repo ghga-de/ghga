@@ -60,9 +60,7 @@ spec:
       serviceAccountName: {{ include "common.names.fullname" . }}
       {{/* allows Vault Agent to send (term) signals to the application process (namespace) */}}
       shareProcessNamespace: {{ ternary true .Values.shareProcessNamespace .Values.vaultAgent.enabled }}
-      {{- if .Values.imagePullSecrets }}
-      imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 8 }}
-      {{- end }}
+      {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
       {{- if or .Values.initContainers .Values.migrationInitContainer.enabled }}
       initContainers: {{ include "ghga-common.initContainers" . | nindent 8 }}
       {{- end -}}
@@ -116,7 +114,6 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" $.Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
       volumes: {{- include "ghga-common.volumes" $ | nindent 8 }}
-      {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | indent 6 }}
       {{- if .Values.hostAliases }}
       hostAliases: {{- include "common.tplvalues.render" (dict "value" .Values.hostAliases "context" $) | nindent 8 }}
       {{- end }}

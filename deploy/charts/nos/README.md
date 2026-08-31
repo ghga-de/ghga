@@ -19,8 +19,7 @@ full set of configurable values.
 | Name | Description | Value |
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
-| `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
-| `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
+| `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"nos"` |
@@ -48,6 +47,7 @@ full set of configurable values.
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
 | `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
 | `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
+| `migrationInitContainer.imagePullPolicy` | imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset | `null` |
 | `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `""` |
 | `migrationInitContainer.executableArgs` |  | `[]` |
 | `migrationInitContainer.env` | Extra env vars for just the migration init container | `[]` |
@@ -80,6 +80,9 @@ full set of configurable values.
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
+| `startupProbe.tcpSocket.port` |  | `8080` |
+| `startupProbe.periodSeconds` |  | `10` |
+| `startupProbe.failureThreshold` |  | `30` |
 | `containerSecurityContext.enabled` | Render the container securityContext from this block (minus `enabled`) | `true` |
 | `containerSecurityContext.runAsUser` |  | `1000` |
 | `containerSecurityContext.capabilities.drop` |  | `["ALL"]` |
