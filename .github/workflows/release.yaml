@@ -286,6 +286,8 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             "${push_flags[@]}" \
             "${attest_flags[@]}" \
+            --cache-from "type=gha,scope=${{ matrix.member.package }}" \
+            --cache-to "type=gha,mode=max,scope=${{ matrix.member.package }}" \
             --build-arg PACKAGE="${{ matrix.member.package }}" \
             --build-arg PLATFORM_VERSION="${{ needs.resolve.outputs.version }}" \
             --build-arg GIT_SHA="${SHORT_SHA}" \
