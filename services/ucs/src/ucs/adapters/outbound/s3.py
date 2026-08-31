@@ -232,9 +232,7 @@ class S3Client(S3ClientPort):
                     log.error(error, exc_info=True, extra=extra)
                     raise error from err
 
-    async def get_object_metadata(
-        self, *, file_upload: FileUpload, object_id: UUID4
-    ) -> ObjectMetadata:
+    async def get_object_metadata(self, *, file_upload: FileUpload) -> ObjectMetadata:
         """Return the ETag and size of an object in the inbox bucket.
 
         Raises:
@@ -245,9 +243,10 @@ class S3Client(S3ClientPort):
         """
         _, object_storage = self._get_bucket_and_storage(file_upload.storage_alias)
         bucket_id = file_upload.bucket_id
+        object_id = file_upload.object_id
         extra = {
             "bucket_id": bucket_id,
-            "object_id": str(object_id),
+            "object_id": file_upload.object_id,
             "file_id": file_upload.id,
             "storage_alias": file_upload.storage_alias,
         }
@@ -261,7 +260,7 @@ class S3Client(S3ClientPort):
                 )
             except object_storage.ObjectNotFoundError as err:
                 error: Exception = self.S3ObjectNotFoundError(
-                    bucket_id=bucket_id, object_id=str(object_id)
+                    bucket_id=bucket_id, object_id=object_id
                 )
                 log.error(error, extra=extra)
                 raise error from err

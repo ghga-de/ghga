@@ -100,7 +100,7 @@ class S3ClientPort(ABC):
     class S3ObjectNotFoundError(RuntimeError):
         """Raised when an object expected to exist in S3 cannot be found."""
 
-        def __init__(self, *, bucket_id: str, object_id: str):
+        def __init__(self, *, bucket_id: str, object_id: UUID4):
             msg = f"Object with ID {object_id} was not found in bucket ID {bucket_id}."
             super().__init__(msg)
 
@@ -162,9 +162,7 @@ class S3ClientPort(ABC):
         """
 
     @abstractmethod
-    async def get_object_metadata(
-        self, *, file_upload: FileUpload, object_id: UUID4
-    ) -> ObjectMetadata:
+    async def get_object_metadata(self, *, file_upload: FileUpload) -> ObjectMetadata:
         """Return the ETag and size of an object in the inbox bucket.
 
         Raises:

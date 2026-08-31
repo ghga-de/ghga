@@ -586,9 +586,7 @@ class UploadController(UploadControllerPort):
         """Fetch the ETag and size of the uploaded object with a single S3 request."""
         object_id = file_upload.object_id
         try:
-            return await self._s3_client.get_object_metadata(
-                file_upload=file_upload, object_id=object_id
-            )
+            return await self._s3_client.get_object_metadata(file_upload=file_upload)
         except S3ClientPort.UnknownStorageAliasError as err:
             raise self.UnknownStorageAliasError(
                 storage_alias=file_upload.storage_alias
@@ -597,7 +595,7 @@ class UploadController(UploadControllerPort):
             raise self.BucketMissingError(bucket_id=file_upload.bucket_id) from err
         except S3ClientPort.S3ObjectNotFoundError as err:
             raise self.S3ObjectMissingError(
-                bucket_id=file_upload.bucket_id, object_id=str(object_id)
+                bucket_id=file_upload.bucket_id, object_id=object_id
             ) from err
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
