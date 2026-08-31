@@ -375,19 +375,18 @@ class InterrogationHandler(InterrogationHandlerPort):
         - Update `file.state_updated`
         """
         try:
-            old_report = await self._interrogation_report_dao.get_by_id(file.id)
-        except ResourceNotFoundError:
-            log.info(
-                "No InterrogationReport found for requeued file %s.",
-                file.id,
-                extra={"file_id": file.id},
-            )
-        else:
             await self._interrogation_report_dao.delete(file.id)
             log.info(
                 "Discarded InterrogationReport for requeued file %s.",
                 file.id,
-                extra={"file_id": file.id, "old_report": old_report.model_dump()},
+                extra={"file_id": file.id},
+            )
+        except ResourceNotFoundError:
+            # Log a warning because this is unexpected but could be due to a previous crash
+            log.warning(
+                "No InterrogationReport found for requeued file %s.",
+                file.id,
+                extra={"file_id": file.id},
             )
 
         file.interrogated = False
