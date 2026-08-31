@@ -29,13 +29,14 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **A platform release merges `dev` into `main`**, and the release tag is applied on `main`.
 - **Hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`** so the fix is never lost on the next release.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
+- **Release tags are cut on `main`, pre-release and PyPI-lane tags may be cut on `dev`.** `ghga/X.Y.Z` on `main` is what makes `main` the released state. A `ghga/X.Y.Z-rc.N` staging cut is just a *candidate*, so it is tagged on `dev` and staging deploys from there. PyPI-lane tags for libraries/tools are also cut on `dev`, so that we can adhere to [ADR-0004](0004-versioning-and-release-by-tag.md) and publish them on demand.
 
 ## Consequences
 - We gain a clear division between deployed state (`main`) and work-in-progress (`dev`).
 - Releasing is a merge plus a tag, and can be prepared and reviewed as a pull request.
 - Two branches must be kept in sync. Every hotfix must be merged back into `dev`, lest the next release be cursed.
 - Work merged to `dev` is not released until the next release merge.
-- We gain the ability to continuously deploy to staging from `dev` while leaving production deployments compartmentalized. With just a `main` branch this is a more involved process.
+- We gain the ability to continuously deploy to staging from `dev`, including the platform release candidates, which now come from `dev` — while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
 - CI and tooling assume a single branch today and have to be updated (see below).
 
 ### Necessary changes
@@ -55,7 +56,11 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 **Workflows**
 - `ci.yaml` and `integration.yaml` trigger on `push: branches: [main]`; both need to cover `dev`, which is where merges will land. Their `pull_request` triggers are branch-agnostic and need no change.
 - `dev-images.yaml` publishes the `:dev` image tags on every push to `main`. That should follow `dev` instead — under this strategy `main` moves only at a release, and the `:dev` tags are meant to track integration.
-- `release.yaml` asserts the tagged commit is on `main` ([ADR-0004](0004-versioning-and-release-by-tag.md)). No change needed; the assertion only now starts to mean something.
+- `release.yaml`'s `resolve` job currently asserts the tagged commit is on `main` *before* it routes the lanes, meaning both platform release candidates and lib/tool PyPI tags are releasable only once `dev` has merged to `main`. To get the desired behavior, it has to move behind the routing step and become per-lane: final platform tags (e.g. `ghga/X.Y.Z`) on `main` only, pre-release platform tags and PyPI-lane tags on `main` or `dev`. The CI half of the check is branch-independent and runs for every tag.
+- [ADR-0004](0004-versioning-and-release-by-tag.md) needs an amendment for the above: it says the release workflow "asserts the tagged commit is on `main`" and describes `ghga/X.Y.Z-rc.N` as a normal platform-lane ref, but that was written back when we only had `main`. It should be updated to reflect that release candidates are cut from `dev`. `release.yaml`'s header comment needs the same treatment.
+
+**Local tooling**
+- `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
 
 ## Alternatives considered
 - **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
