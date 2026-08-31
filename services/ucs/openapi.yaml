@@ -622,6 +622,36 @@ components:
       - part_size
       title: HttpPartSizeErrorData
       type: object
+    HttpRequeueError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpRequeueErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: requeueError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpRequeueError
+      type: object
+    HttpRequeueErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpRequeueErrorData
+      type: object
     HttpS3UploadNotFoundError:
       additionalProperties: false
       properties:
@@ -809,30 +839,14 @@ components:
         skipped:
           description: The FileUploads that were ineligible for a requeue
           items:
-            $ref: '#/components/schemas/SkippedFileUpload'
+            format: uuid4
+            type: string
           title: Skipped
           type: array
       required:
       - requeued
       - skipped
       title: Requeue All Failed Response
-      type: object
-    SkippedFileUpload:
-      description: A FileUpload that was passed over during a box-wide requeue.
-      properties:
-        file_id:
-          description: The ID of the FileUpload that was skipped
-          format: uuid4
-          title: File Id
-          type: string
-        reason:
-          description: Why the FileUpload could not be requeued
-          title: Reason
-          type: string
-      required:
-      - file_id
-      - reason
-      title: SkippedFileUpload
       type: object
     ValidationError:
       properties:
@@ -1483,9 +1497,7 @@ paths:
 
         in the `skipped` list with a reason instead of failing the whole operation.
 
-        Returns 409 if the box is archived.
-
-        Requires a RequeueAllFailedWorkOrder token from the RS.'
+        Requires a `RequeueAllFailedWorkOrder` token.'
       operationId: requeueAllFailedFileUploads
       parameters:
       - in: path
@@ -1540,7 +1552,7 @@ paths:
         Returns 409 if the box is archived or the FileUpload''s state precludes a
         requeue.
 
-        Requires a RequeueFailedFileWorkOrder token from the RS.'
+        Requires a `RequeueFailedFileWorkOrder` token.'
       operationId: requeueFileUpload
       parameters:
       - in: path
@@ -1564,19 +1576,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpFileUploadNotFoundError'
+                $ref: '#/components/schemas/HttpRequeueError'
           description: 'Exceptions by ID:
 
-            - fileUploadNotFound: The FileUpload could not be found.'
+            - requeueError: The FileUpload is not in a state that allows requeuing.'
         '409':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpFileUploadStateError'
+                $ref: '#/components/schemas/HttpRequeueError'
           description: 'Exceptions by ID:
 
-            - fileUploadStateError: The action is incompatible with the FileUpload''s
-            current state.'
+            - requeueError: The FileUpload is not in a state that allows requeuing.'
         '422':
           content:
             application/json:
