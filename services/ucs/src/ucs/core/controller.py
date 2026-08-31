@@ -834,15 +834,15 @@ class UploadController(UploadControllerPort):
             raise self.BoxStateError(box_id=box_id, box_state="archived")
 
         # Get all FileUploads for this box that failed interrogation
-        potential_uploads = await self._file_upload_dao.find_all(
+        potential_uploads = self._file_upload_dao.find_all(
             mapping={"state": "failed", "decrypted_sha256": {"$ne": None}},
             sort=["alias"],
-        ).to_list()
+        )
 
         # Requeue those files
         requeued: list[UUID4] = []
         skipped: list[UUID4] = []
-        for file_upload in potential_uploads:
+        async for file_upload in potential_uploads:
             try:
                 await self._requeue_file_upload(file_upload=file_upload)
             except self.S3ObjectMissingError:
