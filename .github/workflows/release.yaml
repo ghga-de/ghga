@@ -33,7 +33,7 @@ name: release
 on:
   push:
     tags:
-      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0, pypi_sweep/1.0.0
   workflow_dispatch:
     inputs:
       ref:
@@ -74,6 +74,7 @@ jobs:
       actions: read # to read this commit's CI run conclusion
     outputs:
       lane: ${{ steps.route.outputs.lane }}
+      mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
       images: ${{ steps.route.outputs.images }}
@@ -152,10 +153,22 @@ jobs:
             echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
             exit 1
           fi
-          if [ "$name" = "ghga" ]; then lane=platform; else lane=pypi; fi
+          # The name also carries the pypi lane's MODE. `pypi_sweep` is a reserved name
+          # rather than a member: it means "publish every member the index is behind on".
+          # Any other name names one member, and publishes that member alone. Platform tags
+          # have no mode. Both spellings of the reserved name are accepted because the
+          # member check below canonicalizes `_` and `-` to the same string anyway (PEP
+          # 503), so rejecting one spelling here would only produce a confusing "not a lane
+          # member" error instead of the sweep the pusher plainly meant.
+          case "$name" in
+            ghga)                  lane=platform; mode= ;;
+            pypi_sweep|pypi-sweep) lane=pypi;     mode=sweep ;;
+            *)                     lane=pypi;     mode=targeted ;;
+          esac
           echo "name=$name"       >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "lane=$lane"       >> "$GITHUB_OUTPUT"
+          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
           # Platform image set = services/* + frontend defaults, plus tools that opt in
           # via [tool.ghga] (ADR-0014 directory defaults + explicit markers). Convention:
           # every image member's console script is named exactly like its distribution,
@@ -166,9 +179,13 @@ jobs:
           echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
       # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
       # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
-      # release nobody made.
+      # release nobody made. It is also what rejects a tag that routing sent to this lane
+      # but that names nothing at all (`clown/1.0.0`).
+      #
+      # Targeted tags only: a sweep deliberately names no member, so there is nothing here
+      # for it to match against.
       - name: Check the tag against the member it names
-        if: ${{ steps.route.outputs.lane == 'pypi' }}
+        if: ${{ steps.route.outputs.mode == 'targeted' }}
         env:
           NAME: ${{ steps.route.outputs.name }}
           VERSION: ${{ steps.route.outputs.version }}
