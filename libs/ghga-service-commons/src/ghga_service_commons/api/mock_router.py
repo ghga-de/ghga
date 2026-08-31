@@ -186,15 +186,14 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         endpoint_parameters = {
             param for param in signature_parameters if param != "request"
         }
-        if endpoint_parameters:
-            # get set of parameters from path with brackets stripped
-            matches = {param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)}
+        # get set of parameters from path with brackets stripped
+        matches = {param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)}
 
-            if matches != endpoint_parameters:
-                raise TypeError(
-                    f"Path variables for path '{path}' do not match the "
-                    + "function it decorates"
-                )
+        if matches != endpoint_parameters:
+            raise TypeError(
+                f"Path variables for path '{path}' do not match the "
+                + "function it decorates"
+            )
 
     def _add_endpoint(
         self, method: str, path: str, endpoint_function: Callable
@@ -289,11 +288,6 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         # type-cast based on type-hinting info
         typed_parameters: dict[str, Any] = {}
         for parameter_name, value in parsed_url_parameters.items():
-            if parameter_name not in signature_parameters:
-                # a path variable the endpoint does not name: leave it out rather than
-                # passing an argument the function cannot take
-                continue
-
             parameter_type = signature_parameters[parameter_name]
 
             if parameter_type is not str:

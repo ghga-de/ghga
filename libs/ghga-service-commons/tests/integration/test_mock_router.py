@@ -186,17 +186,22 @@ def test_query_string_is_left_out_of_the_matching():
     assert response.json() == {"expected": "ball"}
 
 
-def test_path_variables_the_endpoint_cannot_take_are_left_out():
-    """Make sure an endpoint ignoring the path variables is not passed them anyway."""
+def test_path_variables_the_endpoint_does_not_name_are_rejected():
+    """Ensure a path variable no parameter takes is rejected."""
     throwaway: MockRouter = MockRouter()
+    mismatch = r"Path variables for path '/items/{item_name}' do not match"
 
-    @throwaway.get("/items/{item_name}")
-    def get_item() -> httpx2.Response:
-        """Answer without looking at the item name."""
-        return httpx2.Response(status_code=204)
+    with pytest.raises(TypeError, match=mismatch):
 
-    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
-        assert client.get("/items/ball").status_code == 204
+        @throwaway.get("/items/{item_name}")
+        def takes_nothing() -> None:
+            """Take no arguments at all."""
+
+    with pytest.raises(TypeError, match=mismatch):
+
+        @throwaway.get("/items/{item_name}")
+        def takes_only_the_request(request: httpx2.Request) -> None:
+            """Take the request, but still no item name."""
 
 
 def test_handler_errors_filtering():
