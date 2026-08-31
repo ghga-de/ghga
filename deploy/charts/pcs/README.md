@@ -11,8 +11,8 @@ helm install pcs oci://registry-1.docker.io/ghga/pcs-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/pcs). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/pcs/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/pcs/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -181,4 +181,4 @@ full set of configurable values.
 | `probe.enabled` | Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP | `false` |
 | `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/pcs/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/pcs/values.schema.json).

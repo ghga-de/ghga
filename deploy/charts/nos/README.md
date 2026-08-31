@@ -11,8 +11,8 @@ helm install nos oci://registry-1.docker.io/ghga/nos-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/notification-orchestration-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/notification-orchestration-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/nos/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 

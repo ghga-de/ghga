@@ -11,8 +11,8 @@ helm install auth-service oci://registry-1.docker.io/ghga/auth-service-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/auth-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/auth-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/auth-service/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -196,4 +196,4 @@ full set of configurable values.
 | `config.timeout_keep_alive` | The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. | `90` |
 | `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/auth-service/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/auth-service/values.schema.json).

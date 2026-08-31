@@ -11,8 +11,8 @@ helm install ns oci://registry-1.docker.io/ghga/ns-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/notification-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/notification-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/ns/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -198,4 +198,4 @@ full set of configurable values.
 | `vaultAgent.service` | Override the Vault service address the agent talks to | `""` |
 | `vaultAgent.tlsServerName` | TLS server name override for the Vault connection | `""` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/notification-service/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/ns/values.schema.json).

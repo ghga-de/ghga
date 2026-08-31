@@ -11,8 +11,8 @@ helm install rs oci://registry-1.docker.io/ghga/rs-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/ghga-registry-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/ghga-registry-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/rs/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -184,4 +184,4 @@ full set of configurable values.
 | `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"rs"` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/ghga-registry-service/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/rs/values.schema.json).

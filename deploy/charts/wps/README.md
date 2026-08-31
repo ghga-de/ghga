@@ -11,8 +11,8 @@ helm install wps oci://registry-1.docker.io/ghga/wps-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/work-package-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/work-package-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/wps/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -183,4 +183,4 @@ full set of configurable values.
 | `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
 | `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/work-package-service/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/wps/values.schema.json).
