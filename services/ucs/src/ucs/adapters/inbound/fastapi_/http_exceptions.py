@@ -408,6 +408,25 @@ class HttpFileUploadStateError(HttpCustomExceptionBase):
         )
 
 
+class HttpRequeueError(HttpCustomExceptionBase):
+    """Thrown when a FileUpload is not in a state that allows requeuing."""
+
+    exception_id = "requeueError"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="",
+            data={"file_id": str(file_id)},
+        )
+
+
 class HttpNotAuthorizedError(HttpCustomExceptionBase):
     """Thrown when the user is not authorized to perform the requested action."""
 
