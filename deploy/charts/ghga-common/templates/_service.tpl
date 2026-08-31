@@ -43,9 +43,9 @@ spec:
   {{- /* Derived from containerPorts, not a separate service.ports value: the Service
        always exposes exactly what the container listens on here. */}}
   ports:
-  {{- range .Values.containerPorts }}
+  {{- range (include "ghga-common.container-ports" . | fromYamlArray) }}
   - name: {{ .name }}
-    protocol: {{ .protocol | default "TCP" }}
+    protocol: {{ .protocol }}
     port: {{ .containerPort }}
     targetPort: {{ .name }}
   {{- end }}

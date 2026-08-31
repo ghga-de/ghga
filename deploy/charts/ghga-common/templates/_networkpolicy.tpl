@@ -14,9 +14,9 @@ spec:
     {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress "context" $) | nindent 2 }}
     {{- if .Values.containerPorts }}
     ports:
-    {{- range .Values.containerPorts }}
+    {{- range (include "ghga-common.container-ports" . | fromYamlArray) }}
     - port: {{ .containerPort }}
-      protocol: {{ .protocol | default "TCP" }}
+      protocol: {{ .protocol }}
     {{- end }}
     {{- end }}
 {{- end }}

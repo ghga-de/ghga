@@ -94,7 +94,7 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           {{- if .Values.containerPorts }}
-          ports: {{- include "common.tplvalues.render" (dict "value" .Values.containerPorts "context" $) | nindent 12 }}
+          ports: {{- include "ghga-common.container-ports" . | nindent 12 }}
           {{- end }}
           {{- if and .Values.readinessProbe.enabled (omit .Values.readinessProbe "enabled") }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}

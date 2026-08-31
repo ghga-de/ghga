@@ -69,7 +69,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/r
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `containerPorts` | Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere. | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts.http` |  | `8080` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -179,5 +179,9 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/r
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |
 | `vaultAgent.enabled` | Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container | `false` |
 | `vaultAgent.annotations.vault.hashicorp.com/tls-skip-verify` |  | `"false"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-inject` |  | `"true"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-init-first` |  | `"true"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-cache-enable` |  | `"true"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-pre-populate-only` |  | `"false"` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

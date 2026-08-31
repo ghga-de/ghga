@@ -69,7 +69,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/t
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `containerPorts` | Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere. | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts.http` |  | `8080` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |

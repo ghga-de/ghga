@@ -171,21 +171,28 @@ def test_http_route(rendered_chart):
 
 def test_container_ports_drive_service_and_networkpolicy(rendered_chart):
     """ContainerPorts is the single source for the Deployment/Service/NetworkPolicy
-    ports - not three independent values that could drift out of sync.
+    ports - not three independent values that could drift out of sync. Covers both
+    the bare-number form (protocol defaults to TCP) and the {port, protocol} form.
     """
     manifests = rendered_chart("common.yaml", "custom_container_ports.yaml")
 
     container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
-    assert container["ports"] == [
-        {"name": "metrics", "containerPort": 9090, "protocol": "TCP"}
+    assert sorted(container["ports"], key=lambda p: p["name"]) == [
+        {"name": "dns", "containerPort": 53, "protocol": "UDP"},
+        {"name": "http", "containerPort": 8080, "protocol": "TCP"},
     ]
 
-    assert manifests["Service"]["spec"]["ports"] == [
-        {"name": "metrics", "protocol": "TCP", "port": 9090, "targetPort": "metrics"}
+    assert sorted(manifests["Service"]["spec"]["ports"], key=lambda p: p["name"]) == [
+        {"name": "dns", "protocol": "UDP", "port": 53, "targetPort": "dns"},
+        {"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"},
     ]
 
-    assert manifests["NetworkPolicy"]["spec"]["ingress"][0]["ports"] == [
-        {"port": 9090, "protocol": "TCP"}
+    assert sorted(
+        manifests["NetworkPolicy"]["spec"]["ingress"][0]["ports"],
+        key=lambda p: p["port"],
+    ) == [
+        {"port": 53, "protocol": "UDP"},
+        {"port": 8080, "protocol": "TCP"},
     ]
 
 

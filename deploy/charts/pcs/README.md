@@ -69,7 +69,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/p
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `containerPorts` | Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere. | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts.http` |  | `8080` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -178,5 +178,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/p
 | `healthEndpoint` | Path appended to the probe target URL (after the API base path) | `"/health"` |
 | `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
+| `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
+| `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

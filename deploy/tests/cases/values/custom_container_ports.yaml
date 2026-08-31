@@ -1,7 +1,8 @@
 containerPorts:
-  - name: metrics
-    containerPort: 9090
-    protocol: TCP
+  http: 8080
+  dns:
+    port: 53
+    protocol: UDP
 
 networkPolicy:
   enabled: true
