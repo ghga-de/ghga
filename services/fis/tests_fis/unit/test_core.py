@@ -308,9 +308,9 @@ async def test_process_file_upload_requeue(rig: JointRig):
     requeued_file = failed_file.model_copy()
     requeued_file.state = "inbox"
     requeued_file.state_updated = event_timestamp
-    await rig.interrogation_handler.process_file_upload(file=requeued_file)
 
     await sleep(0.01)
+    await rig.interrogation_handler.process_file_upload(file=requeued_file)
     db_file = await rig.file_dao.get_by_id(file.id)
     assert db_file.state == "inbox"
     assert db_file.interrogated is False
