@@ -11,7 +11,8 @@ helm install ns oci://registry-1.docker.io/ghga/ns-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/notification-service). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/notification-service/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 

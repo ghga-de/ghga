@@ -11,7 +11,8 @@ helm install data-portal oci://registry-1.docker.io/ghga/data-portal-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/frontend/data-portal). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/frontend/data-portal/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 

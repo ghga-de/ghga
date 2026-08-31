@@ -11,7 +11,8 @@ helm install rts oci://registry-1.docker.io/ghga/rts-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/reverse-transpiler-service). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/reverse-transpiler-service/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 
@@ -182,6 +183,5 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/r
 | `vaultAgent.annotations.vault.hashicorp.com/agent-inject` |  | `"true"` |
 | `vaultAgent.annotations.vault.hashicorp.com/agent-init-first` |  | `"true"` |
 | `vaultAgent.annotations.vault.hashicorp.com/agent-cache-enable` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-pre-populate-only` |  | `"false"` |
 
-> **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/reverse-transpiler-service/values.schema.json).

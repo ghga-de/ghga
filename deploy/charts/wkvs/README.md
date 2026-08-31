@@ -11,7 +11,8 @@ helm install wkvs oci://registry-1.docker.io/ghga/wkvs-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/well-known-value-service). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/well-known-value-service/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 

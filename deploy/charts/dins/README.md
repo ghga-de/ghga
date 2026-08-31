@@ -11,7 +11,8 @@ helm install dins oci://registry-1.docker.io/ghga/dins-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/dataset-information-service). See
-[values.yaml](values.yaml) for the full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/dataset-information-service/values.yaml) for the
+full set of configurable values.
 
 ## Parameters
 
@@ -179,6 +180,5 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 | `healthEndpoint` | Path appended to the probe target URL (after the API base path) | `"/health"` |
 | `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
-| `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 
-> **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/dataset-information-service/values.schema.json).
