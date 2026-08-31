@@ -782,7 +782,7 @@ class UploadController(UploadControllerPort):
         file_id: UUID4,
     ) -> None:
         """Requeue a FileUpload that has failed interrogation.
-        
+
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxStateError` if the box exists but is archived.

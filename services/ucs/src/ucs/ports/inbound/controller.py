@@ -373,7 +373,7 @@ class UploadControllerPort(ABC):
         file_id: UUID4,
     ) -> None:
         """Requeue a FileUpload that has failed interrogation.
-                
+
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxStateError` if the box exists but is archived.
@@ -388,7 +388,7 @@ class UploadControllerPort(ABC):
     @abstractmethod
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
         """Requeue all failed FileUploads in the specified FileUploadBox.
-        
+
         Does not attempt to requeue files that failed during initial upload, only
         files that failed during interrogation.
 
