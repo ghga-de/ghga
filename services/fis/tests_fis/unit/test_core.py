@@ -510,7 +510,7 @@ async def test_report_handling_conflict(rig: JointRig):
 
 @pytest.mark.parametrize("passed", [True, False], ids=["passing", "failing"])
 async def test_report_handling_after_requeue(rig: JointRig, passed: bool):
-    """Verify that a report submitted after a requeue is treated as a first report."""
+    """Verify that a report submitted after a requeue is not treated any differently than other reports."""
     file = create_file_under_interrogation(HUB1)
     await rig.interrogation_handler.process_file_upload(file=file)
 
