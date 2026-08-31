@@ -355,9 +355,10 @@ class InterrogationHandler(InterrogationHandlerPort):
             "failed",
             "archived",
         ]:
-            file.can_remove = True
-            file.interrogated = local_file.interrogated  # preserve interrogation status
-            await self._file_dao.update(file)
+            updated_file = file.model_copy()
+            updated_file.can_remove = True
+            updated_file.interrogated = local_file.interrogated  # preserve interrogation status
+            await self._file_dao.update(updated_file)
             log.info(
                 "File %s arrived with state %s. Set can_remove to True.",
                 file.id,
