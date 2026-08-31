@@ -781,7 +781,17 @@ class UploadController(UploadControllerPort):
         box_id: UUID4,
         file_id: UUID4,
     ) -> None:
-        """Requeue a FileUpload that has failed interrogation."""
+        """Requeue a FileUpload that has failed interrogation.
+        
+        Raises:
+        - `BoxNotFoundError` if the FileUploadBox isn't found.
+        - `BoxStateError` if the box exists but is archived.
+        - `FileUploadNotFound` if the FileUpload isn't found.
+        - `FileUploadStateError` if the FileUpload isn't in the `failed` state.
+        - `RequeueError` if the file failed before being interrogated.
+        - `S3ObjectMissingError` if the object was deleted from S3 after
+          the first interrogation failure (this is a legacy failure mode).
+        """
         # Verify that the box exists and isn't archived (locked is fine)
         box = await self._get_box(box_id=box_id, require_unlocked=False)
         if box.state == "archived":
