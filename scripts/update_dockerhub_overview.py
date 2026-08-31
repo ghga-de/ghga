@@ -30,9 +30,25 @@ Verified end-to-end against the real ghga/wps-chart repo before landing this.
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 
 from prep_dockerhub_overview import prep_overview
+
+
+def _urlopen(request: urllib.request.Request):
+    """urlopen, but a rejection prints Docker Hub's actual error body - a bare
+    HTTPError traceback only shows the status code, not the {"detail": ...}
+    explaining which of the auth flow's fussy requirements (right token type,
+    right identifier, right API path - see the module docstring) got missed."""
+    try:
+        return urllib.request.urlopen(request)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors="replace")
+        method = request.get_method()
+        raise SystemExit(
+            f"{method} {request.full_url} -> HTTP {e.code}: {detail}"
+        ) from None
 
 
 def fetch_bearer_token(username: str, token: str) -> str:
@@ -42,7 +58,7 @@ def fetch_bearer_token(username: str, token: str) -> str:
         data=body,
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(request) as response:
+    with _urlopen(request) as response:
         return json.load(response)["access_token"]
 
 
@@ -68,7 +84,7 @@ def update_overview(
             "Authorization": f"Bearer {bearer_token}",
         },
     )
-    with urllib.request.urlopen(request) as response:
+    with _urlopen(request) as response:
         response.read()
     print(f"updated {namespace}/{repo} overview")
 
