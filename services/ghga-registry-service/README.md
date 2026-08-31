@@ -7,9 +7,15 @@ GHGA Registry Service - a service for ingesting and archiving metadata from data
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service. -->
+The GHGA Registry Service manages Research Data Upload Boxes (RDUBs), the unit a Data
+Hub submits research data through. A Data Steward creates a box per submission and
+grants or revokes individual submitters' upload access to it; the box itself moves
+through an `open` → `locked` → `archived` lifecycle as the upload is assembled and then
+closed off from further changes.
 
-Here you should provide a short summary of the purpose of this microservice.
+Once files have been uploaded, the service maps their file IDs to permanent accession
+numbers and exposes each study's resulting file inventory - both to the uploading Data
+Hub and to the rest of GHGA looking up what has already been ingested.
 
 
 ## Installation
