@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"dins"` |
@@ -179,5 +178,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 | `httpRoute.port` |  | `8080` |
 | `httpRoute.rewritePath` | strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them. | `true` |
 | `httpRoute.rules` | Extra HTTPRoute rules rendered before the generated default rule (deduplicated) | `[]` |
+| `probe.enabled` | Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP | `false` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

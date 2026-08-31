@@ -9,7 +9,6 @@ exports:
       storageClass: ""
       _topics: {}
 
-    command: ["sh", "-c"]
     commandPrefix: /usr/local/bin/
     commandStyle: shell
 

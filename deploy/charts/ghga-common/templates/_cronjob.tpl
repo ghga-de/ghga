@@ -71,7 +71,7 @@ spec:
             imagePullPolicy: {{ default (eq $.Values.image.tag "latest" | ternary "Always" "IfNotPresent") $.Values.image.pullPolicy }}
             {{- $executable := $job.executable | default $.Values.executable }}
             {{- $executableArgs := $job.executableArgs | default $.Values.executableArgs }}
-            {{- include "ghga-common.command-args" (list $ $executable $executableArgs $.Values.command)  | nindent 12 }}
+            {{- include "ghga-common.command-args" (list $ $executable $executableArgs)  | nindent 12 }}
             {{- $envVars := include "ghga-common.env-vars" $ | fromYaml | dig "envVars" list -}}
             {{- if $envVars }}
             env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}

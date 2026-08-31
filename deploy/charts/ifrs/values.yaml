@@ -9,9 +9,6 @@ global:
   imagePullSecrets: []
   storageClass: ""
   _topics: {}
-command:
-- "sh"
-- "-c"
 commandPrefix: ''
 commandStyle: exec
 executable: ifrs

@@ -20,7 +20,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/u
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
 | `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"ucs"` |
@@ -181,5 +180,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/u
 | `config.multipart_upload_ttl_hours` | Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job. | `72` |
 | `config.cleanup_interval_minutes` | How often (in minutes) the cleanup job runs. | `60` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"ucs"` |
+| `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

@@ -26,10 +26,6 @@
         }
       }
     },
-    "command": {
-      "type": "array",
-      "description": "This is the actual Kubernetes `command` field"
-    },
     "commandPrefix": {
       "type": "string",
       "description": "Path prefix prepended to `executable` before it's rendered into `command`/`args`"

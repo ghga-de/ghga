@@ -5,13 +5,11 @@ and prepends it with a failsafe routine that injects all existing secrets from v
 @param Root context
 @param executable - the executable name (e.g., "pcs")
 @param executableArgs - list of arguments for the executable (e.g., ["run-rest"])
-@param command - the shell wrapper command (e.g., ["sh", "-c"])
 */}}
 {{- define "ghga-common.command-args" -}}
-{{- if and (index . 1) (index . 3) }}
+{{- if index . 1 }}
 {{- $executable := index . 1 }}
 {{- $executableArgs := index . 2 | default list }}
-{{- $command := index . 3 }}
 {{- $prefix := (index . 0).Values.commandPrefix | default "" }}
 
 {{- /* Build the full command string by explicitly concatenating parts */ -}}
@@ -46,8 +44,10 @@ args:
 {{- end }}
 {{- else }}
 
-{{- /* Add vault secret injection wrapper if enabled */ -}}
-command: {{ $command | toJson }}
+{{- /* Shell style: sh -c wraps the built command string, with a vault secret
+     injection prefix spliced in ahead of it when enabled. Nothing has ever
+     needed a shell other than sh here, so this isn't a values.yaml knob. */ -}}
+command: ["sh", "-c"]
 {{- $args := list $cmdString }}
 {{- if (index . 0).Values.vaultAgent.enabled }}
 {{- $vaultWrapper := "if [ -d \"/vault/secrets\" ]; then for f in /vault/secrets/*; do if [ -f \"$f\" ]; then . \"$f\"; fi; done; fi; " }}
