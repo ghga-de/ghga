@@ -69,8 +69,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/m
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `ports.enabled` | Render the container's `ports` list below | `false` |
-| `ports.ports` |  | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts` | Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere. | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -100,7 +99,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/m
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
 | `service.enabled` | Render the Service resource | `true` |
 | `service.type` |  | `"ClusterIP"` |
-| `service.ports` |  | `[{"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"}]` |
 | `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
 | `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
 | `autoscaling.minReplicas` |  | `3` |
@@ -181,7 +179,5 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/m
 | `vaultAgent.enabled` | Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container | `false` |
 | `vaultAgent.annotations.vault.hashicorp.com/tls-skip-verify` |  | `"false"` |
 | `vaultAgent.annotations.vault.hashicorp.com/agent-inject` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-init-first` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-cache-enable` |  | `"true"` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

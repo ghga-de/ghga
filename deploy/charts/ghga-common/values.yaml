@@ -101,12 +101,14 @@ exports:
 
     podRestartPolicy: Always
 
-    ports:
-      enabled: false
-      ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
+    # Both the container spec's own `ports:` and the Service's `ports:` (and
+    # NetworkPolicy's, if enabled) are built from this single list - one place to
+    # keep in sync, not two. Empty list = no ports declared anywhere (matches the
+    # extraVolumes/sidecars convention: presence, not a separate enabled flag).
+    containerPorts:
+      - name: http
+        containerPort: 8080
+        protocol: TCP
 
     livenessProbe:
       enabled: false
@@ -162,11 +164,6 @@ exports:
     service:
       enabled: true
       type: ClusterIP
-      ports:
-        - name: http
-          protocol: TCP
-          port: 8080
-          targetPort: http
 
     serviceAccount:
       create: true

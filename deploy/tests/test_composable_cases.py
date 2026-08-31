@@ -169,6 +169,36 @@ def test_http_route(rendered_chart):
     assert rule["matches"][0]["path"]["value"] == "/"
 
 
+def test_container_ports_drive_service_and_networkpolicy(rendered_chart):
+    """ContainerPorts is the single source for the Deployment/Service/NetworkPolicy
+    ports - not three independent values that could drift out of sync.
+    """
+    manifests = rendered_chart("common.yaml", "custom_container_ports.yaml")
+
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["ports"] == [
+        {"name": "metrics", "containerPort": 9090, "protocol": "TCP"}
+    ]
+
+    assert manifests["Service"]["spec"]["ports"] == [
+        {"name": "metrics", "protocol": "TCP", "port": 9090, "targetPort": "metrics"}
+    ]
+
+    assert manifests["NetworkPolicy"]["spec"]["ingress"][0]["ports"] == [
+        {"port": 9090, "protocol": "TCP"}
+    ]
+
+
+def test_no_container_ports_renders_no_ports_anywhere(rendered_chart):
+    """An empty containerPorts list turns off ports on all three resources."""
+    manifests = rendered_chart("common.yaml", "no_container_ports.yaml")
+
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert "ports" not in container
+    assert "ports" not in manifests["Service"]["spec"]
+    assert "ports" not in manifests["NetworkPolicy"]["spec"]["ingress"][0]
+
+
 def test_command_style_exec(rendered_chart):
     """commandStyle=exec renders a real argv without a shell."""
     # shell style (default): command is the shell wrapper, args one joined string

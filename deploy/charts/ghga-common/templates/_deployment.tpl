@@ -93,8 +93,8 @@ spec:
           {{- if .Values.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
-          {{- if and .Values.ports.enabled (omit .Values.ports "enabled") }}
-          ports: {{- include "common.tplvalues.render" (dict "value" .Values.ports.ports "context" $) | nindent 12 }}
+          {{- if .Values.containerPorts }}
+          ports: {{- include "common.tplvalues.render" (dict "value" .Values.containerPorts "context" $) | nindent 12 }}
           {{- end }}
           {{- if and .Values.readinessProbe.enabled (omit .Values.readinessProbe "enabled") }}
           readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}

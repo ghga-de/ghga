@@ -1,0 +1,7 @@
+containerPorts:
+  - name: metrics
+    containerPort: 9090
+    protocol: TCP
+
+networkPolicy:
+  enabled: true

@@ -392,26 +392,16 @@
       "description": "Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this)",
       "default": "Always"
     },
-    "ports": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Render the container's `ports` list below",
-          "default": false
-        },
-        "ports": {
-          "type": "array",
-          "default": [
-            {
-              "name": "http",
-              "containerPort": 8080,
-              "protocol": "TCP"
-            }
-          ]
+    "containerPorts": {
+      "type": "array",
+      "description": "Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere.",
+      "default": [
+        {
+          "name": "http",
+          "containerPort": 8080,
+          "protocol": "TCP"
         }
-      }
+      ]
     },
     "livenessProbe": {
       "type": "object",
@@ -613,17 +603,6 @@
         "type": {
           "type": "string",
           "default": "ClusterIP"
-        },
-        "ports": {
-          "type": "array",
-          "default": [
-            {
-              "name": "http",
-              "protocol": "TCP",
-              "port": 8080,
-              "targetPort": "http"
-            }
-          ]
         }
       }
     },

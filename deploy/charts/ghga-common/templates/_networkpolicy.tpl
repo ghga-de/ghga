@@ -12,10 +12,11 @@ spec:
   - Ingress
   ingress:
     {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress "context" $) | nindent 2 }}
-    {{- if .Values.service.ports }}
+    {{- if .Values.containerPorts }}
     ports:
-    {{- range .Values.service.ports }}
-    - {{ include "common.tplvalues.render" (dict "value" (omit . "name") "context" $) | nindent 6 | trim }}
+    {{- range .Values.containerPorts }}
+    - port: {{ .containerPort }}
+      protocol: {{ .protocol | default "TCP" }}
     {{- end }}
     {{- end }}
 {{- end }}

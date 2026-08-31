@@ -1,0 +1,4 @@
+containerPorts: []
+
+networkPolicy:
+  enabled: true

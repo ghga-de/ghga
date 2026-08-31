@@ -69,8 +69,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `ports.enabled` | Render the container's `ports` list below | `false` |
-| `ports.ports` |  | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts` | Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere. | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -100,7 +99,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
 | `service.enabled` | Render the Service resource | `true` |
 | `service.type` |  | `"ClusterIP"` |
-| `service.ports` |  | `[{"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"}]` |
 | `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
 | `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
 | `autoscaling.minReplicas` |  | `3` |
@@ -179,6 +177,5 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `config.dhfs_version_constraint` | A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error. | `null` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"fis"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
-| `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

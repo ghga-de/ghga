@@ -39,8 +39,16 @@ spec:
   {{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
-  {{- if .Values.ports.enabled }}
-  ports: {{- include "common.tplvalues.render" (dict "value" .Values.service.ports "context" $) | nindent 4 }}
+  {{- if .Values.containerPorts }}
+  {{- /* Derived from containerPorts, not a separate service.ports value: the Service
+       always exposes exactly what the container listens on here. */}}
+  ports:
+  {{- range .Values.containerPorts }}
+  - name: {{ .name }}
+    protocol: {{ .protocol | default "TCP" }}
+    port: {{ .containerPort }}
+    targetPort: {{ .name }}
+  {{- end }}
   {{- end }}
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
 {{- end -}}

@@ -281,18 +281,9 @@
       "type": "string",
       "description": "Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this)"
     },
-    "ports": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Render the container's `ports` list below"
-        },
-        "ports": {
-          "type": "array"
-        }
-      }
+    "containerPorts": {
+      "type": "array",
+      "description": "Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere."
     },
     "livenessProbe": {
       "type": "object",
@@ -463,9 +454,6 @@
         },
         "type": {
           "type": "string"
-        },
-        "ports": {
-          "type": "array"
         }
       }
     },

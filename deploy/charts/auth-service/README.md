@@ -69,8 +69,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/a
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `ports.enabled` | Render the container's `ports` list below | `false` |
-| `ports.ports` |  | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts` | Named container ports (name, containerPort, protocol). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one list to keep in sync, not several. Empty = no ports declared anywhere. | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -100,7 +99,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/a
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
 | `service.enabled` | Render the Service resource | `true` |
 | `service.type` |  | `"ClusterIP"` |
-| `service.ports` |  | `[{"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"}]` |
 | `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
 | `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
 | `autoscaling.minReplicas` |  | `3` |
@@ -194,6 +192,5 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/a
 | `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
 | `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
 | `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
-| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.
