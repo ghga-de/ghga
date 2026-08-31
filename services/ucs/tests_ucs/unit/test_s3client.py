@@ -176,9 +176,7 @@ async def test_get_object_metadata(s3_client: S3ClientPort):
     file_upload = file_upload.model_copy(update={"s3_upload_id": upload_id})
     await s3_client.complete_multipart_upload(file_upload=file_upload)
 
-    metadata = await s3_client.get_object_metadata(
-        file_upload=file_upload, object_id=file_upload.object_id
-    )
+    metadata = await s3_client.get_object_metadata(file_upload=file_upload)
     assert metadata.etag == f"etag_for_{file_upload.object_id}"
     assert metadata.size == 1024  # the dummy value returned by the InMem S3 fixture
 
@@ -195,9 +193,7 @@ async def test_get_object_metadata_strips_etag_quotes(
 
     storage.get_object_metadata = quoted_etag
 
-    metadata = await s3_client.get_object_metadata(
-        file_upload=file_upload, object_id=file_upload.object_id
-    )
+    metadata = await s3_client.get_object_metadata(file_upload=file_upload)
     assert metadata.etag == "quoted-etag"
 
 
@@ -217,9 +213,7 @@ async def test_get_object_metadata_incomplete(
     storage.get_object_metadata = incomplete_metadata
 
     with pytest.raises(S3ClientPort.S3OperationError):
-        await s3_client.get_object_metadata(
-            file_upload=file_upload, object_id=file_upload.object_id
-        )
+        await s3_client.get_object_metadata(file_upload=file_upload)
 
 
 async def test_delete_inbox_file_completed(
@@ -332,9 +326,7 @@ async def test_unknown_storage_alias_raises_error(s3_client: S3ClientPort):
         await s3_client.complete_multipart_upload(file_upload=file_upload)
 
     with pytest.raises(S3ClientPort.UnknownStorageAliasError):
-        await s3_client.get_object_metadata(
-            file_upload=file_upload, object_id=file_upload.object_id
-        )
+        await s3_client.get_object_metadata(file_upload=file_upload)
 
     with pytest.raises(S3ClientPort.UnknownStorageAliasError):
         await s3_client.delete_inbox_file(file_upload=file_upload)
@@ -427,9 +419,7 @@ async def test_object_not_found_raises_s3_object_not_found_error(
     storage.get_object_metadata = do_error
 
     with pytest.raises(S3ClientPort.S3ObjectNotFoundError):
-        await s3_client.get_object_metadata(
-            file_upload=file_upload, object_id=file_upload.object_id
-        )
+        await s3_client.get_object_metadata(file_upload=file_upload)
 
 
 @pytest.mark.parametrize(
