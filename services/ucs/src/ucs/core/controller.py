@@ -40,6 +40,7 @@ from hexkit.utils import now_utc_ms_prec
 from ucs.config import Config
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
 from ucs.core.models import (
+    BoxRequeueResult,
     FileUpload,
     FileUploadBasics,
     FileUploadBox,
@@ -773,6 +774,91 @@ class UploadController(UploadControllerPort):
         # Update the FileUploadBox with new size and file count
         await self._update_box_stats(box_id=box_id, version=box_version)
         log.info("DB data updated for upload completion of file %s", file_id)
+
+    async def requeue_file_upload(
+        self,
+        *,
+        box_id: UUID4,
+        file_id: UUID4,
+    ) -> None:
+        """Requeue a FileUpload that has failed interrogation."""
+        # Verify that the box exists and isn't archived (locked is fine)
+        box = await self._get_box(box_id=box_id, require_unlocked=False)
+        if box.state == "archived":
+            raise self.BoxStateError(box_id=box_id, box_state="archived")
+
+        # Get the FileUpload
+        try:
+            file_upload = await self._file_upload_dao.get_by_id(file_id)
+        except ResourceNotFoundError as err:
+            raise self.FileUploadNotFound(file_id=file_id) from err
+
+        # Make sure the state is failed
+        if file_upload.state != "failed":
+            raise self.FileUploadStateError(
+                file_id=file_upload.id,
+                details="Only 'failed' FileUploads can be requeued.",
+            )
+
+        # Make sure it failed in interrogation and not during initial upload
+        if not file_upload.decrypted_sha256:
+            raise self.RequeueError(
+                "Cannot requeue a file that was never interrogated."
+            )
+
+        # Requeue it
+        await self._requeue_file_upload(file_upload=file_upload)
+
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue all failed FileUploads in the specified FileUploadBox.
+
+        Does not attempt to requeue files that failed during initial upload, only
+        files that failed during interrogation.
+
+        Returns an instance of BoxRequeueResult containing the IDs of files that
+        were requeued and the ones that were skipped.
+        """
+        # Verify that the box exists and isn't archived
+        box = await self._get_box(box_id=box_id, require_unlocked=False)
+        if box.state == "archived":
+            raise self.BoxStateError(box_id=box_id, box_state="archived")
+
+        # Get all FileUploads for this box that failed interrogation
+        potential_uploads = await self._file_upload_dao.find_all(
+            mapping={"state": "failed", "decrypted_sha256": {"$ne": None}},
+            sort=["alias"],
+        ).to_list()
+
+        # Requeue those files
+        requeued: list[UUID4] = []
+        skipped: list[UUID4] = []
+        for file_upload in potential_uploads:
+            try:
+                await self._requeue_file_upload(file_upload=file_upload)
+            except self.S3ObjectMissingError:
+                skipped.append(file_upload.id)
+            else:
+                requeued.append(file_upload.id)
+
+        # Return details about which files were requeued or not
+        return BoxRequeueResult(requeued=requeued, skipped=skipped)
+
+    async def _requeue_file_upload(self, *, file_upload: FileUpload) -> None:
+        """Requeue a FileUpload.
+
+        Does not modify the original argument and assumes the state has been validated.
+        Verifies that the object exists in the inbox.
+        """
+        # Make sure the object still exists in the inbox and hasn't been deleted already
+        #  Error handling is done inside _get_object_metadata
+        _ = await self._get_object_metadata(file_upload=file_upload)
+
+        # Now that validation is done/passed, actually do the reset:
+        upload_copy = file_upload.model_copy()
+        upload_copy.failure_reason = ""
+        upload_copy.state = "inbox"
+        upload_copy.state_updated = now_utc_ms_prec()
+        await self._file_upload_dao.update(upload_copy)
 
     async def remove_file_upload(
         self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
