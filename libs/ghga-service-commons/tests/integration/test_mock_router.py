@@ -186,6 +186,41 @@ def test_query_string_is_left_out_of_the_matching():
     assert response.json() == {"expected": "ball"}
 
 
+def test_endpoint_collecting_path_variables():
+    """Make sure one function can serve endpoints with differing path variables."""
+    throwaway: MockRouter = MockRouter()
+
+    def endpoint(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
+        """Report back whatever path variables the endpoint was called with."""
+        return httpx2.Response(status_code=200, json=path_variables)
+
+    throwaway.get("/items/{item_name}")(endpoint)
+    throwaway.get("/items/{item_name}/sizes/{item_size}")(endpoint)
+    throwaway.get("/items")(endpoint)
+
+    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
+        assert client.get("/items/ball").json() == {"item_name": "ball"}
+        assert client.get("/items/ball/sizes/9").json() == {
+            "item_name": "ball",
+            "item_size": "9",
+        }
+        assert client.get("/items").json() == {}
+
+
+def test_endpoint_naming_a_variable_the_path_does_not_have():
+    """Make sure collecting the rest still requires the named variables to exist."""
+    throwaway: MockRouter = MockRouter()
+
+    with pytest.raises(
+        TypeError,
+        match=r"Path variables for path '/dummy/{p2}' do not match the function it decorates",
+    ):
+
+        @throwaway.get("/dummy/{p2}")
+        def dummy(p1: int, **path_variables: str) -> None:
+            """Define a dummy function naming a variable that the path lacks."""
+
+
 def test_path_variables_the_endpoint_does_not_name_are_rejected():
     """Ensure a path variable no parameter takes is rejected."""
     throwaway: MockRouter = MockRouter()

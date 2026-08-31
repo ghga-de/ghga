@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from functools import partial
-from inspect import signature
+from inspect import Parameter, signature
 from typing import Any, Generic, TypeVar, cast, get_type_hints
 
 import httpx2
@@ -34,6 +34,9 @@ __all__ = [
 ]
 
 BRACKET_PATTERN = re.compile(r"{.*?}")
+
+# The parameter kinds that never correspond to a single path variable.
+VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
 
 
 def _compile_regex_url(path: str) -> str:
@@ -66,12 +69,31 @@ def _url_to_match(request: httpx2.Request) -> str:
 def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     """Retrieve the typed parameter info from function signature minus return type.
 
+    Variadic parameters are left out: a `**kwargs` parameter stands for whatever path
+    variables the endpoint does not name, and those are passed on without being cast.
+
     This function is not intended to be used outside the module.
     """
-    signature_parameters: dict[str, Any] = get_type_hints(endpoint_function)
-    if "return" in signature_parameters:
-        signature_parameters.pop("return")
-    return signature_parameters
+    parameters = signature(endpoint_function).parameters
+    return {
+        name: hint
+        for name, hint in get_type_hints(endpoint_function).items()
+        if name in parameters and parameters[name].kind not in VARIADIC_KINDS
+    }
+
+
+def _accepts_path_variables(endpoint_function: Callable) -> bool:
+    """Whether the endpoint function collects the path variables it does not name.
+
+    That is the case when it has a `**kwargs` parameter, which lets one function serve
+    endpoints with different path variables instead of spelling each of them out.
+
+    This function is not intended to be used outside the module.
+    """
+    return any(
+        parameter.kind is Parameter.VAR_KEYWORD
+        for parameter in signature(endpoint_function).parameters.values()
+    )
 
 
 class RegisteredEndpoint(BaseModel):
@@ -98,6 +120,10 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     The only parameter types allowed in the endpoint functions are primitives
     that can be stored in the url string: int, float, str, bool, None, and complex.
     The one exception is "request", which will be passed in automatically if specified.
+
+    An endpoint function may instead collect the path variables it does not name in a
+    `**kwargs` parameter, which arrive there as strings. That is what lets one function
+    serve endpoints with differing path variables, as `ApiMock` in `mock_api` does.
 
     Patterns are matched against the request URL without its query string, so an
     endpoint serves the calls to its path whether they carry query parameters or not.
@@ -162,7 +188,11 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         """
         all_parameters = signature(endpoint_function).parameters
 
-        for parameter in all_parameters:
+        for parameter, parameter_info in all_parameters.items():
+            if parameter_info.kind in VARIADIC_KINDS:
+                # variadic parameters stand for path variables rather than for one
+                # of them, so there is nothing to cast and nothing to type-hint
+                continue
             if parameter not in signature_parameters:
                 raise TypeError(
                     f"Parameter '{parameter}' in '{endpoint_function.__name__}' is "
@@ -171,7 +201,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
     @staticmethod
     def _ensure_decorator_and_endpoint_parameters_match(
-        path: str, signature_parameters: dict[str, Any]
+        path: str,
+        signature_parameters: dict[str, Any],
+        accepts_path_variables: bool = False,
     ):
         """Verify consistency between path in path decorator and the decorated function.
 
@@ -179,6 +211,10 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
             path: the path specified by the MockRouter decorator.
             signature_parameters:
                 A dict containing type information for the endpoint function's parameters.
+            accepts_path_variables:
+                Whether the endpoint function collects the path variables it does not
+                name in a `**kwargs` parameter. The path may then declare variables that
+                the signature does not, but not the other way around.
 
         Raises:
             TypeError: When there is a mismatch between the path and the function parameters.
@@ -189,7 +225,12 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         # get set of parameters from path with brackets stripped
         matches = {param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)}
 
-        if matches != endpoint_parameters:
+        mismatch = (
+            not endpoint_parameters <= matches
+            if accepts_path_variables
+            else matches != endpoint_parameters
+        )
+        if mismatch:
             raise TypeError(
                 f"Path variables for path '{path}' do not match the "
                 + "function it decorates"
@@ -222,7 +263,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         """
         signature_parameters: dict[str, Any] = _get_signature_info(endpoint_function)
         self._ensure_all_parameters_are_typed(endpoint_function, signature_parameters)
-        self._ensure_decorator_and_endpoint_parameters_match(path, signature_parameters)
+        self._ensure_decorator_and_endpoint_parameters_match(
+            path, signature_parameters, _accepts_path_variables(endpoint_function)
+        )
 
     def _base_endpoint_wrapper(
         self, path: str, method: str, endpoint_function: Callable
@@ -288,6 +331,12 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         # type-cast based on type-hinting info
         typed_parameters: dict[str, Any] = {}
         for parameter_name, value in parsed_url_parameters.items():
+            if parameter_name not in signature_parameters:
+                # only an endpoint with `**kwargs` gets here, since every other one
+                # must name each path variable: hand the value over as the string it is
+                typed_parameters[parameter_name] = value
+                continue
+
             parameter_type = signature_parameters[parameter_name]
 
             if parameter_type is not str:
