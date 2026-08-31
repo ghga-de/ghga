@@ -121,7 +121,7 @@ class UploadControllerPort(ABC):
         Indicates a state inconsistency between the database and S3.
         """
 
-        def __init__(self, *, bucket_id: str, object_id: str):
+        def __init__(self, *, bucket_id: str, object_id: UUID4):
             msg = (
                 f"Object {object_id} expected to be present in bucket {bucket_id}"
                 + " was not found."
