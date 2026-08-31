@@ -56,12 +56,7 @@ def _compile_regex_url(path: str) -> str:
 
 
 def _url_to_match(request: httpx2.Request) -> str:
-    """Get the URL of a request in the form the endpoint patterns are matched against.
-
-    The query string and fragment are left off. Endpoints are registered by path, and
-    the compiled patterns are anchored at the end, so a request carrying a query string
-    would otherwise miss the endpoint serving it - or, where the path ends in a variable,
-    be matched with the query string swallowed into that variable's value.
+    """Get the request URL without query and fragment to match against.
 
     This function is not intended to be used outside the module.
     """
