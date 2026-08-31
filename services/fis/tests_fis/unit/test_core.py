@@ -15,6 +15,7 @@
 
 """Unit tests for the core logic"""
 
+from asyncio import sleep
 from datetime import timedelta
 from uuid import uuid4
 
@@ -201,7 +202,7 @@ async def test_process_file_upload_outdated(
 
     outdated_file = local_file.model_copy()
     outdated_file.state = "archived"
-    outdated_file.state_updated += timedelta(hours=-1)
+    outdated_file.state_updated -= timedelta(hours=1)
     caplog.clear()
     caplog.set_level("INFO")
     await rig.interrogation_handler.process_file_upload(file=outdated_file)
@@ -302,19 +303,21 @@ async def test_process_file_upload_requeue(rig: JointRig):
     )
 
     # The requeue reaches FIS as an ordinary FileUpload event with the 'inbox' state
-    event_timestamp = now_utc_ms_prec() + timedelta(hours=1)
+    await sleep(0.01)
+    event_timestamp = now_utc_ms_prec()
     requeued_file = failed_file.model_copy()
     requeued_file.state = "inbox"
     requeued_file.state_updated = event_timestamp
     await rig.interrogation_handler.process_file_upload(file=requeued_file)
 
+    await sleep(0.01)
     db_file = await rig.file_dao.get_by_id(file.id)
     assert db_file.state == "inbox"
     assert db_file.interrogated is False
     assert db_file.can_remove is False
 
     # Make sure the timestamp is updated
-    assert failed_file.state_updated <= db_file.state_updated < event_timestamp
+    assert failed_file.state_updated < event_timestamp < db_file.state_updated
 
     # Make sure the old report is dropped
     with pytest.raises(ResourceNotFoundError):
