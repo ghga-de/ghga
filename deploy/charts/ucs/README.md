@@ -11,8 +11,8 @@ helm install ucs oci://registry-1.docker.io/ghga/ucs-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/ucs). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/ucs/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/ucs/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -183,4 +183,4 @@ full set of configurable values.
 | `config.cleanup_interval_minutes` | How often (in minutes) the cleanup job runs. | `60` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"ucs"` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/ucs/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/ucs/values.schema.json).

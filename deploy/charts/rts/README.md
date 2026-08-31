@@ -11,8 +11,8 @@ helm install rts oci://registry-1.docker.io/ghga/rts-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/reverse-transpiler-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/reverse-transpiler-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/rts/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -182,4 +182,4 @@ full set of configurable values.
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/reverse-transpiler-service/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/rts/values.schema.json).

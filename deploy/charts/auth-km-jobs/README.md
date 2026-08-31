@@ -11,8 +11,8 @@ helm install auth-km-jobs oci://registry-1.docker.io/ghga/auth-km-jobs-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth-km-jobs). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/tools/auth-km-jobs/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/auth-km-jobs/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 

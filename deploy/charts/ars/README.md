@@ -11,8 +11,8 @@ helm install ars oci://registry-1.docker.io/ghga/ars-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/access-request-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/access-request-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/ars/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -185,4 +185,4 @@ full set of configurable values.
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0012) routing to this service | `false` |
 | `httpRoute.port` |  | `8080` |
 
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/access-request-service/values.schema.json).
+> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/deploy/charts/ars/values.schema.json).
