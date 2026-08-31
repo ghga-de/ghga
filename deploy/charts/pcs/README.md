@@ -30,7 +30,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/p
 | `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
 | `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
 | `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
-| `clusterDomain` | Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
 | `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
 | `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
 | `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
@@ -179,5 +178,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/p
 | `probe.enabled` | Render a Prometheus-Operator Probe CR blackbox-checking this service over HTTP | `false` |
 | `probe.hostname` | Public hostname the blackbox exporter probes (combined with the API base path and healthEndpoint below to build the target URL) | `"default.ghga.dev"` |
 | `healthEndpoint` | Path appended to the probe target URL (after the API base path) | `"/health"` |
+| `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
+| `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.

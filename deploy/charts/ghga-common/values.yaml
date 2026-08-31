@@ -31,8 +31,6 @@ exports:
 
     namespaceOverride: ""
 
-    clusterDomain: cluster.local
-
     annotations: {}
 
     labels: {}

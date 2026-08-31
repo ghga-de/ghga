@@ -24,7 +24,6 @@ cronjobs:
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
-clusterDomain: cluster.local
 annotations: {}
 labels: {}
 commonLabels: {}

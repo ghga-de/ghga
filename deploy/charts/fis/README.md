@@ -30,7 +30,6 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
 | `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
 | `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
-| `clusterDomain` | Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
 | `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
 | `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
 | `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
@@ -179,5 +178,7 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/f
 | `config.data_hub_auth_keys` | Mapping of storage (data hub) aliases to their public token signature validation keys | `null` |
 | `config.dhfs_version_constraint` | A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error. | `null` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"fis"` |
+| `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
+| `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
 
 > **Note**: this chart has more parameters than fit under Docker Hub's 25000-character overview limit, so the table above has been trimmed. See [values.schema.json](values.schema.json) in this chart for every parameter.
