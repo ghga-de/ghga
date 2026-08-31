@@ -57,7 +57,7 @@ jobs:
           fi
           changed=$(git diff --name-only "$base...HEAD") # three-dot = since the merge base
           echo "::group::changed files"; echo "$changed"; echo "::endgroup::"
-          relevant=$(echo "$changed" | grep -vE '^docs/|^\.devcontainer/|\.md$' || true)
+          relevant=$(echo "$changed" | grep -vE '^docs/|\.md$' || true)
           if [ -n "$relevant" ]; then
             echo "relevant changes:"; echo "$relevant"
             echo "relevant=true" >> "$GITHUB_OUTPUT"
