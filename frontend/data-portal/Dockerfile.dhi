@@ -46,8 +46,7 @@ RUN jq --arg v "${PLATFORM_VERSION}" \
 # SWS: static-web-server's pre-compiled binary, unlike BUILDER's output above, is
 # architecture-specific and gets copied into RUNNER (which builds per target platform)
 # - so this stage must NOT be pinned to $BUILDPLATFORM, it needs to match RUNNER's own
-# target arch. It's a plain curl+install, not a JS toolchain run, so it was never what
-# crashed under QEMU; only BUILDER needed to move.
+# target arch.
 # hadolint ignore=DL3006
 FROM ${BASE}-sfw-ent-dev AS sws
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
