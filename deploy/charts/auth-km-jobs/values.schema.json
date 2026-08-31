@@ -340,11 +340,7 @@
       "type": "object",
       "description": "Container ports, name -> port (bare number = TCP; {port, protocol} for anything else). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one map to keep in sync, not several. A map, not a list, so an overlay can add/override one named port without repeating the rest. Empty = no ports declared anywhere.",
       "additionalProperties": true,
-      "properties": {
-        "http": {
-          "default": null
-        }
-      }
+      "default": {}
     },
     "livenessProbe": {
       "type": "object",

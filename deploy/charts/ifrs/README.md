@@ -70,7 +70,7 @@ full set of configurable values.
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `containerPorts.http` |  | `null` |
+| `containerPorts` | Container ports, name -> port (bare number = TCP; {port, protocol} for anything else). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one map to keep in sync, not several. A map, not a list, so an overlay can add/override one named port without repeating the rest. Empty = no ports declared anywhere. | `{}` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -187,9 +187,5 @@ full set of configurable values.
 | `vaultAgent.role` | Vault auth role to assume; defaults to the release name when empty | `""` |
 | `vaultAgent.rolePrefix` | Prefix prepended to the resolved role name above | `""` |
 | `vaultAgent.caCert` | Path to a custom CA cert for Vault TLS verification | `""` |
-| `vaultAgent.tlsSecret` | Kubernetes secret providing the Vault Agent's TLS material | `""` |
-| `vaultAgent.service` | Override the Vault service address the agent talks to | `""` |
-| `vaultAgent.tlsServerName` | TLS server name override for the Vault connection | `""` |
-| `vaultAgent.pgrepPattern` | Process name the Agent's "kill -TERM" hook searches for to restart the app on secret rotation | `"python"` |
 
 > Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/ifrs/values.schema.json).

@@ -57,11 +57,35 @@ VALUES_HEADER = """\
 
 
 def deep_merge(base, override):
-    """Helm-style value coalescing: maps merge recursively, everything else replaces."""
+    """Helm-style value coalescing: maps merge recursively, everything else replaces.
+
+    A `None` override value deletes the key, but ONLY when that key already exists in
+    `base` - matching Helm's own values-merge semantics (null unsets an existing
+    default) without also swallowing the unrelated, much older convention of
+    declaring a required-but-deploy-time-provided config field as bare `key:` (null)
+    in a member's own chart-values.yaml (mongo_dsn, smtp_auth, ...), which has
+    nothing to unset: `config` in the library defaults is `{}`, so those keys are
+    never "in base" to begin with and must still come through as-is.
+
+    Without the `key in merged` guard, a member overlay's `containerPorts: {http:
+    null}` (meant to remove the library default's one entry) instead leaves
+    `containerPorts: {http: null}` behind: a non-empty, and therefore still-truthy,
+    map. The container-ports template then renders `ports: [{containerPort: null,
+    ...}]` - a Deployment Kubernetes rejects outright ("containerPort: Required
+    value") rather than the intended "no ports". Confirmed against a real cluster
+    before landing this fix - and the over-broad first version of it (deleting any
+    None override unconditionally) was caught the same way: it silently dropped
+    mongo_dsn from nearly every member's generated values.yaml.
+    """
     if isinstance(base, dict) and isinstance(override, dict):
         merged = dict(base)
         for key, value in override.items():
-            merged[key] = deep_merge(merged[key], value) if key in merged else value
+            if value is None and key in merged:
+                merged.pop(key)
+            elif key in merged:
+                merged[key] = deep_merge(merged[key], value)
+            else:
+                merged[key] = value
         return merged
     return override
 

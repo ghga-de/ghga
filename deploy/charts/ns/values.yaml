@@ -67,8 +67,7 @@ terminationGracePeriodSeconds: ""
 updateStrategy:
   type: RollingUpdate
 podRestartPolicy: Always
-containerPorts:
-  http:
+containerPorts: {}
 livenessProbe:
   enabled: false
   tcpSocket:
