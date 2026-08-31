@@ -340,8 +340,7 @@
       "additionalProperties": true,
       "properties": {
         "http": {
-          "type": "number",
-          "default": 8080
+          "default": null
         }
       }
     },
@@ -540,7 +539,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Render the Service resource",
-          "default": true
+          "default": false
         },
         "type": {
           "type": "string",

@@ -69,7 +69,7 @@ updateStrategy:
   type: RollingUpdate
 podRestartPolicy: Always
 containerPorts:
-  http: 8080
+  http:
 livenessProbe:
   enabled: false
   tcpSocket:

@@ -68,7 +68,7 @@ updateStrategy:
   type: RollingUpdate
 podRestartPolicy: Always
 containerPorts:
-  http: 8080
+  http:
 livenessProbe:
   enabled: false
   tcpSocket:
@@ -109,7 +109,7 @@ envVars: []
 envVarsConfigMap: ""
 envVarsSecret: ""
 service:
-  enabled: true
+  enabled: false
   type: ClusterIP
 serviceAccount:
   create: true

@@ -342,8 +342,7 @@
       "additionalProperties": true,
       "properties": {
         "http": {
-          "type": "number",
-          "default": 8080
+          "default": null
         }
       }
     },

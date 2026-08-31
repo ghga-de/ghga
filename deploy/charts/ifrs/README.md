@@ -70,7 +70,7 @@ full set of configurable values.
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `containerPorts.http` |  | `8080` |
+| `containerPorts.http` |  | `null` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -98,7 +98,7 @@ full set of configurable values.
 | `envVars` | Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled) | `[]` |
 | `envVarsConfigMap` | Name of a ConfigMap to load as bulk env vars via `envFrom` | `""` |
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
-| `service.enabled` | Render the Service resource | `true` |
+| `service.enabled` | Render the Service resource | `false` |
 | `service.type` |  | `"ClusterIP"` |
 | `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
 | `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |

@@ -11,6 +11,8 @@ executableArgs:
 
 service:
   enabled: false
+containerPorts:
+  http: null
 
 config:
   client_reraise_from_retry_error: false
