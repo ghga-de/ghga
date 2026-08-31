@@ -23,6 +23,7 @@ import pytest
 
 from ghga_service_commons.api.mock_api import (
     ApiMock,
+    RoutingTransport,
     endpoint,
     fail_to_connect,
     fail_with,
@@ -296,3 +297,58 @@ def test_httpyexpect_error_handler():
 
     assert response.status_code == 404
     assert response.json()["exception_id"] == "pageNotFound"
+
+
+def test_routing_transport_dispatches_by_base_url():
+    """Each request is answered by the mock of the API it is addressed to."""
+    secrets = SecretsApiMock()
+    boxes = BoxesApiMock(base_url=OTHER_URL)
+    transport = RoutingTransport(secrets, boxes)
+
+    with httpx2.Client(transport=transport) as client:
+        assert client.get(f"{BASE_URL}/secrets/some-id").json() == "s3cret"
+        assert client.get(f"{OTHER_URL}/boxes/some-id").json() == {"id": "box"}
+
+    assert len(secrets.requests) == 1
+    assert len(boxes.requests) == 1
+
+
+def test_routing_transport_refuses_unmocked_urls():
+    """A request that no mock claims is refused rather than sent out."""
+    transport = RoutingTransport(SecretsApiMock())
+
+    with httpx2.Client(transport=transport) as client:
+        with pytest.raises(AssertionError, match="Request to unmocked URL"):
+            client.get(f"{OTHER_URL}/boxes/some-id")
+
+
+def test_routing_transport_falls_back():
+    """A request that no mock claims is handed to the fallback transport."""
+    fallback = ApiMock().as_transport()
+    transport = RoutingTransport(SecretsApiMock(), fallback=fallback)
+
+    with httpx2.Client(transport=transport) as client:
+        assert client.get(f"{BASE_URL}/secrets/some-id").json() == "s3cret"
+        with pytest.raises(HttpException, match="No registered path found"):
+            client.get(f"{OTHER_URL}/boxes/some-id")
+
+
+@pytest.mark.asyncio
+async def test_routing_transport_serves_async_clients():
+    """The routing transport can be mounted on an async client as well."""
+    secrets = SecretsApiMock()
+
+    async with httpx2.AsyncClient(transport=RoutingTransport(secrets)) as client:
+        assert (await client.get(f"{BASE_URL}/secrets/some-id")).json() == "s3cret"
+
+
+def test_patch_httpx_module(monkeypatch: pytest.MonkeyPatch):
+    """The calls made through the `httpx2` module itself reach the mock."""
+    secrets = SecretsApiMock()
+    secrets.patch_httpx_module(monkeypatch)
+
+    assert httpx2.get(f"{BASE_URL}/secrets/some-id", timeout=5).json() == "s3cret"
+    with httpx2.Client() as client:
+        assert client.delete(f"{BASE_URL}/secrets/some-id").status_code == 204
+
+    assert len(secrets.requests) == 2
