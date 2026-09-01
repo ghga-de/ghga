@@ -546,26 +546,21 @@ def parameters_table_text(schema: dict) -> str:
     return "\n".join(lines)
 
 
-# Docker Hub's PATCH API rejects a full_description over this many characters
-# outright (docker/roadmap#475: a validation error, not silent truncation) -
-# confirmed live against a real, already-published chart repo's full_description
-# via the public API, which comes back at exactly 24998 characters ending in a
-# trim note: that publisher pre-truncates client-side before the PATCH, the same
-# thing this does, not something Docker Hub does for you server-side. Leave real
-# headroom below it: a chart whose table lands just under 25000 today grows past
-# it the next time a field gains a longer description, and by then this margin is
-# the only thing standing between "still fits" and the release workflow's PATCH
-# call failing outright.
-README_LENGTH_LIMIT = 25000
-README_SAFE_LENGTH = 22000
-
-
 def chart_readme_text(
     name: str, description: str, path: str, chart_registry: str, schema: dict
 ) -> str:
     """Chart root README.md — `helm package` bundles it into the .tgz (Helm convention;
     also what Artifact Hub reads as the chart's Overview, were this repo ever listed
     there), and release.yaml's Docker Hub overview PATCH reuses the same file.
+
+    Always the FULL parameter table, never trimmed here: this file is committed and
+    rendered on GitHub, which has no length limit worth designing around. Docker
+    Hub's own ~25000-character cap on full_description is a property of that one
+    PATCH call, not of this file - scripts/prep_dockerhub_overview.py trims a copy
+    at push time instead, the same as it already does for hand-authored service
+    READMEs. Trimming here would bake a Docker-Hub-specific caveat into the
+    GitHub-rendered copy for no reason (the file wasn't actually running out of
+    diagram space at 25000 characters, that's not a where a real length limit sits).
 
     No `--version` pin in the install snippet: this file is regenerated at every
     release, so a pinned version here would need updating on every single one - omit
@@ -586,33 +581,14 @@ helm install {name} oci://{chart_registry}/{name}-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/{path}/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/{name}/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
 """
     table = parameters_table_text(schema)
-    if len(header) + len(table) <= README_LENGTH_LIMIT:
-        return header + table + "\n"
-
-    budget = README_SAFE_LENGTH - len(header)
-    kept: list[str] = []
-    used = 0
-    for line in table.split("\n"):
-        used += len(line) + 1
-        if used > budget:
-            break
-        kept.append(line)
-    note = (
-        "\n\n> Docker Hub caps this overview at"
-        f" {README_LENGTH_LIMIT} characters, so the table above stops partway through"
-        " this chart's parameters. The full list, with defaults and descriptions, is"
-        " in"
-        f" [values.schema.json](https://github.com/ghga-de/ghga/blob/main/{path}"
-        "/values.schema.json)."
-    )
-    return header + "\n".join(kept) + note + "\n"
+    return header + table + "\n"
 
 
 def main() -> None:

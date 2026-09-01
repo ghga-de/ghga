@@ -11,8 +11,8 @@ helm install rts oci://registry-1.docker.io/ghga/rts-chart
 ## Source
 
 Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/reverse-transpiler-service). See
-[values.yaml](https://github.com/ghga-de/ghga/blob/main/services/reverse-transpiler-service/values.yaml) for the
-full set of configurable values.
+[values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/rts/values.yaml)
+for the full set of configurable values.
 
 ## Parameters
 
@@ -181,5 +181,42 @@ full set of configurable values.
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |
-
-> Docker Hub caps this overview at 25000 characters, so the table above stops partway through this chart's parameters. The full list, with defaults and descriptions, is in [values.schema.json](https://github.com/ghga-de/ghga/blob/main/services/reverse-transpiler-service/values.schema.json).
+| `vaultAgent.enabled` | Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container | `false` |
+| `vaultAgent.annotations.vault.hashicorp.com/tls-skip-verify` |  | `"false"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-inject` |  | `"true"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-init-first` |  | `"true"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-cache-enable` |  | `"true"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-pre-populate-only` |  | `"false"` |
+| `vaultAgent.annotations.vault.hashicorp.com/agent-run-as-same-user` |  | `"true"` |
+| `vaultAgent.role` | Vault auth role to assume; defaults to the release name when empty | `""` |
+| `vaultAgent.rolePrefix` | Prefix prepended to the resolved role name above | `""` |
+| `vaultAgent.caCert` | Path to a custom CA cert for Vault TLS verification | `""` |
+| `vaultAgent.tlsSecret` | Kubernetes secret providing the Vault Agent's TLS material | `""` |
+| `vaultAgent.service` | Override the Vault service address the agent talks to | `""` |
+| `vaultAgent.tlsServerName` | TLS server name override for the Vault connection | `""` |
+| `vaultAgent.pgrepPattern` | Process name the Agent's "kill -TERM" hook searches for to restart the app on secret rotation | `"python"` |
+| `vaultAgent.secrets.generic` | Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey) | `{}` |
+| `vaultAgent.secrets.mongodb.enabled` | Inject a MongoDB connection string built from a Vault-issued dynamic credential | `false` |
+| `vaultAgent.secrets.mongodb.secretPath` | Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty | `""` |
+| `vaultAgent.secrets.mongodb.connectionString` | Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's | `"mongodb://{{username}}:{{password}}@mongodb:27017/admin"` |
+| `vaultAgent.secrets.service.enabled` | Inject every key/value pair from one Vault secret as env vars | `false` |
+| `vaultAgent.secrets.service.secretPath` | Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty | `""` |
+| `vaultAgent.secrets.service.pathPrefix` |  | `"operational-secrets/data/unique/apps/archive"` |
+| `vaultAgent.secrets.crypt4ghInternalPub.enabled` | Inject GHGA's shared internal Crypt4GH public key | `false` |
+| `vaultAgent.secrets.crypt4ghInternalPub.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
+| `vaultAgent.secrets.crypt4ghInternalPub.mountPath` | Where to write the key when renderToFile is true | `"/keys/crypt4gh-internal/crypt4gh.pub"` |
+| `vaultAgent.secrets.crypt4ghInternalPub.dataKey` | Field name to read within the Vault secret | `"crypt4gh.pub"` |
+| `vaultAgent.secrets.crypt4ghInternalPub.renderToFile` | true: write to mountPath as a file. false: inject as an env var named parameterName instead | `true` |
+| `vaultAgent.secrets.crypt4ghInternalPub.parameterName` |  | `"CRYPT4GH_PUBLIC_KEY"` |
+| `vaultAgent.secrets.crypt4ghInternalPriv.enabled` | Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
+| `vaultAgent.secrets.crypt4ghInternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
+| `vaultAgent.secrets.crypt4ghInternalPriv.mountPath` |  | `"/keys/crypt4gh-internal/crypt4gh.sec"` |
+| `vaultAgent.secrets.crypt4ghInternalPriv.dataKey` |  | `"crypt4gh.sec"` |
+| `vaultAgent.secrets.crypt4ghInternalPriv.renderToFile` |  | `true` |
+| `vaultAgent.secrets.crypt4ghInternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |
+| `vaultAgent.secrets.crypt4ghExternalPriv.enabled` | Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
+| `vaultAgent.secrets.crypt4ghExternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-external"` |
+| `vaultAgent.secrets.crypt4ghExternalPriv.mountPath` |  | `"/keys/crypt4gh-external/crypt4gh.sec"` |
+| `vaultAgent.secrets.crypt4ghExternalPriv.dataKey` |  | `"crypt4gh.sec"` |
+| `vaultAgent.secrets.crypt4ghExternalPriv.renderToFile` |  | `true` |
+| `vaultAgent.secrets.crypt4ghExternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |

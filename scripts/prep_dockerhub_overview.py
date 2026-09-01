@@ -2,26 +2,33 @@
 """Prepare a README for Docker Hub's `full_description` field.
 
 `prep_overview` is imported by update_dockerhub_overview.py, the script behind
-both of release.yaml's overview-refresh jobs (chart repos and image repos).
-Docker Hub rejects a PATCH with full_description over ~25000 characters
-outright (a validation error, not silent truncation - see
-deploy/src/create_charts.py's README_LENGTH_LIMIT comment for how that was
-confirmed against the live API).
+both of release.yaml's overview-refresh jobs (chart repos and image repos), and
+is the ONLY place either kind of README gets trimmed - never at generation
+time, so the committed file and its GitHub rendering always show the whole
+thing. Trimming only belongs here, at push time, since the ~25000-character
+cap is a property of Docker Hub's one PATCH call, not of the file itself.
 
-Generated chart READMEs already fit by construction (create_charts.py trims
-its own parameter table on a row boundary before this ever runs); hand-authored
-service READMEs under services/*, tools/*, libs/* don't have a trim point built
-in, so a raw character cutoff here could land mid-sentence or leave an odd
-number of ``` fences, folding everything after into one unreadable code block.
-This cuts on the last full line instead, closes a dangling fence, and appends
-a note pointing at the untruncated file on GitHub.
+Docker Hub rejects a PATCH with full_description over that many characters
+outright (docker/roadmap#475: a validation error, not silent truncation) -
+confirmed live against a real, already-published chart repo's full_description
+via the public API, which comes back at exactly 24998 characters ending in a
+trim note: that publisher pre-truncates client-side before the PATCH, the same
+thing this does, not something Docker Hub does for you server-side. LIMIT/
+SAFE_LENGTH below leave real headroom under the cap: a README that lands just
+under 25000 today grows past it the next time a field gains a longer
+description, and by then this margin is the only thing standing between
+"still fits" and the release workflow's PATCH call failing outright.
+
+Neither generated chart READMEs nor hand-authored service READMEs under
+services/*, tools/*, libs/* have a trim point built in, so a raw character
+cutoff here could land mid-sentence or leave an odd number of ``` fences,
+folding everything after into one unreadable code block. This cuts on the
+last full line instead, closes a dangling fence, and appends a note pointing
+at the untruncated file on GitHub.
 """
 
 import sys
 
-# Same limit/margin as deploy/src/create_charts.py's README_LENGTH_LIMIT /
-# README_SAFE_LENGTH - see that module for how the real Docker Hub cap was
-# confirmed (~24998 chars in practice) and why a real margin below it matters.
 LIMIT = 25000
 SAFE_LENGTH = 22000
 
