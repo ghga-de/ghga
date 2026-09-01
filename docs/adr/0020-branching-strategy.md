@@ -82,7 +82,6 @@ This would, in essence, give the same end result as the proposed strategy, excep
 It would automate the role of `dev` but in exchange we would lose the concrete state tracking and conceptual simplicity offered by an actual branch.
 This approach might be revisited in the future as part of a production CD strategy when the GHGA platform has gelled more and changes are less disruptive/conflicting.
 - **Release branches per version** (full Git Flow). Rejected: with controlled platform releases and hotfixes applied to the latest release only, `main` already serves that role; per-version maintenance branches are not something we want or have the user base to justify. We tried doing this with `hexkit` early on, up through about v3 or v4, but it got tedious quickly.
-- **`dev` only, with releases tagged there.** Rejected: it is the status quo renamed — the point is a branch whose HEAD is a release.
 
 ## Final Note
 The strategy adopted through this ADR is not binding, it's merely a commitment to *try it out* long enough to be able to judge its suitability for our needs.
