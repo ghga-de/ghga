@@ -27,9 +27,9 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
 - **Platform version strings are always up-to-date in `dev`** but are not bound to semver.
-- **Release candidates are created from `dev`** with a Git Tag *and* a Docker Image Tag of `ghga/x.y.z-rc.n` and deployed to staging.
-- **`dev` is merged back into `main` with a merge commit** for production releases, and non-rc Image Tag is added to the appropriate* images.
-  - \* See "Future Work" for more on this.
+- **Release candidates are created from `dev`**.
+- **`dev` is merged back into `main` with a merge commit** for production releases.
+  - \* See "Open questions" for more on this.
 - **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
 
@@ -70,6 +70,8 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 These are being settled separately. None of them change the branch layout, and this ADR does not depend on any particular answer.
 
 - How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences.
+  - For the moment there will be a "small gap" in that we will rebuild images upon production release, but these can be verified through a final, confirmatory deployment to staging. 
+- Likewise, how exactly docker images are tagged.
 - Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote.
 
 ## Alternatives considered
