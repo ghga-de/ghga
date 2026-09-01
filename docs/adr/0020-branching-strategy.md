@@ -26,7 +26,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`main` reflects the latest platform release.** Its HEAD is always a released state.
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
-- **Platform version strings are always up-to-date in `dev`** but are not bound to semver.
+- **Platform version strings are always up-to-date in `dev`**.
 - **Release candidates are created from `dev`**.
 - **`dev` is merged back into `main` with a merge commit** for production releases.
 - **Production images are rebuilt** after release candidates are verified in staging.
