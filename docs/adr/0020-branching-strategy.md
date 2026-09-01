@@ -61,7 +61,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 **Workflows**
 - Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a git tag cut on `dev` would fail the CI check even though everything passed.
 - `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
-- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every git tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main` unless we decide otherwise.
+- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every git tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main`.
 
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
