@@ -357,29 +357,26 @@ def _publish_order(members: list[dict]) -> list[dict]:
 
 
 def _find_member(target: str, members: list[dict]) -> dict | None:
-    """Locates one lane member by its folder path or its distribution name.
+    """Locates one lane member by its path or its distribution name.
 
-    A tag only ever spells the distribution name — `release.yaml` forwards the part of
-    `name/x.y.z` before the last `/` — but paths are what every neighbouring interface
-    speaks (`--paths`, `plan["paths"]`, the justfile), so both are accepted. Names compare
-    PEP 503-normalised, because the tag may say `ghga-connector` where the pyproject
-    declares `ghga_connector`.
+    Accepts both a distribution name (`hexkit`) and a path (`libs/hexkit`). Names are
+    normalized, e.g. `ghga-connector` equals `ghga_connector`.
     """
     for member in members:
         if member["path"] == target:
             return member
-    wanted = _canonical(target)
+    normalized_target_name = _canonical(target)
     for member in members:
-        if _canonical(member["package"]) == wanted:
+        if _canonical(member["package"]) == normalized_target_name:
             return member
     return None
 
 
-def _blocked_message(member: dict, blockers: list[dict]) -> str:
-    """Explains why one member cannot be released alone, and how to release it anyway.
+def _blocked_message(target: dict, blockers: list[dict]) -> str:
+    """Explains why one member cannot be released alone, and how else to release it.
 
     Both remedies are spelled out as tags that can be pushed as-is, the ordered one in
-    dependency order, because the alternative is guessing at it under release pressure.
+    dependency order.
     """
     ordered = _publish_order(blockers)
     described = [
@@ -389,14 +386,12 @@ def _blocked_message(member: dict, blockers: list[dict]) -> str:
     ]
     named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
     tags = ", ".join(f"{_canonical(m['package'])}/{m['version']}" for m in ordered)
-    is_are = "is a release candidate" if len(ordered) == 1 else "are release candidates"
     return (
-        f"{member['package']}: cannot be released on its own — it depends on {named},"
-        f" which {is_are} too. Publishing it now would put it on PyPI against library"
-        " versions the index does not serve. Either push `pypi_sweep/x.y.z` to release"
+        f"{target['package']}: cannot be released on its own — it depends on release,"
+        f" candidate(s) {named}. Either push `pypi_sweep/x.y.z` to release"
         " the whole train dependencies-first, or release each dependency on its own tag"
         f" first, in this order: {tags}, then"
-        f" {_canonical(member['package'])}/{member['version']}."
+        f" {_canonical(target['package'])}/{target['version']}."
     )
 
 
@@ -430,18 +425,13 @@ def _targeted_plan(
 
     selected = [m for m in publishing if m["path"] == member["path"]]
     if not selected:
-        # The sweep already worked out why it passed this member over; say that, rather
-        # than a vaguer "nothing to do". Unlike a sweep, which drops such a member and
-        # carries on, a tag naming it asked for something that cannot happen.
+        # State why the target was not selected.
         reason = next(
             (s["reason"] for s in skipped if s["path"] == member["path"]),
             "it is not a release candidate",
         )
         return [], [f"{member['package']}: nothing to publish — {reason}"]
 
-    # ADR-0004's closure-train rule, enforced for a single-member release: `internal_deps`
-    # is already the transitive closure, so an indirect dependency blocks just as a direct
-    # one does.
     blockers = [m for m in publishing if m["path"] in member["internal_deps"]]
     if blockers:
         return [], [_blocked_message(member, blockers)]
