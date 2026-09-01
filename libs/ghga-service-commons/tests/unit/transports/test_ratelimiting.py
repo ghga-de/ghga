@@ -15,6 +15,8 @@
 
 """Tests for the rate limiting transport handling of HTTP 429 responses."""
 
+from datetime import datetime, timedelta, timezone
+from email.utils import format_datetime
 from unittest.mock import AsyncMock, patch
 
 import httpx2
@@ -140,3 +142,86 @@ async def test_async_context_manager_closes_transport():
         assert isinstance(ratelimiter, AsyncRateLimitingTransport)
 
     transport.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_429_with_http_date_retry_after_sets_wait_time():
+    """A Retry-After given as an HTTP date is honored instead of crashing.
+
+    RFC 9110 allows the date form, so a compliant server sending one must not take the
+    client down with a ValueError raised out of the transport.
+    """
+    retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
+    response = httpx2.Response(
+        429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
+    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+
+    result = await ratelimiter.handle_async_request(_REQUEST)
+
+    # The date is turned into a remaining duration, so allow for clock granularity.
+    assert ratelimiter._wait_time == pytest.approx(30, abs=2)
+    assert "Should-Wait" not in result.headers
+
+
+@pytest.mark.asyncio
+async def test_429_with_past_http_date_does_not_wait():
+    """A Retry-After date that has already passed yields no wait rather than a negative one."""
+    retry_at = datetime.now(timezone.utc) - timedelta(seconds=30)
+    response = httpx2.Response(
+        429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
+    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+
+    result = await ratelimiter.handle_async_request(_REQUEST)
+
+    assert ratelimiter._wait_time == 0
+    assert result.headers["Should-Wait"] == "true"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", ["garbage", "", "inf", "nan"])
+async def test_429_with_unusable_retry_after_delegates_to_retry_layer(value: str):
+    """An unparsable or non-finite Retry-After is treated as if the header were absent.
+
+    Signaling Should-Wait hands control to the retry layer's own backoff, which is the
+    same path a 429 without the header takes.
+    """
+    response = httpx2.Response(429, headers={"Retry-After": value})
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+
+    result = await ratelimiter.handle_async_request(_REQUEST)
+
+    assert ratelimiter._wait_time == 0
+    assert result.headers["Should-Wait"] == "true"
+
+
+@pytest.mark.asyncio
+async def test_429_with_repeated_retry_after_takes_the_longest():
+    """Repeated Retry-After headers resolve to the longest wait, not to header order.
+
+    `httpx2.Headers.items()` joins repeats into one comma separated string, so reading
+    the values individually is what keeps this parsable at all.
+    """
+    response = httpx2.Response(
+        429, headers=[("Retry-After", "120"), ("Retry-After", "5")]
+    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+
+    result = await ratelimiter.handle_async_request(_REQUEST)
+
+    assert ratelimiter._wait_time == 120.0
+    assert "Should-Wait" not in result.headers
+
+
+@pytest.mark.asyncio
+async def test_429_with_repeated_retry_after_ignores_unusable_values():
+    """A malformed repeat cannot suppress a usable sibling value."""
+    response = httpx2.Response(
+        429, headers=[("Retry-After", "garbage"), ("Retry-After", "45")]
+    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+
+    await ratelimiter.handle_async_request(_REQUEST)
+
+    assert ratelimiter._wait_time == 45.0
