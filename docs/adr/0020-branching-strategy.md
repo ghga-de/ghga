@@ -27,9 +27,10 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
 - **Platform version strings are always up-to-date in `dev`**.
-- **Release candidates are created from `dev`**.
-- **`dev` is merged back into `main` with a merge commit** for production releases.
+- **Release candidates are created from `dev`**, where the pre-release git tag is cut.
+- **`dev` is merged back into `main` with a merge commit** for production releases, and the platform release git tag is cut on `main`.
 - **Production images are rebuilt** after release candidates are verified in staging.
+  - The rebuilt images then get a final, confirmatory deployment to staging, so the images production runs have themselves been deployed there, not just their release candidates.
   - See "Open questions" for more on this.
 - **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
@@ -58,9 +59,9 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - `no-commit-to-branch` in `.pre-commit-config.yaml` only guards `main`, it should guard `dev` too. Its comment ("this repo has only `main`") and the matching note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
 
 **Workflows**
-- Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a tag cut on `dev` would fail the CI check even though everything passed.
+- Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a git tag cut on `dev` would fail the CI check even though everything passed.
 - `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
-- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main` unless we decide otherwise.
+- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every git tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main` unless we decide otherwise.
 
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
