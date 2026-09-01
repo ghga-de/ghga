@@ -148,9 +148,8 @@ class ApiMock:
     def patch_httpx_module(self, monkeypatch: MonkeyPatch) -> None:
         """Route the calls made through the `httpx2` module itself to this mock.
 
-        Code that builds its own client, or calls `httpx2.get` and friends, takes no
-        transport and so cannot be pointed at a mock from the outside. This replaces
-        those module level entry points for the duration of the test.
+        Code building its own client, or calling `httpx2.get`, takes no transport and
+        so cannot be pointed at a mock. This replaces those entry points for the test.
         """
         transport = self.as_transport()
         # bound before patching, so the replacements below don't call themselves
@@ -256,15 +255,16 @@ class MonkeyPatch(Protocol):
 
     def setattr(self, target: Any, name: Any, value: Any = ...) -> None:
         """Replace an attribute for the duration of the test."""
-        ...
 
 
 class RoutingTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
-    """Hands each request to the mock of the API it is addressed to.
+    """A transport serving each request from the mock whose base URL it matches.
 
-    Requests that no mock claims are refused, unless a `fallback` transport is given to
-    take them - `httpx2.AsyncHTTPTransport()` to let them out to the network as usual,
-    or a transport of your own to decide per request.
+    Mount it on a client that talks to several mocked APIs, or to a mocked API and the
+    real network. Mocks are tried in the order given, and a request matching none of
+    them raises. Pass a `fallback` transport to take those instead - an
+    `httpx2.HTTPTransport()` or `httpx2.AsyncHTTPTransport()`, matching the kind of
+    client in use, sends them out to the network.
     """
 
     def __init__(
