@@ -61,7 +61,6 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a tag cut on `dev` would fail the CI check even though everything passed.
 - `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
 - `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main` unless we decide otherwise.
-- [ADR-0004](0004-versioning-and-release-by-tag.md) might need an amendment once those questions are settled since that's where release tagging/image publishing/promotion belong.
 
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
@@ -73,6 +72,7 @@ These are being settled separately. None of them change the branch layout, and t
 - How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences.
 - Likewise, how exactly docker images are tagged.
 - Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote.
+- [ADR-0004](0004-versioning-and-release-by-tag.md) might need an amendment once the above questions are settled since that's where release tagging/image publishing/promotion belong.
 
 ## Alternatives considered
 - **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
