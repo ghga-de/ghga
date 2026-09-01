@@ -331,7 +331,7 @@ jobs:
         if: ${{ inputs.push }}
       - name: Sign the published image (keyless)
         if: ${{ inputs.push }}
-        run: cosign sign --new-bundle-format=false --registry-referrers-mode=legacy --use-signing-config=false --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+        run: cosign sign --yes --recursive "${{ env.REGISTRY }}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
       # See dev-images.yaml. Gated like signing: no pushed digest to attest in build-only mode.
       - name: Attest SBOM + provenance (keyless)
         if: ${{ inputs.push }}
