@@ -37,7 +37,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 
 ## Consequences
 - We gain a clear division between deployed state (`main`) and work-in-progress (`dev`).
-- Releasing is a merge commit, and can be prepared and reviewed as a pull request.
+- Releasing is a merge commit plus a tag, and can be prepared and reviewed as a pull request.
 - Two branches must be kept in sync. Hotfix might have to be merged back into `dev` (only if applicable).
 - Work merged to `dev` is not released until the next release merge.
 - We gain the ability to continuously deploy from `dev` while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
