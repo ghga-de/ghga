@@ -30,7 +30,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **Release candidates are created from `dev`**.
 - **`dev` is merged back into `main` with a merge commit** for production releases.
 - **Production images are rebuilt** after release candidates are verified in staging.
-  - \* See "Open questions" for more on this.
+  - See "Open questions" for more on this.
 - **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
 
