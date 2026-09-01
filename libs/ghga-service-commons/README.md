@@ -77,7 +77,7 @@ Serve several APIs from one client, and let real traffic through:
 transport = RoutingTransport(items, boxes, fallback=httpx2.AsyncHTTPTransport())
 ```
 
-Redirect code that builds its own client or directly uses httpx2 methods:
+Mock code that builds its own client or directly uses httpx2 methods:
 
 ```python
 items.patch_httpx_module(monkeypatch)
