@@ -71,7 +71,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 These are being settled separately. None of them change the branch layout.
 
 - How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences. For now we are rebuilding images, but it is a temporary solution until this question is answered.
-- Likewise, how exactly docker images are tagged.
+- Likewise, how a promoted image would be tagged.
 - Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote.
 - [ADR-0004](0004-versioning-and-release-by-tag.md) was amended on 2026-09-01 for the pre-release cut moving to `dev` and the per-lane branch gate. It will need a further amendment if the questions above resolve toward promoting digests, since that's where release tagging/image publishing/promotion belong.
 
