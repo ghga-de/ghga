@@ -256,8 +256,8 @@ def fail_to_connect(reason: str = "All connection attempts failed") -> ResponseH
 def fail_with(error: Exception) -> ResponseHandler:
     """Make a handler that raises `error` instead of answering.
 
-    Used to simulate transport level failures. For `httpx2.RequestError` subclasses the
-    client attaches the offending request to the exception on its way out.
+    For `httpx2.RequestError` subclasses the client attaches the offending request on
+    the way out.
     """
 
     def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
@@ -270,12 +270,10 @@ def fail_with(error: Exception) -> ResponseHandler:
 def httpyexpect_error_handler(
     request: httpx2.Request, exception: HttpException
 ) -> httpx2.Response:
-    """Answer with an `HttpException` rather than letting it propagate.
+    """Custom error handler for httpyexpect types.
 
-    `MockRouter` raises one when no endpoint matches a request, or when a path variable
-    doesn't fit the type its endpoint declares. Pass this to the router to have those
-    turned into responses, so an unmocked call reaches the service's own error handling
-    instead of the exception surfacing straight out of the transport:
+    `MockRouter` raises for an unmatched request or an uncastable path variable.
+    Pass this to the router so those reach the service's error handling as responses:
     ```
     MockRouter(
         exception_handler=httpyexpect_error_handler,
@@ -298,13 +296,7 @@ def httpyexpect_error_handler(
 def httpyexpect_body(
     exception_id: str, description: str = "", data: dict[str, Any] | None = None
 ) -> dict[str, Any]:
-    """Build the body a GHGA service sends for an error, in the httpyexpect schema.
-
-    Pass it to `respond` to have an endpoint answer with such an error:
-    ```
-    ekss.on_get_envelope = respond(404, json=httpyexpect_body("secretNotFoundError"))
-    ```
-    """
+    """Build the body of a httpyexpect response."""
     return {
         "exception_id": exception_id,
         "description": description,
@@ -313,10 +305,10 @@ def httpyexpect_body(
 
 
 def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
-    """Make a handler that answers consecutive requests with `handlers`, in order.
+    """Build a handler that answers consecutive requests with `handlers`, in order.
 
-    Once the handlers are used up, any further request is an error - use this only
-    where the exact number of requests is part of what the test asserts.
+    A request past the last handler is an error, so use this only where the number of
+    requests is part of the assertion.
     """
     remaining = list(handlers)
 
