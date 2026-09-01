@@ -69,9 +69,8 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 
 These are being settled separately. None of them change the branch layout, and this ADR does not depend on any particular answer.
 
-- How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The constraint either answer has to satisfy is that production runs the artifact staging tested — the platform version is baked into the image at build time ([ADR-0004](0004-versioning-and-release-by-tag.md)), so a rebuild is not equivalent to a promotion.
+- How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences.
 - Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote.
-- Whether (and how) to reuse release candidate images in production after they are verified in staging or rebuild them. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences.
 
 ## Alternatives considered
 - **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
