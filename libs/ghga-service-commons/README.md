@@ -60,7 +60,7 @@ items.on_get_item = fail_to_connect()
 items.on_get_item = in_sequence(respond(503), respond(200))
 
 
-async def from_the_fixture(request: httpx2.Request, **path_variables: str):
+async def custom_function(request: httpx2.Request, **path_variables: str):
     """Any callable taking the request and the path variables works.
 
     An `async` one needs an async client to drive it.
@@ -68,7 +68,7 @@ async def from_the_fixture(request: httpx2.Request, **path_variables: str):
     return httpx2.Response(200, json=known_items[path_variables["item_id"]])
 
 
-items.on_get_item = from_the_fixture
+items.on_get_item = custom_function
 ```
 
 Serve several APIs from one client, and let real traffic through:
