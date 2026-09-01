@@ -27,45 +27,61 @@ Thereby, you may specify following extra(s):
 - `auth`: dependencies needed for dealing with authentication and authorization
 
 # Mocking the APIs a service calls
-Outbound HTTP calls are tested against a mock of the API they go to, rather than
-against the network. `ghga_service_commons.api.mock_router` routes requests to the
-endpoints registered on it, and `ghga_service_commons.api.mock_api` builds the mocks
-themselves on top of it.
 
-Model an API once, declaring each endpoint and how it answers when a test says nothing
-about it:
+Declare an API once with default responses for the endpoints under test:
+
 ```python
 from ghga_service_commons.api.mock_api import ApiMock, endpoint, respond
 
 
-class EkssApiMock(ApiMock):
-    """A mock of the EKSS API endpoints that this service talks to."""
+class ItemsApiMock(ApiMock):
+    """A mock of the item API endpoints that the service under test calls."""
 
-    on_get_envelope = endpoint(
-        "GET", "/secrets/{secret_id}/envelopes", respond(200, json={"content": "..."})
-    )
-    on_delete_secret = endpoint("DELETE", "/secrets/{secret_id}", respond(204))
+    on_get_item = endpoint("GET", "/items/{item_id}", respond(200, json={"size": 3}))
+    on_delete_item = endpoint("DELETE", "/items/{item_id}", respond(204))
+    on_post_item = endpoint("POST", "/items")  # no default: refuses to answer
 ```
-A test then states only what it cares about, and mounts the mock on the client under
-test:
+
+Mount it on the client under test and define test case specific behavior:
+
 ```python
-ekss = EkssApiMock(base_url=str(config.ekss_api_url))
-ekss.on_delete_secret = respond(500)
+items = ItemsApiMock(base_url="http://items.test")
+items.on_delete_item = respond(500)
 
-async with httpx2.AsyncClient(transport=ekss.as_transport()) as client:
+async with httpx2.AsyncClient(transport=items.as_transport()) as client:
     ...
-
-assert str(ekss.last_request.url).endswith("/secrets/some-id")
 ```
-An endpoint declared without a default refuses to make up a response, so a test never
-gets one by accident. Besides `respond`, the module has `fail_to_connect`, `fail_with`
-and `in_sequence`; anything else taking the request, plus the endpoint's path variables
-as keyword arguments, works as a handler too, `async` ones included.
 
-The transport returned by `as_transport()` answers every request, so a test using it
-cannot reach the network. Where one client talks to several APIs, or also has to carry
-real traffic, mount a `RoutingTransport` over the mocks instead. Code that builds its
-own client, and hence takes no transport, is redirected with `patch_httpx_module`.
+Define custom failures or a chain of handlers to emulate a sequence of responses
+
+```python
+items.on_get_item = fail_with(httpx2.ReadTimeout("too slow"))
+items.on_get_item = fail_to_connect()
+items.on_get_item = in_sequence(respond(503), respond(200))
+
+
+async def from_the_fixture(request: httpx2.Request, **path_variables: str):
+    """Any callable taking the request and the path variables works.
+
+    An `async` one needs an async client to drive it.
+    """
+    return httpx2.Response(200, json=known_items[path_variables["item_id"]])
+
+
+items.on_get_item = from_the_fixture
+```
+
+Serve several APIs from one client, and let real traffic through:
+
+```python
+transport = RoutingTransport(items, boxes, fallback=httpx2.AsyncHTTPTransport())
+```
+
+Redirect code that builds its own client or directly uses httpx2 methods:
+
+```python
+items.patch_httpx_module(monkeypatch)
+```
 
 ## Development
 
