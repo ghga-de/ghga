@@ -7,6 +7,16 @@
 # only a version bump clears it.
 # If PyPI cannot be reached, the run fails.
 #
+# Two modes, chosen by the tag and passed in by release.yaml:
+#
+#   sweep     (pypi_sweep/x.y.z) — every candidate goes out together, dependencies first.
+#   targeted  (name/x.y.z)       — that member alone. Refused when a member of its own
+#                                  closure is a candidate too, because publishing it then
+#                                  would put it on PyPI against library versions the index
+#                                  does not serve (ADR-0004's closure-train rule). The
+#                                  error names both ways out: sweep, or release the
+#                                  dependencies on their own tags first.
+#
 # The whole train is built and checked, then uploaded to TestPyPI, then to PyPI.
 #
 # Because the train is built once, the artifacts TestPyPI accepted are byte-for-byte the
@@ -18,6 +28,22 @@ name: pypi-publish
 
 on:
   workflow_call:
+    inputs:
+      # No default, deliberately. `sweep` is the value that fails *open*: were this input
+      # ever to go unforwarded, the run would publish every pending lane member instead of
+      # the one the tag named — and nothing published can be unpublished. `required: true`
+      # turns that omission into a workflow-call failure before any job starts. Safe to
+      # require because release.yaml's `route` always assigns sweep or targeted on this
+      # lane (mode is empty only for platform tags, which never reach here).
+      mode:
+        description: "sweep = every candidate; targeted = only `package`"
+        type: string
+        required: true
+      package:
+        description: "the member the tag named; unread in sweep mode"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -39,9 +65,40 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       # The plan takes every member the index is behind on, orders the set
       # dependencies-first, and fails on any violation
+      #
+      # MODE and PACKAGE arrive through env, not `${{ }}`: interpolation pastes a value
+      # that ultimately comes from a pushed tag into the script as text, where shell
+      # syntax in it would run. As variables they are data (see release.yaml's `route`).
       - id: plan
+        env:
+          MODE: ${{ inputs.mode }}
+          PACKAGE: ${{ inputs.package }}
         run: |
-          plan=$(uv run --script scripts/pypi_members.py --plan)
+          set -euo pipefail
+
+          # `!= sweep`, not `== targeted`. workflow_call inputs have no `type: choice`
+          # (that is workflow_dispatch-only), so `mode` is a free string and nothing at
+          # the boundary rejects a typo. Written the other way round, any unrecognised
+          # value would fall through to a sweep — degrading toward the irreversible
+          # direction. This way only the exact string `sweep` sweeps, and everything else
+          # lands in targeted mode, which checks itself: a mangled mode on a sweep tag
+          # carries `package: pypi_sweep`, which is no lane member, so the plan errors.
+          target_args=()
+          if [ "$MODE" != "sweep" ]; then
+            # Not about typos — this is what makes leaning on the comparison above safe.
+            # Without it a targeted run would pass `--target ""`, matching no member and
+            # failing with a misleading "not a PyPI-lane member".
+            if [ -z "$PACKAGE" ]; then
+              echo "::error::mode '$MODE' needs a package to target, but none was given"
+              exit 1
+            fi
+            target_args=(--target "$PACKAGE")
+            echo "targeted release: $PACKAGE"
+          else
+            echo "sweep release: every member the index is behind on"
+          fi
+
+          plan=$(uv run --script scripts/pypi_members.py --plan "${target_args[@]}")
           echo "$plan" | python3 -m json.tool
 
           errors=$(echo "$plan" | python3 -c "
