@@ -28,6 +28,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
 - **A platform release merges `dev` into `main`**, and the release tag is applied on `main`.
 - **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release.
+- **Where release and pre-release tags are cut, and how a tested candidate reaches production, is left open.** See [Open questions](#open-questions). The branch layout works with either answer, so it is not settled here.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
 
 ## Consequences
@@ -35,7 +36,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - Releasing is a merge plus a tag, and can be prepared and reviewed as a pull request.
 - Two branches must be kept in sync. Every hotfix must be merged back into `dev`, lest the next release be cursed.
 - Work merged to `dev` is not released until the next release merge.
-- We gain the ability to continuously deploy to staging from `dev`, including the platform release candidates, which now come from `dev` — while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
+- We gain the ability to continuously deploy from `dev` while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
 - PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needs updating is the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
 
 ### Necessary changes
@@ -53,13 +54,22 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - `no-commit-to-branch` in `.pre-commit-config.yaml` only guards `main`, it should guard `dev` too. Its comment ("this repo has only `main`") and the matching note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
 
 **Workflows**
-- Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, an rc tag on `dev` would fail the CI check even though everything passed.
+- Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a tag cut on `dev` would fail the CI check even though everything passed.
 - `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
-- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every tag, rc and PyPI ones included. It has to move after the routing and go per-lane: final platform tags on `main` only, rc and PyPI tags on `main` or `dev`. The CI-is-green half doesn't care about branches and can stay as-is.
-- [ADR-0004](0004-versioning-and-release-by-tag.md) needs an amendment to match, since it says releases come from `main`, treats `ghga/X.Y.Z-rc.N` as a normal platform tag, and has libs releasing purely on demand. That was written when `main` was all we had. `release.yaml`'s header comment needs the same treatment.
+- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every tag, rc and PyPI ones included. Whether it stays as-is or has to move depends on where each kind of tag ends up being cut, which is still open.
+- [ADR-0004](0004-versioning-and-release-by-tag.md) might need an amendment once those questions are settled since that's where release tagging/image publishing/promotion belong.
 
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
+
+## Open questions
+
+These are being settled separately. None of them change the branch layout, and this ADR does not depend on any particular answer.
+
+- Whether release candidates are cut from `dev` or from `main`.
+- How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The constraint either answer has to satisfy is that production runs the artifact staging tested — the platform version is baked into the image at build time ([ADR-0004](0004-versioning-and-release-by-tag.md)), so a rebuild is not equivalent to a promotion.
+- Whether `dev` reaches `main` as a merge commit or a squash, and how a release is then tied back to the commit its images were built from.
+- Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote.
 
 ## Alternatives considered
 - **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
