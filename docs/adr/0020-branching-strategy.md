@@ -27,9 +27,8 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
 - **A platform release merges `dev` into `main`**, and the release tag is applied on `main`.
-- **Platform code hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`** so the fix is never lost on the next release.
+- **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
-- **Release tags are cut on `main`, pre-release and PyPI-lane tags may be cut on `dev`.** `ghga/X.Y.Z` on `main` is what makes `main` the released state. A `ghga/X.Y.Z-rc.N` staging cut is just a *candidate*, so it is tagged on `dev` and staging deploys from there. PyPI-lane tags for libraries/tools are cut on `main`, published alongside the rest of the platform. Lib/tool hotfixes are the exception and are cut on `dev`. Merging one into `main` without the associated platform code changes would leave `main` misrepresenting the released platform.
 
 ## Consequences
 - We gain a clear division between deployed state (`main`) and work-in-progress (`dev`).
