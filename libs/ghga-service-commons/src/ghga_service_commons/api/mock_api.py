@@ -104,6 +104,25 @@ class ApiMock:
                 partial(declared.handler_for, self),
             )
 
+    def _register(
+        self, method: str, path: str, handler_of: Callable[[], ResponseHandler]
+    ) -> None:
+        """Register an endpoint answering with whatever `handler_of` returns.
+
+        Looked up per request, so a newly assigned handler takes effect at once.
+        """
+
+        def endpoint_function(
+            request: httpx2.Request, **path_variables: str
+        ) -> httpx2.Response | Awaitable[httpx2.Response]:
+            """Record the request and let the current handler answer it."""
+            self.requests.append(request)
+            return handler_of()(request, **path_variables)
+
+        # dynamically register a function on the provided router
+        register = getattr(self.router, method.lower())
+        register(re.escape(self.base_url) + path)(endpoint_function)
+
     def add(
         self, *, method: str, path: str, handler: ResponseHandler | None = None
     ) -> MockedEndpoint:
@@ -114,6 +133,17 @@ class ApiMock:
         mocked_endpoint = MockedEndpoint(handler or respond())
         self._register(method, path, lambda: mocked_endpoint)
         return mocked_endpoint
+
+    def as_transport(self) -> httpx2.MockTransport:
+        """Return a transport that answers from this mock."""
+        return self.router.as_transport()
+
+    @property
+    def last_request(self) -> httpx2.Request:
+        """The most recent request that reached this mock."""
+        if not self.requests:
+            raise AssertionError(f"No request reached the {type(self).__name__}")
+        return self.requests[-1]
 
     def patch_httpx_module(self, monkeypatch: MonkeyPatch) -> None:
         """Route the calls made through the `httpx2` module itself to this mock.
@@ -147,36 +177,6 @@ class ApiMock:
         monkeypatch.setattr(httpx2, "Client", mocked_client)
         for method in ("delete", "get", "head", "options", "patch", "post", "put"):
             monkeypatch.setattr(httpx2, method, partial(mocked_request, method.upper()))
-
-    def as_transport(self) -> httpx2.MockTransport:
-        """Return a transport that answers from this mock."""
-        return self.router.as_transport()
-
-    @property
-    def last_request(self) -> httpx2.Request:
-        """The most recent request that reached this mock."""
-        if not self.requests:
-            raise AssertionError(f"No request reached the {type(self).__name__}")
-        return self.requests[-1]
-
-    def _register(
-        self, method: str, path: str, handler_of: Callable[[], ResponseHandler]
-    ) -> None:
-        """Register an endpoint answering with whatever `handler_of` returns.
-
-        Looked up per request, so a newly assigned handler takes effect at once.
-        """
-
-        def endpoint_function(
-            request: httpx2.Request, **path_variables: str
-        ) -> httpx2.Response | Awaitable[httpx2.Response]:
-            """Record the request and let the current handler answer it."""
-            self.requests.append(request)
-            return handler_of()(request, **path_variables)
-
-        # dynamically register a function on the provided router
-        register = getattr(self.router, method.lower())
-        register(re.escape(self.base_url) + path)(endpoint_function)
 
 
 class Endpoint:
@@ -278,6 +278,18 @@ class RoutingTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
         self._routes = [(mock.base_url, mock.router.as_transport()) for mock in mocks]
         self._fallback = fallback
 
+    def _transport_for(
+        self, request: httpx2.Request
+    ) -> httpx2.BaseTransport | httpx2.AsyncBaseTransport:
+        """Find the transport that may answer the given request."""
+        url = str(request.url)
+        for base_url, transport in self._routes:
+            if url.startswith(base_url):
+                return transport
+        if self._fallback is None:
+            raise AssertionError(f"Request to unmocked URL {url}")
+        return self._fallback
+
     async def aclose(self) -> None:
         """Close the transport taking the requests that no mock claims."""
         if isinstance(self._fallback, httpx2.AsyncBaseTransport):
@@ -301,18 +313,6 @@ class RoutingTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
         if not isinstance(transport, httpx2.BaseTransport):
             raise TypeError(f"{type(transport).__name__} cannot serve a sync client")
         return transport.handle_request(request)
-
-    def _transport_for(
-        self, request: httpx2.Request
-    ) -> httpx2.BaseTransport | httpx2.AsyncBaseTransport:
-        """Find the transport that may answer the given request."""
-        url = str(request.url)
-        for base_url, transport in self._routes:
-            if url.startswith(base_url):
-                return transport
-        if self._fallback is None:
-            raise AssertionError(f"Request to unmocked URL {url}")
-        return self._fallback
 
 
 def _declared_endpoints(mock_class: type) -> list[Endpoint]:
