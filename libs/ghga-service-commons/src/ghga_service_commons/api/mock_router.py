@@ -69,8 +69,7 @@ def _url_to_match(request: httpx2.Request) -> str:
 def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     """Retrieve the typed parameter info from function signature minus return type.
 
-    Variadic parameters are left out: a `**kwargs` parameter stands for whatever path
-    variables the endpoint does not name, and those are passed on without being cast.
+    Variadic types are not parsed for type coercion later on.
 
     This function is not intended to be used outside the module.
     """
@@ -102,6 +101,7 @@ class RegisteredEndpoint(BaseModel):
     url_pattern: str
     endpoint_function: Callable
     signature_parameters: dict[str, Any]
+    accepts_path_variables: bool
 
 
 ExpectedExceptionTypes = TypeVar("ExpectedExceptionTypes", bound=Exception)
@@ -123,7 +123,8 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
     An endpoint function may instead collect the path variables it does not name in a
     `**kwargs` parameter, which arrive there as strings. That is what lets one function
-    serve endpoints with differing path variables, as `ApiMock` in `mock_api` does.
+    serve endpoints with differing path variables, as `ApiMock` in `mock_api` does. Call
+    it `**path_variables`, so the signature says what it collects.
 
     Patterns are matched against the request URL without its query string, so an
     endpoint serves the calls to its path whether they carry query parameters or not.
@@ -251,6 +252,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
             url_pattern=url_pattern,
             endpoint_function=endpoint_function,
             signature_parameters=signature_parameters,
+            accepts_path_variables=_accepts_path_variables(endpoint_function),
         )
 
         self._methods[method].append(registered_endpoint)
@@ -304,6 +306,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     def _convert_parameter_types(
         parsed_url_parameters: dict[str, str],
         signature_parameters: dict[str, Any],
+        accepts_path_variables: bool,
         request: httpx2.Request,
     ) -> dict[str, Any]:
         """Get type info for function parameters.
@@ -319,10 +322,16 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
                 request still in string format (values).
             signature_parameters:
                 A dict containing type information for the endpoint function's parameters.
+            accepts_path_variables:
+                Whether the endpoint function collects the path variables it does not
+                name in a `**kwargs` parameter.
             request:
                 The request object.
 
         Raises:
+            TypeError:
+                When a path variable has no parameter to go into. Registration rules
+                this out, so it only comes up for endpoints assembled by hand.
             HttpException:
                 (with status 422) when a string value in the request URL cannot
                 be converted/cast to the type specified by the type-hint for the
@@ -332,8 +341,13 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         typed_parameters: dict[str, Any] = {}
         for parameter_name, value in parsed_url_parameters.items():
             if parameter_name not in signature_parameters:
-                # only an endpoint with `**kwargs` gets here, since every other one
-                # must name each path variable: hand the value over as the string it is
+                if not accepts_path_variables:
+                    raise TypeError(
+                        f"Path variable '{parameter_name}' has no parameter to go "
+                        + f"into for path '{request.url.path}'"
+                    )
+                # collected by the `**kwargs` parameter, so there is no type hint to
+                # cast to: hand the value over as the string it is
                 typed_parameters[parameter_name] = value
                 continue
 
@@ -422,6 +436,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         typed_parameters = self._convert_parameter_types(
             parsed_url_parameters=parsed_url_parameters,
             signature_parameters=endpoint.signature_parameters,
+            accepts_path_variables=endpoint.accepts_path_variables,
             request=request,
         )
 

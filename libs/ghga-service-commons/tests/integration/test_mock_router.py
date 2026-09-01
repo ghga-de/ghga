@@ -239,6 +239,22 @@ def test_path_variables_the_endpoint_does_not_name_are_rejected():
             """Take the request, but still no item name."""
 
 
+def test_unnamed_path_variable_without_a_collector_is_reported():
+    """Make sure a path variable with nowhere to go is called out.
+
+    Registration rejects this, so only an endpoint assembled by hand can get here.
+    """
+    with pytest.raises(
+        TypeError, match=r"Path variable 'item_name' has no parameter to go into"
+    ):
+        MockRouter._convert_parameter_types(
+            parsed_url_parameters={"item_name": "ball"},
+            signature_parameters={},
+            accepts_path_variables=False,
+            request=httpx2.Request("GET", f"{BASE_URL}/items/ball"),
+        )
+
+
 def test_handler_errors_filtering():
     """Make sure only the specified errors are passed to the handler.
 
