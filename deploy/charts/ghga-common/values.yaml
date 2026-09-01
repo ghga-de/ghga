@@ -6,10 +6,8 @@ exports:
     global:
       imageRegistry: ""
       imagePullSecrets: []
-      storageClass: ""
       _topics: {}
 
-    command: ["sh", "-c"]
     commandPrefix: /usr/local/bin/
     commandStyle: shell
 
@@ -32,12 +30,13 @@ exports:
 
     namespaceOverride: ""
 
-    clusterDomain: cluster.local
-
-    annotations: {}
-
-    labels: {}
-
+    # Merged onto every rendered resource's metadata - Deployment, CronJob, Job,
+    # Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount,
+    # NetworkPolicy, KafkaUser. There is deliberately no separate, narrower
+    # per-workload-only labels/annotations value: Service is the one resource that
+    # regularly needs its own (LB/ingress-controller annotations, scrape labels,
+    # ...), and that's what service.labels/service.annotations below are for: for
+    # anything else, add it here.
     commonLabels: {}
 
     commonAnnotations: {}
@@ -64,6 +63,7 @@ exports:
     migrationInitContainer:
       enabled: false
       image: ""
+      imagePullPolicy: null
       executable: ""
       executableArgs: []
       env: []
@@ -104,12 +104,19 @@ exports:
 
     podRestartPolicy: Always
 
-    ports:
-      enabled: false
-      ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
+    # Both the container spec's own `ports:` and the Service's `ports:` (and
+    # NetworkPolicy's, if enabled) are built from this single map - one place to
+    # keep in sync, not two. name -> port (bare number = TCP; {port, protocol} for
+    # anything else) - a map, not a list, so a chart-values.yaml overlay can add or
+    # override a single named port without repeating every other one (Helm/this
+    # repo's own value composition merges map keys but replaces lists wholesale).
+    # That cuts the other way too: `containerPorts: {}` in an overlay does NOT
+    # clear this default - merging an empty map into {http: 8080} is still
+    # {http: 8080}. To turn a default port off, null it by name instead:
+    # `containerPorts: {http: null}` (Helm removes a key entirely when an
+    # overlay sets it to null, rather than merging null in as a value).
+    containerPorts:
+      http: 8080
 
     livenessProbe:
       enabled: false
@@ -125,8 +132,17 @@ exports:
       initialDelaySeconds: 30
       periodSeconds: 15
 
+    # Like livenessProbe/readinessProbe above, `enabled` alone isn't enough to render
+    # anything: the template only emits a probe when there's at least one field besides
+    # `enabled` to render. tcpSocket/periodSeconds/failureThreshold below exist so
+    # `startupProbe.enabled: true` actually works out of the box, the same way it does
+    # for its two siblings - not just a documented no-op.
     startupProbe:
       enabled: false
+      tcpSocket:
+        port: 8080
+      periodSeconds: 10
+      failureThreshold: 30
 
     containerSecurityContext:
       enabled: true
@@ -165,11 +181,9 @@ exports:
     service:
       enabled: true
       type: ClusterIP
-      ports:
-        - name: http
-          protocol: TCP
-          port: 8080
-          targetPort: http
+      # Also applied to DestinationRule, which shares the Service's own address.
+      labels: {}
+      annotations: {}
 
     serviceAccount:
       create: true

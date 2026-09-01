@@ -538,7 +538,7 @@ jobs:
             jq -n --arg repo "${name}-chart" \
                   --arg readme "deploy/charts/${name}/README.md" \
                   --arg description "$(yq '.description' "deploy/charts/${name}/Chart.yaml")" \
-                  --arg source_url "https://github.com/ghga-de/ghga/tree/main/deploy/charts/${name}" \
+                  --arg source_url "https://github.com/ghga-de/ghga/blob/main/deploy/charts/${name}/README.md" \
                   '{repo: $repo, readme: $readme, description: $description, source_url: $source_url}'
           done < dist/manifest.txt | jq -s '.' | python3 scripts/update_dockerhub_overview.py
       - name: Summary

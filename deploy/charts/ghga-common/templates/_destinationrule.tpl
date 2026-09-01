@@ -7,6 +7,9 @@ metadata:
   name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.service.labels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.service.labels "context" $ ) | nindent 4 }}
+    {{- end }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}

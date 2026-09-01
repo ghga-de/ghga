@@ -10,6 +10,8 @@ deployment:
 
 service:
   enabled: false
+containerPorts:
+  http: null
 
 cronSchedule: "0 0 1 1 0"
 

@@ -14,14 +14,18 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/auth-km-jobs/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config` | The service's own configuration payload (merged with the computed kafka/api/db/service-name values below into the rendered config.yaml) | `{}` |
+
 ## Parameters
 
 | Name | Description | Value |
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
-| `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
-| `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
+| `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"auth-km-jobs"` |
@@ -32,11 +36,8 @@ for the full set of configurable values.
 | `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
 | `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
 | `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
-| `clusterDomain` | Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
-| `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
-| `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
-| `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
-| `commonAnnotations` | Annotations merged onto the same broad set of resources as commonLabels | `{}` |
+| `commonLabels` | Labels merged onto every rendered resource's metadata - Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount, NetworkPolicy, KafkaUser. No separate, narrower per-workload-only value: use service.labels below for Service/DestinationRule-only labels | `{}` |
+| `commonAnnotations` | Annotations merged onto the same set of resources as commonLabels (see there); use service.annotations below for Service/DestinationRule-only annotations | `{}` |
 | `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
 | `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/auth-km-jobs"` |
 | `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
@@ -50,6 +51,7 @@ for the full set of configurable values.
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
 | `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
 | `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
+| `migrationInitContainer.imagePullPolicy` | imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset | `null` |
 | `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `""` |
 | `migrationInitContainer.executableArgs` |  | `[]` |
 | `migrationInitContainer.env` | Extra env vars for just the migration init container | `[]` |
@@ -72,8 +74,7 @@ for the full set of configurable values.
 | `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `ports.enabled` | Render the container's `ports` list below | `false` |
-| `ports.ports` |  | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
+| `containerPorts` | Container ports, name -> port (bare number = TCP; {port, protocol} for anything else). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one map to keep in sync, not several. A map, not a list, so an overlay can add/override one named port without repeating the rest. Empty = no ports declared anywhere. | `{}` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -83,6 +84,9 @@ for the full set of configurable values.
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
+| `startupProbe.tcpSocket.port` |  | `8080` |
+| `startupProbe.periodSeconds` |  | `10` |
+| `startupProbe.failureThreshold` |  | `30` |
 | `containerSecurityContext.enabled` | Render the container securityContext from this block (minus `enabled`) | `true` |
 | `containerSecurityContext.runAsUser` |  | `1000` |
 | `containerSecurityContext.capabilities.drop` |  | `["ALL"]` |
@@ -103,7 +107,8 @@ for the full set of configurable values.
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
 | `service.enabled` | Render the Service resource | `false` |
 | `service.type` |  | `"ClusterIP"` |
-| `service.ports` |  | `[{"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"}]` |
+| `service.labels` | Extra labels on just the Service (and DestinationRule, which shares its address) | `{}` |
+| `service.annotations` | Extra annotations on just the Service (and DestinationRule, which shares its address) - e.g. cloud load-balancer or ingress-controller annotations | `{}` |
 | `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
 | `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
 | `autoscaling.minReplicas` |  | `3` |
@@ -127,7 +132,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `false` |
-| `config` | The service's own configuration payload (merged with the computed kafka/api/db/service-name values below into the rendered config.yaml) | `{}` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"auth_km_jobs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |

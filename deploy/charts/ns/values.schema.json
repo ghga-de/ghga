@@ -39,13 +39,8 @@
         },
         "imagePullSecrets": {
           "type": "array",
-          "description": "Pull secrets applied to every workload in the umbrella (same helper as above)",
+          "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
-        },
-        "storageClass": {
-          "type": "string",
-          "description": "Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here)",
-          "default": ""
         },
         "_topics": {
           "type": "object",
@@ -54,14 +49,6 @@
           "default": {}
         }
       }
-    },
-    "command": {
-      "type": "array",
-      "description": "This is the actual Kubernetes `command` field",
-      "default": [
-        "sh",
-        "-c"
-      ]
     },
     "commandPrefix": {
       "type": "string",
@@ -136,32 +123,15 @@
       "description": "Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`)",
       "default": ""
     },
-    "clusterDomain": {
-      "type": "string",
-      "description": "Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here",
-      "default": "cluster.local"
-    },
-    "annotations": {
-      "type": "object",
-      "description": "Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below)",
-      "additionalProperties": true,
-      "default": {}
-    },
-    "labels": {
-      "type": "object",
-      "description": "Extra labels added to the same resources' own metadata (narrower reach than commonLabels below)",
-      "additionalProperties": true,
-      "default": {}
-    },
     "commonLabels": {
       "type": "object",
-      "description": "Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe)",
+      "description": "Labels merged onto every rendered resource's metadata - Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount, NetworkPolicy, KafkaUser. No separate, narrower per-workload-only value: use service.labels below for Service/DestinationRule-only labels",
       "additionalProperties": true,
       "default": {}
     },
     "commonAnnotations": {
       "type": "object",
-      "description": "Annotations merged onto the same broad set of resources as commonLabels",
+      "description": "Annotations merged onto the same set of resources as commonLabels (see there); use service.annotations below for Service/DestinationRule-only annotations",
       "additionalProperties": true,
       "default": {}
     },
@@ -244,6 +214,10 @@
           "type": "string",
           "description": "Image for the migration init container; defaults to the main container's image when empty",
           "default": ""
+        },
+        "imagePullPolicy": {
+          "description": "imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset",
+          "default": null
         },
         "executable": {
           "type": "string",
@@ -372,26 +346,11 @@
       "description": "Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this)",
       "default": "Always"
     },
-    "ports": {
+    "containerPorts": {
       "type": "object",
+      "description": "Container ports, name -> port (bare number = TCP; {port, protocol} for anything else). Also the single source the Service's and NetworkPolicy's own `ports:` are derived from - a Service always exposes exactly what its container listens on here, so there's one map to keep in sync, not several. A map, not a list, so an overlay can add/override one named port without repeating the rest. Empty = no ports declared anywhere.",
       "additionalProperties": true,
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Render the container's `ports` list below",
-          "default": false
-        },
-        "ports": {
-          "type": "array",
-          "default": [
-            {
-              "name": "http",
-              "containerPort": 8080,
-              "protocol": "TCP"
-            }
-          ]
-        }
-      }
+      "default": {}
     },
     "livenessProbe": {
       "type": "object",
@@ -459,6 +418,24 @@
           "type": "boolean",
           "description": "Render a container startupProbe from this block (minus `enabled`)",
           "default": false
+        },
+        "tcpSocket": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "port": {
+              "type": "number",
+              "default": 8080
+            }
+          }
+        },
+        "periodSeconds": {
+          "type": "number",
+          "default": 10
+        },
+        "failureThreshold": {
+          "type": "number",
+          "default": 30
         }
       }
     },
@@ -588,22 +565,23 @@
         "enabled": {
           "type": "boolean",
           "description": "Render the Service resource",
-          "default": true
+          "default": false
         },
         "type": {
           "type": "string",
           "default": "ClusterIP"
         },
-        "ports": {
-          "type": "array",
-          "default": [
-            {
-              "name": "http",
-              "protocol": "TCP",
-              "port": 8080,
-              "targetPort": "http"
-            }
-          ]
+        "labels": {
+          "type": "object",
+          "description": "Extra labels on just the Service (and DestinationRule, which shares its address)",
+          "additionalProperties": true,
+          "default": {}
+        },
+        "annotations": {
+          "type": "object",
+          "description": "Extra annotations on just the Service (and DestinationRule, which shares its address) - e.g. cloud load-balancer or ingress-controller annotations",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },

@@ -14,119 +14,10 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/w
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/wkvs/values.yaml)
 for the full set of configurable values.
 
-## Parameters
+## Service Configuration
 
 | Name | Description | Value |
 |------|-------------|-------|
-| `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
-| `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella (same helper as above) | `[]` |
-| `global.storageClass` | Default StorageClass for any PVC in the umbrella (a convention from the vendored `common` library chart; this chart renders no PVC template itself, so currently unused here) | `""` |
-| `command` | This is the actual Kubernetes `command` field | `["sh", "-c"]` |
-| `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
-| `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
-| `executable` | Executable name and arguments (will be combined into a shell command) | `"wkvs"` |
-| `executableArgs` |  | `[]` |
-| `deployment.enabled` | Render the Deployment resource; disable for Job/CronJob-only charts | `true` |
-| `job.enabled` | Render a one-off Job resource alongside (or instead of) the Deployment | `false` |
-| `cronjobs.default.enabled` |  | `false` |
-| `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
-| `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
-| `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
-| `clusterDomain` | Cluster DNS domain suffix (a convention from the vendored `common` library chart); this chart's own templates hardcode `cluster.local` where they build FQDNs (e.g. mongodb.service, destinationRule), so this key isn't actually read here | `"cluster.local"` |
-| `annotations` | Extra annotations added to the Deployment/CronJob/Job/HTTPRoute/Probe resources' own metadata (narrower reach than commonAnnotations below) | `{}` |
-| `labels` | Extra labels added to the same resources' own metadata (narrower reach than commonLabels below) | `{}` |
-| `commonLabels` | Labels merged onto nearly every rendered resource's metadata (Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe) | `{}` |
-| `commonAnnotations` | Annotations merged onto the same broad set of resources as commonLabels | `{}` |
-| `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
-| `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/wkvs"` |
-| `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
-| `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the vendored `common` library chart's `common.images.image` helper) | `""` |
-| `image.pullPolicy` | imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise | `null` |
-| `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
-| `replicaCount` | Deployment replica count; ignored when autoscaling.enabled | `1` |
-| `revisionHistoryLimit` | Number of old ReplicaSets Kubernetes keeps around for rollback | `1` |
-| `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
-| `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
-| `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
-| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
-| `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
-| `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `""` |
-| `migrationInitContainer.executableArgs` |  | `[]` |
-| `migrationInitContainer.env` | Extra env vars for just the migration init container | `[]` |
-| `migrationInitContainer.resources` |  | `{}` |
-| `migrationInitContainer.volumeMounts` | Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets) | `[]` |
-| `hostAliases` | Extra `/etc/hosts` entries for the pod | `[]` |
-| `podLabels` | Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource | `{}` |
-| `podAnnotations` | Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled | `{}` |
-| `podAffinityPreset` | Pod-affinity preset name (e.g. "soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
-| `podAntiAffinityPreset` | Pod-anti-affinity preset name (vendored `common` library chart convention); "soft" spreads replicas across nodes when possible | `"soft"` |
-| `nodeAffinityPreset.type` | Node-affinity preset type ("soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
-| `nodeAffinityPreset.key` | Node label key to match | `""` |
-| `nodeAffinityPreset.values` | Node label values to match | `[]` |
-| `affinity` | Raw Kubernetes affinity spec; overrides all three presets above when set | `{}` |
-| `nodeSelector` | Plain node-selector labels for pod scheduling | `{}` |
-| `tolerations` | Taints the pod tolerates | `[]` |
-| `topologySpreadConstraints` | Kubernetes pod topology spread constraints | `[]` |
-| `priorityClassName` | PriorityClass to schedule the pod with | `""` |
-| `schedulerName` | Alternate Kubernetes scheduler to use | `""` |
-| `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
-| `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
-| `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
-| `ports.enabled` | Render the container's `ports` list below | `false` |
-| `ports.ports` |  | `[{"name": "http", "containerPort": 8080, "protocol": "TCP"}]` |
-| `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
-| `livenessProbe.tcpSocket.port` |  | `8080` |
-| `livenessProbe.initialDelaySeconds` |  | `30` |
-| `livenessProbe.periodSeconds` |  | `15` |
-| `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
-| `readinessProbe.initialDelaySeconds` |  | `30` |
-| `readinessProbe.periodSeconds` |  | `15` |
-| `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
-| `containerSecurityContext.enabled` | Render the container securityContext from this block (minus `enabled`) | `true` |
-| `containerSecurityContext.runAsUser` |  | `1000` |
-| `containerSecurityContext.capabilities.drop` |  | `["ALL"]` |
-| `containerSecurityContext.seccompProfile.type` |  | `"RuntimeDefault"` |
-| `containerSecurityContext.readOnlyRootFilesystem` |  | `true` |
-| `containerSecurityContext.runAsNonRoot` |  | `true` |
-| `containerSecurityContext.allowPrivilegeEscalation` |  | `false` |
-| `lifecycleHooks` | Container lifecycle hooks (postStart/preStop) | `{}` |
-| `resources.limits.cpu` |  | `"1500m"` |
-| `resources.limits.memory` |  | `"2048M"` |
-| `resources.requests.cpu` |  | `"1000m"` |
-| `resources.requests.memory` |  | `"1024M"` |
-| `extraVolumes` | Extra volumes for the pod (on top of the config/kafka-secret volumes this chart already renders) | `[]` |
-| `extraVolumeMounts` | Extra volume mounts for the main container (on top of the shared ones every container gets) | `[]` |
-| `sidecars` | Extra full container specs appended alongside the main container | `[]` |
-| `envVars` | Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled) | `[]` |
-| `envVarsConfigMap` | Name of a ConfigMap to load as bulk env vars via `envFrom` | `""` |
-| `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
-| `service.enabled` | Render the Service resource | `true` |
-| `service.type` |  | `"ClusterIP"` |
-| `service.ports` |  | `[{"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"}]` |
-| `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
-| `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
-| `autoscaling.minReplicas` |  | `3` |
-| `autoscaling.maxReplicas` |  | `5` |
-| `autoscaling.targetCPU` | Target average CPU utilization percentage; omit/empty to skip this metric | `80` |
-| `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
-| `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
-| `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
-| `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
-| `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
-| `kafkaUser.clusterName` |  | `"kafka"` |
-| `kafkaUser.clusterNamespace` |  | `"strimzi"` |
-| `kafkaUser.caCertSecretName` | Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret | `"kafka-cluster-ca-cert"` |
-| `mongodb.dbName` | Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty | `""` |
-| `mongodb.service.namespace` | Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from | `"mongodb"` |
-| `mongodb.service.name` |  | `"mongodb"` |
-| `apiBasePath` | Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path | `"/.well-known/"` |
-| `serviceName` | Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name | `"wkvs"` |
-| `serviceInstanceId.fromPodName` | Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own "uniquely identifies this instance" contract). | `false` |
-| `configMap.enabled` | Render the ConfigMap holding config.yaml and mount it into the container | `true` |
-| `configMap.mountPath` |  | `"/etc/config.yaml"` |
-| `configMap.subPath` |  | `"config.yaml"` |
-| `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
 | `config.dcs_api_url` | URL to the root of the DRS-compatible DCS API. | `null` |
 | `config.host` | IP of the host. | `"127.0.0.1"` |
 | `config.ucs_api_url` | URL to the root of the upload controller API. | `null` |
@@ -152,6 +43,119 @@ for the full set of configurable values.
 | `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
 | `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
 | `config.generate_correlation_id` | A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. | `true` |
+
+## Parameters
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
+| `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
+| `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
+| `executable` | Executable name and arguments (will be combined into a shell command) | `"wkvs"` |
+| `executableArgs` |  | `[]` |
+| `deployment.enabled` | Render the Deployment resource; disable for Job/CronJob-only charts | `true` |
+| `job.enabled` | Render a one-off Job resource alongside (or instead of) the Deployment | `false` |
+| `cronjobs.default.enabled` |  | `false` |
+| `nameOverride` | Override just the chart-name portion of generated resource names (the vendored `common` library chart's `common.names.name` convention) | `""` |
+| `fullnameOverride` | Override the entire generated resource name, bypassing the `<release>-<chart>` convention (the vendored `common` library chart's `common.names.fullname`) | `""` |
+| `namespaceOverride` | Override the namespace resources render into instead of `.Release.Namespace` (the vendored `common` library chart's `common.names.namespace`) | `""` |
+| `commonLabels` | Labels merged onto every rendered resource's metadata - Deployment, CronJob, Job, Service, HPA, DestinationRule, HTTPRoute, Probe, ConfigMap, ServiceAccount, NetworkPolicy, KafkaUser. No separate, narrower per-workload-only value: use service.labels below for Service/DestinationRule-only labels | `{}` |
+| `commonAnnotations` | Annotations merged onto the same set of resources as commonLabels (see there); use service.annotations below for Service/DestinationRule-only annotations | `{}` |
+| `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
+| `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/wkvs"` |
+| `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
+| `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the vendored `common` library chart's `common.images.image` helper) | `""` |
+| `image.pullPolicy` | imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise | `null` |
+| `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
+| `replicaCount` | Deployment replica count; ignored when autoscaling.enabled | `1` |
+| `revisionHistoryLimit` | Number of old ReplicaSets Kubernetes keeps around for rollback | `1` |
+| `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
+| `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
+| `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
+| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
+| `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
+| `migrationInitContainer.imagePullPolicy` | imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset | `null` |
+| `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `""` |
+| `migrationInitContainer.executableArgs` |  | `[]` |
+| `migrationInitContainer.env` | Extra env vars for just the migration init container | `[]` |
+| `migrationInitContainer.resources` |  | `{}` |
+| `migrationInitContainer.volumeMounts` | Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets) | `[]` |
+| `hostAliases` | Extra `/etc/hosts` entries for the pod | `[]` |
+| `podLabels` | Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource | `{}` |
+| `podAnnotations` | Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled | `{}` |
+| `podAffinityPreset` | Pod-affinity preset name (e.g. "soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
+| `podAntiAffinityPreset` | Pod-anti-affinity preset name (vendored `common` library chart convention); "soft" spreads replicas across nodes when possible | `"soft"` |
+| `nodeAffinityPreset.type` | Node-affinity preset type ("soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
+| `nodeAffinityPreset.key` | Node label key to match | `""` |
+| `nodeAffinityPreset.values` | Node label values to match | `[]` |
+| `affinity` | Raw Kubernetes affinity spec; overrides all three presets above when set | `{}` |
+| `nodeSelector` | Plain node-selector labels for pod scheduling | `{}` |
+| `tolerations` | Taints the pod tolerates | `[]` |
+| `topologySpreadConstraints` | Kubernetes pod topology spread constraints | `[]` |
+| `priorityClassName` | PriorityClass to schedule the pod with | `""` |
+| `schedulerName` | Alternate Kubernetes scheduler to use | `""` |
+| `terminationGracePeriodSeconds` | Grace period before SIGKILL on pod termination | `""` |
+| `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
+| `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
+| `containerPorts.http` |  | `8080` |
+| `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
+| `livenessProbe.tcpSocket.port` |  | `8080` |
+| `livenessProbe.initialDelaySeconds` |  | `30` |
+| `livenessProbe.periodSeconds` |  | `15` |
+| `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
+| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.initialDelaySeconds` |  | `30` |
+| `readinessProbe.periodSeconds` |  | `15` |
+| `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
+| `startupProbe.tcpSocket.port` |  | `8080` |
+| `startupProbe.periodSeconds` |  | `10` |
+| `startupProbe.failureThreshold` |  | `30` |
+| `containerSecurityContext.enabled` | Render the container securityContext from this block (minus `enabled`) | `true` |
+| `containerSecurityContext.runAsUser` |  | `1000` |
+| `containerSecurityContext.capabilities.drop` |  | `["ALL"]` |
+| `containerSecurityContext.seccompProfile.type` |  | `"RuntimeDefault"` |
+| `containerSecurityContext.readOnlyRootFilesystem` |  | `true` |
+| `containerSecurityContext.runAsNonRoot` |  | `true` |
+| `containerSecurityContext.allowPrivilegeEscalation` |  | `false` |
+| `lifecycleHooks` | Container lifecycle hooks (postStart/preStop) | `{}` |
+| `resources.limits.cpu` |  | `"1500m"` |
+| `resources.limits.memory` |  | `"2048M"` |
+| `resources.requests.cpu` |  | `"1000m"` |
+| `resources.requests.memory` |  | `"1024M"` |
+| `extraVolumes` | Extra volumes for the pod (on top of the config/kafka-secret volumes this chart already renders) | `[]` |
+| `extraVolumeMounts` | Extra volume mounts for the main container (on top of the shared ones every container gets) | `[]` |
+| `sidecars` | Extra full container specs appended alongside the main container | `[]` |
+| `envVars` | Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled) | `[]` |
+| `envVarsConfigMap` | Name of a ConfigMap to load as bulk env vars via `envFrom` | `""` |
+| `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
+| `service.enabled` | Render the Service resource | `true` |
+| `service.type` |  | `"ClusterIP"` |
+| `service.labels` | Extra labels on just the Service (and DestinationRule, which shares its address) | `{}` |
+| `service.annotations` | Extra annotations on just the Service (and DestinationRule, which shares its address) - e.g. cloud load-balancer or ingress-controller annotations | `{}` |
+| `serviceAccount.create` | Create a dedicated ServiceAccount for this release | `true` |
+| `autoscaling.enabled` | Render a HorizontalPodAutoscaler targeting the Deployment | `false` |
+| `autoscaling.minReplicas` |  | `3` |
+| `autoscaling.maxReplicas` |  | `5` |
+| `autoscaling.targetCPU` | Target average CPU utilization percentage; omit/empty to skip this metric | `80` |
+| `autoscaling.targetMemory` | Target average memory utilization percentage; omit/empty to skip this metric | `80` |
+| `autoscaling.metrics` | Extra raw HPA metric entries appended after CPU/memory | `[]` |
+| `topicPrefix` | Prefix prepended to every Kafka topic name this chart renders/references | `""` |
+| `kafkaTopicsParameters` | Fold `_topics`/`_consumerGroup` into the rendered config.yaml as service config parameters (topic name/type env vars); set false to render topics for KafkaUser ACLs only, without also injecting them as config | `true` |
+| `kafkaUser.enabled` | Render a Strimzi KafkaUser (TLS cert + ACLs from _topics/_consumerGroup) | `false` |
+| `kafkaUser.clusterName` |  | `"kafka"` |
+| `kafkaUser.clusterNamespace` |  | `"strimzi"` |
+| `kafkaUser.caCertSecretName` | Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret | `"kafka-cluster-ca-cert"` |
+| `mongodb.dbName` | Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty | `""` |
+| `mongodb.service.namespace` | Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from | `"mongodb"` |
+| `mongodb.service.name` |  | `"mongodb"` |
+| `apiBasePath` | Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path | `"/.well-known/"` |
+| `serviceName` | Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name | `"wkvs"` |
+| `serviceInstanceId.fromPodName` | Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own "uniquely identifies this instance" contract). | `false` |
+| `configMap.enabled` | Render the ConfigMap holding config.yaml and mount it into the container | `true` |
+| `configMap.mountPath` |  | `"/etc/config.yaml"` |
+| `configMap.subPath` |  | `"config.yaml"` |
+| `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"wkvs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
