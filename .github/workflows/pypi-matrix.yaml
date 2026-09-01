@@ -6,6 +6,12 @@
 #
 # If a dependency's version has not changed, it is resolved from PyPI.
 #
+# That holds for a targeted release too, without anything here having to know about one:
+# --check-pypi fills a cell's train_deps from (that member's closure ∩ every candidate),
+# and pypi-publish.yaml refuses a targeted release whose closure contains a candidate at
+# all. So the intersection is empty and the cell resolves the whole closure from PyPI —
+# which is exactly what a consumer installing that member alone would get.
+#
 # Members, extras, test deps and the Python range all come from scripts/pypi_members.py.
 name: pypi-matrix
 

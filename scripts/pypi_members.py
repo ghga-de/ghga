@@ -17,6 +17,10 @@ What needs releasing is decided against the *index*: a member is a release candi
 when the version it declares is above the latest one on PyPI. A version bump is the
 release trigger.
 
+A bare `--plan` sweeps: every candidate, ordered dependencies-first. `--target` instead
+releases the single member a `name/x.y.z` tag asked for, and refuses when that member's
+own closure is waiting to be released too — see `release_plan`.
+
 Usage (`uv run --script`, so the PEP 723 block above resolves):
     uv run --script scripts/pypi_members.py --check-pypi        # test matrix cells (json)
     uv run --script scripts/pypi_members.py --members           # lane members only
@@ -24,6 +28,7 @@ Usage (`uv run --script`, so the PEP 723 block above resolves):
     uv run --script scripts/pypi_members.py --dev-requirements  # shared test deps
     uv run --script scripts/pypi_members.py --candidates        # unreleased versions
     uv run --script scripts/pypi_members.py --plan              # ordered plan + errors
+    uv run --script scripts/pypi_members.py --plan --target hexkit   # that member alone
 
 """
 
@@ -39,7 +44,7 @@ import urllib.request
 import tomllib
 from packaging.version import InvalidVersion, Version
 
-from affected_targets import internal_dep_graph
+from affected_targets import _canonical, internal_dep_graph
 
 # The versions the matrix runs on.
 TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
@@ -351,12 +356,109 @@ def _publish_order(members: list[dict]) -> list[dict]:
     )
 
 
-def release_plan() -> dict:
+def _find_member(target: str, members: list[dict]) -> dict | None:
+    """Locates one lane member by its folder path or its distribution name.
+
+    A tag only ever spells the distribution name — `release.yaml` forwards the part of
+    `name/x.y.z` before the last `/` — but paths are what every neighbouring interface
+    speaks (`--paths`, `plan["paths"]`, the justfile), so both are accepted. Names compare
+    PEP 503-normalised, because the tag may say `ghga-connector` where the pyproject
+    declares `ghga_connector`.
+    """
+    for member in members:
+        if member["path"] == target:
+            return member
+    wanted = _canonical(target)
+    for member in members:
+        if _canonical(member["package"]) == wanted:
+            return member
+    return None
+
+
+def _blocked_message(member: dict, blockers: list[dict]) -> str:
+    """Explains why one member cannot be released alone, and how to release it anyway.
+
+    Both remedies are spelled out as tags that can be pushed as-is, the ordered one in
+    dependency order, because the alternative is guessing at it under release pressure.
+    """
+    ordered = _publish_order(blockers)
+    described = [
+        f"{m['package']} ({m['version']} declared, PyPI serves"
+        f" {m['pypi_latest'] or 'nothing'})"
+        for m in ordered
+    ]
+    named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
+    tags = ", ".join(f"{_canonical(m['package'])}/{m['version']}" for m in ordered)
+    is_are = "is a release candidate" if len(ordered) == 1 else "are release candidates"
+    return (
+        f"{member['package']}: cannot be released on its own — it depends on {named},"
+        f" which {is_are} too. Publishing it now would put it on PyPI against library"
+        " versions the index does not serve. Either push `pypi_sweep/x.y.z` to release"
+        " the whole train dependencies-first, or release each dependency on its own tag"
+        f" first, in this order: {tags}, then"
+        f" {_canonical(member['package'])}/{member['version']}."
+    )
+
+
+def _targeted_plan(
+    target: str,
+    publishing: list[dict],
+    skipped: list[dict],
+) -> tuple[list[dict], list[str]]:
+    """Narrows a sweep to the single member a `name/x.y.z` tag named.
+
+    Args:
+        target:
+            The distribution name (or member folder) the tag named.
+        publishing:
+            Every member the sweep would have released — the *whole* set, not one already
+            narrowed to the target. That is what makes the closure check below able to see
+            anything: against a one-member set it would pass unconditionally.
+        skipped:
+            The members the sweep passed over, each carrying its `reason`.
+
+    Returns:
+        `(publishing, errors)`. A non-empty `errors` always comes with an empty
+        `publishing`: a targeted tag that cannot be honoured publishes nothing rather
+        than falling back to the sweep nobody asked for.
+    """
+    lane = pypi_members()
+    member = _find_member(target, lane)
+    if member is None:
+        known = ", ".join(sorted(m["package"] for m in lane))
+        return [], [f"{target} is not a PyPI-lane member (lane: {known})"]
+
+    selected = [m for m in publishing if m["path"] == member["path"]]
+    if not selected:
+        # The sweep already worked out why it passed this member over; say that, rather
+        # than a vaguer "nothing to do". Unlike a sweep, which drops such a member and
+        # carries on, a tag naming it asked for something that cannot happen.
+        reason = next(
+            (s["reason"] for s in skipped if s["path"] == member["path"]),
+            "it is not a release candidate",
+        )
+        return [], [f"{member['package']}: nothing to publish — {reason}"]
+
+    # ADR-0004's closure-train rule, enforced for a single-member release: `internal_deps`
+    # is already the transitive closure, so an indirect dependency blocks just as a direct
+    # one does.
+    blockers = [m for m in publishing if m["path"] in member["internal_deps"]]
+    if blockers:
+        return [], [_blocked_message(member, blockers)]
+    return selected, []
+
+
+def release_plan(target: str | None = None) -> dict:
     """Builds the release plan the publish workflow runs on.
 
     Takes the release candidates, orders them dependencies-first so a tool never reaches
     PyPI before the library version it needs, and collects anything that makes the run
     unsafe to start.
+
+    Args:
+        target:
+            Release only this member (a distribution name or a member folder), as a
+            `name/x.y.z` tag asks for. `None` sweeps: every candidate goes out together.
 
     Returns:
         A dict with `members` (the ordered release set), `paths` (their folders),
@@ -366,7 +468,6 @@ def release_plan() -> dict:
     candidates, skipped = release_candidates()
     unreachable = [m for m in candidates if m["index_unreachable"]]
     publishing = [m for m in candidates if not m["index_unreachable"]]
-    release_member_paths = {member["path"] for member in publishing}
     lane_paths = {member["path"] for member in pypi_members()}
     errors = []
 
@@ -375,6 +476,13 @@ def release_plan() -> dict:
             f"{member['package']}: could not reach PyPI to establish what is already"
             f" released — refusing to plan a release against an unknown index"
         )
+
+    # `publishing` goes in as the full sweep set and comes back narrowed. That order is
+    # load-bearing: hand over an already-narrowed list and the closure check inside has
+    # only the target to compare against, so it passes unconditionally.
+    if target is not None:
+        publishing, target_errors = _targeted_plan(target, publishing, skipped)
+        errors.extend(target_errors)
 
     for member in publishing:
         for dep in member["internal_deps"]:
@@ -385,7 +493,10 @@ def release_plan() -> dict:
                 )
 
     # Re-read now that the release set is known, so each member carries the closure that
-    # will be built from the repo rather than resolved from the index.
+    # will be built from the repo rather than resolved from the index. Derived after the
+    # narrowing, so a targeted member's `train_deps` comes out empty on its own: nothing
+    # else ships in that run, so every internal dependency resolves from PyPI.
+    release_member_paths = {member["path"] for member in publishing}
     by_path = {
         m["path"]: m for m in pypi_members(release_member_paths=release_member_paths)
     }
@@ -427,6 +538,11 @@ def main(argv: list[str] | None = None) -> int:
         help="emit the release plan: ordered members, paths, skips and errors",
     )
     parser.add_argument(
+        "--target",
+        help="with --plan: release only this member (distribution name or folder)"
+        " instead of every candidate",
+    )
+    parser.add_argument(
         "--check-pypi",
         action="store_true",
         help="ask the index which members are being released, so cells build that"
@@ -434,11 +550,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Silently ignoring it would let a caller believe it narrowed a run that in fact
+    # swept — the one misunderstanding this flag exists to prevent.
+    if args.target and not args.plan:
+        parser.error("--target only applies to --plan")
+
     if args.dev_requirements:
         print("\n".join(dev_requirements()))
         return 0
     if args.plan:
-        print(json.dumps(release_plan()))
+        print(json.dumps(release_plan(args.target)))
         return 0
     if args.candidates:
         candidates, _ = release_candidates()

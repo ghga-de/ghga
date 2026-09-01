@@ -1,9 +1,15 @@
 # Release — two lanes (revised ADR-0004):
 #   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
 #                  platform version (lockstep; libs embedded from source, never PyPI).
-#   name/x.y.z  -> PYPI lane: the tag triggers the run, it does not select what ships. No
-#                  inputs are forwarded, so pypi-publish.yaml re-derives the set from the
-#                  index and publishes every lane member ahead of it, dependencies first.
+#   name/x.y.z  -> PYPI lane, TARGETED: that member alone. pypi-publish.yaml refuses if a
+#                  member of its own closure is a release candidate too — publishing it
+#                  then would put it on PyPI against library versions the index does not
+#                  serve — and names both ways out: sweep, or release the dependencies on
+#                  their own tags first.
+#   pypi_sweep/x.y.z -> PYPI lane, SWEEP: the tag selects nothing. pypi-publish.yaml
+#                  re-derives the set from the index and publishes every lane member ahead
+#                  of it, dependencies first. The version component is a label; it names
+#                  no member and is not checked against one.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
@@ -160,6 +166,11 @@ jobs:
           # member check below canonicalizes `_` and `-` to the same string anyway (PEP
           # 503), so rejecting one spelling here would only produce a confusing "not a lane
           # member" error instead of the sweep the pusher plainly meant.
+          # `sweep` is the one string here that must stay spelled exactly right:
+          # pypi-publish.yaml branches on `!= sweep` so that any unrecognised mode lands
+          # in targeted (which checks itself) rather than sweeping every pending member.
+          # Misspell `targeted` and the run still behaves; misspell `sweep` and a sweep
+          # tag fails loudly. Both are the safe direction — that is the point.
           case "$name" in
             ghga)                  lane=platform; mode= ;;
             pypi_sweep|pypi-sweep) lane=pypi;     mode=sweep ;;
@@ -544,7 +555,9 @@ jobs:
 
   # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
   #
-  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests. The mode says
+  # whether the tag selects one member or none; `package` is read only in targeted mode,
+  # where `resolve` has already asserted it names a real member at the version tagged.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
@@ -554,3 +567,6 @@ jobs:
       # caller grants.
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
+    with:
+      mode: ${{ needs.resolve.outputs.mode }}
+      package: ${{ needs.resolve.outputs.name }}
