@@ -14,6 +14,82 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/dcs/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config.auth_key` | The GHGA internal public key for validating the token signature. | `null` |
+| `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
+| `config.drs_server_uri` | The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'. | `null` |
+| `config.ekss_base_url` | URL containing host and port of the EKSS endpoint to retrieve personalized envelope from | `null` |
+| `config.host` | IP of the host. | `"127.0.0.1"` |
+| `config.presigned_url_expires_after` | Expiration time in seconds for presigned URLS. Positive integer required | `null` |
+| `config.object_storages` |  | `null` |
+| `config.kafka_enable_dlq` | A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries | `false` |
+| `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
+| `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
+| `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
+| `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
+| `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
+| `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
+| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
+| `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
+| `config.log_level` | The minimum log level to capture. | `"INFO"` |
+| `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"dcs"` |
+| `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id. | `null` |
+| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
+| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
+| `config.file_deletion_request_topic` | The name of the topic to receive events informing about files to delete. | `null` |
+| `config.file_deletion_request_type` | The type used for events indicating that a request to delete a file has been received. | `null` |
+| `config.file_internally_registered_topic` | Name of the topic used for events indicating that a file has been registered for download. | `null` |
+| `config.file_internally_registered_type` | The type used for event indicating that that a file has been registered for download. | `null` |
+| `config.files_to_stage_topic` | Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox. | `null` |
+| `config.files_to_stage_type` | The type used for non-staged file request events | `null` |
+| `config.file_registered_for_download_topic` | Name of the topic used for events indicating that a file has been registered by the DCS for download. | `null` |
+| `config.file_registered_for_download_type` | The type used for event indicating that a file has been registered by the DCS for download. | `null` |
+| `config.file_deleted_topic` | Name of the topic used for events indicating that a file has been deleted. | `null` |
+| `config.file_deleted_type` | The type used for events indicating that a file has been deleted. | `null` |
+| `config.download_served_topic` | Name of the topic used for events indicating that a download of a specified file happened. | `null` |
+| `config.download_served_type` | The type used for event indicating that a download of a specified file happened. | `null` |
+| `config.kafka_servers` | A list of connection strings to connect to Kafka bootstrap servers. | `null` |
+| `config.kafka_security_protocol` | Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. | `"PLAINTEXT"` |
+| `config.kafka_ssl_cafile` | Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. | `""` |
+| `config.kafka_ssl_certfile` | Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. | `""` |
+| `config.kafka_ssl_keyfile` | Optional filename containing the client private key. | `""` |
+| `config.kafka_ssl_password` | Optional password to be used for the client private key. | `""` |
+| `config.generate_correlation_id` | A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. | `true` |
+| `config.kafka_max_message_size` | The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. | `1048576` |
+| `config.kafka_compression_type` | The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. | `null` |
+| `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
+| `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
+| `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
+| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
+| `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
+| `config.download_bucket_cache_timeout` | Time in days since last access after which a file present in the download bucket should be unstaged and has to be requested from permanent storage again for the next request. | `7` |
+| `config.staging_speed` | When trying to access a DRS object that is not yet in the download bucket, assume that this many megabytes can be staged per second. | `100` |
+| `config.retry_after_min` | When trying to access a DRS object that is not yet in the download bucket, wait at least this number of seconds before trying again. | `5` |
+| `config.retry_after_max` | When trying to access a DRS object that is not yet in the download bucket, wait at most this number of seconds before trying again. | `300` |
+| `config.auth_algs` | A list of all algorithms used for signing GHGA internal tokens. | `["ES256"]` |
+| `config.auth_check_claims` | A dict of all GHGA internal claims that shall be verified. | `{"work_type": null, "file_id": null, "user_public_crypt4gh_key": null, "iat": null, "exp": null}` |
+| `config.auth_map_claims` | A mapping of claims to attributes in the GHGA auth context. | `{}` |
+| `config.port` | Port to expose the server on the specified host | `8080` |
+| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
+| `config.workers` | Number of workers processes to run. | `1` |
+| `config.timeout_keep_alive` | The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. | `90` |
+| `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
+| `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
+| `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
+| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
+| `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
+| `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
+| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
+| `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
+| `config.api_route` | DRS API route | `"/ga4gh/drs/v1"` |
+
 ## Parameters
 
 | Name | Description | Value |
@@ -126,77 +202,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `config.auth_key` | The GHGA internal public key for validating the token signature. | `null` |
-| `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
-| `config.drs_server_uri` | The base of the DRS URI to access DRS objects. Has to start with 'drs://' and end with '/'. | `null` |
-| `config.ekss_base_url` | URL containing host and port of the EKSS endpoint to retrieve personalized envelope from | `null` |
-| `config.host` | IP of the host. | `"127.0.0.1"` |
-| `config.presigned_url_expires_after` | Expiration time in seconds for presigned URLS. Positive integer required | `null` |
-| `config.object_storages` |  | `null` |
-| `config.kafka_enable_dlq` | A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries | `false` |
-| `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
-| `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
-| `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
-| `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
-| `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
-| `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
-| `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
-| `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
-| `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
-| `config.log_level` | The minimum log level to capture. | `"INFO"` |
-| `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"dcs"` |
-| `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id. | `null` |
-| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
-| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
-| `config.file_deletion_request_topic` | The name of the topic to receive events informing about files to delete. | `null` |
-| `config.file_deletion_request_type` | The type used for events indicating that a request to delete a file has been received. | `null` |
-| `config.file_internally_registered_topic` | Name of the topic used for events indicating that a file has been registered for download. | `null` |
-| `config.file_internally_registered_type` | The type used for event indicating that that a file has been registered for download. | `null` |
-| `config.files_to_stage_topic` | Name of the topic used for events indicating that a download was requested for a file that is not yet available in the outbox. | `null` |
-| `config.files_to_stage_type` | The type used for non-staged file request events | `null` |
-| `config.file_registered_for_download_topic` | Name of the topic used for events indicating that a file has been registered by the DCS for download. | `null` |
-| `config.file_registered_for_download_type` | The type used for event indicating that a file has been registered by the DCS for download. | `null` |
-| `config.file_deleted_topic` | Name of the topic used for events indicating that a file has been deleted. | `null` |
-| `config.file_deleted_type` | The type used for events indicating that a file has been deleted. | `null` |
-| `config.download_served_topic` | Name of the topic used for events indicating that a download of a specified file happened. | `null` |
-| `config.download_served_type` | The type used for event indicating that a download of a specified file happened. | `null` |
-| `config.kafka_servers` | A list of connection strings to connect to Kafka bootstrap servers. | `null` |
-| `config.kafka_security_protocol` | Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. | `"PLAINTEXT"` |
-| `config.kafka_ssl_cafile` | Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. | `""` |
-| `config.kafka_ssl_certfile` | Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. | `""` |
-| `config.kafka_ssl_keyfile` | Optional filename containing the client private key. | `""` |
-| `config.kafka_ssl_password` | Optional password to be used for the client private key. | `""` |
-| `config.generate_correlation_id` | A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. | `true` |
-| `config.kafka_max_message_size` | The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. | `1048576` |
-| `config.kafka_compression_type` | The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. | `null` |
-| `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
-| `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
-| `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
-| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
-| `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
-| `config.download_bucket_cache_timeout` | Time in days since last access after which a file present in the download bucket should be unstaged and has to be requested from permanent storage again for the next request. | `7` |
-| `config.staging_speed` | When trying to access a DRS object that is not yet in the download bucket, assume that this many megabytes can be staged per second. | `100` |
-| `config.retry_after_min` | When trying to access a DRS object that is not yet in the download bucket, wait at least this number of seconds before trying again. | `5` |
-| `config.retry_after_max` | When trying to access a DRS object that is not yet in the download bucket, wait at most this number of seconds before trying again. | `300` |
-| `config.auth_algs` | A list of all algorithms used for signing GHGA internal tokens. | `["ES256"]` |
-| `config.auth_check_claims` | A dict of all GHGA internal claims that shall be verified. | `{"work_type": null, "file_id": null, "user_public_crypt4gh_key": null, "iat": null, "exp": null}` |
-| `config.auth_map_claims` | A mapping of claims to attributes in the GHGA auth context. | `{}` |
-| `config.port` | Port to expose the server on the specified host | `8080` |
-| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
-| `config.workers` | Number of workers processes to run. | `1` |
-| `config.timeout_keep_alive` | The time in seconds to keep an idle connection open for subsequent requests before closing it. This value should be higher than the timeout used by any client or reverse proxy to avoid premature connection closures. | `90` |
-| `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
-| `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
-| `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
-| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
-| `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
-| `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
-| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all request headers. The Accept, Accept-Language, Content-Language, Content-Type and some are always allowed for CORS requests. | `null` |
-| `config.cors_exposed_headers` | A list of HTTP response headers that should be exposed for cross-origin responses. Defaults to []. Note that you can NOT use ['*'] to expose all response headers. The Cache-Control, Content-Language, Content-Length, Content-Type, Expires, Last-Modified and Pragma headers are always exposed for CORS responses. | `null` |
-| `config.api_route` | DRS API route | `"/ga4gh/drs/v1"` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"dcs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |

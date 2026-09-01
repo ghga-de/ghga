@@ -14,6 +14,44 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/d
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/dhfs/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
+| `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
+| `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
+| `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
+| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
+| `config.data_hub_crypt4gh_public_key_path` | Path to the Data Hub's Crypt4GH public key file. Only needed for running `dhfs verify`. | `null` |
+| `config.inbox_bucket_id` | The inbox bucket ID - only needed for running `dhfs verify`. | `null` |
+| `config.inbox_write_s3_access_key_id` | S3 access key ID with write access to the inbox bucket. Only needed for running `dhfs verify`. | `null` |
+| `config.inbox_write_s3_secret_access_key` | S3 secret access key with write access to the inbox bucket. Only needed for running `dhfs verify`. | `null` |
+| `config.inbox_write_s3_session_token` | Optional S3 session token for the write-capable inbox credentials. Only needed for running `dhfs verify`. | `null` |
+| `config.data_hub_crypt4gh_private_key_path` | Path to the Data Hub's Crypt4GH private key file | `null` |
+| `config.data_hub_crypt4gh_private_key_passphrase` | Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. | `null` |
+| `config.central_api_crypt4gh_public_key` | The Crypt4GH public key used by the Central API. This is used to encrypt new file encryption secrets. | `null` |
+| `config.central_api_url` | The base URL used to connect to to the GHGA Central API | `null` |
+| `config.data_hub_signing_key` | The Data Hub's private JWK for signing JWT auth tokens | `null` |
+| `config.storage_alias` | An alias identifying the Data Hub at which this instance of DHFS is running. This value should be set in coordination with GHGA Central. | `null` |
+| `config.s3_endpoint_url` | URL to the S3 API. | `null` |
+| `config.s3_access_key_id` | Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html | `null` |
+| `config.s3_secret_access_key` | Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html | `null` |
+| `config.s3_session_token` | Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html | `null` |
+| `config.aws_config_ini` | Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file | `null` |
+| `config.log_level` | The minimum log level to capture. | `"INFO"` |
+| `config.service_name` | Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"dhfs"` |
+| `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. This is included in log messages. | `null` |
+| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
+| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
+| `config.min_run_interval_seconds` | The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation. | `60` |
+| `config.interrogation_bucket_id` | The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS. | `null` |
+| `config.max_concurrent_parts` | How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly max_concurrent_parts * 3 * the part size. | `8` |
+| `config.library_log_level` | The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL. | `"CRITICAL"` |
+| `config.library_logger_names` | The list of logger names to target with library_log_level. | `["httpx2", "crypt4gh", "hexkit", "ghga_service_commons", "boto3", "botocore", "httpcore2", "urllib3"]` |
+
 ## Parameters
 
 | Name | Description | Value |
@@ -126,39 +164,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
-| `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
-| `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
-| `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
-| `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
-| `config.data_hub_crypt4gh_public_key_path` | Path to the Data Hub's Crypt4GH public key file. Only needed for running `dhfs verify`. | `null` |
-| `config.inbox_bucket_id` | The inbox bucket ID - only needed for running `dhfs verify`. | `null` |
-| `config.inbox_write_s3_access_key_id` | S3 access key ID with write access to the inbox bucket. Only needed for running `dhfs verify`. | `null` |
-| `config.inbox_write_s3_secret_access_key` | S3 secret access key with write access to the inbox bucket. Only needed for running `dhfs verify`. | `null` |
-| `config.inbox_write_s3_session_token` | Optional S3 session token for the write-capable inbox credentials. Only needed for running `dhfs verify`. | `null` |
-| `config.data_hub_crypt4gh_private_key_path` | Path to the Data Hub's Crypt4GH private key file | `null` |
-| `config.data_hub_crypt4gh_private_key_passphrase` | Passphrase needed to read the content of the private key file. Only needed if the private key is encrypted. | `null` |
-| `config.central_api_crypt4gh_public_key` | The Crypt4GH public key used by the Central API. This is used to encrypt new file encryption secrets. | `null` |
-| `config.central_api_url` | The base URL used to connect to to the GHGA Central API | `null` |
-| `config.data_hub_signing_key` | The Data Hub's private JWK for signing JWT auth tokens | `null` |
-| `config.storage_alias` | An alias identifying the Data Hub at which this instance of DHFS is running. This value should be set in coordination with GHGA Central. | `null` |
-| `config.s3_endpoint_url` | URL to the S3 API. | `null` |
-| `config.s3_access_key_id` | Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html | `null` |
-| `config.s3_secret_access_key` | Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html | `null` |
-| `config.s3_session_token` | Part of credentials for login into the S3 service. See: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html | `null` |
-| `config.aws_config_ini` | Path to a config file for specifying more advanced S3 parameters. This should follow the format described here: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-a-configuration-file | `null` |
-| `config.log_level` | The minimum log level to capture. | `"INFO"` |
-| `config.service_name` | Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"dhfs"` |
-| `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. This is included in log messages. | `null` |
-| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
-| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
-| `config.min_run_interval_seconds` | The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation. | `60` |
-| `config.interrogation_bucket_id` | The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS. | `null` |
-| `config.max_concurrent_parts` | How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly max_concurrent_parts * 3 * the part size. | `8` |
-| `config.library_log_level` | The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL. | `"CRITICAL"` |
-| `config.library_logger_names` | The list of logger names to target with library_log_level. | `["httpx2", "crypt4gh", "hexkit", "ghga_service_commons", "boto3", "botocore", "httpcore2", "urllib3"]` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"dhfs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |

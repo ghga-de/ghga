@@ -14,6 +14,14 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/frontend/d
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/data-portal/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config.host` |  | `"0.0.0.0"` |
+| `config.oidc_use_discovery` |  | `false` |
+| `config.root_files` |  | `{}` |
+
 ## Parameters
 
 | Name | Description | Value |
@@ -126,9 +134,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/app/data-portal.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `config.host` |  | `"0.0.0.0"` |
-| `config.oidc_use_discovery` |  | `false` |
-| `config.root_files` |  | `{}` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"data_portal"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |

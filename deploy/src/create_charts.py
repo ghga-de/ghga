@@ -535,9 +535,8 @@ def _parameter_rows(schema: dict, prefix: str = "") -> list[tuple[str, str, obje
     return [(prefix, description, schema.get("default"))]
 
 
-def parameters_table_text(schema: dict) -> str:
-    """A '| Name | Description | Value |' Markdown table from a values.schema.json."""
-    rows = _parameter_rows(schema)
+def _parameters_table(rows: list[tuple[str, str, object]]) -> str:
+    """A '| Name | Description | Value |' Markdown table from parameter rows."""
     lines = ["| Name | Description | Value |", "|------|-------------|-------|"]
     lines += [
         f"| `{name}` | {desc} | `{json.dumps(default)}` |"
@@ -584,11 +583,23 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/{path}). S
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/{name}/values.yaml)
 for the full set of configurable values.
 
-## Parameters
-
 """
-    table = parameters_table_text(schema)
-    return header + table + "\n"
+
+    def is_config(row: tuple[str, str, object]) -> bool:
+        return row[0] == "config" or row[0].startswith("config.")
+
+    rows = _parameter_rows(schema)
+    config_rows = [row for row in rows if is_config(row)]
+    other_rows = [row for row in rows if not is_config(row)]
+
+    body = ""
+    if config_rows:
+        # The service's own runtime config (config.yaml, one field per config.*
+        # value) is what a deployer actually came here for - broken out ahead of
+        # the generic Helm chart knobs below instead of buried among them.
+        body += f"## Service Configuration\n\n{_parameters_table(config_rows)}\n\n"
+    body += f"## Parameters\n\n{_parameters_table(other_rows)}\n"
+    return header + body
 
 
 def main() -> None:

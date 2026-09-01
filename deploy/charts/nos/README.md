@@ -14,6 +14,48 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/n
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/nos/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config.central_data_stewardship_email` | The email address of the central data steward. | `null` |
+| `config.helpdesk_email` | The email address of the GHGA Helpdesk. | `null` |
+| `config.kafka_enable_dlq` | A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries | `false` |
+| `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
+| `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
+| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
+| `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
+| `config.notification_topic` | Name of the topic used for notification events. | `null` |
+| `config.email_notification_type` | The type used for email notification events. | `null` |
+| `config.sms_notification_type` | The type used for SMS notification events. | `null` |
+| `config.access_request_topic` | Name of the event topic containing access request events | `null` |
+| `config.user_topic` | The name of the topic containing user events. | `"users"` |
+| `config.auth_topic` | The name of the topic containing auth-related events. | `null` |
+| `config.second_factor_recreated_type` | The event type for recreation of the second factor for authentication | `null` |
+| `config.iva_state_changed_topic` | The name of the topic containing IVA events. | `null` |
+| `config.iva_state_changed_type` | The type to use for IVA state changed events. | `null` |
+| `config.iva_send_code_type` | The type to use for IVA send code events. | `null` |
+| `config.service_name` | The Notification Orchestration Service controls the creation of notification events. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"nos"` |
+| `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. This is included in log messages. | `null` |
+| `config.kafka_servers` | A list of connection strings to connect to Kafka bootstrap servers. | `null` |
+| `config.kafka_security_protocol` | Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. | `"PLAINTEXT"` |
+| `config.kafka_ssl_cafile` | Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. | `""` |
+| `config.kafka_ssl_certfile` | Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. | `""` |
+| `config.kafka_ssl_keyfile` | Optional filename containing the client private key. | `""` |
+| `config.kafka_ssl_password` | Optional password to be used for the client private key. | `""` |
+| `config.generate_correlation_id` | A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, a new correlation ID will be generated and used in the event header. | `true` |
+| `config.kafka_max_message_size` | The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. | `1048576` |
+| `config.kafka_compression_type` | The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. | `null` |
+| `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
+| `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
+| `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
+| `config.log_level` | The minimum log level to capture. | `"INFO"` |
+| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
+| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
+| `config.portal_url` | The URL of the GHGA data portal. | `"https://data.ghga.de/"` |
+
 ## Parameters
 
 | Name | Description | Value |
@@ -126,43 +168,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `config.central_data_stewardship_email` | The email address of the central data steward. | `null` |
-| `config.helpdesk_email` | The email address of the GHGA Helpdesk. | `null` |
-| `config.kafka_enable_dlq` | A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries | `false` |
-| `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
-| `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
-| `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
-| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
-| `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
-| `config.notification_topic` | Name of the topic used for notification events. | `null` |
-| `config.email_notification_type` | The type used for email notification events. | `null` |
-| `config.sms_notification_type` | The type used for SMS notification events. | `null` |
-| `config.access_request_topic` | Name of the event topic containing access request events | `null` |
-| `config.user_topic` | The name of the topic containing user events. | `"users"` |
-| `config.auth_topic` | The name of the topic containing auth-related events. | `null` |
-| `config.second_factor_recreated_type` | The event type for recreation of the second factor for authentication | `null` |
-| `config.iva_state_changed_topic` | The name of the topic containing IVA events. | `null` |
-| `config.iva_state_changed_type` | The type to use for IVA state changed events. | `null` |
-| `config.iva_send_code_type` | The type to use for IVA send code events. | `null` |
-| `config.service_name` | The Notification Orchestration Service controls the creation of notification events. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"nos"` |
-| `config.service_instance_id` | A string that uniquely identifies this instance across all instances of this service. This is included in log messages. | `null` |
-| `config.kafka_servers` | A list of connection strings to connect to Kafka bootstrap servers. | `null` |
-| `config.kafka_security_protocol` | Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. | `"PLAINTEXT"` |
-| `config.kafka_ssl_cafile` | Certificate Authority file path containing certificates used to sign broker certificates. If a CA is not specified, the default system CA will be used if found by OpenSSL. | `""` |
-| `config.kafka_ssl_certfile` | Optional filename of client certificate, as well as any CA certificates needed to establish the certificate's authenticity. | `""` |
-| `config.kafka_ssl_keyfile` | Optional filename containing the client private key. | `""` |
-| `config.kafka_ssl_password` | Optional password to be used for the client private key. | `""` |
-| `config.generate_correlation_id` | A flag, which, if False, will result in an error when trying to publish an event without a valid correlation ID set for the context. If True, a new correlation ID will be generated and used in the event header. | `true` |
-| `config.kafka_max_message_size` | The largest message size that can be transmitted, in bytes, before compression. Only services that have a need to send/receive larger messages should set this. When used alongside compression, this value can be set to something greater than the broker's `message.max.bytes` field, which effectively concerns the compressed message size. | `1048576` |
-| `config.kafka_compression_type` | The compression type used for messages. Valid values are: None, gzip, snappy, lz4, and zstd. If None, no compression is applied. This setting is only relevant for the producer and has no effect on the consumer. If set to a value, the producer will compress messages before sending them to the Kafka broker. If unsure, zstd provides a good balance between speed and compression ratio. | `null` |
-| `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
-| `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
-| `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
-| `config.log_level` | The minimum log level to capture. | `"INFO"` |
-| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
-| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
-| `config.portal_url` | The URL of the GHGA data portal. | `"https://data.ghga.de/"` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"nos"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |

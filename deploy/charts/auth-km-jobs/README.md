@@ -14,6 +14,12 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/tools/auth
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/auth-km-jobs/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config` | The service's own configuration payload (merged with the computed kafka/api/db/service-name values below into the rendered config.yaml) | `{}` |
+
 ## Parameters
 
 | Name | Description | Value |
@@ -126,7 +132,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `false` |
-| `config` | The service's own configuration payload (merged with the computed kafka/api/db/service-name values below into the rendered config.yaml) | `{}` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"auth_km_jobs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |

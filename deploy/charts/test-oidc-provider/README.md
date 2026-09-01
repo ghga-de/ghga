@@ -14,6 +14,33 @@ Part of the [GHGA monorepo](https://github.com/ghga-de/ghga/tree/main/services/t
 [values.yaml](https://github.com/ghga-de/ghga/blob/main/deploy/charts/test-oidc-provider/values.yaml)
 for the full set of configurable values.
 
+## Service Configuration
+
+| Name | Description | Value |
+|------|-------------|-------|
+| `config.host` | IP of the host. | `"127.0.0.1"` |
+| `config.log_level` | The minimum log level to capture. | `"INFO"` |
+| `config.service_name` | Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"top"` |
+| `config.service_instance_id` | String that uniquely identifies this service instance in log messages | `"default"` |
+| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
+| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
+| `config.issuer` | test issuer URL | `"https://op.test/"` |
+| `config.user_domain` | domain name of the home organization of the test users | `"home.org"` |
+| `config.client_id` | test client ID | `"test-client"` |
+| `config.redirect_url` | test redirect URL | `"https://client.test/oauth/callback"` |
+| `config.valid_seconds` | default expiration time of access tokens in seconds | `3600` |
+| `config.port` | Port to expose the server on the specified host | `8080` |
+| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
+| `config.workers` | Number of workers processes to run. | `1` |
+| `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
+| `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
+| `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
+| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
+| `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
+| `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
+| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. | `null` |
+| `config.generate_correlation_id` | A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. | `true` |
+
 ## Parameters
 
 | Name | Description | Value |
@@ -126,28 +153,6 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `config.host` | IP of the host. | `"127.0.0.1"` |
-| `config.log_level` | The minimum log level to capture. | `"INFO"` |
-| `config.service_name` | Short name of this service. NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"top"` |
-| `config.service_instance_id` | String that uniquely identifies this service instance in log messages | `"default"` |
-| `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
-| `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
-| `config.issuer` | test issuer URL | `"https://op.test/"` |
-| `config.user_domain` | domain name of the home organization of the test users | `"home.org"` |
-| `config.client_id` | test client ID | `"test-client"` |
-| `config.redirect_url` | test redirect URL | `"https://client.test/oauth/callback"` |
-| `config.valid_seconds` | default expiration time of access tokens in seconds | `3600` |
-| `config.port` | Port to expose the server on the specified host | `8080` |
-| `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
-| `config.workers` | Number of workers processes to run. | `1` |
-| `config.api_root_path` | Root path at which the API is reachable. This is relative to the specified host and port. NOTE: this chart's configmap.tpl always overwrites config.api_root_path with the value computed from `apiBasePath` - a value set directly under config.api_root_path is silently discarded. Set `apiBasePath` instead. | `""` |
-| `config.openapi_url` | Path to get the openapi specification in JSON format. This is relative to the specified host and port. | `"/openapi.json"` |
-| `config.docs_url` | Path to host the swagger documentation. This is relative to the specified host and port. | `"/docs"` |
-| `config.cors_allowed_origins` | A list of origins that should be permitted to make cross-origin requests. By default, cross-origin requests are not allowed. You can use ['*'] to allow any origin. | `null` |
-| `config.cors_allow_credentials` | Indicate that cookies should be supported for cross-origin requests. Defaults to False. Also, cors_allowed_origins cannot be set to ['*'] for credentials to be allowed. The origins must be explicitly specified. | `null` |
-| `config.cors_allowed_methods` | A list of HTTP methods that should be allowed for cross-origin requests. Defaults to ['GET']. You can use ['*'] to allow all standard methods. | `null` |
-| `config.cors_allowed_headers` | A list of HTTP request headers that should be supported for cross-origin requests. Defaults to []. You can use ['*'] to allow all headers. The Accept, Accept-Language, Content-Language and Content-Type headers are always allowed for CORS requests. | `null` |
-| `config.generate_correlation_id` | A flag, which, if False, will result in an error when inbound requests don't possess a correlation ID. If True, requests without a correlation ID will be assigned a newly generated ID in the correlation ID middleware function. | `true` |
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"top"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
