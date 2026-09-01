@@ -159,18 +159,9 @@ jobs:
             echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
             exit 1
           fi
-          # The name also carries the pypi lane's MODE. `pypi_sweep` is a reserved name
-          # rather than a member: it means "publish every member the index is behind on".
-          # Any other name names one member, and publishes that member alone. Platform tags
-          # have no mode. Both spellings of the reserved name are accepted because the
-          # member check below canonicalizes `_` and `-` to the same string anyway (PEP
-          # 503), so rejecting one spelling here would only produce a confusing "not a lane
-          # member" error instead of the sweep the pusher plainly meant.
-          # `sweep` is the one string here that must stay spelled exactly right:
-          # pypi-publish.yaml branches on `!= sweep` so that any unrecognised mode lands
-          # in targeted (which checks itself) rather than sweeping every pending member.
-          # Misspell `targeted` and the run still behaves; misspell `sweep` and a sweep
-          # tag fails loudly. Both are the safe direction — that is the point.
+          # The name also carries the pypi lane's MODE. `pypi_sweep` means "publish every
+          # member the index is behind on". Any other name names one member, and publishes
+          # that member alone. Platform tags have no mode.
           case "$name" in
             ghga)                  lane=platform; mode= ;;
             pypi_sweep|pypi-sweep) lane=pypi;     mode=sweep ;;
