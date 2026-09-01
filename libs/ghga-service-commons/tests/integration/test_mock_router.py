@@ -213,18 +213,33 @@ def test_endpoint_naming_a_variable_the_path_does_not_have():
 
     with pytest.raises(
         TypeError,
-        match=r"Path variables for path '/dummy/{p2}' do not match the function it decorates",
+        match=(
+            r"Path variables for path '/dummy/{p2}' do not match the function it "
+            r"decorates: 'p1' not declared by the path$"
+        ),
     ):
 
         @throwaway.get("/dummy/{p2}")
         def dummy(p1: int, **path_variables: str) -> None:
             """Define a dummy function naming a variable that the path lacks."""
 
+    with pytest.raises(
+        TypeError,
+        match=(r"'p1' not declared by the path, 'p2' not taken by any parameter$"),
+    ):
+
+        @throwaway.get("/dummy/{p2}")
+        def dummy_without_collector(p1: int) -> None:
+            """Name a variable the path lacks and ignore the one it declares."""
+
 
 def test_path_variables_the_endpoint_does_not_name_are_rejected():
     """Ensure a path variable no parameter takes is rejected."""
     throwaway: MockRouter = MockRouter()
-    mismatch = r"Path variables for path '/items/{item_name}' do not match"
+    mismatch = (
+        r"Path variables for path '/items/{item_name}' do not match the function it "
+        r"decorates: 'item_name' not taken by any parameter$"
+    )
 
     with pytest.raises(TypeError, match=mismatch):
 

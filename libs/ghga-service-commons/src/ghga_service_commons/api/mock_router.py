@@ -81,11 +81,19 @@ def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     }
 
 
+def _listed(names: set[str]) -> str:
+    """Quote the names and put them in a stable order, ready to go into a message.
+
+    This function is not intended to be used outside the module.
+    """
+    return ", ".join(f"'{name}'" for name in sorted(names))
+
+
 def _accepts_path_variables(endpoint_function: Callable) -> bool:
     """Whether the endpoint function collects the path variables it does not name.
 
-    That is the case when it has a `**kwargs` parameter, which lets one function serve
-    endpoints with different path variables instead of spelling each of them out.
+    Exists so we can have generic reusable endpoints in tests that do not consume
+    all the path parameters given.
 
     This function is not intended to be used outside the module.
     """
@@ -191,8 +199,8 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
         for parameter, parameter_info in all_parameters.items():
             if parameter_info.kind in VARIADIC_KINDS:
-                # variadic parameters stand for path variables rather than for one
-                # of them, so there is nothing to cast and nothing to type-hint
+                # variadic parameters are ignored here and checked in
+                #  _ensure_decorator_and_endpoint_parameters_match instead
                 continue
             if parameter not in signature_parameters:
                 raise TypeError(
@@ -218,23 +226,33 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
                 the signature does not, but not the other way around.
 
         Raises:
-            TypeError: When there is a mismatch between the path and the function parameters.
+            TypeError:
+                When there is a mismatch between the path and the function parameters,
+                naming the variables or parameters that caused it.
         """
         endpoint_parameters = {
             param for param in signature_parameters if param != "request"
         }
-        # get set of parameters from path with brackets stripped
-        matches = {param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)}
+        # the variables the path declares, with the brackets stripped
+        path_variables = {
+            param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)
+        }
 
-        mismatch = (
-            not endpoint_parameters <= matches
-            if accepts_path_variables
-            else matches != endpoint_parameters
-        )
-        if mismatch:
+        missing_variables = endpoint_parameters - path_variables
+        unnamed_variables = path_variables - endpoint_parameters
+
+        complaints: list[str] = []
+        if missing_variables:
+            complaints.append(f"{_listed(missing_variables)} not declared by the path")
+        if unnamed_variables and not accepts_path_variables:
+            complaints.append(
+                f"{_listed(unnamed_variables)} not taken by any parameter"
+            )
+
+        if complaints:
             raise TypeError(
                 f"Path variables for path '{path}' do not match the "
-                + "function it decorates"
+                + f"function it decorates: {', '.join(complaints)}"
             )
 
     def _add_endpoint(
@@ -330,8 +348,8 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
         Raises:
             TypeError:
-                When a path variable has no parameter to go into. Registration rules
-                this out, so it only comes up for endpoints assembled by hand.
+                When a path variable has no parameter to go into. This is checked on endpoint
+                registration rules, but can come up for endpoints assembled by hand.
             HttpException:
                 (with status 422) when a string value in the request URL cannot
                 be converted/cast to the type specified by the type-hint for the
@@ -346,8 +364,6 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
                         f"Path variable '{parameter_name}' has no parameter to go "
                         + f"into for path '{request.url.path}'"
                     )
-                # collected by the `**kwargs` parameter, so there is no type hint to
-                # cast to: hand the value over as the string it is
                 typed_parameters[parameter_name] = value
                 continue
 
