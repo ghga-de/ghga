@@ -144,6 +144,35 @@ def delete_file_token_header(
     return _make_auth_header(work_order, jwk)
 
 
+def requeue_file_token_header(
+    *,
+    box_id: UUID = uuid4(),
+    file_id: UUID4 = uuid4(),
+    jwk: JWK,
+) -> dict[str, str]:
+    """Generate RequeueFailedFileWorkOrder token for testing.
+
+    Leave box_id and file_id unspecified to use random values.
+    """
+    work_order = models.RequeueFailedFileWorkOrder(
+        work_type="requeue", box_id=box_id, file_id=file_id
+    )
+    return _make_auth_header(work_order, jwk)
+
+
+def requeue_all_failed_token_header(
+    *,
+    box_id: UUID = uuid4(),
+    jwk: JWK,
+) -> dict[str, str]:
+    """Generate RequeueAllFailedWorkOrder token for testing.
+
+    Leave box_id unspecified to use a random value.
+    """
+    work_order = models.RequeueAllFailedWorkOrder(work_type="requeue_box", box_id=box_id)
+    return _make_auth_header(work_order, jwk)
+
+
 def delete_file_box_token_header(
     *,
     box_id: UUID = uuid4(),
