@@ -12,61 +12,63 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-This module provides custom proxy handling, as the way httpx2 setups the client, there is
-an order of precedence which necessitates manual setup for proxies if a custom transport
-is provided.
+"""Builds proxy mounts that use this package's transport stack.
 
-For now this logic is simplified, i.e. this is not in sync with `trust_env` on the
-client and will parse env proxies unconditionally.
-If you don't want to trust the env, don't use the functions from this module.
-
-NO_PROXY is now respected: hosts excluded from proxying via NO_PROXY are kept as
-`None` mounts, which tells httpx2 to connect directly for them. Note that wildcard and
-CIDR NO_PROXY entries behave according to httpx2's mount pattern matching rather than
-httpx2's own NO_PROXY logic (which is bypassed entirely once `mounts` are supplied).
-This is a pre-existing limitation of routing through `mounts` and is not introduced
-by this handling.
+httpx2 mounts one transport per proxy environment variable, and mounts win over the
+client's own transport. This does the same, but with our stack in each mount, so a
+proxied route behaves like the direct one. NO_PROXY hosts stay as `None` mounts, which
+tells httpx2 to connect directly for them.
 """
 
-from httpx2 import AsyncBaseTransport, AsyncHTTPTransport, Limits, _utils
+from httpx2 import AsyncBaseTransport, Limits, _utils
 
 from .config import CompositeConfig
-from .factory import CompositeTransportFactory, get_ssl_verify
+from .factory import (
+    BaseTransportFactory,
+    CompositeTransportFactory,
+    _resolve_base_transport_factory,
+)
+from .ratelimiting import RateBudget
 
 
 def ratelimiting_retry_proxies(
     config: CompositeConfig,
     limits: Limits | None = None,
-):
-    """Setup proxies from env for ratelimiting retry transport.
+    *,
+    make_base_transport: BaseTransportFactory | None = None,
+    budget: RateBudget | None = None,
+    trust_env: bool = True,
+) -> dict[str, AsyncBaseTransport | None]:
+    """Build the `mounts` map for a client, one stack per proxy route.
 
-    The returned dictionary needs to be provided as `mounts` to the client.
+    Prefer `get_composite_client`, which pairs this with a matching transport for the
+    direct route. Used directly, pass the result as `mounts` to the client.
+
+    Each mount differs from the direct route only by the proxy its base transport uses.
+    Pass `budget` to share pacing with the direct route, or `trust_env=False` to ignore
+    the environment.
     """
-    mounts: dict[str, AsyncBaseTransport | None] = {}
-    for key, transport in _get_base_proxies_from_env().items():
-        if transport is None:
-            # NO_PROXY host: keep None so httpx2 connects directly for this host.
-            mounts[key] = None
-            continue
-        mounts[key] = CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config=config, base_transport=transport, limits=limits
-        )
-    return mounts
+    if not trust_env:
+        return {}
 
-
-def _get_base_proxies_from_env() -> dict[str, AsyncHTTPTransport | None]:
-    """Use httpx2 internals to correctly parse proxy environment variables.
-
-    This will populate http, https and all proxy settings and create transports
-    based on those proxy strings.
-
-    NO_PROXY hosts are returned by httpx2 with a ``None`` url; these are preserved as
-    ``None`` so that NO_PROXY is respected (httpx2 connects directly for them) instead
-    of being silently routed through a proxy.
-    """
-    verify = get_ssl_verify()
+    factory = _resolve_base_transport_factory(None, limits, make_base_transport)
     return {
-        key: None if url is None else (AsyncHTTPTransport(proxy=url, verify=verify))
-        for key, url in _utils.get_environment_proxies().items()
+        key: None
+        if url is None
+        else CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config=config, make_base_transport=factory, proxy=url, budget=budget
+        )
+        for key, url in _get_proxy_urls_from_env().items()
     }
+
+
+def _get_proxy_urls_from_env() -> dict[str, str | None]:
+    """Parse proxy environment variables into mount patterns and proxy URLs.
+
+    Hosts excluded by NO_PROXY map to `None`.
+
+    `httpx2._utils.get_environment_proxies` is private and may disappear on any httpx2
+    release. That risk is accepted rather than pinned around; replacing it here would be
+    around thirty lines.
+    """
+    return _utils.get_environment_proxies()
