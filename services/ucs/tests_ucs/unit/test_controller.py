@@ -28,6 +28,7 @@ import pytest_asyncio
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
     FileUploadState,
+    InterrogationFailure,
     InterrogationSuccess,
 )
 from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
@@ -42,7 +43,7 @@ from tests_ucs.fixtures.utils import (
     make_file_upload,
 )
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
-from ucs.core.models import FileUpload, UploadActivity
+from ucs.core.models import BoxRequeueResult, FileUpload, UploadActivity
 from ucs.ports.inbound.controller import UploadControllerPort
 
 MIN_SLEEP = 0.001
@@ -2715,50 +2716,225 @@ async def test_remove_file_upload_box_s3_abort_error(rig: JointRig):
     surviving_box = await rig.file_upload_box_dao.get_by_id(box_id)
     assert surviving_box.state == "locked"
 
-async def test_requeue_file_success_plus_idempotence():
+
+async def _upload_and_fail(rig: JointRig, alias: str, failure_reason: str):
+    """Complete an upload, then simulate an interrogation failure via a path
+    that leaves the inbox object in place.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    box_id = await rig.create_default_box()
+    file_id, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias=alias,
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    object_id = file_upload_dao.latest.object_id
+    await controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+    failed_upload = await file_upload_dao.get_by_id(file_id)
+    failed_upload.state = "failed"
+    failed_upload.failure_reason = failure_reason
+    failed_upload.state_updated = now_utc_ms_prec()
+    await file_upload_dao.update(failed_upload)
+    return box_id, file_id, failed_upload
+
+
+async def test_requeue_file_success(rig: JointRig):
     """Test that a single file can be requeued.
-    
+
     Verify that `state` is set to `"inbox"`, `state_updated` is updated, and
     `failure_reason` is unset, while all other fields are unchanged.
-    Verify that UCS ignores the previous InterrogationFailure event from FIS
-    if it is replayed at this point.
-    Also verify that UCS correctly processes the next InterrogationSuccess or
-    InterrogationFailure event from FIS.
+    Also verify that UCS correctly processes a subsequent InterrogationSuccess
+    event from FIS.
     """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
 
-async def test_requeue_file_box_not_found():
+    # Requeue a failed file and verify the resulting field changes
+    box_id, file_id, failed_file_upload = await _upload_and_fail(
+        rig, "test_file", "Checksum mismatch reported by FIS"
+    )
+    await sleep(MIN_SLEEP)
+    await controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+
+    requeued = await file_upload_dao.get_by_id(file_id)
+    assert requeued.state == "inbox"
+    assert requeued.failure_reason == ""
+    assert requeued.state_updated > failed_file_upload.state_updated
+
+    # Verify that the other fields are unchanged
+    excluded = {"state", "failure_reason", "state_updated"}
+    assert requeued.model_dump(exclude=excluded) == failed_file_upload.model_dump(
+        exclude=excluded
+    )
+
+    # Verify that the inbox object itself is untouched by the requeue
+    assert await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(requeued.object_id)
+    )
+
+    # Verify that the subsequent InterrogationSuccess report is processed normally
+    await sleep(MIN_SLEEP)
+    success_report = InterrogationSuccess(
+        file_id=file_id,
+        secret_id="test-secret-789",
+        storage_alias="test",
+        bucket_id="interrogation",
+        object_id=uuid4(),
+        interrogated_at=now_utc_ms_prec(),
+        encrypted_parts_md5=["aaa111"],
+        encrypted_parts_sha256=["bbb222"],
+        encrypted_size=requeued.encrypted_size,
+    )
+    await controller.process_interrogation_success(report=success_report)
+    after_success = await file_upload_dao.get_by_id(file_id)
+    assert after_success.state == "interrogated"
+    assert after_success.secret_id == "test-secret-789"
+    assert after_success.bucket_id == "interrogation"
+    assert not await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(requeued.object_id)
+    )
+
+
+async def test_requeue_file_ignores_stale_interrogation_failure(rig: JointRig):
+    """Test that after a file is requeued, a replayed InterrogationFailure
+    event from before the requeue is ignored, while a genuinely new
+    InterrogationFailure report is still processed normally.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    original_failure_reason = "Checksum mismatch reported by FIS"
+
+    box_id, file_id, _ = await _upload_and_fail(
+        rig, "test_file", original_failure_reason
+    )
+    stale_report = InterrogationFailure(
+        file_id=file_id,
+        storage_alias="test",
+        interrogated_at=now_utc_ms_prec(),
+        reason=original_failure_reason,
+    )
+
+    await sleep(MIN_SLEEP)
+    await controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+    requeued = await file_upload_dao.get_by_id(file_id)
+
+    # Verify that a replayed InterrogationFailure event is ignored
+    await controller.process_interrogation_failure(report=stale_report)
+    after_stale_replay = await file_upload_dao.get_by_id(file_id)
+    assert after_stale_replay.state == "inbox"
+    assert after_stale_replay.failure_reason == ""
+    assert await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(requeued.object_id)
+    )
+
+    # Verify that a genuinely new InterrogationFailure event is still processed normally
+    await sleep(MIN_SLEEP)
+    new_failure_report = InterrogationFailure(
+        file_id=file_id,
+        storage_alias="test",
+        interrogated_at=now_utc_ms_prec(),
+        reason="Genuinely new failure",
+    )
+    await controller.process_interrogation_failure(report=new_failure_report)
+    after_new_failure = await file_upload_dao.get_by_id(file_id)
+    assert after_new_failure.state == "failed"
+    assert after_new_failure.failure_reason == "Genuinely new failure"
+    assert not await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(requeued.object_id)
+    )
+
+
+async def test_requeue_file_box_not_found(rig: JointRig):
     """Test that `requeue_file_upload()` raises BoxNotFoundError when
     the box doesn't exist.
     """
+    with pytest.raises(UploadControllerPort.BoxNotFoundError):
+        await rig.controller.requeue_file_upload(box_id=uuid4(), file_id=uuid4())
 
-async def test_requeue_file_box_already_archived():
+
+async def test_requeue_file_box_already_archived(rig: JointRig):
     """Test that `requeue_file_upload()` raises BoxStateError if the
     box is already archived.
     """
+    box_id = await rig.create_default_box()
+    box = await rig.file_upload_box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.file_upload_box_dao.update(box)
 
-async def test_requeue_file_if_file_not_failed():
+    with pytest.raises(UploadControllerPort.BoxStateError):
+        await rig.controller.requeue_file_upload(box_id=box_id, file_id=uuid4())
+
+
+async def test_requeue_file_if_file_not_failed(rig: JointRig):
     """Test that `requeue_file_upload()` raises a FileUploadStateError if
     the FileUpload is not in the `"failed"` state.
     """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
 
-async def test_requeue_file_if_file_not_found():
+    with pytest.raises(UploadControllerPort.FileUploadStateError):
+        await rig.controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+
+
+async def test_requeue_file_if_file_not_found(rig: JointRig):
     """Test that `requeue_file_upload()` raises FileUploadNotFound if the
     FileUpload doesn't exist.
     """
+    box_id = await rig.create_default_box()
 
-async def test_requeue_file_never_reached_inbox():
+    with pytest.raises(UploadControllerPort.FileUploadNotFound):
+        await rig.controller.requeue_file_upload(box_id=box_id, file_id=uuid4())
+
+
+async def test_requeue_file_never_reached_inbox(rig: JointRig):
     """Test that `requeue_file_upload()` raises RequeueError if the file
     in question never successfully finished uploading to the inbox.
 
     Note that in this case, error during upload init and error at completion
     time are indistinguishable.
     """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
 
-async def test_requeue_box_success():
+    # Mark the file as failed without completing the upload
+    file_upload = await rig.file_upload_dao.get_by_id(file_id)
+    file_upload.state = "failed"
+    await rig.file_upload_dao.update(file_upload)
+
+    # Make sure we get a RequeueError
+    with pytest.raises(UploadControllerPort.RequeueError):
+        await rig.controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+
+
+async def test_requeue_box_success(rig: JointRig):
     """Test that `requeue_all_box_uploads()` requeues all files in a
     box that failed interrogation.
 
-    Use a box with 6 uploads: 2 'init', 2 'interrogated', 2 'failed' but
+    Use a box with 10 uploads: 2 'init', 2 'interrogated', 2 'failed' but
     not uploaded, 2 that failed interrogation but already had their S3
     objects deleted, and 2 'failed' that failed interrogation (and still
     have their data in S3).
@@ -2771,18 +2947,183 @@ async def test_requeue_box_success():
     while the `skipped` list contains only the file IDs of the 2 failed files whose
     inbox data was deleted already.
     """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    box_id = await rig.create_default_box()
 
-async def test_requeue_box_empty():
+    # The rig's default get_object_metadata mock always succeeds, regardless of
+    # whether the object actually exists (it exists only to fake the ETag/size).
+    # Wrap it so a genuinely deleted object still raises ObjectNotFoundError,
+    # which is required to distinguish the 'deleted' and 'present' categories below.
+    original_get_object_metadata = object_storage.get_object_metadata
+
+    async def get_object_metadata_respecting_deletion(
+        *, bucket_id: str, object_id: str
+    ):
+        if not await object_storage.does_object_exist(
+            bucket_id=bucket_id, object_id=object_id
+        ):
+            raise ObjectStorageProtocol.ObjectNotFoundError(
+                bucket_id=bucket_id, object_id=object_id
+            )
+        return await original_get_object_metadata(
+            bucket_id=bucket_id, object_id=object_id
+        )
+
+    object_storage.get_object_metadata = get_object_metadata_respecting_deletion
+
+    async def upload(alias: str):
+        """Initiate and complete an upload, landing the file in 'inbox'."""
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias=alias,
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+        object_id = file_upload_dao.latest.object_id
+        await controller.complete_file_upload(
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="unencrypted_checksum",
+            encrypted_checksum=f"etag_for_{object_id}",
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
+        )
+        return file_id
+
+    # 2 'init' uploads
+    for i in range(2):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias=f"init_{i}",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+
+    # 2 'interrogated' uploads
+    for i in range(2):
+        file_id = await upload(f"interrogated_{i}")
+        success_report = InterrogationSuccess(
+            file_id=file_id,
+            secret_id=f"secret_{i}",
+            storage_alias="test",
+            bucket_id="permanent-bucket",
+            object_id=uuid4(),
+            interrogated_at=now_utc_ms_prec(),
+            encrypted_parts_md5=["aaa111"],
+            encrypted_parts_sha256=["bbb222"],
+            encrypted_size=ENCRYPTED_SIZE,
+        )
+        await controller.process_interrogation_success(report=success_report)
+
+    # 2 'failed' uploads that never reached the inbox
+    never_reached_inbox_ids: list = []
+    for i in range(2):
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias=f"never_reached_inbox_{i}",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+        file_upload = await file_upload_dao.get_by_id(file_id)
+        file_upload.state = "failed"
+        await file_upload_dao.update(file_upload)
+        never_reached_inbox_ids.append(file_id)
+
+    # 2 'failed' uploads whose inbox object was already deleted
+    deleted_ids: list = []
+    for i in range(2):
+        file_id = await upload(f"deleted_{i}")
+        failure_report = InterrogationFailure(
+            file_id=file_id,
+            storage_alias="test",
+            interrogated_at=now_utc_ms_prec(),
+            reason="Checksum mismatch reported by FIS",
+        )
+        await controller.process_interrogation_failure(report=failure_report)
+        deleted_ids.append(file_id)
+
+    # 2 'failed' uploads that still have their data in S3
+    present_ids: list = []
+    pre_snapshots: dict = {}
+    for i in range(2):
+        file_id = await upload(f"present_{i}")
+        failed_upload = await file_upload_dao.get_by_id(file_id)
+        failed_upload.state = "failed"
+        failed_upload.failure_reason = "Checksum mismatch reported by FIS"
+        failed_upload.state_updated = now_utc_ms_prec()
+        await file_upload_dao.update(failed_upload)
+        present_ids.append(file_id)
+        pre_snapshots[file_id] = failed_upload
+
+    await sleep(MIN_SLEEP)
+    result = await controller.requeue_all_box_uploads(box_id=box_id)
+
+    assert isinstance(result, BoxRequeueResult)
+    assert set(result.requeued) == set(present_ids)
+    assert set(result.skipped) == set(deleted_ids)
+
+    # Verify that the single-file requeue criteria hold for each requeued file
+    excluded = {"state", "failure_reason", "state_updated"}
+    for file_id in present_ids:
+        requeued_upload = await file_upload_dao.get_by_id(file_id)
+        before = pre_snapshots[file_id]
+        assert requeued_upload.state == "inbox"
+        assert requeued_upload.failure_reason == ""
+        assert requeued_upload.state_updated > before.state_updated
+        assert requeued_upload.model_dump(exclude=excluded) == before.model_dump(
+            exclude=excluded
+        )
+        assert await object_storage.does_object_exist(
+            bucket_id=bucket_id, object_id=str(requeued_upload.object_id)
+        )
+
+    # The skipped files should be untouched, and still 'failed'
+    for file_id in deleted_ids:
+        skipped_upload = await file_upload_dao.get_by_id(file_id)
+        assert skipped_upload.state == "failed"
+
+    # The other files (init, interrogated, never-reached-inbox) are untouched
+    for file_id in never_reached_inbox_ids:
+        untouched = await file_upload_dao.get_by_id(file_id)
+        assert untouched.state == "failed"
+        assert untouched.id not in result.requeued
+        assert untouched.id not in result.skipped
+
+
+async def test_requeue_box_empty(rig: JointRig):
     """Test that when a box is empty, a BoxRequeueResult is still
     returned with both `requeued` and `skipped` empty.
     """
+    box_id = await rig.create_default_box()
 
-async def test_requeue_box_if_box_not_found():
+    result = await rig.controller.requeue_all_box_uploads(box_id=box_id)
+
+    assert isinstance(result, BoxRequeueResult)
+    assert result.requeued == []
+    assert result.skipped == []
+
+
+async def test_requeue_box_if_box_not_found(rig: JointRig):
     """Test that `requeue_all_box_uploads()` raises a BoxNotFoundError if
     the box doesn't exist.
     """
+    with pytest.raises(UploadControllerPort.BoxNotFoundError):
+        await rig.controller.requeue_all_box_uploads(box_id=uuid4())
 
-async def test_requeue_box_when_archived():
+
+async def test_requeue_box_when_archived(rig: JointRig):
     """Test that `requeue_all_box_uploads()` raises a BoxStateError if
     the box is already set to 'archived'.
     """
+    box_id = await rig.create_default_box()
+    box = await rig.file_upload_box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.file_upload_box_dao.update(box)
+
+    with pytest.raises(UploadControllerPort.BoxStateError):
+        await rig.controller.requeue_all_box_uploads(box_id=box_id)
