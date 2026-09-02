@@ -34,8 +34,7 @@ from ghga_service_commons.transports.ratelimiting import (
 
 _REQUEST = httpx2.Request("GET", "http://test")
 
-# Spacing is `min_request_interval + uniform(0, per_request_jitter)`, so pinning the
-# jitter to zero makes the interval the whole spacing and the timing deterministic.
+# Pinning the jitter to zero makes the interval the whole spacing, so timing is exact.
 _STEP = 0.02
 
 
@@ -87,11 +86,7 @@ async def _acquire_at(budget: RateBudget, started: float) -> float:
 
 @pytest.mark.asyncio
 async def test_concurrent_requests_are_spread_not_released_together():
-    """Concurrent callers get successive slots instead of all firing at once.
-
-    This is the property the old implementation lacked: it read one shared wait and let
-    every caller sleep it in parallel, so a burst moved but never spread.
-    """
+    """Concurrent callers get successive slots instead of all firing at once."""
     budget = _budget()
     started = time.monotonic()
 
@@ -116,11 +111,7 @@ async def test_no_pacing_configured_grants_immediately():
 
 @pytest.mark.asyncio
 async def test_default_config_alone_spreads_requests():
-    """The shipped defaults spread concurrent requests without any configuration.
-
-    Guards the jitter default: dropping it back to zero would silently switch pacing
-    off for every deployment that does not set an interval.
-    """
+    """The defaults spread requests unconfigured; guards the jitter default."""
     budget = RateBudget(RateLimitingTransportConfig())
     started = time.monotonic()
 
@@ -147,11 +138,7 @@ async def test_penalty_holds_the_whole_budget_back():
 
 @pytest.mark.asyncio
 async def test_penalty_arriving_mid_wait_requeues_the_waiter():
-    """A request already waiting learns about a 429 that lands while it sleeps.
-
-    The old implementation read its wait once, before sleeping, so peers already in
-    flight fired straight through a 429 they should have backed off from.
-    """
+    """A request already waiting learns about a 429 that lands while it sleeps."""
     budget = _budget(min_request_interval=0.02)
     await budget.acquire()  # take the first slot so the next one has to wait
 
@@ -167,11 +154,7 @@ async def test_penalty_arriving_mid_wait_requeues_the_waiter():
 
 @pytest.mark.asyncio
 async def test_penalty_never_moves_backwards():
-    """A shorter penalty cannot shorten a longer one that is still in force.
-
-    There is no counter to consume any more, so an unrelated success cannot clear a
-    penalty either.
-    """
+    """A shorter penalty cannot shorten a longer one that is still in force."""
     budget = _unpaced_budget()
 
     await budget.penalize(30)
@@ -212,11 +195,7 @@ async def test_429_with_retry_after_penalizes_the_budget():
 
 @pytest.mark.asyncio
 async def test_429_without_retry_after_leaves_pacing_to_the_retry_layer():
-    """Without a usable Retry-After there is nothing to hold the budget back with.
-
-    The retry layer above backs off exponentially in that case, which is why no signal
-    has to be passed up any more.
-    """
+    """Without a usable Retry-After the budget is not held back; the retry layer waits."""
     budget = _unpaced_budget()
     response = httpx2.Response(429)
 
@@ -279,11 +258,7 @@ async def test_async_context_manager_closes_transport():
 
 @pytest.mark.asyncio
 async def test_429_with_http_date_retry_after_is_honored():
-    """A Retry-After given as an HTTP date is honored instead of crashing.
-
-    RFC 9110 allows both a delay in seconds and an HTTP date; the date form used to
-    reach float() unguarded and take the request down with a ValueError.
-    """
+    """RFC 9110 allows an HTTP date instead of seconds, so it has to parse."""
     retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
     response = httpx2.Response(
         429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
@@ -329,11 +304,7 @@ async def test_429_with_unusable_retry_after_is_treated_as_absent(value: str):
 
 @pytest.mark.asyncio
 async def test_429_with_repeated_retry_after_takes_the_longest():
-    """Repeated headers are read individually and the more cautious value wins.
-
-    `Headers.items()` joins repeats into one comma separated string that parses as
-    neither allowed form, which used to raise.
-    """
+    """Repeated headers are read individually and the longest wait wins."""
     response = httpx2.Response(
         429, headers=[("Retry-After", "120"), ("Retry-After", "5")]
     )

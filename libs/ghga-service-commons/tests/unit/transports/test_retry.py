@@ -57,10 +57,7 @@ class _TrackedResponse(httpx2.Response):
 
 
 class _FailingCloseResponse(httpx2.Response):
-    """Response whose aclose() always raises, to exercise cleanup error handling.
-
-    Counts close calls so tests can assert the same response is not closed twice.
-    """
+    """Response whose aclose() always raises; counts calls to catch a double close."""
 
     def __init__(self, status_code: int) -> None:
         super().__init__(status_code=status_code)
@@ -223,10 +220,9 @@ async def test_raises_retry_error_when_not_reraising():
 
 @pytest.mark.asyncio
 async def test_retried_responses_are_closed():
-    """Ensure discarded responses from retried attempts are closed, the returned one is not.
+    """Retried responses are closed, the returned one is not.
 
-    Each retried response holds a connection from the pool until it is read or closed,
-    so all but the final, returned response must be closed to avoid leaking connections.
+    Each holds a pool connection until read or closed, so leaving them open leaks.
     """
     responses = [
         _TrackedResponse(RETRYABLE_STATUS_CODE),
@@ -303,11 +299,7 @@ async def test_async_context_manager_closes_transport():
 
 
 def test_wait_strategy_treats_429_like_any_other_retryable_status():
-    """A 429 gets the ordinary backoff, with no signal from the layer below.
-
-    The rate limiting layer holds a server's Retry-After as a shared deadline that the
-    next attempt blocks on, so the two waits run in sequence and the longer one decides.
-    """
+    """A 429 gets the ordinary backoff; the layer below holds the Retry-After."""
     wait = _wait_strategy()
     state = _retry_state(result=httpx2.Response(429), attempt_number=3)
 

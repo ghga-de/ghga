@@ -60,11 +60,7 @@ def _budget(stack) -> RateBudget:
 
 @pytest.mark.usefixtures("proxy_env")
 def test_every_route_shares_one_budget():
-    """The configured request rate applies to the client, not to each mount.
-
-    Each mount used to build its own limiter, so setting three proxy variables silently
-    tripled the rate a deployment actually used.
-    """
+    """The configured rate applies to the whole client, not to each mount."""
     client = get_composite_client(_UNPACED)
 
     budgets = {id(_budget(route)) for route in _routes(client)}
@@ -75,11 +71,7 @@ def test_every_route_shares_one_budget():
 
 @pytest.mark.usefixtures("proxy_env")
 def test_custom_transport_serves_every_route():
-    """A supplied transport is used for proxy mounts too, not stranded behind them.
-
-    Mounts take precedence over a client's own transport, so a custom transport used to
-    go silently unused whenever proxy variables were set.
-    """
+    """A supplied transport serves the proxy mounts too, not just the direct route."""
     mock = httpx2.MockTransport(lambda request: httpx2.Response(200))
     client = get_composite_client(
         _UNPACED, make_base_transport=fixed_base_transport_factory(mock)
@@ -90,7 +82,7 @@ def test_custom_transport_serves_every_route():
 
 @pytest.mark.usefixtures("proxy_env")
 def test_factory_is_called_once_per_route_with_its_proxy():
-    """A wrapper transport can be combined with proxying, which was impossible before."""
+    """The factory builds a transport per route, so wrappers and proxying can combine."""
     seen: list[str | None] = []
 
     def instrumented(proxy: str | None) -> httpx2.AsyncBaseTransport:
@@ -105,11 +97,7 @@ def test_factory_is_called_once_per_route_with_its_proxy():
 
 @pytest.mark.usefixtures("proxy_env")
 def test_limits_reach_the_proxy_mounts():
-    """Pool sizing applies to proxied routes, not only to the direct one.
-
-    The proxy helper used to build its transports without limits and hand them on as a
-    base transport, where limits are ignored, so a requested pool silently stayed at 100.
-    """
+    """Pool sizing applies to proxied routes, not only to the direct one."""
     client = get_composite_client(_UNPACED, limits=httpx2.Limits(max_connections=7))
 
     pools = [_base_transport(route)._pool._max_connections for route in _routes(client)]  # type: ignore[attr-defined]
@@ -146,9 +134,8 @@ def test_client_keyword_arguments_are_passed_through():
 async def test_retry_after_outlasts_the_retry_backoff():
     """A 429 asking for longer than the backoff still waits the full Retry-After.
 
-    The two waits run in sequence: the retry layer sleeps its backoff, then the next
-    attempt blocks on the budget's floor. This is the property the removed Should-Wait
-    signal used to protect.
+    The retry layer sleeps its backoff, then the next attempt blocks on the budget's
+    floor, so the longer of the two decides.
     """
     attempts = []
 

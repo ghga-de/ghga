@@ -145,13 +145,7 @@ def test_preserves_no_proxy_values(
     config_class: type[CompositeConfig],
     proxy_fn: Callable,
 ):
-    """NO_PROXY hosts (None values) are preserved as ``None`` mounts.
-
-    httpx2's built-in NO_PROXY handling is bypassed when ``mounts`` are supplied, so
-    the ``None`` entries are what tell httpx2 to connect directly for those hosts.
-    They must be kept as keys with ``None`` values, not dropped and not wrapped in
-    a transport.
-    """
+    """NO_PROXY hosts stay as ``None`` mounts, which tells httpx2 to connect directly."""
     config = config_class()
 
     with patch(
