@@ -2714,3 +2714,75 @@ async def test_remove_file_upload_box_s3_abort_error(rig: JointRig):
     assert rig.file_upload_box_dao.resources
     surviving_box = await rig.file_upload_box_dao.get_by_id(box_id)
     assert surviving_box.state == "locked"
+
+async def test_requeue_file_success_plus_idempotence():
+    """Test that a single file can be requeued.
+    
+    Verify that `state` is set to `"inbox"`, `state_updated` is updated, and
+    `failure_reason` is unset, while all other fields are unchanged.
+    Verify that UCS ignores the previous InterrogationFailure event from FIS
+    if it is replayed at this point.
+    Also verify that UCS correctly processes the next InterrogationSuccess or
+    InterrogationFailure event from FIS.
+    """
+
+async def test_requeue_file_box_not_found():
+    """Test that `requeue_file_upload()` raises BoxNotFoundError when
+    the box doesn't exist.
+    """
+
+async def test_requeue_file_box_already_archived():
+    """Test that `requeue_file_upload()` raises BoxStateError if the
+    box is already archived.
+    """
+
+async def test_requeue_file_if_file_not_failed():
+    """Test that `requeue_file_upload()` raises a FileUploadStateError if
+    the FileUpload is not in the `"failed"` state.
+    """
+
+async def test_requeue_file_if_file_not_found():
+    """Test that `requeue_file_upload()` raises FileUploadNotFound if the
+    FileUpload doesn't exist.
+    """
+
+async def test_requeue_file_never_reached_inbox():
+    """Test that `requeue_file_upload()` raises RequeueError if the file
+    in question never successfully finished uploading to the inbox.
+
+    Note that in this case, error during upload init and error at completion
+    time are indistinguishable.
+    """
+
+async def test_requeue_box_success():
+    """Test that `requeue_all_box_uploads()` requeues all files in a
+    box that failed interrogation.
+
+    Use a box with 6 uploads: 2 'init', 2 'interrogated', 2 'failed' but
+    not uploaded, 2 that failed interrogation but already had their S3
+    objects deleted, and 2 'failed' that failed interrogation (and still
+    have their data in S3).
+
+    Verify that the single-file criteria hold for multiple files, where
+    the relevant fields are updated and the others unchanged.
+
+    Verify that the return value is an instance of BoxRequeueResult, and
+    that the `requeued` list contains only the file IDs of the 2 requeued files,
+    while the `skipped` list contains only the file IDs of the 2 failed files whose
+    inbox data was deleted already.
+    """
+
+async def test_requeue_box_empty():
+    """Test that when a box is empty, a BoxRequeueResult is still
+    returned with both `requeued` and `skipped` empty.
+    """
+
+async def test_requeue_box_if_box_not_found():
+    """Test that `requeue_all_box_uploads()` raises a BoxNotFoundError if
+    the box doesn't exist.
+    """
+
+async def test_requeue_box_when_archived():
+    """Test that `requeue_all_box_uploads()` raises a BoxStateError if
+    the box is already set to 'archived'.
+    """
