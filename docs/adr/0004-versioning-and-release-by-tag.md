@@ -8,8 +8,10 @@
   **amended 2026-08-25**: `ghga-arcticfreeze` and `ghga-jsonsubschema` named in the member
   list, which had omitted them (see below) — **amended 2026-09-01**: a member-named tag
   releases that member alone; sweeping the whole index gap moves to the reserved
-  `pypi_sweep` tag (see below)
+  `pypi_sweep` tag (see below) — **amended 2026-09-02**: a lane member whose shipped
+  content changes must be bumped in the same change, enforced at CI (see below)
 - **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18 / 2026-08-19 / 2026-08-25 / 2026-09-01
+  / 2026-09-02
 - **Deciders:** Leon Kuchenbecker
 
 ## Context
@@ -149,11 +151,45 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
     work — a fix merged to main that is not ready to ship — would be wrong, and "the
     directory changed" cannot distinguish a docstring edit from a new API.
 
+    Still true of the release plan, but **as of 2026-09-02 that state no longer reaches
+    `main`**: the drift gate below requires the bump at merge time. The rule stands
+    unchanged for what it was about — one member's pending work never blocks another's
+    release, and a dependant still resolves by its own declared constraint, so
+    `ghga-connector` pinning `hexkit[s3]==9.0.1` keeps resolving 9.0.1 after hexkit bumps.
+    The "directory changed" objection is narrower now too: the gate watches a member's
+    packaged roots and its `pyproject.toml`, so tests and docs no longer trip it. A
+    docstring inside `src/` still does — accepted, because no diff distinguishes a
+    docstring from an API change, and exempting one would put content on PyPI that
+    differs from the platform's.
+
   What keeps that honest is the published-combo matrix, which resolves the *same* way: an
   internal dependency is built from this repo only when it is a release candidate, and
   otherwise comes from PyPI. So the combination under test is the combination that ships.
   If a tool genuinely needs unreleased library code, its own floor says so and the install
   fails there — the accurate signal, at the layer that owns it.
+- **A changed lane member must declare an unpublished version** (added 2026-09-02). CI's
+  `check-pypi-drift` (`scripts/pypi_drift.py`) fails when a member's shipped content
+  changed while the version it declares is one the index already serves. It runs *before*
+  the published-combo matrix, which depends on it: the matrix builds an internal
+  dependency from the repo only when that dependency is a release candidate, so it is only
+  meaningful once every changed member is one. The concern is **version-number integrity, not
+  release coupling**: the platform lane embeds internal libraries from source at the
+  release commit, so without this a library can change, merge, and run in production while
+  PyPI keeps serving that number with the old content — `hexkit 9.0.1` meaning two
+  different things, permanently, with no consumer ever told theirs is behind.
+  `stamp_platform_version.py`'s `+ghga.<version>` local suffix labels the image's copy so
+  SBOM metadata stays coherent, but labelling a divergence is not preventing one.
+
+  A bump is not a claim that a change was significant — semver's major/minor/patch already
+  carries that, and the developer still chooses it. The bump only asserts that this content
+  is not the content already published. Nothing ships on merge either: publishing still
+  needs a pushed tag, so bumps accumulate and one sweep releases them together.
+
+  The check derives its own change set — a member's packaged roots plus its
+  `pyproject.toml` — rather than reusing `affected_targets.affected()`, which expands to
+  dependents and treats repo-wide paths as touching everything. Both properties are correct
+  for selecting tests and wrong here, where they would spend versions on content no
+  consumer receives.
 - The **published-combo matrix** ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)) — the
   component against PyPI-resolved dependencies across its supported Python range — is a
   **prerequisite for the first PyPI-lane release from this repo**, since the workspace only

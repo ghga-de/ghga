@@ -9,7 +9,10 @@
 # members are additionally tested: the member's own wheel, plus a wheel for each internal
 # dependency releasing alongside it, against every other dependency resolved from the
 # index — across the supported Python range. published-combo-gate is its always-reported
-# check, for the same reason images-gate is. Stage 2 (integration.yaml) runs as its own workflow.
+# check, for the same reason images-gate is. Separately, check-pypi-drift fails the run if
+# a lane member's shipped content changed without its version moving past the index, which
+# is what keeps a version number denoting one thing in a platform image and on PyPI.
+# Stage 2 (integration.yaml) runs as its own workflow.
 name: ci
 
 on:
@@ -324,12 +327,48 @@ jobs:
             *) echo "::error::image build gate failed ($d / $b)"; exit 1 ;;
           esac
 
+  # The drift gate. A PyPI-lane member whose *shipped* content changed must declare a
+  # version the index does not already serve. Without it a library can change, merge, and
+  # ship inside a platform image — which embeds internal libs from source (ADR-0004) —
+  # while PyPI keeps serving that same version number with the old content: one version
+  # string denoting two different things, permanently, with no consumer ever told theirs
+  # is behind. scripts/pypi_drift.py carries the full reasoning.
+  #
+  # Ahead of check-published-combo, which depends on it. The matrix builds an internal
+  # dependency from the repo only when that dependency is a release candidate, so it is
+  # only meaningful once this gate has established that every changed member is one.
+  # Running it on a drifted tree would burn ~30 runners on a combination that ships
+  # nowhere.
+  check-pypi-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history for the merge-base diff
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # No fallback for an unresolvable base: on a pull_request it is the base branch, and
+      # the only push trigger is main, where `before` is the previous main commit. It
+      # resolves unless main is force-pushed, and then failing is the right answer.
+      - name: Assert every changed lane member declares an unpublished version
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          git diff --name-only "$base...HEAD" \
+            | uv run --script scripts/pypi_drift.py
+
   # The published-combo gate (ADR-0002): the same affected members, tested the way external
   # consumers get them. pypi-matrix.yaml drops everything outside the PyPI lane, so a
   # services-only change yields no cells and only its `test` job is skipped — `discover`
   # still runs, and still queries PyPI once per lane member.
   check-published-combo:
-    needs: [discover, lint]
+    needs: [discover, lint, check-pypi-drift]
     if: ${{ needs.discover.outputs.python != '[]' }}
     uses: ./.github/workflows/pypi-matrix.yaml
     with:
@@ -337,11 +376,11 @@ jobs:
 
   # The check to require in branch protection for this gate, for the same reason
   # images-gate exists above: check-published-combo is `if:`-gated, and a job that never
-  # starts can leave its check missing rather than skipped. `lint` is in `needs` because
-  # check-published-combo waits on it — without that, a lint failure would skip the matrix
-  # and this job would report it as "nothing to test".
+  # starts can leave its check missing rather than skipped. `lint` and `check-pypi-drift`
+  # are in `needs` because check-published-combo waits on them — without that, a failure
+  # in either would skip the matrix and this job would report it as "nothing to test".
   published-combo-gate:
-    needs: [discover, lint, check-published-combo]
+    needs: [discover, lint, check-pypi-drift, check-published-combo]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -350,10 +389,11 @@ jobs:
         run: |
           d='${{ needs.discover.result }}'
           l='${{ needs.lint.result }}'
+          p='${{ needs.check-pypi-drift.result }}'
           c='${{ needs.check-published-combo.result }}'
-          echo "discover=$d lint=$l check-published-combo=$c"
-          case "$d:$l:$c" in
-            success:success:success) echo "every affected lane member passed the published-combo matrix" ;;
-            success:success:skipped) echo "no PyPI-lane member affected — nothing to test" ;;
-            *) echo "::error::published-combo gate failed ($d / $l / $c)"; exit 1 ;;
+          echo "discover=$d lint=$l check-pypi-drift=$p check-published-combo=$c"
+          case "$d:$l:$p:$c" in
+            success:success:success:success) echo "every affected lane member passed the published-combo matrix" ;;
+            success:success:success:skipped) echo "no PyPI-lane member affected — nothing to test" ;;
+            *) echo "::error::published-combo gate failed ($d / $l / $p / $c)"; exit 1 ;;
           esac
