@@ -1259,6 +1259,7 @@ async def test_requeue_file_successful(config: ConfigFixture, app_fixture: AppFi
         box_id=TEST_BOX_ID, file_id=TEST_FILE_ID
     )
 
+
 async def test_requeue_file_auth(config: ConfigFixture, app_fixture: AppFixture):
     """Test the status codes returned when no WOT and an invalid WOT are used for
     the endpoint for requeueing a single FileUpload.
@@ -1304,6 +1305,7 @@ async def test_requeue_file_auth(config: ConfigFixture, app_fixture: AppFixture)
     )
     response = await rest_client.post(url, headers=good_token_header)
     assert response.status_code == 204
+
 
 @pytest.mark.parametrize(
     "core_error, http_error",
@@ -1373,6 +1375,7 @@ async def test_requeue_file_error_translation(
     assert response.json()["description"] == str(http_error)
     assert response.json()["exception_id"] == http_error.exception_id != ""
 
+
 async def test_requeue_box_successful(config: ConfigFixture, app_fixture: AppFixture):
     """Verify that the correct payload and status code are returned from the
     endpoint for requeueing all FileUploads in a box.
@@ -1398,6 +1401,7 @@ async def test_requeue_box_successful(config: ConfigFixture, app_fixture: AppFix
     }
     core_mock.requeue_all_box_uploads.assert_awaited_once_with(box_id=TEST_BOX_ID)
 
+
 async def test_requeue_box_empty_lists(config: ConfigFixture, app_fixture: AppFixture):
     """Verify that the correct payload and status code are returned from the
     endpoint for requeueing all FileUploads in a box when both lists in the
@@ -1418,6 +1422,7 @@ async def test_requeue_box_empty_lists(config: ConfigFixture, app_fixture: AppFi
     assert response.status_code == 200
     assert response.json() == {"requeued": [], "skipped": []}
     core_mock.requeue_all_box_uploads.assert_awaited_once_with(box_id=TEST_BOX_ID)
+
 
 async def test_requeue_box_auth(config: ConfigFixture, app_fixture: AppFixture):
     """Test the status codes returned when no WOT and an invalid WOT are used for
@@ -1457,6 +1462,7 @@ async def test_requeue_box_auth(config: ConfigFixture, app_fixture: AppFixture):
     )
     response = await rest_client.post(url, headers=good_token_header)
     assert response.status_code == 200
+
 
 @pytest.mark.parametrize(
     "core_error, http_error",

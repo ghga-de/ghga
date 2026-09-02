@@ -169,7 +169,9 @@ def requeue_all_failed_token_header(
 
     Leave box_id unspecified to use a random value.
     """
-    work_order = models.RequeueAllFailedWorkOrder(work_type="requeue_box", box_id=box_id)
+    work_order = models.RequeueAllFailedWorkOrder(
+        work_type="requeue_box", box_id=box_id
+    )
     return _make_auth_header(work_order, jwk)
 
 
