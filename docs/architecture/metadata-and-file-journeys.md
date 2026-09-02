@@ -7,7 +7,7 @@
 > you start from ground truth rather than re-deriving it.
 >
 > **Status.** Describes the *current* system. The planned early "data lifecycle" changes are
-> tracked separately in [`docs/epics/91-giraffe/technical_specification.md`](../epics/91-giraffe/technical_specification.md);
+> tracked separately in [`docs/epics/93-giraffe/technical_specification.md`](../epics/93-giraffe/technical_specification.md);
 > where this document notes an invariant the feature will change, it links there.
 >
 > File:line anchors are provided as entry points. They drift — treat them as "start looking
@@ -66,7 +66,7 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
   source event) → `complete_submission`. **Only `PENDING`→`COMPLETED` is ever used.**
 - `SubmissionStatus` (`models.py:31`) *defines* `DEPRECATED_*`, `PUBLISHED`, `HIDDEN_*`,
   `EMPTIED_*`, `CANCELED`, `IN_REVIEW` — **none are ever set**. There is no replaces/replaced-by
-  field and no versioning anywhere today. → [changed by the feature](../epics/91-giraffe/technical_specification.md).
+  field and no versioning anywhere today. → [changed by the feature](../epics/93-giraffe/technical_specification.md).
 
 ### Accession generation (offline, random, no counter)
 - Engine: `accession_registry/accession_registry.py:82`. Accession = `prefix + suffix`, where
@@ -84,7 +84,7 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
   object, re-upserting the same alias **reuses** its accession; new aliases get new ones;
   dropped aliases fall out. **But `submit` always calls `init_submission` (fresh UUID, empty
   map), so a new `submit` run of the same aliases mints *fresh* accessions.** There is no
-  cross-submission accession stability today. → [changed by the feature](../epics/91-giraffe/technical_specification.md).
+  cross-submission accession stability today. → [changed by the feature](../epics/93-giraffe/technical_specification.md).
 - A **separate** catalog-accession scheme exists (`generate-catalog-accessions`,
   `catalog_accession_generator.py`): base `GHGAMC` + per-type letter + 14 digits. Distinct from
   submission accessions; not on the submission path.
@@ -102,7 +102,7 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
 - **`studies[0]` assumption:** the loader derives a publishable artifact's `study_accession` from
   `content["studies"][0]["accession"]` (`libs/metldata/src/metldata/load/collect.py:91`) — a
   hard one-study-per-submission assumption. → [made a hard rule by the
-  feature](../epics/91-giraffe/technical_specification.md).
+  feature](../epics/93-giraffe/technical_specification.md).
 
 ### Transform artifacts
 Workflow `builtin_workflows/ghga_archive.py:36`: normalize → **add_accessions** → embed_restricted
@@ -148,7 +148,7 @@ queryable artifact/class is `embedded_public` / `EmbeddedDataset`.
 - **Prerequisite (today):** `_check_archival_prerequisites` (`rdub_manager.py:314`) rejects
   archival unless **every file in the box already has an accession mapped**; UCS additionally
   rejects if any `init`/`inbox` file remains. On archival every file flips to `awaiting_archival`.
-  → **[this coupling is inverted by the feature](../epics/91-giraffe/technical_specification.md)**
+  → **[this coupling is inverted by the feature](../epics/93-giraffe/technical_specification.md)**
   — archival stops requiring mapping, and mapping starts requiring archival.
 - After archival the box is **immutable**: accession maps, deletion, etc. are all rejected.
 - **Retained after archival (important):** the RDUB, the FUB, and every `FileUpload`
@@ -170,7 +170,7 @@ accessions* → *upload-box file IDs*.
   - box **not archived** (optimistic version lock on `box_version`);
   - **strict 1:1** — each file_id appears once; an accession already mapped elsewhere / to another
     study → `ConflictingAccessionError`. → **[relaxed to one file → many accessions by the
-    feature](../epics/91-giraffe/technical_specification.md).**
+    feature](../epics/93-giraffe/technical_specification.md).**
   - **every active file in the box must be mapped** (no leftovers);
   - the accession must **already exist as an *unmapped* `FileAccession`** — those rows are
     pre-seeded by an **interim ingestion bridge** consuming metldata's `SearchableResource`
@@ -224,7 +224,7 @@ missing targets.
   `GET /search-options`. Searchable classes are **config-driven**; the portal searches
   `class_name=EmbeddedDataset` only — **there is no Study search class**. Upsert/delete are purely
   event-driven; MASS does no diffing.
-  → **[search hiding of superseded datasets is added by the feature](../epics/91-giraffe/technical_specification.md).**
+  → **[search hiding of superseded datasets is added by the feature](../epics/93-giraffe/technical_specification.md).**
 
 ### Portal (`frontend/data-portal/src/app/app-routes.ts`)
 - `browse` (datasets, `class_name=EmbeddedDataset`), `dataset/:id`, `study/:id` (and `s/:id`).
@@ -235,7 +235,7 @@ missing targets.
 - `loadStudiesMap()` is an explicitly temporary fan-out (EmbeddedDataset → stats → Study) labeled
   *"until we switch to a study-based backend"*.
 - **No versioning/deprecation UI anywhere** — re-load silently replaces.
-  → **[the "updated version available" hint is added by the feature](../epics/91-giraffe/technical_specification.md).**
+  → **[the "updated version available" hint is added by the feature](../epics/93-giraffe/technical_specification.md).**
 
 ---
 
@@ -251,7 +251,7 @@ collection (from `MetadataDatasetOverview`), and DINS.
 ## 7. Invariants the data-lifecycle feature will change
 
 Collected here as a checklist; details in
-[`docs/epics/91-giraffe/technical_specification.md`](../epics/91-giraffe/technical_specification.md).
+[`docs/epics/93-giraffe/technical_specification.md`](../epics/93-giraffe/technical_specification.md).
 
 1. **Accession format** is `{prefix}{14 random digits}` with no structure/version → studies move
    to `GHGA.YY.XXX.V`; child entities to `{study_pid}.{alias}`; datasets to `{study_pid}.DS.xxx`.
