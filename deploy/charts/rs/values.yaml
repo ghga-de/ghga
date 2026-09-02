@@ -7,11 +7,7 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
-  storageClass: ""
   _topics: {}
-command:
-- "sh"
-- "-c"
 commandPrefix: ''
 commandStyle: exec
 executable: rs
@@ -27,9 +23,6 @@ cronjobs:
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
-clusterDomain: cluster.local
-annotations: {}
-labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
@@ -48,6 +41,7 @@ initContainers: []
 migrationInitContainer:
   enabled: false
   image: ""
+  imagePullPolicy:
   executable: rs
   executableArgs:
   - migrate-db
@@ -73,12 +67,8 @@ terminationGracePeriodSeconds: ""
 updateStrategy:
   type: RollingUpdate
 podRestartPolicy: Always
-ports:
-  enabled: false
-  ports:
-  - name: http
-    containerPort: 8080
-    protocol: TCP
+containerPorts:
+  http: 8080
 livenessProbe:
   enabled: false
   tcpSocket:
@@ -93,6 +83,10 @@ readinessProbe:
   periodSeconds: 15
 startupProbe:
   enabled: false
+  tcpSocket:
+    port: 8080
+  periodSeconds: 10
+  failureThreshold: 30
 containerSecurityContext:
   enabled: true
   runAsUser: 1000
@@ -121,11 +115,8 @@ envVarsSecret: ""
 service:
   enabled: true
   type: ClusterIP
-  ports:
-  - name: http
-    protocol: TCP
-    port: 8080
-    targetPort: http
+  labels: {}
+  annotations: {}
 serviceAccount:
   create: true
 autoscaling:

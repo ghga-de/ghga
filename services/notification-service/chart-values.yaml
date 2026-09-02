@@ -7,6 +7,12 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: ns-consumer
 
+# event consumer only, no REST API
+service:
+  enabled: false
+containerPorts:
+  http: null
+
 config:
   mongo_dsn:
   from_address: test@test.com
