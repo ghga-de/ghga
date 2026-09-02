@@ -2,8 +2,16 @@
 
 We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than build from
 scratch ([ADR-0013](../docs/adr/0013-adopt-ghga-common-chart-system.md)). The system was
-imported (history-preserving) from the `charts` repo; the upstream documentation lives in
-[chart-system.md](chart-system.md).
+imported (history-preserving) from the `charts` repo.
+
+```bash
+helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version X.Y.Z
+```
+
+Chart version/`appVersion` and publishing are not per-merge: they're stamped and pushed as
+OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via
+[release.yaml](../.github/workflows/release.yaml), ADR-0004), so a chart version always
+matches a released set of images.
 
 Layout:
 
@@ -29,6 +37,14 @@ To validate a `ghga-common` change end-to-end, edit `deploy/charts/ghga-common/`
 and run `just demo-template` (or `just up`) — every generated chart already resolves the
 dependency via `file://../ghga-common`, so `helm dep up` re-vendors local edits with no
 extra repo wiring.
+
+To try a `ghga-common` change against a single chart instead of the whole demo, that
+chart's dependency already resolves locally, so just re-vendor and install it directly:
+
+```bash
+helm dependency update <chart>
+helm install <release-name> <chart>
+```
 
 The demo umbrella (`helm install ghga deploy/charts/ghga-demo`) bundles the Envoy Gateway
 edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route
