@@ -1409,6 +1409,12 @@ class UploadController(UploadControllerPort):
                 )
                 return
             case "inbox":
+                if report.interrogated_at < old_file_upload.state_updated:
+                    log.warning(
+                        "Ignoring stale interrogation report for FileUpload %s",
+                        file_id,
+                    )
+                    return
                 # Update the FileUpload's parameters using the InterrogationReport
                 await self._remove_completed_file_upload(file_upload=old_file_upload)
                 updated_file_upload = old_file_upload.model_copy(deep=True)
@@ -1461,6 +1467,12 @@ class UploadController(UploadControllerPort):
                 )
                 return
             case "inbox":
+                if report.interrogated_at < file_upload.state_updated:
+                    log.info(
+                        "Ignoring stale interrogation failure report for FileUpload %s",
+                        file_id,
+                    )
+                    return
                 await self._remove_completed_file_upload(file_upload=file_upload)
                 file_upload.state = "failed"
                 file_upload.state_updated = now_utc_ms_prec()
