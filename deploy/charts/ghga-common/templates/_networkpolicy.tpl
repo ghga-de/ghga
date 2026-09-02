@@ -5,17 +5,26 @@ kind: NetworkPolicy
 metadata:
   name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations:
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
 spec:
   podSelector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   policyTypes:
   - Ingress
-  ingress: 
+  ingress:
     {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress "context" $) | nindent 2 }}
-    {{- if .Values.service.ports }}
+    {{- if .Values.containerPorts }}
     ports:
-    {{- range .Values.service.ports }}
-    - {{ include "common.tplvalues.render" (dict "value" (omit . "name") "context" $) | nindent 6 | trim }}
+    {{- range (include "ghga-common.container-ports" . | fromYamlArray) }}
+    - port: {{ .containerPort }}
+      protocol: {{ .protocol }}
     {{- end }}
     {{- end }}
 {{- end }}

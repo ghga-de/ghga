@@ -43,7 +43,7 @@ VALID_UNTIL2 = VALID_UNTIL1 + timedelta(days=180)
 @pytest.fixture(name="access_api")
 def fixture_access_api() -> AccessApiMock:
     """Get a mock of the access API that the adapter talks to."""
-    config = AccessCheckConfig(access_url=BASE_ACCESS_URL)  # type: ignore
+    config = AccessCheckConfig(access_url=BASE_ACCESS_URL)
     return AccessApiMock(config=config)
 
 
@@ -52,7 +52,7 @@ async def fixture_access_check(
     access_api: AccessApiMock,
 ) -> AsyncGenerator[AccessCheckAdapter]:
     """Get configured access test adapter."""
-    config = AccessCheckConfig(access_url=BASE_ACCESS_URL)  # type: ignore
+    config = AccessCheckConfig(access_url=BASE_ACCESS_URL)
     async with AccessCheckAdapter.construct(
         config=config, transport=access_api.as_transport()
     ) as adapter:

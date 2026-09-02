@@ -70,7 +70,7 @@ def check_homepage_for_user(full_name: str, fixtures: JointFixture):
     assert profile_button.inner_text() == fixtures.auth.get_initials(full_name)
 
     # Validate navigation items
-    expected_navigation_items = ["Browse Data", "Docs", "FAQ", "Home"]
+    expected_navigation_items = ["Browse Data", "Docs", "FAQ", "Home", "System Status"]
     if full_name == "Data Steward":
         expected_navigation_items.append("Admin")
     navigation = page.locator("mat-nav-list").nth(0).inner_text()

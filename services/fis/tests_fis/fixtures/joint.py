@@ -29,25 +29,23 @@ from fis.core.interrogation import InterrogationHandler
 from fis.core.models import FileUnderInterrogation, InterrogationReport
 from fis.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
-from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from fis.ports.outbound.dao import FileDao
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from hexkit.providers.testing.dao import new_mock_dao_class
+from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.providers.testing.eventpub import InMemEventPublisher, InMemEventStore
 from tests_fis.fixtures.config import get_config
 from tests_fis.fixtures.ekss_api import EkssApiMock
 
 __all__ = ["JointFixture", "joint_fixture"]
 
-InMemFileDao: type[FileDao] = new_mock_dao_class(
-    dto_model=FileUnderInterrogation, id_field="id"
-)
+InMemFileDao = new_mock_dao_class(dto_model=FileUnderInterrogation, id_field="id")
 
-InMemInterrogationReportDao: type[InterrogationReportDao] = new_mock_dao_class(
+InMemInterrogationReportDao = new_mock_dao_class(
     dto_model=InterrogationReport, id_field="file_id"
 )
 
@@ -90,7 +88,7 @@ async def joint_fixture(
         yield JointFixture(
             config=config,
             kafka=kafka,
-            file_dao=interrogation_handler._file_dao,
+            file_dao=interrogation_handler._file_dao,  # type: ignore[attr-defined]
             rest_client=rest_client,
             outbox_consumer=outbox_consumer,
             interrogation_handler=interrogation_handler,
@@ -103,8 +101,9 @@ class JointRig:
     """A smaller version of JointFixture designed for unit testing"""
 
     config: Config
-    file_dao: FileDao
-    interrogation_report_dao: InterrogationReportDao
+    # the in-memory type, not the port: the unit tests use the mock DAO's own API
+    file_dao: BaseInMemDao[FileUnderInterrogation]
+    interrogation_report_dao: BaseInMemDao[InterrogationReport]
     secrets_client: AsyncMock
     publisher: EventPubTranslatorPort
     event_store: InMemEventStore

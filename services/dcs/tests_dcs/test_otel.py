@@ -253,7 +253,9 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     async with get_configured_httpx_client(
         config=config, base_transport=ekss.as_transport(), mount_env_proxies=False
     ) as client:
-        HTTPX2ClientInstrumentor.instrument_client(client)
+        # the instrumentor targets httpx2, but upstream annotates (un)instrument_client
+        # against httpx 0.x client types, so a real httpx2 client never matches
+        HTTPX2ClientInstrumentor.instrument_client(client)  # type: ignore[arg-type]
         try:
             secrets_client = SecretsClient(config=config, httpx_client=client)
 
@@ -262,7 +264,7 @@ async def test_outbound_ekss_call_records_httpx_client_span(
                 secret_id=SECRET_ID, receiver_public_key=receiver_public_key
             )
         finally:
-            HTTPX2ClientInstrumentor.uninstrument_client(client)
+            HTTPX2ClientInstrumentor.uninstrument_client(client)  # type: ignore[arg-type]
 
     assert envelope  # the mocked EKSS really answered
 

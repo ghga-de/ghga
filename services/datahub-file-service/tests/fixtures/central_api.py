@@ -18,11 +18,13 @@
 __all__ = [
     "CentralApiMock",
     "ResponseHandler",
+    "capture",
     "fail_to_connect",
     "get_mocked_httpx_client",
     "respond",
 ]
 
+import json
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from typing import Any
@@ -49,6 +51,18 @@ def respond(status_code: int, json: Any = None) -> ResponseHandler:
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         return httpx2.Response(status_code=status_code, json=json)
+
+    return handler
+
+
+def capture(
+    received: list, status_code: int = 201, response_json: Any = None
+) -> ResponseHandler:
+    """Make a handler that records each request's JSON body into `received`."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        received.append(json.loads(request.content))
+        return httpx2.Response(status_code=status_code, json=response_json or {})
 
     return handler
 

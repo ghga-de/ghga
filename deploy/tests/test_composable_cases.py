@@ -1,6 +1,40 @@
 """Composable render cases for the ghga-common library chart."""
 
 
+def test_common_labels_reach_every_resource_service_labels_stay_scoped(rendered_chart):
+    """commonLabels/commonAnnotations land on every rendered resource - there is no
+    separate, narrower per-workload-only labels/annotations value anymore. service.
+    labels/service.annotations are the deliberate exception: Service-only (and
+    DestinationRule, which shares its address), not merged into anything else.
+    """
+    manifests = rendered_chart("common.yaml", "common_and_service_labels.yaml")
+
+    for kind in ("Deployment", "Service", "ConfigMap", "ServiceAccount"):
+        meta = manifests[kind]["metadata"]
+        assert meta["labels"]["team"] == "archive"
+        assert meta["annotations"]["common-ann"] == "common-value"
+
+    service_meta = manifests["Service"]["metadata"]
+    assert service_meta["labels"]["svc-only"] == "svc-label-value"
+    assert service_meta["annotations"]["svc-ann"] == "svc-ann-value"
+
+    for kind in ("Deployment", "ConfigMap", "ServiceAccount"):
+        meta = manifests[kind]["metadata"]
+        assert "svc-only" not in meta["labels"]
+        assert "svc-ann" not in meta.get("annotations", {})
+
+
+def test_pull_secrets_combine_global_and_image(rendered_chart):
+    """global.imagePullSecrets and image.pullSecrets both land on imagePullSecrets,
+    routed through the vendored common.images.renderPullSecrets helper - not the
+    unrelated, undocumented top-level `imagePullSecrets` value the Deployment/Job/
+    CronJob templates used to hand-roll a check against instead.
+    """
+    manifests = rendered_chart("common.yaml", "pull_secrets.yaml")
+    secrets = manifests["Deployment"]["spec"]["template"]["spec"]["imagePullSecrets"]
+    assert sorted(s["name"] for s in secrets) == ["from-global", "from-image"]
+
+
 def test_config(rendered_chart, expected, release_name):
     """Config map, volume and mount render from the config values."""
     manifests = rendered_chart("common.yaml", "config.yaml")
@@ -167,6 +201,43 @@ def test_http_route(rendered_chart):
     manifests = rendered_chart("http_route_root.yaml")
     rule = manifests["HTTPRoute"]["spec"]["rules"][0]
     assert rule["matches"][0]["path"]["value"] == "/"
+
+
+def test_container_ports_drive_service_and_networkpolicy(rendered_chart):
+    """ContainerPorts is the single source for the Deployment/Service/NetworkPolicy
+    ports - not three independent values that could drift out of sync. Covers both
+    the bare-number form (protocol defaults to TCP) and the {port, protocol} form.
+    """
+    manifests = rendered_chart("common.yaml", "custom_container_ports.yaml")
+
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert sorted(container["ports"], key=lambda p: p["name"]) == [
+        {"name": "dns", "containerPort": 53, "protocol": "UDP"},
+        {"name": "http", "containerPort": 8080, "protocol": "TCP"},
+    ]
+
+    assert sorted(manifests["Service"]["spec"]["ports"], key=lambda p: p["name"]) == [
+        {"name": "dns", "protocol": "UDP", "port": 53, "targetPort": "dns"},
+        {"name": "http", "protocol": "TCP", "port": 8080, "targetPort": "http"},
+    ]
+
+    assert sorted(
+        manifests["NetworkPolicy"]["spec"]["ingress"][0]["ports"],
+        key=lambda p: p["port"],
+    ) == [
+        {"port": 53, "protocol": "UDP"},
+        {"port": 8080, "protocol": "TCP"},
+    ]
+
+
+def test_no_container_ports_renders_no_ports_anywhere(rendered_chart):
+    """An empty containerPorts list turns off ports on all three resources."""
+    manifests = rendered_chart("common.yaml", "no_container_ports.yaml")
+
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert "ports" not in container
+    assert "ports" not in manifests["Service"]["spec"]
+    assert "ports" not in manifests["NetworkPolicy"]["spec"]["ingress"][0]
 
 
 def test_command_style_exec(rendered_chart):

@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+readme = "README.md"
+authors = [
+    { name = "Andrew Habib", email = "andrew.a.habib@gmail.com" },
+    { name = "Avraham Shinnar" },
+    { name = "Martin Hirzel" },
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
+maintainers = [
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+name = "ghga-jsonsubschema"
+version = "0.2.0"
+description = "A tool to check whether a JSON schema is subset/subschema of another JSON schema."
+dependencies = [
+    "greenery>=4.2,<5",
+    "jsonref>=1.1,<2",
+    "jsonschema>=4.26,<5",
+    "portion>=2.6,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage[toml]>=7",
+    "pytest-cov>=6",
+    "mypy>=2.1",
+    "pre-commit>=4",
+    "pytest>=9",
+    "ruff>=0.15",
+]
+
+[project.license]
+text = "Apache 2.0"
+
+[project.urls]
+Repository = "https://github.com/ghga-de/ghga"
+"Release Notes" = "https://github.com/ghga-de/ghga/releases"
+"Issue Tracker" = "https://github.com/ghga-de/ghga/issues"
+
+[project.scripts]
+jsonsubschema = "jsonsubschema.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# NOTE (monorepo): this member's own [tool.ruff] and [tool.mypy] blocks were removed on
+# import. The monorepo has one toolchain config at the repo root (docs/conventions.md);
+# a member-local [tool.ruff] would override it for this subtree, since ruff resolves
+# config per file from the nearest pyproject.toml that declares one.
+[tool.pytest.ini_options]
+minversion = "9.0"
+
+[tool.coverage.run]
+branch = true
+source = ["jsonsubschema"]
+
+[tool.coverage.paths]
+source = ["src", "**/lib/python*/site-packages"]

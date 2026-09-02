@@ -90,7 +90,7 @@ class JointFixture(NamedTuple):
 @fixture(name="config", scope="session")  # pyright: ignore
 def config_fixture() -> Config:
     """Get the testbed configuration."""
-    return Config()  # type: ignore
+    return Config()
 
 
 # pylint: disable=redefined-outer-name

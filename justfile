@@ -2,6 +2,13 @@
 # See docs/adr/0015-task-runner.md. Run `just` to list recipes.
 set shell := ["bash", "-uc"]
 
+# Registry root the `image`/`image-mono`/`demo-load` recipes tag/load under. Defaults to
+# the real platform registry (matches the charts' generated image.registry/repository) so
+# the local kind demo loop needs no override. dev-images.yaml/security-scan.yaml set
+# IMAGE_REGISTRY to their own GHCR scratch space, which is deliberately independent of the
+# release target (see those workflows' headers).
+image_registry := env_var_or_default("IMAGE_REGISTRY", "docker.io/ghga")
+
 default:
     @just --list
 
@@ -25,9 +32,31 @@ fmt:
     uv run ruff format .
     uv run ruff check --fix .
 
-# mypy per member (a single `mypy .` collides on duplicate module names across members)
+# A single `mypy .` collides on duplicate module names across members, and the result
+# depends on the path set it is given -- so the unit, not the file, is what gets checked.
+# scripts/typecheck.py is the same runner the pre-commit hook and CI use.
+# Type-check every member (src + tests) and the non-member Python.
 typecheck:
-    for m in libs/*/src services/*/src tools/*/src; do echo "== $m =="; uv run mypy "$m" || exit 1; done
+    uv run python scripts/typecheck.py --all
+
+# --- Git hooks (pre-commit; ADR-0018) ---------------------------------------------------
+# Once per clone -- the dev container does it for you.
+# Install the git hooks into .git/hooks.
+hooks:
+    uv run pre-commit install
+
+# The branch guard is skipped: it exists to stop commits landing on main, not to fail a
+# full-tree sweep.
+# Run every hook over the whole tree, as CI's `hygiene` job does.
+hooks-all:
+    SKIP=no-commit-to-branch uv run pre-commit run --all-files
+
+# Only the generic pre-commit-hooks repo carries a `rev`; the ruff / mypy / prettier /
+# eslint hooks take their version from uv.lock and pnpm-lock.yaml, so those are bumped by
+# updating the lockfiles instead.
+# Bump the pinned hook revisions.
+hooks-update:
+    uv run pre-commit autoupdate
 
 # Run tests; optionally scope to a member, e.g. `just test libs/hexkit`.
 test target=".":
@@ -36,6 +65,91 @@ test target=".":
 # Print the workspace targets affected by the working tree vs a base ref.
 affected base="origin/main":
     uv run python scripts/affected_targets.py --base {{base}}
+
+# --- PyPI lane --------------------------------------------------------------------------
+# Run ONE cell of the published-combo matrix (.github/workflows/pypi-matrix.yaml) locally.
+#
+# Use it when a cell goes red: `uv sync` cannot reproduce those failures, because in the
+# shared workspace venv a member can import whatever a sibling installed. Here it gets only
+# its own wheel and its declared dependencies, so the gaps surface.
+#
+#   just published-combo tools/ghga-connector        # on the default version
+#   just published-combo libs/hexkit 3.11
+#
+# Test one member the way an external consumer gets it: wheel + PyPI-resolved deps.
+published-combo member python="3.12":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The same script CI reads, so a local run cannot drift from the cell.
+    cell=$(MEMBER="{{member}}" PYTHON="{{python}}" \
+      MEMBERS="$(uv run --script scripts/pypi_members.py --members --check-pypi --paths "{{member}}")" \
+      python3 -c "
+    import json, os, sys
+    member, python = os.environ['MEMBER'], os.environ['PYTHON']
+    members = json.loads(os.environ['MEMBERS'])
+    if not members:
+        sys.exit(f'error: {member} is not a PyPI-lane member — check its [tool.ghga]'
+                 ' release marker (ADR-0014)')
+    cell = members[0]
+    package, declared = cell['package'], cell['requires_python']
+    if python not in cell['pythons']:
+        runs_on = ', '.join(cell['pythons']) or 'no version in the matrix range'
+        sys.exit(f'error: the matrix does not run {package} on {python} — it declares'
+                 f' {declared}, so it runs on: {runs_on}')
+    print(package)
+    print(','.join(cell['extras']))
+    print(' '.join(cell['train_deps']))
+    ")
+    # One field per line, not tab-separated: tab is IFS *whitespace*, so bash collapses a
+    # run of them and an empty `extras` (every tool has one) shifts train_deps into it.
+    # The trailing fields need a fallback: `$(...)` strips trailing newlines, so a member
+    # with no extras and/or no train_deps yields fewer lines than there are reads, and the
+    # read that hits EOF returns 1 — which under `set -e` kills the recipe before it prints
+    # anything. `|| var=""` both neutralizes that and states the intended empty value.
+    { read -r package
+      read -r extras || extras=""
+      read -r train_deps || train_deps=""; } <<< "$cell"
+
+    # Fixed path, not mktemp: the venv outlives the recipe, so a failure can be poked at
+    # (`$work/venv/bin/python -m pytest -k ...`), and a re-run wipes it rather than
+    # leaving a trail of temp trees.
+    work="${TMPDIR:-/tmp}/ghga-published-combo/$package-{{python}}"
+    rm -rf "$work" && mkdir -p "$work/wheels"
+
+    # Member + whatever is being released alongside it (--check-pypi decides that: the
+    # libraries whose declared version is not on the index yet). Everything else is left
+    # out so it resolves from PyPI, exactly as in CI and as on a user's machine.
+    for path in "{{member}}" $train_deps; do
+        uv build --wheel --out-dir "$work/wheels" "$path"
+    done
+
+    # From outside the repo: inside it, uv picks up the workspace's requires-python (3.13)
+    # and warns about every member that cannot have it.
+    cd "$work"
+    uv venv --python "{{python}}" "$work/venv"
+
+    # The closure is in the wheelhouse to be resolved against, not installed directly —
+    # so pick this member's own wheel by name.
+    wheel=$(ls "$work"/wheels/"${package//-/_}"-*.whl)
+    spec="$wheel"
+    [ -n "$extras" ] && spec="${wheel}[${extras}]"
+    echo "== installing $spec"
+    uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" "$spec"
+
+    # Test dependencies live in the root dependency-group, not in the member — minus the
+    # lint tools. The same shared list for every member: anything else a member's suite
+    # needs is declared by the member itself.
+    cd "{{justfile_directory()}}"
+    uv run --script scripts/pypi_members.py --dev-requirements \
+      > "$work/test-requirements.txt"
+    uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" \
+      -r "$work/test-requirements.txt"
+
+    # cwd = the member directory, as in CI: each member is its own pytest rootdir, and the
+    # src/ layout means the tests import the installed package, not the working tree.
+    echo "== running {{member}} tests on {{python}} (env: $work/venv)"
+    cd "{{member}}"
+    "$work/venv/bin/python" -m pytest -q --durations=10
 
 # --- Front end (data-portal, pnpm) ------------------------------------------------------
 fe-install:
@@ -50,16 +164,60 @@ fe-test:
 fe-lint:
     cd frontend/data-portal && pnpm lint
 
-# Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
+# Prettier owns formatting for the front end (ESLint does not check it).
+fe-format:
+    cd frontend/data-portal && pnpm format
+
+fe-format-check:
+    cd frontend/data-portal && pnpm format:check
+
+# The four dev-server modes are the two independent switches --with-backend (real API
+# instead of the MSW mocks) and --with-oidc (real login instead of the faked session);
+# frontend/data-portal/README.md documents what each one needs. Per-developer settings
+# and secrets go in frontend/data-portal/local.env (see local.env.example).
+
 # Generates public/config.js (mock_api=true) and serves on http://localhost:8080.
 # (Bare `pnpm start` won't work on its own: it skips the config.js generation this
 # launcher does — that's why the server needs run.js, not plain `ng serve`.)
+# Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
 fe-dev:
     cd frontend/data-portal && node run.js --dev
 
 # Run the data-portal against a real backend (default: staging) instead of mocks.
 fe-dev-backend:
     cd frontend/data-portal && node run.js --dev --with-backend
+
+# Run the data-portal against the real OIDC provider (mock API), on https://<backend host>/.
+fe-dev-oidc: fe-dev-ssl
+    cd frontend/data-portal && node run.js --dev --with-oidc
+
+# Run the data-portal against both the real backend and the real OIDC provider.
+fe-dev-backend-oidc: fe-dev-ssl
+    cd frontend/data-portal && node run.js --dev --with-backend --with-oidc
+
+# Create the dev server's self-signed certificate (idempotent, reissued per hostname).
+fe-cert:
+    frontend/data-portal/create-cert.sh
+
+# What the --with-oidc modes need before they can serve: a certificate, and a node that
+# may bind port 443. The port is not negotiable — the OIDC provider redirects back to a
+# registered URI that carries no port — but this container shares the host's network
+# namespace (see .devcontainer/devcontainer.json), so it also inherits the host's
+# net.ipv4.ip_unprivileged_port_start=1024 instead of the 0 a private namespace gets.
+# Rather than lower that on the host, grant the capability to this container's node,
+# which a rebuild or a node upgrade then discards along with everything else in the
+# image. Idempotent; only the setcap needs sudo.
+[private]
+fe-dev-ssl: fe-cert
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v getcap > /dev/null && command -v setcap > /dev/null \
+      || { echo "getcap/setcap not found; install libcap2-bin" >&2; exit 1; }
+    node=$(readlink -f "$(command -v node)")
+    # plain grep, not -q — see the SIGPIPE note in `images-present`
+    if getcap "$node" | grep cap_net_bind_service > /dev/null; then exit 0; fi
+    sudo setcap cap_net_bind_service=+ep "$node"
+    echo "granted cap_net_bind_service to $node"
 
 # --- Migration (see docs/migration/runbook.md) ------------------------------------------
 # Dry-run the history-preserving import from the local .legacy_repos snapshot.
@@ -72,8 +230,16 @@ sync-mainline *args:
 
 # --- Helm charts --------------------------------------------------------------------------
 # Regenerate the per-service charts from workspace metadata + member chart-values.yaml.
-charts version="0.0.0-dev":
-    uv run python deploy/src/create_charts.py --version {{version}}
+# Passing no version reuses the committed one: release-charts.yaml publishes whatever is
+# committed, so regenerating must not change it (ADR-0004).
+charts version="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{version}}" ]; then
+        uv run python deploy/src/create_charts.py --version "{{version}}"
+    else
+        uv run python deploy/src/create_charts.py
+    fi
 
 # Run the chart library tests (renders the dummy chart via helm).
 charts-test:
@@ -100,26 +266,51 @@ demo-template:
 # Tags use the release registry scheme with tag 'local' so the charts' generated
 # image references resolve with only a tag override (values-local.yaml).
 # `tag` and trailing docker-build flags are overridable so CI reuses these recipes
-# instead of duplicating the build commands — e.g. dev-images.yaml / security-scan.yaml
-# run `just image-mono dev --pull --label org.opencontainers.image.revision=<sha>`.
-image target tag='local' *flags:
+# instead of duplicating the build commands — e.g. security-scan.yaml runs
+# `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
+# attestations needs a docker-container buildx builder, which these `docker build`
+# recipes cannot provide (see ADR-0019).
+image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
     if [ -f "{{target}}/Dockerfile.dhi" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "ghcr.io/ghga-de/ghga/$name:{{tag}}" "{{target}}"
+        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
-        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "ghcr.io/ghga-de/ghga/$name:{{tag}}" .
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
     fi
 
 # One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
 # The charts start services with `command: [<executable>]`, so one image serves them all;
 # see the mono stage in docker/Dockerfile for why this is demo/CI only.
 # Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
-image-mono tag='local' *flags:
+image-mono tag='local' *flags: check-members
     docker build -f docker/Dockerfile --build-arg VARIANT=mono {{flags}} \
-      -t ghcr.io/ghga-de/ghga/platform:{{tag}} .
+      -t {{image_registry}}/platform:{{tag}} .
+
+# uv finds workspace members by glob (`libs/*`, `services/*`, `tools/*`) and refuses any
+# match without a pyproject.toml. In a working tree it consults git first and skips matches
+# whose contents are all ignored, so a directory left behind by a removed member -- tracked
+# files gone, an ignored build artifact such as *.egg-info keeping the directory alive --
+# resolves fine here. The build context has no .git (see .dockerignore), so uv there sees a
+# real member with no manifest and fails several minutes into the build, far from the cause.
+# .dockerignore cannot prevent it: excluding the residue still leaves the empty directory in
+# the context. So check up front, where the message can name the directory and the fix.
+check-members:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    orphans=()
+    for d in libs/*/ services/*/ tools/*/; do
+        [ -f "$d/pyproject.toml" ] || orphans+=("${d%/}")
+    done
+    if [ ${#orphans[@]} -gt 0 ]; then
+        printf 'error: workspace member directory without a pyproject.toml:\n' >&2
+        printf '  %s\n' "${orphans[@]}" >&2
+        printf 'Left over from a removed member? Its tracked files are gone, but ignored\n' >&2
+        printf 'build residue keeps the directory alive. Remove it: git clean -fdx <dir>\n' >&2
+        exit 1
+    fi
 
 # Building and loading are deliberately SEPARATE (`just demo-load` does the loading): the
 # build survives `just down`, the load does not, and coupling them made a cluster teardown
@@ -180,7 +371,7 @@ demo-load profile="" reclaim="false": cluster
     loaded=0
     already=0
     while read -r name; do
-        ref="ghcr.io/ghga-de/ghga/$name:local"
+        ref="{{image_registry}}/$name:local"
         if ! docker image inspect "$ref" > /dev/null 2>&1; then
             if printf '%s\n' "$node_images" | grep -Fx "$ref" > /dev/null; then
                 already=$((already + 1))

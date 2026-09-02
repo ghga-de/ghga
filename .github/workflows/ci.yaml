@@ -3,8 +3,13 @@
 # Lint the whole repo, then type-check + test exactly the workspace targets affected by
 # the change set, including transitive dependents of changed internal libraries
 # (scripts/affected_targets.py). Python suites run their testcontainers against the
-# runner's native Docker daemon. The integration gate (Stage 2) and the release workflow
-# stay dormant until charts land / publish targets are decided.
+# runner's native Docker daemon. A change to an image's Dockerfile additionally has that
+# image built (check-images) — the only place a base-image bump is actually verified;
+# images-gate is the always-reported check that makes it enforceable. Affected PyPI-lane
+# members are additionally tested: the member's own wheel, plus a wheel for each internal
+# dependency releasing alongside it, against every other dependency resolved from the
+# index — across the supported Python range. published-combo-gate is its always-reported
+# check, for the same reason images-gate is. Stage 2 (integration.yaml) runs as its own workflow.
 name: ci
 
 on:
@@ -12,9 +17,16 @@ on:
   push:
     branches: [main]
 
+# Keyed on the branch's role, not on the event type. Releases come from main only, and
+# release.yaml requires the tagged commit's OWN CI run to be green — a cancelled run never
+# is — so main runs group by commit and are never cancelled. Every other ref groups by ref
+# and the newest push wins: a superseded run there proves nothing about a commit anyone
+# will release. Asking "is this main?" rather than "is this a PR?" keeps that true for any
+# branch added to the trigger later — a dev branch carrying the merge traffic lands on the
+# cancelling side without touching this block.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
@@ -37,6 +49,8 @@ jobs:
     outputs:
       python: ${{ steps.affected.outputs.python }}
       frontend: ${{ steps.affected.outputs.frontend }}
+      images: ${{ steps.affected.outputs.images }}
+      devcontainer: ${{ steps.affected.outputs.devcontainer }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -50,9 +64,11 @@ jobs:
           fi
           if git cat-file -e "$base^{commit}" 2>/dev/null; then
             json=$(python3 scripts/affected_targets.py --base "$base")
+            changed=$(git diff --name-only "$base...HEAD")
           else
             # branch creation / force push: no usable base -> check everything
             json=$(python3 scripts/affected_targets.py --all)
+            changed="" # unknown change set -> every image counts as affected, below
           fi
           echo "affected: $json"
           split() { echo "$json" | python3 -c "
@@ -64,6 +80,43 @@ jobs:
           echo "python=$(split libs services tools)" >> "$GITHUB_OUTPUT"
           echo "frontend=$(split frontend)" >> "$GITHUB_OUTPUT"
           # testbed / deploy targets are exercised by the integration gate (Stage 2).
+          # The image matrix comes from the RAW diff, not from the target list above:
+          # `docker/` is a repo-wide prefix in affected_targets.py, so every global
+          # change (uv.lock, a workflow, scripts/) expands to all targets and would
+          # look like a base-image change. The dockerfile -> recipe mapping is derived
+          # from scripts/image_members.py, so a new image member is gated the day it
+          # lands; the Python members all share docker/Dockerfile and are covered by
+          # the one mono build (`just image-mono`, VARIANT=mono).
+          images=$(CHANGED="$changed" python3 -c "
+          import json, os, sys
+          sys.path.insert(0, 'scripts')
+          from image_members import image_members
+          changed = set(os.environ['CHANGED'].split())
+          unknown = not changed
+          out, mono = [], False
+          for m in image_members():
+              if not (unknown or m['dockerfile'] in changed):
+                  continue
+              if m['kind'] == 'python':
+                  mono = True
+              else:
+                  out.append({'image': m['package'], 'build': 'image ' + m['path']})
+          if mono:
+              out.insert(0, {'image': 'platform', 'build': 'image-mono'})
+          print(json.dumps(out))
+          ")
+          echo "images: $images"
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
+          # The dev container is not a workspace member, so affected_targets.py does not see
+          # it; diff it directly off the same base. No usable base -> check it, matching the
+          # check-everything fallback above.
+          if git cat-file -e "$base^{commit}" 2> /dev/null \
+            && git diff --quiet "$base" -- .devcontainer; then
+            echo "devcontainer=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "devcontainer=true" >> "$GITHUB_OUTPUT"
+          fi
 
   check-python:
     # lint is a dependency so its uv sync populates the shared uv cache once;
@@ -84,7 +137,9 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --all-packages --all-extras
       - name: mypy
-        run: uv run mypy "${{ matrix.target }}/src"
+        # the shared runner, so CI, `just typecheck` and the pre-commit hook check the
+        # same thing: the member's src AND its test package(s), in one invocation
+        run: uv run python scripts/typecheck.py "${{ matrix.target }}"
       - name: pytest
         # cwd = member dir: each member is its own pytest rootdir (the `tests`
         # packages collide across members otherwise)
@@ -113,10 +168,192 @@ jobs:
       - working-directory: ${{ matrix.target }}
         run: |
           pnpm install --frozen-lockfile
+          pnpm format:check
           pnpm lint
           pnpm test
           pnpm build
         # Playwright E2E is part of the integration gate (Stage 2), not this one.
 
-  # TODO (ADR-0002, separable): per-library standalone matrix across supported Python
-  # versions, validating the *published* combination alongside the integrated one.
+  # Everything the shared pre-commit config checks that no other job covers: whitespace,
+  # YAML/JSON validity, exec bits, private keys, large files. ruff, mypy, eslint and
+  # prettier are SKIPped here because `lint`, `check-python` and `check-frontend` already
+  # run them -- this job must not make CI pay for them twice. no-commit-to-branch is
+  # skipped because CI legitimately runs on main.
+  #
+  # Runs `pre-commit` from the workspace's own pin rather than pre-commit/action, which
+  # would provision a second Python and a second pre-commit version.
+  hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # the full sync: the chart check below imports the generator's dependencies, and
+      # `uv run pre-commit` resolves against the same environment
+      - run: uv sync --locked --all-packages --all-extras
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - run: uv run pre-commit run --all-files --show-diff-on-failure --color=always
+        env:
+          SKIP: no-commit-to-branch,ruff,ruff-format,mypy,fe-prettier,fe-eslint
+      # check-python's matrix only covers libs/services/tools, and mypy is SKIPped above,
+      # so the Python that belongs to no member would otherwise never be type-checked here.
+      - name: mypy (non-member Python)
+        run: uv run python scripts/typecheck.py scripts deploy/src testbed
+      # The generated charts must stay a pure function of their sources: if they are not,
+      # the whitespace hooks and `just charts` undo each other forever (ADR-0018).
+      #
+      # The version is an input to the generator (ADR-0004), so no version is pinned here:
+      # a bare run reuses the committed one and fails if the member charts disagree on it.
+      - name: charts are reproducible
+        run: |
+          uv run python deploy/src/create_charts.py
+          git diff --exit-code
+
+  # The dev container is otherwise unvalidated by CI, and it is the one artifact that, when
+  # broken, costs every developer their environment rather than a red check. This builds it
+  # on any .devcontainer change and asserts the properties a plain `docker build` would not
+  # reveal.
+  #
+  # Deliberately partial: `devcontainer build` applies neither runArgs nor mounts nor
+  # postCreateCommand, and this runner is amd64. So it covers base-image resolution and
+  # feature installation only — it would have caught the Debian 13 moby incompatibility, but
+  # it cannot say anything about docker-in-docker at runtime, kind, --net=host, or the arm64
+  # path. Those still need a local rebuild.
+  check-devcontainer:
+    needs: discover
+    if: ${{ needs.discover.outputs.devcontainer == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm install -g @devcontainers/cli
+      - name: Build the dev container image
+        run: devcontainer build --workspace-folder . --image-name ghga-devcontainer:ci
+      # The script goes in on stdin via a quoted heredoc rather than `bash -lc '...'`:
+      # inside single quotes an apostrophe in a comment silently ends the string, so the
+      # rest of the assertions are never passed to the container and the failure points
+      # nowhere near the cause. <<'SCRIPT' passes the body through untouched.
+      - name: Assert the image provides what the repo assumes
+        run: |
+          docker run --rm -i ghga-devcontainer:ci bash -l -s <<'SCRIPT'
+          set -eux
+          # The bootstrap interpreter must carry the stdlib, not just python3-minimal:
+          # the justfile image recipes and scripts/*.py import tomllib.
+          python3 -c "import tomllib, json"
+          node --version && pnpm --version && uv --version
+          # Working tools the whole monorepo leans on: fd/rg/bat/jq for navigating and
+          # inspecting a tree this size, shellcheck/shfmt for the shell the repo runs on
+          # (justfile recipes, .devcontainer/post-create.sh, scripts/migration, testbed),
+          # dig for the container's several competing sources of name resolution. dig
+          # arrives via docker-in-docker too, so this also catches that feature dropping
+          # it. One at a time: `command -v a b c` exits 0 even when some are missing.
+          for t in fd bat rg jq shellcheck shfmt dig; do command -v "$t"; done
+          # docker/Dockerfile uses `RUN --mount=type=cache`, so the image builds the repo
+          # publishes depend on BuildKit being available, not just a docker CLI.
+          docker buildx version
+          docker compose version
+          SCRIPT
+
+  # Build the images whose Dockerfile changed. Nothing else in this workflow runs
+  # `docker build`, so a base-image bump (Renovate editing PYTHON_BASE / NODE_BASE) is
+  # otherwise verified only by the integration gate — a kind cluster plus the
+  # BDD/Playwright suite, a slow and very indirect way to learn that a tag was never
+  # published or that a hardened base dropped something the runtime needs.
+  #
+  # Build commands stay in the justfile (the same recipes dev-images, release and
+  # security-scan call), so the dockerfile / context / registry-name mapping is never
+  # duplicated into a workflow. Nothing is pushed: no packages: write, no GHCR login.
+  check-images:
+    needs: discover
+    if: ${{ needs.discover.outputs.images != '[]' }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.discover.outputs.images) }}
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    env:
+      DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: extractions/setup-just@v4
+      # The hardened bases (dhi.io) are auth-gated — same pattern as dev-images.yaml:
+      # skipped when the org secrets are absent, i.e. on PRs from forks. There is no
+      # anonymous fallback (dhi.io answers an unauthenticated manifest request with a
+      # 401), so such a PR fails at the base pull rather than building against some
+      # public stand-in. A visible 401 is the readable outcome; a fork PR that cannot
+      # reach the base cannot honestly report that its image builds.
+      - name: Login to DHI registry
+        if: ${{ env.DHI_USER != '' }}
+        uses: docker/login-action@v4
+        with:
+          registry: dhi.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # --pull is the point of the check: resolve the base against the registry instead
+      # of whatever manifest the runner happens to have cached. The tag is throwaway.
+      - name: Build ${{ matrix.target.image }}
+        run: just ${{ matrix.target.build }} ci --pull
+
+  # THE check to require in branch protection ("Protected Main" ruleset -> require status
+  # checks -> `ci / images-gate`). It exists because a required check must always report:
+  # this workflow runs on every pull request, but check-images above is gated by `if:`,
+  # and a job that never starts can leave its check missing rather than skipped — which
+  # would block every unrelated PR forever. This job always runs and translates
+  # "no image affected" into an explicit pass.
+  images-gate:
+    needs: [discover, check-images]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verdict
+        run: |
+          d='${{ needs.discover.result }}'
+          b='${{ needs.check-images.result }}'
+          echo "discover=$d check-images=$b"
+          case "$d:$b" in
+            success:success) echo "every affected image built" ;;
+            success:skipped) echo "no image Dockerfile changed — nothing to build" ;;
+            *) echo "::error::image build gate failed ($d / $b)"; exit 1 ;;
+          esac
+
+  # The published-combo gate (ADR-0002): the same affected members, tested the way external
+  # consumers get them. pypi-matrix.yaml drops everything outside the PyPI lane, so a
+  # services-only change yields no cells and only its `test` job is skipped — `discover`
+  # still runs, and still queries PyPI once per lane member.
+  check-published-combo:
+    needs: [discover, lint]
+    if: ${{ needs.discover.outputs.python != '[]' }}
+    uses: ./.github/workflows/pypi-matrix.yaml
+    with:
+      paths: ${{ needs.discover.outputs.python }}
+
+  # The check to require in branch protection for this gate, for the same reason
+  # images-gate exists above: check-published-combo is `if:`-gated, and a job that never
+  # starts can leave its check missing rather than skipped. `lint` is in `needs` because
+  # check-published-combo waits on it — without that, a lint failure would skip the matrix
+  # and this job would report it as "nothing to test".
+  published-combo-gate:
+    needs: [discover, lint, check-published-combo]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verdict
+        run: |
+          d='${{ needs.discover.result }}'
+          l='${{ needs.lint.result }}'
+          c='${{ needs.check-published-combo.result }}'
+          echo "discover=$d lint=$l check-published-combo=$c"
+          case "$d:$l:$c" in
+            success:success:success) echo "every affected lane member passed the published-combo matrix" ;;
+            success:success:skipped) echo "no PyPI-lane member affected — nothing to test" ;;
+            *) echo "::error::published-combo gate failed ($d / $l / $c)"; exit 1 ;;
+          esac

@@ -7,56 +7,26 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
-  storageClass: ""
   _topics: {}
-  _consumerGroup:
-    operations:
-    - Read
-    resource:
-      patternType: literal
-      type: group
-
-    # This is the actual Kubernetes `command` field
-command: ["sh", "-c"]
 commandPrefix: ''
 commandStyle: exec
 executable: ""
 executableArgs: []
 deployment:
   enabled: true
-
 job:
   enabled: false
-
-    # A map of CronJobs to render alongside (or instead of) the Deployment. It's a
-    # map rather than a list so downstream values files can override a single
-    # cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to
-    # redefine the whole list - Helm only deep-merges maps, not lists.
-    # The map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`),
-    # except for the reserved key `default`, which renders with no suffix - use that
-    # key for the common case of a single cronjob.
-    # Each entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`,
-    # and `executableArgs` independently of the Deployment/other cronjobs; unset
-    # fields fall back to the top-level values.
-    # `podAnnotations` on an entry are added on top of the top-level `podAnnotations`
-    # (and any vault agent annotations), taking precedence on conflicting keys - e.g.
-    # to set `vault.hashicorp.com/agent-pre-populate-only: "true"` only for a cronjob
-    # while the Deployment keeps the vault agent sidecar running.
 cronjobs:
   default:
     enabled: false
-
 nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
-clusterDomain: cluster.local
-annotations: {}
-labels: {}
 commonLabels: {}
 commonAnnotations: {}
 image:
-  registry: ghcr.io
-  repository: ghga-de/ghga/data-portal
+  registry: docker.io
+  repository: ghga/data-portal
   tag: ""
   digest: ""
   pullPolicy:
@@ -66,13 +36,13 @@ revisionHistoryLimit: 1
 shareProcessNamespace: false
 podSecurityContext:
   fsGroup: 1000
-
 initContainers: []
 migrationInitContainer:
   enabled: false
   image: ""
-  cmd: ["sh", "-c"]
-  args: []
+  imagePullPolicy:
+  executable: ""
+  executableArgs: []
   env: []
   resources: {}
   volumeMounts: []
@@ -94,33 +64,27 @@ schedulerName: ""
 terminationGracePeriodSeconds: ""
 updateStrategy:
   type: RollingUpdate
-
 podRestartPolicy: Always
-cmd: ""
-ports:
-  enabled: false
-  ports:
-  - name: http
-    containerPort: 8080
-    protocol: TCP
-
+containerPorts:
+  http: 8080
 livenessProbe:
   enabled: false
   tcpSocket:
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 15
-
 readinessProbe:
   enabled: false
   tcpSocket:
     port: 8080
   initialDelaySeconds: 30
   periodSeconds: 15
-
 startupProbe:
   enabled: false
-
+  tcpSocket:
+    port: 8080
+  periodSeconds: 10
+  failureThreshold: 30
 containerSecurityContext:
   enabled: true
   runAsUser: 1000
@@ -140,7 +104,6 @@ resources:
   requests:
     cpu: "1000m"
     memory: "1024M"
-
 extraVolumes: []
 extraVolumeMounts: []
 sidecars: []
@@ -150,15 +113,10 @@ envVarsSecret: ""
 service:
   enabled: true
   type: ClusterIP
-  ports:
-  - name: http
-    protocol: TCP
-    port: 8080
-    targetPort: http
-
+  labels: {}
+  annotations: {}
 serviceAccount:
   create: true
-
 autoscaling:
   enabled: false
   minReplicas: 3
@@ -166,9 +124,6 @@ autoscaling:
   targetCPU: 80
   targetMemory: 80
   metrics: []
-ingress:
-  enabled: false
-
 topicPrefix: ""
 _topics: {}
 _consumerGroup:
@@ -183,27 +138,21 @@ kafkaUser:
   clusterName: kafka
   clusterNamespace: strimzi
   caCertSecretName: kafka-cluster-ca-cert
-
 mongodb:
   dbName: ""
-  host: mongodb.mongodb.svc.cluster.local
   service:
     namespace: mongodb
     name: mongodb
-
-
 apiBasePath: /
 serviceName: ""
-serviceInstanceId: ""
-serviceNameConsumer: ""
-serviceInstanceIdConsumer: ""
+serviceInstanceId:
+  fromPodName: false
 configMap:
   enabled: true
   mountPath: /app/data-portal.yaml
   subPath: config.yaml
   envVar:
     enabled: true
-
 config:
   host: 0.0.0.0
   oidc_use_discovery: false
@@ -213,29 +162,19 @@ enableServiceLinks: true
 successfulJobsHistoryLimit: 5
 environment:
   name: default
-
 cluster:
   name: default
-
-    # Set `spec` of HTTPRoute here
-    # (`port` is the backend service port used by the default rule; it is consumed by
-    # the template, not copied into `spec`)
 httpRoute:
   enabled: false
   port: 8080
-      # strip the base path before forwarding. Services that reconstruct their own
-      # public URLs (an OIDC discovery document, for example) need the full path
-      # instead and rely on api_root_path to route — set this to false for them.
   rewritePath: true
   rules: []
 probe:
   enabled: false
   hostname: default.ghga.dev
-
 healthEndpoint: "/health"
 destinationRule:
   enabled: false
-
 networkPolicy:
   enabled: false
   ingress:
@@ -243,7 +182,6 @@ networkPolicy:
     - namespaceSelector:
         matchLabels:
           ghga-ingress: allow
-
 strimziApiVersion: kafka.strimzi.io/v1
 vaultAgent:
   enabled: false

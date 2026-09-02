@@ -1,0 +1,8 @@
+# {} would NOT clear this: Helm merges maps key-by-key, so an empty map merged
+# into the chart's own default ({http: 8080}) leaves that default untouched.
+# Turning a specific default port off means nulling it by name instead.
+containerPorts:
+  http: null
+
+networkPolicy:
+  enabled: true

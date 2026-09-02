@@ -73,7 +73,7 @@ async def test_get_work_package_file_info(
 
     work_package_api.on_get_work_package = respond(status_code, json={"files": FILES})
 
-    async with async_client() as client:
+    async with async_client(purpose="download") as client:
         work_package_client = WorkPackageClient(
             client=client,
             my_private_key=private_key,

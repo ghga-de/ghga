@@ -277,7 +277,7 @@ async def test_process_with_empty_dlq(override: EventCore | None):
     async def ensure_delete_not_hit(id_) -> None:
         raise RuntimeError("Delete was called on the DAO but shouldn't have been.")
 
-    mock_dao.delete = ensure_delete_not_hit  # type: ignore
+    mock_dao.delete = ensure_delete_not_hit
     mock_publisher = AsyncMock()
     dlq_id = TEST_UUID
 

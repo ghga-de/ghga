@@ -13,7 +13,8 @@
 ([ADR-0015](../adr/0015-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
 
 **On the host** ([ADR-0017](../adr/0017-local-integration-host-cluster.md)): a local Kubernetes
-cluster — OrbStack k8s on macOS, minikube on Linux/WSL2 — plus the docker/podman that builds
+cluster — minikube on Linux/WSL2, or a container runtime's built-in Kubernetes — plus the
+docker/podman that builds
 images next to it. The devcontainer talks to the cluster only via a namespace-scoped kubeconfig;
 it runs **no DinD/DooD for the integration path** (component tests keep DinD until hexkit grows
 in-memory provider alternatives). (No mesh/Istio needed for the self-contained path — the
@@ -21,10 +22,10 @@ umbrella bundles Envoy Gateway, [ADR-0012](../adr/0012-self-contained-edge-envoy
 
 Hosting ([ADR-0010](../adr/0010-history-preserving-migration.md)):
 - GitHub: repo at **`github.com/ghga-de/ghga`**.
-- **No publish credentials are stored — keep it that way.** Interim image target: GHCR under
-  the repo namespace (`ghcr.io/ghga-de/ghga/...`), pushed only by manual `workflow_dispatch`
-  runs using the ephemeral `GITHUB_TOKEN`. Final targets (registries, PyPI) are still
-  undecided; do not add long-lived registry secrets.
+- Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already
+  pulls from. Pushed only by manual `workflow_dispatch` runs, authenticated with the org's
+  stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the same credentials used to pull
+  the hardened dhi.io base images). PyPI targets are still undecided.
 
 The legacy clones already exist at [.legacy_repos/](../../.legacy_repos/) (snapshot). For the
 initial import you may use them via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`**
@@ -85,7 +86,8 @@ incremental sync stays low-conflict:
 2. **Lock:** `uv lock` → single root `uv.lock`. Resolve any genuine conflicts now (this is where
    today's `event-schemas 12 vs 13` / `transpiler <3 vs 3.0.0` skew gets reconciled).
 3. **Toolchain:** one `ruff`/`mypy`/`pre-commit` config; delete per-member copies (already dropped
-   on import).
+   on import). **Done** — the root `.pre-commit-config.yaml` covers both stacks and the last
+   per-member copy (testbed's) is gone ([ADR-0018](../adr/0018-pre-commit-hooks.md)).
 4. **Containers:** one shared `docker/Dockerfile` (+ DHI), ENTRYPOINT chosen per service; the
    frontend keeps its bespoke Dockerfile.
 5. **Per-package lib matrix:** a CI job that runs each `libs/*` standalone across its supported
@@ -113,8 +115,8 @@ incremental sync stays low-conflict:
    ([ADR-0017](../adr/0017-local-integration-host-cluster.md)) — same artifact users install:
    ```bash
    # on the HOST: start the cluster (once) and build the affected images next to it
-   #   macOS:  enable OrbStack Kubernetes (its docker-built images are directly visible)
-   #   Linux:  minikube start --apiserver-names=host.docker.internal ; minikube image build ...
+   #   Linux/WSL2:      minikube start --apiserver-names=host.docker.internal ; minikube image build ...
+   #   runtime with k8s: enable it (its docker-built images are directly visible)
    # in the DEVCONTAINER (scoped kubeconfig):
    helm install ghga ./deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-testbed.yaml
    kubectl port-forward svc/<gateway> 8443:443   # bare cluster: no LoadBalancer

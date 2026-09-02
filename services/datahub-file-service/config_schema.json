@@ -317,6 +317,13 @@
       "title": "Interrogation Bucket Id",
       "type": "string"
     },
+    "max_concurrent_parts": {
+      "default": 8,
+      "description": "How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly max_concurrent_parts * 3 * the part size.",
+      "minimum": 1,
+      "title": "Max Concurrent Parts",
+      "type": "integer"
+    },
     "library_log_level": {
       "default": "CRITICAL",
       "description": "The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL.",

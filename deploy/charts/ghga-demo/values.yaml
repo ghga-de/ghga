@@ -148,7 +148,7 @@ aai:
 secretGen:
   enabled: true
   image:
-    repository: ghcr.io/ghga-de/ghga/auth-km-jobs
+    repository: docker.io/ghga/auth-km-jobs
     tag: latest
     pullPolicy: IfNotPresent
   kubectlImage:
@@ -310,7 +310,7 @@ data-portal:
   ports:
     enabled: true
   config:
-    # browser-facing URLs (the kind config maps the gateway to the Mac's port 80)
+    # browser-facing URLs (the kind config maps the gateway to the host computer's port 80)
     base_url: http://localhost
     oidc_authority_url: http://localhost/ghga
     oidc_client_id: ghga-client

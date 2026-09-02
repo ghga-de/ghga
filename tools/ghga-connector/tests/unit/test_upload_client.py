@@ -30,10 +30,7 @@ from tenacity import RetryError
 from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.client import async_client
-from ghga_connector.core.uploading.api_calls import (
-    UploadClient,
-    _check_for_request_errors,
-)
+from ghga_connector.core.uploading.api_calls import UploadClient
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     UPLOAD_URL,
@@ -99,7 +96,7 @@ async def upload_client(
         TEST_RDUB_ID,
         TEST_FUB_ID,
     )
-    async with async_client() as client:
+    async with async_client(purpose="upload") as client:
         yield UploadClient(client=client, work_package_client=mock_work_package_client)
 
 
@@ -657,20 +654,58 @@ def make_retry_error(exception: Exception) -> RetryError:
 
 
 @pytest.mark.parametrize(
-    "wrapped_error, expected_error",
+    "request_error, expected_error",
     [
         (httpx2.ConnectError("connection refused"), exceptions.ConnectionFailedError),
         (httpx2.ConnectTimeout("timed out"), exceptions.ConnectionFailedError),
         (httpx2.ReadTimeout("read timeout"), exceptions.RequestFailedError),
+        (
+            httpx2.RemoteProtocolError(
+                "Server disconnected without sending a response."
+            ),
+            exceptions.RequestFailedError,
+        ),
     ],
-    ids=["connect_error", "connect_timeout", "other_request_error"],
+    ids=["connect_error", "connect_timeout", "read_timeout", "remote_protocol_error"],
 )
-async def test_check_for_request_errors(
-    wrapped_error: Exception, expected_error: type[Exception]
+@pytest.mark.parametrize("wrapped", [True, False], ids=["via_retry_error", "direct"])
+async def test_handle_request_error_translates_transport_errors(
+    request_error: httpx2.RequestError, expected_error: type[Exception], wrapped: bool
 ):
-    """Make sure a RetryError-wrapped request error is translated to the right error."""
+    """Transport failures are translated whether or not tenacity wrapped them.
+
+    The retry transport reraises the original exception when the final attempt errored,
+    so both the bare error and the RetryError-wrapped form reach the call sites.
+    """
+    exc = make_retry_error(request_error) if wrapped else request_error
     with pytest.raises(expected_error):
-        _check_for_request_errors(make_retry_error(wrapped_error), "http://example.com")
+        exceptions.handle_request_error(exc, url="http://example.com")
+
+
+async def test_handle_request_error_returns_exhausted_response():
+    """A RetryError carrying a final response hands that response back to the caller."""
+    response = httpx2.Response(status_code=503)
+    attempt = MagicMock()
+    attempt.exception.return_value = None
+    attempt.result.return_value = response
+
+    assert (
+        exceptions.handle_request_error(
+            RetryError(last_attempt=attempt), url="http://example.com"
+        )
+        is response
+    )
+
+
+async def test_handle_request_error_reports_the_reason():
+    """The underlying transport message survives into the user-facing error."""
+    with pytest.raises(exceptions.RequestFailedError, match="Server disconnected"):
+        exceptions.handle_request_error(
+            httpx2.RemoteProtocolError(
+                "Server disconnected without sending a response."
+            ),
+            url="http://example.com",
+        )
 
 
 async def test_get_part_upload_url_first_403_triggers_cache_bust_and_second_403_raises(
@@ -686,7 +721,7 @@ async def test_get_part_upload_url_first_403_triggers_cache_bust_and_second_403_
     # Replace the AsyncMock auto-attribute with a plain MagicMock so calling
     # cache_invalidate() doesn't create an unawaited coroutine warning.
     cache_invalidate_mock = MagicMock()
-    upload_client._work_package_client.get_upload_wot.cache_invalidate = (  # type: ignore
+    upload_client._work_package_client.get_upload_wot.cache_invalidate = (
         cache_invalidate_mock
     )
 

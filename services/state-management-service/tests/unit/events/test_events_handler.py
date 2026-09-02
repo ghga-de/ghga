@@ -79,8 +79,8 @@ async def test_topics_parameter_behavior(
 
     # Create an instance of the EventsHandler and patch with the mocks
     handler = EventsHandler(config=DEFAULT_TEST_CONFIG, event_publisher=AsyncMock())
-    handler._get_cleanup_policy = policy_mock  # type: ignore [method-assign]
-    handler.get_admin_client = lambda: asyncnullcontext(mock)  # type: ignore [method-assign]
+    handler._get_cleanup_policy = policy_mock
+    handler.get_admin_client = lambda: asyncnullcontext(mock)
 
     # Call the clear_topics method
     await handler.clear_topics(

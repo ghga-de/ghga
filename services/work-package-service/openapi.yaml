@@ -286,7 +286,8 @@ components:
       scheme: bearer
       type: http
 info:
-  description: A service managing work packages for the GHGA CLI
+  description: A service for authorizing downloads of dataset files and uploads of
+    research data
   title: Work Package Service
   version: 11.1.1
 openapi: 3.1.0

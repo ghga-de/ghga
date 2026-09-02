@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dhfs"
-version = "4.0.0"
+version = "4.1.0"
 description = "Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs"
 dependencies = [
     "typer >= 0.25.1",
@@ -60,3 +60,8 @@ source = [
 [tool.uv.sources]
 ghga-service-commons = { workspace = true }
 hexkit = { workspace = true }
+
+# Extending the root config makes this file ruff's config root for the member, so
+# ruff reads the `requires-python` above instead of assuming a 3.9 floor.
+[tool.ruff]
+extend = "../../pyproject.toml"

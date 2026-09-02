@@ -7,6 +7,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { Resolver } from 'dns/promises';
 import fs from 'fs';
 import * as yaml from 'js-yaml';
 import path from 'path';
@@ -15,7 +16,10 @@ import { fileURLToPath } from 'url';
 const NAME = 'data-portal';
 const DEFAULT_BACKEND = 'https://data.staging.ghga.dev';
 
+// In production the settings that must not be baked into the image arrive on a mounted
+// secrets volume; in development they come from a gitignored file next to this script.
 const DOTENV_PATH = '/secrets/.env';
+const LOCAL_ENV_PATH = 'local.env';
 
 const args = process.argv.slice(1);
 const DEV = args.includes('--dev');
@@ -92,6 +96,24 @@ function parseEnvFile(filePath) {
 }
 
 /**
+ * Put the variables of a .env file into the process environment.
+ *
+ * Variables already set in the environment win, so an inline `data_portal_x=... just fe-dev`
+ * still overrides the file. Everything the file defines becomes a real environment variable,
+ * not just the settings keys, so consumers outside the settings schema — `proxy.conf.mjs`
+ * reads `data_portal_ignore_cert` directly — are served by the same file.
+ *
+ * @param {string} filePath - Path to the .env file.
+ */
+function exportEnvFile(filePath) {
+  for (const [key, value] of Object.entries(parseEnvFile(filePath))) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+/**
  * Reads and merges configuration settings from default and specific YAML files.
  * Overrides settings with environment variables prefixed with the application name.
  * Variables from the .env file at DOTENV_PATH are used as a fallback when a variable
@@ -106,7 +128,7 @@ function readSettings() {
   const defaultSettings = yaml.load(fs.readFileSync(defaultSettingsPath, 'utf8'));
 
   // Read the (optional) development or production specific configuration file
-  const specificSettingsPath = DEV ? `.devcontainer/${NAME}.yaml` : `${NAME}.yaml`;
+  const specificSettingsPath = DEV ? `${NAME}.dev.yaml` : `${NAME}.yaml`;
 
   let specificSettings = {};
   try {
@@ -205,16 +227,22 @@ function addRootFiles(rootFiles) {
 /**
  * Find the IP address for a given hostname
  */
-function getIpAddress(hostname) {
-  const result = spawnSync('dig', ['+short', hostname, '@8.8.8.8'], {
-    encoding: 'utf8',
-  });
-  const address = result.error ? null : result.stdout.trim();
-  if (!address) {
+async function getIpAddress(hostname) {
+  // Query a public resolver directly rather than the system one, so that the
+  // /etc/hosts entry we are about to add cannot shadow the real answer.
+  const resolver = new Resolver();
+  resolver.setServers(['8.8.8.8']);
+  let addresses;
+  try {
+    addresses = await resolver.resolve4(hostname);
+  } catch {
+    addresses = [];
+  }
+  if (!addresses.length) {
     console.error(`Cannot resolve ${hostname}`);
     process.exit(1);
   }
-  return address;
+  return addresses[0];
 }
 
 /**
@@ -236,7 +264,16 @@ function addHostEntry(name, ip) {
 /**
  * Run the development server on the specified host and port.
  */
-function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basicAuth) {
+async function runDevServer(
+  host,
+  port,
+  ssl,
+  sslCert,
+  sslKey,
+  logLevel,
+  baseUrl,
+  basicAuth,
+) {
   console.log('Running the development server...');
 
   const { hostname } = new URL(baseUrl);
@@ -265,7 +302,7 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
   }
 
   if (WITH_OIDC && host != hostname) {
-    const ipAddress = getIpAddress(hostname);
+    const ipAddress = await getIpAddress(hostname);
     addHostEntry(hostname, ipAddress);
     console.log(`Your host computer should resolve ${hostname} to ${host}.`);
     console.log(`Please point your browser to: ${baseUrl}`);
@@ -293,7 +330,7 @@ function runDevServer(host, port, ssl, sslCert, sslKey, logLevel, baseUrl, basic
   if (ssl) {
     params.push('--ssl', '--ssl-cert', sslCert, '--ssl-key', sslKey);
   }
-  if (logLevel == 'debug') {
+  if (logLevel?.toLowerCase() === 'debug') {
     params.push('--verbose');
   }
 
@@ -356,8 +393,12 @@ function runProdServer(host, port, ssl, sslCert, sslKey, logLevel) {
 /**
  * Main entry point.
  */
-function main() {
+async function main() {
   process.chdir(__dirname);
+
+  if (DEV) {
+    exportEnvFile(LOCAL_ENV_PATH);
+  }
 
   const settings = readSettings();
 
@@ -439,7 +480,7 @@ function main() {
 
   addRootFiles(rootFiles);
 
-  (DEV ? runDevServer : runProdServer)(
+  await (DEV ? runDevServer : runProdServer)(
     host,
     port,
     ssl,
@@ -451,4 +492,4 @@ function main() {
   );
 }
 
-main();
+await main();

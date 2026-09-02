@@ -66,12 +66,12 @@ async def run_interrogator(forever: bool = True):
                     )
 
                 stop = now_utc_ms_prec()
-                if (
-                    timediff := (stop - start).seconds
-                ) < config.min_run_interval_seconds:
-                    sleep_duration = config.min_run_interval_seconds - timediff
+                # .seconds would drop whole days and the sub-second remainder
+                elapsed = (stop - start).total_seconds()
+                if elapsed < config.min_run_interval_seconds:
+                    sleep_duration = config.min_run_interval_seconds - elapsed
                     log.info(
-                        "Waiting %i seconds before beginning the next round of file"
+                        "Waiting %.1f seconds before beginning the next round of file"
                         + " processing because the minimum run interval is set to"
                         + " %i seconds.",
                         sleep_duration,
@@ -104,7 +104,7 @@ async def verify(*, file_size: int = 125 * 1024**2):
     start = now_utc_ms_prec()
     await run_dhfs_verification(config=config, file_size=file_size)
     stop = now_utc_ms_prec()
-    duration_sec = (stop - start).seconds
+    duration_sec = (stop - start).total_seconds()
     log.info(
-        "S3 verification process took %i seconds, including cleanup.", duration_sec
+        "S3 verification process took %.1f seconds, including cleanup.", duration_sec
     )

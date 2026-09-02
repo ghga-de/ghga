@@ -1,0 +1,62 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended"],
+  timezone: "Europe/Berlin",
+  labels: ["dependencies", "docker-base-image"],
+
+  // Scope: only the DHI base images below. Application dependency lockfiles
+  // (uv.lock, pnpm-lock.yaml) are already handled by the bespoke daily
+  // security-scan.yaml workflow — do not let Renovate touch those.
+  enabledManagers: ["custom.regex"],
+
+  packageRules: [
+    {
+      groupName: "dhi.io Python base image",
+      matchDepNames: ["dhi.io/python"],
+    },
+    {
+      groupName: "dhi.io Node base image",
+      matchDepNames: ["dhi.io/node"],
+    },
+    {
+      // Security-sensitive base image: every bump waits for human review. No automerge.
+      matchDepNames: ["dhi.io/python", "dhi.io/node"],
+      automerge: false,
+    },
+    {
+      // The platform baseline is Python 3.13 (ADR-0002): .python-version, uv.lock's
+      // requires-python and every component suite run on it, and CI never builds a
+      // release image on anything else — so a 3.14 base would ship an interpreter no
+      // test covers. Moving the baseline is one deliberate change (.python-version,
+      // uv.lock, the members' requires-python) that lifts this bound with it. Patch
+      // bumps of the 3.13 base — the CVE fixes this config exists for — still flow.
+      matchDepNames: ["dhi.io/python"],
+      allowedVersions: "/^3\\.13\\./",
+    },
+  ],
+
+  customManagers: [
+    {
+      customType: "regex",
+      description: "dhi.io/python base image tag (docker/Dockerfile)",
+      managerFilePatterns: ["/^docker/Dockerfile$/"],
+      matchStrings: [
+        "# renovate: track=python-base\\s+ARG PYTHON_BASE=(?<currentValue>[\\w.-]+)",
+      ],
+      datasourceTemplate: "docker",
+      depNameTemplate: "dhi.io/python",
+      versioningTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "dhi.io/node base image tag (frontend/data-portal/Dockerfile.dhi)",
+      managerFilePatterns: ["/^frontend/data-portal/Dockerfile\\.dhi$/"],
+      matchStrings: [
+        "# renovate: track=node-base\\s+ARG NODE_BASE=(?<currentValue>[\\w.-]+)",
+      ],
+      datasourceTemplate: "docker",
+      depNameTemplate: "dhi.io/node",
+      versioningTemplate: "docker",
+    },
+  ],
+}

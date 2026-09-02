@@ -194,6 +194,19 @@ describe('IvaService', () => {
     expect(service.allIvas.value()).toEqual(allIvas);
   });
 
+  it('should get all IVAs when reloading before the first load', async () => {
+    service.reloadAllIvas();
+    expect(service.allIvas.isLoading()).toBe(true);
+    testBed.tick();
+    const req = httpMock.expectOne('http://mock.dev/auth/ivas');
+    expect(req.request.method).toBe('GET');
+    req.flush(allIvas);
+    await Promise.resolve(); // wait for loader to return
+    expect(service.allIvas.isLoading()).toBe(false);
+    expect(service.allIvas.error()).toBeUndefined();
+    expect(service.allIvas.value()).toEqual(allIvas);
+  });
+
   it('should pass server errors when getting all IVAs', async () => {
     service.loadAllIvas();
     expect(service.allIvas.isLoading()).toBe(true);

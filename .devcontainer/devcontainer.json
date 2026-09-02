@@ -1,16 +1,56 @@
 {
-  "name": "Python & Claude",
-  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  // A plain Debian 13 base with both stacks composed from features, rather than a
+  // language-specific base image such as python:3.13. Two reasons, both structural:
+  //
+  //   - The repo carries two stacks of equal standing — Python (services, libs, tools) and
+  //     Angular/pnpm (frontend/data-portal). A Python base image would make one of them the
+  //     image's identity and the other a bolt-on, which is not how the repo is laid out.
+  //   - A Python base image would pin an interpreter that nothing here builds against. uv
+  //     owns every interpreter that matters, and the version is declared in the repo, not
+  //     the image tag: .python-version = 3.13, and `uv venv --python 3.12` for the test bed.
+  //     Baking a second Python into the image only invites the two to be confused.
+  //
+  // What the Python code needs from the image is a single bootstrap `python3` for the
+  // manifest-reading scripts that run before any venv exists; the Dockerfile installs it
+  // and explains the one subtlety it carries.
+  "name": "GHGA monorepo",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "features": {
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      // Debian 13 dropped the moby-* system packages, and the feature hard-errors rather
+      // than attempting them. false switches it to upstream Docker CE from
+      // download.docker.com/linux/debian trixie (29.7.x, i.e. slightly newer than the
+      // moby-engine 29.6.2 this replaces).
+      //
+      // It does NOT change the iptables handling the local cluster depends on: on trixie
+      // the feature still points the `iptables` alternative at iptables-legacy, which is
+      // what keeps this inner dockerd's rules in a different backend from the host's nft
+      // rules while --net=host puts them in one namespace (see `just net-fix`).
+      //
+      // Nor does it cost us buildx, despite only the moby path installing a buildx apt
+      // package: the feature downloads the plugin binary into /usr/libexec/docker/cli-plugins
+      // either way. That matters because docker/Dockerfile uses `RUN --mount=type=cache`,
+      // which only BuildKit can parse.
+      "moby": false
+    },
     "ghcr.io/va-h/devcontainers-features/uv:1": {},
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "version": "latest",
       "helm": "latest",
       "minikube": "none"
-    }
+    },
+    // Scriptable GitHub access; the vscode-pull-request-github extension below is UI-only,
+    // so no script or agent can reach PR state through it. The binary arrives unauthenticated
+    // — VS Code's credential helper serves git transport only, and gh does not consult it.
+    //
+    // Kept read-only by two layers: the token (a zero-scope PAT reads this public repo and
+    // can write nothing) and .claude/settings.json (gh allow/deny rules). Only the token is
+    // enforced by GitHub. Use `gh auth login --with-token`; the browser flow grants write.
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "customizations": {
     "vscode": {
@@ -36,37 +76,85 @@
       ]
     }
   },
-  // Angular dev server (data-portal serves on 8080, not the ng default 4200; API is mocked
-  // in-browser via MSW, so no backend is required to run it).
-  "forwardPorts": [
-    8080
-  ],
+  // No forwardPorts, deliberately. The data-portal dev server listens on 8080 (not the ng
+  // default 4200; the API is mocked in-browser via MSW, so no backend is needed to run it)
+  // and --net=host below already shares it with the host — the same mechanism that puts the
+  // demo's port 80 on the host's http://localhost. Forwarding it as well is not merely
+  // redundant, it loops: VS Code's forwarder listens on the HOST side, so whenever nothing
+  // is bound to 8080 in here, a connection to 127.0.0.1:8080 escapes to the host gateway,
+  // gets forwarded back in, finds nothing, and goes out again. The connection establishes
+  // but never answers, and the loop burns ~200 MB/s until the client gives up. Playwright's
+  // `reuseExistingServer` probe hits exactly that: it concludes a dev server is already up,
+  // never starts one, and waits forever with no output while memory drains.
+
   // Share the host's network namespace. The demo cluster (kind, running in this
   // container's own docker) publishes its gateway on port 80, and only host networking
-  // puts that port on the VM, where the Mac's browser reaches it as a bare
-  // http://localhost. The port-less authority is required rather than cosmetic: the OIDC
-  // issuer must be byte-identical seen from the browser and from inside the cluster, and
-  // the in-cluster path cannot carry a port (see deploy/kind-config.yaml). It is also why
-  // the nested bridges need `just net-fix` on hosts with a FORWARD DROP policy.
+  // gets that port to the browser on the host computer as a bare http://localhost. The
+  // port-less authority is required rather than cosmetic: the OIDC issuer must be
+  // byte-identical seen from the browser and from inside the cluster, and the in-cluster
+  // path cannot carry a port (see deploy/kind-config.yaml). It is also why the nested
+  // bridges need `just net-fix` on hosts with a FORWARD DROP policy.
+  //
+  // What this needs from the container runtime differs, and getting it wrong shows up
+  // only as a connection refused in the browser while the port listens fine in here:
+  //   - Docker Engine on Linux: nothing. The container shares the host's namespace
+  //     directly, so http://localhost is the same stack the browser already uses.
+  //   - Docker Desktop (Linux, or Windows/macOS, where containers run in a VM): turn on
+  //     Settings > Resources > Network > "Enable host networking", then restart Docker
+  //     Desktop and rebuild. Without it the VM forwards only PUBLISHED ports (-p), which
+  //     host networking by definition does not use, so port 80 stays inside the VM.
+  //   - OrbStack: nothing; it forwards host-network ports on its own.
+  // Verify from the host with `curl -I http://localhost/` once `just up` reports ready.
   // Map the in-cluster MinIO name to the loopback address kind publishes its S3 node
   // port on (see deploy/kind-config.yaml). Docker regenerates /etc/hosts on every
   // container start, so this is the only form that survives a restart — an in-container
   // edit does not. `just testbed-hosts` does the same thing for non-devcontainer
   // environments (CI), and is a no-op once the entry is present.
   "runArgs": [
+    // A stable container name for `docker ps` and Docker Desktop: the top-level "name"
+    // above is only VS Code's display label and never reaches Docker, which otherwise
+    // assigns a random adjective_surname. Deriving it from the workspace folder scopes
+    // the name to this checkout instead of the whole daemon — here, ghga_devcontainer.
+    // Two checkouts in identically named folders would still collide, which is ok since
+    // we would not normally want to run two copies of this in parallel.
+    //
+    // Note this does not set the hostname, which stays the HOST's — --net=host below
+    // leaves no network namespace to name, and --hostname is rejected with it.
+    "--name",
+    "${localWorkspaceFolderBasename}_devcontainer",
     "--net=host",
     "--add-host",
     "ghga-minio:127.0.0.1"
   ],
+  // uv's cache lives on a named volume (ext4 in the container) while every venv it
+  // populates lives in the workspace bind mount. Hardlinks cannot cross that boundary, so
+  // uv falls back to copying and warns each time, in wording that reads like a
+  // misconfiguration ("If this is intentional, set UV_LINK_MODE=copy"). It is intentional:
+  // the split is what makes the cache survive rebuilds. Saying so up front removes a
+  // warning on every install; it does not change what uv actually does.
+  "containerEnv": {
+    "UV_LINK_MODE": "copy"
+  },
   // Persist uv's managed Python interpreters and its wheel cache across rebuilds.
   // The workspace .venv lives on the (surviving) bind mount but symlinks its interpreter
   // into ~/.local/share/uv/python/...; without this volume a rebuild wipes that target and
   // the venv symlink dangles (breaking pytest discovery). Persisting ~/.cache/uv additionally
   // skips re-downloading/rebuilding every dependency wheel on each rebuild.
-  // Persisted across rebuilds: uv interpreters + wheel cache (see above), and the Playwright
-  // browser binaries (~100MB+ each) so E2E tests don't re-download them on every rebuild.
+  // Persisted across rebuilds: uv interpreters + wheel cache (see above), the Playwright
+  // browser binaries (~100MB+ each) so E2E tests don't re-download them on every rebuild,
+  // and gh's auth token, so `gh auth login` is a one-time step rather than something a
+  // rebuild silently undoes.
+  //
+  // Deliberately NOT here: an X11 socket for headed Playwright runs. Where it lives is a
+  // property of the host, not of this repo — /tmp/.X11-unix on Linux, /mnt/wslg/.X11-unix
+  // on WSLg, XQuartz over TCP on macOS — and a bind mount whose source is missing fails
+  // container creation rather than degrading. Add the one your host has, plus a matching
+  // DISPLAY in containerEnv, if you need `pnpm e2e:headed`:
+  //     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"   with "DISPLAY": ":0"
+  // See frontend/data-portal/README.md, "Issues relating to headed execution".
   "mounts": [
     "source=ghga-claude,target=/home/vscode/.claude,type=volume",
+    "source=ghga-gh,target=/home/vscode/.config/gh,type=volume",
     "source=ghga-uv-data,target=/home/vscode/.local/share/uv,type=volume",
     "source=ghga-uv-cache,target=/home/vscode/.cache/uv,type=volume",
     "source=ghga-playwright,target=/home/vscode/.cache/ms-playwright,type=volume"

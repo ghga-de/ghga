@@ -27,6 +27,7 @@ build products.
 
 ```bash
 uv sync                 # or: just sync
+just hooks              # install the git hooks (the dev container does this for you)
 just lint && just test
 ```
 
@@ -137,7 +138,7 @@ and the release workflow always build one image per member. It exists because it
 | area | recipes |
 |---|---|
 | Python workspace | `sync`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
-| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend` |
+| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
 | Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix` |
@@ -147,7 +148,7 @@ and the release workflow always build one image per member. It exists because it
 ## Where to read
 
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/adr/](docs/adr/)** — the decisions (and why), ADR-0001…0016.
+- **[docs/adr/](docs/adr/)** — the decisions (and why), ADR-0001…0018.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 
 ## Conventions

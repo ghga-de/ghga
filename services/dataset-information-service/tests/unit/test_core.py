@@ -167,7 +167,7 @@ async def test_handle_file_internally_registered(rig: JointRig):
     """
     fir_event_payload = make_file_internally_registered()
     store_mock = AsyncMock()
-    rig.information_service.store_pending_file_info = store_mock  # type: ignore
+    rig.information_service.store_pending_file_info = store_mock
 
     await rig.information_service.handle_file_internally_registered(
         file=fir_event_payload
@@ -182,7 +182,7 @@ async def test_handle_file_internally_registered(rig: JointRig):
     await rig.accession_map_dao.insert(accession_map)
 
     register_mock = AsyncMock()
-    rig.information_service.register_file_information = register_mock  # type: ignore
+    rig.information_service.register_file_information = register_mock
     await rig.information_service.handle_file_internally_registered(
         file=fir_event_payload
     )

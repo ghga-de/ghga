@@ -1,13 +1,15 @@
 # Local/CI integration cluster (ADR-0009/0017 as amended: kind runs in the
 # devcontainer's inner docker daemon; ports are published through the nested
-# chain and reach the Mac browser via OrbStack's port forwarding).
+# chain and reach the browser on the host computer because the devcontainer
+# shares the host network namespace — see .devcontainer/devcontainer.json for
+# what each container runtime needs before that last hop works).
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: ghga
 nodes:
   - role: control-plane
     extraPortMappings:
-      # the demo gateway NodePort, published on the Mac's port 80: the OIDC
+      # the demo gateway NodePort, published on the host computer's port 80: the OIDC
       # issuer authority must be byte-identical from the browser and from
       # inside the cluster, and the in-cluster path (envoy hostname rewrite)
       # cannot carry a port — a port-less authority (http://localhost) is the

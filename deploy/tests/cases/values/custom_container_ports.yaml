@@ -1,0 +1,8 @@
+containerPorts:
+  http: 8080
+  dns:
+    port: 53
+    protocol: UDP
+
+networkPolicy:
+  enabled: true

@@ -20,7 +20,6 @@ from typing import Any
 
 import httpx2
 from async_lru import alru_cache
-from tenacity import RetryError
 
 from ghga_connector import exceptions
 from ghga_connector.config import get_download_api_url
@@ -86,19 +85,8 @@ class DownloadClient:
                 headers=headers,
                 timeout=TIMEOUT_LONG,
             )
-        except RetryError as retry_error:
-            wrapped_exception = retry_error.last_attempt.exception()
-            if isinstance(wrapped_exception, httpx2.RequestError):
-                exceptions.raise_if_connection_failed(
-                    request_error=wrapped_exception, url=url
-                )
-                raise exceptions.RequestFailedError(url=url) from retry_error
-            elif wrapped_exception:
-                raise wrapped_exception from retry_error
-            elif result := retry_error.last_attempt.result():
-                response = result
-            else:
-                raise
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         return _handle_drs_object_response(url=url, response=response)
 
@@ -139,8 +127,8 @@ class DownloadClient:
             response: httpx2.Response = await self._client.get(
                 headers=auth_headers, url=url
             )
-        except httpx2.RequestError as request_error:
-            raise exceptions.RequestFailedError(url=url) from request_error
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         status_code = response.status_code
         match status_code:
@@ -215,20 +203,8 @@ class DownloadClient:
         )
         try:
             response: httpx2.Response = await self._client.get(url=url, headers=headers)
-        except RetryError as retry_error:
-            wrapped_exception = retry_error.last_attempt.exception()
-
-            if isinstance(wrapped_exception, httpx2.RequestError):
-                exceptions.raise_if_connection_failed(
-                    request_error=wrapped_exception, url=url
-                )
-                raise exceptions.RequestFailedError(url=url) from retry_error
-            elif wrapped_exception:
-                raise wrapped_exception from retry_error
-            elif result := retry_error.last_attempt.result():
-                response = result
-            else:
-                raise
+        except exceptions.REQUEST_FAILURES as exc:
+            response = exceptions.handle_request_error(exc, url=url)
 
         status_code = response.status_code
 

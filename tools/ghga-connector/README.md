@@ -1,5 +1,5 @@
-[![tests](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/ghga-connector/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/ghga-connector/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/ghga-connector?branch=main)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-connector.svg)](https://pypi.org/project/ghga-connector/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-connector.svg)](https://pypi.org/project/ghga-connector/)
 
 # GHGA Connector
 
@@ -8,7 +8,7 @@ GHGA Connector - A CLI client application for interacting with the GHGA system.
 ## Description
 
 The GHGA Connector is a command line client facilitating interaction with the file storage infrastructure of GHGA.
-To this end, it provides commands for the up- and download of files that interact with the RESTful APIs exposed by the Upload Controller Service (https://github.com/ghga-de/upload-controller-service) and Download Controller Service (https://github.com/ghga-de/download-controller-service), respectively.
+To this end, it provides commands for the up- and download of files that interact with the RESTful APIs exposed by the Upload Controller Service (https://github.com/ghga-de/ghga/tree/main/services/ucs) and Download Controller Service (https://github.com/ghga-de/ghga/tree/main/services/dcs), respectively.
 
 When uploading, the Connector expects an unencrypted file that is subsequently encrypted according to the Crypt4GH standard (https://www.ga4gh.org/news_item/crypt4gh-a-secure-method-for-sharing-human-genetic-data/) and only afterwards uploaded to the GHGA storage infrastructure.
 
@@ -18,47 +18,29 @@ As the user is expected to download multiple files, this command takes a directo
 Most of the commands need the submitter's private key that matches the public key announced to GHGA.
 The private key is used for file encryption in the upload path and decryption of the work package access and work order tokens during download.
 Additionally, the decrypt command needs the private key to decrypt the downloaded file.
+If the private key is protected by a passphrase, the Connector prompts for it interactively (up to three attempts). The passphrase cannot be supplied via configuration.
 
 
 ## Installation
 
-We recommend using the provided Docker container.
-
-A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/ghga-connector):
+We recommend installing the latest version of the GHGA Connector using pip:
 ```bash
-docker pull ghga/ghga-connector:3.1.1
+pip install -U ghga-connector
 ```
 
-Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
+To run it from a checkout of this repository instead:
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/ghga-connector:3.1.1 .
-```
-
-For production-ready deployment, we recommend using Kubernetes.
-However for simple use cases, you could execute the service using docker
-on a single server:
-```bash
-# The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/ghga-connector:3.1.1 --help
-```
-
-If you prefer not to use containers, you may install the service from source:
-```bash
-# Execute in the repo's root dir:
-pip install .
-
-# To run the service:
-ghga_connector --help
+uv run ghga-connector --help
 ```
 
 ## Configuration
 
 ### Parameters
 
-The service requires the following configuration parameters:
+The Connector accepts the following configuration parameters:
 - <a id="properties/client_exponential_backoff_max"></a>**`client_exponential_backoff_max`** *(integer)*: Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. Minimum: `0`. Default: `60`.
-- <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Number of times to retry failed API calls. Minimum: `0`. Default: `3`.
+- <a id="properties/client_num_retries"></a>**`client_num_retries`** *(integer)*: Total number of attempts made per API call, so a value of 1 means no retries. Uploads are long-lived and cross the public internet, so the Connector allows more attempts than the service default. Minimum: `0`. Default: `5`.
 - <a id="properties/client_retry_status_codes"></a>**`client_retry_status_codes`** *(array)*: List of status codes that should trigger retrying a request. Default: `[408, 429, 500, 502, 503, 504]`.
   - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
 - <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. Default: `true`.
@@ -72,17 +54,15 @@ The service requires the following configuration parameters:
 
 ### Usage:
 
-A template YAML file for configuring the service can be found at
-[`./example_config.yaml`](./example_config.yaml).
+A template YAML file for configuring the Connector can be found at
+[`./example_config.yaml`](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/example_config.yaml).
 Please adapt it, rename it to `.ghga_connector.yaml`, and place it in one of the following locations:
-- in the current working directory where you execute the service (on Linux: `./.ghga_connector.yaml`)
+- in the current working directory where you run the Connector (on Linux: `./.ghga_connector.yaml`)
 - in your home directory (on Linux: `~/.ghga_connector.yaml`)
 
-The config YAML file will be automatically parsed by the service.
+The config YAML file will be automatically parsed by the Connector.
 
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml)
+All parameters mentioned in the [`./example_config.yaml`](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/example_config.yaml)
 can also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `ghga_connector_`,
@@ -91,7 +71,7 @@ e.g. for the `host` set an environment variable named `ghga_connector_host`
 variables in upper cases).
 
 To use file secrets, please refer to the
-[corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support)
+[corresponding section](https://pydantic.dev/docs/validation/latest/concepts/pydantic_settings/#secrets)
 of the pydantic documentation.
 
 
@@ -108,35 +88,23 @@ The client is roughly structured into three parts:
 
 ## Development
 
-For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code
-in combination with Docker Compose.
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
+developed from the repository root rather than on its own. The repository ships a
+devcontainer with the whole toolchain: open it in VS Code and run
+`Remote-Containers: Reopen in Container`, or set the environment up directly with
+`just sync`.
 
-To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers"
-extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in VS Code and run the command
-`Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
+The usual tasks, run from the repository root (see
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+full recipe list):
 
-This will give you a full-fledged, pre-configured development environment including:
-- infrastructural dependencies of the service (databases, etc.)
-- all relevant VS Code extensions pre-installed
-- pre-configured linting and auto-formatting
-- a pre-configured debugger
-- automatic license-header insertion
-
-Inside the devcontainer, a command `dev_install` is available for convenience.
-It installs the service with all development dependencies, and it installs pre-commit.
-
-The installation is performed automatically when you build the devcontainer. However,
-if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the
-[`lock/requirements-dev.txt`](./lock/requirements-dev.txt), run it again.
+```bash
+just sync                        # install every member plus the shared dev toolchain
+just test tools/ghga-connector   # this member's test suite
+just lint                        # ruff check + format check across the workspace
+```
 
 ## License
 
 This repository is free to use and modify according to the
-[Apache 2.0 License](./LICENSE).
-
-## README Generation
-
-This README file is auto-generated, please see [.readme_generation/README.md](./.readme_generation/README.md)
-for details.
+[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/tools/ghga-connector/LICENSE).

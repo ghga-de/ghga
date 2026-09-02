@@ -1,0 +1,64 @@
+[build-system]
+requires = [
+    "setuptools>=82",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+readme = "README.md"
+authors = [
+    { name = "Kersten Henrik Breuer", email = "kersten-breuer@outlook.com" },
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Software Development :: Libraries",
+    "Intended Audience :: Developers",
+]
+name = "ghga-arcticfreeze"
+version = "1.1.1"
+description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
+maintainers = [
+    { name = "The GHGA Authors", email = "contact@ghga.de" },
+]
+dependencies = [
+    "immutabledict >= 4.3.1, <5",
+]
+
+[project.license]
+text = "Apache 2.0"
+
+[project.optional-dependencies]
+pydantic = [
+    "pydantic >= 2.13.0, <3",
+]
+
+[project.urls]
+Repository = "https://github.com/ghga-de/ghga"
+"Release Notes" = "https://github.com/ghga-de/ghga/releases"
+"Issue Tracker" = "https://github.com/ghga-de/ghga/issues"
+
+[tool.setuptools.packages.find]
+where = [
+    "src",
+]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.paths]
+source = [
+    "src",
+    "/workspace/src",
+    "**/lib/python*/site-packages",
+]

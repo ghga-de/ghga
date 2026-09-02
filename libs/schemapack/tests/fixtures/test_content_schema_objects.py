@@ -16,7 +16,6 @@
 """Objects to create a ClassDefinition object to test content schema load."""
 
 from arcticfreeze import FrozenDict
-
 from schemapack._internals.spec.schemapack import IDSpec
 
 DATASET_ID = IDSpec(propertyName="alias", description=None)

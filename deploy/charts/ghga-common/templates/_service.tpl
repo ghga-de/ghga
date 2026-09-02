@@ -7,6 +7,9 @@ metadata:
   name: {{ include "common.names.fullname" . }}
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.service.labels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.service.labels "context" $ ) | nindent 4 }}
+    {{- end }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
@@ -39,8 +42,16 @@ spec:
   {{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
   externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | quote }}
   {{- end }}
-  {{- if .Values.ports.enabled }}
-  ports: {{- include "common.tplvalues.render" (dict "value" .Values.service.ports "context" $) | nindent 4 }}
+  {{- if .Values.containerPorts }}
+  {{- /* Derived from containerPorts, not a separate service.ports value: the Service
+       always exposes exactly what the container listens on here. */}}
+  ports:
+  {{- range (include "ghga-common.container-ports" . | fromYamlArray) }}
+  - name: {{ .name }}
+    protocol: {{ .protocol }}
+    port: {{ .containerPort }}
+    targetPort: {{ .name }}
+  {{- end }}
   {{- end }}
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
 {{- end -}}

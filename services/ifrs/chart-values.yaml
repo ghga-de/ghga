@@ -14,6 +14,12 @@ config:
   db_version_collection: "ifrsDbVersions"
   migration_wait_sec: 10
 
+# event consumer only, no REST API (see README)
+service:
+  enabled: false
+containerPorts:
+  http: null
+
 executableArgs:
 - consume-events
 

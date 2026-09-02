@@ -8,17 +8,11 @@ metadata:
   namespace: {{ include "common.names.namespace" . | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app: {{ include "common.names.fullname" . }}
-    {{- if .Values.labels }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.labels "context" $ ) | nindent 4 }}
-    {{- end }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
   annotations:
     configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
-    {{- if .Values.annotations }}
-    {{- include "common.tplvalues.render" ( dict "value" .Values.annotations "context" $) | nindent 4 }}
-    {{- end }}
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
     {{- end }}
@@ -51,15 +45,13 @@ spec:
       backoffLimit: {{ .Values.backoffLimit }}
       {{- end }}
       serviceAccountName: {{ include "common.names.fullname" . }}
-      {{- if .Values.imagePullSecrets }}
-      imagePullSecrets: {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 8 }}
-      {{- end }}
+      {{- include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) | nindent 6 }}
       containers:
         - name: {{ .Release.Name }}
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart ) }}
           imagePullPolicy: {{ default (eq .Values.image.tag "latest" | ternary "Always" "IfNotPresent") .Values.image.pullPolicy }}
-          {{- include "ghga-common.command-args" (list $ .Values.executable .Values.executableArgs .Values.command)  | nindent 10 }}
+          {{- include "ghga-common.command-args" (list $ .Values.executable .Values.executableArgs)  | nindent 10 }}
           {{- $envVars := include "ghga-common.env-vars" $ | fromYaml | dig "envVars" list -}}
           {{- if $envVars }}
           env: {{- include "common.tplvalues.render" (dict "value" $envVars "context" $) | nindent 12 }}
