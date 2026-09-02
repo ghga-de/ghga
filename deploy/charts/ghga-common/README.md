@@ -9,7 +9,7 @@ This is a Helm **library** chart — it has no templates of its own and cannot b
 ```yaml
 dependencies:
   - name: ghga-common
-    version: "2.13.0"
+    version: "2.14.0"
     repository: oci://registry-1.docker.io/ghga
 ```
 

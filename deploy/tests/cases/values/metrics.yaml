@@ -1,0 +1,9 @@
+containerPorts:
+  http: 8080
+  metrics: 9464
+httpRoute:
+  enabled: true
+networkPolicy:
+  enabled: true
+metricsNetworkPolicy:
+  enabled: true

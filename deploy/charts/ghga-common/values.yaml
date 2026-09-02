@@ -268,6 +268,18 @@ exports:
               matchLabels:
                 ghga-ingress: allow
 
+    # A second, separate NetworkPolicy scoped to only the `metrics` containerPort (if
+    # declared) - independent of networkPolicy above, which applies its ingress rules to
+    # every containerPort uniformly. Metrics needs its own, narrower peer (Prometheus in
+    # the monitoring namespace), not whatever's allowed onto the main API port.
+    metricsNetworkPolicy:
+      enabled: false
+      ingress:
+        - from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: monitoring
+
     strimziApiVersion: kafka.strimzi.io/v1
     vaultAgent:
       enabled: false

@@ -20,9 +20,16 @@ spec:
   - Ingress
   ingress:
     {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.ingress "context" $) | nindent 2 }}
-    {{- if .Values.containerPorts }}
-    ports:
+    {{- /* metrics is excluded: governed only by the separate metricsNetworkPolicy */ -}}
+    {{- $ports := list }}
     {{- range (include "ghga-common.container-ports" . | fromYamlArray) }}
+    {{- if ne .name "metrics" }}
+    {{- $ports = append $ports . }}
+    {{- end }}
+    {{- end }}
+    {{- if $ports }}
+    ports:
+    {{- range $ports }}
     - port: {{ .containerPort }}
       protocol: {{ .protocol }}
     {{- end }}

@@ -206,6 +206,13 @@ networkPolicy:
     - namespaceSelector:
         matchLabels:
           ghga-ingress: allow
+metricsNetworkPolicy:
+  enabled: false
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
 strimziApiVersion: kafka.strimzi.io/v1
 vaultAgent:
   enabled: false

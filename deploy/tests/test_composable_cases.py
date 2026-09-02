@@ -240,6 +240,48 @@ def test_no_container_ports_renders_no_ports_anywhere(rendered_chart):
     assert "ports" not in manifests["NetworkPolicy"]["spec"]["ingress"][0]
 
 
+def test_metrics_networkpolicy_is_scoped_and_separate(rendered_objects):
+    """The metrics containerPort gets its own NetworkPolicy, restricted to the
+    monitoring namespace and only that port - the general NetworkPolicy's ingress
+    peers (whatever's allowed onto the main API port) never also cover it, since
+    NetworkPolicy rules are additive: a second, broader rule would undo the
+    restriction rather than narrow it.
+    """
+    objects = rendered_objects("common.yaml", "metrics.yaml")
+    policies = {
+        obj["metadata"]["name"]: obj
+        for obj in objects
+        if obj["kind"] == "NetworkPolicy"
+    }
+    assert len(policies) == 2
+
+    metrics_policy = policies["test-my-app-metrics"]
+    assert metrics_policy["spec"]["ingress"][0]["ports"] == [
+        {"port": 9464, "protocol": "TCP"}
+    ]
+    assert metrics_policy["spec"]["ingress"][0]["from"][0]["namespaceSelector"][
+        "matchLabels"
+    ] == {"kubernetes.io/metadata.name": "monitoring"}
+
+    general_policy = policies["test-my-app"]
+    assert general_policy["spec"]["ingress"][0]["ports"] == [
+        {"port": 8080, "protocol": "TCP"}
+    ]
+
+
+def test_metrics_port_never_on_public_httproute(rendered_objects):
+    """The metrics port must never be reachable through the public HTTPRoute - it's
+    meant to be reachable only via the dedicated metricsNetworkPolicy, regardless of
+    app-level auth. The HTTPRoute's backendRef always targets httpRoute.port, never
+    any other containerPort, but this locks that invariant down as a regression test.
+    """
+    objects = rendered_objects("common.yaml", "metrics.yaml")
+    (http_route,) = [obj for obj in objects if obj["kind"] == "HTTPRoute"]
+    for rule in http_route["spec"]["rules"]:
+        for backend_ref in rule["backendRefs"]:
+            assert backend_ref["port"] != 9464
+
+
 def test_command_style_exec(rendered_chart):
     """commandStyle=exec renders a real argv without a shell."""
     # shell style (default): command is the shell wrapper, args one joined string

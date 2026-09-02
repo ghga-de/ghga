@@ -68,6 +68,7 @@ updateStrategy:
 podRestartPolicy: Always
 containerPorts:
   http: 8080
+  metrics: 9464
 livenessProbe:
   enabled: false
   tcpSocket:
@@ -206,6 +207,13 @@ networkPolicy:
     - namespaceSelector:
         matchLabels:
           ghga-ingress: allow
+metricsNetworkPolicy:
+  enabled: true
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
 strimziApiVersion: kafka.strimzi.io/v1
 vaultAgent:
   enabled: false

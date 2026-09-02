@@ -331,6 +331,10 @@
         "http": {
           "type": "number",
           "default": 8080
+        },
+        "metrics": {
+          "type": "number",
+          "default": 9464
         }
       }
     },
@@ -1471,6 +1475,34 @@
                   "namespaceSelector": {
                     "matchLabels": {
                       "ghga-ingress": "allow"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "metricsNetworkPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a second, separate NetworkPolicy scoped to only the `metrics` containerPort - independent of networkPolicy above, which never covers this port regardless of its own ingress rules",
+          "default": true
+        },
+        "ingress": {
+          "type": "array",
+          "description": "Only allow traffic to the metrics port from namespaces labeled `kubernetes.io/metadata.name: monitoring`",
+          "default": [
+            {
+              "from": [
+                {
+                  "namespaceSelector": {
+                    "matchLabels": {
+                      "kubernetes.io/metadata.name": "monitoring"
                     }
                   }
                 }

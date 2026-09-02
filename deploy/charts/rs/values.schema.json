@@ -1891,6 +1891,34 @@
         }
       }
     },
+    "metricsNetworkPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Render a second, separate NetworkPolicy scoped to only the `metrics` containerPort - independent of networkPolicy above, which never covers this port regardless of its own ingress rules",
+          "default": false
+        },
+        "ingress": {
+          "type": "array",
+          "description": "Only allow traffic to the metrics port from namespaces labeled `kubernetes.io/metadata.name: monitoring`",
+          "default": [
+            {
+              "from": [
+                {
+                  "namespaceSelector": {
+                    "matchLabels": {
+                      "kubernetes.io/metadata.name": "monitoring"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
     "strimziApiVersion": {
       "type": "string",
       "description": "apiVersion used for the rendered Strimzi KafkaUser resource",

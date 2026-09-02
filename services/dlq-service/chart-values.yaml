@@ -6,6 +6,16 @@ apiBasePath: /dlqs/
 mongodb:
   dbName: dlqs
 
+# Prometheus metrics, served on their own port (dlqs.config.metrics_port default:
+# 9464) - never on httpRoute.port, so the public HTTPRoute has no path to it.
+# metricsNetworkPolicy is a separate, narrower NetworkPolicy scoped to just this
+# port, so it's only reachable from the monitoring namespace even inside the
+# cluster.
+containerPorts:
+  metrics: 9464
+metricsNetworkPolicy:
+  enabled: true
+
 # This parameter is used as Kafka's group id
 serviceName: dlqs-consumer
 

@@ -112,6 +112,7 @@ for the full set of configurable values.
 | `updateStrategy.type` | Deployment rollout strategy (e.g. RollingUpdate/Recreate) | `"RollingUpdate"` |
 | `podRestartPolicy` | Pod-level restart policy for the Deployment (Jobs/CronJobs set their own, ignoring this) | `"Always"` |
 | `containerPorts.http` |  | `8080` |
+| `containerPorts.metrics` |  | `9464` |
 | `livenessProbe.enabled` | Render a container livenessProbe from this block (minus `enabled`) | `false` |
 | `livenessProbe.tcpSocket.port` |  | `8080` |
 | `livenessProbe.initialDelaySeconds` |  | `30` |
@@ -184,6 +185,8 @@ for the full set of configurable values.
 | `destinationRule.enabled` | Render an Istio DestinationRule for this service | `false` |
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
+| `metricsNetworkPolicy.enabled` | Render a second, separate NetworkPolicy scoped to only the `metrics` containerPort - independent of networkPolicy above, which never covers this port regardless of its own ingress rules | `true` |
+| `metricsNetworkPolicy.ingress` | Only allow traffic to the metrics port from namespaces labeled `kubernetes.io/metadata.name: monitoring` | `[{"from": [{"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "monitoring"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |
 | `vaultAgent.enabled` | Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container | `false` |
 | `vaultAgent.annotations.vault.hashicorp.com/tls-skip-verify` |  | `"false"` |
