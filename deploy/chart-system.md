@@ -19,20 +19,6 @@ matches a released set of images.
 
 ## Developer notes
 
-### End-to-end testing of ghga-common
-
-In some scenarios, it makes sense to run end-to-end tests—for example, when changes in ghga-common need to be validated all the way through to a fully functional deployment. To achieve this, follow these steps:
-
-- Create an empty branch (for better diffs) in ghga-de/charts with the prefix ghga-common/.
-
-- Create an empty branch in ghga-de/devops-kubernetes-hub with the prefix testing and push an empty commit, e.g., `git commit --allow-empty -m "Init"`.
-
-- Open a PR and add the labels: `deployed` and `repoRef: ghga-common/<your-suffix>`.
-
-- Verify that the rendered manifests were pushed to the GitOps branch gitops-testing.
-
-- Update your charts branch in ghga-de/charts. If no diffs are present in ghga-de/devops-kubernetes-hub, rerun the GitOps action manually.
-
 ### Update library chart ghga-common locally
 
 If you want to try out an update in the dependency Helm chart `ghga-common`, you need to set the dependency to resolve locally. This can be achieved by specifying the path to the local version of the chart.

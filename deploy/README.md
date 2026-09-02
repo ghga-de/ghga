@@ -25,6 +25,11 @@ workflow uses); the chart version and `appVersion` are the platform version
 values live in `<member>/chart-values.yaml`, co-located with the member. Generated charts
 use `commandStyle: exec` — the monorepo's hardened images have no shell.
 
+To validate a `ghga-common` change end-to-end, edit `deploy/charts/ghga-common/` directly
+and run `just demo-template` (or `just up`) — every generated chart already resolves the
+dependency via `file://../ghga-common`, so `helm dep up` re-vendors local edits with no
+extra repo wiring.
+
 The demo umbrella (`helm install ghga deploy/charts/ghga-demo`) bundles the Envoy Gateway
 edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route
 `SecurityPolicy` ext-authz against the auth adapter (headers mirror the prod
