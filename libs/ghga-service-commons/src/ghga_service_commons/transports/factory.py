@@ -17,26 +17,28 @@
 
 import os
 import ssl
+import warnings
+from collections.abc import Callable
+from typing import Any
 
 from httpx2 import AsyncBaseTransport, AsyncHTTPTransport, Limits
 
 from .config import CompositeConfig
-from .ratelimiting import AsyncRateLimitingTransport
+from .ratelimiting import AsyncRateLimitingTransport, RateBudget
 from .retry import AsyncRetryTransport
+
+BaseTransportFactory = Callable[[str | None], AsyncBaseTransport]
 
 
 def get_ssl_verify() -> ssl.SSLContext | bool:
-    """Determine the SSL verification setting for outgoing transports.
+    """SSL verification setting for outgoing transports.
 
-    Honors the standard ``REQUESTS_CA_BUNDLE`` and ``SSL_CERT_FILE`` environment
-    variables (the same ones respected by ``requests``, ``urllib3`` and boto3) so
-    that deployments behind SSL-inspecting proxies or with self-signed/custom CA
-    chains verify correctly. ``REQUESTS_CA_BUNDLE`` takes precedence.
+    Honors ``REQUESTS_CA_BUNDLE`` and ``SSL_CERT_FILE`` (the variables ``requests``,
+    ``urllib3`` and boto3 use), so deployments behind SSL-inspecting proxies or with a
+    custom CA verify correctly. ``REQUESTS_CA_BUNDLE`` wins if both are set.
 
-    If either variable is set, an ``ssl.SSLContext`` loaded from the referenced CA
-    bundle is returned. If neither is set, ``True`` is returned so that httpx2 keeps
-    its default behavior: the OS trust store via ``truststore``, not certifi as in
-    httpx 0.x. Minimal images therefore need a populated system CA store.
+    Without either, returns ``True`` and httpx2 falls back to the OS trust store, so
+    minimal images need a populated system CA store.
     """
     ca_bundle = os.environ.get("REQUESTS_CA_BUNDLE") or os.environ.get("SSL_CERT_FILE")
     if ca_bundle:
@@ -44,46 +46,113 @@ def get_ssl_verify() -> ssl.SSLContext | bool:
     return True
 
 
+def default_base_transport_factory(
+    limits: Limits | None = None,
+    verify: ssl.SSLContext | bool | None = None,
+) -> BaseTransportFactory:
+    """Build the standard network transport for a route.
+
+    The only place an AsyncHTTPTransport is built, so limits and SSL verification apply
+    the same way to direct and proxied routes.
+    """
+    resolved_verify = get_ssl_verify() if verify is None else verify
+
+    def make_base_transport(proxy: str | None) -> AsyncBaseTransport:
+        kwargs: dict[str, Any] = {"verify": resolved_verify}
+        if limits is not None:
+            kwargs["limits"] = limits
+        if proxy is not None:
+            kwargs["proxy"] = proxy
+        return AsyncHTTPTransport(**kwargs)
+
+    return make_base_transport
+
+
+def fixed_base_transport_factory(
+    transport: AsyncBaseTransport,
+) -> BaseTransportFactory:
+    """Serve every route from one already built transport.
+
+    Proxy settings cannot reach a finished instance, so it answers direct and proxied
+    routes alike, which is what a test double wants. Write your own factory if you need
+    proxy-aware transports.
+    """
+    return lambda _proxy: transport
+
+
+def _resolve_base_transport_factory(
+    base_transport: AsyncBaseTransport | None,
+    limits: Limits | None,
+    make_base_transport: BaseTransportFactory | None,
+) -> BaseTransportFactory:
+    """Reduce the legacy base_transport/limits pair to a single factory."""
+    if make_base_transport is not None:
+        if base_transport is not None or limits is not None:
+            raise ValueError(
+                "make_base_transport already decides how every transport is built."
+                " Drop base_transport and limits, and apply them inside the factory."
+            )
+        return make_base_transport
+    if base_transport is not None:
+        if limits is not None:
+            warnings.warn(
+                "limits are ignored when base_transport is given; size the transport"
+                " you pass in instead. This will raise in 9.0.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        return fixed_base_transport_factory(base_transport)
+    return default_base_transport_factory(limits)
+
+
 class CompositeTransportFactory:
-    """Produces different flavors of httpx2.AsyncHTTPTransports and takes care of wrapping them in the correct order."""
+    """Builds the wrapped transport stacks this package provides."""
 
     @classmethod
-    def _create_common_transport_layers(
+    def _create_common_transport_layers(  # noqa: PLR0913
         cls,
         config: CompositeConfig,
         base_transport: AsyncBaseTransport | None = None,
         limits: Limits | None = None,
+        *,
+        make_base_transport: BaseTransportFactory | None = None,
+        proxy: str | None = None,
+        budget: RateBudget | None = None,
     ):
-        """Creates wrapped transports reused between different factory methods.
-
-        If provided, limits are applied to the AsyncHTTPTransport instance this method creates.
-        If provided, a custom base_transport class is used and any limits are ignored.
-        Those have to be provided directly to the custom base_transport passed into this method.
-        """
-        verify = get_ssl_verify()
-        base_transport = base_transport or (
-            AsyncHTTPTransport(limits=limits, verify=verify)
-            if limits
-            else AsyncHTTPTransport(verify=verify)
+        """Creates wrapped transports reused between different factory methods."""
+        factory = _resolve_base_transport_factory(
+            base_transport, limits, make_base_transport
         )
         ratelimiting_transport = AsyncRateLimitingTransport(
-            config=config, transport=base_transport
+            config=config, transport=factory(proxy), budget=budget
         )
         return AsyncRetryTransport(config=config, transport=ratelimiting_transport)
 
     @classmethod
-    def create_ratelimiting_retry_transport(
+    def create_ratelimiting_retry_transport(  # noqa: PLR0913
         cls,
         config: CompositeConfig,
         base_transport: AsyncBaseTransport | None = None,
         limits: Limits | None = None,
+        *,
+        make_base_transport: BaseTransportFactory | None = None,
+        proxy: str | None = None,
+        budget: RateBudget | None = None,
     ) -> AsyncRetryTransport:
-        """Creates a retry transport, wrapping, in sequence, a rate limiting transport and AsyncHTTPTransport.
+        """Build one route's stack: retry, wrapping rate limiting, wrapping a base transport.
 
-        If provided, limits are applied to the wrapped AsyncHTTPTransport instance.
-        If provided, a custom base_transport class is used and any limits are ignored.
-        Those have to be provided directly to the custom base_transport passed into this method.
+        Prefer `get_composite_client`, which builds a whole client and shares one budget
+        across its routes.
+
+        `make_base_transport` is called with `proxy` to build the base transport.
+        `base_transport` and `limits` are older sugar over it, and warn when combined
+        because limits cannot reach a finished transport. Pass `budget` to share pacing.
         """
         return cls._create_common_transport_layers(
-            config, base_transport=base_transport, limits=limits
+            config,
+            base_transport=base_transport,
+            limits=limits,
+            make_base_transport=make_base_transport,
+            proxy=proxy,
+            budget=budget,
         )
