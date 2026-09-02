@@ -48,7 +48,7 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 **Branch**
 - Create `dev` from `main`.
 - Rebase all unmerged work which previously targeted `main` onto `dev`, and retarget open PRs.
-- Forbid squash-merging and rebasing on `main`.
+- Forbid squash-merging and rebasing on `main`. "Require linear history" must stay *off* for `main`, since it would forbid the release merge commit.
 
 **GitHub configuration**
 - Protect `dev` like we protect `main`, and keep `main` protected too.
