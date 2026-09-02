@@ -35,8 +35,7 @@ def _parse_retry_after(value: str) -> float | None:
     """Turn a single Retry-After value into a number of seconds to wait.
 
     RFC 9110 allows the header to carry either a number of seconds or an HTTP date, so
-    both forms are accepted. Returns None when the value is neither, which lets the
-    caller treat the header as if it had not been sent instead of failing the request.
+    both forms are accepted. Returns None when the value is neither.
     """
     value = value.strip()
 
@@ -53,7 +52,7 @@ def _parse_retry_after(value: str) -> float | None:
     except (TypeError, ValueError):
         return None
     if retry_at.tzinfo is None:
-        # HTTP dates are GMT; a value parsed without a zone would compare wrong.
+        # A value parsed without a zone would compare wrong.
         retry_at = retry_at.replace(tzinfo=timezone.utc)
     return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
 
@@ -61,10 +60,8 @@ def _parse_retry_after(value: str) -> float | None:
 def _retry_after_seconds(headers: httpx2.Headers) -> float:
     """Determine how long a 429 response asks the client to wait.
 
-    A response may carry Retry-After more than once. `headers.items()` joins repeats
-    into one comma separated string that parses as neither allowed form, so the
-    individual values are read instead and the longest wait wins. Values that cannot be
-    parsed are skipped; 0.0 means no usable Retry-After was found.
+    A response may carry Retry-After more than once and the longest wait wins.
+    Values that cannot be parsed are skipped and 0.0 means no usable Retry-After was found.
     """
     waits = [
         seconds
