@@ -129,10 +129,10 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     that can be stored in the url string: int, float, str, bool, None, and complex.
     The one exception is "request", which will be passed in automatically if specified.
 
-    An endpoint function may instead collect the path variables it does not name in a
-    `**kwargs` parameter, which arrive there as strings. That is what lets one function
-    serve endpoints with differing path variables, as `ApiMock` in `mock_api` does. Call
-    it `**path_variables`, so the signature says what it collects.
+    An endpoint function doesn't have to specify its path parameters in order
+    to access them. You may instead collect path parameters in a single dictionary
+    by specifying `**path_variables` in the endpoint function signature. That
+    enables reusing the endpoint function with paths containing differing parameters.
 
     Patterns are matched against the request URL without its query string, so an
     endpoint serves the calls to its path whether they carry query parameters or not.
