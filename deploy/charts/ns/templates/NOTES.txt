@@ -5,24 +5,26 @@ Your release is named {{ .Release.Name }}.
 {{- if .Values.kafkaUser.enabled }}
 
 {{- $found_reflector := false }}
-{{- range $index, $service := (lookup "apps/v1" "Deployment" "" "").items }}
-{{- if eq $service.metadata.name "reflector" }}
+{{- range $index, $deployment := (lookup "apps/v1" "Deployment" "" "").items }}
+{{- if contains "reflector" ($deployment.metadata.name | lower) }}
     {{- $found_reflector = true }}
 {{- end }}
 {{- end }}
 
+This release needs kafka-secret present in its own namespace
+({{ .Release.Namespace }}) - the KafkaUser's own client certificate. Strimzi
+generates it in the "{{ .Values.kafkaUser.clusterNamespace }}" namespace, alongside
+the KafkaUser resource this release creates, and Reflector copies it here -
+this chart already sets the required reflection annotations on it, but
+Reflector itself has to be running in the cluster for that to happen.
 {{- if not $found_reflector }}
-  Could not find reflector in the cluster. It is required to copy the TLS secrets from strimzi's namespace to the release namespace.
-  To install reflector run:
-    $ helm repo add emberstack https://emberstack.github.io/helm-charts
-    $ helm repo update
-    $ helm upgrade --install reflector emberstack/reflector
-{{- end }}
-
-{{- if empty (lookup "v1" "Secret" .Values.kafkaUser.caCertSecretName .Release.Namespace) }}
-
-Could not find Kafka cluster ca certificate secret in release namespace.
-
+Could not find a Reflector deployment in the cluster. Install it with:
+  $ helm repo add emberstack https://emberstack.github.io/helm-charts
+  $ helm repo update
+  $ helm upgrade --install reflector emberstack/reflector
+{{- else }}
+Reflector is running - kafka-secret should appear here shortly after the
+KafkaUser is created, if it hasn't already.
 {{- end }}
 
 {{- end }}

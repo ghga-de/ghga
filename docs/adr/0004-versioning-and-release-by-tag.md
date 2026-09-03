@@ -54,7 +54,11 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   - OCI labels `org.opencontainers.image.version` / `.revision` and the
     `GHGA_PLATFORM_VERSION` env var carry the version and commit.
 - The release workflow **verifies rather than re-tests**: it asserts the tagged commit is on
-  `main` with a green CI run (ADR-0009's gates are the evidence; the tag snapshots it).
+  the branch its lane releases from, with a green CI run (ADR-0009's gates are the evidence;
+  the tag snapshots it). **The branch half of that check is per-lane** (amended 2026-09-01):
+  final platform tags and PyPI tags are cut on `main`, pre-release platform tags on `dev`
+  ([ADR-0020](0020-branching-strategy.md)), so it runs after lane routing instead of before
+  it. The CI-is-green half does not care about branches and is unchanged.
 - `ghga-datasteward-kit` is distributed **run-from-repo**: stewards `git clone -b ghga/X.Y.Z`
   and `uv run ghga-datasteward-kit` — `uv.lock` at the tag reproduces the exact tested
   combination. No PyPI publishing from the monorepo; requires only `git` + `uv`.
@@ -172,7 +176,9 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   tag push does trigger `release.yaml`, but the `push` input exists only on
   `workflow_dispatch`, so a tagged platform run verifies the commit, builds every image and
   packages every chart, and uploads none of them. Publishing is a deliberate dispatch
-  against that tag with `push` set.
+  against that tag with `push` set. **Pre-release refs publish by the same route** (amended
+  2026-09-01): the dispatch for a `ghga/X.Y.Z-rc.N` tag resolves against `dev`, so staging can
+  be served the candidate images.
 - **PyPI publish targets decided** (2026-08-26): the lane publishes to **PyPI**, rehearsed
   on **TestPyPI** first, both by **trusted publishing** (OIDC; no stored tokens). One
   `pypi-publish.yaml` run builds and checks the whole train before uploading anything, then
@@ -217,9 +223,15 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   `docker.io` (same as the image-build login), while the push target stays
   `registry-1.docker.io` — ORAS does translate a `registry-1.docker.io` lookup back to
   the canonical key, it's only the write side that needed the alias.
-- **Pre-release cuts**: `ghga/X.Y.Z-rc.N` is a normal platform-lane ref for staging — same
-  mechanism, same lockstep guarantee (images and charts from one commit), just a SemVer
-  pre-release identifier on the version. Not a separate process or workflow.
+- **Pre-release cuts** (amended 2026-09-01, per [ADR-0020](0020-branching-strategy.md)):
+  `ghga/X.Y.Z-rc.N` is cut on `dev` and deployed to staging. It runs through the same workflow
+  and keeps the same lockstep guarantee (images and charts from one commit), with a SemVer
+  pre-release identifier on the version. The production release is a second cut: `dev` merges
+  into `main`, `ghga/X.Y.Z` is tagged there, and the images are rebuilt from that commit. The
+  two builds differ in the version they stamp, so the candidate's images are not the ones
+  production runs; the rebuilt images get a confirmatory staging deployment before production.
+  Whether promoting the candidate's digests should replace that rebuild is an open question in
+  ADR-0020.
 
 ## Consequences
 
