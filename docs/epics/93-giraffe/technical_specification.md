@@ -377,7 +377,7 @@ It is persisted in two places for two readers:
 2. **In a new server-side ancestry collection**, written by the loader, exposed through `GET
    /studies/{study_pid}/successor`. This is what the portal hint resolves against.
 
-`load/collect.py:91` currently takes `content["studies"][0]["accession"]` for publishable artifacts
+`load/collect.py` currently takes `content["studies"][0]["accession"]` for publishable artifacts
 and silently discards any further studies. It must assert a single study and fail loudly. dskit
 rejects multi-study submissions upstream, but the loader is a separate trust boundary and must not
 depend on that.
@@ -512,10 +512,10 @@ into.
   to. Getting `reused_accession` as far as RS needs no `libs/ghga-event-schemas` change, since
   `SearchableResource.content` is an untyped `dict` — but it is not free either. RS consumes that
   content through `_LegacyResourceContent`, whose `files` is a flat list of accession strings
-  (`rs/core/legacy_resources.py:66`), so a per-file reuse accession has nowhere to ride today. The
+  (`rs/core/legacy_resources.py`), so a per-file reuse accession has nowhere to ride today. The
   embedded content's `files` aggregation and RS's parsing of it have to widen, and to ship together:
   content that no longer validates is dropped with nothing but a warning
-  (`legacy_resources.py:133`). RS still verifies that the referenced accession exists and is mapped.
+  (`legacy_resources.py`). RS still verifies that the referenced accession exists and is mapped.
   There is **no same-lineage validation here** — that judgement was made offline at submit time.
 - **Unreferenced files** — let the steward add a pool of archived boxes as candidates, then map by
   alias/filename with manual corrections, against the post-archival box/file inventory.
