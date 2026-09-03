@@ -361,8 +361,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
             if parameter_name not in signature_parameters:
                 if not accepts_path_variables:
                     raise TypeError(
-                        f"Path variable '{parameter_name}' has no parameter to go "
-                        + f"into for path '{request.url.path}'"
+                        f"There path parameter '{parameter_name}' doesn't match any of"
+                        + " the function parameters for the endpoint function assigned"
+                        + f" to path '{request.url.path}'."
                     )
                 typed_parameters[parameter_name] = value
                 continue
