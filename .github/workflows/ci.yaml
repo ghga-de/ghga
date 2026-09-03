@@ -333,12 +333,6 @@ jobs:
   # while PyPI keeps serving that same version number with the old content: one version
   # string denoting two different things, permanently, with no consumer ever told theirs
   # is behind. scripts/pypi_drift.py carries the full reasoning.
-  #
-  # Ahead of check-published-combo, which depends on it. The matrix builds an internal
-  # dependency from the repo only when that dependency is a release candidate, so it is
-  # only meaningful once this gate has established that every changed member is one.
-  # Running it on a drifted tree would burn ~30 runners on a combination that ships
-  # nowhere.
   check-pypi-drift:
     runs-on: ubuntu-latest
     timeout-minutes: 10
