@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-"""Tests for the request pacing budget and the transport that drives it."""
+"""Tests for the rate limiting transport handling of HTTP 429 responses."""
 
 import asyncio
 import time
@@ -46,7 +46,7 @@ def _budget(**config_kwargs) -> RateBudget:
 
 
 def _unpaced_budget() -> RateBudget:
-    """Build a budget that never delays, for tests that only care about penalties."""
+    """Build a budget that never delays, for tests that only care about floor updates."""
     return _budget(min_request_interval=0.0)
 
 
@@ -60,7 +60,7 @@ def _mock_transport(responses: list[httpx2.Response]) -> AsyncMock:
 def _ratelimiter(
     transport: AsyncMock, budget: RateBudget | None = None, **config_kwargs
 ) -> AsyncRateLimitingTransport:
-    """Wrap the transport in a rate limiting transport with the given overrides."""
+    """Wrap the given transport in a rate limiting transport with the given overrides."""
     config_kwargs.setdefault("min_request_interval", 0.0)
     config_kwargs.setdefault("per_request_jitter", 0.0)
     return AsyncRateLimitingTransport(
@@ -70,18 +70,15 @@ def _ratelimiter(
     )
 
 
-def _remaining_penalty(budget: RateBudget) -> float:
+def _remaining_retry_after_wait(budget: RateBudget) -> float:
     """Seconds the budget is still holding every route back."""
     return max(0.0, budget._floor - time.monotonic())
 
 
-async def _acquire_at(budget: RateBudget, started: float) -> float:
+async def _acquired_at(budget: RateBudget, started: float) -> float:
     """Acquire a slot and report how far into the run it was granted."""
     await budget.acquire()
     return time.monotonic() - started
-
-
-# ---------------------------------------------------------------- budget pacing
 
 
 @pytest.mark.asyncio
@@ -90,7 +87,7 @@ async def test_concurrent_requests_are_spread_not_released_together():
     budget = _budget()
     started = time.monotonic()
 
-    grants = await asyncio.gather(*(_acquire_at(budget, started) for _ in range(5)))
+    grants = await asyncio.gather(*(_acquired_at(budget, started) for _ in range(5)))
 
     assert grants == sorted(grants)
     for earlier, later in pairwise(grants):
@@ -104,7 +101,7 @@ async def test_no_pacing_configured_grants_immediately():
     budget = _budget(min_request_interval=0.0)
     started = time.monotonic()
 
-    await asyncio.gather(*(_acquire_at(budget, started) for _ in range(5)))
+    await asyncio.gather(*(_acquired_at(budget, started) for _ in range(5)))
 
     assert time.monotonic() - started < _STEP
 
@@ -115,25 +112,10 @@ async def test_default_config_alone_spreads_requests():
     budget = RateBudget(RateLimitingTransportConfig())
     started = time.monotonic()
 
-    grants = await asyncio.gather(*(_acquire_at(budget, started) for _ in range(8)))
+    grants = await asyncio.gather(*(_acquired_at(budget, started) for _ in range(8)))
 
     assert grants == sorted(grants)
     assert grants[-1] > 0.05
-
-
-# ------------------------------------------------------------- budget penalties
-
-
-@pytest.mark.asyncio
-async def test_penalty_holds_the_whole_budget_back():
-    """Ensure a penalty delays the next slot on every route, not just the throttled one."""
-    budget = _unpaced_budget()
-    await budget.penalize(0.05)
-    started = time.monotonic()
-
-    await budget.acquire()
-
-    assert time.monotonic() - started == pytest.approx(0.05, abs=0.05)
 
 
 @pytest.mark.asyncio
@@ -144,7 +126,7 @@ async def test_penalty_arriving_mid_wait_requeues_the_waiter():
 
     async def penalize_shortly() -> None:
         await asyncio.sleep(0.01)
-        await budget.penalize(0.15)
+        await budget.update_floor(0.15)
 
     started = time.monotonic()
     await asyncio.gather(budget.acquire(), penalize_shortly())
@@ -154,21 +136,18 @@ async def test_penalty_arriving_mid_wait_requeues_the_waiter():
 
 @pytest.mark.asyncio
 async def test_penalty_never_moves_backwards():
-    """Ensure a shorter penalty cannot shorten a longer one that is still in force."""
+    """Ensure a smaller floor cannot shorten a longer one that is still in force."""
     budget = _unpaced_budget()
 
-    await budget.penalize(30)
-    await budget.penalize(1)
+    await budget.update_floor(30)
+    await budget.update_floor(1)
 
-    assert _remaining_penalty(budget) == pytest.approx(30, abs=1)
-
-
-# ------------------------------------------------------- transport wiring to it
+    assert _remaining_retry_after_wait(budget) == pytest.approx(30, abs=1)
 
 
 @pytest.mark.asyncio
 async def test_passes_through_non_429_response():
-    """Ensure non-429 responses are returned unchanged and penalize nothing."""
+    """Ensure non-429 responses are returned and do not force a wait."""
     response = httpx2.Response(httpx2.codes.OK)
     budget = _unpaced_budget()
 
@@ -177,12 +156,12 @@ async def test_passes_through_non_429_response():
     ).handle_async_request(_REQUEST)
 
     assert result is response
-    assert _remaining_penalty(budget) == 0
+    assert _remaining_retry_after_wait(budget) == 0
 
 
 @pytest.mark.asyncio
-async def test_429_with_retry_after_penalizes_the_budget():
-    """Ensure a 429 with a Retry-After holds the budget back for that long."""
+async def test_429_with_retry_after_forces_wait():
+    """Ensure a 429 with a Retry-After forces a wait."""
     budget = _unpaced_budget()
     response = httpx2.Response(429, headers={"Retry-After": "5"})
 
@@ -190,12 +169,12 @@ async def test_429_with_retry_after_penalizes_the_budget():
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == pytest.approx(5, abs=1)
+    assert _remaining_retry_after_wait(budget) == pytest.approx(5, abs=1)
 
 
 @pytest.mark.asyncio
 async def test_429_without_retry_after_leaves_pacing_to_the_retry_layer():
-    """Ensure that without a usable Retry-After the budget is not held back and the retry layer waits."""
+    """Ensure a missing Retry-After header does not add any wait."""
     budget = _unpaced_budget()
     response = httpx2.Response(429)
 
@@ -203,12 +182,12 @@ async def test_429_without_retry_after_leaves_pacing_to_the_retry_layer():
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == 0
+    assert _remaining_retry_after_wait(budget) == 0
 
 
 @pytest.mark.asyncio
 async def test_budget_is_shared_when_injected():
-    """Ensure two transports given the same budget pace against each other."""
+    """Ensure two transports given the same budget actually share it."""
     budget = _budget()
     first = _ratelimiter(_mock_transport([httpx2.Response(200)]), budget)
     second = _ratelimiter(_mock_transport([httpx2.Response(200)]), budget)
@@ -252,9 +231,6 @@ async def test_async_context_manager_closes_transport():
     transport.aclose.assert_awaited_once()
 
 
-# ----------------------------------------------------------- Retry-After parsing
-
-
 @pytest.mark.asyncio
 async def test_429_with_http_date_retry_after_is_honored():
     """Ensure a Retry-After given as an HTTP date is honored instead of crashing."""
@@ -268,7 +244,7 @@ async def test_429_with_http_date_retry_after_is_honored():
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == pytest.approx(30, abs=2)
+    assert _remaining_retry_after_wait(budget) == pytest.approx(30, abs=2)
 
 
 @pytest.mark.asyncio
@@ -284,7 +260,7 @@ async def test_429_with_past_http_date_does_not_wait():
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == 0
+    assert _remaining_retry_after_wait(budget) == 0
 
 
 @pytest.mark.asyncio
@@ -298,7 +274,7 @@ async def test_429_with_unusable_retry_after_is_treated_as_absent(value: str):
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == 0
+    assert _remaining_retry_after_wait(budget) == 0
 
 
 @pytest.mark.asyncio
@@ -313,7 +289,7 @@ async def test_429_with_repeated_retry_after_takes_the_longest():
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == pytest.approx(120, abs=1)
+    assert _remaining_retry_after_wait(budget) == pytest.approx(120, abs=1)
 
 
 @pytest.mark.asyncio
@@ -328,4 +304,4 @@ async def test_429_with_repeated_retry_after_ignores_unusable_values():
         _REQUEST
     )
 
-    assert _remaining_penalty(budget) == pytest.approx(45, abs=1)
+    assert _remaining_retry_after_wait(budget) == pytest.approx(45, abs=1)

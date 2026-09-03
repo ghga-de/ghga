@@ -15,7 +15,6 @@
 
 """Contains common configuration for different composite async httpx2 Transports."""
 
-import warnings
 from logging import getLogger
 
 from pydantic import (
@@ -23,56 +22,35 @@ from pydantic import (
     NonNegativeFloat,
     NonNegativeInt,
     PositiveInt,
-    model_validator,
 )
 from pydantic_settings import BaseSettings
 
 log = getLogger(__name__)
 
-RETIRED_COUNTER_FIELD = "retry_after_applicable_for_num_requests"
-RETIRED_COUNTER_MESSAGE = (
-    f"{RETIRED_COUNTER_FIELD} is ignored since 8.2.0 and will be removed in 9.0."
-    " A Retry-After is now held as a deadline until it expires, rather than counted"
-    " down over a number of requests. Remove it from your config."
+RETIRED_FIELD = "retry_after_applicable_for_num_requests"
+RETIRED_FIELD_MESSAGE = (
+    f"{RETIRED_FIELD} is ignored since 8.2.0 and will be removed in 9.0."
 )
 
 
 class RateLimitingTransportConfig(BaseSettings):
-    """Configuration for a rate limiting HTTPTransport.
-
-    `min_request_interval` and `per_request_jitter` set how far apart a client spaces its
-    requests. With the interval at 0, the jitter alone spreads them.
-    """
+    """Configuration for a rate limiting HTTPTransport."""
 
     min_request_interval: NonNegativeFloat = Field(
         default=0.0,
         description="Minimum number of seconds between requests from one client."
-        + " Leave at 0 to let per_request_jitter alone spread concurrent requests.",
+        + "If left at 0 some jitter is still added to pace concurrent requests.",
     )
     per_request_jitter: NonNegativeFloat = Field(
         default=0.05,
-        description="Upper bound of the random delay (in seconds) added to each request."
-        + " With min_request_interval at 0 this is the only thing separating concurrent"
-        + " requests. Set it to 0 to switch pacing off, e.g. when mocking in tests.",
+        description="Max amount of jitter (in seconds) to add to each request.",
     )
     retry_after_applicable_for_num_requests: PositiveInt = Field(
         default=1,
-        deprecated=RETIRED_COUNTER_MESSAGE,
-        description="Deprecated and ignored. A Retry-After is now held as a deadline"
-        + " until it expires, rather than counted down over a number of requests.",
+        deprecated=RETIRED_FIELD_MESSAGE,
+        description="Deprecated and no longer applicable. Remove from your config, "
+        + "will be removed in service-commons 9.0.0.",
     )
-
-    @model_validator(mode="after")
-    def _warn_on_retired_counter(self) -> "RateLimitingTransportConfig":
-        """Warn once at load time if the retired counter is still set.
-
-        Pydantic's `deprecated` marker only fires on attribute access, and nothing reads
-        this field any more.
-        """
-        if RETIRED_COUNTER_FIELD in self.model_fields_set:
-            warnings.warn(RETIRED_COUNTER_MESSAGE, DeprecationWarning, stacklevel=2)
-            log.warning(RETIRED_COUNTER_MESSAGE)
-        return self
 
 
 class RetryTransportConfig(BaseSettings):

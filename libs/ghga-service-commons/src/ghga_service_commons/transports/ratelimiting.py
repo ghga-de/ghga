@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Provides an httpx2.AsyncTransport that paces requests and handles 429 responses."""
+"""Provides an httpx2.AsyncTransport that handles rate limiting responses."""
 
 import asyncio
 import math
@@ -32,9 +32,10 @@ log = getLogger(__name__)
 
 
 def _parse_retry_after(value: str) -> float | None:
-    """Read one Retry-After value as seconds to wait.
+    """Turn a single Retry-After value into a number of seconds to wait
 
-    RFC 9110 allows either seconds or an HTTP date. Anything else returns None.
+    RFC 9110 allows the header to carry either a number of seconds or an HTTP date, so
+    both forms are accepted. Returns None when the value is neither.
     """
     value = value.strip()
 
@@ -43,7 +44,7 @@ def _parse_retry_after(value: str) -> float | None:
     except ValueError:
         pass
     else:
-        # inf and nan would end up in a sleep call.
+        # Reject inf and nan, which would otherwise be carried into the sleep below.
         return max(0.0, seconds) if math.isfinite(seconds) else None
 
     try:
@@ -57,10 +58,10 @@ def _parse_retry_after(value: str) -> float | None:
 
 
 def _retry_after_seconds(headers: httpx2.Headers) -> float:
-    """Seconds a 429 asks the client to wait, or 0.0 if it does not usably say.
+    """Determine how long a 429 response asks the client to wait.
 
-    Retry-After may appear more than once and the longest wait wins. Values that cannot
-    be parsed are skipped.
+    A response may carry Retry-After more than once and the longest wait wins.
+    Values that cannot be parsed are skipped and 0.0 means no usable Retry-After was found.
     """
     waits = [
         seconds
@@ -72,11 +73,10 @@ def _retry_after_seconds(headers: httpx2.Headers) -> float:
 
 
 class RateBudget:
-    """Request pacing shared by every route of one client.
+    """Request pacing budget shared by every route of one client.
 
     Requests take a slot and wait for it, so they spread out instead of all going at
-    once. A 429 pushes a shared floor forward; the floor never moves back, so a later
-    success cannot cancel the penalty.
+    once. A 429 pushes a shared floor forward.
     """
 
     def __init__(self, config: RateLimitingTransportConfig) -> None:
@@ -87,7 +87,7 @@ class RateBudget:
         self._floor = 0.0
 
     def _spacing(self) -> float:
-        """How far apart two slots are. With no interval, the jitter alone spreads them."""
+        """Compute how far away two slots are."""
         return self._interval + random.uniform(0, self._jitter)  # noqa: S311
 
     async def acquire(self) -> None:
@@ -95,19 +95,20 @@ class RateBudget:
         while True:
             async with self._lock:
                 now = time.monotonic()
-                start_at = max(now, self._next_slot, self._floor)
-                self._next_slot = start_at + self._spacing()
-                delay = start_at - now
+                current_slot = max(now, self._next_slot, self._floor)
+                self._next_slot = current_slot + self._spacing()
+                delay = current_slot - now
             if delay > 0:
                 log.debug("Waiting %.3f s for the next slot.", delay)
                 await asyncio.sleep(delay)
             async with self._lock:
-                # Go round again only if a 429 moved the floor past our slot.
+                # If a Retry-After moved the floor beyond the current slot
+                # in the meantime, do an extra round to get a new slot
                 if time.monotonic() >= self._floor:
                     return
 
-    async def penalize(self, retry_after: float) -> None:
-        """Hold every route back until the server's Retry-After has passed."""
+    async def update_floor(self, retry_after: float) -> None:
+        """Update the Retry-After floor."""
         async with self._lock:
             self._floor = max(self._floor, time.monotonic() + retry_after)
         log.info("Received retry after response: %.3f s.", retry_after)
@@ -124,7 +125,6 @@ class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
         self,
         config: RateLimitingTransportConfig,
         transport: httpx2.AsyncBaseTransport,
-        *,
         budget: RateBudget | None = None,
     ) -> None:
         self._budget = budget if budget is not None else RateBudget(config)
@@ -133,12 +133,13 @@ class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Wait for a slot, then delegate. A 429 holds the whole budget back."""
         await self._budget.acquire()
-        # Pass positionally: Otel's httpx instrumentation reads args[0].
+        # Strictly pass request as non kwarg arg to work around Otel httpx
+        # instrumentation trying to extract from arg[0]
         response = await self._transport.handle_async_request(request)
         if response.status_code == 429 and (
             retry_after := _retry_after_seconds(response.headers)
         ):
-            await self._budget.penalize(retry_after)
+            await self._budget.update_floor(retry_after)
         return response
 
     async def aclose(self) -> None:  # noqa: D102
