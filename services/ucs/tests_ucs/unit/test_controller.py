@@ -2930,26 +2930,20 @@ async def test_requeue_file_never_reached_inbox(rig: JointRig):
         await rig.controller.requeue_file_upload(box_id=box_id, file_id=file_id)
 
 
-async def test_requeue_box_success(rig: JointRig):
-    """Test that `requeue_all_box_uploads()` requeues all files in a
-    box that failed interrogation.
+async def _setup_box_for_requeue_box_success(rig: JointRig):
+    """Build a box with 10 uploads across 5 states, for test_requeue_box_success.
 
-    Use a box with 10 uploads: 2 'init', 2 'interrogated', 2 'failed' but
-    not uploaded, 2 that failed interrogation but already had their S3
-    objects deleted, and 2 'failed' that failed interrogation (and still
-    have their data in S3).
+    2 'init', 2 'interrogated', 2 'failed' but not uploaded, 2 that failed
+    interrogation but already had their S3 objects deleted, and 2 'failed' that
+    failed interrogation and still have their data in S3.
 
-    Verify that the single-file criteria hold for multiple files, where
-    the relevant fields are updated and the others unchanged.
-
-    Verify that the return value is an instance of BoxRequeueResult, and
-    that the `requeued` list contains only the file IDs of the 2 requeued files,
-    while the `skipped` list contains only the file IDs of the 2 failed files whose
-    inbox data was deleted already.
+    Returns (box_id, present_ids, deleted_ids, never_reached_inbox_ids,
+    pre_snapshots), where pre_snapshots maps each present-category file_id to its
+    FileUpload snapshot from just before the requeue.
     """
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
-    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    _, object_storage = rig.object_storages.for_alias("test")
     box_id = await rig.create_default_box()
 
     # The rig's default get_object_metadata mock always succeeds, regardless of
@@ -3060,8 +3054,38 @@ async def test_requeue_box_success(rig: JointRig):
         present_ids.append(file_id)
         pre_snapshots[file_id] = failed_upload
 
+    return box_id, present_ids, deleted_ids, never_reached_inbox_ids, pre_snapshots
+
+
+async def test_requeue_box_success(rig: JointRig):
+    """Test that `requeue_all_box_uploads()` requeues all files in a
+    box that failed interrogation.
+
+    Use a box with 10 uploads: 2 'init', 2 'interrogated', 2 'failed' but
+    not uploaded, 2 that failed interrogation but already had their S3
+    objects deleted, and 2 'failed' that failed interrogation (and still
+    have their data in S3).
+
+    Verify that the single-file criteria hold for multiple files, where
+    the relevant fields are updated and the others unchanged.
+
+    Verify that the return value is an instance of BoxRequeueResult, and
+    that the `requeued` list contains only the file IDs of the 2 requeued files,
+    while the `skipped` list contains only the file IDs of the 2 failed files whose
+    inbox data was deleted already.
+    """
+    (
+        box_id,
+        present_ids,
+        deleted_ids,
+        never_reached_inbox_ids,
+        pre_snapshots,
+    ) = await _setup_box_for_requeue_box_success(rig)
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+
     await sleep(MIN_SLEEP)
-    result = await controller.requeue_all_box_uploads(box_id=box_id)
+    result = await rig.controller.requeue_all_box_uploads(box_id=box_id)
 
     assert isinstance(result, BoxRequeueResult)
     assert set(result.requeued) == set(present_ids)
