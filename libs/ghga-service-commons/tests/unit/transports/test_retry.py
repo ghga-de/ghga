@@ -57,7 +57,10 @@ class _TrackedResponse(httpx2.Response):
 
 
 class _FailingCloseResponse(httpx2.Response):
-    """Response whose aclose() always raises; counts calls to catch a double close."""
+    """Response whose aclose() always raises, to exercise cleanup error handling.
+
+    Counts close calls so tests can assert the same response is not closed twice.
+    """
 
     def __init__(self, status_code: int) -> None:
         super().__init__(status_code=status_code)

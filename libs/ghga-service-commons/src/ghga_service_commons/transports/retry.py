@@ -37,21 +37,21 @@ log = getLogger(__name__)
 
 
 def _default_wait_strategy(config: RetryTransportConfig):
-    """Exponential backoff.
+    """Wait strategy using exponential backoff.
 
-    A 429 needs no special case: the rate limiting layer holds the server's Retry-After
-    as a deadline the next attempt blocks on, so the longer of the two waits decides.
+    If used in conjunction with an `AsyncRateLimitingTransport`, when handling a 429
+    the longer wait from either layer wins.
     """
     return wait_exponential(max=config.client_exponential_backoff_max)
 
 
 def _default_stop_strategy(config: RetryTransportConfig):
-    """Stop after the configured number of attempts."""
+    """Basic stop strategy aborting retrying after a configured number of attempts."""
     return stop_after_attempt(config.client_num_retries)
 
 
 def _log_retry_stats(retry_state: RetryCallState):
-    """Log stats after each retry attempt."""
+    """Basic logger printing high level stats after each retry attempt."""
     if not retry_state.fn:
         log.debug("No wrapped function found in retry state.")
         return
@@ -59,7 +59,8 @@ def _log_retry_stats(retry_state: RetryCallState):
     function_name = retry_state.fn.__qualname__
     attempt_number = retry_state.attempt_number
 
-    # Build from retry_state; the retry object's own stats dict is shared across requests.
+    # Build stats from the per-call retry_state. Don't mutate the retry_object's `statistics`
+    # dict as it's shared across all requests using this transport.
     stats: dict[str, Any] = {
         "function_name": function_name,
         "attempt_number": attempt_number,
@@ -86,7 +87,7 @@ def _log_retry_stats(retry_state: RetryCallState):
 
 
 def _log_before_attempt(retry_state: RetryCallState):
-    """Log the function and attempt number before each attempt."""
+    """Basic logger printing the function name and attempt number before each attempt."""
     if not retry_state.fn:
         log.debug("No wrapped function found in retry state.")
         return
@@ -106,7 +107,7 @@ def _log_before_attempt(retry_state: RetryCallState):
 
 
 class AsyncRetryTransport(httpx2.AsyncBaseTransport):
-    """Retries failed requests using tenacity.
+    """Custom async Transport adding retry logic on top of AsyncHTTPTransport.
 
     The wait and stop strategies and the per-attempt logging can be injected. The
     default waits with exponential backoff.
@@ -131,26 +132,29 @@ class AsyncRetryTransport(httpx2.AsyncBaseTransport):
         )
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
-        """Send the request, retrying on failure."""
-        # Close each attempt's response before the next one, leaving only the last open.
+        """Handles HTTP requests and adds retry logic around calls."""
+        # Track the latest response and close it before issuing the next attempt, leaving
+        # only the final response open to consume by the caller.
         latest_response: httpx2.Response | None = None
 
         async def _attempt() -> httpx2.Response:
             nonlocal latest_response
             if latest_response is not None:
-                # Clear it so the cleanup below cannot close the same response twice.
+                # Always clear the reference so a later cleanup doesn't try to close the same response again.
                 try:
                     await latest_response.aclose()
                 finally:
                     latest_response = None
-            # Pass positionally: Otel's httpx instrumentation reads args[0].
+            # Strictly pass request as non kwarg arg to work around Otel httpx
+            # instrumentation trying to extract from arg[0]
             latest_response = await self._transport.handle_async_request(request)
             return latest_response
 
         try:
             return await self._retry_handler(_attempt)
         except BaseException:
-            # Also covers the RetryError raised once all attempts are exhausted.
+            # Close the current connection on an exception. This should also deal with
+            # the RetryError once all attempts are exhausted
             if latest_response is not None:
                 try:
                     await latest_response.aclose()
@@ -182,7 +186,7 @@ def _configure_retry_handler(
     stats_logger: Callable[[RetryCallState], Any],
     before_logger: Callable[[RetryCallState], Any],
 ):
-    """Build the tenacity AsyncRetrying instance."""
+    """Configure the AsyncRetrying instance that is used for handling retryable responses/exceptions."""
     return AsyncRetrying(
         reraise=config.client_reraise_from_retry_error,
         retry=(
