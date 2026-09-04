@@ -187,9 +187,9 @@ jobs:
           # member the index is behind on". Any other name names one member, and publishes
           # that member alone. Platform tags have no mode.
           case "$name" in
-            ghga)                  lane=platform; mode= ;;
-            pypi_sweep|pypi-sweep) lane=pypi;     mode=sweep ;;
-            *)                     lane=pypi;     mode=targeted ;;
+            ghga)       lane=platform; mode= ;;
+            pypi_sweep) lane=pypi;     mode=sweep ;;
+            *)          lane=pypi;     mode=targeted ;;
           esac
           echo "name=$name"       >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
