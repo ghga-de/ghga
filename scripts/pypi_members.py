@@ -40,6 +40,7 @@ import pathlib
 import sys
 import urllib.error
 import urllib.request
+from typing import NamedTuple
 
 import tomllib
 from packaging.version import InvalidVersion, Version
@@ -304,14 +305,33 @@ def _is_newer(candidate: str, other: str) -> bool:
         return False
 
 
-def release_candidates() -> tuple[list[dict], list[dict], list[dict]]:
+class Candidates(NamedTuple):
+    """What the index says should happen to each lane member.
+
+    The three lists partition the lane, so they are passed around together rather than
+    separately. Handing a consumer only some of them is what let a member fall through
+    every table unreported.
+    """
+
+    publishing: list[dict]
+    skipped: list[dict]
+    unreachable: list[dict]
+
+
+def release_candidates(lane: list[dict] | None = None) -> Candidates:
     """Asks the index about every lane member and sorts them by what should happen.
 
+    Args:
+        lane:
+            The lane members to ask about, when the caller has already enumerated them.
+            `None` enumerates them here. Enumerating is not cheap — it parses every
+            workspace pyproject and walks the dependency graph.
+
     Returns:
-        `(publishing, skipped, unreachable)`. Every member lands in exactly one of the
-        three. All carry the member dicts from `pypi_members` plus `pypi_latest` and
-        `index_unreachable`; a skipped member also carries the `reason` it was passed
-        over. `release_plan` turns each unreachable member into an error.
+        A `Candidates`, in which every member lands in exactly one list. All carry the
+        member dicts from `pypi_members` plus `pypi_latest` and `index_unreachable`; a
+        skipped member also carries the `reason` it was passed over. `release_plan` turns
+        each unreachable member into an error.
 
     Consequences worth naming:
     - a version already on PyPI is dropped here, so a re-run never attempts to
@@ -321,7 +341,7 @@ def release_candidates() -> tuple[list[dict], list[dict], list[dict]]:
       1.2.0, because upstream kept releasing) is *skipped*, not an error.
     """
     publishing, skipped, unreachable = [], [], []
-    for member in pypi_members():
+    for member in lane if lane is not None else pypi_members():
         version = member["version"]
         project = _pypi_project(member["package"])
         if not project["reachable"]:
@@ -341,7 +361,7 @@ def release_candidates() -> tuple[list[dict], list[dict], list[dict]]:
             )
         else:
             publishing.append(member)
-    return publishing, skipped, unreachable
+    return Candidates(publishing, skipped, unreachable)
 
 
 def _publish_order(members: list[dict]) -> list[dict]:
@@ -397,24 +417,21 @@ def _blocked_message(target: dict, blockers: list[dict]) -> str:
 
 def _targeted_plan(
     target: str,
-    publishing: list[dict],
-    skipped: list[dict],
-    unreachable: list[dict],
+    lane: list[dict],
+    candidates: Candidates,
 ) -> tuple[list[dict], list[dict], list[str]]:
     """Narrows a sweep to the single member a `name/x.y.z` tag named.
 
     Args:
         target:
             The distribution name (or member folder) the tag named.
-        publishing:
-            Every member the sweep would have released — the *whole* set, not one already
-            narrowed to the target. That is what makes the closure check below able to see
-            anything: against a one-member set it would pass unconditionally.
-        skipped:
-            The members the sweep passed over, each carrying its `reason`.
-        unreachable:
-            The members whose index lookup failed. Needed to tell a target that has
-            nothing to publish apart from one whose state is simply unknown.
+        lane:
+            Every PyPI-lane member, used to resolve the target's name.
+        candidates:
+            What the sweep would have done — the *whole* set, not one already narrowed to
+            the target. That is what makes the closure check below able to see anything:
+            against a one-member set it would pass unconditionally. Its `unreachable` list
+            separates a target with nothing to publish from one whose state is unknown.
 
     Returns:
         `(publishing, deselected, errors)`. `deselected` carries the candidates this tag
@@ -423,21 +440,21 @@ def _targeted_plan(
         `publishing`: a targeted tag that cannot be honoured publishes nothing rather
         than falling back to the sweep nobody asked for.
     """
-    lane = pypi_members()
     member = _find_member(target, lane)
     if member is None:
         known = ", ".join(sorted(m["package"] for m in lane))
         return [], [], [f"{target} is not a PyPI-lane member (lane: {known})"]
 
+    publishing = candidates.publishing
     selected = [m for m in publishing if m["path"] == member["path"]]
     if not selected:
         # An unreachable index says nothing about whether this member needs releasing.
         # release_plan already reports that, so a second guess here would contradict it.
-        if any(m["path"] == member["path"] for m in unreachable):
+        if any(m["path"] == member["path"] for m in candidates.unreachable):
             return [], [], []
         # State why the target was not selected.
         reason = next(
-            (s["reason"] for s in skipped if s["path"] == member["path"]),
+            (s["reason"] for s in candidates.skipped if s["path"] == member["path"]),
             "it is not a release candidate",
         )
         return [], [], [f"{member['package']}: nothing to publish — {reason}"]
@@ -472,23 +489,25 @@ def release_plan(target: str | None = None) -> dict:
         `skipped` (package, version and reason for each member passed over) and `errors`.
         A non-empty `errors` means publish nothing — the caller fails the job.
     """
-    publishing, skipped, unreachable = release_candidates()
-    lane_paths = {member["path"] for member in pypi_members()}
+    # Enumerated once and threaded through. Every helper below needs the same lane, and
+    # building it parses every workspace pyproject and walks the dependency graph.
+    lane = pypi_members()
+    candidates = release_candidates(lane)
+    publishing, skipped = candidates.publishing, candidates.skipped
+    lane_paths = {member["path"] for member in lane}
     errors = []
 
-    for member in unreachable:
+    for member in candidates.unreachable:
         errors.append(
             f"{member['package']}: could not reach PyPI to establish what is already"
             f" released — refusing to plan a release against an unknown index"
         )
 
-    # `publishing` goes in as the full sweep set and comes back narrowed. That order is
-    # load-bearing: hand over an already-narrowed list and the closure check inside has
-    # only the target to compare against, so it passes unconditionally.
+    # The whole sweep goes in and a narrowed set comes back. That order is load-bearing:
+    # hand over an already-narrowed list and the closure check inside has only the target
+    # to compare against, so it passes unconditionally.
     if target is not None:
-        publishing, deselected, target_errors = _targeted_plan(
-            target, publishing, skipped, unreachable
-        )
+        publishing, deselected, target_errors = _targeted_plan(target, lane, candidates)
         errors.extend(target_errors)
         skipped = [*skipped, *deselected]
 
@@ -500,16 +519,21 @@ def release_plan(target: str | None = None) -> dict:
                     " lane, so consumers could never install it"
                 )
 
-    # Re-read now that the release set is known, so each member carries the closure that
-    # will be built from the repo rather than resolved from the index. Derived after the
-    # narrowing, so a targeted member's `train_deps` comes out empty on its own: nothing
-    # else ships in that run, so every internal dependency resolves from PyPI.
+    # `train_deps` is the part of a member's closure that ships in this same run, so it
+    # is built from the repo rather than resolved from the index. Derived after the
+    # narrowing, so a targeted member's comes out empty on its own: nothing else ships in
+    # that run, so every internal dependency resolves from PyPI.
     release_member_paths = {member["path"] for member in publishing}
-    by_path = {
-        m["path"]: m for m in pypi_members(release_member_paths=release_member_paths)
-    }
     ordered = _publish_order(
-        [dict(m, train_deps=by_path[m["path"]]["train_deps"]) for m in publishing]
+        [
+            dict(
+                m,
+                train_deps=sorted(
+                    d for d in m["internal_deps"] if d in release_member_paths
+                ),
+            )
+            for m in publishing
+        ]
     )
     return {
         "members": ordered,
@@ -598,23 +622,23 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(release_plan(args.target)))
         return 0
     if args.candidates:
-        candidates, _, unreachable = release_candidates()
+        candidates = release_candidates()
         # No errors channel here, so an unanswerable index is an exit code instead.
-        if unreachable:
+        if candidates.unreachable:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
-        print(json.dumps(candidates))
+        print(json.dumps(candidates.publishing))
         return 0
 
     release_member_paths = set()
     if args.check_pypi:
-        candidates, _, unreachable = release_candidates()
-        if unreachable:
+        candidates = release_candidates()
+        if candidates.unreachable:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
-        release_member_paths = {member["path"] for member in candidates}
+        release_member_paths = {m["path"] for m in candidates.publishing}
 
     members = pypi_members(args.paths, release_member_paths=release_member_paths)
     print(json.dumps(members if args.members else matrix_cells(members)))
