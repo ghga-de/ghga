@@ -40,17 +40,10 @@ verify against, not the policy.
   dry-run mode is unaffected (attestations require a real registry push).
 
   The resulting `predicateType`s — `https://spdx.dev/Document` (SBOM) and
-  `https://slsa.dev/provenance/v1` (provenance) — are **confirmed**, verified locally
-  (2026-08-14) by pushing a throwaway build to a local registry
-  (`docker run -d -p 5000:5000 registry:2`, then `docker buildx create --use --driver
-  docker-container --driver-opt network=host` — host networking so the builder container
-  can reach `localhost:5000` — then `docker buildx build --push --provenance=mode=max
-  --sbom=true -t localhost:5000/test/demo:test .`) and reading the `in-toto.io/predicate-type`
-  annotation directly off the pushed attestation manifest (`docker buildx imagetools
-  inspect --raw`, or the registry's raw manifest API — the predicateType lives on the
-  attestation manifest's layer annotations, not inside `.SBOM`/`.Provenance` content
-  itself). This result is buildx-version-dependent, not Dockerfile-dependent, so it holds
-  for the real images too.
+  `https://slsa.dev/provenance/v1` (provenance) — are **confirmed**, verified locally on
+  2026-08-14. The result is buildx-version-dependent rather than Dockerfile-dependent, so
+  it holds for the real images too; the transcript behind it lives with the code it
+  constrains, in [`scripts/attest-image.sh`](../../scripts/attest-image.sh).
 - **Signing:** keyless cosign (Sigstore Fulcio + Rekor via GitHub Actions OIDC,
   `permissions: id-token: write`), signing the resolved image **digest**, not the mutable
   tag, and `--recursive` so the OCI index *and* every child manifest carry a signature. No
@@ -59,21 +52,19 @@ verify against, not the policy.
   attestations (`cosign attest --type spdxjson` / `--type slsaprovenance1`) against that
   same digest. Buildx's in-index attestations are not where cosign looks, so without this
   step nothing downstream could actually verify an SBOM or provenance claim — see
-  Consequences for the evidence and the exact failure mode.
+  Consequences for the failure mode.
 - **Verification identity** — Fulcio issues a short-lived cert per run, bound to the
   workflow's OIDC claims, so a verifier matches on those claims rather than on a tag:
   - Issuer (both workflows): `https://token.actions.githubusercontent.com`
   - Subject: the run's `job_workflow_ref` claim, i.e. this repo's URL plus the publishing
     workflow's path and the ref the dispatch UI actually ran against — not any `ref`
     **input** used for lane routing.
-    - `release.yaml`: **confirmed empirically** (2026-08-27) against a real published image
-      (`docker.io/ghga/auth-service@sha256:97af0c7a90caa4a876c07a3b5c6dbb919dbf4827fbf53146d1cc018b43b818bb`,
-      release candidate `ghga/15.3.1-rc.3`) — the claim is `…/release.yaml@refs/tags/<tag>`
-      (e.g. `…/release.yaml@refs/tags/ghga/15.3.1-rc.3`). This repo's dispatch runs point
-      the "Use workflow from" picker at the release tag itself, per
+    - `release.yaml`: `…/release.yaml@refs/tags/<tag>` (e.g.
+      `…/release.yaml@refs/tags/ghga/15.3.1-rc.3`) — **confirmed empirically**
+      (2026-08-27) against a real published image from that release candidate. This
+      repo's dispatch runs point the "Use workflow from" picker at the release tag, per
       [ADR-0004](0004-versioning-and-release-by-tag.md), so the claim reflects the tag, not
-      `main`. An earlier draft of this ADR guessed `@refs/heads/main` for this workflow;
-      that guess was wrong and is corrected here.
+      `main`.
     - `dev-images.yaml`: `…/dev-images.yaml@refs/heads/main` — this workflow only ever runs
       on push to `main`, so the ref is unambiguous, but this has **not yet** been
       independently confirmed against a real dev image the way the release lane has.
@@ -111,12 +102,8 @@ verify against, not the policy.
   re-published via `cosign attest`.** buildx attaches them as unsigned in-toto
   statements on an attestation manifest inside the index; `cosign attest` instead publishes
   a signed DSSE envelope as a separate cosign attachment. These are different locations, and
-  cosign only reads the latter. Verified locally (2026-08-17, cosign v3.1.3, buildx v0.36.1)
-  against a throwaway image pushed to a local registry: `docker buildx imagetools inspect`
-  found both predicates (`https://spdx.dev/Document`, `https://slsa.dev/provenance/v1`) as
-  `application/vnd.in-toto+json` layers, while `cosign download attestation` returned
-  nothing and `cosign tree` reported "No Supply Chain Security Related Artifacts found".
-  Running `cosign attest` on the same image made both cosign commands find it.
+  cosign only reads the latter — verified locally on 2026-08-17, transcript in
+  [`scripts/attest-image.sh`](../../scripts/attest-image.sh).
 
   Strictly speaking this was a discoverability gap, not an integrity one: `cosign sign`
   covers the index digest, and the index references the attestation manifests by digest, so
@@ -124,21 +111,12 @@ verify against, not the policy.
   deliberately **not** what this repo relies on — an attestation a verifier cannot query is
   not a usable one, and "the signature transitively covers it somewhere inside the index" is
   not something an enforcement layer can express as a policy rule. Both publish workflows
-  therefore extract the two predicates back out of the index (`docker buildx imagetools
-  inspect --format '{{json .SBOM.SPDX}}'` / `.Provenance.SLSA`) and re-publish them with
-  `cosign attest`, against the same digest `cosign sign` signed.
-
-  The `--type` values are load-bearing, since they set the `predicateType` a verifier
-  matches on. Confirmed empirically (2026-08-17) that they reproduce exactly what buildx
-  emits: `--type spdxjson` → `https://spdx.dev/Document`, `--type slsaprovenance1` →
-  `https://slsa.dev/provenance/v1`. `--type slsaprovenance` (no suffix) is SLSA **v0.2** and
-  would publish the wrong type — buildx emits the v1 predicate shape
-  (`buildDefinition`/`runDetails`), so v1 is the correct pairing.
-
-  The extraction is platform-agnostic: buildx returns `{SPDX: …}` for a single-platform
-  build and `{"linux/amd64": {SPDX: …}, …}` for a multi-platform one, so the shared
-  attestation script normalises both to a platform → predicate map and emits one
-  attestation per platform, each attached to the index digest. Verified against both shapes.
+  therefore extract the two predicates back out of the index and re-publish them with
+  `cosign attest`, against the same digest `cosign sign` signed. The `--type` values are
+  load-bearing — they set the `predicateType` a verifier matches on — and the extraction
+  is platform-agnostic, emitting one attestation per platform against the index digest.
+  Both are the shared attestation script's concern, and its header carries the empirical
+  basis for them.
 
   Note the asymmetry that leaves: signatures are recursive (index + children), attestations
   are attached to the **index** digest only. A verifier that resolves a platform-specific
