@@ -41,7 +41,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass, replace
-from typing import NamedTuple, TypeVar
+from typing import NamedTuple, Self, TypeVar
 
 import tomllib
 from packaging.specifiers import SpecifierSet
@@ -82,6 +82,22 @@ class Member:
     train_deps: tuple[str, ...]
     extras: tuple[str, ...]
     pythons: tuple[str, ...]
+
+    def with_train_deps(self, release_member_paths: set[str]) -> Self:
+        """Copies the member, filling in the part of its closure shipping in this run.
+
+        The only producer of `train_deps`. Which dependencies it names depends on what
+        else goes out alongside, so it cannot be settled when the member is read off
+        disk: the matrix fills it from what the index says is being released, and the
+        plan refills it after a targeted tag has narrowed that set. An empty set leaves
+        it empty, which is what a member outside any release run should carry.
+        """
+        return replace(
+            self,
+            train_deps=tuple(
+                d for d in self.internal_deps if d in release_member_paths
+            ),
+        )
 
     def as_json(self) -> dict:
         """The member as the workflows consume it. Tuples serialize as JSON arrays."""
@@ -191,17 +207,16 @@ def _lane(root: str, ghga_markers: dict) -> str:
     return LANE_DEFAULTS.get(root, "none")
 
 
-def pypi_members(
-    member_paths: list[str] | None = None, release_member_paths: set[str] | None = None
-) -> list[Member]:
+def pypi_members(member_paths: list[str] | None = None) -> list[Member]:
     """Returns one `Member` per PyPI-lane member, for the matrix and the release plan.
+
+    Reads what each member declares, nothing more. `train_deps` comes back empty here
+    because it depends on which members ship together, which this function has no way
+    of knowing — callers fill it with `Member.with_train_deps`.
 
     Args:
         member_paths:
             Restrict to these member folders; None means every lane member.
-        release_member_paths:
-            The folders of the members being released in this same run. Does not
-            restrict the result — it only fills in each member's `train_deps`.
     """
     dependency_graph = internal_dep_graph()
     members = []
@@ -231,9 +246,7 @@ def pypi_members(
                     version=project.get("version", ""),
                     requires_python=requires_python,
                     internal_deps=tuple(closure),
-                    train_deps=tuple(  # Dependencies released in this run.
-                        d for d in closure if d in (release_member_paths or ())
-                    ),
+                    train_deps=(),
                     extras=tuple(
                         _test_extras(project.get("optional-dependencies", {}))
                     ),
@@ -416,11 +429,13 @@ def _blocked_message(target: Member, blockers: list[IndexedMember]) -> str:
         for m in ordered
     ]
     named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
+
     tags = ", ".join(f"{_canonical(m.package)}/{m.version}" for m in ordered)
+
     return (
         f"{target.package}: cannot be released on its own — it depends on"
         f" release candidate(s) {named}. Either push `pypi_sweep/x.y.z` to release"
-        " the whole train dependencies-first, or release each dependency on its own tag"
+        " the whole train dependencies-first, or release each dependency individually on its own tag"
         f" first, in this order: {tags}, then"
         f" {_canonical(target.package)}/{target.version}."
     )
@@ -534,21 +549,11 @@ def release_plan(target: str | None = None) -> dict:
                     " lane, so consumers could never install it"
                 )
 
-    # `train_deps` is the part of a member's closure that ships in this same run, so it
-    # is built from the repo rather than resolved from the index. Derived after the
-    # narrowing, so a targeted member's comes out empty on its own: nothing else ships in
-    # that run, so every internal dependency resolves from PyPI.
+    # Filled after the narrowing above, so a targeted member's comes out empty: nothing
+    # else ships in that run, so every internal dependency resolves from PyPI.
     release_member_paths = {member.path for member in publishing}
     ordered = _publish_order(
-        [
-            replace(
-                m,
-                train_deps=tuple(
-                    d for d in m.internal_deps if d in release_member_paths
-                ),
-            )
-            for m in publishing
-        ]
+        [m.with_train_deps(release_member_paths) for m in publishing]
     )
     return {
         "members": [member.as_json() for member in ordered],
@@ -646,7 +651,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps([m.as_json() for m in candidates.publishing]))
         return 0
 
-    release_member_paths = set()
+    # Without --check-pypi nothing is known to be shipping, so every `train_deps` stays
+    # empty and each cell resolves its whole closure from the index.
+    release_member_paths: set[str] = set()
     if args.check_pypi:
         candidates = release_candidates()
         if candidates.unreachable:
@@ -655,7 +662,9 @@ def main(argv: list[str] | None = None) -> int:
             )
         release_member_paths = {m.path for m in candidates.publishing}
 
-    members = pypi_members(args.paths, release_member_paths=release_member_paths)
+    members = [
+        m.with_train_deps(release_member_paths) for m in pypi_members(args.paths)
+    ]
     print(
         json.dumps(
             [m.as_json() for m in members] if args.members else matrix_cells(members)
