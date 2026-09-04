@@ -1244,7 +1244,7 @@ async def test_requeue_file_successful(config: ConfigFixture, app_fixture: AppFi
     rs_jwk = config.rs_jwk
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
-    core_mock.requeue_file_upload.return_value = None
+    core_mock.requeue_single_file_upload.return_value = None
     token_header = utils.requeue_file_token_header(
         box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
     )
@@ -1255,7 +1255,7 @@ async def test_requeue_file_successful(config: ConfigFixture, app_fixture: AppFi
     )
 
     assert response.status_code == 204
-    core_mock.requeue_file_upload.assert_awaited_once_with(
+    core_mock.requeue_single_file_upload.assert_awaited_once_with(
         box_id=TEST_BOX_ID, file_id=TEST_FILE_ID
     )
 
@@ -1267,7 +1267,7 @@ async def test_requeue_file_auth(config: ConfigFixture, app_fixture: AppFixture)
     rs_jwk = config.rs_jwk
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
-    core_mock.requeue_file_upload.return_value = None
+    core_mock.requeue_single_file_upload.return_value = None
     url = f"/rpc/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}/requeue"
 
     # No auth token = 401
@@ -1364,7 +1364,7 @@ async def test_requeue_file_error_translation(
     rs_jwk = config.rs_jwk
     rest_client = app_fixture.rest_client
     core_mock = app_fixture.core_mock
-    core_mock.requeue_file_upload.side_effect = core_error
+    core_mock.requeue_single_file_upload.side_effect = core_error
     token_header = utils.requeue_file_token_header(
         box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
     )
