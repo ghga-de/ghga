@@ -43,6 +43,7 @@ import urllib.request
 from typing import NamedTuple
 
 import tomllib
+from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion, Version
 
 from affected_targets import _canonical, internal_dep_graph
@@ -67,67 +68,13 @@ def _requirement_name(spec: str) -> str:
     return spec.strip().lower()
 
 
-def _parse_version(text: str) -> tuple[int, ...]:
-    """Converts a Python version into comparable numbers, e.g. `3.12` -> `(3, 12)`."""
-    parts = []
-    for chunk in text.strip().split("."):
-        if chunk == "*":
-            break
-        digits = "".join(c for c in chunk if c.isdigit())
-        if not digits:
-            break
-        parts.append(int(digits))
-    return tuple(parts)
-
-
-def _compare(left: tuple[int, ...], right: tuple[int, ...]) -> int:
-    """Compares two versions: -1 if left is older, 0 if equal, 1 if newer."""
-    width = max(len(left), len(right))
-    left = left + (0,) * (width - len(left))
-    right = right + (0,) * (width - len(right))
-    return (left > right) - (left < right)
-
-
-def _satisfies_clause(version: tuple[int, ...], clause: str) -> bool:
-    """Whether an (X, Y) Python version satisfies one requires-python clause."""
-    clause = clause.strip()
-    for op in (">=", "<=", "==", "!=", "~=", ">", "<"):
-        if clause.startswith(op):
-            bound_text = clause[len(op) :].strip()
-            bound = _parse_version(bound_text)
-            if not bound:
-                return True
-            if op == ">=":
-                return _compare(version, bound) >= 0
-            if op == "<=":
-                return _compare(version, bound) <= 0
-            if op == ">":
-                return _compare(version, bound) > 0
-            if op == "<":
-                return _compare(version, bound) < 0
-            if op in ("==", "!="):
-                # Compare only the components the clause pins, so `== 3.12.*` and
-                # `== 3.12` both match any 3.12 release.
-                depth = min(len(version), len(bound))
-                equal = _compare(version[:depth], bound[:depth]) == 0
-                return equal if op == "==" else not equal
-            if len(bound) < 2:
-                return _compare(version, bound) >= 0
-            upper = (*bound[:-2], bound[-2] + 1)
-            return _compare(version, bound) >= 0 and _compare(version, upper) < 0
-    return True
-
-
 def _supported(requires_python: str, python: str) -> bool:
-    """Whether `python` satisfies a whole requires-python specifier set."""
-    if not requires_python:
-        return True
-    version = _parse_version(python)
-    return all(
-        _satisfies_clause(version, clause)
-        for clause in requires_python.split(",")
-        if clause.strip()
-    )
+    """Whether `python` satisfies a whole requires-python specifier set.
+
+    An empty specifier admits every version: `SpecifierSet("")` holds no clauses, so
+    there is nothing for the candidate to fail.
+    """
+    return SpecifierSet(requires_python).contains(Version(python))
 
 
 def _test_extras(optional: dict) -> list[str]:
