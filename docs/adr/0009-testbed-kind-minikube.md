@@ -2,7 +2,8 @@
 
 - **Status:** Accepted — local execution amended by
   [ADR-0017](0017-local-integration-host-cluster.md) (host-level cluster, no DinD/DooD in the
-  devcontainer, image delivery per platform)
+  devcontainer, image delivery per platform) — **amended 2026-09-04**: read that pointer as
+  ADR-0017's *current* state, which is kind in the devcontainer (see below)
 - **Date:** 2026-06-30
 - **Deciders:** Leon Kuchenbecker
 
@@ -21,6 +22,13 @@ infra ([ADR-0006](0006-self-contained-demo-lightweight-infra.md),
 [ADR-0012](0012-self-contained-edge-envoy-gateway.md)). "What you install == what CI tests."
 - **CI: kind** — fast cluster bring-up, trivial `kind load` of locally-built images;
 - **Local: minikube / colima** — for cluster-style local work.
+
+**Amended 2026-09-04 — the local bullet is no longer the answer.** ADR-0017 first moved
+the local cluster out to the host; its own 2026-07-27 amendment then moved the *fast*
+iteration loop back to **kind inside the devcontainer's inner docker daemon**, which is
+what `just cluster` / `just up` do today. The host-level cluster stays the target for
+persistent, closer-to-real local use. Reading this ADR's Decision alone therefore gives
+the wrong answer for local work; CI's kind path is unchanged.
 
 The per-PR gate builds **only affected images**, pulls last-released tags for the rest, loads
 them into kind, installs the umbrella, and runs the BDD suite (re-pointing the suite's
