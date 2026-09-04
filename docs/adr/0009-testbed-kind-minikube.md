@@ -30,6 +30,11 @@ what `just cluster` / `just up` do today. The host-level cluster stays the targe
 persistent, closer-to-real local use. Reading this ADR's Decision alone therefore gives
 the wrong answer for local work; CI's kind path is unchanged.
 
+The per-PR gate's parenthetical below is stale for the same reason
+[ADR-0007](0007-local-aai-generic-oidc.md) was amended: the test-bed profile runs the
+original GHGA test OP rather than `mock-oauth2-server`, and the suite's mint-a-user calls
+still `POST /login` against it unchanged (`testbed/fixtures/auth.py`).
+
 The per-PR gate builds **only affected images**, pulls last-released tags for the rest, loads
 them into kind, installs the umbrella, and runs the BDD suite (re-pointing the suite's
 mint-a-user calls at `mock-oauth2-server`).
