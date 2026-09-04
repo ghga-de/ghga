@@ -66,12 +66,7 @@ class Member:
     """One PyPI-lane workspace member, as the repo declares it.
 
     Every field is read out of the member's `pyproject.toml` or derived from the
-    workspace dependency graph — nothing here has asked the index anything. What PyPI
-    says arrives as an `IndexedMember`, so a member that has not been through
-    `release_candidates` cannot be mistaken for one that has.
-
-    Frozen, because a member is copied-with-changes rather than mutated: `replace()`
-    marks each such derivation at the point it happens.
+    workspace dependency graph — nothing here has asked the index anything.
     """
 
     path: str
@@ -84,14 +79,7 @@ class Member:
     pythons: tuple[str, ...]
 
     def with_train_deps(self, release_member_paths: set[str]) -> Self:
-        """Copies the member, filling in the part of its closure shipping in this run.
-
-        The only producer of `train_deps`. Which dependencies it names depends on what
-        else goes out alongside, so it cannot be settled when the member is read off
-        disk: the matrix fills it from what the index says is being released, and the
-        plan refills it after a targeted tag has narrowed that set. An empty set leaves
-        it empty, which is what a member outside any release run should carry.
-        """
+        """Copies the member, filling in the part of its closure shipping in this run."""
         return replace(
             self,
             train_deps=tuple(
@@ -108,9 +96,7 @@ class Member:
 class IndexedMember(Member):
     """A lane member plus what PyPI says about it.
 
-    `index_unreachable` means the query failed, not that the project is new — see
-    `_pypi_project`. `reason` is set only on a member that was passed over, and is
-    what the plan's "not releasing" table prints.
+    `index_unreachable` means the PyPI query failed.
     """
 
     pypi_latest: str | None = None
@@ -130,13 +116,8 @@ class IndexedMember(Member):
         return data
 
 
-# So `_publish_order` returns whatever kind of member it was handed, rather than
-# widening an IndexedMember list back to Member.
-MemberT = TypeVar("MemberT", bound=Member)
-
-
 def _requirement_name(spec: str) -> str:
-    """The package name in a requirement, e.g. `pytest>=9.1` -> `pytest`."""
+    """Extracts the lowercased package name from a requirement, dropping the rest."""
     for i, ch in enumerate(spec):
         if ch in "<>=!~[ ;(":
             return spec[:i].strip().lower()
@@ -144,7 +125,7 @@ def _requirement_name(spec: str) -> str:
 
 
 def _supported(requires_python: str, python: str) -> bool:
-    """Whether `python` satisfies a whole requires-python specifier set.
+    """Checks one Python version against a whole requires-python specifier set.
 
     An empty specifier admits every version: `SpecifierSet("")` holds no clauses, so
     there is nothing for the candidate to fail.
@@ -210,9 +191,9 @@ def _lane(root: str, ghga_markers: dict) -> str:
 def pypi_members(member_paths: list[str] | None = None) -> list[Member]:
     """Returns one `Member` per PyPI-lane member, for the matrix and the release plan.
 
-    Reads what each member declares, nothing more. `train_deps` comes back empty here
-    because it depends on which members ship together, which this function has no way
-    of knowing — callers fill it with `Member.with_train_deps`.
+    Reads what each member declares. `train_deps` comes back empty here
+    because it depends on which members ship together, which is not known to this function.
+    It is filled by the `release_plan`.
 
     Args:
         member_paths:
@@ -323,11 +304,9 @@ def _is_newer(candidate: str, other: str) -> bool:
 
 
 class Candidates(NamedTuple):
-    """What the index says should happen to each lane member.
+    """The lane split by what the index says should happen to each member.
 
-    The three lists partition the lane, so they are passed around together rather than
-    separately. Handing a consumer only some of them is what let a member fall through
-    every table unreported.
+    The three lists partition it, so they travel together rather than separately.
     """
 
     publishing: list[IndexedMember]
@@ -385,6 +364,11 @@ def release_candidates(lane: list[Member] | None = None) -> Candidates:
         else:
             verdicts.publishing.append(indexed)
     return verdicts
+
+
+# So `_publish_order` returns whatever kind of member it was handed, rather than
+# widening an IndexedMember list back to Member.
+MemberT = TypeVar("MemberT", bound=Member)
 
 
 def _publish_order(members: list[MemberT]) -> list[MemberT]:
