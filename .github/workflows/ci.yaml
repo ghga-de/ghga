@@ -204,6 +204,10 @@ jobs:
       # so the Python that belongs to no member would otherwise never be type-checked here.
       - name: mypy (non-member Python)
         run: uv run python scripts/typecheck.py scripts deploy/src testbed
+      # check-python's matrix covers members only, so the suites belonging to no
+      # member run here. (testbed's suite is Stage 2's, not this job's.)
+      - name: pytest (non-member Python)
+        run: uv run pytest -q scripts/tests deploy/tests
       # The generated charts must stay a pure function of their sources: if they are not,
       # the whitespace hooks and `just charts` undo each other forever (ADR-0018).
       #
