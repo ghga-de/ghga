@@ -246,7 +246,7 @@ class S3Client(S3ClientPort):
         object_id = file_upload.object_id
         extra = {
             "bucket_id": bucket_id,
-            "object_id": file_upload.object_id,
+            "object_id": object_id,
             "file_id": file_upload.id,
             "storage_alias": file_upload.storage_alias,
         }
