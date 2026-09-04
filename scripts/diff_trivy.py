@@ -8,8 +8,12 @@ Used by .github/workflows/security-scan.yaml in two steps:
           introduced, identified by (VulnerabilityID, PkgName) so version
           bumps of a still-vulnerable package do not count as a fix.
   render  one or more fragments into a markdown report (the PR body / job
-          summary) and print the total number of fixed vulnerabilities to
+          summary) and print the number of fixed DEPENDENCY vulnerabilities to
           stdout, which the workflow uses as its open-a-PR gate.
+
+Fixed vulnerabilities are split by Trivy's result class: OS packages live in the
+base image, out of reach of any lockfile, so their fixes are reported but never
+gate a PR. Only lang-pkgs fixes do.
 """
 
 import argparse
@@ -19,13 +23,19 @@ from typing import Any
 
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
 
+# Trivy's Result.Class for OS packages. Anything else these scans produce is
+# lang-pkgs, i.e. a dependency the lockfiles control.
+OS_PKGS = "os-pkgs"
+
 
 def _load_vulns(path):
     """Flatten a Trivy JSON report into {(vuln_id, package): record}.
 
     Results (per-target sections) are merged: the mono image reports the OS
     packages and the Python venv separately, but for fixed/introduced
-    accounting only the (vulnerability, package) pair matters.
+    accounting only the (vulnerability, package) pair matters. Each record
+    keeps its section's Class, which separates base-image from dependency
+    findings.
     """
     report = json.loads(pathlib.Path(path).read_text())
     vulns: dict[tuple[str, str], dict[str, Any]] = {}
@@ -41,6 +51,7 @@ def _load_vulns(path):
                     "fixed_in": v.get("FixedVersion", ""),
                     "severity": v.get("Severity") or "UNKNOWN",
                     "url": v.get("PrimaryURL", ""),
+                    "class": result.get("Class", ""),
                 },
             )
     return vulns
@@ -80,6 +91,21 @@ def _table(records):
     return lines
 
 
+def _split_by_origin(records):
+    """Partition records into the dependency ones and the base-image ones."""
+    return (
+        [r for r in records if r.get("class") != OS_PKGS],
+        [r for r in records if r.get("class") == OS_PKGS],
+    )
+
+
+def _section(heading, records):
+    lines = [f"**{heading} ({len(records)}):**", ""]
+    lines.extend(_table(records) if records else ["none"])
+    lines.append("")
+    return lines
+
+
 def _render_fragment(fragment):
     lines = [
         f"### {fragment['label']}",
@@ -88,14 +114,16 @@ def _render_fragment(fragment):
         f"{fragment['after_count']} after.",
         "",
     ]
-    for kind in ("fixed", "introduced"):
-        records = fragment[kind]
-        if not records and kind == "introduced":
-            continue
-        lines.append(f"**{kind.capitalize()} ({len(records)}):**")
-        lines.append("")
-        lines.extend(_table(records) if records else ["none"])
-        lines.append("")
+    fixed_deps, fixed_base = _split_by_origin(fragment["fixed"])
+    lines.extend(_section("Fixed by the dependency update", fixed_deps))
+    if fixed_base:
+        lines.extend(
+            _section(
+                "Fixed by the refreshed base image, not by this update", fixed_base
+            )
+        )
+    if fragment["introduced"]:
+        lines.extend(_section("Introduced", fragment["introduced"]))
     return lines
 
 
@@ -105,7 +133,7 @@ def _render(args):
     for fragment in fragments:
         lines.extend(_render_fragment(fragment))
     pathlib.Path(args.out).write_text("\n".join(lines).rstrip() + "\n")
-    print(sum(len(f["fixed"]) for f in fragments))
+    print(sum(len(_split_by_origin(f["fixed"])[0]) for f in fragments))
 
 
 def main():

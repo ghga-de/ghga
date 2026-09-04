@@ -17,6 +17,10 @@
 # additionally compared at lockfile level (current vs updated pnpm-lock.yaml),
 # since its image ships only bundled JS that Trivy cannot see.
 #
+# Reported vs. gating: every fix reaches the tables, but only fixes in packages a
+# lockfile controls (Trivy's lang-pkgs) open a PR. OS-package fixes come with any
+# rebuild of :dev, so no lockfile update can claim them (scripts/diff_trivy.py).
+#
 # Deliberate scanning gaps:
 #   - uv.lock is NOT fs-scanned: Trivy cannot parse a virtual-workspace-root
 #     lock (no [project] at the root -> zero packages inventoried; verified).
@@ -24,9 +28,10 @@
 #     dependencies as installed dist-infos.
 #   - The mono venv is built --no-dev, so CVEs in the dev toolchain (ruff,
 #     pytest, mypy, ...) are out of scope on purpose: they never ship.
-#   - A PR needs content: on a day where the lockfile update is a no-op, no PR
-#     opens even if a rebuild alone would fix things. Base-digest pinning is the
-#     planned answer for that case.
+#   - A PR needs content: where the lockfile update is a no-op, or fixes nothing a
+#     lockfile controls, no PR opens even if a rebuild alone would fix things; an
+#     open one from an earlier run is closed instead. Base-digest pinning is the
+#     planned answer for base-image drift.
 #
 # Requires:
 #   - DOCKERHUB_USERNAME / DOCKERHUB_TOKEN org secrets (DHI base pulls, as in
@@ -57,6 +62,9 @@ permissions:
   contents: read
 
 env:
+  # The branch this workflow owns: the propose job pushes to it and looks up its
+  # PR by it.
+  PR_BRANCH: automated/lockfile-security-update
   REGISTRY: ghcr.io/ghga-de/ghga
   # Keeps `just image`/`image-mono` tagging under $REGISTRY here too — this scan's
   # scratch/comparison images are deliberately separate from the release target
@@ -288,9 +296,8 @@ jobs:
 
   # Combines whatever the scan jobs handed over and opens ONE PR when the proposed
   # state improves on the published images. A fixed branch, updated in place, so
-  # daily runs never stack PRs. If a previously opened PR goes stale (main already
-  # got the fixes), it stays open for a human verdict — this job only ever
-  # rewrites the branch.
+  # daily runs never stack PRs. A PR whose fixes are no longer on offer is closed
+  # again: left open, it asserts a vulnerability the scan no longer sees.
   propose-update:
     needs: [python, frontend]
     # one ecosystem failing must not discard the other's verdict
@@ -428,7 +435,7 @@ jobs:
           # personal account even when an app token opens the PR
           committer: ${{ steps.identity.outputs.bot }}
           author: ${{ steps.identity.outputs.bot }}
-          branch: automated/lockfile-security-update
+          branch: ${{ env.PR_BRANCH }}
           base: main
           title: "Security: dependency update resolving ${{ steps.verdict.outputs.fixed }} known vulnerabilities"
           body-path: ${{ runner.temp }}/body.md
@@ -445,5 +452,30 @@ jobs:
       - name: Summary when no PR is warranted
         if: ${{ steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0' }}
         run: |
-          echo "Lockfiles are up to date, or the updated rebuild does not improve" \
-            "on the published images — no PR opened." >> "$GITHUB_STEP_SUMMARY"
+          echo "Lockfiles are up to date, or the updated rebuild fixes nothing the" \
+            "lockfiles control — no PR opened. Base-image fixes reported above arrive" \
+            "with the next rebuild of :dev on their own." >> "$GITHUB_STEP_SUMMARY"
+
+      # A PR outlives its finding once main gets those fixes another way — every
+      # merge rebuilds :dev off a fresh base. Gated on both scans succeeding: a
+      # failed ecosystem reports no fixes, and that silence must not close the PR.
+      - name: Close a PR that has nothing left to fix
+        if: >-
+          ${{ (steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0')
+          && needs.python.result == 'success' && needs.frontend.result == 'success' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          number=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main \
+            --head "$PR_BRANCH" --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            exit 0
+          fi
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          comment="Today's scan finds no vulnerability that updating the lockfiles would "
+          comment+="fix: main's published \`:dev\` images already carry everything this "
+          comment+="branch proposed, since every merge rebuilds them off a fresh base. "
+          comment+="Closing automatically — the next scan that does find one opens a fresh "
+          comment+="PR off current main. Details in [run ${GITHUB_RUN_ID}](${run_url})."
+          gh pr close "$number" --repo "$GITHUB_REPOSITORY" --delete-branch --comment "$comment"
+          echo "Closed #$number — nothing left for it to fix." >> "$GITHUB_STEP_SUMMARY"
