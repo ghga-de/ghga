@@ -407,8 +407,8 @@ def _blocked_message(target: dict, blockers: list[dict]) -> str:
     named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
     tags = ", ".join(f"{_canonical(m['package'])}/{m['version']}" for m in ordered)
     return (
-        f"{target['package']}: cannot be released on its own — it depends on release,"
-        f" candidate(s) {named}. Either push `pypi_sweep/x.y.z` to release"
+        f"{target['package']}: cannot be released on its own — it depends on"
+        f" release candidate(s) {named}. Either push `pypi_sweep/x.y.z` to release"
         " the whole train dependencies-first, or release each dependency on its own tag"
         f" first, in this order: {tags}, then"
         f" {_canonical(target['package'])}/{target['version']}."
