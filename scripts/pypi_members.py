@@ -380,7 +380,9 @@ def _find_member(target: str, members: list[dict]) -> dict | None:
     """Locates one lane member by its path or its distribution name.
 
     Accepts both a distribution name (`hexkit`) and a path (`libs/hexkit`). Names are
-    normalized, e.g. `ghga-connector` equals `ghga_connector`.
+    normalized, e.g. `ghga-connector` equals `ghga_connector`. Only the name form ever
+    arrives from a tag — `name/x.y.z` leaves no `/` in the name — so the path form is
+    for running this script by hand.
     """
     for member in members:
         if member["path"] == target:
