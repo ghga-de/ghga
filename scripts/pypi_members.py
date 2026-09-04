@@ -304,14 +304,14 @@ def _is_newer(candidate: str, other: str) -> bool:
         return False
 
 
-def release_candidates() -> tuple[list[dict], list[dict]]:
-    """Asks the index about every lane member and splits them into candidates and skips.
+def release_candidates() -> tuple[list[dict], list[dict], list[dict]]:
+    """Asks the index about every lane member and sorts them by what should happen.
 
     Returns:
-        `(candidates, skipped)`. Both carry the member dicts from `pypi_members`, plus
-        `pypi_latest` and `index_unreachable`; a skipped member also carries the `reason`
-        it was passed over. A failed lookup lands in *candidates* with
-        `index_unreachable=True`, where `release_plan` turns it into an error.
+        `(publishing, skipped, unreachable)`. Every member lands in exactly one of the
+        three. All carry the member dicts from `pypi_members` plus `pypi_latest` and
+        `index_unreachable`; a skipped member also carries the `reason` it was passed
+        over. `release_plan` turns each unreachable member into an error.
 
     Consequences worth naming:
     - a version already on PyPI is dropped here, so a re-run never attempts to
@@ -320,12 +320,12 @@ def release_candidates() -> tuple[list[dict], list[dict]]:
     - a member trailing the index (`ghga-validator` declares 1.1.1 while PyPI serves
       1.2.0, because upstream kept releasing) is *skipped*, not an error.
     """
-    candidates, skipped = [], []
+    publishing, skipped, unreachable = [], [], []
     for member in pypi_members():
         version = member["version"]
         project = _pypi_project(member["package"])
         if not project["reachable"]:
-            candidates.append(dict(member, pypi_latest=None, index_unreachable=True))
+            unreachable.append(dict(member, pypi_latest=None, index_unreachable=True))
             continue
         member = dict(member, pypi_latest=project["latest"], index_unreachable=False)
         latest = project["latest"]
@@ -340,8 +340,8 @@ def release_candidates() -> tuple[list[dict], list[dict]]:
                 dict(member, reason=f"{version} is not above the released {latest}")
             )
         else:
-            candidates.append(member)
-    return candidates, skipped
+            publishing.append(member)
+    return publishing, skipped, unreachable
 
 
 def _publish_order(members: list[dict]) -> list[dict]:
@@ -399,7 +399,8 @@ def _targeted_plan(
     target: str,
     publishing: list[dict],
     skipped: list[dict],
-) -> tuple[list[dict], list[str]]:
+    unreachable: list[dict],
+) -> tuple[list[dict], list[dict], list[str]]:
     """Narrows a sweep to the single member a `name/x.y.z` tag named.
 
     Args:
@@ -411,9 +412,14 @@ def _targeted_plan(
             anything: against a one-member set it would pass unconditionally.
         skipped:
             The members the sweep passed over, each carrying its `reason`.
+        unreachable:
+            The members whose index lookup failed. Needed to tell a target that has
+            nothing to publish apart from one whose state is simply unknown.
 
     Returns:
-        `(publishing, errors)`. A non-empty `errors` always comes with an empty
+        `(publishing, deselected, errors)`. `deselected` carries the candidates this tag
+        excluded, each with its own `reason`, so every lane member still lands in exactly
+        one of the plan's two tables. A non-empty `errors` always comes with an empty
         `publishing`: a targeted tag that cannot be honoured publishes nothing rather
         than falling back to the sweep nobody asked for.
     """
@@ -421,21 +427,32 @@ def _targeted_plan(
     member = _find_member(target, lane)
     if member is None:
         known = ", ".join(sorted(m["package"] for m in lane))
-        return [], [f"{target} is not a PyPI-lane member (lane: {known})"]
+        return [], [], [f"{target} is not a PyPI-lane member (lane: {known})"]
 
     selected = [m for m in publishing if m["path"] == member["path"]]
     if not selected:
+        # An unreachable index says nothing about whether this member needs releasing.
+        # release_plan already reports that, so a second guess here would contradict it.
+        if any(m["path"] == member["path"] for m in unreachable):
+            return [], [], []
         # State why the target was not selected.
         reason = next(
             (s["reason"] for s in skipped if s["path"] == member["path"]),
             "it is not a release candidate",
         )
-        return [], [f"{member['package']}: nothing to publish — {reason}"]
+        return [], [], [f"{member['package']}: nothing to publish — {reason}"]
 
     blockers = [m for m in publishing if m["path"] in member["internal_deps"]]
     if blockers:
-        return [], [_blocked_message(member, blockers)]
-    return selected, []
+        return [], [], [_blocked_message(member, blockers)]
+
+    # Candidates a sweep would have released but this targeted run excludes.
+    deselected = [
+        dict(m, reason=f"the tag targeted {member['package']}")
+        for m in publishing
+        if m["path"] != member["path"]
+    ]
+    return selected, deselected, []
 
 
 def release_plan(target: str | None = None) -> dict:
@@ -455,9 +472,7 @@ def release_plan(target: str | None = None) -> dict:
         `skipped` (package, version and reason for each member passed over) and `errors`.
         A non-empty `errors` means publish nothing — the caller fails the job.
     """
-    candidates, skipped = release_candidates()
-    unreachable = [m for m in candidates if m["index_unreachable"]]
-    publishing = [m for m in candidates if not m["index_unreachable"]]
+    publishing, skipped, unreachable = release_candidates()
     lane_paths = {member["path"] for member in pypi_members()}
     errors = []
 
@@ -471,8 +486,11 @@ def release_plan(target: str | None = None) -> dict:
     # load-bearing: hand over an already-narrowed list and the closure check inside has
     # only the target to compare against, so it passes unconditionally.
     if target is not None:
-        publishing, target_errors = _targeted_plan(target, publishing, skipped)
+        publishing, deselected, target_errors = _targeted_plan(
+            target, publishing, skipped, unreachable
+        )
         errors.extend(target_errors)
+        skipped = [*skipped, *deselected]
 
     for member in publishing:
         for dep in member["internal_deps"]:
@@ -504,25 +522,57 @@ def release_plan(target: str | None = None) -> dict:
     }
 
 
+def _reject_ignored_flags(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """Fails on a flag combination where one of the flags would be silently ignored.
+
+    The mutually exclusive group already refuses two output modes at once. What is left
+    is a modifier the chosen mode never reads, which would otherwise promise a narrowing
+    that does not happen.
+    """
+    # `is not None` rather than a truth test, so `--target ""` is caught here instead of
+    # reaching release_plan and failing with a misleading "not a PyPI-lane member".
+    if args.target is not None:
+        if not args.plan:
+            parser.error("--target only applies to --plan")
+        if not args.target:
+            parser.error("--target needs a package name")
+
+    # The plan always asks the index about every lane member, because the closure check
+    # has to see candidates outside whatever the caller narrowed to. Neither flag can
+    # reach it.
+    if args.plan and (args.paths or args.check_pypi):
+        parser.error(
+            "--plan takes only --target; --paths and --check-pypi shape the cells"
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--paths", nargs="*", help="restrict to these member paths (default: all)"
     )
-    parser.add_argument(
+    # Each of these prints one thing and stops, so asking for two is a contradiction.
+    # argparse rejects the combination before main() runs, which also means the branches
+    # below no longer decide the winner by their order. Passing none is still valid and
+    # emits the matrix cells. `--paths`, `--target` and `--check-pypi` stay outside the
+    # group because they modify a mode rather than being one.
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--members", action="store_true", help="emit lane members instead of cells"
     )
-    parser.add_argument(
+    mode.add_argument(
         "--dev-requirements",
         action="store_true",
         help="print the test dependencies, one per line",
     )
-    parser.add_argument(
+    mode.add_argument(
         "--candidates",
         action="store_true",
         help="emit members whose declared version is ahead of the index",
     )
-    parser.add_argument(
+    mode.add_argument(
         "--plan",
         action="store_true",
         help="emit the release plan: ordered members, paths, skips and errors",
@@ -539,11 +589,7 @@ def main(argv: list[str] | None = None) -> int:
         " closure from the repo instead of resolving it from PyPI",
     )
     args = parser.parse_args(argv)
-
-    # Silently ignoring it would let a caller believe it narrowed a run that in fact
-    # swept — the one misunderstanding this flag exists to prevent.
-    if args.target and not args.plan:
-        parser.error("--target only applies to --plan")
+    _reject_ignored_flags(parser, args)
 
     if args.dev_requirements:
         print("\n".join(dev_requirements()))
@@ -552,9 +598,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(release_plan(args.target)))
         return 0
     if args.candidates:
-        candidates, _ = release_candidates()
+        candidates, _, unreachable = release_candidates()
         # No errors channel here, so an unanswerable index is an exit code instead.
-        if any(member["index_unreachable"] for member in candidates):
+        if unreachable:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
@@ -563,8 +609,8 @@ def main(argv: list[str] | None = None) -> int:
 
     release_member_paths = set()
     if args.check_pypi:
-        candidates, _ = release_candidates()
-        if any(member["index_unreachable"] for member in candidates):
+        candidates, _, unreachable = release_candidates()
+        if unreachable:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
