@@ -67,8 +67,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          # only the exact string `sweep` sweeps, and everything else
-          # lands in targeted mode, which checks itself.
+          # Only the exact string `sweep` sweeps and `targeted` names one member.
+          # Anything else is a caller bug: fail loudly rather than quietly falling
+          # through to a single-package publish nobody asked for.
+          case "$MODE" in
+            sweep|targeted) ;;
+            *) echo "::error::unknown mode '$MODE' (expected sweep or targeted)"; exit 1 ;;
+          esac
           target_args=()
           if [ "$MODE" != "sweep" ]; then
             # Not about typos — this is what makes leaning on the comparison above safe.
