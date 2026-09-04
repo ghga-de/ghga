@@ -2765,7 +2765,7 @@ async def test_requeue_file_success(rig: JointRig):
         rig, "test_file", "Checksum mismatch reported by FIS"
     )
     await sleep(MIN_SLEEP)
-    await controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+    await controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
 
     requeued = await file_upload_dao.get_by_id(file_id)
     assert requeued.state == "inbox"
@@ -2827,7 +2827,7 @@ async def test_requeue_file_ignores_stale_interrogation_failure(rig: JointRig):
     )
 
     await sleep(MIN_SLEEP)
-    await controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+    await controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
     requeued = await file_upload_dao.get_by_id(file_id)
 
     # Verify that a replayed InterrogationFailure event is ignored
@@ -2857,15 +2857,15 @@ async def test_requeue_file_ignores_stale_interrogation_failure(rig: JointRig):
 
 
 async def test_requeue_file_box_not_found(rig: JointRig):
-    """Test that `requeue_file_upload()` raises BoxNotFoundError when
+    """Test that `requeue_single_file_upload()` raises BoxNotFoundError when
     the box doesn't exist.
     """
     with pytest.raises(UploadControllerPort.BoxNotFoundError):
-        await rig.controller.requeue_file_upload(box_id=uuid4(), file_id=uuid4())
+        await rig.controller.requeue_single_file_upload(box_id=uuid4(), file_id=uuid4())
 
 
 async def test_requeue_file_box_already_archived(rig: JointRig):
-    """Test that `requeue_file_upload()` raises BoxStateError if the
+    """Test that `requeue_single_file_upload()` raises BoxStateError if the
     box is already archived.
     """
     box_id = await rig.create_default_box()
@@ -2874,11 +2874,11 @@ async def test_requeue_file_box_already_archived(rig: JointRig):
     await rig.file_upload_box_dao.update(box)
 
     with pytest.raises(UploadControllerPort.BoxStateError):
-        await rig.controller.requeue_file_upload(box_id=box_id, file_id=uuid4())
+        await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=uuid4())
 
 
 async def test_requeue_file_if_file_not_failed(rig: JointRig):
-    """Test that `requeue_file_upload()` raises a FileUploadStateError if
+    """Test that `requeue_single_file_upload()` raises a FileUploadStateError if
     the FileUpload is not in the `"failed"` state.
     """
     box_id = await rig.create_default_box()
@@ -2891,21 +2891,21 @@ async def test_requeue_file_if_file_not_failed(rig: JointRig):
     )
 
     with pytest.raises(UploadControllerPort.FileUploadStateError):
-        await rig.controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+        await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
 
 
 async def test_requeue_file_if_file_not_found(rig: JointRig):
-    """Test that `requeue_file_upload()` raises FileUploadNotFound if the
+    """Test that `requeue_single_file_upload()` raises FileUploadNotFound if the
     FileUpload doesn't exist.
     """
     box_id = await rig.create_default_box()
 
     with pytest.raises(UploadControllerPort.FileUploadNotFound):
-        await rig.controller.requeue_file_upload(box_id=box_id, file_id=uuid4())
+        await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=uuid4())
 
 
 async def test_requeue_file_never_reached_inbox(rig: JointRig):
-    """Test that `requeue_file_upload()` raises RequeueError if the file
+    """Test that `requeue_single_file_upload()` raises RequeueError if the file
     in question never successfully finished uploading to the inbox.
 
     Note that in this case, error during upload init and error at completion
@@ -2927,7 +2927,7 @@ async def test_requeue_file_never_reached_inbox(rig: JointRig):
 
     # Make sure we get a RequeueError
     with pytest.raises(UploadControllerPort.RequeueError):
-        await rig.controller.requeue_file_upload(box_id=box_id, file_id=file_id)
+        await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
 
 
 async def _setup_box_for_requeue_box_success(rig: JointRig):
