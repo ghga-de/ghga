@@ -169,6 +169,23 @@ def test_endpoint_missing_typehint():
             """Define a dummy function with missing type-hint info."""
 
 
+def test_query_string_is_left_out_of_the_matching():
+    """Make sure an endpoint is found whether or not the call carries a query string."""
+    throwaway: MockRouter = MockRouter()
+
+    @throwaway.get("/items/{item_name}")
+    def get_item(item_name: str) -> httpx2.Response:
+        """Report back the item name the path was matched with."""
+        return httpx2.Response(status_code=200, json={"expected": item_name})
+
+    with httpx2.Client(base_url=BASE_URL, transport=throwaway.as_transport()) as client:
+        # without the query being left out, the pattern's trailing group would swallow
+        # it and the endpoint would report an item name of "ball?size=large"
+        response = client.get("/items/ball?size=large")
+
+    assert response.json() == {"expected": "ball"}
+
+
 def test_handler_errors_filtering():
     """Make sure only the specified errors are passed to the handler.
 
