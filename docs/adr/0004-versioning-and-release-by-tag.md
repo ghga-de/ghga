@@ -192,10 +192,10 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   whole job. The two indexes hold **separate** trusted-publisher
   entries, matched on owner, repository, workflow filename and environment — a mismatch
   reports only `invalid-publisher`, so both sides change together. The lane has **one
-  entrance**: `release.yaml` routes `name/x.y.z` tags to it via `workflow_call`, so every
-  publish has passed `resolve` (commit on `main`, CI green, tag matching the declared
-  version). `pypi-publish.yaml` declares no `workflow_dispatch` of its own — a second
-  entrance would bypass all three.
+  entrance**: `release.yaml` routes `name/x.y.z` and `pypi_sweep/x.y.z` tags to it via
+  `workflow_call`, so every publish has passed `resolve` (commit on `main`, CI green, and —
+  for a member-named tag — the tag matching the declared version). `pypi-publish.yaml`
+  declares no `workflow_dispatch` of its own — a second entrance would bypass those checks.
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.
