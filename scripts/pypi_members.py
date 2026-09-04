@@ -40,7 +40,8 @@ import pathlib
 import sys
 import urllib.error
 import urllib.request
-from typing import NamedTuple
+from dataclasses import asdict, dataclass, replace
+from typing import NamedTuple, TypeVar
 
 import tomllib
 from packaging.specifiers import SpecifierSet
@@ -58,6 +59,64 @@ LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
 NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+@dataclass(frozen=True)
+class Member:
+    """One PyPI-lane workspace member, as the repo declares it.
+
+    Every field is read out of the member's `pyproject.toml` or derived from the
+    workspace dependency graph — nothing here has asked the index anything. What PyPI
+    says arrives as an `IndexedMember`, so a member that has not been through
+    `release_candidates` cannot be mistaken for one that has.
+
+    Frozen, because a member is copied-with-changes rather than mutated: `replace()`
+    marks each such derivation at the point it happens.
+    """
+
+    path: str
+    package: str
+    version: str
+    requires_python: str
+    internal_deps: tuple[str, ...]
+    train_deps: tuple[str, ...]
+    extras: tuple[str, ...]
+    pythons: tuple[str, ...]
+
+    def as_json(self) -> dict:
+        """The member as the workflows consume it. Tuples serialize as JSON arrays."""
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class IndexedMember(Member):
+    """A lane member plus what PyPI says about it.
+
+    `index_unreachable` means the query failed, not that the project is new — see
+    `_pypi_project`. `reason` is set only on a member that was passed over, and is
+    what the plan's "not releasing" table prints.
+    """
+
+    pypi_latest: str | None = None
+    index_unreachable: bool = False
+    reason: str | None = None
+
+    @classmethod
+    def of(cls, member: Member, **index_state) -> IndexedMember:
+        """Annotates a repo-declared member with what the index said about it."""
+        return cls(**asdict(member), **index_state)
+
+    def as_json(self) -> dict:
+        """Adds the index fields, omitting `reason` on a member that has none."""
+        data = asdict(self)
+        if self.reason is None:
+            del data["reason"]
+        return data
+
+
+# So `_publish_order` returns whatever kind of member it was handed, rather than
+# widening an IndexedMember list back to Member.
+MemberT = TypeVar("MemberT", bound=Member)
 
 
 def _requirement_name(spec: str) -> str:
@@ -134,8 +193,8 @@ def _lane(root: str, ghga_markers: dict) -> str:
 
 def pypi_members(
     member_paths: list[str] | None = None, release_member_paths: set[str] | None = None
-) -> list[dict]:
-    """Returns one dict per PyPI-lane member, for the matrix and the release plan.
+) -> list[Member]:
+    """Returns one `Member` per PyPI-lane member, for the matrix and the release plan.
 
     Args:
         member_paths:
@@ -143,10 +202,6 @@ def pypi_members(
         release_member_paths:
             The folders of the members being released in this same run. Does not
             restrict the result — it only fills in each member's `train_deps`.
-
-    Returns:
-        One dict per member with `path`, `package`, `version`, `requires_python`,
-        `internal_deps`, `train_deps`, `extras`, and `pythons`
     """
     dependency_graph = internal_dep_graph()
     members = []
@@ -170,38 +225,40 @@ def pypi_members(
             requires_python = project.get("requires-python", "")
             closure = _closure(relative, dependency_graph)
             members.append(
-                {
-                    "path": relative,
-                    "package": project["name"],
-                    "version": project.get("version", ""),
-                    "requires_python": requires_python,
-                    "internal_deps": closure,
-                    "train_deps": sorted(  # Dependencies released in this run.
+                Member(
+                    path=relative,
+                    package=project["name"],
+                    version=project.get("version", ""),
+                    requires_python=requires_python,
+                    internal_deps=tuple(closure),
+                    train_deps=tuple(  # Dependencies released in this run.
                         d for d in closure if d in (release_member_paths or ())
                     ),
-                    "extras": _test_extras(project.get("optional-dependencies", {})),
-                    "pythons": [
+                    extras=tuple(
+                        _test_extras(project.get("optional-dependencies", {}))
+                    ),
+                    pythons=tuple(
                         p for p in TEST_PYTHONS if _supported(requires_python, p)
-                    ],
-                }
+                    ),
+                )
             )
     return members
 
 
-def matrix_cells(members: list[dict]) -> list[dict]:
+def matrix_cells(members: list[Member]) -> list[dict]:
     """Creates the test matrix, each cell denoting one member on one Python version."""
     return [
         {
-            "path": member["path"],
-            "package": member["package"],
-            "extras": ",".join(member["extras"]),
+            "path": member.path,
+            "package": member.package,
+            "extras": ",".join(member.extras),
             # Only the closure being released alongside this member goes into the
             # wheelhouse. Its other dependencies resolve from the index.
-            "train_deps": " ".join(member["train_deps"]),
+            "train_deps": " ".join(member.train_deps),
             "python": python,
         }
         for member in members
-        for python in member["pythons"]
+        for python in member.pythons
     ]
 
 
@@ -260,12 +317,12 @@ class Candidates(NamedTuple):
     every table unreported.
     """
 
-    publishing: list[dict]
-    skipped: list[dict]
-    unreachable: list[dict]
+    publishing: list[IndexedMember]
+    skipped: list[IndexedMember]
+    unreachable: list[IndexedMember]
 
 
-def release_candidates(lane: list[dict] | None = None) -> Candidates:
+def release_candidates(lane: list[Member] | None = None) -> Candidates:
     """Asks the index about every lane member and sorts them by what should happen.
 
     Args:
@@ -275,10 +332,8 @@ def release_candidates(lane: list[dict] | None = None) -> Candidates:
             workspace pyproject and walks the dependency graph.
 
     Returns:
-        A `Candidates`, in which every member lands in exactly one list. All carry the
-        member dicts from `pypi_members` plus `pypi_latest` and `index_unreachable`; a
-        skipped member also carries the `reason` it was passed over. `release_plan` turns
-        each unreachable member into an error.
+        A `Candidates`, in which every member lands in exactly one list, each an
+        `IndexedMember`. `release_plan` turns each unreachable member into an error.
 
     Consequences worth naming:
     - a version already on PyPI is dropped here, so a re-run never attempts to
@@ -287,43 +342,51 @@ def release_candidates(lane: list[dict] | None = None) -> Candidates:
     - a member trailing the index (`ghga-validator` declares 1.1.1 while PyPI serves
       1.2.0, because upstream kept releasing) is *skipped*, not an error.
     """
-    publishing, skipped, unreachable = [], [], []
+    # Built empty and filled in place: the field types make each `append` below a typed
+    # one, so a member can only be filed under a list it belongs in.
+    verdicts = Candidates(publishing=[], skipped=[], unreachable=[])
     for member in lane if lane is not None else pypi_members():
-        version = member["version"]
-        project = _pypi_project(member["package"])
+        version = member.version
+        project = _pypi_project(member.package)
         if not project["reachable"]:
-            unreachable.append(dict(member, pypi_latest=None, index_unreachable=True))
+            verdicts.unreachable.append(
+                IndexedMember.of(member, pypi_latest=None, index_unreachable=True)
+            )
             continue
-        member = dict(member, pypi_latest=project["latest"], index_unreachable=False)
+        indexed = IndexedMember.of(
+            member, pypi_latest=project["latest"], index_unreachable=False
+        )
         latest = project["latest"]
         if not version:
-            skipped.append(dict(member, reason="declares no version"))
+            verdicts.skipped.append(replace(indexed, reason="declares no version"))
         elif version in project["versions"]:
             # Catches the case `latest` cannot: a prerelease is on the index but is not
             # the latest *stable*.
-            skipped.append(dict(member, reason=f"{version} is already on the index"))
+            verdicts.skipped.append(
+                replace(indexed, reason=f"{version} is already on the index")
+            )
         elif latest and not _is_newer(version, latest):
-            skipped.append(
-                dict(member, reason=f"{version} is not above the released {latest}")
+            verdicts.skipped.append(
+                replace(indexed, reason=f"{version} is not above the released {latest}")
             )
         else:
-            publishing.append(member)
-    return Candidates(publishing, skipped, unreachable)
+            verdicts.publishing.append(indexed)
+    return verdicts
 
 
-def _publish_order(members: list[dict]) -> list[dict]:
+def _publish_order(members: list[MemberT]) -> list[MemberT]:
     """Sorts the release set so each member is published after the ones it depends on."""
-    by_path = {member["path"]: member for member in members}
+    by_path = {member.path: member for member in members}
     return sorted(
         members,
         key=lambda member: (
-            len([d for d in member["internal_deps"] if d in by_path]),
-            member["path"],
+            len([d for d in member.internal_deps if d in by_path]),
+            member.path,
         ),
     )
 
 
-def _find_member(target: str, members: list[dict]) -> dict | None:
+def _find_member(target: str, members: list[Member]) -> Member | None:
     """Locates one lane member by its path or its distribution name.
 
     Accepts both a distribution name (`hexkit`) and a path (`libs/hexkit`). Names are
@@ -332,16 +395,16 @@ def _find_member(target: str, members: list[dict]) -> dict | None:
     for running this script by hand.
     """
     for member in members:
-        if member["path"] == target:
+        if member.path == target:
             return member
     normalized_target_name = _canonical(target)
     for member in members:
-        if _canonical(member["package"]) == normalized_target_name:
+        if _canonical(member.package) == normalized_target_name:
             return member
     return None
 
 
-def _blocked_message(target: dict, blockers: list[dict]) -> str:
+def _blocked_message(target: Member, blockers: list[IndexedMember]) -> str:
     """Explains why one member cannot be released alone, and how else to release it.
 
     Both remedies are spelled out as tags that can be pushed as-is, the ordered one in
@@ -349,26 +412,25 @@ def _blocked_message(target: dict, blockers: list[dict]) -> str:
     """
     ordered = _publish_order(blockers)
     described = [
-        f"{m['package']} ({m['version']} declared, PyPI serves"
-        f" {m['pypi_latest'] or 'nothing'})"
+        f"{m.package} ({m.version} declared, PyPI serves {m.pypi_latest or 'nothing'})"
         for m in ordered
     ]
     named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
-    tags = ", ".join(f"{_canonical(m['package'])}/{m['version']}" for m in ordered)
+    tags = ", ".join(f"{_canonical(m.package)}/{m.version}" for m in ordered)
     return (
-        f"{target['package']}: cannot be released on its own — it depends on"
+        f"{target.package}: cannot be released on its own — it depends on"
         f" release candidate(s) {named}. Either push `pypi_sweep/x.y.z` to release"
         " the whole train dependencies-first, or release each dependency on its own tag"
         f" first, in this order: {tags}, then"
-        f" {_canonical(target['package'])}/{target['version']}."
+        f" {_canonical(target.package)}/{target.version}."
     )
 
 
 def _targeted_plan(
     target: str,
-    lane: list[dict],
+    lane: list[Member],
     candidates: Candidates,
-) -> tuple[list[dict], list[dict], list[str]]:
+) -> tuple[list[IndexedMember], list[IndexedMember], list[str]]:
     """Narrows a sweep to the single member a `name/x.y.z` tag named.
 
     Args:
@@ -391,32 +453,36 @@ def _targeted_plan(
     """
     member = _find_member(target, lane)
     if member is None:
-        known = ", ".join(sorted(m["package"] for m in lane))
+        known = ", ".join(sorted(m.package for m in lane))
         return [], [], [f"{target} is not a PyPI-lane member (lane: {known})"]
 
     publishing = candidates.publishing
-    selected = [m for m in publishing if m["path"] == member["path"]]
+    selected = [m for m in publishing if m.path == member.path]
     if not selected:
         # An unreachable index says nothing about whether this member needs releasing.
         # release_plan already reports that, so a second guess here would contradict it.
-        if any(m["path"] == member["path"] for m in candidates.unreachable):
+        if any(m.path == member.path for m in candidates.unreachable):
             return [], [], []
         # State why the target was not selected.
         reason = next(
-            (s["reason"] for s in candidates.skipped if s["path"] == member["path"]),
+            (
+                s.reason
+                for s in candidates.skipped
+                if s.path == member.path and s.reason
+            ),
             "it is not a release candidate",
         )
-        return [], [], [f"{member['package']}: nothing to publish — {reason}"]
+        return [], [], [f"{member.package}: nothing to publish — {reason}"]
 
-    blockers = [m for m in publishing if m["path"] in member["internal_deps"]]
+    blockers = [m for m in publishing if m.path in member.internal_deps]
     if blockers:
         return [], [], [_blocked_message(member, blockers)]
 
     # Candidates a sweep would have released but this targeted run excludes.
     deselected = [
-        dict(m, reason=f"the tag targeted {member['package']}")
+        replace(m, reason=f"the tag targeted {member.package}")
         for m in publishing
-        if m["path"] != member["path"]
+        if m.path != member.path
     ]
     return selected, deselected, []
 
@@ -443,12 +509,12 @@ def release_plan(target: str | None = None) -> dict:
     lane = pypi_members()
     candidates = release_candidates(lane)
     publishing, skipped = candidates.publishing, candidates.skipped
-    lane_paths = {member["path"] for member in lane}
+    lane_paths = {member.path for member in lane}
     errors = []
 
     for member in candidates.unreachable:
         errors.append(
-            f"{member['package']}: could not reach PyPI to establish what is already"
+            f"{member.package}: could not reach PyPI to establish what is already"
             f" released — refusing to plan a release against an unknown index"
         )
 
@@ -461,10 +527,10 @@ def release_plan(target: str | None = None) -> dict:
         skipped = [*skipped, *deselected]
 
     for member in publishing:
-        for dep in member["internal_deps"]:
+        for dep in member.internal_deps:
             if dep not in lane_paths:
                 errors.append(
-                    f"{member['package']}: internal dependency {dep} is not in the PyPI"
+                    f"{member.package}: internal dependency {dep} is not in the PyPI"
                     " lane, so consumers could never install it"
                 )
 
@@ -472,23 +538,23 @@ def release_plan(target: str | None = None) -> dict:
     # is built from the repo rather than resolved from the index. Derived after the
     # narrowing, so a targeted member's comes out empty on its own: nothing else ships in
     # that run, so every internal dependency resolves from PyPI.
-    release_member_paths = {member["path"] for member in publishing}
+    release_member_paths = {member.path for member in publishing}
     ordered = _publish_order(
         [
-            dict(
+            replace(
                 m,
-                train_deps=sorted(
-                    d for d in m["internal_deps"] if d in release_member_paths
+                train_deps=tuple(
+                    d for d in m.internal_deps if d in release_member_paths
                 ),
             )
             for m in publishing
         ]
     )
     return {
-        "members": ordered,
-        "paths": [member["path"] for member in ordered],
+        "members": [member.as_json() for member in ordered],
+        "paths": [member.path for member in ordered],
         "skipped": [
-            {"package": m["package"], "version": m["version"], "reason": m["reason"]}
+            {"package": m.package, "version": m.version, "reason": m.reason}
             for m in skipped
         ],
         "errors": errors,
@@ -577,7 +643,7 @@ def main(argv: list[str] | None = None) -> int:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
-        print(json.dumps(candidates.publishing))
+        print(json.dumps([m.as_json() for m in candidates.publishing]))
         return 0
 
     release_member_paths = set()
@@ -587,10 +653,14 @@ def main(argv: list[str] | None = None) -> int:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
             )
-        release_member_paths = {m["path"] for m in candidates.publishing}
+        release_member_paths = {m.path for m in candidates.publishing}
 
     members = pypi_members(args.paths, release_member_paths=release_member_paths)
-    print(json.dumps(members if args.members else matrix_cells(members)))
+    print(
+        json.dumps(
+            [m.as_json() for m in members] if args.members else matrix_cells(members)
+        )
+    )
     return 0
 
 
