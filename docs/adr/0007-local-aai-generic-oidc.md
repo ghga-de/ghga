@@ -1,6 +1,7 @@
 # ADR-0007 — Local AAI via a generic OIDC provider
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended 2026-09-04**: the premise no longer holds, both OPs
+  now ship (see below)
 - **Date:** 2026-06-30
 - **Deciders:** Leon Kuchenbecker
 
@@ -21,6 +22,17 @@ Ship a **generic, off-the-shelf OIDC provider** as a swappable `aai` subchart wi
 - **keycloak:** a more production-like self-hosted AAI option (LS Login is Keycloak-family),
   with Direct Access Grants for test token minting;
 - **external:** point `oidc_*` config at real LS Login (production).
+
+**Amended 2026-09-04 — premise falsified; both OPs now ship.** `ghga/test-oidc-provider`
+*was* migrated after all: it is a workspace member (`services/test-oidc-provider/`) with
+its own chart (`deploy/charts/test-oidc-provider/`), so "source not available in scope"
+under Alternatives is no longer true. The decision above stands and the two now coexist as
+profiles of the demo umbrella — the **demo** profile runs `mock-oauth2-server` via the
+`aai` subchart, the **test-bed** profile (`values-testbed.yaml`) disables `aai` and swaps
+in the original GHGA test OP, pointing the whole auth stack's `oidc_*` settings at it.
+That also retires the second Consequence below: the test OP's `POST /login` mints tokens
+non-interactively, so the BDD auth fixtures use it as-is rather than being re-pointed at
+the mock's token endpoint.
 
 ## Consequences
 - No dependency on an unavailable GHGA image; the local AAI is maintained config, not bespoke

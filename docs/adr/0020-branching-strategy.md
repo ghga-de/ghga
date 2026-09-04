@@ -1,6 +1,7 @@
 # ADR-0020 — Git Flow: `main` is the latest release, `dev` is the integration branch
 
-- **Status:** Proposed
+- **Status:** Proposed — **amended 2026-09-04**: still unimplemented, none of the
+  "Necessary changes" below have landed
 - **Date:** 2026-08-28
 - **Deciders:** Byron Himes
 
@@ -44,6 +45,10 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needs updating is the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
 
 ### Necessary changes
+
+> **Amended 2026-09-04 — none of this has landed; the ADR is not in force.**
+> Verified against the tree: there is no `dev` branch, locally or on the remote, and `main` is still the default branch; `ci.yaml`, `integration.yaml` and `dev-images.yaml` still trigger on `push: branches: [main]`; `release.yaml` still asserts "the commit is on main" ahead of lane routing; `security-scan.yaml` still opens its lockfile PR with `base: main`; `no-commit-to-branch` still guards `main` alone, with its "this repo has only `main`" comment intact; and both `scripts/affected_targets.py` and the justfile's `affected` recipe still default to `origin/main`.
+> The one place the repo already speaks as though `dev` existed is [ADR-0004](0004-versioning-and-release-by-tag.md), whose 2026-09-01 amendment moved the pre-release cut to `dev` — so until this ADR is accepted and implemented, or withdrawn, the ADR set asserts a branching model the repo does not have.
 
 **Branch**
 - Create `dev` from `main`.
