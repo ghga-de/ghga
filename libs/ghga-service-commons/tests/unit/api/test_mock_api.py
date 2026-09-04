@@ -24,6 +24,11 @@ import pytest
 from ghga_service_commons.api.mock_api import (
     ApiMock,
     endpoint,
+    fail_to_connect,
+    fail_with,
+    httpyexpect_body,
+    httpyexpect_error_handler,
+    in_sequence,
     respond,
     unconfigured,
 )
@@ -222,9 +227,72 @@ def test_respond_bodies():
     assert respond(200, content="text")(request).content == b"text"  # type: ignore[union-attr]
 
 
+def test_fail_with():
+    """`fail_with` raises the given error instead of answering."""
+    error = httpx2.ReadTimeout("Simulated network problem")
+    mock = ApiMock(base_url=BASE_URL)
+    mock.add(method="GET", path="/health", handler=fail_with(error))
+
+    with httpx2.Client(transport=mock.as_transport()) as client:
+        with pytest.raises(httpx2.ReadTimeout, match="Simulated network problem"):
+            client.get(f"{BASE_URL}/health")
+
+
+def test_fail_to_connect():
+    """`fail_to_connect` makes the API look unreachable."""
+    mock = ApiMock(base_url=BASE_URL)
+    mock.add(method="GET", path="/health", handler=fail_to_connect())
+
+    with httpx2.Client(transport=mock.as_transport()) as client:
+        with pytest.raises(httpx2.ConnectError, match="All connection attempts failed"):
+            client.get(f"{BASE_URL}/health")
+
+
+def test_in_sequence(secrets: SecretsApiMock):
+    """`in_sequence` answers consecutive requests with one handler each."""
+    secrets.on_get_secret = in_sequence(respond(202), respond(200, json="s3cret"))
+
+    with httpx2.Client(transport=secrets.as_transport()) as client:
+        assert client.get(f"{BASE_URL}/secrets/some-id").status_code == 202
+        assert client.get(f"{BASE_URL}/secrets/some-id").status_code == 200
+
+        with pytest.raises(AssertionError, match="Unexpected additional request"):
+            client.get(f"{BASE_URL}/secrets/some-id")
+
+
 def test_unconfigured_names_the_endpoint():
     """`unconfigured` says which handler to assign to answer the call."""
     request = httpx2.Request("GET", BASE_URL)
 
     with pytest.raises(AssertionError, match="`on_something`"):
         unconfigured("on_something")(request)
+
+
+def test_httpyexpect_body():
+    """`httpyexpect_body` builds the error body a GHGA service would send."""
+    assert httpyexpect_body("someError") == {
+        "exception_id": "someError",
+        "description": "",
+        "data": {},
+    }
+    assert httpyexpect_body("someError", "It failed.", {"id": "1"}) == {
+        "exception_id": "someError",
+        "description": "It failed.",
+        "data": {"id": "1"},
+    }
+
+
+def test_httpyexpect_error_handler():
+    """A router given the handler answers unmatched calls instead of raising."""
+    router: MockRouter[HttpException] = MockRouter(
+        exception_handler=httpyexpect_error_handler,
+        exceptions_to_handle=(HttpException,),
+    )
+    mock = ApiMock(base_url=BASE_URL, router=router)
+    mock.add(method="GET", path="/health")
+
+    with httpx2.Client(transport=mock.as_transport()) as client:
+        response = client.get(f"{BASE_URL}/does-not-exist")
+
+    assert response.status_code == 404
+    assert response.json()["exception_id"] == "pageNotFound"

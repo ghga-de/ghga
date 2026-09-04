@@ -35,11 +35,13 @@ from __future__ import annotations
 import re
 from collections.abc import Awaitable, Callable
 from functools import partial
+from json import dumps as json_dumps
 from typing import Any, overload
 
 import httpx2
 
 from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 
 __all__ = [
     "NO_BODY",
@@ -48,6 +50,11 @@ __all__ = [
     "MockedEndpoint",
     "ResponseHandler",
     "endpoint",
+    "fail_to_connect",
+    "fail_with",
+    "httpyexpect_body",
+    "httpyexpect_error_handler",
+    "in_sequence",
     "respond",
     "unconfigured",
 ]
@@ -234,6 +241,86 @@ def endpoint(
 ) -> Endpoint:
     """Declare an endpoint of an `ApiMock`. See `Endpoint`."""
     return Endpoint(method, path, default)
+
+
+def fail_to_connect(reason: str = "All connection attempts failed") -> ResponseHandler:
+    """Make a handler that simulates the API being unreachable."""
+
+    def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
+        """Refuse the connection."""
+        raise httpx2.ConnectError(reason, request=request)
+
+    return handler
+
+
+def fail_with(error: Exception) -> ResponseHandler:
+    """Make a handler that raises `error` instead of answering.
+
+    For `httpx2.RequestError` subclasses the client attaches the offending request on
+    the way out.
+    """
+
+    def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
+        """Raise instead of answering."""
+        raise error
+
+    return handler
+
+
+def httpyexpect_error_handler(
+    request: httpx2.Request, exception: HttpException
+) -> httpx2.Response:
+    """Custom error handler for httpyexpect types.
+
+    `MockRouter` raises for an unmatched request or an uncastable path variable.
+    Pass this to the router so those reach the service's error handling as responses:
+    ```
+    MockRouter(
+        exception_handler=httpyexpect_error_handler,
+        exceptions_to_handle=(HttpException,),
+    )
+    ```
+    """
+    body = httpyexpect_body(
+        exception.body.exception_id, exception.body.description, exception.body.data
+    )
+    # serialized leniently, because `data` does not always hold plain JSON: the 422 the
+    # router raises for an uncastable path variable reports the type it tried to cast to
+    return httpx2.Response(
+        exception.status_code,
+        content=json_dumps(body, default=str),
+        headers={"content-type": "application/json"},
+    )
+
+
+def httpyexpect_body(
+    exception_id: str, description: str = "", data: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Build the body of a httpyexpect response."""
+    return {
+        "exception_id": exception_id,
+        "description": description,
+        "data": data or {},
+    }
+
+
+def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
+    """Build a handler that answers consecutive requests with `handlers`, in order.
+
+    A request past the last handler is an error, so use this only where the number of
+    requests is part of the assertion.
+    """
+    remaining = list(handlers)
+
+    def handler(
+        request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response | Awaitable[httpx2.Response]:
+        """Answer with the next handler in line."""
+        if not remaining:
+            raise AssertionError(f"Unexpected additional request to {request.url}")
+        return remaining.pop(0)(request, **path_variables)
+
+    return handler
 
 
 def respond(
