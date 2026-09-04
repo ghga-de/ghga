@@ -775,7 +775,7 @@ class UploadController(UploadControllerPort):
         await self._update_box_stats(box_id=box_id, version=box_version)
         log.info("DB data updated for upload completion of file %s", file_id)
 
-    async def requeue_file_upload(
+    async def requeue_single_file_upload(
         self,
         *,
         box_id: UUID4,

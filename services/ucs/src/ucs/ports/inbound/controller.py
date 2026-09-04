@@ -366,7 +366,7 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def requeue_file_upload(
+    async def requeue_single_file_upload(
         self,
         *,
         box_id: UUID4,
