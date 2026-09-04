@@ -52,8 +52,7 @@ The core docs (architecture overview, ADRs, migration runbook) are listed in the
 
 - [docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md:
 how metadata and files flow.
-- [deploy/README.md](deploy/README.md) and [deploy/chart-system.md](deploy/chart-system.md):
-how the chart system works.
+- [deploy/README.md](deploy/README.md): how the chart system works.
 
 ## Development environment
 
