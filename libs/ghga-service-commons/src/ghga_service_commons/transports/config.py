@@ -15,21 +15,41 @@
 
 """Contains common configuration for different composite async httpx2 Transports."""
 
-from pydantic import Field, NonNegativeFloat, NonNegativeInt, PositiveInt
+from logging import getLogger
+
+from pydantic import (
+    Field,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveInt,
+)
 from pydantic_settings import BaseSettings
+
+log = getLogger(__name__)
+
+RETIRED_FIELD = "retry_after_applicable_for_num_requests"
+RETIRED_FIELD_MESSAGE = (
+    f"{RETIRED_FIELD} is ignored since 8.2.0 and will be removed in 9.0."
+)
 
 
 class RateLimitingTransportConfig(BaseSettings):
-    """Configuration options for a rate limiting HTTPTransport."""
+    """Configuration for a rate limiting HTTPTransport."""
 
-    per_request_jitter: NonNegativeFloat = Field(
+    min_request_interval: NonNegativeFloat = Field(
         default=0.0,
+        description="Minimum number of seconds between requests from one client."
+        + "If left at 0 some jitter is still added to pace concurrent requests.",
+    )
+    per_request_jitter: NonNegativeFloat = Field(
+        default=0.05,
         description="Max amount of jitter (in seconds) to add to each request.",
     )
     retry_after_applicable_for_num_requests: PositiveInt = Field(
         default=1,
-        description="Amount of requests after which the stored delay from a 429 response is ignored again. "
-        + "Can be useful to adjust if concurrent requests are fired in quick succession.",
+        deprecated=RETIRED_FIELD_MESSAGE,
+        description="Deprecated and no longer applicable. Remove from your config, "
+        + "will be removed in service-commons 9.0.0.",
     )
 
 
