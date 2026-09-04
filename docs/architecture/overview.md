@@ -1,9 +1,11 @@
 # GHGA Monorepo — Architecture Overview
 
-> Status: **Proposal / planning**. This document describes the target architecture for
-> consolidating GHGA's ~28 actively-maintained repositories into one polyglot monorepo.
-> The load-bearing decisions are captured as ADRs under [docs/adr/](../adr/) and the
+> Status: **Implemented**, and kept as the reference for the architecture it describes —
+> the consolidation of GHGA's ~28 actively-maintained repositories into one polyglot
+> monorepo. The load-bearing decisions are captured as ADRs under [docs/adr/](../adr/),
+> whose [index](../README.md#decisions-adrs) carries their current status, and the
 > step-by-step migration is in [docs/migration/runbook.md](../migration/runbook.md).
+> Where a section still reads as a plan, the ADRs are the current answer.
 
 ## 1. Goals & non-goals
 
