@@ -6,9 +6,9 @@
   **amended 2026-08-19**: the release set is decided against the index rather than a git
   diff, and the closure-train rule is narrowed to bumped dependencies (see below) —
   **amended 2026-08-25**: `ghga-arcticfreeze` and `ghga-jsonsubschema` named in the member
-  list, which had omitted them (see below) — **amended 2026-09-01**: pre-release cuts move to
-  `dev` and the branch gate becomes per-lane, following
-  [ADR-0020](0020-branching-strategy.md) (see below)
+  list, which had omitted them (see below) — **amended 2026-09-01**: a member-named tag
+  releases that member alone; sweeping the whole index gap moves to the reserved
+  `pypi_sweep` tag (see below)
 - **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18 / 2026-08-19 / 2026-08-25 / 2026-09-01
 - **Deciders:** Leon Kuchenbecker
 
@@ -92,24 +92,51 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - A pushed tag **`name/x.y.z`** publishes that component's wheel; CI asserts the tag matches
   the member's version at HEAD. Libraries release **on demand** — when an external consumer
   needs something or a tool release requires it.
-- The tag names the component; **what uploads is decided against the index** — every lane
-  member declaring a version above the latest one PyPI serves, ordered dependencies-first.
-  `release.yaml` asserts the tag, then delegates to `pypi-publish.yaml`, which owns that
-  plan. Nothing is diffed against a git ref: "did this commit bump it?" is a different
-  question, and one that misses a bump made weeks ago and never published. So the lane has
-  one implementation, a bump arriving through the mainline sync is picked up like any
-  other, a missed release repairs itself on the next run, a tag for a member already on the
-  index is a no-op, and re-running does not republish: the plan is re-derived from PyPI on
-  every run, so a version already there is dropped before any upload is attempted. Nothing
-  does this for TestPyPI — see the publish-targets entry below. A member *trailing* the
-  index (`ghga-validator` declares 1.1.1 while PyPI serves 1.2.0) is skipped, not an
-  error — being behind is a sync question, not a release one.
+- **What uploads is decided against the index** — every lane member declaring a version
+  above the latest one PyPI serves, ordered dependencies-first. `release.yaml` asserts the
+  tag, then delegates to `pypi-publish.yaml`, which owns that plan. Nothing is diffed
+  against a git ref: "did this commit bump it?" is a different question, and one that
+  misses a bump made weeks ago and never published. So the lane has one implementation, a
+  bump arriving through the mainline sync is picked up like any other, a missed release
+  repairs itself on the next run, and re-running does not republish: the plan is re-derived
+  from PyPI on every run, so a version already there is dropped before any upload is
+  attempted. Nothing does this for TestPyPI — see the publish-targets entry below. A member
+  *trailing* the index (`ghga-validator` declares 1.1.1 while PyPI serves 1.2.0) is skipped,
+  not an error — being behind is a sync question, not a release one.
+- **The tag chooses how much of that gap closes** (amended 2026-09-01). `release.yaml`'s
+  `resolve` derives a *mode* from the tag name and forwards it:
+  - **`name/x.y.z` — targeted.** That member alone, whatever else the index is behind on.
+    This is the common case: releasing one library should not drag along someone's
+    unrelated pending work.
+  - **`pypi_sweep/x.y.z` — sweep.** The reserved name is not a member, so it selects
+    nothing and the plan takes the whole gap, dependencies first. The version component is
+    a label; nothing checks it against a declared version, because there is none to check.
+
+  Originally *every* pypi-lane tag swept, and the tag only triggered the run. That made a
+  single-library release impossible to express. The two failure modes swap places rather
+  than disappearing, so each mode is loud about its own: a sweep publishes more than the
+  tag names (by design, and the plan summary lists it), while a targeted tag naming a
+  member with nothing to publish **fails** instead of exiting green on a no-op — a tag that
+  asked for a specific release that cannot happen is a mistake worth surfacing, unlike the
+  same member being silently dropped from a sweep.
 - **Closure-train rule** (amended 2026-08-19): a published tool must not induce untested
   combinations on user machines. `ghga-connector`'s internal closure
   (`ghga-service-commons`, `hexkit`) is released **in the same train** when those libraries
   are themselves candidates, dependencies first, so the tool never reaches the index before
   a version it needs. `ghga-validator` and `ghga-transpiler` have no internal dependencies —
   their trains are trivially themselves.
+
+  A targeted tag cannot honour that rule by widening the train — it exists to publish one
+  member — so it **refuses** instead (amended 2026-09-01). If any member of the target's
+  transitive closure is a release candidate, the plan errors and names both ways out:
+  `pypi_sweep/x.y.z` for the whole train, or the dependencies on their own tags first, in
+  dependency order. The refusal is strict rather than pin-aware: `ghga-connector` pins
+  `hexkit[s3]==9.0.1` exactly, so releasing it against an unpublished hexkit bump would put
+  an *uninstallable* wheel on PyPI, while `schemapack`'s `ghga-arcticfreeze >=1.0, <2` would
+  merely ship a combination nothing tested. Only the first is a hard breakage, but
+  distinguishing them at release time buys a worse guarantee for more machinery, and the
+  remedy is the same either way. There is no override — nothing published can be
+  unpublished, so the escape hatch is the part most likely to be misused under pressure.
 
   Two things the original rule asked for are deliberately **not** done:
 
@@ -165,10 +192,10 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   whole job. The two indexes hold **separate** trusted-publisher
   entries, matched on owner, repository, workflow filename and environment — a mismatch
   reports only `invalid-publisher`, so both sides change together. The lane has **one
-  entrance**: `release.yaml` routes `name/x.y.z` tags to it via `workflow_call`, so every
-  publish has passed `resolve` (commit on `main`, CI green, tag matching the declared
-  version). `pypi-publish.yaml` declares no `workflow_dispatch` of its own — a second
-  entrance would bypass all three.
+  entrance**: `release.yaml` routes `name/x.y.z` and `pypi_sweep/x.y.z` tags to it via
+  `workflow_call`, so every publish has passed `resolve` (commit on `main`, CI green, and —
+  for a member-named tag — the tag matching the declared version). `pypi-publish.yaml`
+  declares no `workflow_dispatch` of its own — a second entrance would bypass those checks.
 - Local development builds use the same Dockerfile/stamping path with a dev placeholder
   version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
   transfers.

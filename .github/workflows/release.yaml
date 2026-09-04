@@ -1,9 +1,15 @@
 # Release — two lanes (revised ADR-0004):
 #   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
 #                  platform version (lockstep; libs embedded from source, never PyPI).
-#   name/x.y.z  -> PYPI lane: the tag triggers the run, it does not select what ships. No
-#                  inputs are forwarded, so pypi-publish.yaml re-derives the set from the
-#                  index and publishes every lane member ahead of it, dependencies first.
+#   name/x.y.z  -> PYPI lane, TARGETED: that member alone. pypi-publish.yaml refuses if a
+#                  member of its own closure is a release candidate too — publishing it
+#                  then would put it on PyPI against library versions the index does not
+#                  serve — and names both ways out: sweep, or release the dependencies on
+#                  their own tags first.
+#   pypi_sweep/x.y.z -> PYPI lane, SWEEP: the tag selects nothing. pypi-publish.yaml
+#                  re-derives the set from the index and publishes every lane member ahead
+#                  of it, dependencies first. The version component is a label; it names
+#                  no member and is not checked against one.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
@@ -33,7 +39,7 @@ name: release
 on:
   push:
     tags:
-      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0, pypi_sweep/1.0.0
   workflow_dispatch:
     inputs:
       ref:
@@ -75,6 +81,7 @@ jobs:
       actions: read # to read this commit's CI run conclusion
     outputs:
       lane: ${{ steps.route.outputs.lane }}
+      mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
       images: ${{ steps.route.outputs.images }}
@@ -176,10 +183,18 @@ jobs:
             echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
             exit 1
           fi
-          if [ "$name" = "ghga" ]; then lane=platform; else lane=pypi; fi
+          # The name also carries the pypi lane's MODE. `pypi_sweep` means "publish every
+          # member the index is behind on". Any other name names one member, and publishes
+          # that member alone. Platform tags have no mode.
+          case "$name" in
+            ghga)       lane=platform; mode= ;;
+            pypi_sweep) lane=pypi;     mode=sweep ;;
+            *)          lane=pypi;     mode=targeted ;;
+          esac
           echo "name=$name"       >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "lane=$lane"       >> "$GITHUB_OUTPUT"
+          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
           # Platform image set = services/* + frontend defaults, plus tools that opt in
           # via [tool.ghga] (ADR-0014 directory defaults + explicit markers). Convention:
           # every image member's console script is named exactly like its distribution,
@@ -190,9 +205,13 @@ jobs:
           echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
       # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
       # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
-      # release nobody made.
+      # release nobody made. It is also what rejects a tag that routing sent to this lane
+      # but that names nothing at all (`clown/1.0.0`).
+      #
+      # Targeted tags only: a sweep deliberately names no member, so there is nothing here
+      # for it to match against.
       - name: Check the tag against the member it names
-        if: ${{ steps.route.outputs.lane == 'pypi' }}
+        if: ${{ steps.route.outputs.mode == 'targeted' }}
         env:
           NAME: ${{ steps.route.outputs.name }}
           VERSION: ${{ steps.route.outputs.version }}
@@ -553,7 +572,9 @@ jobs:
 
   # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
   #
-  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests. The mode says
+  # whether the tag selects one member or none; `package` is read only in targeted mode,
+  # where `resolve` has already asserted it names a real member at the version tagged.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
@@ -563,3 +584,6 @@ jobs:
       # caller grants.
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
+    with:
+      mode: ${{ needs.resolve.outputs.mode }}
+      package: ${{ needs.resolve.outputs.name }}
