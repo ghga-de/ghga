@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from functools import partial
-from inspect import signature
+from inspect import Parameter, signature
 from typing import Any, Generic, TypeVar, cast, get_type_hints
 
 import httpx2
@@ -34,6 +34,9 @@ __all__ = [
 ]
 
 BRACKET_PATTERN = re.compile(r"{.*?}")
+
+# The parameter kinds that never correspond to a single path variable.
+VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
 
 
 def _compile_regex_url(path: str) -> str:
@@ -66,12 +69,38 @@ def _url_to_match(request: httpx2.Request) -> str:
 def _get_signature_info(endpoint_function: Callable) -> dict[str, Any]:
     """Retrieve the typed parameter info from function signature minus return type.
 
+    Variadic types are not parsed for type coercion later on.
+
     This function is not intended to be used outside the module.
     """
-    signature_parameters: dict[str, Any] = get_type_hints(endpoint_function)
-    if "return" in signature_parameters:
-        signature_parameters.pop("return")
-    return signature_parameters
+    parameters = signature(endpoint_function).parameters
+    return {
+        name: hint
+        for name, hint in get_type_hints(endpoint_function).items()
+        if name in parameters and parameters[name].kind not in VARIADIC_KINDS
+    }
+
+
+def _listed(names: set[str]) -> str:
+    """Quote the names and put them in a stable order, ready to go into a message.
+
+    This function is not intended to be used outside the module.
+    """
+    return ", ".join(f"'{name}'" for name in sorted(names))
+
+
+def _accepts_path_variables(endpoint_function: Callable) -> bool:
+    """Whether the endpoint function collects the path variables it does not name.
+
+    Exists so we can have generic reusable endpoints in tests that do not consume
+    all the path parameters given.
+
+    This function is not intended to be used outside the module.
+    """
+    return any(
+        parameter.kind is Parameter.VAR_KEYWORD
+        for parameter in signature(endpoint_function).parameters.values()
+    )
 
 
 class RegisteredEndpoint(BaseModel):
@@ -80,6 +109,7 @@ class RegisteredEndpoint(BaseModel):
     url_pattern: str
     endpoint_function: Callable
     signature_parameters: dict[str, Any]
+    accepts_path_variables: bool
 
 
 ExpectedExceptionTypes = TypeVar("ExpectedExceptionTypes", bound=Exception)
@@ -98,6 +128,11 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     The only parameter types allowed in the endpoint functions are primitives
     that can be stored in the url string: int, float, str, bool, None, and complex.
     The one exception is "request", which will be passed in automatically if specified.
+
+    An endpoint function doesn't have to specify its path parameters in order
+    to access them. You may instead collect path parameters in a single dictionary
+    by specifying `**path_variables` in the endpoint function signature. That
+    enables reusing the endpoint function with paths containing differing parameters.
 
     Patterns are matched against the request URL without its query string, so an
     endpoint serves the calls to its path whether they carry query parameters or not.
@@ -162,7 +197,11 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         """
         all_parameters = signature(endpoint_function).parameters
 
-        for parameter in all_parameters:
+        for parameter, parameter_info in all_parameters.items():
+            if parameter_info.kind in VARIADIC_KINDS:
+                # variadic parameters are ignored here and checked in
+                #  _ensure_decorator_and_endpoint_parameters_match instead
+                continue
             if parameter not in signature_parameters:
                 raise TypeError(
                     f"Parameter '{parameter}' in '{endpoint_function.__name__}' is "
@@ -171,7 +210,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
 
     @staticmethod
     def _ensure_decorator_and_endpoint_parameters_match(
-        path: str, signature_parameters: dict[str, Any]
+        path: str,
+        signature_parameters: dict[str, Any],
+        accepts_path_variables: bool = False,
     ):
         """Verify consistency between path in path decorator and the decorated function.
 
@@ -179,20 +220,39 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
             path: the path specified by the MockRouter decorator.
             signature_parameters:
                 A dict containing type information for the endpoint function's parameters.
+            accepts_path_variables:
+                Whether the endpoint function collects the path variables it does not
+                name in a `**kwargs` parameter. The path may then declare variables that
+                the signature does not, but not the other way around.
 
         Raises:
-            TypeError: When there is a mismatch between the path and the function parameters.
+            TypeError:
+                When there is a mismatch between the path and the function parameters,
+                naming the variables or parameters that caused it.
         """
         endpoint_parameters = {
             param for param in signature_parameters if param != "request"
         }
-        # get set of parameters from path with brackets stripped
-        matches = {param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)}
+        # the variables the path declares, with the brackets stripped
+        path_variables = {
+            param.strip("{}") for param in re.findall(BRACKET_PATTERN, path)
+        }
 
-        if matches != endpoint_parameters:
+        missing_variables = endpoint_parameters - path_variables
+        unnamed_variables = path_variables - endpoint_parameters
+
+        complaints: list[str] = []
+        if missing_variables:
+            complaints.append(f"{_listed(missing_variables)} not declared by the path")
+        if unnamed_variables and not accepts_path_variables:
+            complaints.append(
+                f"{_listed(unnamed_variables)} not taken by any parameter"
+            )
+
+        if complaints:
             raise TypeError(
                 f"Path variables for path '{path}' do not match the "
-                + "function it decorates"
+                + f"function it decorates: {', '.join(complaints)}"
             )
 
     def _add_endpoint(
@@ -210,6 +270,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
             url_pattern=url_pattern,
             endpoint_function=endpoint_function,
             signature_parameters=signature_parameters,
+            accepts_path_variables=_accepts_path_variables(endpoint_function),
         )
 
         self._methods[method].append(registered_endpoint)
@@ -222,7 +283,9 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         """
         signature_parameters: dict[str, Any] = _get_signature_info(endpoint_function)
         self._ensure_all_parameters_are_typed(endpoint_function, signature_parameters)
-        self._ensure_decorator_and_endpoint_parameters_match(path, signature_parameters)
+        self._ensure_decorator_and_endpoint_parameters_match(
+            path, signature_parameters, _accepts_path_variables(endpoint_function)
+        )
 
     def _base_endpoint_wrapper(
         self, path: str, method: str, endpoint_function: Callable
@@ -261,6 +324,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
     def _convert_parameter_types(
         parsed_url_parameters: dict[str, str],
         signature_parameters: dict[str, Any],
+        accepts_path_variables: bool,
         request: httpx2.Request,
     ) -> dict[str, Any]:
         """Get type info for function parameters.
@@ -276,10 +340,16 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
                 request still in string format (values).
             signature_parameters:
                 A dict containing type information for the endpoint function's parameters.
+            accepts_path_variables:
+                Whether the endpoint function collects the path variables it does not
+                name in a `**kwargs` parameter.
             request:
                 The request object.
 
         Raises:
+            TypeError:
+                When a path variable has no parameter to go into. This is checked on endpoint
+                registration rules, but can come up for endpoints assembled by hand.
             HttpException:
                 (with status 422) when a string value in the request URL cannot
                 be converted/cast to the type specified by the type-hint for the
@@ -288,6 +358,16 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         # type-cast based on type-hinting info
         typed_parameters: dict[str, Any] = {}
         for parameter_name, value in parsed_url_parameters.items():
+            if parameter_name not in signature_parameters:
+                if not accepts_path_variables:
+                    raise TypeError(
+                        f"There path parameter '{parameter_name}' doesn't match any of"
+                        + " the function parameters for the endpoint function assigned"
+                        + f" to path '{request.url.path}'."
+                    )
+                typed_parameters[parameter_name] = value
+                continue
+
             parameter_type = signature_parameters[parameter_name]
 
             if parameter_type is not str:
@@ -373,6 +453,7 @@ class MockRouter(Generic[ExpectedExceptionTypes]):
         typed_parameters = self._convert_parameter_types(
             parsed_url_parameters=parsed_url_parameters,
             signature_parameters=endpoint.signature_parameters,
+            accepts_path_variables=endpoint.accepts_path_variables,
             request=request,
         )
 
