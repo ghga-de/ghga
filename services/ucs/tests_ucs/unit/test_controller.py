@@ -2877,18 +2877,20 @@ async def test_requeue_file_box_already_archived(rig: JointRig):
         await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=uuid4())
 
 
-async def test_requeue_file_if_file_not_failed(rig: JointRig):
+@pytest.mark.parametrize(
+    "state",
+    ["init", "inbox", "cancelled", "interrogated", "awaiting_archival", "archived"],
+)
+async def test_requeue_file_if_file_not_failed(rig: JointRig, state: FileUploadState):
     """Test that `requeue_single_file_upload()` raises a FileUploadStateError if
     the FileUpload is not in the `"failed"` state.
     """
     box_id = await rig.create_default_box()
-    file_id, _ = await rig.controller.initiate_file_upload(
-        box_id=box_id,
-        alias="test_file",
-        decrypted_size=DECRYPTED_SIZE,
-        encrypted_size=ENCRYPTED_SIZE,
-        part_size=PART_SIZE,
-    )
+    file_id = uuid4()
+
+    file_upload = make_file_upload(file_id=file_id, state=state)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
 
     with pytest.raises(UploadControllerPort.FileUploadStateError):
         await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
