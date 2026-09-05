@@ -18,15 +18,17 @@
 import logging
 from dataclasses import dataclass
 from unittest.mock import AsyncMock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
 
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
 from tests_ucs.fixtures import ConfigFixture, utils
 from ucs.adapters.inbound.fastapi_ import http_exceptions
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
+from ucs.core.models import BoxRequeueResult
 from ucs.inject import prepare_rest_app
 from ucs.ports.inbound.controller import UploadControllerPort
 
@@ -198,7 +200,7 @@ async def test_get_box_uploads_response_format(
     token_header = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
     url = f"/boxes/{TEST_BOX_ID}/uploads"
 
-    # Build two mock file uploads with different aliases
+    # Build two mock FileUploads with different aliases
     file_upload_a = utils.make_file_upload(file_id=TEST_FILE_ID)
     file_upload_a.alias = "test0.bam"
     file_upload_a.box_id = TEST_BOX_ID
@@ -314,7 +316,7 @@ async def test_get_box_uploads_invalid_params(
 async def test_create_file_upload_endpoint_auth(
     config: ConfigFixture, app_fixture: AppFixture
 ):
-    """Test that the POST file upload endpoint returns a 401 if auth is not
+    """Test that the POST FileUpload endpoint returns a 401 if auth is not
     supplied or is invalid, a 403 if a structurally valid auth token is supplied
     but doesn't match the requested resource, and a 201 if the request succeeds.
     """
@@ -1232,3 +1234,273 @@ async def test_delete_box_endpoint_error_handling(
     token_header = utils.delete_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
     response = await rest_client.delete(f"/boxes/{TEST_BOX_ID}", headers=token_header)
     assert response.json()["description"] == str(http_error)
+
+
+async def test_requeue_file_successful(config: ConfigFixture, app_fixture: AppFixture):
+    """Test the happy path case for the endpoint for requeueing a single FileUpload.
+
+    Use a mock core call and verify that the endpoint returns the correct status code.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.requeue_single_file_upload.return_value = None
+    token_header = utils.requeue_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+
+    response = await rest_client.post(
+        f"/rpc/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}/requeue",
+        headers=token_header,
+    )
+
+    assert response.status_code == 204
+    core_mock.requeue_single_file_upload.assert_awaited_once_with(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID
+    )
+
+
+async def test_requeue_file_auth(config: ConfigFixture, app_fixture: AppFixture):
+    """Test the status codes returned when no WOT and an invalid WOT are used for
+    the endpoint for requeueing a single FileUpload.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.requeue_single_file_upload.return_value = None
+    url = f"/rpc/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}/requeue"
+
+    # No auth token = 401
+    response = await rest_client.post(url)
+    assert response.status_code == 401
+
+    # Invalid auth token = 401
+    response = await rest_client.post(url, headers=INVALID_HEADER)
+    assert response.status_code == 401
+
+    # Correct work type but wrong box_id in token
+    wrong_box_token_header = utils.requeue_file_token_header(
+        file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(url, headers=wrong_box_token_header)
+    assert response.status_code == 403
+
+    # Correct work type but wrong file_id in token
+    wrong_file_token_header = utils.requeue_file_token_header(
+        box_id=TEST_BOX_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(url, headers=wrong_file_token_header)
+    assert response.status_code == 403
+
+    # Correct claims but wrong work type (use a DeleteFileWorkOrder token)
+    wrong_work_type_token_header = utils.delete_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(url, headers=wrong_work_type_token_header)
+    assert response.status_code == 401
+
+    # Correct token
+    good_token_header = utils.requeue_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(url, headers=good_token_header)
+    assert response.status_code == 204
+
+
+@pytest.mark.parametrize(
+    "core_error, http_error",
+    [
+        (
+            UploadControllerPort.BoxNotFoundError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
+        ),
+        (
+            UploadControllerPort.BoxStateError(
+                box_id=TEST_BOX_ID, box_state="archived"
+            ),
+            http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="archived"),
+        ),
+        (
+            UploadControllerPort.FileUploadNotFound(file_id=TEST_FILE_ID),
+            http_exceptions.HttpFileUploadNotFoundError(file_id=TEST_FILE_ID),
+        ),
+        (
+            UploadControllerPort.FileUploadStateError(
+                file_id=TEST_FILE_ID, details="not failed"
+            ),
+            http_exceptions.HttpFileUploadStateError(file_id=TEST_FILE_ID),
+        ),
+        (
+            UploadControllerPort.S3ObjectMissingError(
+                bucket_id="test-bucket", object_id=TEST_FILE_ID
+            ),
+            http_exceptions.HttpRequeueError(file_id=TEST_FILE_ID, status_code=404),
+        ),
+        (
+            UploadControllerPort.RequeueError("Cannot requeue"),
+            http_exceptions.HttpRequeueError(file_id=TEST_FILE_ID, status_code=409),
+        ),
+        (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
+    ],
+    ids=[
+        "BoxNotFound",
+        "BoxStateError",
+        "FileUploadNotFound",
+        "FileUploadStateError",
+        "S3ObjectMissingError",
+        "RequeueError",
+        "InternalError",
+    ],
+)
+async def test_requeue_file_error_translation(
+    config: ConfigFixture,
+    core_error: Exception,
+    http_error: HttpCustomExceptionBase,
+    app_fixture: AppFixture,
+):
+    """Verify that the endpoint for requeueing a single FileUpload translates
+    errors like it should.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.requeue_single_file_upload.side_effect = core_error
+    token_header = utils.requeue_file_token_header(
+        box_id=TEST_BOX_ID, file_id=TEST_FILE_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(
+        f"/rpc/boxes/{TEST_BOX_ID}/uploads/{TEST_FILE_ID}/requeue",
+        headers=token_header,
+    )
+    assert response.json()["description"] == str(http_error)
+    assert response.json()["exception_id"] == http_error.exception_id != ""
+
+
+async def test_requeue_box_successful(config: ConfigFixture, app_fixture: AppFixture):
+    """Verify that the correct payload and status code are returned from the
+    endpoint for requeueing all FileUploads in a box.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    requeued_ids = [uuid4(), uuid4()]
+    skipped_ids = [uuid4(), uuid4()]
+    core_mock.requeue_all_box_uploads.return_value = BoxRequeueResult(
+        requeued=requeued_ids, skipped=skipped_ids
+    )
+    token_header = utils.requeue_all_failed_token_header(box_id=TEST_BOX_ID, jwk=rs_jwk)
+
+    response = await rest_client.post(
+        f"/rpc/boxes/{TEST_BOX_ID}/requeue", headers=token_header
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "requeued": [str(x) for x in requeued_ids],
+        "skipped": [str(x) for x in skipped_ids],
+    }
+    core_mock.requeue_all_box_uploads.assert_awaited_once_with(box_id=TEST_BOX_ID)
+
+
+async def test_requeue_box_empty_lists(config: ConfigFixture, app_fixture: AppFixture):
+    """Verify that the correct payload and status code are returned from the
+    endpoint for requeueing all FileUploads in a box when both lists in the
+    returned BoxRequeueResult are empty.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.requeue_all_box_uploads.return_value = BoxRequeueResult(
+        requeued=[], skipped=[]
+    )
+    token_header = utils.requeue_all_failed_token_header(box_id=TEST_BOX_ID, jwk=rs_jwk)
+
+    response = await rest_client.post(
+        f"/rpc/boxes/{TEST_BOX_ID}/requeue", headers=token_header
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"requeued": [], "skipped": []}
+    core_mock.requeue_all_box_uploads.assert_awaited_once_with(box_id=TEST_BOX_ID)
+
+
+async def test_requeue_box_auth(config: ConfigFixture, app_fixture: AppFixture):
+    """Test the status codes returned when no WOT and an invalid WOT are used for
+    the endpoint for requeueing all FileUploads in a box.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.requeue_all_box_uploads.return_value = BoxRequeueResult(
+        requeued=[], skipped=[]
+    )
+    url = f"/rpc/boxes/{TEST_BOX_ID}/requeue"
+
+    # No auth token = 401
+    response = await rest_client.post(url)
+    assert response.status_code == 401
+
+    # Invalid auth token = 401
+    response = await rest_client.post(url, headers=INVALID_HEADER)
+    assert response.status_code == 401
+
+    # Correct work type but wrong box_id in token
+    wrong_box_token_header = utils.requeue_all_failed_token_header(jwk=rs_jwk)
+    response = await rest_client.post(url, headers=wrong_box_token_header)
+    assert response.status_code == 403
+
+    # Correct box_id but wrong work type (use a DeleteFileBoxWorkOrder token)
+    wrong_work_type_token_header = utils.delete_file_box_token_header(
+        box_id=TEST_BOX_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(url, headers=wrong_work_type_token_header)
+    assert response.status_code == 401
+
+    # Correct token
+    good_token_header = utils.requeue_all_failed_token_header(
+        box_id=TEST_BOX_ID, jwk=rs_jwk
+    )
+    response = await rest_client.post(url, headers=good_token_header)
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "core_error, http_error",
+    [
+        (
+            UploadControllerPort.BoxNotFoundError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpBoxNotFoundError(box_id=TEST_BOX_ID),
+        ),
+        (
+            UploadControllerPort.BoxStateError(
+                box_id=TEST_BOX_ID, box_state="archived"
+            ),
+            http_exceptions.HttpBoxStateError(box_id=TEST_BOX_ID, box_state="archived"),
+        ),
+        (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
+    ],
+    ids=[
+        "BoxNotFound",
+        "BoxStateError",
+        "InternalError",
+    ],
+)
+async def test_requeue_box_error_translation(
+    config: ConfigFixture,
+    core_error: Exception,
+    http_error: HttpCustomExceptionBase,
+    app_fixture: AppFixture,
+):
+    """Verify that the endpoint for requeueing all FileUploads in a box translates
+    errors like it should.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.requeue_all_box_uploads.side_effect = core_error
+    token_header = utils.requeue_all_failed_token_header(box_id=TEST_BOX_ID, jwk=rs_jwk)
+    response = await rest_client.post(
+        f"/rpc/boxes/{TEST_BOX_ID}/requeue", headers=token_header
+    )
+    assert response.json()["description"] == str(http_error)
+    assert response.json()["exception_id"] == http_error.exception_id != ""
