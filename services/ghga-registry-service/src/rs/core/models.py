@@ -271,7 +271,8 @@ class UpdateUploadBoxRequest(BaseModel):
     force: bool = Field(
         default=False,
         description="Force the state change even if prerequisites are not met."
-        " Only relevant when locking a box; ignored for all other state changes.",
+        " Only relevant when locking a box, in which case any ongoing uploads will"
+        " be allowed to continue, but other changes will become prohibited.",
     )
 
     @model_validator(mode="after")

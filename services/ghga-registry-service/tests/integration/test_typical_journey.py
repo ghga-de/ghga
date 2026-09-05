@@ -24,6 +24,7 @@ import pytest
 from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
 from hexkit.utils import now_utc_ms_prec
+from rs.constants import EXC_ID_BOX_NOT_FOUND
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort
@@ -102,7 +103,7 @@ async def test_typical_journey(joint_fixture: JointFixture):
 
     # Brief detour: Ensure getting files list raises an error if the FUB doesn't exist
     file_box_api.on_get_file_upload_list = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     with pytest.raises(FileBoxClientPort.OperationError):
         await rdub_manager.get_upload_box_files(
