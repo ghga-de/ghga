@@ -1116,7 +1116,9 @@ async def test_upload_activity_deleted_after_completion_failure(
 
     # Deleting the upload should clean up the activity entry
     async with set_correlation_id(uuid4()):
-        await controller.remove_file_upload(box_id=box_id, file_id=file_id)
+        await controller.remove_file_upload(
+            box_id=box_id, file_id=file_id, require_unlocked=False
+        )
 
     assert upload_activity_collection.find_one({"_id": file_id}) is None
 

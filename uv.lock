@@ -4109,7 +4109,7 @@ wheels = [
 
 [[package]]
 name = "ucs"
-version = "15.2.0"
+version = "16.0.0"
 source = { editable = "services/ucs" }
 dependencies = [
     { name = "crypt4gh" },

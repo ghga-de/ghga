@@ -34,17 +34,26 @@ class UploadControllerPort(ABC):
     class UploadError(RuntimeError):
         """Base error class for all upload errors"""
 
-    class IncompleteUploadsError(UploadError):
+    class IncompleteOrFailedError(UploadError):
         """Raised when trying to lock or archive a FileUploadBox for which
-        at least one incomplete FileUpload exists.
+        at least one FileUpload exists which either failed the interrogation
+        step or is still being uploaded to the inbox. Using the `force` boolean
+        will override this error.
         """
 
-        def __init__(self, *, box_id: UUID4, file_ids: list[tuple[UUID4, str]]):
+        def __init__(
+            self,
+            *,
+            box_id: UUID4,
+            incomplete_uploads: list[tuple[UUID4, str]],
+            need_attention: list[tuple[UUID4, str]],
+        ):
             self.box_id = box_id
-            self.file_ids = file_ids
+            self.incomplete_uploads = incomplete_uploads
+            self.need_attention = need_attention
             msg = (
-                f"Cannot lock or archive box {box_id} because these"
-                + f" files are incomplete: {file_ids}"
+                f"Cannot lock or archive box {box_id} because some files are"
+                + " still being uploaded or need attention."
             )
             super().__init__(msg)
 
@@ -336,11 +345,13 @@ class UploadControllerPort(ABC):
         with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
         is stored in the database.
 
+        If either of the object size or checksum verification steps fail, the object
+        will be removed from the S3 inbox bucket.
+
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `FileUploadStateError` if the FileUpload is in a cancelled or failed state.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `BoxStateError` if the box exists but is locked.
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
@@ -352,8 +363,12 @@ class UploadControllerPort(ABC):
         ...
 
     @abstractmethod
-    async def remove_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+    async def remove_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
+    ) -> None:
         """Remove a file upload and cancel the ongoing upload if applicable.
+
+        If `require_unlocked` is True, the box must be unlocked to complete the operation.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
@@ -364,6 +379,7 @@ class UploadControllerPort(ABC):
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         ...
 
@@ -435,8 +451,9 @@ class UploadControllerPort(ABC):
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
-        - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
-        - `UploadAbortError` if force is True and aborting an in-progress upload fails.
+        - `IncompleteOrFailedError` if force=False and there are files still uploading
+          or that failed interrogation.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         ...
 
@@ -459,7 +476,7 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
-        - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
+        - `IncompleteOrFailedError` if the FileUploadBox has incomplete FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         ...
