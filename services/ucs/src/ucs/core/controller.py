@@ -839,7 +839,11 @@ class UploadController(UploadControllerPort):
 
         # Get all FileUploads for this box that failed interrogation
         potential_uploads = self._file_upload_dao.find_all(
-            mapping={"state": "failed", "decrypted_sha256": {"$ne": None}},
+            mapping={
+                "box_id": box_id,
+                "state": "failed",
+                "decrypted_sha256": {"$ne": None},
+            },
             sort=["alias"],
         )
 
