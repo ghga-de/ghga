@@ -3121,6 +3121,30 @@ async def test_requeue_box_success(rig: JointRig):
         assert untouched.id not in result.skipped
 
 
+async def test_requeue_box_only_touches_the_requested_box(rig: JointRig):
+    """Test that `requeue_all_box_uploads()` only requeues files belonging to the
+    box it was called for, and leaves failed files in other boxes alone.
+    """
+    target_box_id, target_file_id, _ = await _upload_and_fail(
+        rig, "target_file", "Checksum mismatch reported by FIS"
+    )
+    other_box_id, other_file_id, other_before = await _upload_and_fail(
+        rig, "other_file", "Checksum mismatch reported by FIS"
+    )
+    assert target_box_id != other_box_id
+
+    await sleep(MIN_SLEEP)
+    result = await rig.controller.requeue_all_box_uploads(box_id=target_box_id)
+
+    assert result.requeued == [target_file_id]
+    assert result.skipped == []
+
+    # The failed file in the other box must be untouched
+    other_after = await rig.file_upload_dao.get_by_id(other_file_id)
+    assert other_after.state == "failed"
+    assert other_after.model_dump() == other_before.model_dump()
+
+
 async def test_requeue_box_empty(rig: JointRig):
     """Test that when a box is empty, a BoxRequeueResult is still
     returned with both `requeued` and `skipped` empty.
