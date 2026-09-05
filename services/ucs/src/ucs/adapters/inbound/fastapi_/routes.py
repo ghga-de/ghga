@@ -694,8 +694,8 @@ async def requeue_all_failed_file_uploads(
 ) -> rest_models.RequeueAllFailedResponse:
     """Set every failed FileUpload in the box back to the 'inbox' state.
 
-    Files that never reached the inbox or whose object is gone from S3 are reported
-    in the `skipped` list with a reason instead of failing the whole operation.
+    Files whose object has already been deleted from S3 are reported in the `skipped`
+    list instead of failing the whole operation.
     Requires a `RequeueAllFailedWorkOrder` token.
     """
     if work_order.box_id != box_id:
