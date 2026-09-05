@@ -1493,9 +1493,9 @@ paths:
       description: 'Set every failed FileUpload in the box back to the ''inbox'' state.
 
 
-        Files that never reached the inbox or whose object is gone from S3 are reported
+        Files whose object has already been deleted from S3 are reported in the `skipped`
 
-        in the `skipped` list with a reason instead of failing the whole operation.
+        list instead of failing the whole operation.
 
         Requires a `RequeueAllFailedWorkOrder` token.'
       operationId: requeueAllFailedFileUploads
