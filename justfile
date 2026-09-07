@@ -88,28 +88,51 @@ hooks-update:
 # Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
 # collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the
-# members' own `[tool.pytest.ini_options]` anyway (auth-service's `testpaths`, say).
+# members' own `[tool.pytest.ini_options]` anyway (auth-service's `testpaths`, say). That
+# collision is why a bare tier ("libs", "services", "tools") is swept member-by-member too,
+# not handed to pytest as one target.
 # So the sweep runs one pytest per member, from the member directory, exactly as CI's
 # check-python matrix does; scripts/ and deploy/ belong to no member and share the root
 # rootdir, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
 # member should not hide the state of the other 31.
 #
 #   just test                                    # every member, then the non-member suites
+#   just test libs                               # every member in one tier
 #   just test services/auth-service              # one member
 #   just test services/auth-service/tests/unit   # part of one member's suite
 #
-# Run tests; optionally scope to a member, e.g. `just test services/auth-service`.
+# Run tests; optionally scope to a tier or a member, e.g. `just test services/auth-service`.
 test target="": sync-check
     #!/usr/bin/env bash
     set -uo pipefail
     target="{{target}}"
     # `.` was this recipe's old default; it still means "everything", not "the root as a member"
     [ "$target" = "." ] && target=""
+    # a trailing slash ("libs/") must not defeat the bare-tier check below ("libs/" != "libs")
+    target="${target%/}"
+
+    # pytest every member directory matching the given glob(s); no fail-fast, like CI's matrix
+    sweep() {
+        local failed=() member
+        for member in "$@"; do
+            member="${member%/}"
+            [ -f "$member/pyproject.toml" ] || continue
+            echo "== pytest $member =="
+            (cd "$member" && uv run pytest -q --durations=10) || failed+=("$member")
+        done
+        if [ ${#failed[@]} -gt 0 ]; then
+            echo "pytest failed in: ${failed[*]}" >&2
+            return 1
+        fi
+    }
 
     if [ -n "$target" ]; then
-        member=$(cut -d/ -f1-2 <<< "$target")
-        case "$member" in
-            libs/*|services/*|tools/*)
+        tier="${target%%/*}"
+        case "$tier" in
+            libs|services|tools)
+                # a bare tier: sweep just its members, same as the full sweep below
+                [ "$target" = "$tier" ] && { sweep "$tier"/*/; exit $?; }
+                member=$(cut -d/ -f1-2 <<< "$target")
                 # anything deeper than the member is a scope *within* its suite, so it is
                 # passed on relative to the member -- `just test <member>/tests/unit`
                 scope="${target#"$member"}"
@@ -122,20 +145,11 @@ test target="": sync-check
         exec uv run pytest "$target"  # scripts/tests, deploy/tests, ... : no member, no cd
     fi
 
-    failed=()
-    for member in libs/*/ services/*/ tools/*/; do
-        member="${member%/}"
-        [ -f "$member/pyproject.toml" ] || continue
-        echo "== pytest $member =="
-        (cd "$member" && uv run pytest -q --durations=10) || failed+=("$member")
-    done
+    exit_status=0
+    sweep libs/*/ services/*/ tools/*/ || exit_status=1
     echo "== pytest scripts/tests deploy/tests =="
-    uv run pytest -q scripts/tests deploy/tests || failed+=("scripts+deploy")
-
-    if [ ${#failed[@]} -gt 0 ]; then
-        echo "pytest failed in: ${failed[*]}" >&2
-        exit 1
-    fi
+    uv run pytest -q scripts/tests deploy/tests || { echo "pytest failed in: scripts+deploy" >&2; exit_status=1; }
+    exit $exit_status
 
 # Print the workspace targets affected by the working tree vs a base ref.
 affected base="origin/main":
