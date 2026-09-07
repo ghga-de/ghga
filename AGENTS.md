@@ -72,7 +72,7 @@ raw uv/pnpm/helm/kubectl — they encode ordering and environment details the ra
 Further rules:
 
 - Always scope test runs to the member you touched (e.g. `just test services/auth-service`);
-a bare `just test` runs every suite in the workspace..
+a bare `just test` runs every suite in the workspace.
 - Use `just affected [base]` to decide what to test when a change may cross members.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the
   `config.js` generation the launcher does. For anything beyond the `just fe-*`
