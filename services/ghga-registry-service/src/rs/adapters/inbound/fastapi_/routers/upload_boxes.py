@@ -212,7 +212,9 @@ async def requeue_all_box_uploads(
     Requires Data Steward role.
     """
     try:
-        return await registry.rdub_manager.requeue_all_box_uploads(box_id=box_id)
+        return await registry.rdub_manager.requeue_all_box_uploads(
+            box_id=box_id, data_steward_id=UUID(auth_context.id)
+        )
     except RDUBManagerPort.BoxNotFoundError as err:
         raise HttpBoxNotFoundError(box_id=box_id) from err
     except RDUBManagerPort.BoxStateError as err:

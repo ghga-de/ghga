@@ -132,3 +132,21 @@ class AuditRepository(AuditRepositoryPort):
             entity=FileUpload.__name__,
             entity_id=str(file_id),
         )
+
+    async def log_whole_box_requeue(
+        self, *, box_id: UUID4, user_id: UUID4, file_ids: list[UUID4]
+    ) -> None:
+        """Log that a user requeued all failed FileUploads in a box for interrogation."""
+        # Action is set to None because the box itself isn't updated, just all the files
+        #  within the box.
+        await self.create_audit_record(
+            label="All FileUploads in ResearchDataUploadBox requeued",
+            description=(
+                f"All failed FileUploads in box {box_id} were requeued for"
+                + f" interrogation. Requeued File IDs are: {file_ids}"
+            ),
+            user_id=user_id,
+            action=None,
+            entity=ResearchDataUploadBox.__name__,
+            entity_id=str(box_id),
+        )

@@ -408,7 +408,9 @@ class RDUBManagerPort(ABC):
         ...
 
     @abstractmethod
-    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+    async def requeue_all_box_uploads(
+        self, *, box_id: UUID4, data_steward_id: UUID4
+    ) -> BoxRequeueResult:
         """Requeue every file upload in a box that failed interrogation.
 
         Files that failed before this feature was implemented are ineligible

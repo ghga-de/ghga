@@ -66,3 +66,9 @@ class AuditRepositoryPort(ABC):
     @abstractmethod
     async def log_file_requeued(self, *, file_id: UUID4, user_id: UUID4) -> None:
         """Log that a user requeued a FileUpload for interrogation."""
+
+    @abstractmethod
+    async def log_whole_box_requeue(
+        self, *, box_id: UUID4, user_id: UUID4, file_ids: list[UUID4]
+    ) -> None:
+        """Log that a user requeued all failed FileUploads in a box for interrogation."""
