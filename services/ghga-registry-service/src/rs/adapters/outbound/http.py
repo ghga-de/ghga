@@ -775,6 +775,58 @@ class FileBoxClient(FileBoxClientPort):
         )
         raise self.OperationError(f"Failed to delete file upload {file_id}.")
 
+    async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
+        """Delete a FileUploadBox and all its FileUploads in the owning service.
+
+        A 404 (box not found) is treated as success so that retries after a partial
+        deletion are idempotent.
+
+        Raises:
+            FUBVersionError if the remote box version differs from `version`.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = DeleteFileBoxWorkOrder(box_id=box_id)
+        headers = self._auth_header(wot)
+        response = await self._client.delete(
+            f"{self._ucs_url}/boxes/{box_id}",
+            headers=headers,
+            params={"version": version},
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 204:
+            return
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "version": version,
+            "status_code": response.status_code,
+            "response_text": response.text,
+        }
+
+        if response.status_code == 404:
+            log.warning(
+                "FileUploadBox %s was already absent from the external service when"
+                + " attempting to delete it. Treating it as a success.",
+                box_id,
+                extra=extra,
+            )
+            return
+
+        if response.status_code == 409:
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="delete",
+                box_id=box_id,
+            )
+
+        log.error(
+            "Error deleting FileUploadBox %s in external service.",
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(f"Failed to delete FileUploadBox {box_id}.")
+
     async def requeue_single_file_upload(
         self, *, box_id: UUID4, file_id: UUID4
     ) -> None:
@@ -919,55 +971,3 @@ class FileBoxClient(FileBoxClientPort):
         raise self.OperationError(
             f"Failed to requeue the failed files in FileUploadBox {box_id}."
         )
-
-    async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
-        """Delete a FileUploadBox and all its FileUploads in the owning service.
-
-        A 404 (box not found) is treated as success so that retries after a partial
-        deletion are idempotent.
-
-        Raises:
-            FUBVersionError if the remote box version differs from `version`.
-            OperationError if there's any other problem with the operation.
-        """
-        wot = DeleteFileBoxWorkOrder(box_id=box_id)
-        headers = self._auth_header(wot)
-        response = await self._client.delete(
-            f"{self._ucs_url}/boxes/{box_id}",
-            headers=headers,
-            params={"version": version},
-            timeout=HTTPX_TIMEOUT,
-        )
-        if response.status_code == 204:
-            return
-
-        extra: dict[str, Any] = {
-            "box_id": box_id,
-            "version": version,
-            "status_code": response.status_code,
-            "response_text": response.text,
-        }
-
-        if response.status_code == 404:
-            log.warning(
-                "FileUploadBox %s was already absent from the external service when"
-                + " attempting to delete it. Treating it as a success.",
-                box_id,
-                extra=extra,
-            )
-            return
-
-        if response.status_code == 409:
-            self._raise_for_409(
-                response=response,
-                body={},
-                operation="delete",
-                box_id=box_id,
-            )
-
-        log.error(
-            "Error deleting FileUploadBox %s in external service.",
-            box_id,
-            extra=extra,
-        )
-        raise self.OperationError(f"Failed to delete FileUploadBox {box_id}.")
