@@ -111,12 +111,6 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
-        },
-        "_topics": {
-          "type": "object",
-          "description": "Kafka topics shared across every chart instance in an umbrella; merged into each instance's own `_topics` below (kafkaTopicsParameters)",
-          "additionalProperties": true,
-          "default": {}
         }
       }
     },
@@ -712,7 +706,7 @@
     },
     "_topics": {
       "type": "object",
-      "description": "Per-instance Kafka topics this chart owns (merged with global._topics); shape is {<key>: {topic: {name, value}, type: {name, value}, types: [...]}} - see kafkaTopicsParameters/kafkaUser below for how each field is consumed",
+      "description": "Kafka topics this chart owns; shape is {<key>: {topic: {name, value}, type: {name, value}, types: [...]}} - see kafkaTopicsParameters/kafkaUser below for how each field is consumed",
       "additionalProperties": true,
       "properties": {
         "wildcard": {

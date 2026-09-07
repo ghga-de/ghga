@@ -39,6 +39,7 @@ import pytest
 import pytest_asyncio
 from aiokafka import AIOKafkaConsumer, TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
+from aiokafka.errors import KafkaError
 from pydantic import UUID4
 from testcontainers.kafka import KafkaContainer
 
@@ -620,6 +621,12 @@ class KafkaFixture:
         )
 
 
+# How long to wait for the broker to register itself, and how often to re-check while
+# waiting. The timeout matches the container's own startup timeout.
+BROKER_REGISTRATION_TIMEOUT = 30.0
+BROKER_REGISTRATION_POLL_INTERVAL = 0.1
+
+
 class KafkaContainerFixture(KafkaContainer):
     """Kafka test container with configuration and command execution."""
 
@@ -638,7 +645,44 @@ class KafkaContainerFixture(KafkaContainer):
             service_instance_id="001",
             kafka_servers=kafka_servers,
         )
+        asyncio.run(self._wait_for_broker(kafka_servers))
         return self
+
+    @staticmethod
+    async def _wait_for_broker(
+        kafka_servers: list[str], timeout: float = BROKER_REGISTRATION_TIMEOUT
+    ) -> None:
+        """Wait until the broker is registered in the cluster metadata.
+
+        The container reports itself ready on the "[KafkaServer id=N] started" log line,
+        which the server emits before it has registered with the KRaft controller. Until
+        it has, a metadata request is answered with an empty broker list and every admin
+        call raises NodeNotReadyError -- and the `kafka` fixture makes one (clear_topics)
+        as soon as the first test asks for it. Waiting the registration out here keeps a
+        container that is merely slow to start from failing whichever test happens to run
+        first.
+
+        Raises:
+            RuntimeError: if the broker is not registered before `timeout` elapses.
+        """
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while True:
+            admin_client = AIOKafkaAdminClient(bootstrap_servers=kafka_servers)
+            try:
+                await admin_client.start()
+                # the same call the `kafka` fixture makes first, so this waits for
+                # exactly the readiness the fixture goes on to rely on
+                await admin_client.list_topics()
+                return
+            except (KafkaError, OSError) as error:
+                if loop.time() >= deadline:
+                    raise RuntimeError(
+                        f"Kafka broker did not register within {timeout} seconds."
+                    ) from error
+            finally:
+                await admin_client.close()
+            await asyncio.sleep(BROKER_REGISTRATION_POLL_INTERVAL)
 
     def wrapped_exec_run(self, command: str, run_in_shell: bool):
         """Run the given command in the kafka testcontainer.
