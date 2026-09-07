@@ -22,6 +22,33 @@ sync:
 lock:
     uv lock
 
+# `uv run` syncs the environment but does not prune it, so a distribution that is no longer
+# in uv.lock stays installed and can shadow a workspace member's source -- the suite then
+# tests code that is not in the repo. CI cannot drift that way: it builds the environment
+# from the lock (`uv sync --locked`). This is that same assertion, read-only and in ~0.1s,
+# so `just test` cannot report on an environment CI would not recognise.
+#
+# Two assertions, because CI's one `uv sync --locked` covers two failures that need
+# different fixes here: `--check` reports a stale ENVIRONMENT but passes a stale LOCK
+# straight through, so the lock is checked on its own first.
+# Assert uv.lock and the environment are current, as CI's `uv sync --locked` does.
+sync-check:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if ! out=$(uv lock --check 2>&1); then
+        echo "$out" >&2
+        printf '\nerror: uv.lock is out of date with the pyproject.toml files.\n' >&2
+        printf 'Refresh the lock and the environment, then re-run:\n' >&2
+        printf '  just lock && just sync\n' >&2
+        exit 1
+    fi
+    out=$(uv sync --locked --all-packages --all-extras --check 2>&1) && exit 0
+    echo "$out" >&2
+    printf '\nerror: the environment does not match uv.lock, so a test run here would not\n' >&2
+    printf 'be the run CI does. Update the environment, then re-run:\n' >&2
+    printf '  just sync\n' >&2
+    exit 1
+
 # Lint + format check across the workspace.
 lint:
     uv run ruff check .
@@ -58,9 +85,57 @@ hooks-all:
 hooks-update:
     uv run pre-commit autoupdate
 
-# Run tests; optionally scope to a member, e.g. `just test libs/hexkit`.
-test target=".":
-    uv run pytest {{target}}
+# Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
+# over the whole tree dies on the duplicate module names before running anything (the same
+# collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the
+# members' own `[tool.pytest.ini_options]` anyway (auth-service's `testpaths`, say).
+# So the sweep runs one pytest per member, from the member directory, exactly as CI's
+# check-python matrix does; scripts/ and deploy/ belong to no member and share the root
+# rootdir, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
+# member should not hide the state of the other 31.
+#
+#   just test                                    # every member, then the non-member suites
+#   just test services/auth-service              # one member
+#   just test services/auth-service/tests/unit   # part of one member's suite
+#
+# Run tests; optionally scope to a member, e.g. `just test services/auth-service`.
+test target="": sync-check
+    #!/usr/bin/env bash
+    set -uo pipefail
+    target="{{target}}"
+    # `.` was this recipe's old default; it still means "everything", not "the root as a member"
+    [ "$target" = "." ] && target=""
+
+    if [ -n "$target" ]; then
+        member=$(cut -d/ -f1-2 <<< "$target")
+        case "$member" in
+            libs/*|services/*|tools/*)
+                # anything deeper than the member is a scope *within* its suite, so it is
+                # passed on relative to the member -- `just test <member>/tests/unit`
+                scope="${target#"$member"}"
+                # explicit, because without -e a failed cd would silently fall back to the
+                # root -- i.e. to the tree-wide run this recipe exists to avoid
+                cd "$member" || { echo "no such member: $member" >&2; exit 1; }
+                exec uv run pytest ${scope:+"${scope#/}"}
+                ;;
+        esac
+        exec uv run pytest "$target"  # scripts/tests, deploy/tests, ... : no member, no cd
+    fi
+
+    failed=()
+    for member in libs/*/ services/*/ tools/*/; do
+        member="${member%/}"
+        [ -f "$member/pyproject.toml" ] || continue
+        echo "== pytest $member =="
+        (cd "$member" && uv run pytest -q --durations=10) || failed+=("$member")
+    done
+    echo "== pytest scripts/tests deploy/tests =="
+    uv run pytest -q scripts/tests deploy/tests || failed+=("scripts+deploy")
+
+    if [ ${#failed[@]} -gt 0 ]; then
+        echo "pytest failed in: ${failed[*]}" >&2
+        exit 1
+    fi
 
 # Print the workspace targets affected by the working tree vs a base ref.
 affected base="origin/main":
