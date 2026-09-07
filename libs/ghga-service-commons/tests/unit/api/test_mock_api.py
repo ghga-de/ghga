@@ -352,3 +352,126 @@ def test_patch_httpx_module(monkeypatch: pytest.MonkeyPatch):
         assert client.delete(f"{BASE_URL}/secrets/some-id").status_code == 204
 
     assert len(secrets.requests) == 2
+
+
+def stand_in_for_the_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> list[httpx2.Request]:
+    """Record the requests a mock hands on instead of sending them anywhere.
+
+    This is what sits underneath a patched mock, so a test can tell a request that was
+    passed on apart from one the mock answered without going near a real socket.
+    """
+    network: list[httpx2.Request] = []
+
+    def send(
+        transport: httpx2.HTTPTransport, request: httpx2.Request
+    ) -> httpx2.Response:
+        """Answer as the network would have, and remember being asked."""
+        network.append(request)
+        return httpx2.Response(200, json="from the network")
+
+    monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", send)
+    return network
+
+
+def test_patch_httpx_module_covers_every_entry_point(monkeypatch: pytest.MonkeyPatch):
+    """No way of calling `httpx2` without a transport slips past the patch.
+
+    The patch steps in where a client that was given no transport of its own would
+    reach the network. If `httpx2` ever stopped building its default client that way,
+    this fails rather than the calls quietly escaping to the network.
+    """
+    secrets = SecretsApiMock()
+    secrets.patch_httpx_module(monkeypatch)
+    url = f"{BASE_URL}/secrets/some-id"
+
+    assert httpx2.get(url).json() == "s3cret"
+    assert httpx2.request("GET", url).json() == "s3cret"
+    with httpx2.stream("GET", url) as response:
+        assert response.json() == "s3cret"
+    with httpx2.Client() as client:
+        assert client.get(url).json() == "s3cret"
+
+    assert len(secrets.requests) == 4
+
+
+@pytest.mark.asyncio
+async def test_patch_httpx_module_serves_async_clients(monkeypatch: pytest.MonkeyPatch):
+    """A client built by the code under test is served whether it is async or not."""
+    secrets = SecretsApiMock()
+    secrets.patch_httpx_module(monkeypatch)
+
+    async with httpx2.AsyncClient() as client:
+        assert (await client.get(f"{BASE_URL}/secrets/some-id")).json() == "s3cret"
+
+
+def test_patch_httpx_module_leaves_other_urls_alone(monkeypatch: pytest.MonkeyPatch):
+    """A call to a URL the mock does not claim goes where it would have gone.
+
+    Tests that mock one API while talking to something else for real - a test container
+    handing out its own URLs, say - would otherwise have that traffic swallowed. The
+    network stands in here for what the mock hands those requests back to.
+    """
+    network = stand_in_for_the_network(monkeypatch)
+    secrets = SecretsApiMock()
+    secrets.patch_httpx_module(monkeypatch)
+
+    assert httpx2.get(f"{OTHER_URL}/boxes/some-id").json() == "from the network"
+    assert not secrets.requests
+
+    assert httpx2.get(f"{BASE_URL}/secrets/some-id").json() == "s3cret"
+    assert len(network) == 1
+
+
+def test_patch_httpx_module_stacks(monkeypatch: pytest.MonkeyPatch):
+    """Two mocks patched in one test answer their own URLs instead of replacing each other."""
+    secrets = SecretsApiMock()
+    boxes = BoxesApiMock(base_url=OTHER_URL)
+    secrets.patch_httpx_module(monkeypatch)
+    boxes.patch_httpx_module(monkeypatch)
+
+    assert httpx2.get(f"{BASE_URL}/secrets/some-id").json() == "s3cret"
+    assert httpx2.get(f"{OTHER_URL}/boxes/some-id").json() == {"id": "box"}
+
+    assert len(secrets.requests) == 1
+    assert len(boxes.requests) == 1
+
+
+def test_patch_httpx_module_matches_on_url_boundaries(monkeypatch: pytest.MonkeyPatch):
+    """A mock claims its own API, not one whose URL merely starts the same way.
+
+    Both of these would be claimed by comparing the URLs as plain text, and would then
+    404 against endpoints that were never meant to serve them.
+    """
+    network = stand_in_for_the_network(monkeypatch)
+    secrets = SecretsApiMock()
+    boxes = BoxesApiMock(base_url=OTHER_URL)
+    secrets.patch_httpx_module(monkeypatch)
+    boxes.patch_httpx_module(monkeypatch)
+
+    # a host that starts with the mocked one, and a path that starts with its base path
+    assert httpx2.get(f"{OTHER_URL}.other.org/boxes/1").json() == "from the network"
+    assert httpx2.get(f"{BASE_URL}-v2/secrets/1").json() == "from the network"
+
+    assert len(network) == 2
+    assert not secrets.requests
+    assert not boxes.requests
+
+
+def test_patch_httpx_module_with_a_shared_router(monkeypatch: pytest.MonkeyPatch):
+    """Mocks sharing a router each claim their own base URL, and record separately.
+
+    Sharing a router means sharing one transport, but claiming is per mock, so each of
+    them has to be patched in for its own API to be served.
+    """
+    secrets = SecretsApiMock()
+    boxes = BoxesApiMock(base_url=OTHER_URL, router=secrets.router)
+    secrets.patch_httpx_module(monkeypatch)
+    boxes.patch_httpx_module(monkeypatch)
+
+    assert httpx2.get(f"{BASE_URL}/secrets/some-id").json() == "s3cret"
+    assert httpx2.get(f"{OTHER_URL}/boxes/some-id").json() == {"id": "box"}
+
+    assert len(secrets.requests) == 1
+    assert len(boxes.requests) == 1

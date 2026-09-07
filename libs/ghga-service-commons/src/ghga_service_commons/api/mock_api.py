@@ -104,6 +104,22 @@ class ApiMock:
                 partial(declared.handler_for, self),
             )
 
+    def _claims(self, request: httpx2.Request) -> bool:
+        """Whether this mock answers the request instead of letting it go out.
+
+        Compared piece by piece rather than as plain text, so a mock of
+        `http://boxes.test` does not also claim `http://boxes.test.other.org`, and one
+        of `http://boxes.test/api` does not claim `http://boxes.test/api-v2`.
+        """
+        if not self.base_url:
+            return True
+        base = httpx2.URL(self.base_url)
+        url = request.url
+        if (url.scheme, url.host, url.port) != (base.scheme, base.host, base.port):
+            return False
+        base_path = base.path.rstrip("/")
+        return url.path == base_path or url.path.startswith(f"{base_path}/")
+
     def _register(
         self, method: str, path: str, handler_of: Callable[[], ResponseHandler]
     ) -> None:
@@ -146,36 +162,35 @@ class ApiMock:
         return self.requests[-1]
 
     def patch_httpx_module(self, monkeypatch: MonkeyPatch) -> None:
-        """Route the calls made through the `httpx2` module itself to this mock.
+        """Answer the calls made to this mock's base URL.
 
-        Code building its own client, or calling `httpx2.get`, takes no transport and
-        so cannot be pointed at a mock. This replaces those entry points for the test.
+        Other URLs are left alone, and a mock without a base URL claims all of them.
+        Use this to mock code that uses standalone clients or calls httpx methods directly.
         """
         transport = self.as_transport()
-        # bound before patching, so the replacements below don't call themselves
-        real_client = httpx2.Client
+        previous = httpx2.HTTPTransport.handle_request
+        previous_async = httpx2.AsyncHTTPTransport.handle_async_request
 
-        def mocked_client(**kwargs: Any) -> httpx2.Client:
-            """Stand in for `httpx2.Client`, mounting the mock as its transport."""
-            return real_client(transport=transport, **kwargs)
+        def handle_request(
+            network: httpx2.HTTPTransport, request: httpx2.Request
+        ) -> httpx2.Response:
+            """Answer a request made by a synchronous client, or pass it on."""
+            if not self._claims(request):
+                return previous(network, request)
+            return transport.handle_request(request)
 
-        def mocked_request(method: str, url: Any, **kwargs: Any) -> httpx2.Response:
-            """Stand in for the module level request functions of `httpx2`.
+        async def handle_async_request(
+            network: httpx2.AsyncHTTPTransport, request: httpx2.Request
+        ) -> httpx2.Response:
+            """Answer a request made by an asynchronous client, or pass it on."""
+            if not self._claims(request):
+                return await previous_async(network, request)
+            return await transport.handle_async_request(request)
 
-            The arguments that only a client can take are passed to the one built here,
-            the rest to the request it makes.
-            """
-            client_kwargs = {
-                name: kwargs.pop(name)
-                for name in ("cookies", "proxy", "trust_env", "verify")
-                if name in kwargs
-            }
-            with mocked_client(**client_kwargs) as client:
-                return client.request(method, url, **kwargs)
-
-        monkeypatch.setattr(httpx2, "Client", mocked_client)
-        for method in ("delete", "get", "head", "options", "patch", "post", "put"):
-            monkeypatch.setattr(httpx2, method, partial(mocked_request, method.upper()))
+        monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", handle_request)
+        monkeypatch.setattr(
+            httpx2.AsyncHTTPTransport, "handle_async_request", handle_async_request
+        )
 
 
 class Endpoint:
