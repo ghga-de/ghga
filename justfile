@@ -108,8 +108,10 @@ test target="": sync-check
     target="{{target}}"
     # `.` was this recipe's old default; it still means "everything", not "the root as a member"
     [ "$target" = "." ] && target=""
-    # a trailing slash ("libs/") must not defeat the bare-tier check below ("libs/" != "libs")
-    target="${target%/}"
+    # repeated trailing slashes must not defeat the bare-tier and member checks below
+    while [[ "$target" == */ && "$target" != / ]]; do
+        target="${target%/}"
+    done
 
     # pytest every member directory matching the given glob(s); no fail-fast, like CI's matrix
     sweep() {
