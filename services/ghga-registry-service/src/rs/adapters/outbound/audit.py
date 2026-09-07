@@ -18,7 +18,7 @@ from typing import Literal
 
 from pydantic import UUID4
 
-from ghga_event_schemas.pydantic_ import AuditRecord
+from ghga_event_schemas.pydantic_ import AuditRecord, FileUpload
 from hexkit.correlation import get_correlation_id
 from hexkit.utils import now_utc_ms_prec
 from rs.core.models import ResearchDataUploadBox
@@ -120,4 +120,15 @@ class AuditRepository(AuditRepositoryPort):
             action=None,
             entity=ResearchDataUploadBox.__name__,
             entity_id=str(box_id),
+        )
+
+    async def log_file_requeued(self, *, file_id: UUID4, user_id: UUID4) -> None:
+        """Log that a user requeued a FileUpload for interrogation."""
+        await self.create_audit_record(
+            label="FileUpload requeued",
+            description=f"FileUpload {file_id} was requeued for interrogation.",
+            user_id=user_id,
+            action="U",
+            entity=FileUpload.__name__,
+            entity_id=str(file_id),
         )

@@ -386,7 +386,7 @@ class RDUBManagerPort(ABC):
 
     @abstractmethod
     async def requeue_single_file_upload(
-        self, *, box_id: UUID4, file_id: UUID4
+        self, *, box_id: UUID4, file_id: UUID4, data_steward_id: UUID4
     ) -> None:
         """Requeue a file upload that failed interrogation.
 
