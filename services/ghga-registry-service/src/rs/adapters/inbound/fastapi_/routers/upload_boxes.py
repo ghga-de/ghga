@@ -165,8 +165,7 @@ async def requeue_single_file_upload(
     """Requeue a file upload that failed interrogation. Requires Data Steward role."""
     try:
         await registry.rdub_manager.requeue_single_file_upload(
-            box_id=box_id,
-            file_id=file_id,
+            box_id=box_id, file_id=file_id, data_steward_id=UUID(auth_context.id)
         )
     except RDUBManagerPort.BoxNotFoundError as err:
         raise HttpBoxNotFoundError(box_id=box_id) from err

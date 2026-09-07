@@ -994,7 +994,7 @@ class RDUBManager(RDUBManagerPort):
         return box
 
     async def requeue_single_file_upload(
-        self, *, box_id: UUID4, file_id: UUID4
+        self, *, box_id: UUID4, file_id: UUID4, data_steward_id: UUID4
     ) -> None:
         """Requeue a file upload that failed interrogation.
 
@@ -1037,7 +1037,9 @@ class RDUBManager(RDUBManagerPort):
             log.error(error, extra=extra)
             raise error from err
 
-        # TODO: Add audit call here, need to add DS ID param
+        await self._audit_repository.log_file_requeued(
+            file_id=file_id, user_id=data_steward_id
+        )
         log.info("Requeued FileUpload %s in box %s.", file_id, box_id)
 
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
