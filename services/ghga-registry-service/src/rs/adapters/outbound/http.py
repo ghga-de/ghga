@@ -31,18 +31,24 @@ from rs.constants import (
     EXC_ID_BOX_MAX_SIZE_TOO_LOW,
     EXC_ID_BOX_STATE_ERROR,
     EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_FILE_UPLOAD_NOT_FOUND,
+    EXC_ID_FILE_UPLOAD_STATE_ERROR,
     EXC_ID_INCOMPLETE_OR_FAILED,
+    EXC_ID_REQUEUE_ERROR,
     HTTPX_TIMEOUT,
     UCS_UPLOADS_PAGE_SIZE,
 )
 from rs.core.models import (
     BaseWorkOrderToken,
+    BoxRequeueResult,
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
     DeleteFileBoxWorkOrder,
     DeleteFileUploadWorkOrder,
     FileUploadWithAccession,
     GrantId,
+    RequeueAllFailedWorkOrder,
+    RequeueFailedFileWorkOrder,
     ResizeFileBoxWorkOrder,
     UploadGrant,
     ViewFileBoxWorkOrder,
@@ -342,7 +348,14 @@ class FileBoxClient(FileBoxClientPort):
         response: httpx2.Response,
         body: dict[str, Any],
         operation: Literal[
-            "lock", "unlock", "archive", "resize", "delete file from", "delete"
+            "lock",
+            "unlock",
+            "archive",
+            "resize",
+            "delete file from",
+            "delete",
+            "requeue a file in",
+            "requeue all failed files in",
         ],
         box_id: UUID4,
     ):
@@ -761,6 +774,151 @@ class FileBoxClient(FileBoxClientPort):
             extra=extra,
         )
         raise self.OperationError(f"Failed to delete file upload {file_id}.")
+
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4
+    ) -> None:
+        """Requeue a FileUpload that failed interrogation in the owning service.
+
+        The uploaded object is still in the inbox, so the file is only set back to the
+        inbox state - it does not have to be uploaded again.
+
+        Raises:
+            FileUploadNotFoundError if the FileUpload doesn't exist.
+            FUBStateError if the FileUploadBox is archived.
+            RequeueError if the FileUpload cannot be requeued.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = RequeueFailedFileWorkOrder(box_id=box_id, file_id=file_id)
+        headers = self._auth_header(wot)
+        response = await self._client.post(
+            f"{self._ucs_url}/rpc/boxes/{box_id}/uploads/{file_id}/requeue",
+            headers=headers,
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 204:
+            return
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "file_id": file_id,
+            "status_code": response.status_code,
+            "response_text": response.text,
+        }
+        exception_id = _extract_exception_id(response)
+
+        if response.status_code == 404:
+            if exception_id == EXC_ID_FILE_UPLOAD_NOT_FOUND:
+                log.error(
+                    "FileUpload %s was not found in FileUploadBox %s when attempting"
+                    + " to requeue it.",
+                    file_id,
+                    box_id,
+                    extra=extra,
+                )
+                raise self.FileUploadNotFoundError(file_id=file_id)
+            if exception_id == EXC_ID_REQUEUE_ERROR:
+                # The uploaded object is gone from the inbox, so there is nothing left
+                #  to interrogate again. The file has to be uploaded anew.
+                msg = (
+                    f"Cannot requeue FileUpload {file_id} because its uploaded object"
+                    + " is no longer in the inbox."
+                )
+                log.error(msg, extra=extra)
+                raise self.RequeueError(msg)
+            log.error(
+                "FileUploadBox %s not found in external service when attempting to"
+                + " requeue FileUpload %s. The RDUB and FUB states may be out of sync.",
+                box_id,
+                file_id,
+                extra=extra,
+            )
+            raise self.OperationError(
+                f"FileUploadBox {box_id} was not found in the external service."
+            )
+
+        if response.status_code == 409:
+            if exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
+                msg = (
+                    f"Cannot requeue FileUpload {file_id} because it did not fail"
+                    + " interrogation."
+                )
+                log.error(msg, extra=extra)
+                raise self.RequeueError(msg)
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="requeue a file in",
+                box_id=box_id,
+            )
+
+        log.error(
+            "Error requeuing FileUpload %s in FileUploadBox %s.",
+            file_id,
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(f"Failed to requeue FileUpload {file_id}.")
+
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue every FileUpload in a FileUploadBox that failed interrogation.
+
+        Files that are ineligible for a requeue are reported in the result's `skipped`
+        list instead of failing the whole operation.
+
+        Raises:
+            FUBStateError if the FileUploadBox is archived.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = RequeueAllFailedWorkOrder(box_id=box_id)
+        headers = self._auth_header(wot)
+        response = await self._client.post(
+            f"{self._ucs_url}/rpc/boxes/{box_id}/requeue",
+            headers=headers,
+            timeout=HTTPX_TIMEOUT,
+        )
+        if response.status_code == 200:
+            try:
+                return BoxRequeueResult(**response.json())
+            except Exception as err:
+                msg = "Failed to extract the requeue results from the response body."
+                log.error(msg, exc_info=True)
+                raise self.OperationError(msg) from err
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "status_code": response.status_code,
+            "response_text": response.text,
+        }
+
+        if response.status_code == 404:
+            log.error(
+                "FileUploadBox %s not found in external service when attempting to"
+                + " requeue its failed files. The RDUB and FUB states may be out of"
+                + " sync.",
+                box_id,
+                extra=extra,
+            )
+            raise self.OperationError(
+                f"FileUploadBox {box_id} was not found in the external service."
+            )
+
+        if response.status_code == 409:
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="requeue all failed files in",
+                box_id=box_id,
+            )
+
+        log.error(
+            "Error requeuing the failed files in FileUploadBox %s.",
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(
+            f"Failed to requeue the failed files in FileUploadBox {box_id}."
+        )
 
     async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Delete a FileUploadBox and all its FileUploads in the owning service.

@@ -33,6 +33,7 @@ from hexkit.utils import now_utc_ms_prec
 from rs.constants import VALID_STATE_TRANSITIONS
 from rs.core.models import (
     PID,
+    BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
     FileUploadBox,
@@ -968,6 +969,115 @@ class RDUBManager(RDUBManagerPort):
             )
             log.error(error, extra=extra)
             raise error from err
+
+    async def _get_box_for_requeue(self, *, box_id: UUID4) -> ResearchDataUploadBox:
+        """Fetch the RDUB for a requeue and make sure it's not archived.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
+        """
+        try:
+            box = await self._box_dao.get_by_id(box_id)
+        except ResourceNotFoundError as err:
+            error: Exception = self.BoxNotFoundError(box_id=box_id)
+            log.info(error)
+            raise error from err
+
+        if box.state == "archived":
+            error = self.BoxStateError(
+                operation="requeue file uploads", state="archived"
+            )
+            log.info(error, extra={"box_id": box_id})
+            raise error
+
+        return box
+
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4
+    ) -> None:
+        """Requeue a file upload that failed interrogation.
+
+        The file is set back to the inbox state so it gets interrogated again.
+        The uploaded object remains in S3, so no re-upload is needed.
+        Only files that failed interrogation can be requeued.
+
+        The box can be locked, since files that failed interrogation still
+        have to be resolved after the box is locked.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
+            FileUploadNotFoundError: If the file upload doesn't exist.
+            RequeueError: If the file upload cannot be requeued.
+            OperationError: If there's a problem communicating with the file box
+                service.
+        """
+        box = await self._get_box_for_requeue(box_id=box_id)
+        extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}
+
+        try:
+            await self._file_upload_box_client.requeue_single_file_upload(
+                box_id=box.file_upload_box_id, file_id=file_id
+            )
+        except FileBoxClientPort.FileUploadNotFoundError as err:
+            error: Exception = self.FileUploadNotFoundError(file_id=file_id)
+            log.info(error, extra=extra)
+            raise error from err
+        except FileBoxClientPort.RequeueError as err:
+            error = self.RequeueError(str(err))
+            log.info(error, extra=extra)
+            raise error from err
+        except FileBoxClientPort.FUBStateError as err:
+            # The file box service only outright refuses a requeue for archived boxes,
+            #  so the RDUB and FUB states are out of sync if this is reached.
+            error = self.BoxStateError(
+                operation=f"requeue FileUpload {file_id}", state="archived"
+            )
+            log.error(error, extra=extra)
+            raise error from err
+
+        # TODO: Add audit call here, need to add DS ID param
+        log.info("Requeued FileUpload %s in box %s.", file_id, box_id)
+
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue every file upload in a box that failed interrogation.
+
+        Files that failed before this feature was implemented are ineligible
+        for requeuing because their objects have already been deleted from S3.
+        Such files are reported in the result's `skipped` list rather than
+        failing the whole operation. The result's `requeued` list contains the
+        IDs of all requeued files.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
+            OperationError: If there's a problem communicating with the file box
+                service.
+        """
+        box = await self._get_box_for_requeue(box_id=box_id)
+
+        try:
+            results = await self._file_upload_box_client.requeue_all_box_uploads(
+                box_id=box.file_upload_box_id
+            )
+        except FileBoxClientPort.FUBStateError as err:
+            # The file box service only refuses a requeue for archived boxes, so the
+            #  RDUB and FUB states are out of sync if this is reached.
+            error = self.BoxStateError(
+                operation="requeue file uploads", state="archived"
+            )
+            log.error(error, extra={"box_id": box_id})
+            raise error from err
+
+        # TODO: Add audit call here, need to add DS ID param
+        log.info(
+            "Requeued %i file upload(s) in box %s, skipping %i.",
+            len(results.requeued),
+            box_id,
+            len(results.skipped),
+        )
+        return results
 
     async def _revoke_all_grants_for_box(self, *, box_id: UUID4) -> None:
         """Revoke every currently-valid upload-access grant for a box.
