@@ -1042,7 +1042,9 @@ class RDUBManager(RDUBManagerPort):
         )
         log.info("Requeued FileUpload %s in box %s.", file_id, box_id)
 
-    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+    async def requeue_all_box_uploads(
+        self, *, box_id: UUID4, data_steward_id: UUID4
+    ) -> BoxRequeueResult:
         """Requeue every file upload in a box that failed interrogation.
 
         Files that failed before this feature was implemented are ineligible
@@ -1072,7 +1074,10 @@ class RDUBManager(RDUBManagerPort):
             log.error(error, extra={"box_id": box_id})
             raise error from err
 
-        # TODO: Add audit call here, need to add DS ID param
+        if results.requeued:
+            await self._audit_repository.log_whole_box_requeue(
+                box_id=box_id, user_id=data_steward_id, file_ids=results.requeued
+            )
         log.info(
             "Requeued %i file upload(s) in box %s, skipping %i.",
             len(results.requeued),
