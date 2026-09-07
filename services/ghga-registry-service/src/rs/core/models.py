@@ -46,6 +46,7 @@ from hexkit.utils import now_utc_ms_prec
 __all__ = [
     "AccessionMapRequest",
     "BaseWorkOrderToken",
+    "BoxRequeueResult",
     "BoxRetrievalResults",
     "BoxUploadsPage",
     "ChangeFileBoxWorkOrder",
@@ -62,6 +63,8 @@ __all__ = [
     "GrantId",
     "GrantWithBoxInfo",
     "HubStorageSummary",
+    "RequeueAllFailedWorkOrder",
+    "RequeueFailedFileWorkOrder",
     "ResearchDataUploadBox",
     "ResizeFileBoxWorkOrder",
     "Study",
@@ -226,6 +229,25 @@ class DeleteFileBoxWorkOrder(BaseWorkOrderToken):
 
     work_type: Literal["delete_box"] = "delete_box"
     box_id: UUID4 = Field(..., description="ID of the box to delete")
+
+
+class RequeueFailedFileWorkOrder(BaseWorkOrderToken):
+    """Work order token for requeueing a FileUpload that failed interrogation."""
+
+    work_type: Literal["requeue"] = "requeue"
+    box_id: UUID4 = Field(..., description="ID of the box containing the file")
+    file_id: UUID4 = Field(..., description="ID of the file upload to requeue")
+
+
+class RequeueAllFailedWorkOrder(BaseWorkOrderToken):
+    """Work order token for requeueing all failed FileUploads in a FileUploadBox.
+
+    The work type is `"requeue_box"` rather than `"requeue"` so that a
+    `RequeueFailedFileWorkOrder` can't validate as a box-level requeue token.
+    """
+
+    work_type: Literal["requeue_box"] = "requeue_box"
+    box_id: UUID4 = Field(..., description="ID of the box whose files are requeued")
 
 
 # API Request/Response models
@@ -399,6 +421,22 @@ class FileUploadWithAccession(FileUpload):
 
     accession: PID | None = Field(
         default=None, description="The accession number assigned to this file."
+    )
+
+
+class BoxRequeueResult(BaseModel):
+    """The outcome of requeueing every failed file upload in an upload box."""
+
+    requeued: list[UUID4] = Field(
+        ...,
+        description="The IDs of the file uploads that were set back to the inbox state",
+    )
+    skipped: list[UUID4] = Field(
+        ...,
+        description=(
+            "The IDs of the file uploads that were ineligible for a requeue, e.g."
+            + " because the uploaded object is no longer in the inbox"
+        ),
     )
 
 

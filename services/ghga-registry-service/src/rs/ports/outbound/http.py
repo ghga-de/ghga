@@ -21,6 +21,7 @@ from pydantic import UUID4, PositiveInt
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.core.models import (
+    BoxRequeueResult,
     FileUploadWithAccession,
     GrantId,
     UploadGrant,
@@ -139,7 +140,22 @@ class FileBoxClientPort(ABC):
             )
 
     class FUBStateError(RuntimeError):
-        """Raised when the FileUploadBox is locked and the operation cannot proceed."""
+        """Raised when the FileUploadBox's state precludes the operation, i.e. it is
+        locked or archived.
+        """
+
+    class FileUploadNotFoundError(RuntimeError):
+        """Raised when the FileUpload doesn't exist in the owning service."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = f"FileUpload {file_id} was not found in the owning service."
+            super().__init__(msg)
+
+    class RequeueError(RuntimeError):
+        """Raised when the owning service refuses to requeue a FileUpload because its
+        state doesn't allow it, it never got interrogated, or the uploaded object is
+        no longer in the inbox.
+        """
 
     @abstractmethod
     async def create_file_upload_box(
@@ -266,6 +282,36 @@ class FileBoxClientPort(ABC):
 
         Raises:
             FUBStateError if the FileUploadBox is locked.
+            OperationError if there's any other problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4
+    ) -> None:
+        """Requeue a FileUpload that failed interrogation in the owning service.
+
+        The uploaded object is still in the inbox, so the file is only set back to the
+        inbox state - it does not have to be uploaded again.
+
+        Raises:
+            FileUploadNotFoundError if the FileUpload doesn't exist.
+            FUBStateError if the FileUploadBox is archived.
+            RequeueError if the FileUpload cannot be requeued.
+            OperationError if there's any other problem with the operation.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue every FileUpload in a FileUploadBox that failed interrogation.
+
+        Files that are ineligible for a requeue are reported in the result's `skipped`
+        list instead of failing the whole operation.
+
+        Raises:
+            FUBStateError if the FileUploadBox is archived.
             OperationError if there's any other problem with the operation.
         """
         ...
