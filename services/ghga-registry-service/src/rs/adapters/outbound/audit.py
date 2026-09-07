@@ -139,11 +139,12 @@ class AuditRepository(AuditRepositoryPort):
         """Log that a user requeued all failed FileUploads in a box for interrogation."""
         # Action is set to None because the box itself isn't updated, just all the files
         #  within the box.
+        stringified_ids = ", ".join([str(file_id) for file_id in file_ids])
         await self.create_audit_record(
             label="All FileUploads in ResearchDataUploadBox requeued",
             description=(
                 f"All failed FileUploads in box {box_id} were requeued for"
-                + f" interrogation. Requeued File IDs are: {file_ids}"
+                + f" interrogation. Requeued File IDs are: {stringified_ids}."
             ),
             user_id=user_id,
             action=None,
