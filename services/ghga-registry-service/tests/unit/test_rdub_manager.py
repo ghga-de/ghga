@@ -2494,7 +2494,7 @@ async def test_requeue_all_box_uploads_happy(
     )
 
     # The audit record refers to the RDUB and lists only the requeued files
-    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_awaited_once_with(  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_awaited_once_with(  # type: ignore
         box_id=box_id, user_id=TEST_DS_ID, file_ids=expected_results.requeued
     )
 
@@ -2525,7 +2525,7 @@ async def test_requeue_all_box_uploads_box_locked(
     rig.file_upload_box_client.requeue_all_box_uploads.assert_awaited_once_with(  # type: ignore
         box_id=box.file_upload_box_id
     )
-    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_awaited_once_with(  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_awaited_once_with(  # type: ignore
         box_id=box_id, user_id=TEST_DS_ID, file_ids=expected_results.requeued
     )
 
@@ -2550,7 +2550,7 @@ async def test_requeue_all_box_uploads_box_archived(
     assert exc_info.value.state == "archived"
 
     rig.file_upload_box_client.requeue_all_box_uploads.assert_not_called()  # type: ignore
-    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
 
 
 async def test_requeue_all_box_uploads_box_not_found(
@@ -2566,7 +2566,7 @@ async def test_requeue_all_box_uploads_box_not_found(
         )
 
     rig.file_upload_box_client.requeue_all_box_uploads.assert_not_called()  # type: ignore
-    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
 
 
 async def test_requeue_all_box_uploads_fbc_error_translation(
@@ -2600,7 +2600,7 @@ async def test_requeue_all_box_uploads_fbc_error_translation(
             assert exc_info.value.state == "archived"  # type: ignore
 
     # A failed requeue is never audited
-    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
 
 
 async def test_requeue_all_box_uploads_empty_results(
@@ -2622,4 +2622,4 @@ async def test_requeue_all_box_uploads_empty_results(
     assert results == expected_results
 
     # Nothing was requeued, so there is nothing to audit
-    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
