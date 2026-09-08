@@ -560,12 +560,14 @@ def _reject_ignored_flags(
         if not args.target:
             parser.error("--target needs a package name")
 
-    # The plan always asks the index about every lane member, because the closure check
-    # has to see candidates outside whatever the caller narrowed to. Neither flag can
-    # reach it.
-    if args.plan and (args.paths or args.check_pypi):
+    # Both shape the test matrix, so only the cell output and --members read them. The
+    # plan in particular always asks the index about every lane member, because the
+    # closure check has to see candidates outside whatever the caller narrowed to.
+    if (args.plan or args.candidates or args.dev_requirements) and (
+        args.paths or args.check_pypi
+    ):
         parser.error(
-            "--plan takes only --target; --paths and --check-pypi shape the cells"
+            "--paths and --check-pypi only apply to the default cells or --members"
         )
 
 
