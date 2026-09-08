@@ -37,6 +37,11 @@ from pypi_members import IndexedMember, pypi_members, release_candidates
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
+# Root files that reach consumers alongside the code: pyproject.toml becomes the wheel's
+# METADATA, the README its Description on the project page, the LICENSE ships in
+# .dist-info. Prefix-matched, so README.md and LICENSE.txt are both picked up.
+METADATA_FILES = ("pyproject.toml", "README", "LICENSE")
+
 
 def _packaged_roots(member_path: str) -> list[str]:
     """Reads the directories a member's distribution is built from, e.g. `["src"]`.
@@ -93,8 +98,8 @@ def changed_members(files: list[str]) -> list[str]:
     changed = set()
     for path, packaged in roots.items():
         shipped = tuple(f"{path}/{root}/" for root in packaged)
-        metadata = f"{path}/pyproject.toml"
-        if any(f == metadata or f.startswith(shipped) for f in files):
+        metadata = tuple(f"{path}/{name}" for name in METADATA_FILES)
+        if any(f.startswith(metadata) or f.startswith(shipped) for f in files):
             changed.add(path)
     return sorted(changed)
 
