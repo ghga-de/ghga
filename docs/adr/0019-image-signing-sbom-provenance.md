@@ -1,6 +1,8 @@
 # ADR-0019 — Sign, SBOM, and attest published images; verification foundation for Kyverno
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended 2026-09-08**: the dev-image workflow follows `dev`, not
+  `main`, so its predicted provenance subject changed with it
+  ([ADR-0020](0020-branching-strategy.md))
 - **Date:** 2026-08-14
 - **Deciders:** MKoesters
 
@@ -8,7 +10,7 @@
 
 Every deployable workload is built `FROM` Docker Hardened Images (`dhi.io`, an
 authenticated upstream pulled with GHGA's Docker Hub entitlement) and published by two CI
-workflows: the dev-image one (every merge to `main`, mutable `:dev` tags, to GHCR —
+workflows: the dev-image one (every merge to `dev`, mutable `:dev` tags, to GHCR —
 `ghcr.io/ghga-de/ghga`, a deliberately independent scratch registry) and the release one
 (manual, versioned platform-lane artifacts, to Docker Hub — `docker.io/ghga`, the actual
 production target per [ADR-0004](0004-versioning-and-release-by-tag.md)). Neither
@@ -65,9 +67,13 @@ verify against, not the policy.
       repo's dispatch runs point the "Use workflow from" picker at the release tag, per
       [ADR-0004](0004-versioning-and-release-by-tag.md), so the claim reflects the tag, not
       `main`.
-    - `dev-images.yaml`: `…/dev-images.yaml@refs/heads/main` — this workflow only ever runs
-      on push to `main`, so the ref is unambiguous, but this has **not yet** been
-      independently confirmed against a real dev image the way the release lane has.
+    - `dev-images.yaml`: `…/dev-images.yaml@refs/heads/dev` — **amended 2026-09-08**: this
+      was `…@refs/heads/main` until [ADR-0020](0020-branching-strategy.md) moved the
+      workflow's trigger to `dev`, which is the branch `:dev` is named for. It still only
+      ever runs on push to one branch, so the ref is unambiguous, but this remains a
+      prediction — it has **not yet** been independently confirmed against a real dev image
+      the way the release lane has. Anything that pinned the old `main` shape must be
+      updated; nothing in this repo does, since enforcement lives in the platform layer.
 
   Read the exact subject off a real run (`cosign verify … --output json`) before any
   consumer pins a policy to the `dev-images.yaml` shape, which remains a prediction.

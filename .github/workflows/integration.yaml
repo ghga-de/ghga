@@ -20,11 +20,12 @@
 # full fleet is up. Measure, don't assume — the documented specs were wrong.
 name: integration
 
-# A gate: every pull request and every push to main, subject to `changes` below.
+# A gate: every pull request and every push to the long-lived branches (`dev` takes the
+# merge traffic, `main` moves at release time — ADR-0020), subject to `changes` below.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 concurrency:

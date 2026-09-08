@@ -15,18 +15,18 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev]
 
-# Keyed on the branch's role, not on the event type. Releases come from main only, and
+# Keyed on the branch's role, not on the event type. Releases are cut from the two
+# long-lived branches (ADR-0020: final tags on `main`, release candidates on `dev`), and
 # release.yaml requires the tagged commit's OWN CI run to be green — a cancelled run never
-# is — so main runs group by commit and are never cancelled. Every other ref groups by ref
-# and the newest push wins: a superseded run there proves nothing about a commit anyone
-# will release. Asking "is this main?" rather than "is this a PR?" keeps that true for any
-# branch added to the trigger later — a dev branch carrying the merge traffic lands on the
-# cancelling side without touching this block.
+# is — so runs on both group by commit and are never cancelled. Every other ref groups by
+# ref and the newest push wins: a superseded run there proves nothing about a commit anyone
+# will release. Asking "is this a release branch?" rather than "is this a PR?" is what lets
+# a candidate be cut from `dev` at any moment without racing the next merge into it.
 concurrency:
-  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ci-${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
 
 jobs:
   # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
@@ -178,7 +178,8 @@ jobs:
   # YAML/JSON validity, exec bits, private keys, large files. ruff, mypy, eslint and
   # prettier are SKIPped here because `lint`, `check-python` and `check-frontend` already
   # run them -- this job must not make CI pay for them twice. no-commit-to-branch is
-  # skipped because CI legitimately runs on main.
+  # skipped because CI legitimately runs on both long-lived branches, `main` and `dev`,
+  # which is exactly what that hook forbids a developer from committing to.
   #
   # Runs `pre-commit` from the workspace's own pin rather than pre-commit/action, which
   # would provision a second Python and a second pre-commit version.

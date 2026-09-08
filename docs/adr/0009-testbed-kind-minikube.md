@@ -10,7 +10,8 @@
 ## Context
 Integration today uses docker-compose (`archive-test-bed`). We want the test bed to exercise the
 **same Helm charts** we deploy, so that `HEAD` being green means "the deployable system
-integrates", and to keep `main` always integrated. The BDD + Playwright suite already drives the
+integrates", and to keep the integration branch always integrated (`main` when this was
+written; `dev` since [ADR-0020](0020-branching-strategy.md)). The BDD + Playwright suite already drives the
 full user journey (registration → metadata → upload → access → download) and uses
 `state-management-service` to reset state between scenarios.
 

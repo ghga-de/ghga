@@ -30,14 +30,17 @@ charts and runs its integration tests on Kubernetes.
 
 ## Decisions (ADRs)
 Status mirrors each ADR's own `Status:` line; the last column records supersession and
-cross-ADR amendment, which is how several of these are meant to be read together.
+cross-ADR amendment, which is how several of these are meant to be read together. "Last
+amended" tracks decisions that moved, not wording that was clarified — an ADR edited only to
+say which branch a sentence now names keeps its previous date, and gains no `Status:` entry to
+mirror here.
 
 | # | Decision | Status | Supersedes / superseded by |
 |---|---|---|---|
 | [0001](adr/0001-consolidate-into-monorepo.md) | Consolidate into one polyglot monorepo; retire the template + `.template/` sync | Accepted |  |
 | [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted · last amended 2026-08-24 |  |
 | [0003](adr/0003-repository-scope.md) | Scope: everything except `datahub-test-bed` | Accepted |  |
-| [0004](adr/0004-versioning-and-release-by-tag.md) | Hybrid releases: platform lockstep (`ghga/X.Y.Z`) + per-component PyPI lanes | Accepted · revised 2026-07-23 · last amended 2026-09-01 | follows [0020](adr/0020-branching-strategy.md) for the `dev` cut |
+| [0004](adr/0004-versioning-and-release-by-tag.md) | Hybrid releases: platform lockstep (`ghga/X.Y.Z`) + per-component PyPI lanes | Accepted · revised 2026-07-23 · last amended 2026-09-08 | follows [0020](adr/0020-branching-strategy.md) for the `dev` cut |
 | [0005](adr/0005-helm-app-chart-services-and-config-only.md) | ~~App chart = "services + config only"~~ | **Superseded** | superseded by [0011](adr/0011-helm-chart-boundary-hybrid.md) |
 | [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Self-contained demo umbrella; lightweight infra (revised: Envoy Gateway edge, demo == testbed) | Accepted · revised 2026-06-30 · last amended 2026-09-04 |  |
 | [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI via a generic OIDC provider (mock-oauth2-server default) | Accepted · last amended 2026-09-04 |  |
@@ -51,9 +54,9 @@ cross-ADR amendment, which is how several of these are meant to be read together
 | [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later | Accepted |  |
 | [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) | Accepted |  |
 | [0017](adr/0017-local-integration-host-cluster.md) | Local integration on a host-level cluster; no DinD/DooD in the devcontainer | Accepted · last amended 2026-08-11 | amends [0009](adr/0009-testbed-kind-minikube.md) |
-| [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted |  |
-| [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted |  |
-| [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch | **Proposed** — unimplemented | [0004](adr/0004-versioning-and-release-by-tag.md) already amended for it |
+| [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
+| [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
+| [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch | Accepted · implemented 2026-09-08 | amends [0004](adr/0004-versioning-and-release-by-tag.md), [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) |
 
 ## Phased roadmap (high level)
 

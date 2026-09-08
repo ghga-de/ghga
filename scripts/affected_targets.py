@@ -12,7 +12,7 @@ derived from the members' own pyproject.toml files: any dependency whose (normal
 is another workspace member counts as an internal edge.
 
 Usage:
-    python scripts/affected_targets.py [--base origin/main] [--format json|lines|matrix]
+    python scripts/affected_targets.py [--base origin/dev] [--format json|lines|matrix]
 
 Output (json, default):
     {"all": false, "targets": ["libs/hexkit", "services/auth-service"]}
@@ -183,7 +183,9 @@ def all_targets() -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--base", default="origin/main", help="base ref to diff against")
+    # origin/dev: feature branches are cut from the integration branch (ADR-0020). A
+    # hotfix branch is cut from `main` instead and needs an explicit --base origin/main.
+    ap.add_argument("--base", default="origin/dev", help="base ref to diff against")
     ap.add_argument("--format", choices=("json", "lines", "matrix"), default="json")
     ap.add_argument(
         "--all",

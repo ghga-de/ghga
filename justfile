@@ -154,7 +154,9 @@ test target="": sync-check
     exit $exit_status
 
 # Print the workspace targets affected by the working tree vs a base ref.
-affected base="origin/main":
+# Defaults to the integration branch, which is what feature branches are cut from (ADR-0020).
+# On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
+affected base="origin/dev":
     uv run python scripts/affected_targets.py --base {{base}}
 
 # --- PyPI lane --------------------------------------------------------------------------

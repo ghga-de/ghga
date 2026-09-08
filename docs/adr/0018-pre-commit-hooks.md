@@ -1,6 +1,7 @@
 # ADR-0018 — One `pre-commit` config for both stacks
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended 2026-09-08**: `no-commit-to-branch` guards `dev` as well
+  as `main`, following [ADR-0020](0020-branching-strategy.md)
 - **Date:** 2026-08-21
 - **Deciders:** Christoph Zwerschke
 
@@ -70,7 +71,9 @@ files without a final newline, which a whitespace hook would strip and the next 
 restore — forever. `deploy/src/create_charts.py` and the chart templates were changed so
 regeneration is idempotent, and CI asserts it stays that way.
 
-**`no-commit-to-branch` guards `main` only.** `dev` and `int` do not exist here; releases are tags
+**`no-commit-to-branch` guards `main` and `dev`** (amended 2026-09-08): both long-lived branches
+under [ADR-0020](0020-branching-strategy.md) — `main` the latest release, `dev` the integration
+branch. No `int` branch exists, and releases are tags, not branches
 ([ADR-0004](0004-versioning-and-release-by-tag.md)).
 
 The exclusions are deliberate and each has a reason recorded in the config: imported epic docs

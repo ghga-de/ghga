@@ -1,7 +1,8 @@
 # ADR-0020 — Git Flow: `main` is the latest release, `dev` is the integration branch
 
-- **Status:** Proposed — **amended 2026-09-04**: still unimplemented, none of the
-  "Necessary changes" below have landed
+- **Status:** Accepted — **amended 2026-09-08**: implemented. `dev` exists and the
+  repo-side changes below have landed; the GitHub-side settings are tracked in
+  "Remaining setup"
 - **Date:** 2026-08-28
 - **Deciders:** Byron Himes
 
@@ -28,12 +29,13 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
 - **Platform version strings are always up-to-date in `dev`**.
-- **Release candidates are created from `dev`**, where the pre-release git tag is cut.
+- **Release candidates are created from `dev`**, where the pre-release git tag is cut. Only
+  from `dev` — see the hotfix bullet.
 - **`dev` is merged back into `main` with a merge commit** for production releases, and the platform release git tag is cut on `main`.
 - **Production images are rebuilt** after release candidates are verified in staging.
   - The rebuilt images then get a final, confirmatory deployment to staging, so the images production runs have themselves been deployed there, not just their release candidates.
   - See "Open questions" for more on this.
-- **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release.
+- **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release. **Hotfixes get no release candidate** (decided 2026-09-08): they are cut, reviewed and released on `main` in one step. A candidate exists to stage integrated-but-unreleased work, which is what `dev` holds and what a hotfix by definition is not — and a hotfix is the case where the extra round trip costs the most. So `ghga/X.Y.Z-rc.N` is a `dev`-only tag, and the release gate rejects one on `main` rather than accepting it.
 - **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
 
 ## Consequences
@@ -46,9 +48,19 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 
 ### Necessary changes
 
-> **Amended 2026-09-04 — none of this has landed; the ADR is not in force.**
-> Verified against the tree: there is no `dev` branch, locally or on the remote, and `main` is still the default branch; `ci.yaml`, `integration.yaml` and `dev-images.yaml` still trigger on `push: branches: [main]`; `release.yaml` still asserts "the commit is on main" ahead of lane routing; `security-scan.yaml` still opens its lockfile PR with `base: main`; `no-commit-to-branch` still guards `main` alone, with its "this repo has only `main`" comment intact; and both `scripts/affected_targets.py` and the justfile's `affected` recipe still default to `origin/main`.
-> The one place the repo already speaks as though `dev` existed is [ADR-0004](0004-versioning-and-release-by-tag.md), whose 2026-09-01 amendment moved the pre-release cut to `dev` — so until this ADR is accepted and implemented, or withdrawn, the ADR set asserts a branching model the repo does not have.
+> **Amended 2026-09-08 — the repo-side changes have landed.** `dev` is branched from `main`
+> and pushed; `ci.yaml` and `integration.yaml` trigger on pushes to both branches;
+> `dev-images.yaml` follows `dev`; `release.yaml` asserts the branch per lane, after routing;
+> `security-scan.yaml` scans and targets `dev`; `no-commit-to-branch` guards both branches; and
+> `scripts/affected_targets.py` and the justfile's `affected` recipe default to `origin/dev`.
+> Prose that described `main` as the integrated branch was swept with it:
+> [ADR-0019](0019-image-signing-sbom-provenance.md) (its predicted provenance subject is now
+> `@refs/heads/dev`), [ADR-0009](0009-testbed-kind-minikube.md), the architecture overview, and
+> the ADR index. The ADR set and the repo now agree —
+> [ADR-0004](0004-versioning-and-release-by-tag.md)'s 2026-09-01 amendment (pre-release cuts on
+> `dev`, per-lane branch gate) is backed by the workflow, and was itself amended on 2026-09-08
+> where implementing it showed the per-lane branches had to be sets rather than single names.
+> What is left is GitHub-side and cannot be done from the tree; see "Remaining setup".
 
 **Branch**
 - Create `dev` from `main`.
@@ -59,17 +71,45 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - Protect `dev` like we protect `main`, and keep `main` protected too.
 - Make `dev` the default branch so new branches and PRs target it automatically.
 - `security-scan.yaml` opens its lockfile PR against `main`. That needs to become `dev`.
+  - **Corrected while implementing (2026-09-08):** changing the PR base alone was a live bug. The workflow runs on `schedule`/`workflow_dispatch`, whose bare `actions/checkout` resolves to the *default* branch — still `main` until the flip below — so it would have scanned `main`'s tree while diffing against `:dev` images now built from `dev`. Two effects, both silent: the lockfiles were resolved from `main`'s manifests, so any dependency change made on `dev` since the branch point would be overwritten by a lockfile that never saw it; and the vulnerability delta was measured on `main`'s tree, so the whole `main..dev` gap was attributed to the lockfile update. (The blast radius was the lockfiles, not the tree — `create-pull-request` commits the working-tree diff, which `add-paths` limits to `uv.lock` and `pnpm-lock.yaml`, onto the base branch. An earlier draft of this bullet said the PR would revert everything merged since the branch point; it would not, and the mechanism does not support that claim.) Every checkout now takes its commit from a `base` job that resolves `BASE_BRANCH` once, which the PR base and the close-step lookup also read — so the workflow is correct regardless of the default-branch setting, and all three jobs see one commit even when a merge lands mid-run.
 
 **pre-commit**
 - `no-commit-to-branch` in `.pre-commit-config.yaml` only guards `main`, it should guard `dev` too. Its comment ("this repo has only `main`") and the matching note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
 
 **Workflows**
 - Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a git tag cut on `dev` would fail the CI check even though everything passed.
+  - **Added while implementing (2026-09-08):** `ci.yaml`'s concurrency block also had to learn about `dev`. It grouped `main` by commit and never cancelled it, precisely so a tag would find its own green run, and cancelled everything else. Adding the trigger alone would have put `dev` on the cancelling side, where the next merge kills the run a release candidate is about to be cut against — losing the evidence this bullet exists to preserve. Both long-lived branches now group by commit and are never cancelled.
 - `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
 - `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every git tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main`.
+  - **Revised while implementing (2026-09-08):** the bullet's per-lane split is right, and each lane ended up pinned to exactly one branch — but not the ones first written down. Two cases surfaced while implementing it, both settled by decision rather than by loosening the gate:
+    - **Hotfix candidates.** Implementing the gate surfaced that a `dev`-only rc rule makes `ghga/17.0.1-rc.1` unbuildable, since hotfixes never touch `dev`. That was first handled by accepting rc tags on `main` as well, which deferred the question rather than answering it. **Settled 2026-09-08 by the decider: hotfixes get no candidate** (recorded in the Decision above), so the rc lane is `dev`-only after all and rejecting a `-rc.N` tag on `main` is now the intended behaviour, not an accident.
+    - **Component releases serialize behind platform releases.** A PyPI version bump lands in `dev` and only reaches `main` at the release merge, so `hexkit/8.7.0` cannot be tagged until the next platform release — a coupling this ADR introduced without weighing it against [ADR-0004](0004-versioning-and-release-by-tag.md)'s independent component lifecycle. Accepting PyPI tags on `dev` too was considered and rejected. **Settled 2026-09-08: keep the lockstep**, because one release cadence is simpler than two. So "PyPI tags left on `main`" stands as written, now deliberately.
+  - **Also while implementing:** the tree-reading half of the routing step (`python3 scripts/image_members.py`) moved *behind* the gate. Routing needs only the ref string, so the gate now runs before anything from the tagged tree executes — previously the on-`main` check ran first and gave that ordering for free.
+- `integration.yaml`'s concurrency block is **deliberately left cancellable** (decided 2026-09-08), unlike `ci.yaml`'s. It groups by ref with `cancel-in-progress: true`, so a post-merge integration run on `dev` is killed by the next merge. That is the same behaviour `main` had before the merge traffic moved; it is acceptable here and not in `ci.yaml` because `release.yaml` reads CI results by commit SHA and never reads integration results, so a cancelled integration run cannot cost anyone a release. Superseding a ~1h job is worth more than the redundant verdict.
 
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
+
+### Remaining setup
+
+The tree is done; these are repo settings and in-flight work, and have to be done through
+GitHub rather than a commit. Until they are, `dev` works but nothing steers people onto it.
+
+- Make `dev` the default branch, and protect it the way `main` is protected. Renovate has no
+  `baseBranches` in `renovate.json5`, so the flip is what retargets it — no config change
+  needed. It does leave Renovate's existing `main`-based PRs stranded, though, exactly as it
+  strands the lockfile PR below: `renovate/dhi.io-node-base-image` and
+  `renovate/dhi.io-python-base-image` are superseded by whatever the next Monday run opens
+  against `dev`, so close them alongside that one. `renovate.yaml` itself needs no change; it
+  has no checkout at all and drives the Renovate action over the API.
+- Keep "Require linear history" *off* for `main` — it would forbid the release merge commit —
+  and forbid squash-merging and rebasing there for the same reason.
+- Retarget the open pull requests that still name `main` as their base. `dev` was branched
+  from `main` at the same commit, so nothing needs rebasing yet; that stops being true as soon
+  as the first PR merges into `dev`.
+- Close the existing `automated/lockfile-security-update` PR by hand. It is open against
+  `main`, and `security-scan.yaml`'s close step now looks up its PR with `--base dev`, so it
+  can never match that one again. The next scan opens a fresh PR against `dev`.
 
 ## Open questions
 
@@ -77,7 +117,7 @@ These are being settled separately. None of them change the branch layout.
 
 - How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences. For now we are rebuilding images, but it is a temporary solution until this question is answered.
 - Likewise, how a promoted image would be tagged.
-- Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote.
+- Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote. **Amended 2026-09-08:** that premise is now a decision rather than an assumption — hotfixes get no candidate (see the Decision), so "hotfix" is a reliable synonym for "nothing to promote" and this question only has to cover the normal `dev` → rc → `main` path.
 - [ADR-0004](0004-versioning-and-release-by-tag.md) was amended on 2026-09-01 for the pre-release cut moving to `dev` and the per-lane branch gate. It will need a further amendment if the questions above resolve toward promoting digests, since that's where release tagging/image publishing/promotion belong.
 
 ## Alternatives considered
