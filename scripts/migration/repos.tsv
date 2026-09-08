@@ -25,10 +25,29 @@
 #                                        deploy/charts/ghga-common + the generator instead — see
 #                                        docs/migration/runbook.md.
 #
+# Retired: upstream repo ARCHIVED (read-only); the monorepo is now the source of truth. The row
+# is REMOVED rather than kept, because an archived repo still clones fine — a sync would succeed
+# as a permanent no-op, and a live row wrongly implies an upstream that still moves. Each was
+# verified fully synced first (runbook: "Verifying a repo is fully synced"). Last upstream commit
+# merged here, with the member version it carried:
+#   auth-service          -> services/auth-service       7e53ecb "Migrate to httpx2 (#158)" 2026-08-07, 10.0.2
+#   ghga-event-schemas    -> libs/ghga-event-schemas     0e1ba03 "Upload Box Size Limit (#78)" 2026-05-04, 13.0.0
+#   ghga-datasteward-kit  -> tools/ghga-datasteward-kit  7d70c58 "Httpx2 migration (#86)" 2026-08-07, 5.4.2
+#   data-portal           -> frontend/data-portal        ccc8676 "Update dependencies (#356)" 2026-08-10, 2.5.15
+#                            (JS toolchain, separate pnpm lockfile)
+#   epic-docs             -> docs/epics                  fcb9b94 "Complete README (#171)" 2026-08-12 (= archived tip)
+#                            (planning docs, no code; outside the libs/*, services/*, tools/* globs,
+#                            so not a uv workspace member)
+# Three archived tips are deliberately NOT merged — each is an archival/deprecation notice that
+# belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482, and
+# ghga-datasteward-kit f474eef (which also makes the PyPI console script print a final-release
+# banner — wanted there, not here).
+# adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
+# (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
+#
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
 lib	hexkit	.	libs/hexkit	main
 lib	ghga-service-commons	.	libs/ghga-service-commons	main
-lib	ghga-event-schemas	.	libs/ghga-event-schemas	main
 lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main
 # GHGA fork of IBM/jsonsubschema (dist `ghga-jsonsubschema`, import name `jsonsubschema`),
@@ -48,7 +67,6 @@ service	file-services-backend	services/pcs	services/pcs	main
 service	file-services-backend	services/ucs	services/ucs	main
 #
 # Standalone services
-service	auth-service	.	services/auth-service	main
 service	access-request-service	.	services/access-request-service	main
 service	dataset-information-service	.	services/dataset-information-service	main
 service	notification-service	.	services/notification-service	main
@@ -64,14 +82,10 @@ service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
 tool	ghga-connector	.	tools/ghga-connector	main
-tool	ghga-datasteward-kit	.	tools/ghga-datasteward-kit	main
 # ghga-transpiler: the integrated/compatible line is v2 (2.x, no schemapack dep), NOT main (3.x).
 tool	ghga-transpiler	.	tools/ghga-transpiler	v2
 tool	ghga-validator	.	tools/ghga-validator	main
 tool	auth-km-jobs	.	tools/auth-km-jobs	main
-#
-# Front end (JS toolchain, separate pnpm lockfile)
-frontend	data-portal	.	frontend/data-portal	main
 #
 # Test-only service: the OIDC provider the integration suite and the portal's UI
 # tests authenticate against (deployed by the testbed profile, never in prod)
@@ -79,7 +93,3 @@ service	test-oidc-provider	.	services/test-oidc-provider	main
 #
 # Integration test bed (BDD + Playwright) -> runs against kind + helm
 testbed	archive-test-bed	.	testbed	main
-#
-# Epic technical specifications: planning docs, no code. Not a uv workspace member
-# (docs/epics is outside the libs/*, services/*, tools/* globs).
-docs	epic-docs	.	docs/epics	main
