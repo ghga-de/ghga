@@ -189,9 +189,10 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 - [ ] Archive the old repos (keep read-only for history/provenance); update external docs that
       point at per-repo locations. **Started ahead of the full cutover (2026-09):**
       `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`,
-      `access-request-service`, `epic-docs` and `adrs` are archived and their rows removed from
-      `repos.tsv` — see the "Retired" block there for the last commit merged from each. Verify a repo is fully synced (§6) before
-      dropping its row.
+      `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`,
+      `epic-docs` and `adrs` are archived and their rows removed from `repos.tsv` — see the
+      "Retired" block there for the last commit merged from each. Verify a repo is fully
+      synced (§6) before dropping its row.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
 - [ ] Decommission the docker-compose test bed.

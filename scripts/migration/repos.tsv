@@ -45,10 +45,18 @@
 #                             .pyproject_generation/, a ruff rev: pin in the per-repo pre-commit config).
 #                             The bump was ported by hand instead, so the member here reads 8.0.3 while
 #                             the last merged commit carried 8.0.2.
-# Four archived tips are deliberately NOT merged — each is an archival/deprecation notice that
+#   work-package-service   -> services/work-package-service   4a61871 "Migrate to httpx2 (#72)" 2026-08-07, 11.1.1
+#   ghga-registry-service  -> services/ghga-registry-service  510a085 "Update lock file for cryptography 50" 2026-08-07, 5.0.2
+#                             The one later upstream commit, 7d536b7 "Sparse index (#28)"
+#                             2026-08-11 (= release 5.0.3), was NOT merged: its content was ported
+#                             by hand here instead (387b1f7c + 2dd9172f), so the member reads 5.0.3
+#                             while the last merged commit carried 5.0.2.
+#   mass                   -> services/mass                   32dd385 "Migrate to httpx2 (#51)" 2026-07-31, 7.0.2
+# Five archived tips are deliberately NOT merged — each is an archival/deprecation notice that
 # belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
-# access-request-service 1f2069d1, and ghga-datasteward-kit f474eef (which also makes the PyPI
-# console script print a final-release banner — wanted there, not here).
+# access-request-service 1f2069d1, work-package-service 4b933c0, and ghga-datasteward-kit
+# f474eef (which also makes the PyPI console script print a final-release banner — wanted
+# there, not here).
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
 # (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
 #
@@ -77,12 +85,9 @@ service	file-services-backend	services/ucs	services/ucs	main
 service	dataset-information-service	.	services/dataset-information-service	main
 service	notification-service	.	services/notification-service	main
 service	notification-orchestration-service	.	services/notification-orchestration-service	main
-service	mass	.	services/mass	main
 service	well-known-value-service	.	services/well-known-value-service	main
-service	work-package-service	.	services/work-package-service	main
 service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
-service	ghga-registry-service	.	services/ghga-registry-service	main
 service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
