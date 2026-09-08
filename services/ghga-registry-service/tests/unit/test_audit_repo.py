@@ -76,14 +76,9 @@ def get_audit_payload(event: Event) -> dict:
     return payload
 
 
-async def test_create_audit_record(config: Config):
+async def test_create_audit_record(audit_fixture: AuditFixture):
     """Test the create_audit_record method"""
-    _config = config
-    event_store = InMemEventStore()
-    event_pub_translator = EventPubTranslator(
-        config=_config, provider=InMemEventPublisher(event_store=event_store)
-    )
-    auditor = AuditRepository(service="rs", event_publisher=event_pub_translator)
+    auditor, event_store = audit_fixture
     await auditor.create_audit_record(
         label="My label",
         description="Testing out my class",
@@ -94,21 +89,14 @@ async def test_create_audit_record(config: Config):
     )
 
     # Get the event from the in memory event store
-    events = []
-    with suppress(TopicExhaustedError):
-        while True:
-            events.append(event_store.get("audit-records"))  # topic from test_config
+    events = get_audit_events(event_store)
 
     # Inspect the event
     assert len(events) == 1
     event: Event = events[0]
     assert event.key.startswith("rs-")
     assert event.type_ == "audit_record_created"
-    payload = dict(event.payload)
-    del payload["id"]
-    created = str(payload.pop("created"))  # cast to string to satisfy type checker
-    assert datetime.fromisoformat(created) - now_utc_ms_prec() < timedelta(seconds=5)
-    assert payload == {
+    assert get_audit_payload(event) == {
         "service": "rs",
         "label": "My label",
         "description": "Testing out my class",
