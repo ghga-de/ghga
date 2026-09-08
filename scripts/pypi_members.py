@@ -626,11 +626,15 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps([m.as_json() for m in candidates.publishing]))
         return 0
 
+    # Built once: --check-pypi needs the whole lane to know what is shipping, and
+    # `--paths` only narrows what is printed, so filter rather than walk again.
+    lane = pypi_members()
+
     # Without --check-pypi nothing is known to be shipping, so every `train_deps` stays
     # empty and each cell resolves its whole closure from the index.
     release_member_paths: set[str] = set()
     if args.check_pypi:
-        candidates = release_candidates()
+        candidates = release_candidates(lane)
         if candidates.unreachable:
             sys.exit(
                 "error: could not reach PyPI to establish what is already released"
@@ -638,7 +642,9 @@ def main(argv: list[str] | None = None) -> int:
         release_member_paths = {m.path for m in candidates.publishing}
 
     members = [
-        m.with_train_deps(release_member_paths) for m in pypi_members(args.paths)
+        m.with_train_deps(release_member_paths)
+        for m in lane
+        if not args.paths or m.path in args.paths
     ]
     print(
         json.dumps(
