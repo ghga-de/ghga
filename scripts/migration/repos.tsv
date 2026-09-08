@@ -30,18 +30,25 @@
 # as a permanent no-op, and a live row wrongly implies an upstream that still moves. Each was
 # verified fully synced first (runbook: "Verifying a repo is fully synced"). Last upstream commit
 # merged here, with the member version it carried:
-#   auth-service          -> services/auth-service       7e53ecb "Migrate to httpx2 (#158)" 2026-08-07, 10.0.2
-#   ghga-event-schemas    -> libs/ghga-event-schemas     0e1ba03 "Upload Box Size Limit (#78)" 2026-05-04, 13.0.0
-#   ghga-datasteward-kit  -> tools/ghga-datasteward-kit  7d70c58 "Httpx2 migration (#86)" 2026-08-07, 5.4.2
-#   data-portal           -> frontend/data-portal        ccc8676 "Update dependencies (#356)" 2026-08-10, 2.5.15
-#                            (JS toolchain, separate pnpm lockfile)
-#   epic-docs             -> docs/epics                  fcb9b94 "Complete README (#171)" 2026-08-12 (= archived tip)
-#                            (planning docs, no code; outside the libs/*, services/*, tools/* globs,
-#                            so not a uv workspace member)
-# Three archived tips are deliberately NOT merged — each is an archival/deprecation notice that
-# belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482, and
-# ghga-datasteward-kit f474eef (which also makes the PyPI console script print a final-release
-# banner — wanted there, not here).
+#   auth-service           -> services/auth-service           7e53ecb "Migrate to httpx2 (#158)" 2026-08-07, 10.0.2
+#   ghga-event-schemas     -> libs/ghga-event-schemas         0e1ba03 "Upload Box Size Limit (#78)" 2026-05-04, 13.0.0
+#   ghga-datasteward-kit   -> tools/ghga-datasteward-kit      7d70c58 "Httpx2 migration (#86)" 2026-08-07, 5.4.2
+#   data-portal            -> frontend/data-portal            ccc8676 "Update dependencies (#356)" 2026-08-10, 2.5.15
+#                             (JS toolchain, separate pnpm lockfile)
+#   epic-docs              -> docs/epics                      fcb9b94 "Complete README (#171)" 2026-08-12 (= archived tip)
+#                             (planning docs, no code; outside the libs/*, services/*, tools/* globs,
+#                             so not a uv workspace member)
+#   access-request-service -> services/access-request-service 6af2b32 "Migrate to httpx2 (#57)" 2026-08-07, 8.0.2
+#                             The one later upstream commit, 041d1f21 "Update template and dependencies
+#                             (#58)" 2026-08-10 (= release 8.0.3), was NOT merged: apart from the version
+#                             bump it is only dropped boilerplate (lock/requirements*.txt,
+#                             .pyproject_generation/, a ruff rev: pin in the per-repo pre-commit config).
+#                             The bump was ported by hand instead, so the member here reads 8.0.3 while
+#                             the last merged commit carried 8.0.2.
+# Four archived tips are deliberately NOT merged — each is an archival/deprecation notice that
+# belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
+# access-request-service 1f2069d1, and ghga-datasteward-kit f474eef (which also makes the PyPI
+# console script print a final-release banner — wanted there, not here).
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
 # (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
 #
@@ -67,7 +74,6 @@ service	file-services-backend	services/pcs	services/pcs	main
 service	file-services-backend	services/ucs	services/ucs	main
 #
 # Standalone services
-service	access-request-service	.	services/access-request-service	main
 service	dataset-information-service	.	services/dataset-information-service	main
 service	notification-service	.	services/notification-service	main
 service	notification-orchestration-service	.	services/notification-orchestration-service	main
