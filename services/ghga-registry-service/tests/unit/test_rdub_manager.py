@@ -2332,11 +2332,8 @@ async def test_requeue_single_file_upload_happy(
     box = await rig.box_dao.get_by_id(box_id)
     file_id = uuid4()
 
-    assert (
-        await rig.rdub_manager.requeue_single_file_upload(
-            box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
-        )
-        is None
+    await rig.rdub_manager.requeue_single_file_upload(
+        box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
     )
 
     # The outbound call has to use the FileUploadBox ID, not the RDUB ID
