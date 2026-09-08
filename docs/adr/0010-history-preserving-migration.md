@@ -51,12 +51,13 @@ mainline sync ran 2026-07-22; day-to-day work now happens in this repo directly.
 repos ([repos.tsv](../../scripts/migration/repos.tsv) last changed 2026-08-25). Treat
 "until cutover" above as describing a window that is closing rather than one still open.
 
-**Amended 2026-09-08 — retirement has started, repo by repo.** `auth-service`,
-`ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`, `epic-docs` and `adrs` are archived
-upstream and their rows removed from [repos.tsv](../../scripts/migration/repos.tsv) after each was
-verified fully synced ([runbook §6](../migration/runbook.md)). So the checklist item "archive the
-old repos" is being worked incrementally rather than as one cutover event, and the manifest is now
-a list of what *still* syncs, not of what was imported.
+**Amended 2026-09-08 — retirement has started, repo by repo.** Mainline repos are archived
+upstream one at a time; each is verified fully synced ([runbook §6](../migration/runbook.md))
+before its row is dropped from [repos.tsv](../../scripts/migration/repos.tsv). Which ones have
+gone, and the last commit merged from each, is recorded in that file's "Retired" block — this
+ADR deliberately does not repeat the list, which changes with every retirement. So the checklist
+item "archive the old repos" is being worked incrementally rather than as one cutover event, and
+the manifest is now a list of what *still* syncs, not of what was imported.
 
 ## Consequences
 - Full history, authorship, and dates preserved; `git blame`/`log` follow files into subdirs.
