@@ -110,13 +110,21 @@ def unbumped_members(member_paths: set[str]) -> list[IndexedMember]:
         `release_candidates` passed it over for.
 
     Raises:
-        SystemExit: if PyPI cannot be reached, since nothing can be asserted against an
-            unknown index.
+        SystemExit: if PyPI cannot be reached for one of them, since nothing can be
+            asserted against an unknown index.
     """
-    candidates = release_candidates()
+    # Narrowed before the lookup, not after: the index is asked only about the members
+    # the change set touched, so an outage on an unrelated lane member cannot fail a run
+    # that had nothing to do with it.
+    changed = [member for member in pypi_members() if member.path in member_paths]
+    candidates = release_candidates(changed)
     if candidates.unreachable:
-        sys.exit("error: could not reach PyPI to establish what is already released")
-    return [member for member in candidates.skipped if member.path in member_paths]
+        unreachable = ", ".join(member.package for member in candidates.unreachable)
+        sys.exit(
+            "error: could not reach PyPI to establish what is already released:"
+            f" {unreachable}"
+        )
+    return candidates.skipped
 
 
 def main(argv: list[str] | None = None) -> int:
