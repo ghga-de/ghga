@@ -2316,3 +2316,310 @@ async def test_get_boxes_skips_dangling_grant(
 
     assert results.count == 1
     assert [b.id for b in results.boxes] == [existing_box_id]
+
+
+async def test_requeue_single_file_upload_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the `requeue_single_file_upload()` core method works in the happy case.
+
+    Check that:
+    - the right FileBoxClient method is called with the right parameters
+    - the return type of the core method is None
+    - the correct method on the AuditRepository is called with the right parameters
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    file_id = uuid4()
+
+    assert (
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
+        )
+        is None
+    )
+
+    # The outbound call has to use the FileUploadBox ID, not the RDUB ID
+    rig.file_upload_box_client.requeue_single_file_upload.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=file_id
+    )
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_awaited_once_with(  # type: ignore
+        file_id=file_id, user_id=TEST_DS_ID
+    )
+
+
+async def test_requeue_single_file_upload_box_locked(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_single_file_upload()` doesn't raise an error
+    if the box is locked. Also verify that the right FileBoxClient and AuditRepository
+    methods are called.
+    """
+    box_id = populated_boxes[0]
+    file_id = uuid4()
+
+    # Lock the box - files that failed interrogation still have to be resolved
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    await rig.rdub_manager.requeue_single_file_upload(
+        box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
+    )
+
+    rig.file_upload_box_client.requeue_single_file_upload.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=file_id
+    )
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_awaited_once_with(  # type: ignore
+        file_id=file_id, user_id=TEST_DS_ID
+    )
+
+
+async def test_requeue_single_file_upload_box_archived(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_single_file_upload()` raises an error if
+    the box is archived, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    box_id = populated_boxes[0]
+
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.box_dao.update(box)
+
+    with pytest.raises(rig.rdub_manager.BoxStateError) as exc_info:
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=box_id, file_id=uuid4(), data_steward_id=TEST_DS_ID
+        )
+    assert exc_info.value.state == "archived"
+
+    rig.file_upload_box_client.requeue_single_file_upload.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_single_file_upload_box_not_found(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_single_file_upload()` raises an error if
+    the box is missing, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=uuid4(), file_id=uuid4(), data_steward_id=TEST_DS_ID
+        )
+
+    rig.file_upload_box_client.requeue_single_file_upload.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_single_file_upload_fbc_error_translation(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that all FileBoxClient errors are translated correctly by
+    the `requeue_single_file_upload()` core method.
+
+    Expected error translation:
+    - FileUploadNotFoundError -> FileUploadNotFoundError
+    - RequeueError -> RequeueError (the client's reason is preserved)
+    - FUBStateError -> BoxStateError (the box states are out of sync)
+    - OperationError -> OperationError (not translated, propagates as is)
+    """
+    box_id = populated_boxes[0]
+    file_id = uuid4()
+    client_requeue_error = FileBoxClientPort.RequeueError(
+        f"Cannot requeue FileUpload {file_id} because it did not fail interrogation."
+    )
+
+    error_translation: list[tuple[Exception, type[Exception]]] = [
+        (
+            FileBoxClientPort.FileUploadNotFoundError(file_id=file_id),
+            RDUBManager.FileUploadNotFoundError,
+        ),
+        (client_requeue_error, RDUBManager.RequeueError),
+        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+    ]
+
+    for client_error, expected_error in error_translation:
+        rig.file_upload_box_client.requeue_single_file_upload.side_effect = (  # type: ignore
+            client_error
+        )
+        with pytest.raises(expected_error) as exc_info:
+            await rig.rdub_manager.requeue_single_file_upload(
+                box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
+            )
+
+        # The reason a file can't be requeued is passed on so the API can relay it
+        if client_error is client_requeue_error:
+            assert str(exc_info.value) == str(client_requeue_error)
+
+        # Only an archived box makes the file box service refuse outright
+        if expected_error is RDUBManager.BoxStateError:
+            assert exc_info.value.state == "archived"  # type: ignore
+
+    # A failed requeue is never audited
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that the `requeue_all_box_uploads()` core method works in the happy case.
+
+    Check that:
+    - the right FileBoxClient method is called with the right parameters
+    - the return type of the core method is an instance of BoxRequeueResults
+    - the correct method on the AuditRepository is called with the right parameters
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    expected_results = models.BoxRequeueResult(
+        requeued=[uuid4(), uuid4()], skipped=[uuid4()]
+    )
+    rig.file_upload_box_client.requeue_all_box_uploads.return_value = (  # type: ignore
+        expected_results
+    )
+
+    results = await rig.rdub_manager.requeue_all_box_uploads(
+        box_id=box_id, data_steward_id=TEST_DS_ID
+    )
+    assert isinstance(results, models.BoxRequeueResult)
+    assert results == expected_results
+
+    # The outbound call has to use the FileUploadBox ID, not the RDUB ID
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id
+    )
+
+    # The audit record refers to the RDUB and lists only the requeued files
+    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_awaited_once_with(  # type: ignore
+        box_id=box_id, user_id=TEST_DS_ID, file_ids=expected_results.requeued
+    )
+
+
+async def test_requeue_all_box_uploads_box_locked(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_all_box_uploads()` doesn't raise an error
+    if the box is locked. Also verify that the right FileBoxClient and AuditRepository
+    methods are called.
+    """
+    box_id = populated_boxes[0]
+    expected_results = models.BoxRequeueResult(requeued=[uuid4()], skipped=[])
+    rig.file_upload_box_client.requeue_all_box_uploads.return_value = (  # type: ignore
+        expected_results
+    )
+
+    # Lock the box - files that failed interrogation still have to be resolved
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    results = await rig.rdub_manager.requeue_all_box_uploads(
+        box_id=box_id, data_steward_id=TEST_DS_ID
+    )
+    assert results == expected_results
+
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id
+    )
+    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_awaited_once_with(  # type: ignore
+        box_id=box_id, user_id=TEST_DS_ID, file_ids=expected_results.requeued
+    )
+
+
+async def test_requeue_all_box_uploads_box_archived(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_all_box_uploads()` raises an error if
+    the box is archived, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    box_id = populated_boxes[0]
+
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.box_dao.update(box)
+
+    with pytest.raises(rig.rdub_manager.BoxStateError) as exc_info:
+        await rig.rdub_manager.requeue_all_box_uploads(
+            box_id=box_id, data_steward_id=TEST_DS_ID
+        )
+    assert exc_info.value.state == "archived"
+
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_box_not_found(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_all_box_uploads()` raises an error if
+    the box is missing, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.requeue_all_box_uploads(
+            box_id=uuid4(), data_steward_id=TEST_DS_ID
+        )
+
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_fbc_error_translation(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that all FileBoxClient errors are translated correctly by
+    the `requeue_all_box_uploads()` core method.
+
+    Expected error translation:
+    - FUBStateError -> BoxStateError (the box states are out of sync)
+    - OperationError -> OperationError (not translated, propagates as is)
+    """
+    box_id = populated_boxes[0]
+
+    error_translation: list[tuple[Exception, type[Exception]]] = [
+        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+    ]
+
+    for client_error, expected_error in error_translation:
+        rig.file_upload_box_client.requeue_all_box_uploads.side_effect = (  # type: ignore
+            client_error
+        )
+        with pytest.raises(expected_error) as exc_info:
+            await rig.rdub_manager.requeue_all_box_uploads(
+                box_id=box_id, data_steward_id=TEST_DS_ID
+            )
+
+        # Only an archived box makes the file box service refuse outright
+        if expected_error is RDUBManager.BoxStateError:
+            assert exc_info.value.state == "archived"  # type: ignore
+
+    # A failed requeue is never audited
+    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_empty_results(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that when the `requeued` list returned by the FileBoxClient is empty,
+    the `requeue_all_box_uploads()` core method does not call the AuditRepository,
+    but still returns the results.
+    """
+    box_id = populated_boxes[0]
+    expected_results = models.BoxRequeueResult(requeued=[], skipped=[uuid4()])
+    rig.file_upload_box_client.requeue_all_box_uploads.return_value = (  # type: ignore
+        expected_results
+    )
+
+    results = await rig.rdub_manager.requeue_all_box_uploads(
+        box_id=box_id, data_steward_id=TEST_DS_ID
+    )
+    assert results == expected_results
+
+    # Nothing was requeued, so there is nothing to audit
+    rig.rdub_manager._audit_repository.log_whole_box_requeue.assert_not_called()  # type: ignore
