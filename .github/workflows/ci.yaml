@@ -347,9 +347,6 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      # No fallback for an unresolvable base: on a pull_request it is the base branch, and
-      # the only push trigger is main, where `before` is the previous main commit. It
-      # resolves unless main is force-pushed, and then failing is the right answer.
       - name: Assert every changed lane member declares an unpublished version
         run: |
           set -euo pipefail
@@ -358,8 +355,20 @@ jobs:
           else
             base="${{ github.event.before }}"
           fi
-          git diff --name-only "$base...HEAD" \
-            | uv run --script scripts/pypi_drift.py
+          # Failing, not skipping: an undeterminable change set is not evidence of no drift.
+          if ! git cat-file -e "$base^{commit}" 2> /dev/null; then
+            echo "::error::drift check failed: no base commit to compare against ($base) — main was force-pushed or newly created"
+            exit 1
+          fi
+          # `::error::` lifts the message onto the GitHubs Checks tab.
+          if git diff --name-only "$base...HEAD" \
+            | uv run --script scripts/pypi_drift.py 2> /tmp/drift.err; then
+            exit 0
+          fi
+          while IFS= read -r line; do
+            echo "::error::$line"
+          done < /tmp/drift.err
+          exit 1
 
   # The published-combo gate (ADR-0002): the same affected members, tested the way external
   # consumers get them. pypi-matrix.yaml drops everything outside the PyPI lane, so a
