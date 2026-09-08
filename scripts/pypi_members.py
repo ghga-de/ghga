@@ -44,7 +44,7 @@ from dataclasses import asdict, dataclass, replace
 from typing import NamedTuple, Self, TypeVar
 
 import tomllib
-from packaging.specifiers import SpecifierSet
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
 from affected_targets import _canonical, internal_dep_graph
@@ -131,6 +131,24 @@ def _supported(requires_python: str, python: str) -> bool:
     there is nothing for the candidate to fail.
     """
     return SpecifierSet(requires_python).contains(Version(python))
+
+
+def _supported_pythons(requires_python: str, member_path: str) -> tuple[str, ...]:
+    """Returns the versions in TEST_PYTHONS the member can run on.
+
+    A member declaring `requires-python = ">=3.13"` yields `("3.13", "3.14")`.
+
+    Raises:
+        SystemExit: if the specifier cannot be parsed — `packaging` names only the
+            offending string, not the member declaring it.
+    """
+    try:
+        return tuple(p for p in TEST_PYTHONS if _supported(requires_python, p))
+    except InvalidSpecifier as error:
+        sys.exit(
+            f"error: {member_path}/pyproject.toml declares an unparseable"
+            f" requires-python: {error}"
+        )
 
 
 def _test_extras(optional: dict) -> list[str]:
@@ -231,9 +249,7 @@ def pypi_members(member_paths: list[str] | None = None) -> list[Member]:
                     extras=tuple(
                         _test_extras(project.get("optional-dependencies", {}))
                     ),
-                    pythons=tuple(
-                        p for p in TEST_PYTHONS if _supported(requires_python, p)
-                    ),
+                    pythons=_supported_pythons(requires_python, relative),
                 )
             )
     return members
