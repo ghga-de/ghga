@@ -76,10 +76,9 @@ jobs:
             *) echo "::error::unknown mode '$MODE' (expected sweep or targeted)"; exit 1 ;;
           esac
           target_args=()
-          if [ "$MODE" != "sweep" ]; then
-            # Not about typos — this is what makes leaning on the comparison above safe.
-            # Without it a targeted run would pass `--target ""`, matching no member and
-            # failing with a misleading "not a PyPI-lane member".
+          if [ "$MODE" = "targeted" ]; then
+            # `--target ""` would be rejected by the script too, but failing here names
+            # the mode and the missing input, and does it before spending a `uv run`.
             if [ -z "$PACKAGE" ]; then
               echo "::error::mode '$MODE' needs a package to target, but none was given"
               exit 1
