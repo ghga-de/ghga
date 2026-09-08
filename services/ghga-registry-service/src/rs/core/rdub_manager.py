@@ -1075,7 +1075,7 @@ class RDUBManager(RDUBManagerPort):
             raise error from err
 
         if results.requeued:
-            await self._audit_repository.log_whole_box_requeue(
+            await self._audit_repository.log_whole_box_requeued(
                 box_id=box_id, user_id=data_steward_id, file_ids=results.requeued
             )
         log.info(
