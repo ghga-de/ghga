@@ -153,6 +153,30 @@ Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`
 `git commit`, re-run for the rest. Keep harmonisation root-only and don't restructure service
 `src/` during the window, or conflicts multiply.
 
+### Verifying a repo is fully synced
+
+Before retiring a mainline repo (archiving it and dropping its `repos.tsv` row), prove nothing was
+left behind. `sync-from-mainline.sh` reporting "up to date" is necessary but not sufficient: it
+only checks that the rewritten upstream tip is an ancestor of `HEAD`. Compare commit *identity*
+instead — author date, author and subject all survive the `filter-repo` rewrite:
+
+```bash
+git -C <upstream.git> log --format='%at%x09%an%x09%s' main | sort -u > /tmp/up
+git log --format='%at%x09%an%x09%s' HEAD | sort -u > /tmp/mono
+comm -23 /tmp/up /tmp/mono          # upstream commits with no counterpart here
+```
+
+Every line that comes back must be accounted for as one of:
+
+- a commit that touched **only** stripped boilerplate (`drop_paths_for_kind` in `lib.sh`) —
+  `filter-repo` drops commits that filter to empty, so these legitimately have no counterpart;
+- a deliberate **upstream-only** commit, i.e. the archival/deprecation notice added when the repo
+  was frozen.
+
+Anything else is unsynced work: sync it (or port it) before archiving. Then diff the trees as a
+cross-check — the remaining differences should only be the dropped boilerplate and the monorepo's
+own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
+
 ## 7. Cutover checklist (when the sandbox proves out)
 
 - [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas.
@@ -163,7 +187,11 @@ Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`
       series (no version regressions).
 - [ ] Move the repo to `github.com/ghga-de/<monorepo>`; set CODEOWNERS per path.
 - [ ] Archive the old repos (keep read-only for history/provenance); update external docs that
-      point at per-repo locations.
+      point at per-repo locations. **Started ahead of the full cutover (2026-09):**
+      `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`, `epic-docs`
+      and `adrs` are archived and their rows removed from `repos.tsv` — see the "Retired" block
+      there for the last commit merged from each. Verify a repo is fully synced (§6) before
+      dropping its row.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
 - [ ] Decommission the docker-compose test bed.
