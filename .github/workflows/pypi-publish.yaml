@@ -9,7 +9,7 @@
 #
 # Two modes, chosen by the tag and passed in by release.yaml:
 #
-#   sweep     (pypi_sweep/x.y.z) — every candidate goes out together, dependencies first.
+#   sweep     (packages/x.y.z) — every candidate goes out together, dependencies first.
 #   targeted  (name/x.y.z)       — that member alone. Refused when a member of its own
 #                                  closure is a candidate too.
 #

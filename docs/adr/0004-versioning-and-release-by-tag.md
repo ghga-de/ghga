@@ -10,7 +10,7 @@
   to `dev` and the branch gate becomes per-lane, following
   [ADR-0020](0020-branching-strategy.md) — **amended 2026-09-01**: a member-named tag
   releases that member alone; sweeping the whole index gap moves to the reserved
-  `pypi_sweep` tag (see below)
+  `packages` tag (see below)
 - **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18 / 2026-08-19 / 2026-08-25 / 2026-09-01
 - **Deciders:** Leon Kuchenbecker
 
@@ -110,7 +110,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   - **`name/x.y.z` — targeted.** That member alone, whatever else the index is behind on.
     This is the common case: releasing one library should not drag along someone's
     unrelated pending work.
-  - **`pypi_sweep/x.y.z` — sweep.** The reserved name is not a member, so it selects
+  - **`packages/x.y.z` — sweep.** The reserved name is not a member, so it selects
     nothing and the plan takes the whole gap, dependencies first. The version component is
     a label; nothing checks it against a declared version, because there is none to check.
 
@@ -131,7 +131,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   A targeted tag cannot honour that rule by widening the train — it exists to publish one
   member — so it **refuses** instead (amended 2026-09-01). If any member of the target's
   transitive closure is a release candidate, the plan errors and names both ways out:
-  `pypi_sweep/x.y.z` for the whole train, or the dependencies on their own tags first, in
+  `packages/x.y.z` for the whole train, or the dependencies on their own tags first, in
   dependency order. The refusal is strict rather than pin-aware: `ghga-connector` pins
   `hexkit[s3]==9.0.1` exactly, so releasing it against an unpublished hexkit bump would put
   an *uninstallable* wheel on PyPI, while `schemapack`'s `ghga-arcticfreeze >=1.0, <2` would
@@ -194,7 +194,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   whole job. The two indexes hold **separate** trusted-publisher
   entries, matched on owner, repository, workflow filename and environment — a mismatch
   reports only `invalid-publisher`, so both sides change together. The lane has **one
-  entrance**: `release.yaml` routes `name/x.y.z` and `pypi_sweep/x.y.z` tags to it via
+  entrance**: `release.yaml` routes `name/x.y.z` and `packages/x.y.z` tags to it via
   `workflow_call`, so every publish has passed `resolve` (commit on `main`, CI green, and —
   for a member-named tag — the tag matching the declared version). `pypi-publish.yaml`
   declares no `workflow_dispatch` of its own — a second entrance would bypass those checks.

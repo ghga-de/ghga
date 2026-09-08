@@ -413,7 +413,7 @@ def _blocked_message(target: Member, blockers: list[IndexedMember]) -> str:
 
     return (
         f"{target.package}: cannot be released on its own — it depends on"
-        f" release candidate(s) {named}. Either push `pypi_sweep/x.y.z` to release"
+        f" release candidate(s) {named}. Either push `packages/x.y.z` to release"
         " the whole train dependencies-first, or release each dependency individually on its own tag"
         f" first, in this order: {tags}, then"
         f" {_canonical(target.package)}/{target.version}."

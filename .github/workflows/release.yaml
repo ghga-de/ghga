@@ -6,7 +6,7 @@
 #                  then would put it on PyPI against library versions the index does not
 #                  serve — and names both ways out: sweep, or release the dependencies on
 #                  their own tags first.
-#   pypi_sweep/x.y.z -> PYPI lane, SWEEP: the tag selects nothing. pypi-publish.yaml
+#   packages/x.y.z -> PYPI lane, SWEEP: the tag selects nothing. pypi-publish.yaml
 #                  re-derives the set from the index and publishes every lane member ahead
 #                  of it, dependencies first. The version component is a label; it names
 #                  no member and is not checked against one.
@@ -39,7 +39,7 @@ name: release
 on:
   push:
     tags:
-      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0, pypi_sweep/1.0.0
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0, packages/1.0.0
   workflow_dispatch:
     inputs:
       ref:
@@ -183,13 +183,13 @@ jobs:
             echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
             exit 1
           fi
-          # The name also carries the pypi lane's MODE. `pypi_sweep` means "publish every
+          # The name also carries the pypi lane's MODE. `packages` means "publish every
           # member the index is behind on". Any other name names one member, and publishes
           # that member alone. Platform tags have no mode.
           case "$name" in
-            ghga)       lane=platform; mode= ;;
-            pypi_sweep) lane=pypi;     mode=sweep ;;
-            *)          lane=pypi;     mode=targeted ;;
+            ghga)     lane=platform; mode= ;;
+            packages) lane=pypi;     mode=sweep ;;
+            *)        lane=pypi;     mode=targeted ;;
           esac
           echo "name=$name"       >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
