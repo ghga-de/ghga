@@ -8,22 +8,12 @@
 # ///
 """Fail a change set that moves a published PyPI-lane member without bumping its version.
 
-The platform lane embeds internal libraries from source at the release commit (ADR-0004),
-so a lane member can change, merge, and run in production while PyPI keeps serving that
-same version number with the old content — `hexkit 9.0.1` denoting two different things,
-permanently, with no consumer ever told theirs is behind. `stamp_platform_version.py`
-labels the image's copy `+ghga.<version>` so SBOM metadata stays coherent, but labelling a
-divergence is not preventing one. This is the check that prevents it.
+The platform lane embeds internal libraries from source at the release commit.
+So a lane member can change, merge, and run in production while PyPI keeps serving that
+same version number with the old content. This is the check that prevents it.
 
-The rule: **a member whose shipped content changed must declare a version the index does
-not already serve.** Which is to say it must be a release candidate — the same test
-`pypi_members.release_candidates` applies to a tag, asked here of a diff instead. Not
-merely "absent from the index": a member trailing the index could clear that with a bump
-the release plan would still skip, leaving the drift unpublishable and so unresolved.
-
-Shipped content means the member's packaged roots plus its `pyproject.toml`, whose
-`[project]` table becomes the METADATA. Changes under `tests/` or to a README ship nothing
-to consumers and demand no bump.
+The rule: a member whose shipped content changed must declare a version the index does
+not already serve.
 
 A bump does not claim the change was significant — semver's major/minor/patch carries
 that, and the author still chooses it. It asserts only that this content is not the content
@@ -43,7 +33,7 @@ import sys
 
 import tomllib
 
-from pypi_members import pypi_members, release_candidates
+from pypi_members import IndexedMember, pypi_members, release_candidates
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -92,9 +82,7 @@ def changed_members(files: list[str]) -> list[str]:
             one as "ships nothing" would let it drift forever while this check stayed
             green — the failure the check exists to prevent.
     """
-    roots = {
-        member["path"]: _packaged_roots(member["path"]) for member in pypi_members()
-    }
+    roots = {member.path: _packaged_roots(member.path) for member in pypi_members()}
     unknown = sorted(path for path, found in roots.items() if not found)
     if unknown:
         sys.exit(
@@ -111,24 +99,24 @@ def changed_members(files: list[str]) -> list[str]:
     return sorted(changed)
 
 
-def unbumped_members(member_paths: set[str]) -> list[dict]:
+def unbumped_members(member_paths: set[str]) -> list[IndexedMember]:
     """Finds which of `member_paths` still declare a version the index already serves.
 
     Args:
         member_paths: The member folders whose shipped content changed.
 
     Returns:
-        The member dicts among them that need a version bump, each carrying the `reason`
+        The members among them that need a version bump, each carrying the `reason`
         `release_candidates` passed it over for.
 
     Raises:
         SystemExit: if PyPI cannot be reached, since nothing can be asserted against an
             unknown index.
     """
-    candidates, skipped = release_candidates()
-    if any(member["index_unreachable"] for member in candidates):
+    candidates = release_candidates()
+    if candidates.unreachable:
         sys.exit("error: could not reach PyPI to establish what is already released")
-    return [member for member in skipped if member["path"] in member_paths]
+    return [member for member in candidates.skipped if member.path in member_paths]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -153,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     needing_a_bump = unbumped_members(set(changed))
     for member in needing_a_bump:
         print(
-            f"{member['package']}: {member['reason']}, but its shipped content changed"
+            f"{member.package}: {member.reason}, but its shipped content changed"
             " — bump it, or the platform and PyPI disagree about what that version"
             " contains",
             file=sys.stderr,
