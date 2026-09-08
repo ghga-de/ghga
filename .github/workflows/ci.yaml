@@ -356,7 +356,7 @@ jobs:
             base="${{ github.event.before }}"
           fi
           # Failing, not skipping: an undeterminable change set is not evidence of no drift.
-          if ! git cat-file -e "$base^{commit}" 2> /dev/null; then
+          if ! git merge-base "$base" HEAD > /dev/null 2>&1; then
             echo "::error::drift check failed: no base commit to compare against ($base) — main was force-pushed or newly created"
             exit 1
           fi

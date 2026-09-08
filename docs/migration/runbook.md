@@ -182,8 +182,10 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 
 - [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas.
 - [ ] Freeze mainline repos (announce; protect branches / make read-only).
-- [ ] Decide + wire the CD targets (image registry, chart registry, PyPI), add the required
-      secrets, then enable the release workflow's tag trigger and write permissions.
+- [x] Wire the CD targets, add the required secrets, enable the release workflow's tag trigger
+      and write permissions. **Done (2026-09):** images and charts to Docker Hub, wheels to
+      PyPI after a TestPyPI rehearsal (trusted publishing on both indexes)
+      ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image
       series (no version regressions).
 - [ ] Move the repo to `github.com/ghga-de/<monorepo>`; set CODEOWNERS per path.
@@ -204,7 +206,8 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 - Determinism (for incremental sync) assumes append-only mainline history and a **pinned
   `git-filter-repo` version** across runs.
 - Historical release tags are **not** imported (they'd reference rewritten SHAs); the new scheme
-  is `name/x.y.z` ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
+  is `name/x.y.z`, plus `packages/x.y.z` to sweep the PyPI lane
+  ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - `.legacy_repos/` and `.migration-work/` must stay gitignored (nested `.git` dirs; scratch).
 
 ## Deploy (charts): manual semantic port — no textual sync
