@@ -40,6 +40,40 @@ pytestmark = pytest.mark.asyncio
 
 
 AuditFixture = tuple[AuditRepository, InMemEventStore]
+AUDIT_TOPIC = "audit-records"  # topic from test_config
+
+
+@pytest.fixture(name="audit_fixture")
+def audit_fixture(config: Config) -> AuditFixture:
+    """An AuditRepository publishing to an in-memory event store, plus that store."""
+    event_store = InMemEventStore()
+    event_pub_translator = EventPubTranslator(
+        config=config, provider=InMemEventPublisher(event_store=event_store)
+    )
+    auditor = AuditRepository(service="rs", event_publisher=event_pub_translator)
+    return auditor, event_store
+
+
+def get_audit_events(event_store: InMemEventStore) -> list[Event]:
+    """Drain the audit record topic of the in-memory event store."""
+    events: list[Event] = []
+    with suppress(TopicExhaustedError):
+        while True:
+            events.append(event_store.get(AUDIT_TOPIC))
+    return events
+
+
+def get_audit_payload(event: Event) -> dict:
+    """Return the audit record payload minus the fields that can't be predicted.
+
+    The record's `created` timestamp is checked here since it is dropped, while the
+    randomly generated `id` is simply discarded.
+    """
+    payload = dict(event.payload)
+    del payload["id"]
+    created = str(payload.pop("created"))  # cast to string to satisfy type checker
+    assert datetime.fromisoformat(created) - now_utc_ms_prec() < timedelta(seconds=5)
+    return payload
 
 
 async def test_create_audit_record(config: Config):
@@ -195,3 +229,63 @@ async def test_log_box_deleted():
         entity="ResearchDataUploadBox",
         entity_id=str(box.id),
     )
+
+
+async def test_log_file_requeued(audit_fixture: AuditFixture):
+    """Test `log_file_requeued()`"""
+    auditor, event_store = audit_fixture
+    file_id = uuid4()
+    user_id = uuid4()
+
+    await auditor.log_file_requeued(file_id=file_id, user_id=user_id)
+
+    # Inspect the event that was actually published
+    events = get_audit_events(event_store)
+    assert len(events) == 1
+    event = events[0]
+    assert event.key.startswith("rs-")
+    assert event.type_ == "audit_record_created"
+    assert get_audit_payload(event) == {
+        "service": "rs",
+        "label": "FileUpload requeued",
+        "description": f"FileUpload {file_id} was requeued for interrogation.",
+        "user_id": str(user_id),
+        "correlation_id": str(get_correlation_id()),
+        "action": "U",
+        "entity": "FileUpload",
+        "entity_id": str(file_id),
+    }
+
+
+async def test_log_whole_box_requeue(audit_fixture: AuditFixture):
+    """Test `log_whole_box_requeued()`"""
+    auditor, event_store = audit_fixture
+    box_id = uuid4()
+    user_id = uuid4()
+    file_ids = [uuid4() for _ in range(3)]
+
+    await auditor.log_whole_box_requeued(
+        box_id=box_id, user_id=user_id, file_ids=file_ids
+    )
+
+    # Inspect the event that was actually published
+    events = get_audit_events(event_store)
+    assert len(events) == 1
+    event = events[0]
+    assert event.key.startswith("rs-")
+    assert event.type_ == "audit_record_created"
+
+    # The action is None because the box itself isn't changed, only the files in it
+    assert get_audit_payload(event) == {
+        "service": "rs",
+        "label": "All FileUploads in ResearchDataUploadBox requeued",
+        "description": (
+            f"All failed FileUploads in box {box_id} were requeued for interrogation."
+            + f" Requeued File IDs are: {', '.join(str(f) for f in file_ids)}."
+        ),
+        "user_id": str(user_id),
+        "correlation_id": str(get_correlation_id()),
+        "action": None,
+        "entity": "ResearchDataUploadBox",
+        "entity_id": str(box_id),
+    }
