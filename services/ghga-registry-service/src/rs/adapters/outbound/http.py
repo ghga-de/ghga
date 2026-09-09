@@ -892,8 +892,8 @@ class FileBoxClient(FileBoxClientPort):
         if response.status_code == 409:
             if exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
                 msg = (
-                    f"Cannot requeue FileUpload {file_id} because it did not fail"
-                    + " interrogation."
+                    f"Cannot requeue FileUpload {file_id} because it was not"
+                    + " successfully uploaded and never made it to interrogation."
                 )
                 log.warning(msg, extra=extra)
                 raise self.RequeueError(msg)
