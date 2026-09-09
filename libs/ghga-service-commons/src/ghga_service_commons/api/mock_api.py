@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 """Mocks of the HTTP APIs a service calls.
 
 Model an API once, with the URL it is served at and the endpoints it answers:
@@ -33,17 +32,21 @@ A `{variable}` reaches the handler as the parameter of that name, cast to whatev
 parameter is annotated with, and matches one path segment unless it names a converter,
 as in `{file_path:path}`.
 
-A test overrides what it cares about with `things.on_delete_thing = respond(500)`.
-
-Entering a `MockedApis` block intercepts `httpx2` itself, so even a client the test
-never sees is answered:
+A test overrides what it cares about with `things.on_delete_thing = respond(500)`, then
+serves the mocks one of two ways. Where the code under test takes a transport, hand it
+one, and only the clients built with it are mocked:
+```
+prepare_thing(config, base_transport=things.as_transport())
+```
+Where it does not, a `MockedApis` block intercepts `httpx2` itself, reaching even a
+client the test never sees:
 ```
 with MockedApis(things, widgets):
     ...
 ```
-A request no mock serves is refused unless `allow_network` lets it out. `verify()`
-reports a call nothing served or a handler nothing called, and `raise_for_complaints()`
-turns that report into a failure.
+Either way a request no mock serves is refused unless `allow_network` lets it out.
+`check_for_complaints` reports a call nothing served or a handler nothing called, and
+`raise_for_complaints()` turns that report into a failure.
 """
 
 from __future__ import annotations
@@ -68,6 +71,7 @@ __all__ = [
     "HttpException",
     "MockSetupError",
     "MockedApi",
+    "MockedApiTransport",
     "MockedApis",
     "NetworkPolicy",
     "NotMockedError",
@@ -100,9 +104,7 @@ PATH_CONVERTERS = {
 _PARAMETER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-zA-Z_][a-zA-Z0-9_]*))?\}")
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
-
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
-
 NetworkPolicy = Callable[[httpx2.URL], bool]
 
 
@@ -191,6 +193,22 @@ class Endpoint:
         """
         obj._handlers[self.name] = handler
         obj._configured_at[self.name] = len(obj.calls[self.name])
+
+
+def local_network(url: httpx2.URL) -> bool:
+    """Allow requests to loopback, `*.internal` and private addresses."""
+    host = url.host
+    if host in LOOPBACK_HOSTS or host.endswith(".internal"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_private
+    except ValueError:
+        return False
+
+
+def no_network(url: httpx2.URL) -> bool:
+    """Let nothing out: every request has to be served by a mock."""
+    return False
 
 
 class MockedApi:
@@ -327,16 +345,15 @@ class MockedApi:
             if len(self.calls[name]) <= configured_at
         ]
 
+    def as_transport(
+        self, allow_network: NetworkPolicy = no_network
+    ) -> MockedApiTransport:
+        """Get a transport serving this mock alone.
 
-def local_network(url: httpx2.URL) -> bool:
-    """Allow requests to loopback, `*.internal` and private addresses."""
-    host = url.host
-    if host in LOOPBACK_HOSTS or host.endswith(".internal"):
-        return True
-    try:
-        return ipaddress.ip_address(host).is_private
-    except ValueError:
-        return False
+        `MockedApis(...).as_transport()` is the way to serve several at once, or to
+        pass an `inner` transport for what `allow_network` lets out.
+        """
+        return MockedApis(self, allow_network=allow_network).as_transport()
 
 
 class MockedApis:
@@ -413,6 +430,17 @@ class MockedApis:
             return await unmocked()
         api, path = route
         return await api._answer_async(request, path)
+
+    def as_transport(self, inner: Any = None) -> MockedApiTransport:
+        """Return a transport serving these mocks, for a Client or an AsyncClient.
+
+        Use it where the code under test takes a transport, so only the clients built
+        with it are mocked. `install()` is for the code that gives no such opening.
+
+        A request no mock serves and `allow_network` permits goes to `inner`, which also
+        makes this stackable as the innermost layer of a transport stack.
+        """
+        return MockedApiTransport(self, inner)
 
     def install(self) -> None:
         """Intercept every `httpx2` call until `uninstall` is called."""
@@ -494,6 +522,61 @@ class MockedApis:
         """Reset all MockAPIs."""
         for api in self.apis:
             api.reset()
+
+
+class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
+    """Serves a set of mocks to the clients it is mounted on.
+
+    Answers both kinds of caller, so a fixture handing one out can say it returns this
+    rather than having to narrow to the sync or the async half.
+    """
+
+    def __init__(self, mocks: MockedApis, inner: Any = None) -> None:
+        """Answer from `mocks`, passing anything they do not serve to `inner`."""
+        self._mocks = mocks
+        self._inner = inner
+
+    def _refuse(self, request: httpx2.Request) -> httpx2.Response:
+        """Explain that a permitted request has nowhere to go from here."""
+        raise MockSetupError(
+            f"{request.url} is not served by any of these mocks, and `allow_network`"
+            " lets it out - but this transport has nothing to send it with. Pass the"
+            " transport to send it with as `as_transport(inner=...)`, or tighten"
+            " `allow_network` so the call is refused where it is made."
+        )
+
+    def handle_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Answer a request made by a synchronous client."""
+        return self._mocks._answered(
+            request,
+            lambda: (
+                self._inner.handle_request(request)
+                if self._inner is not None
+                else self._refuse(request)
+            ),
+        )
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Answer a request made by an asynchronous client."""
+        await request.aread()
+
+        async def unmocked() -> httpx2.Response:
+            """Send the request on, if there is anything to send it with."""
+            if self._inner is None:
+                return self._refuse(request)
+            return await self._inner.handle_async_request(request)
+
+        return await self._mocks._answered_async(request, unmocked)
+
+    def close(self) -> None:
+        """Close the transport underneath, which this one was handed to close."""
+        if self._inner is not None:
+            self._inner.close()
+
+    async def aclose(self) -> None:
+        """Close the transport underneath, the way an asynchronous client asks."""
+        if self._inner is not None:
+            await self._inner.aclose()
 
 
 def _compiled(path: str) -> re.Pattern[str]:
@@ -705,11 +788,6 @@ def network_at(*hosts: str) -> NetworkPolicy:
         return url.host in allowed
 
     return policy
-
-
-def no_network(url: httpx2.URL) -> bool:
-    """Let nothing out: every request has to be served by a mock."""
-    return False
 
 
 def respond(
