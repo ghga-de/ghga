@@ -57,6 +57,22 @@ async def create_default_bucket(rig: JointRig):
     await rig.object_storages.for_alias("test")[1].create_bucket("test-inbox")
 
 
+async def _fail_interrogation(*, file_id, rig: JointRig):
+    """Process an interrogation failure for a FileUpload.
+
+    Returns the updated FileUpload object.
+    """
+    await rig.controller.process_interrogation_failure(
+        report=InterrogationFailure(
+            file_id=file_id,
+            storage_alias="test",
+            interrogated_at=now_utc_ms_prec(),
+            reason="Checksum mismatch reported by FIS",
+        )
+    )
+    return await rig.file_upload_dao.get_by_id(file_id)
+
+
 async def test_create_new_box(rig: JointRig):
     """Test creating a new FileUploadBox"""
     box_id = await rig.create_default_box()
@@ -3037,24 +3053,12 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
         await file_upload_dao.update(file_upload)
         never_reached_inbox_ids.append(file_id)
 
-    async def _fail_interrogation(file_id):
-        """Report an interrogation failure for an inbox file, leaving its object."""
-        await controller.process_interrogation_failure(
-            report=InterrogationFailure(
-                file_id=file_id,
-                storage_alias="test",
-                interrogated_at=now_utc_ms_prec(),
-                reason="Checksum mismatch reported by FIS",
-            )
-        )
-        return await file_upload_dao.get_by_id(file_id)
-
     # 2 'failed' uploads whose inbox object was already deleted. Interrogation
     #  failures no longer delete the object, so we do this manually
     deleted_ids: list = []
     for i in range(2):
         file_id = await _upload(f"deleted_{i}")
-        failed_upload = await _fail_interrogation(file_id)
+        failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
         await object_storage.delete_object(
             bucket_id=failed_upload.bucket_id, object_id=str(failed_upload.object_id)
         )
@@ -3066,7 +3070,7 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
     for i in range(2):
         file_id = await _upload(f"present_{i}")
         present_ids.append(file_id)
-        pre_snapshots[file_id] = await _fail_interrogation(file_id)
+        pre_snapshots[file_id] = await _fail_interrogation(file_id=file_id, rig=rig)
 
     return box_id, present_ids, deleted_ids, never_reached_inbox_ids, pre_snapshots
 
