@@ -97,7 +97,7 @@ def changed_members(files: list[str]) -> list[str]:
 
     changed = set()
     for path, packaged in roots.items():
-        shipped = tuple(f"{path}/{root}/" for root in packaged)
+        shipped = tuple(f"{pathlib.PurePosixPath(path, root)}/" for root in packaged)
         metadata = tuple(f"{path}/{name}" for name in METADATA_FILES)
         if any(f.startswith(metadata) or f.startswith(shipped) for f in files):
             changed.add(path)
