@@ -54,8 +54,19 @@ GLOBAL_PREFIXES = (
 )
 
 
+class BaseRefError(Exception):
+    """Raised when `base` cannot be resolved or diffed against."""
+
+
 def changed_files(base: str) -> list[str]:
-    """Return files changed vs `base` (merge-base diff), else fall back to the working tree."""
+    """Return files changed vs `base` (three-dot merge-base diff).
+
+    Raises BaseRefError rather than answering from the working tree. Those are different
+    questions: on a branch whose work is committed and whose tree is clean — the normal
+    state when you ask what to test — the working tree is empty no matter what the branch
+    contains, so the fallback reported "nothing affected" for a change set it never looked
+    at. Same rule as --all below: an unknown change set must never mean "check nothing".
+    """
 
     def run(args: list[str]) -> list[str] | None:
         try:
@@ -70,20 +81,12 @@ def changed_files(base: str) -> list[str]:
         return [line for line in out.splitlines() if line.strip()]
 
     # base...HEAD (three-dot = changes since the merge base)
-    if run(["rev-parse", "--verify", "--quiet", base]) is not None:
-        diff = run(["diff", "--name-only", f"{base}...HEAD"])
-        if diff is not None:
-            return diff
-    # Fallbacks: committed-but-unmerged + uncommitted working tree.
-    files: set[str] = set()
-    for args in (
-        ["diff", "--name-only", "HEAD"],
-        ["ls-files", "--others", "--exclude-standard"],
-    ):
-        got = run(args)
-        if got:
-            files.update(got)
-    return sorted(files)
+    if run(["rev-parse", "--verify", "--quiet", base]) is None:
+        raise BaseRefError(f"base ref {base!r} does not resolve")
+    diff = run(["diff", "--name-only", f"{base}...HEAD"])
+    if diff is None:
+        raise BaseRefError(f"cannot diff {base!r}...HEAD")
+    return diff
 
 
 def affected(files: list[str]) -> tuple[bool, list[str]]:
@@ -198,7 +201,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.all:
         is_all, targets = True, all_targets()
     else:
-        is_all, targets = affected(changed_files(args.base))
+        try:
+            is_all, targets = affected(changed_files(args.base))
+        except BaseRefError as err:
+            # The default base is a remote-tracking ref, so the common cause is a clone
+            # that has not fetched since `dev` was created (ADR-0020) rather than a typo.
+            hint = "pass --base <ref>, or --all to skip diffing"
+            if args.base.startswith("origin/"):
+                branch = args.base.removeprefix("origin/")
+                hint = f"try `git fetch origin {branch}`, or {hint}"
+            print(f"error: {err}\n       {hint}", file=sys.stderr)
+            return 2
 
     if args.format == "lines":
         print("\n".join(targets))
