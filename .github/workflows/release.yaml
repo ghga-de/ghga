@@ -364,7 +364,7 @@ jobs:
         run: |
           mkdir -p digests
           echo -n "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.member.package }}"
-      - uses: actions/upload-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: ${{ inputs.push }}
         with:
           name: digest-${{ matrix.member.package }}
