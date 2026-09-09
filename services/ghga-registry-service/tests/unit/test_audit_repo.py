@@ -227,7 +227,6 @@ async def test_log_file_requeued(audit_fixture: AuditFixture):
 
     await auditor.log_file_requeued(file_id=file_id, user_id=user_id)
 
-    # Inspect the event that was actually published
     events = get_audit_events(event_store)
     assert len(events) == 1
     event = events[0]
