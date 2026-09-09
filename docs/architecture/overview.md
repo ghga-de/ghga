@@ -192,8 +192,9 @@ The monorepo is developed **separately from mainline (`ghga-de`) for a while**
 ([ADR-0010](../adr/0010-history-preserving-migration.md)):
 
 - Hosted at **`github.com/ghga-de/ghga`** (a new repo, separate from the per-component repos).
-  **Publish targets (images, charts, PyPI) are not yet decided** — until they are, the release
-  workflow is dormant and nothing is published from this repo.
+  Publish targets are decided and both lanes are live — images and charts to Docker Hub,
+  wheels to PyPI after a TestPyPI rehearsal
+  ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - **History-preserving import** via `git filter-repo` (subdir move + boilerplate drop), then a
   **one-way incremental sync** from mainline until cutover. See the
   [runbook](../migration/runbook.md).
