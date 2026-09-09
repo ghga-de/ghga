@@ -20,8 +20,8 @@ import httpx2
 import pytest
 
 from dhfs.ports.outbound.s3 import S3ClientPort
+from ghga_service_commons.api.mock_api import fail_to_connect, respond
 from hexkit.providers.s3.testutils import temp_file_object
-from tests.fixtures.central_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
@@ -156,7 +156,9 @@ async def test_no_files_in_interrogation_bucket(
     assert await joint_fixture.s3.storage.list_all_object_ids(interrogation) == []
 
     # Verify that the Central API isn't called (should quit)
-    def should_not_be_called(request: httpx2.Request) -> httpx2.Response:
+    def should_not_be_called(
+        request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response:
         raise RuntimeError("Was not supposed to call Central API!")
 
     joint_fixture.central_api.on_get_removable_files = should_not_be_called

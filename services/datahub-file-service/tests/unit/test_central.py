@@ -36,11 +36,12 @@ from dhfs.adapters.outbound.http import (
 )
 from dhfs.config import Config
 from dhfs.core.models import InterrogationReport
+from ghga_service_commons.api.mock_api import fail_to_connect, respond
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
 from ghga_service_commons.utils.crypt import decrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
-from tests.fixtures.central_api import CentralApiMock, respond
+from tests.fixtures.central_api import CentralApiMock
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
 
 pytestmark = pytest.mark.asyncio()
@@ -100,10 +101,18 @@ async def configured_central_client(
         yield CentralClient(config=config, httpx_client=httpx_client)
 
 
-async def test_central_api_unavailable(config: Config):
+async def test_central_api_unavailable(config: Config, central_api: CentralApiMock):
     """Ensure a ConnectionFailedError gets raised if the central api is unavailable"""
-    # Use an unmocked client so the requests actually fail to connect
-    async with get_configured_httpx_client(config=config) as httpx_client:
+    # Refuse the connection at the mock. A real call would fail whichever way the
+    # network the test runs on happens to fail, and only ConnectError maps to
+    # ConnectionFailedError.
+    central_api.on_fetch_new_uploads = fail_to_connect()
+    central_api.on_get_removable_files = fail_to_connect()
+    central_api.on_submit_report = fail_to_connect()
+
+    async with get_configured_httpx_client(
+        config=config, base_transport=central_api.as_transport()
+    ) as httpx_client:
         central_client = CentralClient(config=config, httpx_client=httpx_client)
 
         # Test the different public methods exposed by the CentralClient
@@ -212,7 +221,9 @@ async def test_report_submission(
     fail_report = make_interrogation_failure_report(config.storage_alias)
 
     # Define a handler to let us inspect the request body
-    def inspect_report(request: httpx2.Request) -> httpx2.Response:
+    def inspect_report(
+        request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response:
         user_agent = request.headers.get("User-Agent")
         assert user_agent == f"GHGA DataHubFileService/{__version__}"
         body = json.loads(request.content)
