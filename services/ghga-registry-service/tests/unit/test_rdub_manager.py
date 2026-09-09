@@ -2573,8 +2573,19 @@ async def test_requeue_all_box_uploads_box_not_found(
     rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
 
 
+@pytest.mark.parametrize(
+    "client_error, expected_error",
+    [
+        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+    ],
+    ids=["FUBStateError", "OperationError"],
+)
 async def test_requeue_all_box_uploads_fbc_error_translation(
-    rig: JointRig, populated_boxes: list[UUID]
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    client_error: Exception,
+    expected_error: type[Exception],
 ):
     """Test that all FileBoxClient errors are translated correctly by
     the `requeue_all_box_uploads()` core method.
@@ -2585,23 +2596,17 @@ async def test_requeue_all_box_uploads_fbc_error_translation(
     """
     box_id = populated_boxes[0]
 
-    error_translation: list[tuple[Exception, type[Exception]]] = [
-        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
-        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
-    ]
-
-    for client_error, expected_error in error_translation:
-        rig.file_upload_box_client.requeue_all_box_uploads.side_effect = (  # type: ignore
-            client_error
+    rig.file_upload_box_client.requeue_all_box_uploads.side_effect = (  # type: ignore
+        client_error
+    )
+    with pytest.raises(expected_error) as exc_info:
+        await rig.rdub_manager.requeue_all_box_uploads(
+            box_id=box_id, data_steward_id=TEST_DS_ID
         )
-        with pytest.raises(expected_error) as exc_info:
-            await rig.rdub_manager.requeue_all_box_uploads(
-                box_id=box_id, data_steward_id=TEST_DS_ID
-            )
 
-        # Only an archived box makes the file box service refuse outright
-        if expected_error is RDUBManager.BoxStateError:
-            assert exc_info.value.state == "archived"  # type: ignore
+    # Only an archived box makes the file box service refuse outright
+    if expected_error is RDUBManager.BoxStateError:
+        assert exc_info.value.state == "archived"  # type: ignore
 
     # A failed requeue is never audited
     rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
