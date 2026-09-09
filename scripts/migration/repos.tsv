@@ -84,20 +84,28 @@
 #                             dataset-information-service/feature/backport_dhi and
 #                             well-known-value-service/feature/backport_dhi, both 2026-06-05);
 #                             none reached main, so none were ever in scope for the sync.
-# Eleven archived tips are deliberately NOT merged — each is an archival/deprecation notice
+#   auth-km-jobs           -> tools/auth-km-jobs              83ff924 "Update dependencies (#21)" 2026-01-14, 0.2.1
+#                             main was its only branch ever, so nothing was out of scope.
+#                             tools/auth-km-jobs additionally carries monorepo-only work never
+#                             upstreamed: testcontainer-based test fixtures (upstream's tests
+#                             expected Vault and MongoDB already running on localhost), the
+#                             `run` -> `auth-km-jobs` console-script rename, and the ADR-0014
+#                             capability markers.
+# Twelve archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
 # there, not here), file-services-backend 605be53 (root README and template only, so the
 # partial rows would have filtered it to empty in any case), hexkit 245ca78 "Replace the
 # docs site with redirects to the monorepo (#253)", notification-service 00ca3db1,
-# notification-orchestration-service 285dc85f, dataset-information-service 5afbde4 and
-# well-known-value-service 282b4be (all four "Add deprecation note"). Those last five are
-# the only tips that would NOT have filtered to empty: hexkit's is mostly redirect
-# tooling on paths the import drops (.github/, scripts/, .template/, .gitignore) and the
-# other four touch nothing else but .readme_generation/ and .template/, yet each also
-# adds a "this repo has moved" banner to the README, which is kept — an upstream-only
-# notice, wrong to carry here, where that README is the package's own.
+# notification-orchestration-service 285dc85f, dataset-information-service 5afbde4,
+# well-known-value-service 282b4be (all four "Add deprecation note") and auth-km-jobs
+# f27562b "Add retirement note (#22)". Those last six are the only tips that would NOT
+# have filtered to empty: hexkit's is mostly redirect tooling on paths the import drops
+# (.github/, scripts/, .template/, .gitignore), the next four touch nothing else but
+# .readme_generation/ and .template/, and auth-km-jobs' touches nothing but the README,
+# yet each also adds a "this repo has moved" banner to the README, which is kept — an
+# upstream-only notice, wrong to carry here, where that README is the package's own.
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
 # (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
 #
@@ -124,7 +132,6 @@ tool	ghga-connector	.	tools/ghga-connector	main
 # ghga-transpiler: the integrated/compatible line is v2 (2.x, no schemapack dep), NOT main (3.x).
 tool	ghga-transpiler	.	tools/ghga-transpiler	v2
 tool	ghga-validator	.	tools/ghga-validator	main
-tool	auth-km-jobs	.	tools/auth-km-jobs	main
 #
 # Test-only service: the OIDC provider the integration suite and the portal's UI
 # tests authenticate against (deployed by the testbed profile, never in prod)
