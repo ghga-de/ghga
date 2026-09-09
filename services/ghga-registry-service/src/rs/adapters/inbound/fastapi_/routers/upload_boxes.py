@@ -138,8 +138,8 @@ async def delete_file_upload(
     + " so that it is interrogated again. Requires the Data Steward role. The uploaded"
     + " object is untouched, so the file does not have to be uploaded again. Only files"
     + " that failed interrogation can be requeued - files that failed during the upload"
-    + " itself have to be uploaded again instead. The box may be locked, but not"
-    + " archived.",
+    + " itself have to be uploaded again instead. This operation is not permitted on"
+    + " archived boxes.",
     response_model=None,
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -188,7 +188,7 @@ async def requeue_single_file_upload(
     + " role. Files that cannot be requeued, e.g. because their uploaded object is no"
     + " longer in the inbox, are reported in the `skipped` list instead of failing the"
     + " whole request. Files that failed during the upload itself are left alone and"
-    + " have to be uploaded again. The box may be locked, but not archived.",
+    + " have to be uploaded again. This operation is not permitted on archived boxes.",
     response_model=BoxRequeueResult,
     responses={
         200: {

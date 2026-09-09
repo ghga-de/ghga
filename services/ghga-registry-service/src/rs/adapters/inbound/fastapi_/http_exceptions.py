@@ -248,9 +248,10 @@ class HttpRequeueError(HttpCustomExceptionBase):
     def __init__(self, *, file_id: UUID4, reason: str, status_code: int = 409):
         """Construct message and init the exception.
 
-        `reason` comes from the layer that determined why the requeue is impossible,
-        so the client is told whether the file simply didn't fail interrogation or
-        whether its uploaded object is gone and it has to be uploaded again.
+        `reason` describes why the requeue operation was blocked for this file,
+        which can be either that the file never successfully uploaded in the
+        first place, or that its S3 object no longer exists.
+        
         """
         super().__init__(
             status_code=status_code,

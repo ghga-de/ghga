@@ -1118,7 +1118,8 @@ paths:
         Steward role. Files that cannot be requeued, e.g. because their uploaded object
         is no longer in the inbox, are reported in the `skipped` list instead of failing
         the whole request. Files that failed during the upload itself are left alone
-        and have to be uploaded again. The box may be locked, but not archived.
+        and have to be uploaded again. This operation is not permitted on archived
+        boxes.
       operationId: requeue_all_box_uploads_upload_boxes__box_id__requeue_post
       parameters:
       - in: path
@@ -1284,8 +1285,8 @@ paths:
         so that it is interrogated again. Requires the Data Steward role. The uploaded
         object is untouched, so the file does not have to be uploaded again. Only
         files that failed interrogation can be requeued - files that failed during
-        the upload itself have to be uploaded again instead. The box may be locked,
-        but not archived.
+        the upload itself have to be uploaded again instead. This operation is not
+        permitted on archived boxes.
       operationId: requeue_single_file_upload_upload_boxes__box_id__uploads__file_id__requeue_post
       parameters:
       - in: path
