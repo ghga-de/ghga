@@ -26,6 +26,8 @@ enable_opentelemetry: false
 file_upload_box_topic: file-upload-boxes
 generate_correlation_id: true
 host: 127.0.0.1
+httpx_long_timeout_sec: 600.0
+httpx_standard_timeout_sec: 60.0
 kafka_compression_type: null
 kafka_dlq_topic: dlq
 kafka_enable_dlq: false
