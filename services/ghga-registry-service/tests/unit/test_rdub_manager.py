@@ -2411,8 +2411,29 @@ async def test_requeue_single_file_upload_box_not_found(
     rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
 
 
+@pytest.mark.parametrize(
+    "client_error, expected_error",
+    [
+        (
+            FileBoxClientPort.FileUploadNotFoundError(file_id=uuid4()),
+            RDUBManager.FileUploadNotFoundError,
+        ),
+        (
+            FileBoxClientPort.RequeueError(
+                "Cannot requeue FileUpload because it did not fail interrogation."
+            ),
+            RDUBManager.RequeueError,
+        ),
+        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+    ],
+    ids=["FileUploadNotFoundError", "RequeueError", "FUBStateError", "OperationError"],
+)
 async def test_requeue_single_file_upload_fbc_error_translation(
-    rig: JointRig, populated_boxes: list[UUID]
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    client_error: Exception,
+    expected_error: type[Exception],
 ):
     """Test that all FileBoxClient errors are translated correctly by
     the `requeue_single_file_upload()` core method.
@@ -2425,36 +2446,22 @@ async def test_requeue_single_file_upload_fbc_error_translation(
     """
     box_id = populated_boxes[0]
     file_id = uuid4()
-    client_requeue_error = FileBoxClientPort.RequeueError(
-        f"Cannot requeue FileUpload {file_id} because it did not fail interrogation."
+
+    rig.file_upload_box_client.requeue_single_file_upload.side_effect = (  # type: ignore
+        client_error
     )
-
-    error_translation: list[tuple[Exception, type[Exception]]] = [
-        (
-            FileBoxClientPort.FileUploadNotFoundError(file_id=file_id),
-            RDUBManager.FileUploadNotFoundError,
-        ),
-        (client_requeue_error, RDUBManager.RequeueError),
-        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
-        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
-    ]
-
-    for client_error, expected_error in error_translation:
-        rig.file_upload_box_client.requeue_single_file_upload.side_effect = (  # type: ignore
-            client_error
+    with pytest.raises(expected_error) as exc_info:
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
         )
-        with pytest.raises(expected_error) as exc_info:
-            await rig.rdub_manager.requeue_single_file_upload(
-                box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
-            )
 
-        # The reason a file can't be requeued is passed on so the API can relay it
-        if client_error is client_requeue_error:
-            assert str(exc_info.value) == str(client_requeue_error)
+    # The reason a file can't be requeued is passed on so the API can relay it
+    if isinstance(client_error, FileBoxClientPort.RequeueError):
+        assert str(exc_info.value) == str(client_error)
 
-        # Only an archived box makes the file box service refuse outright
-        if expected_error is RDUBManager.BoxStateError:
-            assert exc_info.value.state == "archived"  # type: ignore
+    # Only an archived box makes the file box service refuse outright
+    if expected_error is RDUBManager.BoxStateError:
+        assert exc_info.value.state == "archived"  # type: ignore
 
     # A failed requeue is never audited
     rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
