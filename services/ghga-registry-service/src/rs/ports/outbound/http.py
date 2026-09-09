@@ -54,7 +54,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
     @abstractmethod
     async def revoke_upload_access(self, *, grant_id: UUID4) -> None:
@@ -79,7 +78,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
     @abstractmethod
     async def get_accessible_upload_boxes(self, user_id: UUID4) -> list[UUID4]:
@@ -88,7 +86,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
     @abstractmethod
     async def check_box_access(self, *, user_id: UUID4, box_id: UUID4) -> bool:
@@ -97,7 +94,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
 
 class FileBoxClientPort(ABC):
@@ -166,7 +162,6 @@ class FileBoxClientPort(ABC):
         Raises:
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def lock_file_upload_box(
@@ -180,7 +175,6 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
@@ -190,7 +184,6 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def get_file_upload_list(  # noqa: PLR0913
@@ -225,7 +218,6 @@ class FileBoxClientPort(ABC):
         Raises:
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def get_all_file_uploads(
@@ -248,7 +240,6 @@ class FileBoxClientPort(ABC):
         Raises:
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
@@ -260,7 +251,6 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def resize_file_upload_box(
@@ -274,7 +264,6 @@ class FileBoxClientPort(ABC):
             uploaded.
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def delete_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
@@ -284,7 +273,6 @@ class FileBoxClientPort(ABC):
             FUBStateError if the FileUploadBox is locked.
             OperationError if there's any other problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
@@ -297,7 +285,6 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def requeue_single_file_upload(
@@ -314,7 +301,6 @@ class FileBoxClientPort(ABC):
             RequeueError if the FileUpload cannot be requeued.
             OperationError if there's any other problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
@@ -327,4 +313,3 @@ class FileBoxClientPort(ABC):
             FUBStateError if the FileUploadBox is archived.
             OperationError if there's any other problem with the operation.
         """
-        ...
