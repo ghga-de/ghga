@@ -49,6 +49,10 @@
 name: security-scan
 
 on:
+  # A `schedule` trigger always runs the DEFAULT branch's copy of this file, no matter which
+  # branch a change merged into, so an edit here does not reach the nightly run until the
+  # default branch carries it. A dispatch is the opposite: it runs the copy on the ref you
+  # pick. ADR-0020's "Remaining setup" tracks this for the `dev` flip.
   schedule:
     - cron: "17 4 * * *" # daily, off the top of the hour (GitHub's own advice)
   workflow_dispatch:

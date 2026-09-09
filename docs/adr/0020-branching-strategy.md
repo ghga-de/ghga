@@ -95,6 +95,15 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 The tree is done; these are repo settings and in-flight work, and have to be done through
 GitHub rather than a commit. Until they are, `dev` works but nothing steers people onto it.
 
+**The default-branch flip is the one with a deadline.** GitHub runs a `schedule` trigger from
+the *default branch's* copy of the workflow file, whatever branch the work merged into. So
+between merging this and flipping the default, the nightly `security-scan.yaml` is still
+`main`'s version: scanning `main`, diffing against `:dev` images now built from `dev`, and
+opening its PR with `base: main` — the exact bug this change set fixes, still running once a
+day at 04:17 UTC. Nothing breaks, but the fix is not in force until the flip, so do the two
+together rather than leaving a gap over a weekend. (`renovate.yaml` is untouched here, so
+which copy of it runs makes no difference — what retargets Renovate is the flip itself.)
+
 - Make `dev` the default branch, and protect it the way `main` is protected. Renovate has no
   `baseBranches` in `renovate.json5`, so the flip is what retargets it — no config change
   needed. It does leave Renovate's existing `main`-based PRs stranded, though, exactly as it
@@ -107,9 +116,14 @@ GitHub rather than a commit. Until they are, `dev` works but nothing steers peop
 - Retarget the open pull requests that still name `main` as their base. `dev` was branched
   from `main` at the same commit, so nothing needs rebasing yet; that stops being true as soon
   as the first PR merges into `dev`.
-- Close the existing `automated/lockfile-security-update` PR by hand. It is open against
-  `main`, and `security-scan.yaml`'s close step now looks up its PR with `--base dev`, so it
-  can never match that one again. The next scan opens a fresh PR against `dev`.
+- Close the existing `automated/lockfile-security-update` PR by hand, **after** the flip, not
+  before. It is open against `main`, and the new close step looks up its PR with `--base dev`,
+  so it can never match that one — but that is only true once the flip makes the nightly run
+  use this version of the workflow. Until then `main`'s copy is what runs, it still looks up
+  `--base main`, and it will keep that PR refreshed (or close and reopen it) every morning, so
+  closing it early just means closing it again. Delete the branch with it: the `dev`-based run
+  reuses the same `automated/lockfile-security-update` name, and leaving the old PR pointed at
+  that branch means the first post-flip run rewrites the branch under it.
 
 ## Open questions
 
