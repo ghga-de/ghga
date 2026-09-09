@@ -38,7 +38,7 @@ from tests.fixtures.mock_api.apis import (
     UploadApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import api_url, respond
+from tests.fixtures.mock_api.shared import respond
 from tests.fixtures.utils import (
     TEST_FILE_ID,
     TEST_FUB_ID,
@@ -118,6 +118,7 @@ async def test_create_file_upload_success(
     assert storage_alias == TEST_STORAGE_ALIAS1
 
     request = upload_api.last_request
+    assert request is not None
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads")
     assert json.loads(request.read()) == {
         "alias": FILE_ALIAS,
@@ -154,7 +155,9 @@ async def test_create_file_upload_sends_overwrite(
         overwrite=overwrite,
     )
     assert file_id == TEST_FILE_ID
-    assert json.loads(upload_api.last_request.read()) == {
+    recorded_request = upload_api.last_request
+    assert recorded_request is not None
+    assert json.loads(recorded_request.read()) == {
         "alias": FILE_ALIAS,
         "decrypted_size": decrypted_size,
         "encrypted_size": encrypted_size,
@@ -195,6 +198,7 @@ async def test_get_box_uploads(
     assert uploads[0].state == "inbox"
 
     request = upload_api.last_request
+    assert request is not None
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads")
     assert request.url.params["skip"] == "0"
     assert request.url.params["limit"] == str(UPLOAD_LISTING_PAGE_SIZE)
@@ -262,7 +266,9 @@ async def test_get_part_upload_url(
         file_id=TEST_FILE_ID, part_no=1
     )
     assert upload_url == UPLOAD_URL
-    assert upload_api.last_request.url.path.endswith(
+    recorded_request = upload_api.last_request
+    assert recorded_request is not None
+    assert recorded_request.url.path.endswith(
         f"/boxes/{TEST_FUB_ID}/uploads/{TEST_FILE_ID}/parts/1"
     )
 
@@ -282,11 +288,12 @@ async def test_upload_file_part(
     """Test that upload_file_part fetches the presigned URL and PUTs the content to S3."""
     uploaded: list[bytes] = []
 
-    @mock_apis.router.put(api_url(UPLOAD_URL, ""))
-    def upload_part(request: httpx2.Request) -> httpx2.Response:
+    def upload_part(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
         """Accept the part content at the presigned URL."""
         uploaded.append(request.read())
         return httpx2.Response(200)
+
+    mock_apis.storage.on_put_part = upload_part
 
     await upload_client.upload_file_part(
         file_id=TEST_FILE_ID, content=b"abc123", part_no=1
@@ -304,6 +311,7 @@ async def test_complete_file_upload(
     )
 
     request = upload_api.last_request
+    assert request is not None
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads/{TEST_FILE_ID}")
     assert json.loads(request.read()) == CHECKSUMS
 
@@ -324,6 +332,7 @@ async def test_delete_file(
     await upload_client.delete_file(file_id=TEST_FILE_ID, file_alias=FILE_ALIAS)
 
     request = upload_api.last_request
+    assert request is not None
     assert request.method == "DELETE"
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads/{TEST_FILE_ID}")
 

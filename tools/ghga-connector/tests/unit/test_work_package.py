@@ -28,7 +28,7 @@ from tests.fixtures.mock_api.apis import (
     WorkPackageApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import respond
+from tests.fixtures.mock_api.shared import respond
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
     mock_work_package_token,
