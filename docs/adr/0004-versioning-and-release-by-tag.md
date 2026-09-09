@@ -162,7 +162,8 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
     release, and a dependant still resolves by its own declared constraint, so
     `ghga-connector` pinning `hexkit[s3]==9.0.1` keeps resolving 9.0.1 after hexkit bumps.
     The "directory changed" objection is narrower now too: the gate watches a member's
-    packaged roots and its `pyproject.toml`, so tests and docs no longer trip it. A
+    packaged roots plus the files that ship as its index metadata (`pyproject.toml`,
+    `README`, `LICENSE`), so tests and internal docs no longer trip it. A
     docstring inside `src/` still does — accepted, because no diff distinguishes a
     docstring from an API change, and exempting one would put content on PyPI that
     differs from the platform's.
@@ -190,11 +191,12 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   is not the content already published. Nothing ships on merge either: publishing still
   needs a pushed tag, so bumps accumulate and one sweep releases them together.
 
-  The check derives its own change set — a member's packaged roots plus its
-  `pyproject.toml` — rather than reusing `affected_targets.affected()`, which expands to
-  dependents and treats repo-wide paths as touching everything. Both properties are correct
-  for selecting tests and wrong here, where they would spend versions on content no
-  consumer receives.
+  The check derives its own change set — a member's packaged roots plus the files that
+  ship as its index metadata (`pyproject.toml`, `README`, `LICENSE`, matched by prefix so
+  extensions do not matter) — rather than reusing `affected_targets.affected()`, which
+  expands to dependents and treats repo-wide paths as touching everything. Both properties
+  are correct for selecting tests and wrong here, where they would spend versions on
+  content no consumer receives.
 
   **The check is index-time, not merge-time.** It compares the declared version against
   what PyPI served *when the job ran*. If a `hexkit/9.1.0` or `packages/*` tag publishes
