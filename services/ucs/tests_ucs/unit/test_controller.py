@@ -1998,7 +1998,9 @@ async def test_part_size_validation(
         )
 
 
-def _make_matching_event(file_upload: FileUpload) -> FileInternallyRegistered:
+def _make_file_internally_registered_event(
+    file_upload: FileUpload,
+) -> FileInternallyRegistered:
     """Create a FileInternallyRegistered event that matches the given FileUpload."""
     return FileInternallyRegistered(
         file_id=file_upload.id,
@@ -2024,7 +2026,7 @@ async def test_handle_internal_file_registration(rig: JointRig):
     # Create the FileUpload and matching FileInternallyRegistered event, but don't
     #  insert the FileUpload just yet. First, check for error handling on absent FileUploads
     file_upload = make_file_upload(state="awaiting_archival")
-    event = _make_matching_event(file_upload)
+    event = _make_file_internally_registered_event(file_upload)
     with pytest.raises(UploadControllerPort.FileUploadNotFound):
         await rig.controller.process_internal_file_registration(
             registration_metadata=event
@@ -2079,7 +2081,7 @@ async def test_handle_internal_file_registration_state_error(
     file_upload.state = file_upload_state
     await rig.file_upload_dao.insert(file_upload)
 
-    event = _make_matching_event(file_upload)
+    event = _make_file_internally_registered_event(file_upload)
     if bad_event_field is not None:
         event = event.model_copy(update={bad_event_field: bad_event_value})
 
@@ -2740,12 +2742,15 @@ async def _upload_and_fail(rig: JointRig, alias: str, failure_reason: str):
         encrypted_parts_md5=["abc123"],
         encrypted_parts_sha256=["def456"],
     )
-    failed_upload = await file_upload_dao.get_by_id(file_id)
-    failed_upload.state = "failed"
-    failed_upload.failure_reason = failure_reason
-    failed_upload.state_updated = now_utc_ms_prec()
-    await file_upload_dao.update(failed_upload)
-    return box_id, file_id, failed_upload
+    await controller.process_interrogation_failure(
+        report=InterrogationFailure(
+            file_id=file_id,
+            storage_alias=rig.file_upload_dao.latest.storage_alias,
+            interrogated_at=now_utc_ms_prec(),
+            reason=failure_reason,
+        )
+    )
+    return box_id, file_id, rig.file_upload_dao.latest
 
 
 async def test_requeue_file_success(rig: JointRig):
@@ -2851,7 +2856,9 @@ async def test_requeue_file_ignores_stale_interrogation_failure(rig: JointRig):
     after_new_failure = await file_upload_dao.get_by_id(file_id)
     assert after_new_failure.state == "failed"
     assert after_new_failure.failure_reason == "Genuinely new failure"
-    assert not await object_storage.does_object_exist(
+
+    # The object stays in the inbox so the file can be requeued again
+    assert await object_storage.does_object_exist(
         bucket_id=bucket_id, object_id=str(requeued.object_id)
     )
 
@@ -2954,7 +2961,7 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
     # which is required to distinguish the 'deleted' and 'present' categories below.
     original_get_object_metadata = object_storage.get_object_metadata
 
-    async def get_object_metadata_respecting_deletion(
+    async def _get_object_metadata_respecting_deletion(
         *, bucket_id: str, object_id: str
     ):
         if not await object_storage.does_object_exist(
@@ -2967,9 +2974,9 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
             bucket_id=bucket_id, object_id=object_id
         )
 
-    object_storage.get_object_metadata = get_object_metadata_respecting_deletion
+    object_storage.get_object_metadata = _get_object_metadata_respecting_deletion
 
-    async def upload(alias: str):
+    async def _upload(alias: str):
         """Initiate and complete an upload, landing the file in 'inbox'."""
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
@@ -3001,12 +3008,12 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
 
     # 2 'interrogated' uploads
     for i in range(2):
-        file_id = await upload(f"interrogated_{i}")
+        file_id = await _upload(f"interrogated_{i}")
         success_report = InterrogationSuccess(
             file_id=file_id,
             secret_id=f"secret_{i}",
             storage_alias="test",
-            bucket_id="permanent-bucket",
+            bucket_id="interrogation",
             object_id=uuid4(),
             interrogated_at=now_utc_ms_prec(),
             encrypted_parts_md5=["aaa111"],
@@ -3030,31 +3037,36 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
         await file_upload_dao.update(file_upload)
         never_reached_inbox_ids.append(file_id)
 
-    # 2 'failed' uploads whose inbox object was already deleted
+    async def _fail_interrogation(file_id):
+        """Report an interrogation failure for an inbox file, leaving its object."""
+        await controller.process_interrogation_failure(
+            report=InterrogationFailure(
+                file_id=file_id,
+                storage_alias="test",
+                interrogated_at=now_utc_ms_prec(),
+                reason="Checksum mismatch reported by FIS",
+            )
+        )
+        return await file_upload_dao.get_by_id(file_id)
+
+    # 2 'failed' uploads whose inbox object was already deleted. Interrogation
+    #  failures no longer delete the object, so we do this manually
     deleted_ids: list = []
     for i in range(2):
-        file_id = await upload(f"deleted_{i}")
-        failure_report = InterrogationFailure(
-            file_id=file_id,
-            storage_alias="test",
-            interrogated_at=now_utc_ms_prec(),
-            reason="Checksum mismatch reported by FIS",
+        file_id = await _upload(f"deleted_{i}")
+        failed_upload = await _fail_interrogation(file_id)
+        await object_storage.delete_object(
+            bucket_id=failed_upload.bucket_id, object_id=str(failed_upload.object_id)
         )
-        await controller.process_interrogation_failure(report=failure_report)
         deleted_ids.append(file_id)
 
     # 2 'failed' uploads that still have their data in S3
     present_ids: list = []
     pre_snapshots: dict = {}
     for i in range(2):
-        file_id = await upload(f"present_{i}")
-        failed_upload = await file_upload_dao.get_by_id(file_id)
-        failed_upload.state = "failed"
-        failed_upload.failure_reason = "Checksum mismatch reported by FIS"
-        failed_upload.state_updated = now_utc_ms_prec()
-        await file_upload_dao.update(failed_upload)
+        file_id = await _upload(f"present_{i}")
         present_ids.append(file_id)
-        pre_snapshots[file_id] = failed_upload
+        pre_snapshots[file_id] = await _fail_interrogation(file_id)
 
     return box_id, present_ids, deleted_ids, never_reached_inbox_ids, pre_snapshots
 
