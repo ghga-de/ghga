@@ -42,7 +42,10 @@ class MongoDbBoxStatsAggregator(BoxStatsAggregatorPort):
             {
                 "$match": {
                     "box_id": box_id,
-                    "state": {"$in": list(COUNTED_UPLOAD_STATES)},
+                    "$or": [
+                        {"state": {"$in": list(COUNTED_UPLOAD_STATES)}},
+                        {"state": "failed", "decrypted_sha256": {"$ne": None}},
+                    ],
                 }
             },
             {
