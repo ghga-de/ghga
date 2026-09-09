@@ -1386,6 +1386,44 @@ async def test_process_interrogation_success_no_file_upload(rig: JointRig):
         await rig.controller.process_interrogation_success(report=report)
 
 
+async def test_process_interrogation_failure_happy(rig: JointRig):
+    """Ensure that when UCS consumes an InterrogationFailure event,
+    the fields are updated and state set to `failed`, but the S3 object
+    is not deleted.
+    """
+    # Initiate and complete a FileUpload
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    completed_upload = await _complete_file_upload(
+        file_upload=rig.file_upload_dao.latest, rig=rig
+    )
+    assert completed_upload.state == "inbox"
+
+    await sleep(MIN_SLEEP)
+    failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
+
+    # Only state, state_updated, and failure_reason should change
+    assert failed_upload.state == "failed"
+    assert failed_upload.failure_reason == "Checksum mismatch reported by FIS"
+    assert failed_upload.state_updated > completed_upload.state_updated
+    excluded = {"state", "failure_reason", "state_updated"}
+    assert failed_upload.model_dump(exclude=excluded) == completed_upload.model_dump(
+        exclude=excluded
+    )
+
+    # Make sure the object is still in the inbox
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    assert await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(failed_upload.object_id)
+    )
+
+
 async def test_initiate_upload_after_failed(rig: JointRig):
     """Re-initiating an upload with the same alias is allowed when the existing
     FileUpload is in 'failed' state.
