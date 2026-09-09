@@ -570,6 +570,8 @@ class UploadControllerPort(ABC):
     ) -> None:
         """Update a FileUpload state to 'failed' and remove it from the inbox bucket.
 
+        The associated S3 object is not deleted.
+
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `UnknownStorageAliasError` if the storage alias is not known.
