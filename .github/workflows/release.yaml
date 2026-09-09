@@ -355,6 +355,21 @@ jobs:
       - name: Attest SBOM + provenance (keyless)
         if: ${{ inputs.push }}
         run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+      # Hands the resolved digest to package-charts so a chart can pin image.digest
+      # instead of the mutable tag (create_charts.py's --digests). One artifact per
+      # matrix member (not a job output) because matrix job outputs don't aggregate
+      # across shards — package-charts downloads and merges them by filename.
+      - name: Save resolved digest for chart packaging
+        if: ${{ inputs.push }}
+        run: |
+          mkdir -p digests
+          echo -n "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.member.package }}"
+      - uses: actions/upload-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        if: ${{ inputs.push }}
+        with:
+          name: digest-${{ matrix.member.package }}
+          path: digests/${{ matrix.member.package }}
+          retention-days: 1
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then
@@ -417,8 +432,29 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      # One digest-<package> artifact per build-images matrix member (build-only dry
+      # runs push nothing, so there's nothing to download); merged into a single
+      # {package: digest} map for create_charts.py's --digests below.
+      - name: Download resolved image digests
+        if: ${{ inputs.push }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: "digest-*"
+          path: digests
+          merge-multiple: true
+      - name: Merge digests into one file
+        if: ${{ inputs.push }}
+        run: |
+          for f in digests/*; do
+            jq -n --arg pkg "$(basename "$f")" --arg digest "$(cat "$f")" '{($pkg): $digest}'
+          done | jq -s 'add' > digests.json
       - name: Regenerate charts at the release version
-        run: uv run python deploy/src/create_charts.py --version "${{ needs.resolve.outputs.version }}"
+        run: |
+          digest_flags=()
+          if [ "${{ inputs.push }}" = "true" ]; then
+            digest_flags=(--digests digests.json)
+          fi
+          uv run python deploy/src/create_charts.py --version "${{ needs.resolve.outputs.version }}" "${digest_flags[@]}"
       # ghga-demo is the local test bed (deploy/README.md), not a release artifact: it
       # bundles dev-only subcharts (aai's mock-oauth2-server, test-oidc-provider) and its
       # own Chart.yaml version isn't stamped by create_charts.py to the platform version

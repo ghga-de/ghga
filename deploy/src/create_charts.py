@@ -13,6 +13,9 @@ Conventions baked into the derived values:
   no command prefix (executables resolve via the image PATH)
 - image.tag stays empty so the Bitnami image helper falls back to the chart's
   appVersion == the platform version (ADR-0004)
+- image.digest is empty unless --digests supplies one: release.yaml's build-images
+  only knows a member's real digest after it pushes, so it is injected here as a
+  post-build overlay rather than derived like the other image fields
 """
 
 import argparse
@@ -625,16 +628,30 @@ def main() -> None:
             " CHART_REGISTRY); used only for each chart README's install snippet"
         ),
     )
+    parser.add_argument(
+        "--digests",
+        type=Path,
+        help=(
+            "JSON file mapping member package name to its resolved image digest"
+            " (release.yaml's build-images output, merged across matrix members);"
+            " a member missing from it keeps image.digest empty, falling back to"
+            " tag/appVersion as usual"
+        ),
+    )
     args = parser.parse_args()
 
     # resolved before the first stamp_chart(), which rmtree()s the chart directories
     version = args.version or current_member_version()
+    digests = json.loads(args.digests.read_text()) if args.digests else {}
 
     defaults = library_defaults()
     docs = library_docs()
     for member in image_members():
         description = member["description"] or member["package"]
         values, source = compose_member_values(member, args.registry, defaults)
+        digest = digests.get(member["package"])
+        if digest:
+            values = deep_merge(values, {"image": {"digest": digest}})
         chart_dir = stamp_chart(
             name=member["package"],
             description=description,
