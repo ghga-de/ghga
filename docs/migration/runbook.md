@@ -65,7 +65,8 @@ scripts/migration/import-all.sh
 What it does, per row in [scripts/migration/repos.tsv](../../scripts/migration/repos.tsv):
 - whole-repo rows: drop centralised boilerplate (kind-specific list in
   [lib.sh](../../scripts/migration/lib.sh)), then move the rest into the destination subdir;
-- `file-services-backend` rows: keep only the named `services/<svc>` subtree, placed at top level;
+- partial rows (a `subpath` other than `.`): keep only that subtree, placed at top level — how
+  the six `file-services-backend` services were imported, before those rows were retired;
 - merge with `--allow-unrelated-histories`, preserving authorship/dates; `git blame`/`log` follow
   files into their new paths.
 
@@ -190,9 +191,9 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
       point at per-repo locations. **Started ahead of the full cutover (2026-09):**
       `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`,
       `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`,
-      `epic-docs` and `adrs` are archived and their rows removed from `repos.tsv` — see the
-      "Retired" block there for the last commit merged from each. Verify a repo is fully
-      synced (§6) before dropping its row.
+      `epic-docs`, `adrs` and `file-services-backend` (all six of its services at once) are
+      archived and their rows removed from `repos.tsv` — see the "Retired" block there for the
+      last commit merged from each. Verify a repo is fully synced (§6) before dropping its row.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
 - [ ] Decommission the docker-compose test bed.
