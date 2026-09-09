@@ -818,8 +818,8 @@ async def test_requeue_single_file_409(
 
     # Check cases #1 and #2
     requeue_err_msg = (
-        f"Cannot requeue FileUpload {test_file_id} because it did not fail"
-        + " interrogation."
+        f"Cannot requeue FileUpload {test_file_id} because it was not successfully"
+        + " uploaded and never made it to interrogation."
     )
     for exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
         file_box_api.on_requeue_single_file_upload = respond(
