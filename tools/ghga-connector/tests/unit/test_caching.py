@@ -35,7 +35,7 @@ from tests.fixtures.mock_api.apis import (
     WorkPackageApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import respond
+from tests.fixtures.mock_api.shared import respond
 from tests.fixtures.utils import (
     RecordingClient,
     patch_work_package_functions,  # noqa: F401

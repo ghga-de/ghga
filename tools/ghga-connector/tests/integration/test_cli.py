@@ -37,7 +37,7 @@ from tests.fixtures.mock_api.apis import (
     StagedObject,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import (
+from tests.fixtures.mock_api.shared import (
     httpyexpect_error,
     mock_health_checks,
     respond,
@@ -278,10 +278,9 @@ async def test_file_not_downloadable(
 
     # The work order token the connector fetched has to have reached the Download API as
     # the bearer token - `patch_work_package_functions` leaves `_decrypt` as the identity.
-    assert (
-        mock_apis.download.last_request.headers["authorization"]
-        == f"Bearer {WORK_ORDER_TOKEN}"
-    )
+    recorded_request = mock_apis.download.last_request
+    assert recorded_request is not None
+    assert recorded_request.headers["authorization"] == f"Bearer {WORK_ORDER_TOKEN}"
 
     # 403 caused by requesting file ID that's not part of the work order token
     mock_apis.download.on_get_drs_object = lambda request, **path_variables: (
