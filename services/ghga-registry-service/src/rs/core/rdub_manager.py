@@ -980,7 +980,7 @@ class RDUBManager(RDUBManagerPort):
         try:
             box = await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            error: Exception = self.BoxNotFoundError(box_id=box_id)
+            error = self.BoxNotFoundError(box_id=box_id)
             log.info(error)
             raise error from err
 
@@ -1021,7 +1021,7 @@ class RDUBManager(RDUBManagerPort):
                 box_id=box.file_upload_box_id, file_id=file_id
             )
         except FileBoxClientPort.FileUploadNotFoundError as err:
-            error: Exception = self.FileUploadNotFoundError(file_id=file_id)
+            error = self.FileUploadNotFoundError(file_id=file_id)
             log.info(error, extra=extra)
             raise error from err
         except FileBoxClientPort.RequeueError as err:
