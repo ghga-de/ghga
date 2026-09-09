@@ -365,9 +365,16 @@ jobs:
             | uv run -q --script scripts/pypi_drift.py 2> /tmp/drift.err; then
             exit 0
           fi
-          while IFS= read -r line; do
-            echo "::error::$line"
-          done < /tmp/drift.err
+          # The gate is fail-closed: `pipefail` reds the step whatever failed. But only the
+          # script's stderr is captured, so a failure on the `git diff` side would annotate
+          # nothing — hence a message that at least says the failure was not drift.
+          if [ -s /tmp/drift.err ]; then
+            while IFS= read -r line; do
+              echo "::error::$line"
+            done < /tmp/drift.err
+          else
+            echo "::error::drift check failed without reporting drift — see the step log"
+          fi
           exit 1
 
   # The published-combo gate (ADR-0002): the same affected members, tested the way external

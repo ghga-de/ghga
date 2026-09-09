@@ -157,7 +157,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
     directory changed" cannot distinguish a docstring edit from a new API.
 
     Still true of the release plan, but **as of 2026-09-02 that state no longer reaches
-    `main`**: the drift gate below requires the bump at merge time. The rule stands
+    `main`**: the drift gate below requires the bump before a PR can merge. The rule stands
     unchanged for what it was about — one member's pending work never blocks another's
     release, and a dependant still resolves by its own declared constraint, so
     `ghga-connector` pinning `hexkit[s3]==9.0.1` keeps resolving 9.0.1 after hexkit bumps.
@@ -195,6 +195,17 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   dependents and treats repo-wide paths as touching everything. Both properties are correct
   for selecting tests and wrong here, where they would spend versions on content no
   consumer receives.
+
+  **The check is index-time, not merge-time.** It compares the declared version against
+  what PyPI served *when the job ran*. If a `hexkit/9.1.0` or `packages/*` tag publishes
+  that same version between a PR going green and the PR merging, the passing result is
+  already stale: the index moved, the branch did not. Branch protection cannot close
+  this — "require branches to be up to date" re-runs checks when the *base branch*
+  advances, and nothing in git changed; a merge queue narrows the window to the queue
+  run itself but a tag pushed against that run reproduces it. The failure is loud
+  rather than silent: `main`'s own run of the gate goes red immediately after the
+  merge, and the fix is a second bump. Accepted as inherent to checking a version
+  number against a registry anyone else can also write to.
 - The **published-combo matrix** ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)) — the
   component against PyPI-resolved dependencies across its supported Python range — is a
   **prerequisite for the first PyPI-lane release from this repo**, since the workspace only
