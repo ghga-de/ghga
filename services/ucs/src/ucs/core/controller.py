@@ -1699,7 +1699,7 @@ class UploadController(UploadControllerPort):
                     "storage_alias": storage_alias,
                     "$or": [
                         {"state": {"$in": ["init", "inbox"]}},
-                        {"state": "failed", "decrypted_sha256": {"$ne": None}}
+                        {"state": "failed", "decrypted_sha256": {"$ne": None}},
                     ],
                 }
             )
