@@ -1697,7 +1697,10 @@ class UploadController(UploadControllerPort):
             async for upload in self._file_upload_dao.find_all(
                 mapping={
                     "storage_alias": storage_alias,
-                    "state": {"$in": ["init", "inbox"]},
+                    "$or": [
+                        {"state": {"$in": ["init", "inbox"]}},
+                        {"state": "failed", "decrypted_sha256": {"$ne": None}}
+                    ],
                 }
             )
         ]

@@ -26,7 +26,11 @@ from uuid import UUID, uuid4
 import httpx2
 import pytest
 
-from ghga_event_schemas.pydantic_ import FileDeletionRequested, InterrogationSuccess
+from ghga_event_schemas.pydantic_ import (
+    FileDeletionRequested,
+    InterrogationFailure,
+    InterrogationSuccess,
+)
 from hexkit.correlation import set_correlation_id
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
@@ -704,6 +708,91 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
 
     # Consume the event -- should not receive an error
     await joint_fixture.event_subscriber.run(forever=False)
+
+
+async def test_failed_interrogation_object_survives_cleanup(
+    joint_fixture: JointFixture,
+):
+    """Test that the cleanup job doesn't remove the inbox object of
+    a file that failed interrogation.
+    """
+    controller = joint_fixture.upload_controller
+    s3_storage = joint_fixture.s3.storage
+    inbox_bucket_id = joint_fixture.bucket_id
+    config = joint_fixture.config
+
+    # Create a box and initiate a file upload
+    async with set_correlation_id(uuid4()):
+        box_id = await controller.create_file_upload_box(
+            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
+        )
+        file_id, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=utils.PART_SIZE,
+        )
+
+    # Upload the data
+    url = await controller.get_part_upload_url(file_id=file_id, part_no=1)
+    response = await upload_to_s3(url, CONTENT)
+    assert response.status_code == 200
+    async with set_correlation_id(uuid4()):
+        await controller.complete_file_upload(
+            box_id=box_id,
+            file_id=file_id,
+            unencrypted_checksum="abc123",
+            encrypted_checksum=calc_expected_encrypted_checksum(CONTENT),
+            encrypted_parts_md5=["abc123"],
+            encrypted_parts_sha256=["def456"],
+        )
+
+    # Fetch the object ID and verify that the data is in the inbox
+    db = joint_fixture.mongodb.client[config.db_name]
+    file_upload_collection = db[FILE_UPLOADS_COLLECTION]
+    file_upload_db = file_upload_collection.find_one(
+        {"_id": file_id, "__metadata__.deleted": False}
+    )
+    assert file_upload_db is not None
+    assert file_upload_db["state"] == "inbox"
+    object_id = str(file_upload_db["object_id"])
+    assert await s3_storage.does_object_exist(
+        bucket_id=inbox_bucket_id, object_id=object_id
+    )
+
+    # Fail the file via InterrogationFailure event
+    interrogation_failure = InterrogationFailure(
+        file_id=file_id,
+        storage_alias="test",
+        interrogated_at=now_utc_ms_prec(),
+        reason="Checksum mismatch reported by FIS",
+    )
+    await joint_fixture.kafka.publish_event(
+        payload=interrogation_failure.model_dump(mode="json"),
+        type_=config.interrogation_failure_type,
+        topic=config.file_interrogations_topic,
+    )
+    await joint_fixture.event_subscriber.run(forever=False)
+
+    # Verify that the FileUpload was updated to 'failed'
+    failed_file = file_upload_collection.find_one(
+        {"_id": file_id, "__metadata__.deleted": False}
+    )
+    assert failed_file is not None
+    assert failed_file["state"] == "failed"
+    assert failed_file["decrypted_sha256"]
+    assert await s3_storage.does_object_exist(
+        bucket_id=inbox_bucket_id, object_id=object_id
+    )
+
+    # Run the cleanup job
+    await controller.cleanup_stale_uploads()
+
+    # Verify that the object is left in place
+    assert await s3_storage.does_object_exist(
+        bucket_id=inbox_bucket_id, object_id=object_id
+    ), "Cleanup deleted the inbox object of a file that failed interrogation"
 
 
 async def test_file_deletion_requested_event(joint_fixture: JointFixture, caplog):
