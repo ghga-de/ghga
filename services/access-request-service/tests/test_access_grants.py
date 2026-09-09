@@ -23,6 +23,7 @@ from uuid import UUID, uuid4
 
 import httpx2
 import pytest
+from pytest import fixture
 from pytest_asyncio import fixture as async_fixture
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
@@ -64,6 +65,12 @@ def as_json(grant: BaseAccessGrant, **kwargs) -> dict:
     return json.loads(grant.model_dump_json(**kwargs))
 
 
+@fixture(name="access_grants")
+def access_grants_at_the_configured_url() -> AccessGrantsMock:
+    """Mock the download access API where this module configures it."""
+    return AccessGrantsMock(DOWNLOAD_ACCESS_URL)
+
+
 @async_fixture(name="grants_adapter", loop_scope="session")
 async def fixture_grants_adapter(
     access_grants: AccessGrantsMock,
@@ -94,6 +101,7 @@ async def test_grant_download_access(
     )
 
     request = access_grants.last_request
+    assert request is not None
     assert request.method == "POST"
     assert str(request.url) == GRANT_URL
     assert json.loads(request.content) == {
@@ -181,6 +189,7 @@ async def test_get_access_grants(
     grants = await get_grants(**params)  # type: ignore[arg-type]
 
     request = access_grants.last_request
+    assert request is not None
     assert request.method == "GET"
     assert str(request.url).startswith(GRANTS_URL)
     expected_query = (
@@ -254,6 +263,7 @@ async def test_revoke_existing_access_grants(
 
     # make sure the request was sent
     request = access_grants.last_request
+    assert request is not None
     assert request.method == "DELETE"
     assert str(request.url) == f"{GRANTS_URL}/{GRANT_ID}"
     assert not request.content
@@ -273,7 +283,9 @@ async def test_revoke_non_existing_access_grants(
     ):
         await revoke_grant(random_grant_id)
 
-    assert str(access_grants.last_request.url) == f"{GRANTS_URL}/{random_grant_id}"
+    recorded_request = access_grants.last_request
+    assert recorded_request is not None
+    assert str(recorded_request.url) == f"{GRANTS_URL}/{random_grant_id}"
 
 
 async def test_revoke_access_grants_with_server_error(
