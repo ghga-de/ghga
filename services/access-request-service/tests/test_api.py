@@ -490,6 +490,7 @@ async def test_patch_access_request_status(
 
     # check that access has been granted
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{SOME_IVA_ID}/datasets/DS001"
@@ -583,6 +584,7 @@ async def test_patch_access_request_with_another_iva(
 
     # check that access has been granted using the other IVA
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{another_iva}/datasets/DS001"
@@ -900,6 +902,7 @@ async def test_patch_everything_when_allowing_request(
 
     # check that access has been granted using the new IVA
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{new_iva}/datasets/DS001"
@@ -1048,7 +1051,9 @@ async def test_get_own_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
-    assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
+    recorded_request = access_grants.last_request
+    assert recorded_request is not None
+    assert dict(recorded_request.url.params) == {"user_id": user_id}
 
     # get own access grants specifying a user ID
     response = await client.get(
@@ -1058,7 +1063,9 @@ async def test_get_own_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
-    assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
+    recorded_request = access_grants.last_request
+    assert recorded_request is not None
+    assert dict(recorded_request.url.params) == {"user_id": user_id}
 
 
 async def test_get_other_access_grants(
@@ -1082,7 +1089,9 @@ async def test_get_other_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
-    assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
+    recorded_request = access_grants.last_request
+    assert recorded_request is not None
+    assert dict(recorded_request.url.params) == {"user_id": user_id}
 
     # get access grants of all users
     response = await client.get("/access-grants", headers=auth_headers_steward)
@@ -1090,7 +1099,9 @@ async def test_get_other_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
-    assert not access_grants.last_request.url.params
+    recorded_request = access_grants.last_request
+    assert recorded_request is not None
+    assert not recorded_request.url.params
 
 
 async def test_get_filtered_access_grants(
@@ -1119,7 +1130,9 @@ async def test_get_filtered_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
-    assert dict(access_grants.last_request.url.params) == {
+    recorded_request = access_grants.last_request
+    assert recorded_request is not None
+    assert dict(recorded_request.url.params) == {
         "user_id": user_id,
         "iva_id": iva_id,
         "dataset_id": dataset_id,
@@ -1208,6 +1221,7 @@ async def test_revoke_existing_access_grant(
 
     # check that the grant has been revoked upstream
     revoke_request = access_grants.last_request
+    assert revoke_request is not None
     assert revoke_request.method == "DELETE"
     assert str(revoke_request.url) == f"http://access/grants/{grant_id}"
 

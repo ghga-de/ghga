@@ -170,7 +170,7 @@ wheels = [
 
 [[package]]
 name = "ars"
-version = "8.0.2"
+version = "8.0.3"
 source = { editable = "services/access-request-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
