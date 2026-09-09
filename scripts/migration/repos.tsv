@@ -76,17 +76,26 @@
 #                             services/notification-orchestration-service additionally carries
 #                             monorepo-only work never upstreamed (c53f1261, pointing the portal
 #                             link at `access-request-manager/` rather than `access-requests/`).
-# Nine archived tips are deliberately NOT merged — each is an archival/deprecation notice
+#   dataset-information-service -> services/dataset-information-service
+#                             07fd91d "Migrate to httpx2 (#29)" 2026-07-31, 7.0.2
+#   well-known-value-service -> services/well-known-value-service
+#                             fd32763 "Migrate to httpx2 (#25)" 2026-08-06, 3.0.2
+#                             Both keep unmerged feature branches on the archived repo (newest
+#                             dataset-information-service/feature/backport_dhi and
+#                             well-known-value-service/feature/backport_dhi, both 2026-06-05);
+#                             none reached main, so none were ever in scope for the sync.
+# Eleven archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
 # there, not here), file-services-backend 605be53 (root README and template only, so the
 # partial rows would have filtered it to empty in any case), hexkit 245ca78 "Replace the
-# docs site with redirects to the monorepo (#253)", notification-service 00ca3db1 and
-# notification-orchestration-service 285dc85f (both "Add deprecation note"). Those last
-# three are the only tips that would NOT have filtered to empty: hexkit's is mostly redirect
+# docs site with redirects to the monorepo (#253)", notification-service 00ca3db1,
+# notification-orchestration-service 285dc85f, dataset-information-service 5afbde4 and
+# well-known-value-service 282b4be (all four "Add deprecation note"). Those last five are
+# the only tips that would NOT have filtered to empty: hexkit's is mostly redirect
 # tooling on paths the import drops (.github/, scripts/, .template/, .gitignore) and the
-# notification pair touch nothing else but .readme_generation/ and .template/, yet each also
+# other four touch nothing else but .readme_generation/ and .template/, yet each also
 # adds a "this repo has moved" banner to the README, which is kept — an upstream-only
 # notice, wrong to carry here, where that README is the package's own.
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
@@ -105,8 +114,6 @@ lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
 lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Standalone services
-service	dataset-information-service	.	services/dataset-information-service	main
-service	well-known-value-service	.	services/well-known-value-service	main
 service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
 service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
