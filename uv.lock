@@ -340,7 +340,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "auth-service"
-version = "10.0.2"
+version = "10.0.3"
 source = { editable = "services/auth-service" }
 dependencies = [
     { name = "ghga-event-schemas" },

@@ -30,12 +30,12 @@ from auth_service.auth_adapter.deps import get_session_store
 from auth_service.auth_adapter.ports.session_store import SessionStorePort
 from auth_service.user_registry.models.ivas import IvaState
 from auth_service.user_registry.models.users import UserStatus
-from ghga_service_commons.api.mock_router import MockRouter
 from hexkit.utils import now_utc_ms_prec
 from tests.fixtures.constants import ID_OF_JOHN, SOME_USER_ID
 
 from ...fixtures.utils import (
     USER_INFO,
+    MockedOidcApi,
     headers_for_session,
     mock_userinfo,
 )
@@ -210,9 +210,7 @@ async def test_verify_totp_without_csrf_token(
     assert response.json() == {"detail": "Invalid or missing CSRF token"}
 
 
-async def test_verify_totp(
-    client_with_session: ClientWithSession, mock_router: MockRouter
-):
+async def test_verify_totp(client_with_session: ClientWithSession, oidc: MockedOidcApi):
     """Test verification of TOTP tokens."""
     client, session, user_registry, user_token_dao = client_with_session
     headers = headers_for_session(session)
@@ -268,7 +266,7 @@ async def test_verify_totp(
     response = await client.post(LOGOUT_PATH, headers=headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc, USER_INFO)
     session = await query_new_session(client)
     assert session.state is SessionState.HAS_TOTP_TOKEN
     headers = headers_for_session(session)

@@ -12,19 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+"""A mock of the external OIDC provider the auth adapter calls.
 
-"""Fixtures that are shared between all unit and integration tests"""
+Kept apart from `utils`, which pulls in the service configuration - `conftest` needs
+this before that configuration is in place.
+"""
 
-from collections.abc import Iterator
+from ghga_service_commons.api.mock_api import MockedApi, endpoint
 
-import pytest
-
-from ghga_service_commons.api.mock_api import MockedApis
-from tests.fixtures.oidc import MockedOidcApi
+__all__ = ["MockedOidcApi"]
 
 
-@pytest.fixture
-def oidc() -> Iterator[MockedOidcApi]:
-    """Serve the external OIDC API, intercepting the requests made with httpx2."""
-    with MockedApis(api := MockedOidcApi()):
-        yield api
+class MockedOidcApi(MockedApi):
+    """A mock of the external OIDC provider the auth adapter calls."""
+
+    base_url = "https://login.aai.lifescience-ri.eu/oidc"
+
+    on_userinfo = endpoint("GET", "/userinfo")
