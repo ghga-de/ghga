@@ -262,7 +262,6 @@ async def test_log_whole_box_requeue(audit_fixture: AuditFixture):
     assert event.key.startswith("rs-")
     assert event.type_ == "audit_record_created"
 
-    # The action is None because the box itself isn't changed, only the files in it
     assert get_audit_payload(event) == {
         "service": "rs",
         "label": "All FileUploads in ResearchDataUploadBox requeued",
