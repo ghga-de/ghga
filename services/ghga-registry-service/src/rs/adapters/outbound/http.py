@@ -29,6 +29,7 @@ from pydantic_settings import BaseSettings
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.constants import (
     EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_NOT_FOUND,
     EXC_ID_BOX_STATE_ERROR,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
@@ -878,16 +879,17 @@ class FileBoxClient(FileBoxClientPort):
                 )
                 log.warning(msg, extra=extra)
                 raise self.RequeueError(msg)
-            log.warning(
-                "FileUploadBox %s not found in external service when attempting to"
-                + " requeue FileUpload %s. The RDUB and FUB states may be out of sync.",
-                box_id,
-                file_id,
-                extra=extra,
-            )
-            raise self.OperationError(
-                f"FileUploadBox {box_id} was not found in the external service."
-            )
+            if exception_id == EXC_ID_BOX_NOT_FOUND:
+                log.warning(
+                    "FileUploadBox %s not found in external service when attempting to"
+                    + " requeue FileUpload %s. The RDUB and FUB states may be out of sync.",
+                    box_id,
+                    file_id,
+                    extra=extra,
+                )
+                raise self.OperationError(
+                    f"FileUploadBox {box_id} was not found in the external service."
+                )
 
         if response.status_code == 409:
             if exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
