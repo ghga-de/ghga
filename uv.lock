@@ -4427,7 +4427,7 @@ requires-dist = [
 
 [[package]]
 name = "wps"
-version = "11.1.1"
+version = "11.1.2"
 source = { editable = "services/work-package-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
