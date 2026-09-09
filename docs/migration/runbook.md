@@ -138,9 +138,10 @@ Enabled in two stages (the component gate does **not** wait for the charts):
 - **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed
   run ([ADR-0009](../adr/0009-testbed-kind-minikube.md),
   [ADR-0017](../adr/0017-local-integration-host-cluster.md)).
-- **Image/chart/PyPI publish (live):** images and charts publish to Docker Hub, wheels to PyPI
-  after a TestPyPI rehearsal; a tag push only builds, so publishing a platform release is a
-  deliberate dispatch ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
+- **Image/chart/PyPI publish (live):** a tag push publishes wheels to PyPI, after a TestPyPI
+  rehearsal. Images and charts go to Docker Hub, but a tag push only builds them — publishing
+  a platform release is a deliberate dispatch
+  ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - Push the repo to `github.com/ghga-de/ghga`.
 
 ## 6. Ongoing — one-way incremental sync
