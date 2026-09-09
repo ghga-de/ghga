@@ -2736,9 +2736,7 @@ async def test_remove_file_upload_box_s3_abort_error(rig: JointRig):
 
 
 async def _upload_and_fail(rig: JointRig, alias: str, failure_reason: str):
-    """Complete an upload, then simulate an interrogation failure via a path
-    that leaves the inbox object in place.
-    """
+    """Complete an upload, then simulate an interrogation failure."""
     controller = rig.controller
     file_upload_dao = rig.file_upload_dao
     box_id = await rig.create_default_box()
