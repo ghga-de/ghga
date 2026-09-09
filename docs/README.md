@@ -54,6 +54,7 @@ cross-ADR amendment, which is how several of these are meant to be read together
 | [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted |  |
 | [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted |  |
 | [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch | **Proposed** — unimplemented | [0004](adr/0004-versioning-and-release-by-tag.md) already amended for it |
+| [0021](adr/0021-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | **Proposed** | deviates from [0014](adr/0014-capability-markers-and-placement.md) on marker vs. config-file discovery |
 
 ## Phased roadmap (high level)
 

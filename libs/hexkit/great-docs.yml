@@ -10,35 +10,36 @@ display_name: hexkit
 # Enables the per-object "view source" links on reference pages (each class,
 # method, and function links to its exact lines on GitHub) and the GitHub navbar
 # widget. Without this, great-docs skips source-link generation entirely.
-repo: "https://github.com/ghga-de/hexkit"
+repo: "https://github.com/ghga-de/ghga"
 
 # Source Link Configuration
 # -------------------------
 # `branch: main` pins "view source" links to the published branch rather than the
 # docs feature branch that happens to be checked out at build time.
 #
-# NOTE: hexkit uses a src/ layout, but great-docs builds source URLs from griffe's
-# package-relative path (`hexkit/...`), omitting the `src/` prefix — so the links
-# would 404. The `fix_source_link_paths.py` pre_render hook (below) reinserts it.
-# TODO: Drop the `fix_source_link_paths.py` hook once great-docs ships a release
-# > 0.14.1 that includes the upstream fix (posit-dev/great-docs PR #245, merged
-# 2026-06-30; unreleased as of 0.14.1). It fixes this natively and re-enables the
-# `source.path` override if we ever prefer that over the pre_render workaround.
+# NOTE: `source.path` is deliberately NOT set, even though great-docs advertises it
+# as the monorepo override. Its code path (`_apiref/_render/doc.py`) builds the URL
+# as `<source.path>/<basename>`, discarding the package subdirectories, so every
+# object below the top level would point at a file that does not exist. Left unset,
+# great-docs falls back to resolving the path against the first pyproject.toml above
+# the build dir — `libs/hexkit`, not the repo root — which yields `src/hexkit/...`
+# and is missing the `libs/hexkit/` prefix. The `fix_source_link_paths.py` pre_render
+# hook (below) supplies that prefix; it is the only variant that produces URLs which
+# resolve.
 source:
   branch: main
 
 # Pre-render Hooks
 # ----------------
 # Scripts run after the reference pages are generated but before Quarto renders
-# them. `fix_source_link_paths.py` reinserts the `src/` prefix that great-docs
-# omits from "view source" URLs for src/-layout packages (see note above).
+# them. `fix_source_link_paths.py` rewrites the "view source" URLs so they carry the
+# monorepo member prefix (see the source note above).
 # `add_member_anchor_ids.py` injects the fully qualified anchors (e.g.
 # `#hexkit.protocols.dao.Dao.insert`) that great-docs' automatic API
 # cross-linker promises in objects.json but the generated reference pages do
 # not carry (they only have short ids like `#insert`) — without it, auto-links
 # from user-guide pages land on the right page but do not scroll to the member.
-# Unfixed upstream as of great-docs 0.14.1 (checked issues, PRs, and releases
-# on 2026-07-03).
+# Still unfixed upstream as of great-docs 0.17.0.
 pre_render:
   - scripts/fix_source_link_paths.py
   - scripts/add_member_anchor_ids.py
@@ -383,9 +384,23 @@ reference:
 # --------
 # Canonical address of the deployed documentation site.
 # Required for subdirectory deployments, skills page install commands,
-# .well-known/ discovery, and sitemaps. hexkit deploys to GitHub Pages under the
-# repo-name subpath, so this must be set for correct link/asset resolution.
-site_url: "https://ghga-de.github.io/hexkit/"
+# .well-known/ discovery, and sitemaps. The monorepo serves one GitHub Pages site
+# (ghga-de.github.io/ghga) with one subpath per documented member, so this must be
+# set for correct link/asset resolution.
+site_url: "https://ghga-de.github.io/ghga/hexkit/"
+
+# SEO / Canonical Base URL
+# ------------------------
+# The SEO pass (canonical <link>, og:url, sitemap.xml) does NOT read `site_url`. It
+# reads `seo.canonical.base_url`, and when that is unset it GUESSES
+# `https://<owner>.github.io/<repo>/` from `repo:` above — which here would be
+# ghga-de.github.io/ghga, dropping the member subpath and pointing every canonical
+# link and sitemap entry at another member's site. Under a single-package repo the
+# guess happened to be right; in the monorepo it must be stated. Keep it in step with
+# `site_url` — scripts/docs_members.py --check asserts both against the deploy path.
+seo:
+  canonical:
+    base_url: "https://ghga-de.github.io/ghga/hexkit/"
 
 # Site Settings
 # -------------

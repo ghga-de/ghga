@@ -9,7 +9,7 @@
 and event-driven microservices in Python*
 
 Read the short summary below, or jump straight to our full
-📖 **[User Guide](https://ghga-de.github.io/hexkit/user-guide/)** to learn the abstract
+📖 **[User Guide](https://ghga-de.github.io/ghga/hexkit/user-guide/)** to learn the abstract
 concepts and patterns as well as the concrete infrastructure integrations and testing
 tools that hexkit provides for building better microservices.
 
@@ -37,7 +37,7 @@ to use. The only task that remains for an individual service is to implement
 service-specific translators between the service's ports and the general-purpose
 protocols (in addition to implementing the domain functionality of the service, of
 course). For an in-depth introduction to the pattern, please read the
-[Architectural Concepts](https://ghga-de.github.io/hexkit/user-guide/arch_concepts/)
+[Architectural Concepts](https://ghga-de.github.io/ghga/hexkit/user-guide/arch_concepts/)
 chapter of the User Guide.
 
 The following protocols and providers are currently available:
@@ -61,9 +61,9 @@ designing REST APIs and an ORM like SQLAlchemy for interacting with databases.
 
 ## Getting Started
 
-The 📖 [User Guide](https://ghga-de.github.io/hexkit/user-guide/) covers all
+The 📖 [User Guide](https://ghga-de.github.io/ghga/hexkit/user-guide/) covers all
 protocols, providers, testing utilities, and observability tools with example code,
-and the [API Reference](https://ghga-de.github.io/hexkit/reference/) documents all
+and the [API Reference](https://ghga-de.github.io/ghga/hexkit/reference/) documents all
 public classes and functions.
 
 For a complete example service built with hexkit, have a look at the

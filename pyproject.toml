@@ -33,6 +33,18 @@ dev = [
     "logot>=1.3",
 ]
 
+# Documentation toolchain (ADR-0021). Kept out of `dev` because it is only ever needed by
+# the docs lane and pulls a large dependency tree; `uv sync` for tests must not resolve it.
+# Upstream hexkit installed great-docs with a bare `pip install` outside its lock, because
+# the shared dev lock had to stay importable on py310 and great-docs requires >=3.11. The
+# workspace floor is 3.11, so the group resolves into the single uv.lock like anything else
+# and Renovate tracks it.
+# NB: `great-docs build` also needs the Quarto CLI, which is not a Python package — the
+# workflow installs it with quarto-dev/quarto-actions/setup, and `just docs` checks for it.
+docs = [
+    "great-docs>=0.17,<0.18",
+]
+
 # ----------------------------------------------------------------------------------------
 # Repo-wide tool configuration (single source of truth — replaces N per-repo copies).
 # Rule sets are ported VERBATIM from the retired microservice-repository-template
