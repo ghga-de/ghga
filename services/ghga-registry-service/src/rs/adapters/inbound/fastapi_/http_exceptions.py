@@ -251,7 +251,6 @@ class HttpRequeueError(HttpCustomExceptionBase):
         `reason` describes why the requeue operation was blocked for this file,
         which can be either that the file never successfully uploaded in the
         first place, or that its S3 object no longer exists.
-        
         """
         super().__init__(
             status_code=status_code,
