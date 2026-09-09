@@ -28,6 +28,7 @@ from ghga_datasteward_kit.file_ingest import (
     alias_to_accession,
     file_ingest,
 )
+from ghga_service_commons.api.mock_api import endpoint, respond
 from ghga_service_commons.utils.simple_token import generate_token
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.submission_registry.models import (
@@ -42,7 +43,7 @@ from tests.fixtures.ingest import (  # noqa: F401
     ingest_fixture,
     legacy_ingest_fixture,
 )
-from tests.fixtures.mock_api import ApiMock, MockedEndpoint, respond
+from tests.fixtures.mock_api import MockedIngestApi, MockedWkvsApi, serve_httpx
 
 DEFAULT_STORAGE_ALIASES = {"test": "http://example.com"}
 
@@ -53,30 +54,32 @@ def mock_ingest_api(
     *,
     endpoint_path: str,
     storage_aliases: dict[str, str] | None = None,
-) -> MockedEndpoint:
+) -> MockedIngestApi:
     """Mock the WKVS and file ingest endpoints used by an ingest run.
 
-    Returns the ingest endpoint, which starts out accepting everything with a 202.
-    Reassign its `handler` to make the calls that follow fail instead.
+    Returns the ingest API mock, whose endpoint starts out accepting everything with a
+    202. Reassign `on_ingest` to make the calls that follow fail instead.
     """
-    api_mock = ApiMock()
-    api_mock.add(
-        method="GET",
-        path="/values/storage_aliases",
-        handler=respond(
-            200,
-            json={
-                "storage_aliases": DEFAULT_STORAGE_ALIASES
-                if storage_aliases is None
-                else storage_aliases
-            },
-        ),
+    wkvs = MockedWkvsApi(str(config.wkvs_api_url))
+    wkvs.on_get_value = respond(
+        200,
+        json={
+            "storage_aliases": DEFAULT_STORAGE_ALIASES
+            if storage_aliases is None
+            else storage_aliases
+        },
     )
-    ingest_endpoint = api_mock.add(
-        method="POST", path=endpoint_path, handler=respond(202)
-    )
-    api_mock.patch_httpx(monkeypatch)
-    return ingest_endpoint
+
+    class MockedConfiguredIngestApi(MockedIngestApi):
+        """The ingest service at the endpoint this run is configured for."""
+
+        base_url = str(config.file_ingest_baseurl)
+        on_ingest = endpoint("POST", endpoint_path)
+
+    ingest = MockedConfiguredIngestApi()
+    ingest.on_ingest = respond(202)
+    serve_httpx(monkeypatch, wkvs, ingest)
+    return ingest
 
 
 @pytest.mark.asyncio
@@ -376,7 +379,7 @@ async def test_legacy_ingest_directly(
         submission_id=EXAMPLE_SUBMISSION.id,
     )
 
-    ingest_endpoint.handler = respond(
+    ingest_endpoint.on_ingest = respond(
         403, json={"detail": "Not authorized to access ingest endpoint."}
     )
     with pytest.raises(ValueError, match=r"Not authorized to access ingest endpoint."):
@@ -387,7 +390,7 @@ async def test_legacy_ingest_directly(
             submission_id=EXAMPLE_SUBMISSION.id,
         )
 
-    ingest_endpoint.handler = respond(
+    ingest_endpoint.on_ingest = respond(
         422, json={"detail": "Could not decrypt received payload."}
     )
     with pytest.raises(ValueError, match=r"Could not decrypt received payload."):
@@ -420,7 +423,7 @@ async def test_ingest_directly(
         submission_id=EXAMPLE_SUBMISSION.id,
     )
 
-    ingest_endpoint.handler = respond(
+    ingest_endpoint.on_ingest = respond(
         403, json={"detail": "Not authorized to access ingest endpoint."}
     )
     with pytest.raises(ValueError, match=r"Not authorized to access ingest endpoint."):
@@ -431,7 +434,7 @@ async def test_ingest_directly(
             submission_id=EXAMPLE_SUBMISSION.id,
         )
 
-    ingest_endpoint.handler = respond(
+    ingest_endpoint.on_ingest = respond(
         422, json={"detail": "Could not decrypt received payload."}
     )
     with pytest.raises(ValueError, match=r"Could not decrypt received payload."):
@@ -478,7 +481,7 @@ async def test_legacy_main(
 
         assert "Successfully sent all file upload metadata for ingest" in out
 
-        ingest_endpoint.handler = respond(403, json={"detail": "Unauthorized"})
+        ingest_endpoint.on_ingest = respond(403, json={"detail": "Unauthorized"})
         ingest_upload_metadata(
             config_path=config_path, submission_id=EXAMPLE_SUBMISSION.id
         )
