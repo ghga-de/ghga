@@ -24,8 +24,6 @@ AUDIT_COLLECTION = "auditLogs"
 WORK_ORDER_TOKEN_VALID_SECONDS = 30
 FILE_ACCESSION_COLLECTION = "fileAccessions"
 STUDY_COLLECTION = "studies"
-HTTPX_STD_TIMEOUT = 60.0  # for normal short HTTP calls
-HTTPX_LONG_OP_TIMEOUT = 600.0  # for potentially long-running calls
 UCS_UPLOADS_PAGE_SIZE = 100
 VALID_STATE_TRANSITIONS = [
     ("open", "locked"),

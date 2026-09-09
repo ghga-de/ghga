@@ -36,8 +36,6 @@ from rs.constants import (
     EXC_ID_FILE_UPLOAD_STATE_ERROR,
     EXC_ID_INCOMPLETE_OR_FAILED,
     EXC_ID_REQUEUE_ERROR,
-    HTTPX_LONG_OP_TIMEOUT,
-    HTTPX_STD_TIMEOUT,
     UCS_UPLOADS_PAGE_SIZE,
 )
 from rs.core.models import (
@@ -63,6 +61,8 @@ from rs.ports.outbound.http import (
 
 log = logging.getLogger(__name__)
 
+DEFAULT_HTTPX_TIMEOUT = 60.0
+
 
 @asynccontextmanager
 async def get_configured_httpx_client(
@@ -74,7 +74,7 @@ async def get_configured_httpx_client(
     meant for tests, which can supply a mock transport in its place.
     """
     async with httpx2.AsyncClient(
-        timeout=HTTPX_STD_TIMEOUT, transport=base_transport
+        timeout=DEFAULT_HTTPX_TIMEOUT, transport=base_transport
     ) as client:
         yield client
 
@@ -102,7 +102,23 @@ class WOTSigningConfig(BaseSettings):
     )
 
 
-class AccessApiConfig(BaseSettings):
+class HttpxTimeoutConfig(BaseSettings):
+    """Configuration for long and short timeout durations"""
+
+    httpx_standard_timeout_sec: float = Field(
+        default=60.0,
+        description="The timeout duration, in seconds, to use for most HTTP calls.",
+    )
+    httpx_long_timeout_sec: float = Field(
+        default=600.0,
+        description=(
+            "The timeout duration, in seconds, to use for HTTP calls which"
+            + " have the potential to be especially long-running."
+        ),
+    )
+
+
+class AccessApiConfig(HttpxTimeoutConfig):
     """Config parameters for managing upload access grants."""
 
     access_url: HttpUrl = Field(
@@ -118,6 +134,8 @@ class AccessClient(AccessClientPort):
     def __init__(self, *, config: AccessApiConfig, httpx_client: httpx2.AsyncClient):
         self._access_url = str(config.access_url).rstrip("/")
         self._client = httpx_client
+        self._standard_timeout = config.httpx_standard_timeout_sec
+        self._long_timeout = config.httpx_long_timeout_sec
 
     async def grant_upload_access(
         self,
@@ -144,7 +162,9 @@ class AccessClient(AccessClientPort):
             "valid_until": valid_until.isoformat(),
         }
 
-        response = await self._client.post(url, json=body, timeout=HTTPX_STD_TIMEOUT)
+        response = await self._client.post(
+            url, json=body, timeout=self._standard_timeout
+        )
         if response.status_code != 201:
             log.warning(
                 "Failed to grant upload access for user %s to box %s.",
@@ -179,7 +199,7 @@ class AccessClient(AccessClientPort):
             AccessAPIError: if there's a problem during the operation.
         """
         url = f"{self._access_url}/upload-access/grants/{grant_id}"
-        response = await self._client.delete(url, timeout=HTTPX_STD_TIMEOUT)
+        response = await self._client.delete(url, timeout=self._standard_timeout)
         if response.status_code == 204:
             return
 
@@ -218,7 +238,9 @@ class AccessClient(AccessClientPort):
         params = {key: value for key, value in params.items() if value is not None}
 
         url = f"{self._access_url}/upload-access/grants"
-        response = await self._client.get(url, params=params, timeout=HTTPX_STD_TIMEOUT)
+        response = await self._client.get(
+            url, params=params, timeout=self._standard_timeout
+        )
         if response.status_code != 200:
             msg = "Failed to retrieve upload access grants."
             log.warning(
@@ -245,7 +267,7 @@ class AccessClient(AccessClientPort):
             AccessAPIError: if there's a problem during the operation.
         """
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes"
-        response = await self._client.get(url, timeout=HTTPX_STD_TIMEOUT)
+        response = await self._client.get(url, timeout=self._standard_timeout)
         status_code = response.status_code
         if status_code == httpx2.codes.NOT_FOUND:
             return []
@@ -277,7 +299,7 @@ class AccessClient(AccessClientPort):
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes/{box_id}"
 
         try:
-            response = await self._client.get(url, timeout=HTTPX_STD_TIMEOUT)
+            response = await self._client.get(url, timeout=self._standard_timeout)
 
             # 200 means user has access, 403/404 means no access
             if response.status_code == 200:
@@ -308,7 +330,7 @@ class AccessClient(AccessClientPort):
             raise self.AccessAPIError("Failed to check box access.") from err
 
 
-class FileBoxClientConfig(WOTSigningConfig):
+class FileBoxClientConfig(WOTSigningConfig, HttpxTimeoutConfig):
     """Config parameters for interacting with the service owning
     FileUploadBoxes.
     """
@@ -332,6 +354,8 @@ class FileBoxClient(FileBoxClientPort):
     ):
         self._ucs_url = str(config.ucs_url).rstrip("/")
         self._client = httpx_client
+        self._standard_timeout = config.httpx_standard_timeout_sec
+        self._long_timeout = config.httpx_long_timeout_sec
         self._signing_key = jwk.JWK.from_json(
             config.work_order_signing_key.get_secret_value()
         )
@@ -440,7 +464,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes",
             headers=headers,
             json=body,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code != 201:
             log.warning(
@@ -485,7 +509,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 409:
             self._raise_for_409(
@@ -517,7 +541,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 409:
             self._raise_for_409(
@@ -583,7 +607,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}/uploads",
             headers=headers,
             params=params,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code != 200:
             if response.status_code == 404 and missing_box_ok:
@@ -671,7 +695,7 @@ class FileBoxClient(FileBoxClientPort):
             json=body,
             # Archiving has to settle every FileUpload in the box, so it can
             #  take much longer than a normal request.
-            timeout=HTTPX_LONG_OP_TIMEOUT,
+            timeout=self._long_timeout,
         )
         if response.status_code == 409:
             self._raise_for_409(
@@ -709,7 +733,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 204:
             return
@@ -742,7 +766,7 @@ class FileBoxClient(FileBoxClientPort):
         response = await self._client.delete(
             f"{self._ucs_url}/boxes/{box_id}/uploads/{file_id}",
             headers=headers,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 204:
             return
@@ -798,7 +822,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             params={"version": version},
-            timeout=HTTPX_LONG_OP_TIMEOUT,
+            timeout=self._long_timeout,
         )
         if response.status_code == 204:
             return
@@ -853,7 +877,7 @@ class FileBoxClient(FileBoxClientPort):
         response = await self._client.post(
             f"{self._ucs_url}/rpc/boxes/{box_id}/uploads/{file_id}/requeue",
             headers=headers,
-            timeout=HTTPX_STD_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 204:
             return
@@ -937,7 +961,7 @@ class FileBoxClient(FileBoxClientPort):
             headers=headers,
             # A whole-box requeue touches every failed FileUpload in the box,
             #  so it can take much longer than a normal request.
-            timeout=HTTPX_LONG_OP_TIMEOUT,
+            timeout=self._long_timeout,
         )
         if response.status_code == 200:
             try:
