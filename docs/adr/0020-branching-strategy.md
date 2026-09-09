@@ -121,9 +121,12 @@ which copy of it runs makes no difference — what retargets Renovate is the fli
   so it can never match that one — but that is only true once the flip makes the nightly run
   use this version of the workflow. Until then `main`'s copy is what runs, it still looks up
   `--base main`, and it will keep that PR refreshed (or close and reopen it) every morning, so
-  closing it early just means closing it again. Delete the branch with it: the `dev`-based run
-  reuses the same `automated/lockfile-security-update` name, and leaving the old PR pointed at
-  that branch means the first post-flip run rewrites the branch under it.
+  closing it early just means closing it again. **After the flip this is blocking, not
+  tidy-up:** the `dev`-based run reuses the same `automated/lockfile-security-update` branch,
+  and the workflow now refuses to push to a branch an open PR is using for a different base
+  rather than force-updating it — so while that PR sits there, the nightly scan finds fixes
+  and opens nothing, reporting the reason in its job summary. Close it (and let the branch be
+  deleted) to unblock.
 
 ## Open questions
 

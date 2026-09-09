@@ -5,7 +5,9 @@
 - **Deciders:** Leon Kuchenbecker
 
 ## Context
-We want "HEAD of `main` is always fully integrated" and "make use of `uv` as much as possible".
+We want "HEAD of the integration branch is always fully integrated" (`main` when this was
+written; `dev` since [ADR-0020](0020-branching-strategy.md)) and "make use of `uv` as much as
+possible".
 
 Today services depend on internal libraries via **published PyPI version constraints**, which
 allows skew: `ghga-event-schemas` is pinned at both `~=12` and `~=13` across services;

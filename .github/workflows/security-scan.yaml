@@ -71,10 +71,15 @@ permissions:
   contents: read
 
 env:
-  # The branch this workflow owns: the propose job pushes to it and looks up its
-  # PR by it. Namespaced per base when rehearsing (see BASE_BRANCH): create-pull-request
-  # resets its head branch to base + diff, so a rehearsal sharing this name would rewrite
-  # the contents of the real dev-based PR.
+  # The branch this workflow owns: the propose job pushes to it and looks up its PR by it.
+  # Namespaced when a dispatch names a base other than `dev`, so a rehearsal gets its own
+  # branch — create-pull-request resets its head branch to base + diff, and sharing this
+  # name would rewrite the real PR's contents.
+  #
+  # That only covers a NON-default input; a dispatch left at `dev` still lands here, which
+  # is correct once `dev` is the default branch but not while the pre-flip `main`-targeted
+  # PR still holds this branch. The `branch-guard` step in propose-update is what closes
+  # that case, by refusing the push rather than by renaming around it.
   PR_BRANCH: ${{ (inputs.base_branch && inputs.base_branch != 'dev') && format('automated/lockfile-security-update-{0}', inputs.base_branch) || 'automated/lockfile-security-update' }}
   # The branch this workflow measures and targets: the integration branch (ADR-0020),
   # which is also what the :dev images it diffs against are built from. Named rather than
@@ -542,8 +547,42 @@ jobs:
         env:
           BASE_SCANNED: ${{ needs.base.outputs.sha }}
 
+      # PR_BRANCH is only namespaced for a NON-default `base_branch`, so a dispatch left at
+      # the default reuses the nightly branch. That is right once `dev` is the default
+      # branch, but in the pre-flip window that same branch still carries the open
+      # `main`-targeted PR (ADR-0020's "Remaining setup" closes it after the flip), and
+      # create-pull-request force-updates its head branch — so one dispatch would rewrite a
+      # `main` PR with a `dev` diff. Checking the base of whatever already holds the branch
+      # covers that without special-casing the transition, and keeps covering any later
+      # change of base: a branch an open PR is using for a different base is not ours to
+      # take.
+      - name: Check the PR branch is not held by a PR on another base
+        id: branch-guard
+        if: ${{ steps.verdict.outputs.fixed > 0 }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          held=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$PR_BRANCH" \
+            --json number,baseRefName \
+            --jq 'map(select(.baseRefName != env.BASE_BRANCH)) | .[0] | select(.) | "#\(.number) -> \(.baseRefName)"')
+          if [ -n "$held" ]; then
+            echo "held=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## No PR opened — \`$PR_BRANCH\` belongs to another PR"
+              echo
+              echo "\`$held\` is open on that branch, and this run targets \`$BASE_BRANCH\`."
+              echo "Pushing would force-update the branch and rewrite that PR's contents, so"
+              echo "this run stops instead. Close or retarget it, then re-run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "held=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Open or update the PR
-        if: ${{ steps.verdict.outputs.fixed > 0 && steps.race.outputs.stale != 'true' }}
+        if: >-
+          ${{ steps.verdict.outputs.fixed > 0 && steps.race.outputs.stale != 'true'
+          && steps.branch-guard.outputs.held != 'true' }}
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
