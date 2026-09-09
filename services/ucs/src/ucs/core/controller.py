@@ -907,10 +907,12 @@ class UploadController(UploadControllerPort):
             log.info(error)
             raise error from err
 
-        # Remove the file from S3 only if it's still in the inbox state. After that
-        #  point, the bucket ID and object ID will refer to another bucket for which UCS
-        #  has no write access.
-        if file_upload.state == "inbox":
+        # Remove the file from S3 only if it's still in the inbox state OR if
+        #  it failed interrogation. After that point, the bucket ID and object
+        #  ID will refer to another bucket for which UCS has no write access.
+        if file_upload.state == "inbox" or (
+            file_upload.state == "failed" and file_upload.decrypted_sha256 != None
+        ):
             await self._remove_completed_file_upload(file_upload=file_upload)
         # Abort the upload if it still hasn't completed
         elif file_upload.state == "init":

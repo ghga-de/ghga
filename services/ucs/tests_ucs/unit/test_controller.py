@@ -196,8 +196,14 @@ async def test_complete_file_upload(rig: JointRig):
 
 
 @pytest.mark.parametrize("complete_before_delete", [True, False])
-async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
+@pytest.mark.parametrize("fail_interrogation", [True, False])
+async def test_delete_file_upload(
+    rig: JointRig, complete_before_delete: bool, fail_interrogation: bool
+):
     """Test deleting a FileUpload from a FileUploadBox"""
+    # Skip the auto-combo of these two since it's not possible
+    if fail_interrogation and not complete_before_delete:
+        return
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
     bucket_id, object_storage = rig.object_storages.for_alias("test")
@@ -227,6 +233,9 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
         assert await object_storage.does_object_exist(
             bucket_id=bucket_id, object_id=object_id
         )
+
+    if fail_interrogation:
+        await _fail_interrogation(file_id=file_id, rig=rig)
 
     # Now delete the file upload
     await controller.remove_file_upload(
@@ -704,6 +713,10 @@ async def test_remove_file_upload_skips_s3_for_terminal_states(
     box_id = await rig.create_default_box()
     file_upload = make_file_upload(state=state)
     file_upload.box_id = box_id
+
+    # Make sure to unset decrypted_sha256 if 'failed' so it represents
+    #  a file that failed upload instead of a failed interrogation
+    file_upload.decrypted_sha256 = None
     await rig.file_upload_dao.insert(file_upload)
 
     s3_calls: list[str] = []
