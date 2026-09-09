@@ -70,17 +70,25 @@
 #                             services/ucs additionally carries monorepo-only work never upstreamed
 #                             (017c7dd9, splitting the missing-S3-multipart-upload log level by
 #                             FileUpload state).
-# Seven archived tips are deliberately NOT merged — each is an archival/deprecation notice
+#   notification-service   -> services/notification-service   0c40356 "Migrate to httpx2 (#37)" 2026-08-06, 7.0.1
+#   notification-orchestration-service -> services/notification-orchestration-service
+#                             49c00a1 "Migrate to httpx2 (#43)" 2026-07-31, 9.0.1
+#                             services/notification-orchestration-service additionally carries
+#                             monorepo-only work never upstreamed (c53f1261, pointing the portal
+#                             link at `access-request-manager/` rather than `access-requests/`).
+# Nine archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
 # there, not here), file-services-backend 605be53 (root README and template only, so the
-# partial rows would have filtered it to empty in any case), and hexkit 245ca78 "Replace the
-# docs site with redirects to the monorepo (#253)". That last one is the only tip that would
-# NOT have filtered to empty: it is mostly redirect tooling on paths the import drops
-# (.github/, scripts/, .template/, .gitignore), but it also adds a "hexkit has moved" banner
-# to the README, which is kept — an upstream-only notice, wrong to carry here, where that
-# README is the package's own.
+# partial rows would have filtered it to empty in any case), hexkit 245ca78 "Replace the
+# docs site with redirects to the monorepo (#253)", notification-service 00ca3db1 and
+# notification-orchestration-service 285dc85f (both "Add deprecation note"). Those last
+# three are the only tips that would NOT have filtered to empty: hexkit's is mostly redirect
+# tooling on paths the import drops (.github/, scripts/, .template/, .gitignore) and the
+# notification pair touch nothing else but .readme_generation/ and .template/, yet each also
+# adds a "this repo has moved" banner to the README, which is kept — an upstream-only
+# notice, wrong to carry here, where that README is the package's own.
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
 # (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
 #
@@ -98,8 +106,6 @@ lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Standalone services
 service	dataset-information-service	.	services/dataset-information-service	main
-service	notification-service	.	services/notification-service	main
-service	notification-orchestration-service	.	services/notification-orchestration-service	main
 service	well-known-value-service	.	services/well-known-value-service	main
 service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
