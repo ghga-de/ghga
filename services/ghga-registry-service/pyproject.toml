@@ -21,11 +21,11 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "rs"
-version = "5.0.3"
+version = "5.0.4"
 description = "GHGA Registry Service - a service for ingesting and archiving metadata from data submitters."
 dependencies = [
     "typer >= 0.26",
-    "ghga-service-commons[api,auth,http] >= 8.0",
+    "ghga-service-commons[api,auth,http] >= 9.0",
     "ghga-event-schemas ~= 13.0",
     "hexkit[akafka,mongodb,opentelemetry] >= 9.0",
 ]
