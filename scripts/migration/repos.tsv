@@ -53,6 +53,12 @@
 #                             by hand here instead (387b1f7c + 2dd9172f), so the member reads 5.0.3
 #                             while the last merged commit carried 5.0.2.
 #   mass                   -> services/mass                   32dd385 "Migrate to httpx2 (#51)" 2026-07-31, 7.0.2
+#   hexkit                 -> libs/hexkit                     ad3c710 "Add observability tools docs (#251)" 2026-08-07, 9.0.1
+#                             The member here reads 9.0.3: the docs move (ADR-0021) changed its
+#                             `Documentation` URL and README, which ship in the wheel metadata, so
+#                             the drift gate required a bump (9.0.2 is spent on TestPyPI).
+#                             Its docs site moved to ghga-de.github.io/ghga/hexkit; the archived
+#                             repo still serves ghga-de.github.io/hexkit as redirects to it.
 #   file-services-backend  -> services/{dcs,ekss,fis,ifrs,pcs,ucs}
 #                             c3d833f "Migrate to httpx2 (#218)" 2026-08-07, the one commit that
 #                             touched all six subtrees, carrying dcs 10.3.0, ekss 5.3.0,
@@ -64,17 +70,21 @@
 #                             services/ucs additionally carries monorepo-only work never upstreamed
 #                             (017c7dd9, splitting the missing-S3-multipart-upload log level by
 #                             FileUpload state).
-# Six archived tips are deliberately NOT merged — each is an archival/deprecation notice that
-# belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
+# Seven archived tips are deliberately NOT merged — each is an archival/deprecation notice
+# that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
-# there, not here), and file-services-backend 605be53 (root README and template only, so the
-# partial rows would have filtered it to empty in any case).
+# there, not here), file-services-backend 605be53 (root README and template only, so the
+# partial rows would have filtered it to empty in any case), and hexkit 245ca78 "Replace the
+# docs site with redirects to the monorepo (#253)". That last one is the only tip that would
+# NOT have filtered to empty: it is mostly redirect tooling on paths the import drops
+# (.github/, scripts/, .template/, .gitignore), but it also adds a "hexkit has moved" banner
+# to the README, which is kept — an upstream-only notice, wrong to carry here, where that
+# README is the package's own.
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
 # (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
 #
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
-lib	hexkit	.	libs/hexkit	main
 lib	ghga-service-commons	.	libs/ghga-service-commons	main
 lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main

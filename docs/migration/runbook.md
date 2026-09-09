@@ -149,7 +149,7 @@ Enabled in two stages (the component gate does **not** wait for the charts):
 While developing the sandbox in parallel with mainline:
 ```bash
 scripts/migration/sync-from-mainline.sh                 # all destinations
-scripts/migration/sync-from-mainline.sh libs/hexkit     # just one
+scripts/migration/sync-from-mainline.sh libs/metldata   # just one
 ```
 Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`); resolve,
 `git commit`, re-run for the rest. Keep harmonisation root-only and don't restructure service
@@ -194,9 +194,13 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
       point at per-repo locations. **Started ahead of the full cutover (2026-09):**
       `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`,
       `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`,
-      `epic-docs`, `adrs` and `file-services-backend` (all six of its services at once) are
-      archived and their rows removed from `repos.tsv` — see the "Retired" block there for the
-      last commit merged from each. Verify a repo is fully synced (§6) before dropping its row.
+      `epic-docs`, `adrs`, `file-services-backend` (all six of its services at once) and
+      `hexkit` are archived and their rows removed from `repos.tsv` — see the "Retired" block
+      there for the last commit merged from each. Verify a repo is fully synced (§6) before
+      dropping its row. `hexkit` additionally published a documentation site, so its archived
+      Pages site was replaced with redirects to `ghga-de.github.io/ghga/hexkit`
+      ([ADR-0021](../adr/0021-docs-lane-github-pages.md)) before archiving — an archived repo
+      keeps serving Pages but cannot run Actions, so that deploy could not be redone.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
 - [ ] Decommission the docker-compose test bed.

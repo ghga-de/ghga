@@ -39,10 +39,14 @@ source:
 # cross-linker promises in objects.json but the generated reference pages do
 # not carry (they only have short ids like `#insert`) — without it, auto-links
 # from user-guide pages land on the right page but do not scroll to the member.
-# Still unfixed upstream as of great-docs 0.17.0.
+# `set_version_badge.py` puts this package's declared version in the navbar badge:
+# great-docs takes it from the repository's latest GitHub Release, which in a monorepo
+# is whichever component was tagged last.
+# All three are still unfixed upstream as of great-docs 0.17.0.
 pre_render:
   - scripts/fix_source_link_paths.py
   - scripts/add_member_anchor_ids.py
+  - scripts/set_version_badge.py
 
 # Module Name (optional)
 # ----------------------
@@ -401,6 +405,20 @@ site_url: "https://ghga-de.github.io/ghga/hexkit/"
 seo:
   canonical:
     base_url: "https://ghga-de.github.io/ghga/hexkit/"
+
+# Changelog
+# ---------
+# Off. great-docs builds this page from the GitHub Releases of the repository named by
+# `repo:` above, taking the most recent ones with no way to filter by tag. A monorepo's
+# releases are per component (`<package>/x.y.z`), so the page rendered ghga-connector's
+# release notes as hexkit's changelog.
+#
+# Publishing `hexkit/x.y.z` releases will NOT be enough to turn this back on: the page
+# would then mix whichever components released most recently. It needs a tag-prefix filter
+# upstream, or a generator of our own. Until then release notes live at the `Release Notes`
+# URL in pyproject.toml, which selects this package's releases.
+changelog:
+  enabled: false
 
 # Site Settings
 # -------------

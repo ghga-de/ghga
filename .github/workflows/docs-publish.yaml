@@ -96,50 +96,26 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+      # For `uv run --script` in the assemble step; it resolves that script's PEP 723
+      # block into a throwaway environment, so nothing else is installed here.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
       - uses: actions/configure-pages@v5
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: docs-*
-      # Each artifact becomes <package>/ in the site root. The root itself gets a plain
-      # index listing them: without it ghga-de.github.io/ghga/ is a 404, and that bare URL
-      # is what people reach for when a member's link is one level too deep.
+      # Each artifact becomes <package>/ in the site root, which also gets an index and a
+      # 404 page. In a script rather than inline here so it can be run and read on its own;
+      # scripts/assemble_docs_site.py explains why the 404 page earns its keep.
       - name: Assemble the site
         env:
           MEMBERS: ${{ needs.plan.outputs.members }}
         run: |
-          mkdir -p site
-          python3 - <<'EOF'
-          import html, json, os, pathlib, shutil
-
-          members = json.loads(os.environ["MEMBERS"])
-          site = pathlib.Path("site")
-
-          rows = []
-          for member in members:
-              package = member["package"]
-              built = pathlib.Path("artifacts") / f"docs-{package}"
-              if not built.is_dir():
-                  raise SystemExit(f"error: no built site for {package}")
-              shutil.copytree(built, site / package)
-              rows.append(
-                  f'    <li><a href="{html.escape(package)}/">'
-                  f"{html.escape(package)}</a></li>"
-              )
-
-          (site / "index.html").write_text(
-              "<!doctype html>\n"
-              '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-              '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-              "<title>GHGA documentation</title>\n</head>\n<body>\n"
-              "<h1>GHGA documentation</h1>\n"
-              "<p>Documentation for the packages published from the "
-              '<a href="https://github.com/ghga-de/ghga">GHGA monorepo</a>:</p>\n'
-              "<ul>\n" + "\n".join(rows) + "\n</ul>\n</body>\n</html>\n",
-              encoding="utf-8",
-          )
-          EOF
-          find site -maxdepth 2 -name index.html | sort
+          printf '%s' "$MEMBERS" \
+            | uv run --script scripts/assemble_docs_site.py --artifacts artifacts --out site
+          find site -maxdepth 1 -name '*.html' | sort
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site

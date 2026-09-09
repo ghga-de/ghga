@@ -123,7 +123,7 @@ all = [
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
 Documentation = "https://ghga-de.github.io/ghga/hexkit/"
-"Release Notes" = "https://github.com/ghga-de/ghga/releases"
+"Release Notes" = "https://github.com/ghga-de/ghga/releases?q=hexkit"
 "Issue Tracker" = "https://github.com/ghga-de/ghga/issues"
 
 [tool.setuptools.packages.find]
