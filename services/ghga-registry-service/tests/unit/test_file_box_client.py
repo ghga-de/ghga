@@ -739,17 +739,8 @@ async def test_requeue_single_file_404(
     httpx_client: httpx2.AsyncClient,
 ):
     """Check `requeue_single_file_upload()` for correct handling of the
-    three 404 cases:
-    1) the FileUpload not found at all
-    2) the FileUpload exists, but the S3 content is already gone
-    3) the FileUploadBox doesn't exist, which indicates a serious sync issue
-       between RS and UCS.
+    three 404 cases.
 
-    In case #1, FileBoxClient should raise a FileUploadNotFoundError.
-    In case #2, FileBoxClient should raise a RequeueError with a message
-    accurately describing the situation.
-    In case #3, FileBoxClient should raise an OperationError with a
-    descriptive message.
     Does not test outbound HTTP error translation, because that has a
     dedicated test.
     """
@@ -781,8 +772,7 @@ async def test_requeue_single_file_404(
         + " longer in the inbox."
     )
 
-    # Case #3: 404 "boxNotFound" -> OperationError. If the exception_id is blank
-    #  by some oversight, it will also fall through to here.
+    # Case #3: 404 fallback interpreted as box not found
     box_not_found_msg = (
         f"FileUploadBox {TEST_BOX_ID} was not found in the external service."
     )
@@ -804,14 +794,7 @@ async def test_requeue_single_file_409(
     httpx_client: httpx2.AsyncClient,
 ):
     """Check `requeue_single_file_upload()` for correct handling of the
-    three 409 cases:
-    1) the FileUpload isn't in the "failed" state
-    2) the FileUpload is "failed" but wasn't uploaded successfully
-    3) the FileUploadBox is in the "archived" state (which shouldn't be possible,
-       but we're testing it anyway.
-
-    In case #1 and #2, the FileBoxClient should raise a RequeueError.
-    In case #3, the FileBoxClient should raise an FUBStateError.
+    three 409 cases.
     """
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     test_file_id = uuid4()
