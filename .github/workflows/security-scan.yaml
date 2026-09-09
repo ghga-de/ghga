@@ -74,8 +74,9 @@ env:
   PR_BRANCH: ${{ (inputs.base_branch && inputs.base_branch != 'dev') && format('automated/lockfile-security-update-{0}', inputs.base_branch) || 'automated/lockfile-security-update' }}
   # The branch this workflow measures and targets: the integration branch (ADR-0020),
   # which is also what the :dev images it diffs against are built from. Named rather than
-  # left to the default branch — `schedule`/`workflow_dispatch` have no ref of their own,
-  # so a bare checkout would follow whatever GitHub's default-branch setting says. Scanning
+  # left implicit — a bare checkout follows the event's ref, which is the default branch on
+  # `schedule` and whatever the "Use workflow from" picker resolved on `workflow_dispatch`.
+  # Neither is necessarily the branch this workflow means to scan. Scanning
   # `main`'s tree while diffing `dev`'s images would resolve the lockfiles from `main`'s
   # manifests (overwriting any dependency change made on `dev` since the branch point) and
   # attribute the entire main..dev gap to the lockfile update.
@@ -103,8 +104,9 @@ env:
   TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2,public.ecr.aws/aquasecurity/trivy-db:2
 
 jobs:
-  # One commit for the whole run. $GITHUB_SHA cannot serve: on `schedule`/`workflow_dispatch`
-  # it is the DEFAULT branch's tip, which is a branch this workflow never checks out.
+  # One commit for the whole run. $GITHUB_SHA cannot serve: it names the event's ref — the
+  # default branch on `schedule`, the ref the "Use workflow from" picker resolved on
+  # `workflow_dispatch` — and neither is tied to $BASE_BRANCH, which is what gets checked out.
   base:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -137,10 +139,11 @@ jobs:
       packages: read # pull :dev from GHCR
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-      # The commit this run scanned — NOT $GITHUB_SHA, which on schedule/dispatch is the
-      # default branch's tip, a branch this workflow never checks out. The PR body compares
-      # it against each :dev image's revision label to say how much of the delta is
-      # staleness, so it has to name the tree the scan actually ran against.
+      # The commit this run scanned — NOT $GITHUB_SHA, which names the event's ref (the
+      # default branch on schedule, the picked ref on dispatch) rather than the branch
+      # checked out here. The PR body compares it against each :dev image's revision label
+      # to say how much of the delta is staleness, so it has to name the tree the scan
+      # actually ran against.
       BASE_SHA: ${{ needs.base.outputs.short }}
     steps:
       - uses: actions/checkout@v5
@@ -247,10 +250,11 @@ jobs:
       packages: read
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-      # The commit this run scanned — NOT $GITHUB_SHA, which on schedule/dispatch is the
-      # default branch's tip, a branch this workflow never checks out. The PR body compares
-      # it against each :dev image's revision label to say how much of the delta is
-      # staleness, so it has to name the tree the scan actually ran against.
+      # The commit this run scanned — NOT $GITHUB_SHA, which names the event's ref (the
+      # default branch on schedule, the picked ref on dispatch) rather than the branch
+      # checked out here. The PR body compares it against each :dev image's revision label
+      # to say how much of the delta is staleness, so it has to name the tree the scan
+      # actually ran against.
       BASE_SHA: ${{ needs.base.outputs.short }}
     steps:
       - uses: actions/checkout@v5
