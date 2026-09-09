@@ -362,7 +362,7 @@ jobs:
           fi
           # `::error::` lifts the message onto the GitHubs Checks tab.
           if git diff --name-only "$base...HEAD" \
-            | uv run --script scripts/pypi_drift.py 2> /tmp/drift.err; then
+            | uv run -q --script scripts/pypi_drift.py 2> /tmp/drift.err; then
             exit 0
           fi
           while IFS= read -r line; do
