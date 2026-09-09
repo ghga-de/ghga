@@ -980,16 +980,16 @@ class RDUBManager(RDUBManagerPort):
         try:
             box = await self._box_dao.get_by_id(box_id)
         except ResourceNotFoundError as err:
-            error = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
+            box_not_found_error = self.BoxNotFoundError(box_id=box_id)
+            log.info(box_not_found_error)
+            raise box_not_found_error from err
 
         if box.state == "archived":
-            error = self.BoxStateError(
+            box_state_error = self.BoxStateError(
                 operation="requeue file uploads", state="archived"
             )
-            log.info(error, extra={"box_id": box_id})
-            raise error
+            log.info(box_state_error, extra={"box_id": box_id})
+            raise box_state_error
 
         return box
 
@@ -1021,21 +1021,21 @@ class RDUBManager(RDUBManagerPort):
                 box_id=box.file_upload_box_id, file_id=file_id
             )
         except FileBoxClientPort.FileUploadNotFoundError as err:
-            error = self.FileUploadNotFoundError(file_id=file_id)
-            log.info(error, extra=extra)
-            raise error from err
+            file_not_found_error = self.FileUploadNotFoundError(file_id=file_id)
+            log.info(file_not_found_error, extra=extra)
+            raise file_not_found_error from err
         except FileBoxClientPort.RequeueError as err:
-            error = self.RequeueError(str(err))
-            log.info(error, extra=extra)
-            raise error from err
+            requeue_error = self.RequeueError(str(err))
+            log.info(requeue_error, extra=extra)
+            raise requeue_error from err
         except FileBoxClientPort.FUBStateError as err:
             # The file box service only outright refuses a requeue for archived boxes,
             #  so the RDUB and FUB states are out of sync if this is reached.
-            error = self.BoxStateError(
+            box_state_error = self.BoxStateError(
                 operation=f"requeue FileUpload {file_id}", state="archived"
             )
-            log.error(error, extra=extra)
-            raise error from err
+            log.error(box_state_error, extra=extra)
+            raise box_state_error from err
 
         await self._audit_repository.log_file_requeued(
             file_id=file_id, user_id=data_steward_id
