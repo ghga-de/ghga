@@ -34,10 +34,21 @@ parameter is annotated with, and matches one path segment unless it names a conv
 as in `{file_path:path}`.
 
 A test overrides what it cares about with `things.on_delete_thing = respond(500)`.
+
+Entering a `MockedApis` block intercepts `httpx2` itself, so even a client the test
+never sees is answered:
+```
+with MockedApis(things, widgets):
+    ...
+```
+A request no mock serves is refused unless `allow_network` lets it out. `verify()`
+reports a call nothing served or a handler nothing called, and `raise_for_complaints()`
+turns that report into a failure.
 """
 
 from __future__ import annotations
 
+import ipaddress
 import re
 from collections.abc import Awaitable, Callable
 from copy import deepcopy
@@ -57,14 +68,20 @@ __all__ = [
     "HttpException",
     "MockSetupError",
     "MockedApi",
+    "MockedApis",
+    "NetworkPolicy",
     "NotMockedError",
     "ResponseHandler",
+    "any_network",
     "endpoint",
     "fail_to_connect",
     "fail_with",
     "httpyexpect_body",
     "httpyexpect_response",
     "in_sequence",
+    "local_network",
+    "network_at",
+    "no_network",
     "respond",
 ]
 
@@ -85,6 +102,8 @@ LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
 
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
+
+NetworkPolicy = Callable[[httpx2.URL], bool]
 
 
 # Tells "no body at all" apart from a JSON `null`, which httpx2 cannot.
@@ -309,6 +328,174 @@ class MockedApi:
         ]
 
 
+def local_network(url: httpx2.URL) -> bool:
+    """Allow requests to loopback, `*.internal` and private addresses."""
+    host = url.host
+    if host in LOOPBACK_HOSTS or host.endswith(".internal"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_private
+    except ValueError:
+        return False
+
+
+class MockedApis:
+    """Wraps a collection of `MockedApi`s and deals with routing requests to the correct one."""
+
+    def __init__(
+        self, *apis: MockedApi, allow_network: NetworkPolicy = local_network
+    ) -> None:
+        self.apis = list(apis)
+        self.allow_network = allow_network
+        self._replaced: tuple[Callable, Callable] | None = None
+        self._installed: tuple[Callable, Callable] | None = None
+
+        claimed: dict[str, MockedApi] = {}
+        for api in self.apis:
+            if api.base_url in claimed:
+                raise MockSetupError(
+                    f"{type(api).__name__} and {type(claimed[api.base_url]).__name__}"
+                    f" both serve {api.base_url}, so only one of them would ever answer."
+                    " Declare the endpoints on one mock instead."
+                )
+            claimed[api.base_url] = api
+
+        # longest base URL first, so an API nested under another one gets its own calls
+        self._routes = sorted(
+            self.apis, key=lambda api: len(api.base_url), reverse=True
+        )
+
+    def __enter__(self) -> MockedApis:
+        """Install the mocks when used as context manager."""
+        self.install()
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        """Take the mocks off, leaving `verify` to whoever wants to look."""
+        self.uninstall()
+
+    def _route(self, request: httpx2.Request) -> tuple[MockedApi, str] | None:
+        """Route to the correct API.
+
+        Raise if this would route to a non-mocked endpoint disallowed by `allow_network`.
+        Return None if the request doesn't hit a MockedAPI and is allowed to hit the real network.
+        """
+        url = _canonical_loopback(request.url)
+        for api in self._routes:
+            path = api._path_relative_to_base_url(url)
+            if path is not None:
+                return api, path
+        if not self.allow_network(url):
+            raise NotMockedError(
+                f"A test tried to reach {request.url}, which is neither one of the"
+                " mocked APIs nor a real endpoint permitted by `allow_network`."
+            )
+        return None
+
+    def _answered(
+        self, request: httpx2.Request, unmocked: Callable[[], httpx2.Response]
+    ) -> httpx2.Response:
+        """Let the mock serving the request answer it, else fall through to `unmocked`."""
+        route = self._route(request)
+        if route is None:
+            return unmocked()
+        api, path = route
+        return api._answer(request, path)
+
+    async def _answered_async(
+        self,
+        request: httpx2.Request,
+        unmocked: Callable[[], Awaitable[httpx2.Response]],
+    ) -> httpx2.Response:
+        """Answer an asynchronous caller the way `_answered` answers a synchronous one."""
+        route = self._route(request)
+        if route is None:
+            return await unmocked()
+        api, path = route
+        return await api._answer_async(request, path)
+
+    def install(self) -> None:
+        """Intercept every `httpx2` call until `uninstall` is called."""
+        if self._installed:
+            raise MockSetupError(
+                "These mocks are already installed. Installing them again would lose"
+                " what they replaced, leaving it patched after the test."
+            )
+
+        network = httpx2.HTTPTransport.handle_request
+        network_async = httpx2.AsyncHTTPTransport.handle_async_request
+
+        def handle_request(
+            transport: httpx2.HTTPTransport, request: httpx2.Request
+        ) -> httpx2.Response:
+            """Answer a request made by a synchronous client."""
+            return self._answered(request, lambda: network(transport, request))
+
+        async def handle_async_request(
+            transport: httpx2.AsyncHTTPTransport, request: httpx2.Request
+        ) -> httpx2.Response:
+            """Answer a request made by an asynchronous client."""
+            return await self._answered_async(
+                request, lambda: network_async(transport, request)
+            )
+
+        self._replaced = (network, network_async)
+        self._installed = (handle_request, handle_async_request)
+        httpx2.HTTPTransport.handle_request = handle_request  # type: ignore[assignment,method-assign]
+        httpx2.AsyncHTTPTransport.handle_async_request = handle_async_request  # type: ignore[assignment,method-assign]
+
+    def uninstall(self) -> None:
+        """Reset mocked methods to their previous state."""
+        if self._installed is None or self._replaced is None:
+            return
+        installed_now = (
+            httpx2.HTTPTransport.handle_request,
+            httpx2.AsyncHTTPTransport.handle_async_request,
+        )
+        if installed_now != self._installed:
+            raise MockSetupError(
+                "These mocks were installed before another set that is still installed,"
+                " so they cannot be taken off yet. Uninstall the sets in the order they"
+                " were installed."
+            )
+        network, network_async = self._replaced
+        httpx2.HTTPTransport.handle_request = network  # type: ignore[method-assign]
+        httpx2.AsyncHTTPTransport.handle_async_request = network_async  # type: ignore[method-assign]
+        self._replaced = None
+        self._installed = None
+
+    def check_for_complaints(self) -> list[str]:
+        """Report anything the test set up wrong.
+
+        Both directions: a call that reached a mock with no endpoint for it, and an
+        endpoint a test configured that nothing ever asked for.
+        """
+        complaints: list[str] = []
+        for api in self.apis:
+            name = type(api).__name__
+            for request in api.unmatched:
+                complaints.append(
+                    f"{name} was asked for {request.method} {request.url}, which none of"
+                    " its endpoints serve."
+                )
+            for unused in api.unused_handlers:
+                complaints.append(
+                    f"{name}.{unused} was given a handler that nothing called."
+                )
+        return complaints
+
+    def raise_for_complaints(self) -> None:
+        """Raise whatever `check_for_complaints` found."""
+        complaints = self.check_for_complaints()
+        if complaints:
+            raise MockSetupError("\n".join(complaints))
+
+    def reset(self) -> None:
+        """Reset all MockAPIs."""
+        for api in self.apis:
+            api.reset()
+
+
 def _compiled(path: str) -> re.Pattern[str]:
     """Turn a path into a pattern matching it, capturing its `{variable}` placeholders.
 
@@ -472,6 +659,11 @@ def httpyexpect_body(
     }
 
 
+def any_network(url: httpx2.URL) -> bool:
+    """Let out everything no mock serves, including calls to the internet."""
+    return True
+
+
 def endpoint(
     method: str, path: str, default: ResponseHandler | None = None
 ) -> Endpoint:
@@ -502,6 +694,22 @@ def fail_with(error: Exception) -> ResponseHandler:
 def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
     """Build a handler answering consecutive requests with `handlers`, then failing."""
     return _InSequence(handlers)
+
+
+def network_at(*hosts: str) -> NetworkPolicy:
+    """Let out only the calls to the named hosts."""
+    allowed = frozenset(hosts)
+
+    def policy(url: httpx2.URL) -> bool:
+        """Whether the request is bound for one of the named hosts."""
+        return url.host in allowed
+
+    return policy
+
+
+def no_network(url: httpx2.URL) -> bool:
+    """Let nothing out: every request has to be served by a mock."""
+    return False
 
 
 def respond(
