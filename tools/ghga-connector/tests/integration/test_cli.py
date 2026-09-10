@@ -29,6 +29,7 @@ import pytest
 from ghga_connector import exceptions
 from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
 from ghga_connector.core.main import async_download
+from ghga_service_commons.api.mock_api import respond
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
@@ -37,11 +38,7 @@ from tests.fixtures.mock_api.apis import (
     StagedObject,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.shared import (
-    httpyexpect_error,
-    mock_health_checks,
-    respond,
-)
+from tests.fixtures.mock_api.shared import httpyexpect_error, mock_health_checks
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
     get_big_s3_object,

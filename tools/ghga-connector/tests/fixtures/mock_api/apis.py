@@ -44,7 +44,12 @@ import httpx2
 import pytest
 
 from ghga_connector.core.client import get_ratelimiting_retry_transport
-from ghga_service_commons.api.mock_api import MockedApi, MockedApis, endpoint
+from ghga_service_commons.api.mock_api import (
+    MockedApi,
+    MockedApis,
+    endpoint,
+    respond,
+)
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.shared import (
@@ -53,7 +58,6 @@ from tests.fixtures.mock_api.shared import (
     UPLOAD_API_URL,
     WORK_PACKAGE_API_URL,
     httpyexpect_error,
-    respond,
 )
 from tests.fixtures.utils import TEST_FILE_ID, TEST_PUBLIC_KEYS, TEST_STORAGE_ALIAS1
 
@@ -190,11 +194,6 @@ class StagedObject:
     envelope: bytes | None = None
 
 
-def envelope_response(envelope: bytes) -> httpx2.Response:
-    """Hand out `envelope` the way the Download API does, base64 encoded."""
-    return httpx2.Response(200, content=base64.b64encode(envelope))
-
-
 def no_such_drs_object(file_id: str) -> httpx2.Response:
     """Report the DRS object as unknown, the way the object endpoint does.
 
@@ -206,9 +205,7 @@ def no_such_drs_object(file_id: str) -> httpx2.Response:
     )
 
 
-def no_such_envelope(
-    request: httpx2.Request, file_id: str, **path_variables: Any
-) -> httpx2.Response:
+def no_such_envelope(file_id: str) -> httpx2.Response:
     """Report the envelope as unknown, the way the envelope endpoint does."""
     return httpyexpect_error(
         404,
@@ -240,8 +237,9 @@ class DownloadApiMock(MockedApi):
         """Hand out the Crypt4GH envelope, for an object that has one."""
         staged = self.staged
         if staged is None or file_id != staged.file_id or staged.envelope is None:
-            return no_such_envelope(request, file_id)
-        return envelope_response(staged.envelope)
+            return no_such_envelope(file_id)
+        # the Download API hands the envelope out base64 encoded
+        return httpx2.Response(200, content=base64.b64encode(staged.envelope))
 
     @endpoint("GET", DRS_OBJECT_PATH)
     async def on_get_drs_object(
@@ -303,20 +301,23 @@ class StorageMock(MockedApi):
     on_put_part = endpoint("PUT", "/part", respond(200))
 
 
-@dataclass
-class MockApis:
+class MockApis(MockedApis):
     """The mocked GHGA APIs, and the set serving all of them.
 
-    Everything a test needs to arrange is a handler swap on one of the mocks; `served`
-    is there for the rare test that wants the set itself.
+    Everything a test needs to arrange is a handler swap on one of the mocks, and the
+    set itself is right here for a test that wants `reset` or `check_for_complaints`.
     """
 
-    served: MockedApis
-    wkvs: WkvsMock
-    work_package: WorkPackageApiMock
-    download: DownloadApiMock
-    upload: UploadApiMock
-    storage: StorageMock
+    def __init__(self) -> None:
+        """Build every mock, and serve them all together."""
+        self.wkvs = WkvsMock()
+        self.work_package = WorkPackageApiMock()
+        self.download = DownloadApiMock()
+        self.upload = UploadApiMock()
+        self.storage = StorageMock()
+        super().__init__(
+            self.wkvs, self.work_package, self.download, self.upload, self.storage
+        )
 
 
 @pytest.fixture()
@@ -338,17 +339,7 @@ def mock_apis(monkeypatch) -> MockApis:
     # config's `client_num_retries=0` every mocked 5xx would cost a real backoff sleep.
     monkeypatch.setattr("ghga_connector.config.CONFIG", get_test_config())
 
-    mocks = MockApis(
-        served=MockedApis(),
-        wkvs=WkvsMock(),
-        work_package=WorkPackageApiMock(),
-        download=DownloadApiMock(),
-        upload=UploadApiMock(),
-        storage=StorageMock(),
-    )
-    mocks.served = MockedApis(
-        mocks.wkvs, mocks.work_package, mocks.download, mocks.upload, mocks.storage
-    )
+    mocks = MockApis()
 
     def mock_mounts(config, limits=None):
         """Stand in for `ratelimiting_retry_proxies`, sorting out where calls may go."""
@@ -356,7 +347,7 @@ def mock_apis(monkeypatch) -> MockApis:
         # still goes out, and the retry transport wraps both paths as it did before
         return {
             "all://": get_ratelimiting_retry_transport(
-                base_transport=mocks.served.as_transport(httpx2.AsyncHTTPTransport()),
+                base_transport=mocks.as_transport(httpx2.AsyncHTTPTransport()),
                 limits=limits,
             )
         }

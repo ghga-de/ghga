@@ -23,7 +23,6 @@ import httpx2
 from ghga_service_commons.api.mock_api import (
     MockedApi,
     MockedApis,
-    ResponseHandler,
     any_network,
     endpoint,
     respond,
@@ -37,10 +36,8 @@ __all__ = [
     "STORAGE_URL",
     "UPLOAD_API_URL",
     "WORK_PACKAGE_API_URL",
-    "ResponseHandler",
     "httpyexpect_error",
     "mock_health_checks",
-    "respond",
 ]
 
 # The host the mocked GHGA APIs are served from. The other spellings of the loopback
