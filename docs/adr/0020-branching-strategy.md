@@ -85,6 +85,16 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
   - **Revised while implementing (2026-09-08):** the bullet's per-lane split is right, and each lane ended up pinned to exactly one branch — but not the ones first written down. Two cases surfaced while implementing it, both settled by decision rather than by loosening the gate:
     - **Hotfix candidates.** Implementing the gate surfaced that a `dev`-only rc rule makes `ghga/17.0.1-rc.1` unbuildable, since hotfixes never touch `dev`. That was first handled by accepting rc tags on `main` as well, which deferred the question rather than answering it. **Settled 2026-09-08 by the decider: hotfixes get no candidate** (recorded in the Decision above), so the rc lane is `dev`-only after all and rejecting a `-rc.N` tag on `main` is now the intended behaviour, not an accident.
     - **Component releases serialize behind platform releases.** A PyPI version bump lands in `dev` and only reaches `main` at the release merge, so `hexkit/8.7.0` cannot be tagged until the next platform release — a coupling this ADR introduced without weighing it against [ADR-0004](0004-versioning-and-release-by-tag.md)'s independent component lifecycle. Accepting PyPI tags on `dev` too was considered and rejected. **Settled 2026-09-08: keep the lockstep**, because one release cadence is simpler than two. So "PyPI tags left on `main`" stands as written, now deliberately.
+  - **Corrected in review (2026-09-10):** the gate tested *reachability*
+    (`git merge-base --is-ancestor`), which this flow defeats by construction. The release
+    merge puts every `dev` commit into `main`'s history and the hotfix back-merge puts every
+    `main`-only commit into `dev`'s, so after the first merge in either direction both lanes'
+    rules quietly stop distinguishing the branches: `ghga/17.0.0` would be accepted on any
+    already-released `dev` commit, and `ghga/17.0.2-rc.1` on a back-merged hotfix commit —
+    the one tag the bullet above says is now rejected on purpose. It now tests membership of
+    the branch's **first-parent chain**, i.e. the commits that were ever that branch's tip,
+    which is what "cut from `main`"/"cut from `dev`" means. The release merge commit and a
+    hotfix merge commit still qualify.
   - **Also while implementing:** the tree-reading half of the routing step (`python3 scripts/image_members.py`) moved *behind* the gate. Routing needs only the ref string, so the gate now runs before anything from the tagged tree executes — previously the on-`main` check ran first and gave that ordering for free.
 - `integration.yaml`'s concurrency block is **deliberately left cancellable** (decided 2026-09-08), unlike `ci.yaml`'s. It groups by ref with `cancel-in-progress: true`, so a post-merge integration run on `dev` is killed by the next merge. That is the same behaviour `main` had before the merge traffic moved; it is acceptable here and not in `ci.yaml` because `release.yaml` reads CI results by commit SHA and never reads integration results, so a cancelled integration run cannot cost anyone a release. Superseding a ~1h job is worth more than the redundant verdict.
 

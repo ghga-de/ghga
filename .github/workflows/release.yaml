@@ -188,8 +188,30 @@ jobs:
 
           git fetch --no-tags --quiet origin "+refs/heads/$branch:refs/remotes/origin/$branch"
 
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/$branch"; then
-            echo "::error::${GITHUB_SHA::12} is not on $branch — $what"
+          # FIRST-PARENT membership, not reachability. `git merge-base --is-ancestor` asks
+          # "can this commit be reached from the branch tip?", and this ADR-0020 flow makes
+          # both branches reach into each other by design: the release merge puts every
+          # `dev` commit into `main`'s history, and merging a hotfix back into `dev` puts
+          # every `main`-only commit into `dev`'s. So reachability stops distinguishing the
+          # two branches after the first merge in either direction, and each lane's rule
+          # silently becomes a no-op:
+          #   - `ghga/17.0.0` would be accepted on any `dev` commit already swept into
+          #     `main` by an earlier release merge, rather than only on the release merge
+          #     that published it.
+          #   - `ghga/17.0.2-rc.1` would be accepted on a hotfix commit once that hotfix
+          #     had been merged back into `dev` — the exact tag ADR-0020 decided to reject.
+          # The first-parent chain is the set of commits that were ever this branch's tip,
+          # which is what "cut from `main`" and "cut from `dev`" actually mean. It still
+          # accepts the release merge commit and a hotfix merge commit, since a merge sits
+          # on the first-parent chain of the branch it landed on.
+          #
+          # Via a file rather than `| grep -qxF`: `grep -q` exits at the first match and
+          # SIGPIPEs `git rev-list`, which `pipefail` then reports as a failed pipeline —
+          # turning a valid release into "not on $branch".
+          git rev-list --first-parent "origin/$branch" > "$RUNNER_TEMP/first-parent.txt"
+
+          if ! grep -qxF "$GITHUB_SHA" "$RUNNER_TEMP/first-parent.txt"; then
+            echo "::error::${GITHUB_SHA::12} is not a commit on $branch — $what. The tag must name a commit that was itself a $branch tip (a merge into $branch, or a commit pushed to it), not merely one $branch can reach."
             exit 1
           fi
 

@@ -84,7 +84,10 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
     deploys. Revisit if a component ever needs to ship on its own schedule.
 
   What the branch half proves is that the tagged commit sits on a protected, reviewed,
-  CI-gated branch, and on the *right* one of the two. The CI-is-green half does
+  CI-gated branch, and on the *right* one of the two. It asks whether the commit was ever
+  that branch's tip (its first-parent chain), not whether the branch can reach it — the two
+  differ as soon as `main` and `dev` merge into each other, which
+  [ADR-0020](0020-branching-strategy.md)'s flow does in both directions. The CI-is-green half does
   not care about branches and is unchanged. The branch check also runs **before any repo code
   executes** in the release job, so a tag on an unreviewed commit cannot reach a `python3
   scripts/...` at all.
