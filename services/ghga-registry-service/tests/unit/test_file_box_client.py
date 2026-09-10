@@ -799,7 +799,8 @@ async def test_requeue_single_file_409(
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     test_file_id = uuid4()
 
-    # Check cases #1 and #2
+    # Check for the case where the FileUpload is not found at all and the case
+    #  where the FileUpload exists, but the S3 content is already gone.
     requeue_err_msg = (
         f"Cannot requeue FileUpload {test_file_id} because it was not successfully"
         + " uploaded and never made it to interrogation."
@@ -814,7 +815,8 @@ async def test_requeue_single_file_409(
             )
         assert str(requeue_err.value) == requeue_err_msg
 
-    # Check case #3
+    # Check the case where the FileUploadBox doesn't exist, which indicates
+    #  a serious sync issue between RS and UCS.
     file_box_api.on_requeue_single_file_upload = respond(
         409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
