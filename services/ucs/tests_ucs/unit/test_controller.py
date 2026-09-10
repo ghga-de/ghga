@@ -1785,7 +1785,7 @@ async def test_box_size_limit(
 async def test_finished_uploads_count_toward_limit(rig: JointRig):
     """Test that when calculating the progress towards the size quota, completed uploads
     are also taken into account rather than only the in-progress uploads. Also check
-    that failed and cancelled uploads are ignored.
+    that we ignore files marked 'cancelled' or that never completed uploading.
     """
     controller = rig.controller
     # Box fits exactly 2 files
@@ -1850,6 +1850,49 @@ async def test_finished_uploads_count_toward_limit(rig: JointRig):
         part_size=PART_SIZE,
     )
     assert rig.file_upload_dao.latest.id == file_id3
+
+
+async def test_failed_interrogation_files_count_toward_limit(rig: JointRig):
+    """Test that when calculating the progress towards the size quota, we still count
+    files that failed interrogation.
+    """
+    controller = rig.controller
+
+    # Box fits exactly 2 files
+    box_id = await controller.create_file_upload_box(
+        storage_alias="test", max_size=DECRYPTED_SIZE * 2
+    )
+    # Upload and complete file1 — now box.size == DECRYPTED_SIZE
+    _, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file1",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    assert rig.file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # add a second file that fills up the box to the byte and then fail it
+    file_id2, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file2",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    await _fail_interrogation(file_id=file_id2, rig=rig)
+
+    # Try to add a new file. It should be rejected.
+    with pytest.raises(UploadControllerPort.BoxMaxSizeExceededError):
+        _, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="file3",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
 
 
 async def test_concurrent_upload_cap(rig: JointRig):
