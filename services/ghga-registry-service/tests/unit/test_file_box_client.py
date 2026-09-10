@@ -773,19 +773,27 @@ async def test_requeue_single_file_404(
     )
 
     # Case #3: 404 fallback interpreted as box not found
+    file_box_api.on_requeue_single_file_upload = respond(
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
     box_not_found_msg = (
         f"FileUploadBox {TEST_BOX_ID} was not found in the external service."
     )
-    for response_body in (
-        {"exception_id": EXC_ID_BOX_NOT_FOUND},
-        "Some error occurred.",
-    ):
-        file_box_api.on_requeue_single_file_upload = respond(404, json=response_body)
-        with pytest.raises(FileBoxClient.OperationError) as operation_err:
-            await file_upload_box_client.requeue_single_file_upload(
-                box_id=TEST_BOX_ID, file_id=test_file_id
-            )
-        assert str(operation_err.value) == box_not_found_msg
+    assert str(operation_err.value) == box_not_found_msg
+
+    # Bonus case: 404 with no exception_id
+    file_box_api.on_requeue_single_file_upload = respond(
+        404, json="Some unformatted error text."
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(operation_err.value) == f"Failed to requeue FileUpload {test_file_id}."
 
 
 async def test_requeue_single_file_409(
