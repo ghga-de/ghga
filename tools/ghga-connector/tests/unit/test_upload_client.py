@@ -31,6 +31,7 @@ from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.uploading.api_calls import UploadClient
+from ghga_service_commons.api.mock_api import respond
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     UPLOAD_URL,
@@ -38,7 +39,6 @@ from tests.fixtures.mock_api.apis import (
     UploadApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.shared import respond
 from tests.fixtures.utils import (
     TEST_FILE_ID,
     TEST_FUB_ID,
