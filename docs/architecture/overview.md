@@ -107,17 +107,25 @@ Repo→destination mapping for the import is the source of truth in
   release whenever", **not** "service X may lag on an old `hexkit`".
 - **Workspace Python baseline = 3.13** (the services' target). The workspace lock resolves for
   one interpreter.
-- **Published libraries keep broad support** (3.9–3.12 today). Their declared dependency
-  *ranges* stay broad in their own `pyproject.toml`; a **per-package standalone matrix** job
-  (`uv run --python 3.10…3.13`) validates the *published* combination. So: the workspace lock
-  tests "the integrated combo"; the matrix tests "the published combo". Both are required.
+- **Published libraries keep broad support** (3.11–3.14 today, a floor now uniform across the
+  lane — [ADR-0002](../adr/0002-uv-workspace-source-coupled-libs.md), amended 2026-08-24).
+  Their declared dependency *ranges* stay broad in their own `pyproject.toml`; a **per-package
+  standalone matrix** job (`TEST_PYTHONS` in `scripts/pypi_members.py`) validates the
+  *published* combination. So: the workspace lock tests "the integrated combo"; the matrix
+  tests "the published combo". Both are required.
 
 ### 3.3 Versioning & release — [ADR-0004](../adr/0004-versioning-and-release-by-tag.md)
 
 - Every component keeps a semver in its `pyproject.toml` (or `Chart.yaml` / `package.json`).
-- A push of a git tag **`name/x.y.z`** (e.g. `hexkit/8.4.0`, `dcs/10.2.0`, `ghga/2.1.0`)
-  triggers release of *only* that component. The version in the tag must match the version in
-  HEAD for that component (CI validates, as `file-services-backend` already does).
+- A push of a git tag **`name/x.y.z`** (e.g. `hexkit/8.4.0`) releases that one PyPI-lane
+  member. The version in the tag must match the version that member declares at HEAD (CI
+  validates, as `file-services-backend` already does).
+- A push of **`packages/x.y.z`** instead releases every PyPI-lane member whose declared version
+  is ahead of the index, dependencies first. The name is reserved and names no component, so
+  the version is a label — nothing checks it against a declared version.
+- A push of **`ghga/X.Y.Z`** is the platform lane: *every* image is built from the tagged
+  commit and stamped with that one version (lockstep), internal libs embedded from source
+  rather than resolved from PyPI. Services have no release tag of their own.
 - Because HEAD is integrated, tagging releases **the integrated HEAD's** version of the
   component — not an isolated branch.
 - Artifact per component kind: libs/CLIs → wheel to PyPI; services → image to the registry;
@@ -189,7 +197,8 @@ GitOps/platform layer.
   (`helm install ghga-demo` + the BDD suite). This is what keeps HEAD integrated.
 - **The long pole** is building ~20 images per relevant change; mitigated by building only
   *affected* images and pulling last-released tags for the rest, then `kind load`.
-- **Release**: tag `name/x.y.z` → publish only that component (§3.3).
+- **Release**: tag `name/x.y.z` → publish only that component; `packages/x.y.z` → publish every
+  PyPI-lane member the index is behind on (§3.3).
 
 ## 4. Sandbox phase & migration
 
@@ -197,8 +206,9 @@ The monorepo is developed **separately from mainline (`ghga-de`) for a while**
 ([ADR-0010](../adr/0010-history-preserving-migration.md)):
 
 - Hosted at **`github.com/ghga-de/ghga`** (a new repo, separate from the per-component repos).
-  **Publish targets (images, charts, PyPI) are not yet decided** — until they are, the release
-  workflow is dormant and nothing is published from this repo.
+  Publish targets are decided and both lanes are live — images and charts to Docker Hub,
+  wheels to PyPI after a TestPyPI rehearsal
+  ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - **History-preserving import** via `git filter-repo` (subdir move + boilerplate drop), then a
   **one-way incremental sync** from mainline until cutover. See the
   [runbook](../migration/runbook.md).

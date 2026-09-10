@@ -65,7 +65,8 @@ scripts/migration/import-all.sh
 What it does, per row in [scripts/migration/repos.tsv](../../scripts/migration/repos.tsv):
 - whole-repo rows: drop centralised boilerplate (kind-specific list in
   [lib.sh](../../scripts/migration/lib.sh)), then move the rest into the destination subdir;
-- `file-services-backend` rows: keep only the named `services/<svc>` subtree, placed at top level;
+- partial rows (a `subpath` other than `.`): keep only that subtree, placed at top level — how
+  the six `file-services-backend` services were imported, before those rows were retired;
 - merge with `--allow-unrelated-histories`, preserving authorship/dates; `git blame`/`log` follow
   files into their new paths.
 
@@ -137,8 +138,9 @@ Enabled in two stages (the component gate does **not** wait for the charts):
 - **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed
   run ([ADR-0009](../adr/0009-testbed-kind-minikube.md),
   [ADR-0017](../adr/0017-local-integration-host-cluster.md)).
-- **Image/chart/PyPI publish:** targets **not yet decided**; the release workflow is dormant
-  (no triggers, no publish steps, no write permissions) and must stay so until they are
+- **Image/chart/PyPI publish (live):** a tag push publishes wheels to PyPI, after a TestPyPI
+  rehearsal. Images and charts go to Docker Hub, but a tag push only builds them — publishing
+  a platform release is a deliberate dispatch
   ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - Push the repo to `github.com/ghga-de/ghga`.
 
@@ -147,23 +149,61 @@ Enabled in two stages (the component gate does **not** wait for the charts):
 While developing the sandbox in parallel with mainline:
 ```bash
 scripts/migration/sync-from-mainline.sh                 # all destinations
-scripts/migration/sync-from-mainline.sh libs/hexkit     # just one
+scripts/migration/sync-from-mainline.sh libs/metldata   # just one
 ```
 Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`); resolve,
 `git commit`, re-run for the rest. Keep harmonisation root-only and don't restructure service
 `src/` during the window, or conflicts multiply.
 
+### Verifying a repo is fully synced
+
+Before retiring a mainline repo (archiving it and dropping its `repos.tsv` row), prove nothing was
+left behind. `sync-from-mainline.sh` reporting "up to date" is necessary but not sufficient: it
+only checks that the rewritten upstream tip is an ancestor of `HEAD`. Compare commit *identity*
+instead — author date, author and subject all survive the `filter-repo` rewrite:
+
+```bash
+git -C <upstream.git> log --format='%at%x09%an%x09%s' main | sort -u > /tmp/up
+git log --format='%at%x09%an%x09%s' HEAD | sort -u > /tmp/mono
+comm -23 /tmp/up /tmp/mono          # upstream commits with no counterpart here
+```
+
+Every line that comes back must be accounted for as one of:
+
+- a commit that touched **only** stripped boilerplate (`drop_paths_for_kind` in `lib.sh`) —
+  `filter-repo` drops commits that filter to empty, so these legitimately have no counterpart;
+- a deliberate **upstream-only** commit, i.e. the archival/deprecation notice added when the repo
+  was frozen.
+
+Anything else is unsynced work: sync it (or port it) before archiving. Then diff the trees as a
+cross-check — the remaining differences should only be the dropped boilerplate and the monorepo's
+own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
+
 ## 7. Cutover checklist (when the sandbox proves out)
 
 - [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas.
 - [ ] Freeze mainline repos (announce; protect branches / make read-only).
-- [ ] Decide + wire the CD targets (image registry, chart registry, PyPI), add the required
-      secrets, then enable the release workflow's tag trigger and write permissions.
+- [x] Wire the CD targets, add the required secrets, enable the release workflow's tag trigger
+      and write permissions. **Done (2026-09):** images and charts to Docker Hub, wheels to
+      PyPI after a TestPyPI rehearsal (trusted publishing on both indexes)
+      ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image
       series (no version regressions).
 - [ ] Move the repo to `github.com/ghga-de/<monorepo>`; set CODEOWNERS per path.
 - [ ] Archive the old repos (keep read-only for history/provenance); update external docs that
-      point at per-repo locations.
+      point at per-repo locations. **Started ahead of the full cutover (2026-09):**
+      `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`,
+      `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`,
+      `epic-docs`, `adrs`, `file-services-backend` (all six of its services at once),
+      `hexkit`, `notification-service`, `notification-orchestration-service`,
+      `dataset-information-service`, `well-known-value-service` and `auth-km-jobs` are
+      archived and their rows removed from `repos.tsv` — see the "Retired" block there for
+      the last commit merged from each. Verify a repo is fully synced (§6) before dropping
+      its row.
+      `hexkit` additionally published a documentation site, so its archived Pages site was
+      replaced with redirects to `ghga-de.github.io/ghga/hexkit`
+      ([ADR-0021](../adr/0021-docs-lane-github-pages.md)) before archiving — an archived repo
+      keeps serving Pages but cannot run Actions, so that deploy could not be redone.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
 - [ ] Decommission the docker-compose test bed.
@@ -174,7 +214,8 @@ Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`
 - Determinism (for incremental sync) assumes append-only mainline history and a **pinned
   `git-filter-repo` version** across runs.
 - Historical release tags are **not** imported (they'd reference rewritten SHAs); the new scheme
-  is `name/x.y.z` ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
+  is `name/x.y.z`, plus `packages/x.y.z` to sweep the PyPI lane
+  ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md)).
 - `.legacy_repos/` and `.migration-work/` must stay gitignored (nested `.git` dirs; scratch).
 
 ## Deploy (charts): manual semantic port — no textual sync

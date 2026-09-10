@@ -1,0 +1,123 @@
+# Docs lane (ADR-0021) — build every documented member and deploy them as ONE GitHub Pages
+# site, each under its own subpath: ghga-de.github.io/ghga/<package>/.
+#
+# A member is documented iff it carries a `great-docs.yml`; scripts/docs_members.py is the
+# discovery, and the justfile's `docs` recipe is the build, so what runs here is what runs
+# locally (ADR-0015).
+#
+# Trigger: pushes to `main`, plus manual dispatch. The site tracks the latest release state,
+# not work-in-progress — the integration branch is deliberately not published, so unreleased
+# API never appears on the URL PyPI's `Documentation` link points at.
+#
+# There is deliberately no `paths:` filter. Docstrings live in the members' sources, so an
+# accurate filter would have to enumerate every documented member's tree and be re-edited
+# whenever one is added — the discovery script exists precisely so that list is not written
+# down twice. A build is ~2 minutes, cheaper than the drift.
+name: docs-publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # rebuild without a push (e.g. after a Pages settings change)
+
+# GitHub serves one Pages site per repo and rejects concurrent deployments to it. Queued
+# runs must not cancel each other: the newest push wins the *deploy*, but a cancelled run
+# mid-upload can leave the Pages artifact half-written, so runs are serialised instead.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Which members are documented, as a matrix. Reading it from the script (rather than a
+  # literal list here) is what keeps the workflow and `just docs` in agreement.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      members: ${{ steps.plan.outputs.members }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      # docs_members.py declares its own dependency via PEP 723 and runs as
+      # `uv run --script`; this job installs nothing else.
+      - id: plan
+        run: |
+          members=$(uv run --script scripts/docs_members.py --json)
+          echo "$members" | python3 -m json.tool
+          echo "members=$members" >> "$GITHUB_OUTPUT"
+      # A declared URL that disagrees with the deploy subpath is silent at build time and
+      # only shows up as wrong canonical links and sitemap entries on the live site, so the
+      # lane fails here rather than publishing them.
+      - name: Check the declared site URLs against the deploy paths
+        run: uv run --script scripts/docs_members.py --check
+
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false # one member's docs failing should not hide the others' state
+      matrix:
+        member: ${{ fromJSON(needs.plan.outputs.members) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # great-docs reads git history for page timestamps and refs
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      # great-docs renders through Quarto, which is a standalone binary rather than a
+      # Python dependency, so the docs group cannot supply it.
+      - uses: quarto-dev/quarto-actions/setup@v2
+      - run: just docs-install
+      - run: just docs ${{ matrix.member.path }}
+      # One artifact per member, named by the subpath it is deployed under, so the deploy
+      # job can reassemble the site without knowing anything about the members.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-${{ matrix.member.package }}
+          path: ${{ matrix.member.path }}/great-docs/_site
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      # For `uv run --script` in the assemble step; it resolves that script's PEP 723
+      # block into a throwaway environment, so nothing else is installed here.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/configure-pages@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: docs-*
+      # Each artifact becomes <package>/ in the site root, which also gets an index and a
+      # 404 page. In a script rather than inline here so it can be run and read on its own;
+      # scripts/assemble_docs_site.py explains why the 404 page earns its keep.
+      - name: Assemble the site
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          printf '%s' "$MEMBERS" \
+            | uv run --script scripts/assemble_docs_site.py --artifacts artifacts --out site
+          find site -maxdepth 1 -name '*.html' | sort
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

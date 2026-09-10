@@ -1,9 +1,15 @@
 # Release — two lanes (revised ADR-0004):
 #   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
 #                  platform version (lockstep; libs embedded from source, never PyPI).
-#   name/x.y.z  -> PYPI lane: the tag triggers the run, it does not select what ships. No
-#                  inputs are forwarded, so pypi-publish.yaml re-derives the set from the
-#                  index and publishes every lane member ahead of it, dependencies first.
+#   name/x.y.z  -> PYPI lane, TARGETED: that member alone. pypi-publish.yaml refuses if a
+#                  member of its own closure is a release candidate too — publishing it
+#                  then would put it on PyPI against library versions the index does not
+#                  serve — and names both ways out: sweep, or release the dependencies on
+#                  their own tags first.
+#   packages/x.y.z -> PYPI lane, SWEEP: the tag selects nothing. pypi-publish.yaml
+#                  re-derives the set from the index and publishes every lane member ahead
+#                  of it, dependencies first. The version component is a label; it names
+#                  no member and is not checked against one.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
@@ -33,7 +39,7 @@ name: release
 on:
   push:
     tags:
-      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0
+      - "*/*.*.*" # e.g. ghga/17.0.0, hexkit/8.7.0, ghga-connector/3.1.0, packages/1.0.0
   workflow_dispatch:
     inputs:
       ref:
@@ -75,6 +81,7 @@ jobs:
       actions: read # to read this commit's CI run conclusion
     outputs:
       lane: ${{ steps.route.outputs.lane }}
+      mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
       images: ${{ steps.images.outputs.images }}
@@ -116,10 +123,18 @@ jobs:
             echo "::error::version '$version' is not SemVer (expected x.y.z or x.y.z-prerelease)"
             exit 1
           fi
-          if [ "$name" = "ghga" ]; then lane=platform; else lane=pypi; fi
+          # The name also carries the pypi lane's MODE. `packages` means "publish every
+          # member the index is behind on". Any other name names one member, and publishes
+          # that member alone. Platform tags have no mode.
+          case "$name" in
+            ghga)     lane=platform; mode= ;;
+            packages) lane=pypi;     mode=sweep ;;
+            *)        lane=pypi;     mode=targeted ;;
+          esac
           echo "name=$name"       >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "lane=$lane"       >> "$GITHUB_OUTPUT"
+          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
 
       # ADR-0004: the release VERIFIES the integrated HEAD, it does not re-test it. CI
       # already proved this commit good; the tag only snapshots that. So the two things
@@ -238,9 +253,13 @@ jobs:
 
       # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
       # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
-      # release nobody made.
+      # release nobody made. It is also what rejects a tag that routing sent to this lane
+      # but that names nothing at all (`clown/1.0.0`).
+      #
+      # Targeted tags only: a sweep deliberately names no member, so there is nothing here
+      # for it to match against.
       - name: Check the tag against the member it names
-        if: ${{ steps.route.outputs.lane == 'pypi' }}
+        if: ${{ steps.route.outputs.mode == 'targeted' }}
         env:
           NAME: ${{ steps.route.outputs.name }}
           VERSION: ${{ steps.route.outputs.version }}
@@ -384,6 +403,21 @@ jobs:
       - name: Attest SBOM + provenance (keyless)
         if: ${{ inputs.push }}
         run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.member.package }}@${{ steps.build.outputs.digest }}"
+      # Hands the resolved digest to package-charts so a chart can pin image.digest
+      # instead of the mutable tag (create_charts.py's --digests). One artifact per
+      # matrix member (not a job output) because matrix job outputs don't aggregate
+      # across shards — package-charts downloads and merges them by filename.
+      - name: Save resolved digest for chart packaging
+        if: ${{ inputs.push }}
+        run: |
+          mkdir -p digests
+          echo -n "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.member.package }}"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: ${{ inputs.push }}
+        with:
+          name: digest-${{ matrix.member.package }}
+          path: digests/${{ matrix.member.package }}
+          retention-days: 1
       - name: Summary
         run: |
           if [ "${{ inputs.push }}" = "true" ]; then
@@ -446,8 +480,29 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      # One digest-<package> artifact per build-images matrix member (build-only dry
+      # runs push nothing, so there's nothing to download); merged into a single
+      # {package: digest} map for create_charts.py's --digests below.
+      - name: Download resolved image digests
+        if: ${{ inputs.push }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: "digest-*"
+          path: digests
+          merge-multiple: true
+      - name: Merge digests into one file
+        if: ${{ inputs.push }}
+        run: |
+          for f in digests/*; do
+            jq -n --arg pkg "$(basename "$f")" --arg digest "$(cat "$f")" '{($pkg): $digest}'
+          done | jq -s 'add' > digests.json
       - name: Regenerate charts at the release version
-        run: uv run python deploy/src/create_charts.py --version "${{ needs.resolve.outputs.version }}"
+        run: |
+          digest_flags=()
+          if [ "${{ inputs.push }}" = "true" ]; then
+            digest_flags=(--digests digests.json)
+          fi
+          uv run python deploy/src/create_charts.py --version "${{ needs.resolve.outputs.version }}" "${digest_flags[@]}"
       # ghga-demo is the local test bed (deploy/README.md), not a release artifact: it
       # bundles dev-only subcharts (aai's mock-oauth2-server, test-oidc-provider) and its
       # own Chart.yaml version isn't stamped by create_charts.py to the platform version
@@ -601,7 +656,9 @@ jobs:
 
   # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
   #
-  # It calls pypi-publish.yaml, which picks the packages and runs the tests.
+  # It calls pypi-publish.yaml, which picks the packages and runs the tests. The mode says
+  # whether the tag selects one member or none; `package` is read only in targeted mode,
+  # where `resolve` has already asserted it names a real member at the version tagged.
   publish-pypi:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
@@ -611,3 +668,6 @@ jobs:
       # caller grants.
       id-token: write
     uses: ./.github/workflows/pypi-publish.yaml
+    with:
+      mode: ${{ needs.resolve.outputs.mode }}
+      package: ${{ needs.resolve.outputs.name }}

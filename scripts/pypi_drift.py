@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+# Imports pypi_members, which owns the index lookup and needs `packaging` for the PEP 440
+# comparison — so this script declares the same PEP 723 dependency and runs the same way,
+# `uv run --script`. The job that calls it never `uv sync`s.
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["packaging>=25"]
+# ///
+"""Fail a change set that moves a published PyPI-lane member without bumping its version.
+
+The platform lane embeds internal libraries from source at the release commit.
+So a lane member can change, merge, and run in production while PyPI keeps serving that
+same version number with the old content. This is the check that prevents it.
+
+The rule: a member whose shipped content changed must declare a version the index does
+not already serve.
+
+A bump does not claim the change was significant — semver's major/minor/patch carries
+that, and the author still chooses it. It asserts only that this content is not the content
+already published. Nothing is released on merge either: publishing still needs a pushed
+tag, so bumps accumulate and one run ships them together.
+
+Usage (`uv run --script`, so the PEP 723 block above resolves):
+    git diff --name-only origin/main...HEAD | uv run --script scripts/pypi_drift.py
+    git diff --name-only origin/main...HEAD | uv run --script scripts/pypi_drift.py --list
+"""
+
+from __future__ import annotations
+
+import argparse
+import pathlib
+import sys
+
+import tomllib
+
+from pypi_members import IndexedMember, pypi_members, release_candidates
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+# Root files that reach consumers alongside the code: pyproject.toml becomes the wheel's
+# METADATA, the README its Description on the project page, the LICENSE ships in
+# .dist-info. Prefix-matched, so README.md and LICENSE.txt are both picked up.
+METADATA_FILES = ("pyproject.toml", "README", "LICENSE")
+
+
+def _packaged_roots(member_path: str) -> list[str]:
+    """Reads the directories a member's distribution is built from, e.g. `["src"]`.
+
+    Taken from the member's own `[tool.setuptools.packages.find] where`, so "shipped"
+    here means the same thing it means to the build backend, rather than a second guess
+    that could drift from it.
+
+    Args:
+        member_path: The member's folder relative to the repo root, e.g. `libs/hexkit`.
+
+    Returns:
+        The packaged root directories, empty when they cannot be established — a build
+        backend other than setuptools, or the table missing.
+    """
+    manifest = tomllib.loads((ROOT / member_path / "pyproject.toml").read_text())
+    return list(
+        manifest.get("tool", {})
+        .get("setuptools", {})
+        .get("packages", {})
+        .get("find", {})
+        .get("where", [])
+    )
+
+
+def changed_members(files: list[str]) -> list[str]:
+    """Selects the lane members whose shipped content `files` touches.
+
+    Deliberately not `affected_targets.affected()`, which answers "what might this break?"
+    and is right to over-approximate: it expands to dependents — whose own distributions
+    do not change when a dependency does — and treats repo-wide paths such as `scripts/`
+    or `.github/workflows/` as touching every member, none of which ship inside a wheel.
+    Reusing it here would demand a version bump of every lane member for a workflow edit.
+
+    Args:
+        files: Changed file paths, relative to the repo root.
+
+    Returns:
+        The sorted member folders whose shipped content changed, e.g. `["libs/hexkit"]`.
+
+    Raises:
+        SystemExit: if any lane member's packaged roots cannot be established. Treating
+            one as "ships nothing" would let it drift forever while this check stayed
+            green — the failure the check exists to prevent.
+    """
+    roots = {member.path: _packaged_roots(member.path) for member in pypi_members()}
+    unknown = sorted(path for path, found in roots.items() if not found)
+    if unknown:
+        sys.exit(
+            "error: cannot establish what these members ship, so drift in them would go"
+            f" unnoticed: {', '.join(unknown)}"
+        )
+
+    changed = set()
+    for path, packaged in roots.items():
+        shipped = tuple(f"{pathlib.PurePosixPath(path, root)}/" for root in packaged)
+        metadata = tuple(f"{path}/{name}" for name in METADATA_FILES)
+        if any(f.startswith(metadata) or f.startswith(shipped) for f in files):
+            changed.add(path)
+    return sorted(changed)
+
+
+def unbumped_members(member_paths: set[str]) -> list[IndexedMember]:
+    """Finds which of `member_paths` still declare a version the index already serves.
+
+    Args:
+        member_paths: The member folders whose shipped content changed.
+
+    Returns:
+        The members among them that need a version bump, each carrying the `reason`
+        `release_candidates` passed it over for.
+
+    Raises:
+        SystemExit: if PyPI cannot be reached for one of them, since nothing can be
+            asserted against an unknown index.
+    """
+    # Narrowed before the lookup, not after: the index is asked only about the members
+    # the change set touched, so an outage on an unrelated lane member cannot fail a run
+    # that had nothing to do with it.
+    changed = [member for member in pypi_members() if member.path in member_paths]
+    candidates = release_candidates(changed)
+    if candidates.unreachable:
+        unreachable = ", ".join(member.package for member in candidates.unreachable)
+        sys.exit(
+            "error: could not reach PyPI to establish what is already released:"
+            f" {unreachable}"
+        )
+    return candidates.skipped
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="print the lane members the change set ships into and stop, without asking"
+        " the index anything",
+    )
+    args = parser.parse_args(argv)
+
+    changed = changed_members(sys.stdin.read().splitlines())
+    if args.list:
+        print("\n".join(changed))
+        return 0
+    if not changed:
+        print("no PyPI-lane member's shipped content changed")
+        return 0
+
+    print("changed lane members: " + ", ".join(changed))
+    needing_a_bump = unbumped_members(set(changed))
+    for member in needing_a_bump:
+        print(
+            f"{member.package}: {member.reason}, but its shipped content changed"
+            " — bump it, or the platform and PyPI disagree about what that version"
+            " contains",
+            file=sys.stderr,
+        )
+    return 1 if needing_a_bump else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

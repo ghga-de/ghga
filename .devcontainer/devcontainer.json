@@ -50,7 +50,11 @@
     // Kept read-only by two layers: the token (a zero-scope PAT reads this public repo and
     // can write nothing) and .claude/settings.json (gh allow/deny rules). Only the token is
     // enforced by GitHub. Use `gh auth login --with-token`; the browser flow grants write.
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Quarto renders the docs sites (ADR-0021). great-docs drives it but does not vendor
+    // it — it is a standalone binary, not a Python dependency, so the `docs` dependency
+    // group cannot supply it and `just docs` would fail on a container without it.
+    "ghcr.io/rocker-org/devcontainer-features/quarto-cli:1": {}
   },
   "customizations": {
     "vscode": {

@@ -20,7 +20,7 @@ chart-generation, and release pipelines key off these — **not** off the folder
 [tool.ghga]
 release = "platform"  # release lane: "platform" (lockstep) | "pypi" | "none"
 image = true    # build & push a container image (and generate a Helm chart) on the release tag
-pypi  = true    # publish a wheel to PyPI on the release tag (disabled during the sandbox)
+pypi  = true    # publish a wheel to PyPI on the release tag
 cli   = true    # exposes a console entry point
 
 # optional, when image = true:
@@ -56,9 +56,13 @@ One `uv.lock` governs the whole repo → HEAD is always integrated
 - Every member keeps its own semver (in `pyproject.toml` / `Chart.yaml` / `package.json`).
 - A pushed git tag **`name/x.y.z`** releases only that component; CI asserts the tag matches the
   member's version at HEAD ([ADR-0004](adr/0004-versioning-and-release-by-tag.md)).
-- Publish targets (images / charts / PyPI) are **not yet decided**; until they are, the release
-  workflow stays dormant with no publish steps
-  ([ADR-0010](adr/0010-history-preserving-migration.md)).
+- A pushed git tag **`packages/x.y.z`** releases every PyPI-lane member the index is behind
+  on, dependencies first; the version is a label naming no member
+  ([ADR-0004](adr/0004-versioning-and-release-by-tag.md)).
+- Wheels publish to **PyPI**, rehearsed on **TestPyPI** first, both by trusted publishing.
+  Images publish to `docker.io/ghga/<member>` and charts as OCI artifacts under
+  `ghga/<chart>-chart` — a tag push builds both; publishing them is a deliberate dispatch
+  ([ADR-0004](adr/0004-versioning-and-release-by-tag.md)).
 
 ## Toolchain
 

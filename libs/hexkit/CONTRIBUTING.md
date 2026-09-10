@@ -43,7 +43,7 @@ just hooks  # install the git hooks (the devcontainer does this for you)
 ```
 
 Either way, the usual tasks are `just` recipes run from the repository root (see
-[ADR-0015](../../docs/adr/0015-task-runner.md) for the full list):
+[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the full list):
 
 ``` bash
 just test libs/hexkit  # run hexkit's test suite

@@ -57,6 +57,7 @@ mirror here.
 | [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
 | [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
 | [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch | Accepted · implemented 2026-09-08 | amends [0004](adr/0004-versioning-and-release-by-tag.md), [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) |
+| [0021](adr/0021-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | **Proposed** | deviates from [0014](adr/0014-capability-markers-and-placement.md) on marker vs. config-file discovery |
 
 ## Phased roadmap (high level)
 
