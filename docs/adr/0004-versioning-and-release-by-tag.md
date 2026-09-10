@@ -138,8 +138,12 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - **The tag chooses how much of that gap closes** (amended 2026-09-01). `release.yaml`'s
   `resolve` derives a *mode* from the tag name and forwards it:
   - **`name/x.y.z` — targeted.** That member alone, whatever else the index is behind on.
-    This is the common case: releasing one library should not drag along someone's
-    unrelated pending work.
+    It exists so releasing one library does not drag along someone's unrelated pending
+    work. Note this is about *scope*, not *timing*: since the branch gate cuts PyPI tags
+    from `main` ([ADR-0020](0020-branching-strategy.md)), a targeted release still waits
+    for the platform release that carries its version bump over — so it is currently the
+    narrow option rather than the frequent one. The lockstep is deliberate and revisitable;
+    see the per-lane branch decision above.
   - **`packages/x.y.z` — sweep.** The reserved name is not a member, so it selects
     nothing and the plan takes the whole gap, dependencies first. The version component is
     a label; nothing checks it against a declared version, because there is none to check.
