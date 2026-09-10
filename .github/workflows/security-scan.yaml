@@ -49,9 +49,18 @@
 name: security-scan
 
 on:
+  # A `schedule` trigger always runs the DEFAULT branch's copy of this file, no matter which
+  # branch a change merged into, so an edit here does not reach the nightly run until the
+  # default branch carries it. A dispatch is the opposite: it runs the copy on the ref you
+  # pick. ADR-0020's "Remaining setup" tracks this for the `dev` flip.
   schedule:
     - cron: "17 4 * * *" # daily, off the top of the hour (GitHub's own advice)
   workflow_dispatch:
+    inputs:
+      base_branch:
+        description: "Branch to scan and target; leave as dev unless rehearsing a change to this workflow"
+        required: false
+        default: dev
 
 # A manual run during the scheduled one would race on the PR branch: queue, don't kill.
 concurrency:
@@ -62,9 +71,38 @@ permissions:
   contents: read
 
 env:
-  # The branch this workflow owns: the propose job pushes to it and looks up its
-  # PR by it.
-  PR_BRANCH: automated/lockfile-security-update
+  # The branch this workflow owns: the propose job pushes to it and looks up its PR by it.
+  # Namespaced when a dispatch names a base other than `dev`, so a rehearsal gets its own
+  # branch — create-pull-request resets its head branch to base + diff, and sharing this
+  # name would rewrite the real PR's contents.
+  #
+  # That only covers a NON-default input; a dispatch left at `dev` still lands here, which
+  # is correct once `dev` is the default branch but not while the pre-flip `main`-targeted
+  # PR still holds this branch. The `branch-guard` step in propose-update is what closes
+  # that case, by refusing the push rather than by renaming around it.
+  PR_BRANCH: ${{ (inputs.base_branch && inputs.base_branch != 'dev') && format('automated/lockfile-security-update-{0}', inputs.base_branch) || 'automated/lockfile-security-update' }}
+  # The branch this workflow measures and targets: the integration branch (ADR-0020),
+  # which is also what the :dev images it diffs against are built from. Named rather than
+  # left implicit — a bare checkout follows the event's ref, which is the default branch on
+  # `schedule` and whatever the "Use workflow from" picker resolved on `workflow_dispatch`.
+  # Neither is necessarily the branch this workflow means to scan. Scanning
+  # `main`'s tree while diffing `dev`'s images would resolve the lockfiles from `main`'s
+  # manifests (overwriting any dependency change made on `dev` since the branch point) and
+  # attribute the entire main..dev gap to the lockfile update.
+  #
+  # The dispatch input overrides it, because there is no `pull_request` trigger here: a
+  # dispatch is the only way to exercise a change to this ~45m, PR-opening workflow before
+  # it lands, and pinning a single name outright would have made every dispatch scan `dev`
+  # no matter which ref the "Use workflow from" picker chose. One name still drives the
+  # checkout, the PR base and the close-step lookup, so a rehearsal stays internally
+  # consistent rather than scanning one branch and targeting another.
+  #
+  # The `base` job resolves this name to ONE commit and every other job checks that commit
+  # out. Pinning the *name* in each job is not enough: the three jobs start minutes to an
+  # hour apart, so each would resolve the tip independently, and a merge landing mid-run
+  # would have the lockfiles resolved against one commit and applied to a tree at another —
+  # a narrower version of the same silent-revert bug.
+  BASE_BRANCH: ${{ inputs.base_branch || 'dev' }}
   REGISTRY: ghcr.io/ghga-de/ghga
   # Keeps `just image`/`image-mono` tagging under $REGISTRY here too — this scan's
   # scratch/comparison images are deliberately separate from the release target
@@ -75,7 +113,34 @@ env:
   TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db:2,public.ecr.aws/aquasecurity/trivy-db:2
 
 jobs:
+  # One commit for the whole run. $GITHUB_SHA cannot serve: it names the event's ref — the
+  # default branch on `schedule`, the ref the "Use workflow from" picker resolved on
+  # `workflow_dispatch` — and neither is tied to $BASE_BRANCH, which is what gets checked out.
+  base:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      short: ${{ steps.resolve.outputs.short }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+      - id: resolve
+        run: |
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          # Truncated exactly as dev-images.yaml stamps its revision label
+          # (`${GITHUB_SHA::12}`), NOT `git rev-parse --short=12`, whose length is a
+          # minimum and grows on ambiguity. The PR body compares the two strings for
+          # equality, so they have to be built the same way.
+          echo "short=${sha:0:12}" >> "$GITHUB_OUTPUT"
+          echo "$BASE_BRANCH is at ${sha:0:12}" >> "$GITHUB_STEP_SUMMARY"
+
   python:
+    needs: base
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -83,8 +148,16 @@ jobs:
       packages: read # pull :dev from GHCR
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      # The commit this run scanned — NOT $GITHUB_SHA, which names the event's ref (the
+      # default branch on schedule, the picked ref on dispatch) rather than the branch
+      # checked out here. The PR body compares it against each :dev image's revision label
+      # to say how much of the delta is staleness, so it has to name the tree the scan
+      # actually ran against.
+      BASE_SHA: ${{ needs.base.outputs.short }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.base.outputs.sha }}
       # Reports live OUTSIDE the checkout — the tree must stay clean except for the
       # lockfile. ($RUNNER_TEMP is step-level only, hence GITHUB_ENV, not job env.)
       - name: Prepare scratch dirs
@@ -128,13 +201,13 @@ jobs:
               --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
               "$REGISTRY/platform:dev" || true)
             jq -n --arg image platform --arg revision "$rev" \
-              --arg head "${GITHUB_SHA::12}" \
+              --arg head "$BASE_SHA" \
               '{image: $image, published: true, revision: $revision, head: $head}' \
               > "$OUT/python-context.json"
           else
             echo "## platform:dev not found — image comparison skipped" \
               >> "$GITHUB_STEP_SUMMARY"
-            jq -n --arg image platform --arg head "${GITHUB_SHA::12}" \
+            jq -n --arg image platform --arg head "$BASE_SHA" \
               '{image: $image, published: false, revision: "", head: $head}' \
               > "$OUT/python-context.json"
           fi
@@ -178,6 +251,7 @@ jobs:
           path: ${{ env.OUT }} # always at least the context file
 
   frontend:
+    needs: base
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -185,8 +259,16 @@ jobs:
       packages: read
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      # The commit this run scanned — NOT $GITHUB_SHA, which names the event's ref (the
+      # default branch on schedule, the picked ref on dispatch) rather than the branch
+      # checked out here. The PR body compares it against each :dev image's revision label
+      # to say how much of the delta is staleness, so it has to name the tree the scan
+      # actually ran against.
+      BASE_SHA: ${{ needs.base.outputs.short }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.base.outputs.sha }}
       - name: Prepare scratch dirs
         run: |
           echo "SCAN=$RUNNER_TEMP/scan" >> "$GITHUB_ENV"
@@ -224,13 +306,13 @@ jobs:
               --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' \
               "$REGISTRY/data-portal:dev" || true)
             jq -n --arg image data-portal --arg revision "$rev" \
-              --arg head "${GITHUB_SHA::12}" \
+              --arg head "$BASE_SHA" \
               '{image: $image, published: true, revision: $revision, head: $head}' \
               > "$OUT/frontend-context.json"
           else
             echo "## data-portal:dev not found — image comparison skipped" \
               >> "$GITHUB_STEP_SUMMARY"
-            jq -n --arg image data-portal --arg head "${GITHUB_SHA::12}" \
+            jq -n --arg image data-portal --arg head "$BASE_SHA" \
               '{image: $image, published: false, revision: "", head: $head}' \
               > "$OUT/frontend-context.json"
           fi
@@ -299,7 +381,7 @@ jobs:
   # daily runs never stack PRs. A PR whose fixes are no longer on offer is closed
   # again: left open, it asserts a vulnerability the scan no longer sees.
   propose-update:
-    needs: [python, frontend]
+    needs: [base, python, frontend]
     # one ecosystem failing must not discard the other's verdict
     if: ${{ !cancelled() && (needs.python.result == 'success' || needs.frontend.result == 'success') }}
     runs-on: ubuntu-latest
@@ -346,6 +428,7 @@ jobs:
           it or push to it to get checks."
       - uses: actions/checkout@v5
         with:
+          ref: ${{ needs.base.outputs.sha }}
           token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v7
         with:
@@ -426,8 +509,80 @@ jobs:
             echo "Generated by [security-scan run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
           } > "$RUNNER_TEMP/body.md"
 
-      - name: Open or update the PR
+      # The `base` job's pin covers the scan; it does NOT cover what the PR proposes.
+      # create-pull-request runs detached, cherry-picking the lockfile commit onto the base
+      # branch's LIVE tip with `--strategy-option=theirs` — so a lockfile that landed on
+      # $BASE_BRANCH during the ~45m scan loses to the older one this run resolved, and the
+      # PR silently reverts it. `uv sync --locked` only catches that when pyproject.toml
+      # moved too; a lockfile-only refresh (`uv lock --upgrade`) reverts with CI green.
+      #
+      # So don't reconcile, just don't race: if either lockfile moved under us, drop this
+      # run's PR. Tomorrow's scan redoes the work against the new tip, which is cheaper than
+      # being clever and cannot get the answer wrong.
+      - name: Check the lockfiles did not move during the scan
+        id: race
         if: ${{ steps.verdict.outputs.fixed > 0 }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --quiet origin "$BASE_BRANCH"
+          moved=$(git diff --name-only "$BASE_SCANNED" FETCH_HEAD -- \
+            uv.lock frontend/data-portal/pnpm-lock.yaml)
+          if [ -n "$moved" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## No PR opened — lockfiles moved during the scan"
+              echo
+              echo "\`$BASE_BRANCH\` gained changes to:"
+              echo '```'
+              echo "$moved"
+              echo '```'
+              echo
+              echo "This run resolved its lockfiles from \`${BASE_SCANNED::12}\`. Opening the PR"
+              echo "would cherry-pick that older result over the newer one. Tomorrow's scan"
+              echo "starts from the current tip."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          BASE_SCANNED: ${{ needs.base.outputs.sha }}
+
+      # PR_BRANCH is only namespaced for a NON-default `base_branch`, so a dispatch left at
+      # the default reuses the nightly branch. That is right once `dev` is the default
+      # branch, but in the pre-flip window that same branch still carries the open
+      # `main`-targeted PR (ADR-0020's "Remaining setup" closes it after the flip), and
+      # create-pull-request force-updates its head branch — so one dispatch would rewrite a
+      # `main` PR with a `dev` diff. Checking the base of whatever already holds the branch
+      # covers that without special-casing the transition, and keeps covering any later
+      # change of base: a branch an open PR is using for a different base is not ours to
+      # take.
+      - name: Check the PR branch is not held by a PR on another base
+        id: branch-guard
+        if: ${{ steps.verdict.outputs.fixed > 0 }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          held=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$PR_BRANCH" \
+            --json number,baseRefName \
+            --jq 'map(select(.baseRefName != env.BASE_BRANCH)) | .[0] | select(.) | "#\(.number) -> \(.baseRefName)"')
+          if [ -n "$held" ]; then
+            echo "held=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## No PR opened — \`$PR_BRANCH\` belongs to another PR"
+              echo
+              echo "\`$held\` is open on that branch, and this run targets \`$BASE_BRANCH\`."
+              echo "Pushing would force-update the branch and rewrite that PR's contents, so"
+              echo "this run stops instead. Close or retarget it, then re-run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "held=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update the PR
+        if: >-
+          ${{ steps.verdict.outputs.fixed > 0 && steps.race.outputs.stale != 'true'
+          && steps.branch-guard.outputs.held != 'true' }}
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
@@ -436,7 +591,10 @@ jobs:
           committer: ${{ steps.identity.outputs.bot }}
           author: ${{ steps.identity.outputs.bot }}
           branch: ${{ env.PR_BRANCH }}
-          base: main
+          # The lockfile update is ordinary integration work, so it targets the branch the
+          # delta was measured against. Note the action resolves this to the branch's live
+          # tip, not to the commit the `base` job pinned — see the race check above.
+          base: ${{ env.BASE_BRANCH }}
           title: "Security: dependency update resolving ${{ steps.verdict.outputs.fixed }} known vulnerabilities"
           body-path: ${{ runner.temp }}/body.md
           commit-message: |
@@ -456,7 +614,7 @@ jobs:
             "lockfiles control — no PR opened. Base-image fixes reported above arrive" \
             "with the next rebuild of :dev on their own." >> "$GITHUB_STEP_SUMMARY"
 
-      # A PR outlives its finding once main gets those fixes another way — every
+      # A PR outlives its finding once dev gets those fixes another way — every
       # merge rebuilds :dev off a fresh base. Gated on both scans succeeding: a
       # failed ecosystem reports no fixes, and that silence must not close the PR.
       - name: Close a PR that has nothing left to fix
@@ -466,16 +624,16 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          number=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main \
+          number=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base "$BASE_BRANCH" \
             --head "$PR_BRANCH" --json number --jq '.[0].number // empty')
           if [ -z "$number" ]; then
             exit 0
           fi
           run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           comment="Today's scan finds no vulnerability that updating the lockfiles would "
-          comment+="fix: main's published \`:dev\` images already carry everything this "
+          comment+="fix: the published \`:dev\` images already carry everything this "
           comment+="branch proposed, since every merge rebuilds them off a fresh base. "
           comment+="Closing automatically — the next scan that does find one opens a fresh "
-          comment+="PR off current main. Details in [run ${GITHUB_RUN_ID}](${run_url})."
+          comment+="PR off current ${BASE_BRANCH}. Details in [run ${GITHUB_RUN_ID}](${run_url})."
           gh pr close "$number" --repo "$GITHUB_REPOSITORY" --delete-branch --comment "$comment"
           echo "Closed #$number — nothing left for it to fix." >> "$GITHUB_STEP_SUMMARY"

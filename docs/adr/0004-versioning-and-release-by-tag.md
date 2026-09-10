@@ -6,14 +6,17 @@
   **amended 2026-08-19**: the release set is decided against the index rather than a git
   diff, and the closure-train rule is narrowed to bumped dependencies (see below) —
   **amended 2026-08-25**: `ghga-arcticfreeze` and `ghga-jsonsubschema` named in the member
-  list, which had omitted them (see below) — **amended 2026-09-01**: pre-release cuts move
-  to `dev` and the branch gate becomes per-lane, following
-  [ADR-0020](0020-branching-strategy.md) — **amended 2026-09-01**: a member-named tag
-  releases that member alone; sweeping the whole index gap moves to the reserved
-  `packages` tag (see below)
+  list, which had omitted them (see below) — **amended 2026-09-01**: pre-release cuts move to
+  `dev` and the branch gate becomes per-lane, following
+  [ADR-0020](0020-branching-strategy.md) (see below) — **amended 2026-09-01**: a member-named
+  tag releases that member alone; sweeping the whole index gap moves to the reserved
+  `packages` tag (see below) — **amended 2026-09-08**: the per-lane branches are spelled out,
+  and the PyPI lane is confirmed as moving in lockstep with the platform release rather than
+  on an independent cadence (see below)
 - **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18 / 2026-08-19 / 2026-08-25 / 2026-09-01
-  / 2026-09-02
-- **Deciders:** Leon Kuchenbecker
+  / 2026-09-02 / 2026-09-08
+- **Deciders:** Leon Kuchenbecker; Byron Himes (2026-09-08 amendment, as
+  [ADR-0020](0020-branching-strategy.md)'s decider)
 
 ## Context
 
@@ -57,11 +60,37 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   - OCI labels `org.opencontainers.image.version` / `.revision` and the
     `GHGA_PLATFORM_VERSION` env var carry the version and commit.
 - The release workflow **verifies rather than re-tests**: it asserts the tagged commit is on
-  the branch its lane releases from, with a green CI run (ADR-0009's gates are the evidence;
+  a branch its lane releases from, with a green CI run (ADR-0009's gates are the evidence;
   the tag snapshots it). **The branch half of that check is per-lane** (amended 2026-09-01):
-  final platform tags and PyPI tags are cut on `main`, pre-release platform tags on `dev`
-  ([ADR-0020](0020-branching-strategy.md)), so it runs after lane routing instead of before
-  it. The CI-is-green half does not care about branches and is unchanged.
+  it runs after lane routing instead of before it
+  ([ADR-0020](0020-branching-strategy.md)). **Each lane names exactly one branch**
+  (amended 2026-09-08, on implementation):
+  - `ghga/X.Y.Z` — **`main` only**. This is the one guarantee `main` exists to give, and the
+    only one worth failing a release over: production releases come from the released state.
+  - `ghga/X.Y.Z-rc.N` — **`dev` only**. A candidate stages integrated-but-unreleased work,
+    which is exactly what `dev` holds. Hotfixes are the case this rule would otherwise
+    strand, since they never touch `dev` — resolved by ADR-0020 deciding that hotfixes get
+    no candidate and are released from `main` in one step, so an rc tag on `main` is a
+    mistake worth rejecting.
+  - `name/x.y.z` and `packages/x.y.z` — **`main` only**. Both are PyPI-lane tags, so the same
+    rule covers the member-named tag and the reserved sweep tag (amended 2026-09-01) without a
+    special case. This does couple component releases to platform
+    releases: a version bump lands in `dev` and only reaches `main` at the release merge, so
+    `hexkit/8.7.0` cannot be tagged until the next platform release. Implementing the gate
+    raised that as a conflict with this ADR's independent component lifecycle, and accepting
+    the tag on `dev` as well was considered. **Decided 2026-09-08: keep the lockstep.** One
+    cadence is simpler to reason about than two, and the independent lifecycle is worth less
+    in practice than the simplification, now that the platform release is the unit anybody
+    deploys. Revisit if a component ever needs to ship on its own schedule.
+
+  What the branch half proves is that the tagged commit sits on a protected, reviewed,
+  CI-gated branch, and on the *right* one of the two. It asks whether the commit was ever
+  that branch's tip (its first-parent chain), not whether the branch can reach it — the two
+  differ as soon as `main` and `dev` merge into each other, which
+  [ADR-0020](0020-branching-strategy.md)'s flow does in both directions. The CI-is-green half does
+  not care about branches and is unchanged. The branch check also runs **before any repo code
+  executes** in the release job, so a tag on an unreviewed commit cannot reach a `python3
+  scripts/...` at all.
 - `ghga-datasteward-kit` is distributed **run-from-repo**: stewards `git clone -b ghga/X.Y.Z`
   and `uv run ghga-datasteward-kit` — `uv.lock` at the tag reproduces the exact tested
   combination. No PyPI publishing from the monorepo; requires only `git` + `uv`.
@@ -109,8 +138,12 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 - **The tag chooses how much of that gap closes** (amended 2026-09-01). `release.yaml`'s
   `resolve` derives a *mode* from the tag name and forwards it:
   - **`name/x.y.z` — targeted.** That member alone, whatever else the index is behind on.
-    This is the common case: releasing one library should not drag along someone's
-    unrelated pending work.
+    It exists so releasing one library does not drag along someone's unrelated pending
+    work. Note this is about *scope*, not *timing*: since the branch gate cuts PyPI tags
+    from `main` ([ADR-0020](0020-branching-strategy.md)), a targeted release still waits
+    for the platform release that carries its version bump over — so it is currently the
+    narrow option rather than the frequent one. The lockstep is deliberate and revisitable;
+    see the per-lane branch decision above.
   - **`packages/x.y.z` — sweep.** The reserved name is not a member, so it selects
     nothing and the plan takes the whole gap, dependencies first. The version component is
     a label; nothing checks it against a declared version, because there is none to check.
@@ -287,6 +320,12 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
 
 - "What version is auth-service?" stops having its own answer: it's the auth-service *of
   platform X.Y.Z*. Per-service version-bump rituals end at cutover.
+- **A PyPI release waits for the next platform release** (decided 2026-09-08). Because
+  `name/x.y.z` is cut on `main` and version bumps land in `dev`, a component's version bump
+  reaches a taggable commit only at the release merge. The independent component lifecycle
+  above is therefore independent in *versioning* but not in *timing*. Accepted as a
+  simplification: what is on PyPI stays derivable from `main`'s tree, and there is one
+  release cadence to reason about instead of two.
 - One number describes a deployment; upgrades, rollbacks, and support conversations are
   one-dimensional. Adjacent-release compatibility (rolling upgrades) replaces arbitrary-skew
   compatibility.

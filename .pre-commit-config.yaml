@@ -54,8 +54,10 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch
-        # this repo has only `main`; releases are tags, not branches (ADR-0004).
-        args: [--branch, main]
+        # both long-lived branches (ADR-0020): `main` is the latest release, `dev` is the
+        # integration branch. Everything else reaches them by pull request; releases are
+        # tags, not branches (ADR-0004).
+        args: [--branch, main, --branch, dev]
       # NOT taken from the template: pretty-format-json. It rewrites 39 tracked files,
       # among them angular.json and src/mocks/example-metadata.json, which Prettier owns
       # and formats differently. check-json above still guarantees validity.

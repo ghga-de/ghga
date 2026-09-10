@@ -1,11 +1,15 @@
-# Dev images — every merge to main rebuilds the mono Python image and the front-end
-# image and publishes them to the interim registry (release.yaml's REGISTRY) under the
-# mutable :dev tag.
+# Dev images — every merge to `dev` rebuilds the mono Python image and the front-end
+# image and publishes them to the scratch registry ($REGISTRY below, ghcr.io/ghga-de/ghga)
+# under the mutable :dev tag. That is deliberately NOT release.yaml's REGISTRY, which is
+# docker.io/ghga, the production target (ADR-0004).
 #
 # :dev is NOT a release artifact. The mono variant packs every Python member into one
-# venv (docker/Dockerfile VARIANT=mono — demo/CI only), and the tag simply tracks main.
-# Its consumers are the daily security-scan workflow (which pulls these images as its
-# published-exposure baseline) and anyone wanting "latest main" without a release.
+# venv (docker/Dockerfile VARIANT=mono — demo/CI only), and the tag simply tracks the
+# `dev` branch — integration state, which is what it is named for. `main` deliberately
+# does not feed it: `main` only moves at release time (ADR-0020) and its artifacts are
+# the version-stamped release images. Consumers are the daily security-scan workflow
+# (which pulls these images as its published-exposure baseline) and anyone wanting
+# "latest integrated" without a release.
 # Release images remain per-member and version-stamped (release.yaml, ADR-0004).
 #
 # Publishing is deliberately independent of ci.yaml: merges are already gated by PR CI,
@@ -26,7 +30,7 @@ name: dev-images
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
 
 # Newest merge wins the tag; a superseded in-flight build has nothing to offer.
 concurrency:

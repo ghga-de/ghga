@@ -14,16 +14,21 @@
   Angular front end — with a single, harmonised toolchain built around **`uv`**.
 - **Retire the `microservice-repository-template`** and its cross-repo `.template/` file-sync
   mechanism. One toolchain, defined once at the repo root, replaces N synchronised copies.
-- **HEAD of `main` is always fully integrated.** A single `uv.lock` and source-level coupling
-  of internal libraries make this true by construction (see §3.2).
+- **HEAD of the integration branch is always fully integrated.** A single `uv.lock` and
+  source-level coupling of internal libraries make this true by construction (see §3.2).
+  That branch is `dev` since [ADR-0020](../adr/0020-branching-strategy.md); `main` carries the
+  latest release.
 - **Helm charts are a product of this repo.** `helm install ghga` yields a working GHGA,
   including a local AAI (Life Science Login replacement).
 - **Integration testing on Kubernetes** (kind in CI; a host-level cluster locally — no
   DinD/DooD in the devcontainer, ADR-0017) using the same charts, replacing the
   docker-compose test bed.
-- **CI/CD keeps `main` green** by running the integration tests on proposed changes.
-- **Independent component lifecycle** preserved: tagging `name/version` releases just that
-  component.
+- **CI/CD keeps `dev` green** by running the integration tests on proposed changes
+  ([ADR-0020](../adr/0020-branching-strategy.md); `main` moves only at release time).
+- **Independent component lifecycle** preserved *in versioning*: tagging `name/version`
+  releases just that component, and nothing else. Not in *timing* — the tag is cut on `main`,
+  so a component's release rides the platform cadence rather than running ahead of it
+  ([ADR-0004](../adr/0004-versioning-and-release-by-tag.md), decided 2026-09-08).
 
 ### Non-goals
 - Replacing the application architecture itself (hexagonal services, Kafka event bus,
