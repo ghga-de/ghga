@@ -18,7 +18,10 @@
 
 import os
 import re
+import shutil
 import subprocess
+import sys
+from importlib.util import find_spec
 from pathlib import Path
 from time import sleep
 from typing import Any, NamedTuple
@@ -53,7 +56,8 @@ from fixtures import (  # noqa: RUF100
     state_manager_fixture,
     vault_fixture,
 )
-from pytest import StashKey, fixture, hookimpl, mark
+from pytest import ExitCode, StashKey, fixture, hookimpl, mark
+from pytest import exit as pytest_exit
 from pytest_bdd import (  # noqa: RUF100
     given,
     scenarios,
@@ -143,6 +147,51 @@ def playwright_trace(request):
             tracing.stop_chunk(path=str(TRACE_DIR / f"{safe}.zip"))
         else:
             tracing.stop_chunk()  # no path => discarded
+
+
+# --- Workspace tools guard -----------------------------------------------------------
+# The suite imports ghga-datasteward-kit and shells out to it and to ghga-connector. All
+# of that has to be the workspace source under tools/, which `just testbed-install`
+# installs editable into the testbed venv; a PyPI release in its place would silently
+# be tested instead. Checked once before the first test, so a mix-up stops the run up
+# front rather than surfacing as a confusing failure halfway through it.
+WORKSPACE_TOOLS = Path(__file__).resolve().parents[2] / "tools"
+WORKSPACE_TOOL_PACKAGES = {
+    "ghga_datasteward_kit": "ghga-datasteward-kit",
+    "ghga_connector": "ghga-connector",
+}
+
+
+def find_non_workspace_tools() -> list[str]:
+    """Describe every tool the suite would use that is not the workspace source."""
+    problems = []
+    venv_bin = (Path(sys.prefix) / "bin").resolve()
+    for package, cli in WORKSPACE_TOOL_PACKAGES.items():
+        spec = find_spec(package)
+        origin = Path(spec.origin).resolve() if spec and spec.origin else None
+        if not (origin and origin.is_relative_to(WORKSPACE_TOOLS)):
+            problems.append(f"{package} is imported from {origin or 'nowhere'}")
+        # a CLI runs whatever the interpreter next to it imports, which is checked
+        # above, so it only has to be the one from this venv
+        on_path = shutil.which(cli)
+        if not (on_path and Path(on_path).parent.resolve() == venv_bin):
+            problems.append(
+                f"{cli} on PATH is {on_path or 'missing'}, not {venv_bin / cli}"
+            )
+    return problems
+
+
+@fixture(scope="session", autouse=True)
+def workspace_tools_guard():
+    """Stop the run before the first test unless the tools are the workspace source."""
+    problems = find_non_workspace_tools()
+    if problems:
+        pytest_exit(
+            "the suite must run the workspace's own tools (tools/):\n  "
+            + "\n  ".join(problems)
+            + "\nreinstall with `just testbed-install` and run the suite with `just testbed`",
+            returncode=ExitCode.USAGE_ERROR,
+        )
 
 
 class UserData(NamedTuple):

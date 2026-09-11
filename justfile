@@ -684,12 +684,26 @@ testbed-up profile="": (demo-load profile)
       --kube-context kind-ghga --wait --timeout 15m
     just wait-ready
 
-# One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
+# The suite imports ghga-datasteward-kit and runs it and ghga-connector as CLIs, so both
+# have to be the workspace source, never a PyPI release: they are exported from uv.lock
+# and installed editable, with the lock's versions of everything under them. The
+# suite's own requirements are resolved in the same step, so a pin there that disagrees
+# with uv.lock fails the install instead of quietly replacing the workspace's version;
+# the suite re-checks the result before its first test (steps/conftest.py).
 # The UI phase drives a real browser, so the matching chromium build comes with it
 # (playwright pins the build to the library version; a system chromium won't do).
+# One-time: virtualenv for the testbed suite (not a workspace member; tools from uv.lock).
 testbed-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
     uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
-    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
+    # uv exports the workspace paths relative to the root; made absolute so the file
+    # means the same whichever directory the installer resolves them against
+    uv export --frozen --no-hashes --no-dev --no-header \
+      --package ghga-datasteward-kit --package ghga-connector \
+      | sed "s|^-e \./|-e $PWD/|" > .venv-testbed/workspace-tools.txt
+    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install \
+      -r .venv-testbed/workspace-tools.txt -r testbed/requirements.txt
     .venv-testbed/bin/playwright install chromium
 
 # Open a Playwright trace from a traced test-bed run (`TB_TRACE=1 just testbed -m frontend`).
@@ -770,11 +784,9 @@ testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
     # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
-    # on PATH. Both are workspace members (tools/), so the gate has to exercise our
-    # build of them — testbed/requirements.txt also pins released versions from PyPI
-    # into .venv-testbed, and those would silently be tested instead. Locally this was
-    # only ever right by accident: the devcontainer happens to put .venv/bin on PATH.
-    export PATH="$PWD/.venv/bin:$PATH"
+    # on PATH. The testbed venv holds them as editable workspace installs (see
+    # testbed-install), so the CLIs are the very install the suite also imports.
+    export PATH="$PWD/.venv-testbed/bin:$PATH"
     K="kubectl --context kind-ghga"
     secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
     export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
