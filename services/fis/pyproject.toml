@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fis"
-version = "12.0.0"
+version = "12.0.1"
 description = "File Ingest Service - A service to liaise between Central File Services and Data Hubs for file inspection."
 readme = "README.md"
 authors = [
@@ -13,7 +13,7 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "typer >= 0.25",
-    "ghga-service-commons[api, auth, crypt, transports] >= 7.0.1",
+    "ghga-service-commons[api, auth, crypt, transports] >= 9.0",
     "ghga-event-schemas >= 13.0.0",
     "hexkit[akafka, s3, mongodb, opentelemetry] >= 8.3.0",
     "crypt4gh >= 1.7",

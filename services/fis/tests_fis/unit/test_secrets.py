@@ -24,12 +24,12 @@ from pydantic import HttpUrl, SecretBytes
 
 from fis.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
 from fis.adapters.outbound.secrets import SecretsClient, SecretsClientConfig
-from tests_fis.fixtures.ekss_api import (
-    EkssApiMock,
+from ghga_service_commons.api.mock_api import (
     ResponseHandler,
     fail_to_connect,
     respond,
 )
+from tests_fis.fixtures.ekss_api import EkssApiMock
 
 pytestmark = pytest.mark.asyncio
 
