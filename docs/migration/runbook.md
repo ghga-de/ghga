@@ -196,10 +196,10 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
       `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`,
       `epic-docs`, `adrs`, `file-services-backend` (all six of its services at once),
       `hexkit`, `notification-service`, `notification-orchestration-service`,
-      `dataset-information-service`, `well-known-value-service` and `auth-km-jobs` are
-      archived and their rows removed from `repos.tsv` — see the "Retired" block there for
-      the last commit merged from each. Verify a repo is fully synced (§6) before dropping
-      its row.
+      `dataset-information-service`, `well-known-value-service`, `auth-km-jobs`,
+      `dlq-service` and `reverse-transpiler-service` are archived and their rows removed
+      from `repos.tsv` — see the "Retired" block there for the last commit merged from
+      each. Verify a repo is fully synced (§6) before dropping its row.
       `hexkit` additionally published a documentation site, so its archived Pages site was
       replaced with redirects to `ghga-de.github.io/ghga/hexkit`
       ([ADR-0021](../adr/0021-docs-lane-github-pages.md)) before archiving — an archived repo

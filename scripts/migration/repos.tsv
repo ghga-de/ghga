@@ -12,7 +12,8 @@
 # Excluded on purpose:
 #   datahub-test-bed                  -> different audience (data hubs verifying their own S3); stays its own repo
 #   microservice-repository-template  -> RETIRED; its conventions become root scaffolding, not imported
-#   upload-orchestration-service      -> DEPRECATED upstream; never imported
+#   upload-orchestration-service      -> DEPRECATED upstream; never imported. ARCHIVED 2026-09-09,
+#                                        so nothing here tracks it and nothing ever will.
 #   em-transformation-service         -> imported as the template scaffold, REMOVED again 2026-08: upstream
 #                                        builds against metldata 5.x (the schemapack line, released from the
 #                                        `schemapack` branch), which cannot co-resolve with the workspace's
@@ -91,7 +92,21 @@
 #                             expected Vault and MongoDB already running on localhost), the
 #                             `run` -> `auth-km-jobs` console-script rename, and the ADR-0014
 #                             capability markers.
-# Twelve archived tips are deliberately NOT merged — each is an archival/deprecation notice
+#   dlq-service            -> services/dlq-service            42d67fd "Migrate to httpx2 (#20)" 2026-07-31, 4.1.1
+#                             Every PR but one was merged: #19 "Add script to republish dead
+#                             letters" (feature/dlq-script, 2026-07-21) was closed UNMERGED
+#                             upstream, and feature/backport_dhi is a stray branch with no PR
+#                             (the DHI swap landed as #17), so neither was ever in scope for
+#                             the sync.
+#   reverse-transpiler-service -> services/reverse-transpiler-service
+#                             174edf8 "Remove error log (GSI-2433) (#10)" 2026-06-23, 3.0.1
+#                             All ten PRs were merged; feature/backport_dhi (a 2.3.0 backport
+#                             superseded by #9's 3.0.0 DHI swap) and fix/update_dependencies
+#                             (#5, merged as a squash) are stale leftovers, never in scope.
+#                             services/reverse-transpiler-service additionally carries
+#                             monorepo-only work never upstreamed: a writable /tmp for
+#                             spreadsheet serialization (431690a2, chart values only).
+# Fourteen archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
@@ -99,12 +114,16 @@
 # partial rows would have filtered it to empty in any case), hexkit 245ca78 "Replace the
 # docs site with redirects to the monorepo (#253)", notification-service 00ca3db1,
 # notification-orchestration-service 285dc85f, dataset-information-service 5afbde4,
-# well-known-value-service 282b4be (all four "Add deprecation note") and auth-km-jobs
-# f27562b "Add retirement note (#22)". Those last six are the only tips that would NOT
-# have filtered to empty: hexkit's is mostly redirect tooling on paths the import drops
-# (.github/, scripts/, .template/, .gitignore), the next four touch nothing else but
-# .readme_generation/ and .template/, and auth-km-jobs' touches nothing but the README,
-# yet each also adds a "this repo has moved" banner to the README, which is kept — an
+# well-known-value-service 282b4be (all four "Add deprecation note"), auth-km-jobs
+# f27562b "Add retirement note (#22)", dlq-service 4646433 "Add deprecation note (#21)"
+# and reverse-transpiler-service b428f91 "Add deprecation note (#11)". Those last eight
+# are the only tips that would NOT have filtered to empty: hexkit's is mostly redirect
+# tooling on paths the import drops (.github/, scripts/, .template/, .gitignore), the
+# next four touch nothing else but .readme_generation/ and .template/, auth-km-jobs' and
+# dlq-service's touch nothing but the README, and reverse-transpiler-service's bundles a
+# template refresh whose kept-path parts the monorepo has already replaced centrally (the
+# per-repo [tool.ruff] tables and the per-member .gitignore, dropped in 9ddc8284) — yet
+# each also adds a "this repo has moved" banner to the README, which is kept: an
 # upstream-only notice, wrong to carry here, where that README is the package's own.
 # adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
 # (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
@@ -122,9 +141,7 @@ lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
 lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Standalone services
-service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
-service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
