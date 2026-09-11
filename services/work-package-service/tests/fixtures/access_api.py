@@ -13,45 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""A mock of the access API, built on `MockedApi`."""
 
-"""A mock of the access API, built on the service commons `MockRouter`."""
-
-from collections.abc import Callable
-from json import dumps as json_dumps
-from typing import Any
-
-import httpx2
-
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.api.mock_api import MockedApi, endpoint, respond
 from wps.adapters.outbound.http import AccessCheckConfig
 
-__all__ = ["AccessApiMock", "ResponseHandler", "respond"]
+__all__ = ["AccessApiMock"]
 
-ResponseHandler = Callable[[httpx2.Request], httpx2.Response]
-
-_NO_BODY = object()  # marker distinguishing "no body" from a JSON body of `null`
-
-
-def respond(status_code: int = 200, *, json: Any = _NO_BODY) -> ResponseHandler:
-    """Make a handler that always answers with the same status code and JSON body.
-
-    When `json` is not passed at all, the response carries no body.
-    """
-
-    def handler(request: httpx2.Request) -> httpx2.Response:
-        if json is _NO_BODY:
-            return httpx2.Response(status_code)
-        return httpx2.Response(
-            status_code,
-            content=json_dumps(json),
-            headers={"Content-Type": "application/json"},
-        )
-
-    return handler
+_DOWNLOAD_PATH = "/download-access/users/{user_id}"
+_UPLOAD_PATH = "/upload-access/users/{user_id}"
 
 
-class AccessApiMock:
-    """A mock of the access API endpoints that the work package service talks to.
+class AccessApiMock(MockedApi):
+    """A mock of the access API endpoints that the WPS talks to.
 
     Each endpoint answers with the handler currently assigned to
     `on_check_download_access`, `on_get_accessible_datasets`, `on_check_upload_access`
@@ -63,57 +37,23 @@ class AccessApiMock:
     request to an unregistered path raises instead of reaching the network.
     """
 
+    on_check_download_access = endpoint(
+        "GET", f"{_DOWNLOAD_PATH}/datasets/{{dataset_id}}", respond(json=None)
+    )
+    on_get_accessible_datasets = endpoint(
+        "GET", f"{_DOWNLOAD_PATH}/datasets", respond(json={})
+    )
+    on_check_upload_access = endpoint(
+        "GET", f"{_UPLOAD_PATH}/boxes/{{box_id}}", respond(json=None)
+    )
+    on_get_accessible_boxes = endpoint("GET", f"{_UPLOAD_PATH}/boxes", respond(json={}))
+
     def __init__(self, *, config: AccessCheckConfig) -> None:
-        base_path = httpx2.URL(str(config.access_url)).path.rstrip("/")
-        download_path = f"{base_path}/download-access/users/{{user_id}}"
-        upload_path = f"{base_path}/upload-access/users/{{user_id}}"
-
-        self.requests: list[httpx2.Request] = []
-        self.on_check_download_access: ResponseHandler = respond(json=None)
-        self.on_get_accessible_datasets: ResponseHandler = respond(json={})
-        self.on_check_upload_access: ResponseHandler = respond(json=None)
-        self.on_get_accessible_boxes: ResponseHandler = respond(json={})
-
-        router: MockRouter = MockRouter()
-
-        @router.get(f"{download_path}/datasets/{{dataset_id}}")
-        def check_download_access(
-            user_id: str, dataset_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            return self._handle(request, self.on_check_download_access)
-
-        @router.get(f"{download_path}/datasets")
-        def get_accessible_datasets(
-            user_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            return self._handle(request, self.on_get_accessible_datasets)
-
-        @router.get(f"{upload_path}/boxes/{{box_id}}")
-        def check_upload_access(
-            user_id: str, box_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            return self._handle(request, self.on_check_upload_access)
-
-        @router.get(f"{upload_path}/boxes")
-        def get_accessible_boxes(
-            user_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            return self._handle(request, self.on_get_accessible_boxes)
-
-        self._router = router
-
-    def _handle(
-        self, request: httpx2.Request, handler: ResponseHandler
-    ) -> httpx2.Response:
-        """Record the request and let the currently assigned handler answer it."""
-        self.requests.append(request)
-        return handler(request)
+        """Serve the access API where the config says it is."""
+        super().__init__(str(config.access_url))
 
     @property
     def last_url(self) -> str:
         """The URL of the most recent request that reached the mock."""
-        return str(self.requests[-1].url)
-
-    def as_transport(self) -> httpx2.AsyncBaseTransport:
-        """Return a transport answering access API requests with this mock."""
-        return self._router.as_transport()
+        assert self.last_request is not None
+        return str(self.last_request.url)
