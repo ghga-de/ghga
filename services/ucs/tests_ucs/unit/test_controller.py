@@ -1437,6 +1437,35 @@ async def test_process_interrogation_failure_happy(rig: JointRig):
     )
 
 
+async def test_process_file_deletion_requested_with_failed_interrogation_files(
+    rig: JointRig,
+):
+    """Verify that `process_file_deletion()` doesn't skip failed-interrogation files."""
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    file_upload = rig.file_upload_dao.latest
+    await _complete_file_upload(file_upload=file_upload, rig=rig)
+    await _fail_interrogation(file_id=file_id, rig=rig)
+
+    # First, quickly check that the S3 object exists
+    bucket_id, storage = rig.object_storages.for_alias(file_upload.storage_alias)
+    assert await storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(file_upload.object_id)
+    )
+    await rig.controller.process_file_deletion_requested(file_id=file_id)
+
+    # Now verify that the object is gone
+    assert not await storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(file_upload.object_id)
+    )
+
+
 async def test_initiate_upload_after_failed(rig: JointRig):
     """Re-initiating an upload with the same alias is allowed when the existing
     FileUpload is in 'failed' state.
