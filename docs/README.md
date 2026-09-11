@@ -33,7 +33,8 @@ Status mirrors each ADR's own `Status:` line; the last column records supersessi
 cross-ADR amendment, which is how several of these are meant to be read together. "Last
 amended" tracks decisions that moved, not wording that was clarified — an ADR edited only to
 say which branch a sentence now names keeps its previous date, and gains no `Status:` entry to
-mirror here.
+mirror here. New ADRs carry no `Deciders` line — a decision here is the team's, and git already
+records who wrote and committed the file; the older ones keep theirs.
 
 | # | Decision | Status | Supersedes / superseded by |
 |---|---|---|---|
@@ -56,8 +57,9 @@ mirror here.
 | [0017](adr/0017-local-integration-host-cluster.md) | Local integration on a host-level cluster; no DinD/DooD in the devcontainer | Accepted · last amended 2026-08-11 | amends [0009](adr/0009-testbed-kind-minikube.md) |
 | [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
 | [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
-| [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch | Accepted · fully implemented 2026-09-11 | amends [0004](adr/0004-versioning-and-release-by-tag.md), [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) |
+| [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch; pull requests are squashed | Accepted · fully implemented 2026-09-11 · last amended 2026-09-14 | amends [0004](adr/0004-versioning-and-release-by-tag.md), [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) · amended by [0022](adr/0022-naming-branches-prs-commits.md) |
 | [0021](adr/0021-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | Accepted · implemented 2026-09-09 | deviates from [0014](adr/0014-capability-markers-and-placement.md) on marker vs. config-file discovery |
+| [0022](adr/0022-naming-branches-prs-commits.md) | Branch, PR title and squash commit from one grammar; Conventional Commits | Accepted | amends [0020](adr/0020-branching-strategy.md) |
 
 ## Phased roadmap (high level)
 

@@ -59,6 +59,7 @@ is always a released state.
 
 - **Cut feature branches from `dev` and merge them back into `dev`** via pull request. That is
   the default for everything; `just affected` compares against `origin/dev` for the same reason.
+- **Pull requests are squashed** — one pull request, one commit on `dev`. Rebase merges are off.
 - **Hotfixes are the exception:** branch from `main`, merge back into `main`, release, then
   merge `main` back into `dev` so the fix survives the next release.
 - **Release:** `dev` is merged into `main` with a merge commit (never squashed or rebased —
@@ -74,6 +75,47 @@ of the branch's first-parent chain, so a back-merge does not launder a tag onto 
 | `ghga/X.Y.Z` | `main` | platform release |
 | `ghga/X.Y.Z-rc.N` | `dev` | release candidate — hotfixes get none, so this is `dev`-only |
 | `name/x.y.z`, `packages/x.y.z` | `main` | PyPI, deliberately in lockstep with the platform release |
+
+### Names: branches, PRs, commits
+
+A change carries three names, all derived from one grammar
+([ADR-0022](adr/0022-naming-branches-prs-commits.md)):
+
+| | in a stack | solo |
+|---|---|---|
+| branch | `<stack>/<kind>/<description>` | `<kind>/<description>` |
+| PR title | `[<stack>] <Description> (<ISSUE>)` | `<Description> (<ISSUE>)` |
+| commit | `<type>(<stack>): <description> (#<PR>)` | `<type>: <description> (#<PR>)` |
+
+A **stack** is a chain of PRs, each based on the previous one and rooted at `dev`. GitHub does
+not model that, so the stack name — one or two words, naming the stack and not the member —
+is what holds it together in the PR list. Branch names are lowercase kebab-case, PR titles are
+prose. The YouTrack key goes in front of the description, or in front of the stack name when
+the issue covers the whole stack: `upload/feat/GSI-1234-add-ucs-endpoints` versus
+`GSI-1234-upload/feat/add-ucs-endpoints`. Both are titled `[upload] Add UCS endpoints
+(GSI-1234)`.
+
+| kind | for | cut from | commit type |
+|---|---|---|---|
+| `feat` | new functionality | `dev` | `feat` |
+| `fix` | bug fix on unreleased work | `dev` | `fix` |
+| `hotfix` | fix against the latest release | `main` | `fix` |
+| `docs` | documentation, ADRs, READMEs | `dev` | `docs` |
+| `refactor` | behaviour-preserving restructuring | `dev` | `refactor` |
+| `test` | test bed, test tooling, test-only changes | `dev` | `test` |
+| `chore` | tooling, CI, dependencies, charts — and anything not clearly one of the above | `dev` | `chore` |
+
+`hotfix` is the only kind that names its base branch; the rest are labels. There is deliberately
+no `release` kind — a release is a merge plus a tag.
+
+**At merge time** the commit message is written by hand, because neither prefill is right:
+subject imperative and lower case, 52 characters where it fits and 72 at the outside, counting
+the ` (#<PR>)` GitHub appends; body is the PR description cut to three to five bullets, wrapped
+at 72. Mark a breaking change `feat(upload)!:` with a `BREAKING CHANGE:` footer. Do not repeat
+the YouTrack key — `(#<PR>)` leads to it.
+
+`renovate/*` and `automated/*` are owned by Renovate and the nightly security scan. Nothing
+enforces the convention, and branches already in flight are not renamed.
 
 ## Versioning & releases
 

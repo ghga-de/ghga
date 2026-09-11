@@ -2,7 +2,6 @@
 
 - **Status:** Proposed | Accepted | Superseded by ADR-XXXX
 - **Date:** YYYY-MM-DD
-- **Deciders:** <names>
 
 ## Context
 What is the situation and the forces at play? Why does a decision need to be made now?
