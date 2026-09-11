@@ -222,7 +222,9 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
         )
 
     # Now delete the file upload
-    await controller.remove_file_upload(box_id=box_id, file_id=file_id)
+    await controller.remove_file_upload(
+        box_id=box_id, file_id=file_id, require_unlocked=True
+    )
     assert not await object_storage.does_object_exist(
         bucket_id=bucket_id, object_id=object_id
     )
@@ -661,7 +663,7 @@ async def test_delete_file_upload_when_box_missing(rig: JointRig):
     # Should raise BoxNotFoundError
     with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
         await controller.remove_file_upload(
-            box_id=non_existent_box_id, file_id=fake_file_id
+            box_id=non_existent_box_id, file_id=fake_file_id, require_unlocked=True
         )
 
     # Verify the exception contains the correct box_id
@@ -698,7 +700,9 @@ async def test_delete_file_upload_when_box_locked(rig: JointRig):
 
     # Try to delete the FileUpload from the locked box - should raise BoxStateError
     with pytest.raises(UploadControllerPort.BoxStateError) as exc_info:
-        await controller.remove_file_upload(box_id=box_id, file_id=file_id)
+        await controller.remove_file_upload(
+            box_id=box_id, file_id=file_id, require_unlocked=True
+        )
 
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
@@ -749,7 +753,9 @@ async def test_remove_file_upload_skips_s3_for_terminal_states(
     )
 
     # Call remove_file_upload() and verify that the S3Client's delete method wasn't called
-    await rig.controller.remove_file_upload(box_id=box_id, file_id=file_upload.id)
+    await rig.controller.remove_file_upload(
+        box_id=box_id, file_id=file_upload.id, require_unlocked=True
+    )
 
     if state in ["inbox", "init"]:
         assert s3_calls == (
@@ -772,7 +778,9 @@ async def test_remove_file_upload_when_upload_missing(rig: JointRig):
 
     # Try to delete a FileUpload that doesn't exist - should raise FileUploadNotFound
     with pytest.raises(UploadControllerPort.FileUploadNotFound):
-        await rig.controller.remove_file_upload(box_id=box_id, file_id=uuid4())
+        await rig.controller.remove_file_upload(
+            box_id=box_id, file_id=uuid4(), require_unlocked=True
+        )
 
 
 async def test_delete_file_upload_with_s3_error(rig: JointRig):
@@ -801,7 +809,9 @@ async def test_delete_file_upload_with_s3_error(rig: JointRig):
 
     storage.abort_multipart_upload = do_error
     with pytest.raises(UploadControllerPort.UploadAbortError) as exc_info:
-        await controller.remove_file_upload(box_id=box_id, file_id=file_id)
+        await controller.remove_file_upload(
+            box_id=box_id, file_id=file_id, require_unlocked=True
+        )
 
     # Verify the exception contains the S3 upload ID
     s3_upload_id = rig.file_upload_dao.latest.s3_upload_id
@@ -841,7 +851,7 @@ async def test_lock_missing_box(rig: JointRig):
 
 async def test_lock_box_with_incomplete_upload(rig: JointRig):
     """Test error handling for the scenario where the user tries to lock a box
-    for which incomplete FileUpload(s) exist.
+    for which incomplete FileUpload(s) or FileUploads that failed interrogation exist.
     """
     controller = rig.controller
     file_upload_box_dao = rig.file_upload_box_dao
@@ -864,11 +874,11 @@ async def test_lock_box_with_incomplete_upload(rig: JointRig):
         part_size=PART_SIZE,
     )
     # Attempt to lock the box while the upload is still incomplete
-    with pytest.raises(UploadControllerPort.IncompleteUploadsError) as exc_info:
+    with pytest.raises(UploadControllerPort.IncompleteOrFailedError) as exc_info:
         await controller.lock_file_upload_box(box_id=box_id, version=0)
 
     # Verify the exception carries the right IDs and aliases (sorted by alias)
-    assert exc_info.value.file_ids == [
+    assert exc_info.value.incomplete_uploads == [
         (file_id1, "test_file"),
         (file_id2, "test_file2"),
     ]
@@ -889,11 +899,102 @@ async def test_lock_box_ignores_terminal_uploads(
     box_id = await rig.create_default_box()
 
     file_upload = make_file_upload(state=terminal_state)
+    file_upload.decrypted_sha256 = None
     file_upload.box_id = box_id
     await rig.file_upload_dao.insert(file_upload)
 
     await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
     assert rig.file_upload_box_dao.latest.state == "locked"
+
+
+async def test_lock_box_force(rig: JointRig):
+    """Test that setting the force parameter allows the box to be locked even
+    when there are ongoing uploads and uploads that failed interrogation.
+    Also verify that force-locking doesn't abort ongoing uploads.
+    """
+    box_id = await rig.create_default_box()
+
+    # Create an unfinished upload
+    ongoing_upload = make_file_upload(state="init")
+    ongoing_upload.box_id = box_id
+    await rig.file_upload_dao.insert(ongoing_upload)
+
+    # Create an upload that failed interrogation
+    failed_upload = make_file_upload(state="failed")
+    failed_upload.decrypted_sha256 = "a1b2c3"
+    failed_upload.box_id = box_id
+    await rig.file_upload_dao.insert(failed_upload)
+
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0, force=True)
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+    # Verify that the states are the same (mostly affects 'ongoing' but check both anyway)
+    assert (await rig.file_upload_dao.get_by_id(ongoing_upload.id)).state == "init"
+    assert (await rig.file_upload_dao.get_by_id(failed_upload.id)).state == "failed"
+
+
+@pytest.mark.parametrize("blocking_state", ["init", "inbox"])
+async def test_archive_box_with_incomplete_upload(
+    rig: JointRig, blocking_state: FileUploadState
+):
+    """Test error handling for the scenario where the user tries to archive a
+    box for which an incomplete FileUpload (still in 'init' or 'inbox') exists.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    file_upload = make_file_upload(state=blocking_state)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    with pytest.raises(UploadControllerPort.IncompleteOrFailedError) as exc_info:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+
+    assert exc_info.value.incomplete_uploads == [(file_upload.id, file_upload.alias)]
+    assert exc_info.value.need_attention == []
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+
+async def test_archive_box_with_failed_interrogation(rig: JointRig):
+    """Test error handling for the scenario where the user tries to archive a
+    box for which a FileUpload that failed interrogation (state 'failed' with
+    decrypted_sha256 set) exists. Such uploads need attention and must block
+    archiving even though they aren't still actively uploading.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    failed_upload = make_file_upload(state="failed")
+    failed_upload.decrypted_sha256 = "a1b2c3"
+    failed_upload.box_id = box_id
+    await rig.file_upload_dao.insert(failed_upload)
+
+    with pytest.raises(UploadControllerPort.IncompleteOrFailedError) as exc_info:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+
+    assert exc_info.value.incomplete_uploads == []
+    assert exc_info.value.need_attention == [(failed_upload.id, failed_upload.alias)]
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+
+@pytest.mark.parametrize("terminal_state", ["failed", "cancelled"])
+async def test_archive_box_ignores_terminal_uploads(
+    rig: JointRig, terminal_state: FileUploadState
+):
+    """Archiving must succeed when the only non-interrogated uploads are in a
+    terminal state (cancelled, or failed without having reached the decryption
+    step). Those uploads are no longer active and don't need attention.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+
+    file_upload = make_file_upload(state=terminal_state)
+    file_upload.decrypted_sha256 = None
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
+    await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+    assert rig.file_upload_box_dao.latest.state == "archived"
 
 
 async def test_complete_file_upload_when_box_missing(rig: JointRig):
@@ -934,6 +1035,44 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
 
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
+
+
+async def test_complete_file_upload_when_box_locked(rig: JointRig):
+    """Verify that we can complete FileUploads when the box is already locked.
+
+    This would be for the situation where a user has initiated uploads and then
+    decided to lock the box without waiting for them to finish.
+    """
+    # Create a FileUploadBox and a FileUpload
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    # Lock the box
+    version = rig.file_upload_box_dao.latest.version
+    await rig.controller.lock_file_upload_box(
+        box_id=box_id, version=version, force=True
+    )
+    assert rig.file_upload_box_dao.latest.state == "locked"
+
+    # Now complete the file upload
+    object_id = rig.file_upload_dao.latest.object_id
+    await rig.controller.complete_file_upload(
+        box_id=box_id,
+        file_id=file_id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+
+    # Verify that the upload is now marked complete
+    assert rig.file_upload_dao.latest.state == "inbox"
 
 
 @pytest.mark.parametrize("terminal_state", ["cancelled", "failed"])
@@ -1395,7 +1534,9 @@ async def test_initiate_upload_after_cancelled(rig: JointRig):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    await controller.remove_file_upload(box_id=box_id, file_id=file_id_1)
+    await controller.remove_file_upload(
+        box_id=box_id, file_id=file_id_1, require_unlocked=True
+    )
 
     cancelled = await file_upload_dao.get_by_id(file_id_1)
     assert cancelled.state == "cancelled"
@@ -1735,7 +1876,9 @@ async def test_finished_uploads_count_toward_limit(rig: JointRig):
         )
 
     # Cancel file2. quota consumption stays at DECRYPTED_SIZE (only file1 counts now)
-    await controller.remove_file_upload(box_id=box_id, file_id=file_id2)
+    await controller.remove_file_upload(
+        box_id=box_id, file_id=file_id2, require_unlocked=True
+    )
     assert rig.file_upload_box_dao.latest.size == DECRYPTED_SIZE
 
     # Create an upload and mark it as failed to show failed uploads are also ignored.
@@ -1996,7 +2139,9 @@ async def test_upload_activity_deleted_on_abort(rig: JointRig):
     await rig.upload_activity_dao.get_by_id(file_id)
 
     # Remove the file upload
-    await rig.controller.remove_file_upload(box_id=box_id, file_id=file_id)
+    await rig.controller.remove_file_upload(
+        box_id=box_id, file_id=file_id, require_unlocked=True
+    )
 
     # UploadActivity entry should be gone
     with pytest.raises(ResourceNotFoundError):

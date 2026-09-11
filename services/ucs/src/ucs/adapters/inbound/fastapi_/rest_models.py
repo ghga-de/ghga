@@ -83,8 +83,8 @@ class BoxUpdateRequest(BaseModel):
     force: bool = Field(
         default=False,
         description=(
-            "Only applies when locking the box. If True, any uploads still in the"
-            " 'init' state will be aborted before locking proceeds."
+            "Only applies when locking the box. If True, will allow locking the box"
+            + " even when there are ongoing uploads."
         ),
     )
     model_config = ConfigDict(title="Box Update Request")

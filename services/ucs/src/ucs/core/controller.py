@@ -79,29 +79,6 @@ class UploadController(UploadControllerPort):
         self._box_stats_aggregator = box_stats_aggregator
         self._s3_client = s3_client
 
-    async def _get_box_at_version(
-        self, *, box_id: UUID4, version: int
-    ) -> FileUploadBox:
-        """Fetch a FileUploadBox and verify the version matches.
-
-        Raises:
-        - `BoxNotFoundError` if the box is not in the DB.
-        - `BoxVersionError` if the version doesn't match.
-        """
-        try:
-            box = await self._file_upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            error: Exception = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
-
-        if box.version != version:
-            error = self.BoxVersionError(box_id=box_id)
-            log.info(error, extra={"box_id": box_id, "version": version})
-            raise error
-
-        return box
-
     async def _insert_file_upload(
         self,
         *,
@@ -258,12 +235,16 @@ class UploadController(UploadControllerPort):
         await self._file_upload_dao.insert(new_upload)
         return True
 
-    async def _get_unlocked_box(self, *, box_id: UUID4) -> FileUploadBox:
-        """Retrieve a FileUploadBox by ID.
+    async def _get_box(
+        self, *, box_id: UUID4, require_unlocked: bool, version: int | None = None
+    ) -> FileUploadBox:
+        """Retrieve a FileUploadBox by ID, optionally requiring the box to be unlocked ("open")
+        and/or have a specific version number.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist
-        - `BoxStateError` if the box exists but is locked or archived.
+        - `BoxStateError` if `require_unlocked` is True and the box is locked or archived.
+        - `BoxVersionError` if `version` is set and the fetched box's version doesn't match.
         """
         # Verify that the box exists
         try:
@@ -274,9 +255,14 @@ class UploadController(UploadControllerPort):
             raise error from err
 
         # Verify that the box is not locked or archived
-        if box.state != "open":
+        if require_unlocked and box.state != "open":
             error = self.BoxStateError(box_id=box_id, box_state=box.state)
             log.info(error)
+            raise error
+
+        if version is not None and box.version != version:
+            error = self.BoxVersionError(box_id=box_id)
+            log.info(error, extra={"box_id": box_id, "version": version})
             raise error
 
         return box
@@ -378,7 +364,7 @@ class UploadController(UploadControllerPort):
         """
         extra: dict[str, Any] = {"box_id": box_id, "alias": alias}
         # Get the box and resolve S3 storage details
-        box = await self._get_unlocked_box(box_id=box_id)
+        box = await self._get_box(box_id=box_id, require_unlocked=True)
         storage_alias = box.storage_alias
         try:
             bucket_id = self._s3_client.get_bucket_id_for_alias(
@@ -401,9 +387,11 @@ class UploadController(UploadControllerPort):
                 existing_upload = None
 
             if existing_upload and existing_upload.state in ("init", "inbox"):
-                await self.remove_file_upload(box_id=box_id, file_id=existing_upload.id)
+                await self.remove_file_upload(
+                    box_id=box_id, file_id=existing_upload.id, require_unlocked=True
+                )
                 # Re-fetch box to get the updated size/file count
-                box = await self._get_unlocked_box(box_id=box_id)
+                box = await self._get_box(box_id=box_id, require_unlocked=True)
 
         # Get both box size + in progress size and the number of in progress files
         current_size = box.size
@@ -625,12 +613,14 @@ class UploadController(UploadControllerPort):
         for the file upload itself.
 
         If the checksums don't match, this function marks the FileUpload as failed and
-        raises a ChecksumMismatchError.
+        raises a ChecksumMismatchError after deleting the object from S3.
         """
         file_id = file_upload.id
         object_id = file_upload.object_id
 
         if actual_checksum != expected_checksum:
+            # Delete S3 data first
+            await self._remove_completed_file_upload(file_upload=file_upload)
             # Mark upload as failed, then raise an error
             file_upload.state = "failed"
             file_upload.state_updated = now_utc_ms_prec()
@@ -654,12 +644,14 @@ class UploadController(UploadControllerPort):
         """Verify that the S3 object size matches the declared encrypted_size.
 
         If the sizes don't match, marks the FileUpload as failed and raises
-        UploadSizeMismatchError.
+        UploadSizeMismatchError after deleting the object from S3.
         """
         file_id = file_upload.id
         object_id = file_upload.object_id
 
         if actual_size != file_upload.encrypted_size:
+            # Delete S3 data first
+            await self._remove_completed_file_upload(file_upload=file_upload)
             file_upload.state = "failed"
             file_upload.state_updated = now_utc_ms_prec()
             file_upload.failure_reason = "Actual object size didn't match expected size"
@@ -691,10 +683,12 @@ class UploadController(UploadControllerPort):
         with the value provided for `encrypted_checksum`. The `unencrypted_checksum`
         is stored in the database.
 
+        If either of the object size or checksum verification steps fail, the object
+        will be removed from the S3 inbox bucket.
+
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `BoxStateError` if the box exists but is locked.
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
@@ -702,8 +696,9 @@ class UploadController(UploadControllerPort):
         - `ChecksumMismatchError` if the checksums don't match.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        # Get the FileUploadBox instance and verify that it is unlocked
-        box = await self._get_unlocked_box(box_id=box_id)
+        # Get the FileUploadBox instance (box can be locked because users can lock
+        #  it proactively before all uploads have finished)
+        box = await self._get_box(box_id=box_id, require_unlocked=False)
         box_version = box.version
         extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}  # just 4 logging
 
@@ -781,19 +776,26 @@ class UploadController(UploadControllerPort):
         await self._update_box_stats(box_id=box_id, version=box_version)
         log.info("DB data updated for upload completion of file %s", file_id)
 
-    async def remove_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
+    async def remove_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
+    ) -> None:
         """Remove a file upload and cancel the ongoing upload if applicable.
+
+        If `require_unlocked` is True, the box must be unlocked to complete the operation.
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if the box exists but is locked.
         - `BoxVersionError` if the box version changed before stats could be updated.
+        - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
+        - `BucketMissingError` if the configured bucket does not exist in S3.
+        - `S3OperationError` if S3 returns any other unexpected error.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Make sure box exists and is unlocked (unless overridden)
-        box = await self._get_unlocked_box(box_id=box_id)
+        box = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
 
         # Retrieve the FileUpload data
         try:
@@ -851,24 +853,15 @@ class UploadController(UploadControllerPort):
         - `UploadAbortError` if there's an error aborting an in-progress multipart upload.
         """
         # Get the box
-        try:
-            box = await self._file_upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            error: Exception = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
-
-        # Verify the version
-        if version is not None and box.version != version:
-            error = self.BoxVersionError(box_id=box_id)
-            log.info(error, extra={"box_id": box_id, "version": version})
-            raise error
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         # Raise an error if the box is archived
         if box.state == "archived":
-            error = self.BoxStateError(box_id=box_id, box_state=box.state)
-            log.info(error)
-            raise error
+            box_state_error = self.BoxStateError(box_id=box_id, box_state=box.state)
+            log.info(box_state_error)
+            raise box_state_error
 
         # Lock the box so no new uploads can be initiated while sweeping
         if box.state == "open":
@@ -892,7 +885,7 @@ class UploadController(UploadControllerPort):
 
         if files_with_wrong_state:
             first_bad_file = files_with_wrong_state[0]
-            error = self.FileUploadStateError(
+            fus_error = self.FileUploadStateError(
                 file_id=first_bad_file.id,
                 details=(
                     f"FileUpload {first_bad_file.id} is in the '{first_bad_file.state}',"
@@ -901,13 +894,13 @@ class UploadController(UploadControllerPort):
                 ),
             )
             log.error(
-                error,
+                fus_error,
                 extra={
                     "box_id": box_id,
                     "files_with_wrong_state": [f.id for f in files_with_wrong_state],
                 },
             )
-            raise error
+            raise fus_error
 
         # Delete the FileUploads
         await self._delete_box_file_uploads(box_id=box_id)
@@ -963,7 +956,9 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the box version has changed since it was fetched.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         file_count, total_size = await self._calc_box_stats(box_id=box_id)
 
@@ -1029,7 +1024,9 @@ class UploadController(UploadControllerPort):
         - `BoxMaxSizeTooLowError` if the new max_size is smaller than what has
             already been uploaded.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         if max_size < box.size:
             error = self.BoxMaxSizeTooLowError(
@@ -1048,50 +1045,63 @@ class UploadController(UploadControllerPort):
     ) -> None:
         """Lock an existing FileUploadBox.
 
+        If `force` is set to True, the box will be locked even if there
+        are ongoing uploads.
+
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
-        - `IncompleteUploadsError` if force is False and the box has incomplete FileUploads.
-        - `UploadAbortError` if force is True and aborting an in-progress upload fails.
+        - `IncompleteOrFailedError` if force=False and there are files still uploading
+          or that failed interrogation.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         if box.state != "open":
             # This goes for archived boxes too
             log.info("Box with ID %s is already locked.", box_id)
             return
 
-        incomplete_files = [
-            upload
-            async for upload in self._file_upload_dao.find_all(
-                mapping={"box_id": box_id, "state": "init"}
-            )
-        ]
+        # Look for ongoing uploads and files that failed interrogation
+        blocking_files_cursor = self._file_upload_dao.find_all(
+            mapping={
+                "box_id": box_id,
+                "$or": [
+                    {"state": "init"},  # ongoing upload
+                    {
+                        "state": "failed",
+                        "decrypted_sha256": {"$ne": None},
+                    },  # failed interrogation
+                ],
+            },
+            sort=["alias"],
+        )
+        incomplete_uploads = []
+        need_attention = []
+        async for file in blocking_files_cursor:
+            if file.state == "init":
+                incomplete_uploads.append((file.id, file.alias))  # already sorted
+            else:
+                need_attention.append((file.id, file.alias))
 
-        if force:
-            for upload in incomplete_files:
-                await self._remove_incomplete_file_upload(file_upload=upload)
-                upload.state = "cancelled"
-                upload.state_updated = now_utc_ms_prec()
-                await self._file_upload_dao.update(upload)
-                with contextlib.suppress(ResourceNotFoundError):
-                    await self._upload_activity_dao.delete(upload.id)
-            if incomplete_files:
-                log.info(
-                    "Aborted %d in-progress upload(s) in box %s for forced lock.",
-                    len(incomplete_files),
-                    box_id,
-                )
-        else:
-            file_ids = sorted(
-                [(x.id, x.alias) for x in incomplete_files],
-                key=lambda entry: entry[1],
+        # If there are incomplete/failed files and force is set to false, raise an error
+        if (incomplete_uploads or need_attention) and not force:
+            error = self.IncompleteOrFailedError(
+                box_id=box_id,
+                incomplete_uploads=incomplete_uploads,
+                need_attention=need_attention,
             )
-            if file_ids:
-                error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-                log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
-                raise error
+            log.info(
+                error,
+                extra={
+                    "box_id": box_id,
+                    "incomplete_uploads": str(incomplete_uploads),
+                    "need_attention": str(need_attention),
+                },
+            )
+            raise error
 
         # Recompute stats
         file_count, total_size = await self._calc_box_stats(box_id=box_id)
@@ -1111,7 +1121,9 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is archived and cannot be unlocked.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         if box.state == "locked":
             box.version += 1
@@ -1131,10 +1143,12 @@ class UploadController(UploadControllerPort):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
-        - `IncompleteUploadsError` if the FileUploadBox has incomplete FileUploads.
+        - `IncompleteOrFailedError` if the FileUploadBox has incomplete FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
-        box = await self._get_box_at_version(box_id=box_id, version=version)
+        box = await self._get_box(
+            box_id=box_id, require_unlocked=False, version=version
+        )
 
         # Exit early if already archived, or raise error if unlocked
         if box.state == "archived":
@@ -1144,17 +1158,43 @@ class UploadController(UploadControllerPort):
             log.info("Can't unlock box %s because it's still open.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
-        # Scan for incomplete files
-        files_not_interrogated_cursor = self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "state": {"$in": ["init", "inbox"]}}
+        # Scan for incomplete files (note that this invocation includes 'inbox')
+        blocking_files_cursor = self._file_upload_dao.find_all(
+            mapping={
+                "box_id": box_id,
+                "$or": [
+                    {"state": {"$in": ["init", "inbox"]}},  # <- ongoing upload
+                    {  # failed interrogation:
+                        "state": "failed",
+                        "decrypted_sha256": {"$ne": None},
+                    },
+                ],
+            },
+            sort=["alias"],
         )
-        file_ids = sorted(
-            [(x.id, x.alias) async for x in files_not_interrogated_cursor],
-            key=lambda entry: entry[1],
-        )
-        if file_ids:
-            error = self.IncompleteUploadsError(box_id=box_id, file_ids=file_ids)
-            log.info(error, extra={"box_id": box_id, "file_ids": str(file_ids)})
+        incomplete_uploads = []
+        need_attention = []
+        async for file in blocking_files_cursor:
+            if file.state in ("init", "inbox"):
+                incomplete_uploads.append((file.id, file.alias))  # already sorted
+            else:
+                need_attention.append((file.id, file.alias))
+
+        # If there are incomplete/failed files, raise an error
+        if incomplete_uploads or need_attention:
+            error = self.IncompleteOrFailedError(
+                box_id=box_id,
+                incomplete_uploads=incomplete_uploads,
+                need_attention=need_attention,
+            )
+            log.info(
+                error,
+                extra={
+                    "box_id": box_id,
+                    "incomplete_uploads": str(incomplete_uploads),
+                    "need_attention": str(need_attention),
+                },
+            )
             raise error
 
         # Verify that all files are in state 'interrogated' or 'awaiting_archival'.
@@ -1219,12 +1259,7 @@ class UploadController(UploadControllerPort):
         elif all(spec.removeprefix("-") != "alias" for spec in sort):
             sort = [*sort, "alias"]
 
-        try:
-            _ = await self._file_upload_box_dao.get_by_id(box_id)
-        except ResourceNotFoundError as err:
-            error = self.BoxNotFoundError(box_id=box_id)
-            log.info(error)
-            raise error from err
+        _ = await self._get_box(box_id=box_id, require_unlocked=False)
 
         try:
             find_result = self._file_upload_dao.find_all(
@@ -1237,8 +1272,7 @@ class UploadController(UploadControllerPort):
             raise self.PaginationError() from err
 
         if with_checksums:
-            # TODO: Use `.to_list()` once newer hexkit is pulled in
-            file_uploads = [x async for x in find_result]
+            file_uploads = await find_result.to_list()
         else:
             file_uploads = [
                 x.model_copy(
@@ -1420,7 +1454,9 @@ class UploadController(UploadControllerPort):
 
         # This will result in a second FileUpload fetch, but alternative is to
         #  replicate removal logic here
-        await self.remove_file_upload(box_id=file_upload.box_id, file_id=file_id)
+        await self.remove_file_upload(
+            box_id=file_upload.box_id, file_id=file_id, require_unlocked=False
+        )
 
     async def cleanup_stale_uploads(self) -> None:
         """Abort stale in-progress multipart uploads and mark their FileUpload records
