@@ -61,7 +61,8 @@ def _retry_after_seconds(headers: httpx2.Headers) -> float:
     """Determine how long a 429 response asks the client to wait.
 
     A response may carry Retry-After more than once and the longest wait wins.
-    Values that cannot be parsed are skipped and 0.0 means no usable Retry-After was found.
+    Values that cannot be parsed are skipped. The default of 0.0 means
+    no usable Retry-After was found, and the client should retry immediately.
     """
     waits = [
         seconds
