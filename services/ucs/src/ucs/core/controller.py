@@ -1559,7 +1559,8 @@ class UploadController(UploadControllerPort):
         """Process a deletion request for the given FileUpload ID.
 
         This will remove the object from the inbox, if it exists.
-        Database objects are untouched.
+        FileUpload objects in the database are updated to the `cancelled` state
+        but not deleted.
 
         If no FileUpload with the given ID exists, merely logs a warning and returns.
         """
