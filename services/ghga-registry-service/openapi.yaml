@@ -29,6 +29,31 @@ components:
       - study_id
       title: AccessionMapRequest
       type: object
+    BoxRequeueResult:
+      description: The outcome of requeueing every failed file upload in an upload
+        box.
+      properties:
+        requeued:
+          description: The IDs of the file uploads that were set back to the inbox
+            state
+          items:
+            format: uuid4
+            type: string
+          title: Requeued
+          type: array
+        skipped:
+          description: The IDs of the file uploads that were ineligible for a requeue,
+            e.g. because the uploaded object is no longer in the inbox
+          items:
+            format: uuid4
+            type: string
+          title: Skipped
+          type: array
+      required:
+      - requeued
+      - skipped
+      title: BoxRequeueResult
+      type: object
     BoxRetrievalResults:
       description: 'A model encapsulating retrieved research data upload boxes and
         the count
@@ -1086,6 +1111,50 @@ paths:
       summary: Map file IDs to accession numbers for files in the upload box
       tags:
       - ResearchDataUploadBoxes
+  /upload-boxes/{box_id}/requeue:
+    post:
+      description: Set every file upload in the box that failed interrogation back
+        to the inbox state so that they are interrogated again. Requires the Data
+        Steward role. Files that cannot be requeued, e.g. because their uploaded object
+        is no longer in the inbox, are reported in the `skipped` list instead of failing
+        the whole request. Files that failed during the upload itself are left alone
+        and have to be uploaded again. This operation is not permitted on archived
+        boxes.
+      operationId: requeue_all_box_uploads_upload_boxes__box_id__requeue_post
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoxRequeueResult'
+          description: The file uploads that were requeued and the ones skipped.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box not found.
+        '409':
+          description: The box is archived.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Requeue all failed file uploads in an upload box
+      tags:
+      - ResearchDataUploadBoxes
   /upload-boxes/{box_id}/uploads:
     get:
       description: 'Retrieve a paginated list of file uploads for an upload box. By
@@ -1208,6 +1277,54 @@ paths:
       security:
       - HTTPBearer: []
       summary: Delete file upload
+      tags:
+      - ResearchDataUploadBoxes
+  /upload-boxes/{box_id}/uploads/{file_id}/requeue:
+    post:
+      description: Set a file upload that failed interrogation back to the inbox state
+        so that it is interrogated again. Requires the Data Steward role. The uploaded
+        object is untouched, so the file does not have to be uploaded again. Only
+        files that failed interrogation can be requeued - files that failed during
+        the upload itself have to be uploaded again instead. This operation is not
+        permitted on archived boxes.
+      operationId: requeue_single_file_upload_upload_boxes__box_id__uploads__file_id__requeue_post
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid
+          title: Box Id
+          type: string
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          format: uuid
+          title: File Id
+          type: string
+      responses:
+        '204':
+          description: File upload requeued successfully.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '404':
+          description: Upload box or file upload not found.
+        '409':
+          description: The file is still being uploaded, has not been interrogated
+            yet, has been successfully interrogated, was never uploaded successfully,
+            OR the box has been archived already.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Requeue a failed file upload
       tags:
       - ResearchDataUploadBoxes
   /upload-grants:

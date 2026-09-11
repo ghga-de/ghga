@@ -38,7 +38,6 @@ class AuditRepositoryPort(ABC):
         entity_id: str | None,
     ) -> None:
         """Create a new audit record and publish it as an event"""
-        ...
 
     @abstractmethod
     async def log_box_created(
@@ -51,17 +50,25 @@ class AuditRepositoryPort(ABC):
         self, *, box: ResearchDataUploadBox, user_id: UUID4
     ) -> None:
         """Log changes made to a ResearchDataUploadBox"""
-        ...
 
     @abstractmethod
     async def log_box_deleted(
         self, *, box: ResearchDataUploadBox, user_id: UUID4
     ) -> None:
         """Log the deletion of a ResearchDataUploadBox."""
-        ...
 
     @abstractmethod
     async def log_access_granted(
         self, *, box_id: UUID4, grantor_id: UUID4, grantee_id: UUID4
     ):
         """Log that a user was granted access to a ResearchDataUploadBox"""
+
+    @abstractmethod
+    async def log_file_requeued(self, *, file_id: UUID4, user_id: UUID4) -> None:
+        """Log that a user requeued a FileUpload for interrogation."""
+
+    @abstractmethod
+    async def log_whole_box_requeued(
+        self, *, box_id: UUID4, user_id: UUID4, file_ids: list[UUID4]
+    ) -> None:
+        """Log that a user requeued all failed FileUploads in a box for interrogation."""

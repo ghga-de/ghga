@@ -32,14 +32,17 @@ from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpBoxStateError,
     HttpBoxTitleExistsError,
     HttpBoxVersionError,
+    HttpFileUploadNotFoundError,
     HttpIncompleteOrFailedError,
     HttpInternalError,
     HttpNotAuthorizedError,
+    HttpRequeueError,
     HttpStateChangeError,
 )
 from rs.constants import TRACER
 from rs.core.models import (
     AccessionMapRequest,
+    BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
     CreateUploadBoxRequest,
@@ -126,6 +129,100 @@ async def delete_file_upload(
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to delete file upload") from err
+
+
+@box_router.post(
+    "/{box_id}/uploads/{file_id}/requeue",
+    summary="Requeue a failed file upload",
+    description="Set a file upload that failed interrogation back to the inbox state"
+    + " so that it is interrogated again. Requires the Data Steward role. The uploaded"
+    + " object is untouched, so the file does not have to be uploaded again. Only files"
+    + " that failed interrogation can be requeued - files that failed during the upload"
+    + " itself have to be uploaded again instead. This operation is not permitted on"
+    + " archived boxes.",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        204: {"description": "File upload requeued successfully."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+        404: {"description": "Upload box or file upload not found."},
+        409: {
+            "description": (
+                "The file is still being uploaded, has not been interrogated yet, has"
+                + " been successfully interrogated, was never uploaded successfully, OR"
+                + " the box has been archived already."
+            )
+        },
+    },
+)
+@TRACER.start_as_current_span("routes.requeue_single_file_upload")
+async def requeue_single_file_upload(
+    box_id: UUID,
+    file_id: UUID,
+    registry: dummies.RegistryDummy,
+    auth_context: StewardAuthContext,
+) -> None:
+    """Requeue a file upload that failed interrogation. Requires Data Steward role."""
+    try:
+        await registry.rdub_manager.requeue_single_file_upload(
+            box_id=box_id, file_id=file_id, data_steward_id=UUID(auth_context.id)
+        )
+    except RDUBManagerPort.BoxNotFoundError as err:
+        raise HttpBoxNotFoundError(box_id=box_id) from err
+    except RDUBManagerPort.BoxStateError as err:
+        raise HttpBoxStateError(state=err.state, operation="requeued") from err
+    except RDUBManagerPort.FileUploadNotFoundError as err:
+        raise HttpFileUploadNotFoundError(file_id=file_id) from err
+    except RDUBManagerPort.RequeueError as err:
+        raise HttpRequeueError(file_id=file_id, reason=str(err)) from err
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to requeue file upload") from err
+
+
+@box_router.post(
+    "/{box_id}/requeue",
+    summary="Requeue all failed file uploads in an upload box",
+    description="Set every file upload in the box that failed interrogation back to the"
+    + " inbox state so that they are interrogated again. Requires the Data Steward"
+    + " role. Files that cannot be requeued, e.g. because their uploaded object is no"
+    + " longer in the inbox, are reported in the `skipped` list instead of failing the"
+    + " whole request. Files that failed during the upload itself are left alone and"
+    + " have to be uploaded again. This operation is not permitted on archived boxes.",
+    response_model=BoxRequeueResult,
+    responses={
+        200: {
+            "model": BoxRequeueResult,
+            "description": "The file uploads that were requeued and the ones skipped.",
+        },
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+        404: {"description": "Upload box not found."},
+        409: {"description": "The box is archived."},
+    },
+)
+@TRACER.start_as_current_span("routes.requeue_all_box_uploads")
+async def requeue_all_box_uploads(
+    box_id: UUID,
+    registry: dummies.RegistryDummy,
+    auth_context: StewardAuthContext,
+) -> BoxRequeueResult:
+    """Requeue all file uploads in a box that failed interrogation.
+
+    Requires Data Steward role.
+    """
+    try:
+        return await registry.rdub_manager.requeue_all_box_uploads(
+            box_id=box_id, data_steward_id=UUID(auth_context.id)
+        )
+    except RDUBManagerPort.BoxNotFoundError as err:
+        raise HttpBoxNotFoundError(box_id=box_id) from err
+    except RDUBManagerPort.BoxStateError as err:
+        raise HttpBoxStateError(state=err.state, operation="requeued") from err
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to requeue file uploads") from err
 
 
 @box_router.delete(
