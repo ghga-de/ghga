@@ -37,8 +37,9 @@ scenarios("../features/200_upload_initiated.feature")
 
 UPLOAD_VISA_TYPE = "https://www.ghga.de/GA4GH/VisaTypes/Upload/v1.0"
 
-# Boxes are listed in reverse creation order, so the "last" is the secondary box
-# and the "next" page is the previously created primary box.
+# The RS sorts boxes by state ("open" first), then by most recent change, then by ID.
+# While both boxes are open and the secondary box was changed last, the "last" page is
+# the secondary box and the "next" page is the primary box.
 PAGINATION_PARAMS = {"last": {"skip": 0, "limit": 1}, "next": {"skip": 1, "limit": 1}}
 
 

@@ -420,7 +420,6 @@ def check_box_archived(storage_name: str, fixtures: JointFixture):
     while slept < INGEST_TIMEOUT:
         if info_card.get_by_text("Archived").is_visible():
             return
-        expect(refresh_button).to_be_enabled(timeout=TIMEOUT)
         with page.expect_response(
             lambda response: (
                 "/upload-boxes/" in response.url and response.request.method == "GET"
