@@ -568,7 +568,7 @@ class UploadControllerPort(ABC):
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
     ) -> None:
-        """Update a FileUpload state to 'failed' and remove it from the inbox bucket.
+        """Update a FileUpload state to 'failed'.
 
         The associated S3 object is not deleted.
 
