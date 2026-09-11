@@ -19,6 +19,7 @@ import asyncio
 import math
 import random
 import time
+from contextlib import suppress
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from logging import getLogger
@@ -39,11 +40,8 @@ def _parse_retry_after(value: str) -> float | None:
     """
     value = value.strip()
 
-    try:
+    with suppress(ValueError):
         seconds = float(value)
-    except ValueError:
-        pass
-    else:
         # Reject inf and nan, which would otherwise be carried into the sleep below.
         return max(0.0, seconds) if math.isfinite(seconds) else None
 
