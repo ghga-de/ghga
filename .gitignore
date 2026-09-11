@@ -47,3 +47,5 @@ metadata.json
 
 # great-docs build output (`just docs`); the trailing slash keeps great-docs.yml tracked
 libs/*/great-docs/
+# Playwright traces from failed test-bed runs (diagnostics only, can be large)
+testbed/.traces/

@@ -39,6 +39,15 @@ Feature: 503 Data Portal Requests
       Then the table shows two "Pending" items for "Dr. John Doe"
 
 
+    Scenario: Data Steward adds a ticket ID to an access request
+
+      When I load the admin page "Access Request Manager"
+      And I filter "access requests" for dataset "DS_A"
+      And I select the filtered item
+      And I set the ticket ID to "1234567"
+      Then the ticket ID "1234567" is saved
+
+
     Scenario Outline: Data Steward processes an access request
 
       When I load the admin page "Access Request Manager"

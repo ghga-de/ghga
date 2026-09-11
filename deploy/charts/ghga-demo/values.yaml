@@ -70,6 +70,13 @@ kafka:
   image: apache/kafka:3.9.1
   # fixed KRaft cluster id (any base64-ish 22 chars; fixed so restarts reuse storage)
   clusterId: GhgaDemoKafkaCluster00
+  # The image defaults to `-Xmx1G -Xms1G`, and -Xms COMMITS that gigabyte at start
+  # whatever the load — measured at 862 MiB working set, by far the largest pod on
+  # the node. The demo/testbed topics hold a few hundred tiny events, so the default
+  # is sized for a production broker we are not running. The node has ~7.8 GiB and
+  # also hosts pytest, a headless browser and the connector, so this was roughly
+  # half of the shortfall that starved the UI phase.
+  heapOpts: -Xmx512m -Xms256m
 
 mongodb:
   enabled: true
@@ -169,8 +176,6 @@ auth-adapter:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     provide_apis: ["ext_auth"]
     # Endpoints with their own auth (bearer work-package / work-order / service
@@ -227,8 +232,6 @@ auth-rest:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     # users API only: the access API lives with the claims API on the internal
     # instance, so exactly ONE instance seeds the data steward (two instances
@@ -250,8 +253,6 @@ auth-claims:
   enabled: true
   nameOverride: auth-claims
   envVarsSecret: ghga-auth-keys-pub
-  ports:
-    enabled: true
   config:
     # also consumes dataset/user events: the claims repository revokes access
     # grants when a dataset disappears (the reference deployment runs the
@@ -294,8 +295,6 @@ wkvs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
 
 data-portal:
   enabled: true
@@ -304,8 +303,6 @@ data-portal:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     # browser-facing URLs (the kind config maps the gateway to the host computer's port 80)
     base_url: http://localhost
@@ -322,8 +319,6 @@ data-portal:
 
 ekss:
   enabled: true
-  ports:
-    enabled: true
   config:
     host: 0.0.0.0
     port: 8080
@@ -352,8 +347,6 @@ dcs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -385,8 +378,6 @@ ucs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -415,8 +406,6 @@ fis:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -459,8 +448,6 @@ pcs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -476,8 +463,6 @@ wps:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -494,8 +479,6 @@ rs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -512,8 +495,6 @@ metldata:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -533,8 +514,6 @@ rts:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -551,8 +530,6 @@ ars:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -568,8 +545,6 @@ mass:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -584,8 +559,6 @@ dins:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -639,8 +612,6 @@ dlqs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -657,8 +628,6 @@ sms:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]

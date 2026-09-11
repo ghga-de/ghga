@@ -586,6 +586,13 @@ cluster:
     just net-fix
     # plain grep, not -q — see the SIGPIPE note in `images-present`
     kind get clusters 2>/dev/null | grep -x ghga > /dev/null || kind create cluster --config deploy/kind-config.yaml --wait 120s
+    # The check above finds the cluster through docker's labels, but every recipe below
+    # reaches it through the kind-ghga context in ~/.kube/config — and the two do not have
+    # the same lifetime here: a devcontainer rebuild keeps docker's storage (a named
+    # volume) and wipes the home directory. The cluster then still exists, creation is
+    # skipped, and the first `--kube-context kind-ghga` fails with "context does not
+    # exist". Re-exporting unconditionally costs nothing and closes that gap.
+    kind export kubeconfig --name ghga > /dev/null
 
 # Build the images first — `just demo-images` (one per member, as released) or
 # `just demo-images-mono` (a single Python image; far faster, demo/CI only). Loading them
@@ -677,13 +684,50 @@ testbed-up profile="": (demo-load profile)
       --kube-context kind-ghga --wait --timeout 15m
     just wait-ready
 
-# One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
+# The suite imports ghga-datasteward-kit and runs it and ghga-connector as CLIs, so both
+# have to be the workspace source, never a PyPI release: they are exported from uv.lock
+# and installed editable, with the lock's versions of everything under them. The
+# suite's own requirements are resolved in the same step, so a pin there that disagrees
+# with uv.lock fails the install instead of quietly replacing the workspace's version;
+# the suite re-checks the result before its first test (steps/conftest.py).
 # The UI phase drives a real browser, so the matching chromium build comes with it
 # (playwright pins the build to the library version; a system chromium won't do).
+# One-time: virtualenv for the testbed suite (not a workspace member; tools from uv.lock).
 testbed-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
     uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
-    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
+    # uv exports the workspace paths relative to the root; made absolute so the file
+    # means the same whichever directory the installer resolves them against
+    uv export --frozen --no-hashes --no-dev --no-header \
+      --package ghga-datasteward-kit --package ghga-connector \
+      | sed "s|^-e \./|-e $PWD/|" > .venv-testbed/workspace-tools.txt
+    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install \
+      -r .venv-testbed/workspace-tools.txt -r testbed/requirements.txt
     .venv-testbed/bin/playwright install chromium
+
+# Open a Playwright trace from a traced test-bed run (`TB_TRACE=1 just testbed -m frontend`).
+# With no argument, lists what the last traced run left behind. `show-trace` would
+# otherwise try to launch a GUI chromium, which there is no display for in the
+# devcontainer, so serve the viewer instead and let the editor forward the port.
+testbed-trace file="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${TB_TRACE_DIR:-$PWD/testbed/.traces}"
+    if [ -z "{{file}}" ]; then
+      ls -1 "$dir"/*.zip 2>/dev/null \
+        || { echo "no traces in $dir — record some with \`TB_TRACE=1 just testbed -m frontend\`"; exit 1; }
+      echo
+      echo "open one with: just testbed-trace <name>"
+      exit 0
+    fi
+    # accept a bare test name, a file name or a path
+    trace="{{file}}"
+    [ -f "$trace" ] || trace="$dir/{{file}}"
+    [ -f "$trace" ] || trace="$dir/{{file}}.zip"
+    [ -f "$trace" ] || { echo "error: no such trace: {{file}} (\`just testbed-trace\` lists them)" >&2; exit 1; }
+    echo "serving $trace on http://localhost:9323 (ctrl-c to stop)"
+    .venv-testbed/bin/playwright show-trace --host 0.0.0.0 --port 9323 "$trace"
 
 # Make the in-cluster MinIO name resolve locally: services hand the connector
 # pre-signed S3 URLs built from s3_endpoint_url, and those signatures are bound to
@@ -714,7 +758,21 @@ testbed-reset:
          .forEach(n => db.getSiblingDB(n).dropDatabase())' > /dev/null
     apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
     echo "$apps" | xargs -r -n1 $K rollout restart > /dev/null
-    for d in $apps; do $K rollout status "$d" --timeout=240s > /dev/null; done
+    # Name what is being waited on, and what failed. Every app deployment restarts at
+    # once above, so the node runs ~2x the pods (rolling updates surge before they
+    # terminate) while each service re-migrates and rejoins its Kafka consumer group —
+    # 240s was not enough on a loaded machine, and a bare `rollout status > /dev/null`
+    # under `set -e` then aborted with kubectl's "timed out waiting for the condition"
+    # and no clue which of the ~19 deployments it meant.
+    total=$(echo "$apps" | wc -l | tr -d ' ')
+    i=0
+    for d in $apps; do
+        i=$((i + 1))
+        name="${d#deployment.apps/}"
+        printf '  [%2d/%s] waiting for %s\n' "$i" "$total" "$name" >&2
+        $K rollout status "$d" --timeout=600s > /dev/null \
+          || { echo "error: $name did not become ready within 600s — \`just logs $name\` shows why" >&2; exit 1; }
+    done
     sleep 20
     echo "state reset (databases empty, services re-migrated and re-seeded)"
 
@@ -726,11 +784,9 @@ testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
     # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
-    # on PATH. Both are workspace members (tools/), so the gate has to exercise our
-    # build of them — testbed/requirements.txt also pins released versions from PyPI
-    # into .venv-testbed, and those would silently be tested instead. Locally this was
-    # only ever right by accident: the devcontainer happens to put .venv/bin on PATH.
-    export PATH="$PWD/.venv/bin:$PATH"
+    # on PATH. The testbed venv holds them as editable workspace installs (see
+    # testbed-install), so the CLIs are the very install the suite also imports.
+    export PATH="$PWD/.venv-testbed/bin:$PATH"
     K="kubectl --context kind-ghga"
     secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
     export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
@@ -756,3 +812,23 @@ testbed *args:
     trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
     sleep 2
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
+
+# The name is matched loosely, so the `ghga-` prefix is optional and a substring is enough.
+# `just logs` with no argument lists the deployments and their ready counts.
+# Follow a service's logs, e.g. `just logs auth-adapter` (no argument lists them).
+logs name="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    if [ -z "{{name}}" ]; then
+        $K get deploy -o custom-columns=NAME:.metadata.name,READY:.status.readyReplicas --no-headers \
+          | awk '{sub(/^ghga-/, "", $1); printf "%-28s %s\n", $1, $2}'
+        exit 0
+    fi
+    # `|| true`: a non-matching grep exits 1, and under `set -e` that kills the recipe
+    # before the message below ever prints
+    match=$($K get deploy -o name | grep -- "{{name}}" | head -1 || true)
+    [ -n "$match" ] || { echo "error: no deployment matching '{{name}}' — \`just logs\` lists them" >&2; exit 1; }
+    echo "== $match ==" >&2
+    # --all-containers: several workloads run a sidecar, and the default picks only one
+    $K logs -f --tail=100 --all-containers "$match"
