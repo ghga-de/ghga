@@ -22,13 +22,13 @@ from pydantic import SecretBytes
 from ghga_connector import exceptions
 from ghga_connector.core.client import async_client
 from ghga_connector.core.work_package import WorkPackageClient
+from ghga_service_commons.api.mock_api import respond
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     MockApis,
     WorkPackageApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import respond
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
     mock_work_package_token,

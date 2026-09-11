@@ -16,12 +16,10 @@
 
 """Tests for the core functions of the cli"""
 
-import re
-
 import pytest
 
 from ghga_connector.core.api_calls import is_service_healthy
-from tests.fixtures.mock_api.router import mock_health_checks
+from tests.fixtures.mock_api.shared import mock_health_checks
 
 HEALTHY_API_URL = "https://ghga.de"
 
@@ -33,7 +31,7 @@ def mock_health_endpoint(monkeypatch):
     Only the one URL is reported as healthy, so this also pins down which URL
     `is_service_healthy` derives from the API URL it is given.
     """
-    mock_health_checks(monkeypatch, healthy_url=re.escape(HEALTHY_API_URL))
+    mock_health_checks(monkeypatch, healthy_url=HEALTHY_API_URL)
 
 
 @pytest.mark.parametrize(

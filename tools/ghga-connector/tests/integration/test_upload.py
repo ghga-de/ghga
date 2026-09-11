@@ -35,7 +35,7 @@ from tests.fixtures.mock_api.apis import (
     MockApis,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import mock_health_checks
+from tests.fixtures.mock_api.shared import mock_health_checks
 from tests.fixtures.s3 import S3Fixture, s3_fixture  # noqa: F401
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,

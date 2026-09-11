@@ -23,16 +23,13 @@ import pytest
 
 from ghga_connector.config import get_config
 from ghga_connector.core.client import async_client
+from ghga_service_commons.api.mock_api import MockedApis, NotMockedError
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
-    MOCKED_BASE_URLS,
     MockApis,
+    UploadApiMock,
+    WkvsMock,
     mock_apis,  # noqa: F401
-)
-from tests.fixtures.mock_api.router import (
-    OffLimitsError,
-    is_mocked,
-    may_be_reached,
 )
 
 
@@ -43,21 +40,37 @@ def apply_test_config():
         yield
 
 
+BOX_ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+
+
 def _destination(url: str) -> str:
-    """Where a request to `url` would be sent."""
-    parsed = httpx2.URL(url)
-    if is_mocked(parsed, MOCKED_BASE_URLS):
-        return "mock"
-    return "network" if may_be_reached(parsed) else "refused"
+    """Where a request to `url` actually goes, asked of the mocks themselves."""
+    went_out: list[httpx2.URL] = []
+
+    class Recording(httpx2.BaseTransport):
+        """Stands in for the network the S3 testcontainer is reached over."""
+
+        def handle_request(self, request: httpx2.Request) -> httpx2.Response:
+            """Record that the request was let out, and answer it."""
+            went_out.append(request.url)
+            return httpx2.Response(200)
+
+    served = MockedApis(WkvsMock(), UploadApiMock())
+    with httpx2.Client(transport=served.as_transport(Recording())) as client:
+        try:
+            client.get(url)
+        except NotMockedError:
+            return "refused"
+    return "network" if went_out else "mock"
 
 
 @pytest.mark.parametrize(
     "url, expected",
     [
         # The mocked GHGA APIs, under every spelling of the loopback interface
-        ("http://127.0.0.1/upload/boxes", "mock"),
+        (f"http://127.0.0.1/upload/boxes/{BOX_ID}/uploads", "mock"),
         ("https://127.0.0.1/values", "mock"),
-        ("http://localhost/upload/boxes", "mock"),
+        (f"http://localhost/upload/boxes/{BOX_ID}/uploads", "mock"),
         # The S3 testcontainer, at whichever address Docker is reached by. Which one it
         # is depends on the environment, so all of them have to be allowed out.
         ("http://localhost:32768/bucket/object", "network"),
@@ -90,7 +103,7 @@ async def test_requests_to_the_internet_are_refused(
     assert "127.0.0.1" not in live_default
 
     async with async_client(purpose="download") as client:
-        with pytest.raises(OffLimitsError, match=re.escape(live_default)):
+        with pytest.raises(NotMockedError, match=re.escape(live_default)):
             await client.get(f"{live_default}/values")
 
 
