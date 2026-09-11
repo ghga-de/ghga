@@ -97,6 +97,14 @@
 #                             upstream, and feature/backport_dhi is a stray branch with no PR
 #                             (the DHI swap landed as #17), so neither was ever in scope for
 #                             the sync.
+#   reverse-transpiler-service -> services/reverse-transpiler-service
+#                             174edf8 "Remove error log (GSI-2433) (#10)" 2026-06-23, 3.0.1
+#                             All ten PRs were merged; feature/backport_dhi (a 2.3.0 backport
+#                             superseded by #9's 3.0.0 DHI swap) and fix/update_dependencies
+#                             (#5, merged as a squash) are stale leftovers, never in scope.
+#                             services/reverse-transpiler-service additionally carries
+#                             monorepo-only work never upstreamed: a writable /tmp for
+#                             spreadsheet serialization (431690a2, chart values only).
 # Twelve archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
@@ -129,7 +137,6 @@ lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Standalone services
 service	state-management-service	.	services/state-management-service	main
-service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
