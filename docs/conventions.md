@@ -75,6 +75,31 @@ of the branch's first-parent chain, so a back-merge does not launder a tag onto 
 | `ghga/X.Y.Z-rc.N` | `dev` | release candidate — hotfixes get none, so this is `dev`-only |
 | `name/x.y.z`, `packages/x.y.z` | `main` | PyPI, deliberately in lockstep with the platform release |
 
+### Branch names
+
+Name branches `<prefix>/<TICKET>-<slug>` — lowercase kebab-case slug, ticket key dropped when
+there is none: `feature/GSI-2604-rs-increase-timeout`, `chore/pin-sigstore-installer`. The
+prefix names the kind of change, not the member it touches; the member belongs in the slug.
+
+| prefix | for | cut from |
+|---|---|---|
+| `feature/` | new functionality | `dev` |
+| `fix/` | bug fix on unreleased work | `dev` |
+| `hotfix/` | fix against the latest release | `main` |
+| `test/` | test bed, test tooling, test-only changes | `dev` |
+| `docs/` | documentation, ADRs, READMEs | `dev` |
+| `refactor/` | behaviour-preserving restructuring | `dev` |
+| `chore/` | tooling, CI, dependencies, charts — and anything not clearly one of the above | `dev` |
+
+`hotfix/` is the only prefix that carries information rather than a label: it marks the one
+kind of branch cut from `main` instead of `dev`. There is deliberately no `release/` prefix —
+a release is a merge plus a tag, and per-version release branches were rejected in
+[ADR-0020](adr/0020-branching-strategy.md), which also records why the prefix names a kind of
+change rather than a member.
+
+`renovate/*` and `automated/*` are owned by Renovate and the nightly security scan. Nothing
+enforces the convention, and branches already in flight are not renamed.
+
 ## Versioning & releases
 
 - Every member keeps its own semver (in `pyproject.toml` / `Chart.yaml` / `package.json`).

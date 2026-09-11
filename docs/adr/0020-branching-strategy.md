@@ -2,7 +2,8 @@
 
 - **Status:** Accepted — **amended 2026-09-08**: the repo-side changes landed —
   **amended 2026-09-11**: fully implemented. The GitHub-side setup is done as well, so
-  nothing is outstanding; `dev` is the default branch and all work targets it
+  nothing is outstanding; `dev` is the default branch and all work targets it. Branch
+  **naming** was settled on the same date and is recorded in the Decision below
 - **Date:** 2026-08-28
 - **Deciders:** Byron Himes
 
@@ -28,6 +29,12 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`main` reflects the latest platform release.** Its HEAD is always a released state.
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
+- **Branches are named `<prefix>/<TICKET>-<slug>`, where the prefix names the kind of
+  change** — `feature/`, `fix/`, `hotfix/`, `test/`, `docs/`, `refactor/`, `chore/` (decided
+  2026-09-11). The list and the format live in
+  [conventions.md](../conventions.md#branch-names). `hotfix/` is the only prefix that also
+  fixes the base branch, which is what makes it worth keeping apart from `fix/`; the rest are
+  labels. See "Alternatives considered" for why the prefix does not name the member.
 - **Platform version strings are always up-to-date in `dev`**.
 - **Release candidates are created from `dev`**, where the pre-release git tag is cut. Only
   from `dev` — see the hotfix bullet.
@@ -138,6 +145,14 @@ Rejected: merge queues would allow PRs to pile up against `main` until certain c
 This would, in essence, give the same end result as the proposed strategy, except all the changes that would be merged into `dev` would be in a limbo state against `main`.
 It would automate the role of `dev` but in exchange we would lose the concrete state tracking and conceptual simplicity offered by an actual branch.
 This approach might be revisited in the future as part of a production CD strategy when the GHGA platform has gelled more and changes are less disruptive/conflicting.
+- **Member-based branch prefixes** (`ucs/…`, `service-commons/…`), where the prefix names the component the work touches rather than the kind of change.
+Rejected because in a monorepo the component is the weaker of the two things to put there.
+A great deal of the work crosses members or belongs to none in particular — tooling, CI, charts, the test bed, a change to a `libs/` member and the consumers it breaks — so the prefix becomes a judgement call exactly where a naming rule should be automatic, and the set of valid prefixes has to be kept in step with the members as they are added and retired.
+What it would name is also the part that is easiest to recover elsewhere: which components a branch touches is evident from its diff, its pull request and `just affected`, whereas the kind of change it makes — and with it the branch it was cut from, which is the whole point of `hotfix/` — is recorded nowhere else.
+The pattern's best case is one topic fanned out across many members, as a cross-cutting migration is, where the member is the only thing telling the branches apart; that case is narrow, and `<topic>-<member>` in the slug serves it.
+A nested `feature/ucs/…` that keeps both was considered and dropped — the extra segment buys little and makes prefix globs noisier.
+The component keeps its place in the slug, as in `fix/GSI-2477-ucs-enable-requeueing`.
+Branches already in flight are not renamed.
 - **Release branches per version** (full Git Flow). Rejected: with controlled platform releases and hotfixes applied to the latest release only, `main` already serves that role; per-version maintenance branches are not something we want or have the user base to justify. We tried doing this with `hexkit` early on, up through about v3 or v4, but it got tedious quickly.
 
 ## Final Note

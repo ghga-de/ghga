@@ -124,7 +124,8 @@ editing a `libs/` member affects every consumer.
   `dev` and target `dev` in the pull request — `dev` is the integration branch and the repo
   default, `main` carries the latest release and takes hotfixes only
   ([branching](docs/conventions.md#branching), [ADR-0020](docs/adr/0020-branching-strategy.md)).
-  Committing to either branch directly is blocked by a pre-commit hook.
+  Committing to either branch directly is blocked by a pre-commit hook. Name the branch
+  `<prefix>/<slug>` per [branch names](docs/conventions.md#branch-names).
 
 ## Definition of done
 
