@@ -91,6 +91,12 @@
 #                             expected Vault and MongoDB already running on localhost), the
 #                             `run` -> `auth-km-jobs` console-script rename, and the ADR-0014
 #                             capability markers.
+#   dlq-service            -> services/dlq-service            42d67fd "Migrate to httpx2 (#20)" 2026-07-31, 4.1.1
+#                             Every PR but one was merged: #19 "Add script to republish dead
+#                             letters" (feature/dlq-script, 2026-07-21) was closed UNMERGED
+#                             upstream, and feature/backport_dhi is a stray branch with no PR
+#                             (the DHI swap landed as #17), so neither was ever in scope for
+#                             the sync.
 # Twelve archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
@@ -122,7 +128,6 @@ lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
 lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Standalone services
-service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
 service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
