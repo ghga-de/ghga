@@ -171,6 +171,14 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpIncompleteOrFailedError.get_body_model(),
     },
+    "requeueError": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- requeueError: The FileUpload is not in a state that allows"
+            + " requeuing."
+        ),
+        "model": http_exceptions.HttpRequeueError.get_body_model(),
+    },
 }
 
 # For the update_box endpoint, map the work type required to change to a given box state
@@ -597,6 +605,113 @@ async def complete_file_upload(  # noqa: C901
     except UploadControllerPort.BoxStatsCalcError as error:
         # The controller already logs the underlying cause, so don't re-log here
         raise http_exceptions.HttpInternalError() from error
+    except Exception as error:
+        log.error(error, exc_info=True)
+        raise http_exceptions.HttpInternalError() from error
+
+
+@router.post(
+    "/rpc/boxes/{box_id}/uploads/{file_id}/requeue",
+    summary="Requeue a FileUpload that failed interrogation",
+    operation_id="requeueFileUpload",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_description="FileUpload requeued successfully",
+    responses={
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
+        | ERROR_RESPONSES["fileUploadNotFound"]
+        | ERROR_RESPONSES["requeueError"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
+        | ERROR_RESPONSES["fileUploadStateError"]
+        | ERROR_RESPONSES["requeueError"],
+    },
+)
+@TRACER.start_as_current_span("routes.requeue_file_upload")
+async def requeue_file_upload(
+    box_id: UUID4,
+    file_id: UUID4,
+    work_order: Annotated[
+        rest_models.RequeueFailedFileWorkOrder,
+        http_authorization.require_requeue_file_work_order,
+    ],
+    upload_controller: dummies.UploadControllerDummy,
+) -> None:
+    """Set a failed FileUpload back to the 'inbox' state so it is interrogated again.
+
+    The object is still in the inbox bucket, so no re-upload is needed.
+    Returns 409 if the box is archived or the FileUpload's state precludes a requeue.
+    Requires a `RequeueFailedFileWorkOrder` token.
+    """
+    if work_order.box_id != box_id or work_order.file_id != file_id:
+        raise http_exceptions.HttpNotAuthorizedError()
+
+    try:
+        await upload_controller.requeue_single_file_upload(
+            box_id=box_id, file_id=file_id
+        )
+    except UploadControllerPort.BoxNotFoundError as error:
+        raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
+    except UploadControllerPort.BoxStateError as error:
+        raise http_exceptions.HttpBoxStateError(
+            box_id=box_id, box_state=error.box_state
+        ) from error
+    except UploadControllerPort.FileUploadNotFound as error:
+        raise http_exceptions.HttpFileUploadNotFoundError(file_id=file_id) from error
+    except UploadControllerPort.FileUploadStateError as error:
+        raise http_exceptions.HttpFileUploadStateError(file_id=file_id) from error
+    except UploadControllerPort.S3ObjectMissingError as error:
+        raise http_exceptions.HttpRequeueError(
+            file_id=file_id, status_code=404
+        ) from error
+    except UploadControllerPort.RequeueError as error:
+        raise http_exceptions.HttpRequeueError(
+            file_id=file_id, status_code=409
+        ) from error
+    except Exception as error:
+        log.error(error, exc_info=True)
+        raise http_exceptions.HttpInternalError() from error
+
+
+@router.post(
+    "/rpc/boxes/{box_id}/requeue",
+    summary="Requeue all FileUploads in a box that failed interrogation",
+    operation_id="requeueAllFailedFileUploads",
+    status_code=status.HTTP_200_OK,
+    response_model=rest_models.RequeueAllFailedResponse,
+    response_description="The FileUploads that were requeued and the ones skipped",
+    responses={
+        status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"],
+        status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
+    },
+)
+@TRACER.start_as_current_span("routes.requeue_all_failed_file_uploads")
+async def requeue_all_failed_file_uploads(
+    box_id: UUID4,
+    work_order: Annotated[
+        rest_models.RequeueAllFailedWorkOrder,
+        http_authorization.require_requeue_all_failed_work_order,
+    ],
+    upload_controller: dummies.UploadControllerDummy,
+) -> rest_models.RequeueAllFailedResponse:
+    """Set every failed FileUpload in the box back to the 'inbox' state.
+
+    Files whose object has already been deleted from S3 are reported in the `skipped`
+    list instead of failing the whole operation.
+    Requires a `RequeueAllFailedWorkOrder` token.
+    """
+    if work_order.box_id != box_id:
+        raise http_exceptions.HttpNotAuthorizedError()
+
+    try:
+        results = await upload_controller.requeue_all_box_uploads(box_id=box_id)
+        return rest_models.RequeueAllFailedResponse(
+            requeued=results.requeued, skipped=results.skipped
+        )
+    except UploadControllerPort.BoxNotFoundError as error:
+        raise http_exceptions.HttpBoxNotFoundError(box_id=box_id) from error
+    except UploadControllerPort.BoxStateError as error:
+        raise http_exceptions.HttpBoxStateError(
+            box_id=box_id, box_state=error.box_state
+        ) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error

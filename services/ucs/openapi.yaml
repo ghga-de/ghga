@@ -622,6 +622,36 @@ components:
       - part_size
       title: HttpPartSizeErrorData
       type: object
+    HttpRequeueError:
+      additionalProperties: false
+      properties:
+        data:
+          $ref: '#/components/schemas/HttpRequeueErrorData'
+        description:
+          description: A human readable message to the client explaining the cause
+            of the exception.
+          title: Description
+          type: string
+        exception_id:
+          const: requeueError
+          title: Exception Id
+          type: string
+      required:
+      - data
+      - description
+      - exception_id
+      title: HttpRequeueError
+      type: object
+    HttpRequeueErrorData:
+      properties:
+        file_id:
+          format: uuid4
+          title: File Id
+          type: string
+      required:
+      - file_id
+      title: HttpRequeueErrorData
+      type: object
     HttpS3UploadNotFoundError:
       additionalProperties: false
       properties:
@@ -795,6 +825,28 @@ components:
       required:
       - file_id
       title: HttpUploadSizeMismatchErrorData
+      type: object
+    RequeueAllFailedResponse:
+      description: Response body for a box-wide requeue of failed FileUploads.
+      properties:
+        requeued:
+          description: The IDs of the FileUploads that were set back to 'inbox'
+          items:
+            format: uuid4
+            type: string
+          title: Requeued
+          type: array
+        skipped:
+          description: The FileUploads that were ineligible for a requeue
+          items:
+            format: uuid4
+            type: string
+          title: Skipped
+          type: array
+      required:
+      - requeued
+      - skipped
+      title: Requeue All Failed Response
       type: object
     ValidationError:
       properties:
@@ -1434,6 +1486,117 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+      tags:
+      - UploadControllerService
+  /rpc/boxes/{box_id}/requeue:
+    post:
+      description: 'Set every failed FileUpload in the box back to the ''inbox'' state.
+
+
+        Files whose object has already been deleted from S3 are reported in the `skipped`
+
+        list instead of failing the whole operation.
+
+        Requires a `RequeueAllFailedWorkOrder` token.'
+      operationId: requeueAllFailedFileUploads
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequeueAllFailedResponse'
+          description: The FileUploads that were requeued and the ones skipped
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxNotFoundError'
+          description: 'Exceptions by ID:
+
+            - boxNotFound: The FileUploadBox with the given ID does not exist.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpBoxStateError'
+          description: 'Exceptions by ID:
+
+            - boxStateError: The FileUploadBox''s state precludes the requested action.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Requeue all FileUploads in a box that failed interrogation
+      tags:
+      - UploadControllerService
+  /rpc/boxes/{box_id}/uploads/{file_id}/requeue:
+    post:
+      description: 'Set a failed FileUpload back to the ''inbox'' state so it is interrogated
+        again.
+
+
+        The object is still in the inbox bucket, so no re-upload is needed.
+
+        Returns 409 if the box is archived or the FileUpload''s state precludes a
+        requeue.
+
+        Requires a `RequeueFailedFileWorkOrder` token.'
+      operationId: requeueFileUpload
+      parameters:
+      - in: path
+        name: box_id
+        required: true
+        schema:
+          format: uuid4
+          title: Box Id
+          type: string
+      - in: path
+        name: file_id
+        required: true
+        schema:
+          format: uuid4
+          title: File Id
+          type: string
+      responses:
+        '204':
+          description: FileUpload requeued successfully
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpRequeueError'
+          description: 'Exceptions by ID:
+
+            - requeueError: The FileUpload is not in a state that allows requeuing.'
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpRequeueError'
+          description: 'Exceptions by ID:
+
+            - requeueError: The FileUpload is not in a state that allows requeuing.'
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Requeue a FileUpload that failed interrogation
       tags:
       - UploadControllerService
 tags:

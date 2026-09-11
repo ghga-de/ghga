@@ -25,7 +25,7 @@ from ghga_event_schemas.pydantic_ import (
     InterrogationSuccess,
     UploadBoxState,
 )
-from ucs.core.models import FileUpload
+from ucs.core.models import BoxRequeueResult, FileUpload
 
 
 class UploadControllerPort(ABC):
@@ -121,7 +121,7 @@ class UploadControllerPort(ABC):
         Indicates a state inconsistency between the database and S3.
         """
 
-        def __init__(self, *, bucket_id: str, object_id: str):
+        def __init__(self, *, bucket_id: str, object_id: UUID4):
             msg = (
                 f"Object {object_id} expected to be present in bucket {bucket_id}"
                 + " was not found."
@@ -270,6 +270,9 @@ class UploadControllerPort(ABC):
     class PaginationError(RuntimeError):
         """Raised when pagination parameters, such as skip and limit, are invalid"""
 
+    class RequeueError(RuntimeError):
+        """Raised when a FileUpload is not allowed to be requeued."""
+
     @abstractmethod
     async def initiate_file_upload(  # noqa: PLR0913
         self,
@@ -359,6 +362,42 @@ class UploadControllerPort(ABC):
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3ObjectMissingError` if the completed object can't be found in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_single_file_upload(
+        self,
+        *,
+        box_id: UUID4,
+        file_id: UUID4,
+    ) -> None:
+        """Requeue a FileUpload that has failed interrogation.
+
+        Raises:
+        - `BoxNotFoundError` if the FileUploadBox isn't found.
+        - `BoxStateError` if the box exists but is archived.
+        - `FileUploadNotFound` if the FileUpload isn't found.
+        - `FileUploadStateError` if the FileUpload isn't in the `failed` state.
+        - `RequeueError` if the file failed before being interrogated.
+        - `S3ObjectMissingError` if the object was deleted from S3 after
+          the first interrogation failure (this is a legacy failure mode).
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue all failed FileUploads in the specified FileUploadBox.
+
+        Does not attempt to requeue files that failed during initial upload, only
+        files that failed during interrogation.
+
+        Returns an instance of BoxRequeueResult containing the IDs of files that
+        were requeued and the ones that were skipped.
+
+        Raises:
+        - `BoxNotFoundError` if the FileUploadBox isn't found.
+        - `BoxStateError` if the box exists but is archived.
         """
         ...
 
