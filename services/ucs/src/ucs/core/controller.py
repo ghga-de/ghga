@@ -1573,7 +1573,9 @@ class UploadController(UploadControllerPort):
             )
             return
 
-        if file_upload.state in ["cancelled", "failed"]:
+        if file_upload.state == "cancelled" or (
+            file_upload.state == "failed" and file_upload.decrypted_sha256 is None
+        ):
             log.info(
                 "FileUpload %s is already marked '%s', further action presumed unnecessary.",
                 file_id,
