@@ -24,6 +24,7 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from pydantic import UUID4
 
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
@@ -55,6 +56,34 @@ pytestmark = pytest.mark.asyncio()
 async def create_default_bucket(rig: JointRig):
     """Create the `test-inbox` bucket automatically for tests."""
     await rig.object_storages.for_alias("test")[1].create_bucket("test-inbox")
+
+
+async def _fail_interrogation(*, file_id: UUID4, rig: JointRig):
+    """Process an interrogation failure for a FileUpload.
+
+    Returns the updated FileUpload object.
+    """
+    await rig.controller.process_interrogation_failure(
+        report=InterrogationFailure(
+            file_id=file_id,
+            storage_alias="test",
+            interrogated_at=now_utc_ms_prec(),
+            reason="Checksum mismatch reported by FIS",
+        )
+    )
+    return await rig.file_upload_dao.get_by_id(file_id)
+
+
+async def _complete_file_upload(*, file_upload: FileUpload, rig: JointRig):
+    await rig.controller.complete_file_upload(
+        box_id=file_upload.box_id,
+        file_id=file_upload.id,
+        unencrypted_checksum="unencrypted_checksum",
+        encrypted_checksum=f"etag_for_{file_upload.object_id}",
+        encrypted_parts_md5=["abc123"],
+        encrypted_parts_sha256=["def456"],
+    )
+    return await rig.file_upload_dao.get_by_id(file_upload.id)
 
 
 async def test_create_new_box(rig: JointRig):
@@ -128,20 +157,12 @@ async def test_complete_file_upload(rig: JointRig):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    file1_object_id = rig.file_upload_dao.latest.object_id
 
     # Now complete the file upload
-    await controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{file1_object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
     bucket_id, object_storage = rig.object_storages.for_alias("test")
     assert await object_storage.does_object_exist(
-        bucket_id=bucket_id, object_id=str(file1_object_id)
+        bucket_id=bucket_id, object_id=str(rig.file_upload_dao.latest.object_id)
     )
 
     # Verify that the completed field was set on the FileUpload
@@ -165,15 +186,7 @@ async def test_complete_file_upload(rig: JointRig):
         encrypted_size=other_encrypted_size,
         part_size=PART_SIZE,
     )
-    file2_object_id = rig.file_upload_dao.latest.object_id
-    await controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id2,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{file2_object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
     latest_file_upload = file_upload_dao.latest
     assert latest_file_upload.id == file_id2
     assert latest_file_upload.completed
@@ -183,8 +196,14 @@ async def test_complete_file_upload(rig: JointRig):
 
 
 @pytest.mark.parametrize("complete_before_delete", [True, False])
-async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
+@pytest.mark.parametrize("fail_interrogation", [True, False])
+async def test_delete_file_upload(
+    rig: JointRig, complete_before_delete: bool, fail_interrogation: bool
+):
     """Test deleting a FileUpload from a FileUploadBox"""
+    # Skip the auto-combo of these two since it's not possible
+    if fail_interrogation and not complete_before_delete:
+        return
     file_upload_box_dao = rig.file_upload_box_dao
     file_upload_dao = rig.file_upload_dao
     bucket_id, object_storage = rig.object_storages.for_alias("test")
@@ -208,19 +227,15 @@ async def test_delete_file_upload(rig: JointRig, complete_before_delete: bool):
     )
 
     if complete_before_delete:
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{object_id}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
         assert file_upload_box_dao.latest.file_count == 1
         assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
         assert await object_storage.does_object_exist(
             bucket_id=bucket_id, object_id=object_id
         )
+
+    if fail_interrogation:
+        await _fail_interrogation(file_id=file_id, rig=rig)
 
     # Now delete the file upload
     await controller.remove_file_upload(
@@ -276,22 +291,14 @@ async def test_update_box_max_size_below_committed(rig: JointRig):
     controller = rig.controller
     box_id = await rig.create_default_box()
 
-    file_id, _ = await controller.initiate_file_upload(
+    _, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id = rig.file_upload_dao.latest.object_id
-    await controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     box = rig.file_upload_box_dao.latest
     with pytest.raises(UploadControllerPort.BoxMaxSizeTooLowError):
@@ -330,22 +337,14 @@ async def test_completion_recomputes_box_stats_from_truth(rig: JointRig):
     await file_upload_box_dao.update(drifted_box)
 
     # Complete one file upload so the box has real stats again
-    file_id, _ = await rig.controller.initiate_file_upload(
+    _, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id = rig.file_upload_dao.latest.object_id
-    await rig.controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
     assert file_upload_box_dao.latest.file_count == 1
     assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
 
@@ -358,22 +357,14 @@ async def test_lock_recomputes_box_stats(rig: JointRig):
     box_id = await rig.create_default_box()
 
     # Complete one upload so the box has a real, counted file (version 0 -> 1)
-    file_id, _ = await rig.controller.initiate_file_upload(
+    _, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id = rig.file_upload_dao.latest.object_id
-    await rig.controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Manufacture stat drift, then lock and confirm the lock write corrected it
     drifted_box = await file_upload_box_dao.get_by_id(box_id)
@@ -446,15 +437,7 @@ async def test_get_box_uploads(rig: JointRig):
             encrypted_size=ENCRYPTED_SIZE,
             part_size=PART_SIZE,
         )
-        object_id = rig.file_upload_dao.latest.object_id
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{object_id}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
         file_ids.append(file_id)
 
     # Create a second box with different files to test isolation
@@ -468,15 +451,7 @@ async def test_get_box_uploads(rig: JointRig):
             encrypted_size=ENCRYPTED_SIZE,
             part_size=PART_SIZE,
         )
-        other_object_id = rig.file_upload_dao.latest.object_id
-        await controller.complete_file_upload(
-            box_id=other_box_id,
-            file_id=other_file_id,
-            unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{other_object_id}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
         other_file_ids.append(other_file_id)
 
     # Create a third, empty box
@@ -738,6 +713,10 @@ async def test_remove_file_upload_skips_s3_for_terminal_states(
     box_id = await rig.create_default_box()
     file_upload = make_file_upload(state=state)
     file_upload.box_id = box_id
+
+    # Make sure to unset decrypted_sha256 if 'failed' so it represents
+    #  a file that failed upload instead of a failed interrogation
+    file_upload.decrypted_sha256 = None
     await rig.file_upload_dao.insert(file_upload)
 
     s3_calls: list[str] = []
@@ -1007,7 +986,7 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
 
     # Create a FileUploadBox and a FileUpload
     box_id = await rig.create_default_box()
-    file_id, _ = await rig.controller.initiate_file_upload(
+    _, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -1025,14 +1004,7 @@ async def test_complete_file_upload_when_box_missing(rig: JointRig):
 
     # Try to complete the file upload for the now missing box
     with pytest.raises(UploadControllerPort.BoxNotFoundError) as exc_info:
-        await rig.controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="sha256:unencrypted_checksum_here",
-            encrypted_checksum="sha256:encrypted_checksum_here",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Verify the exception contains the correct box_id
     assert str(box_id) in str(exc_info.value)
@@ -1046,7 +1018,7 @@ async def test_complete_file_upload_when_box_locked(rig: JointRig):
     """
     # Create a FileUploadBox and a FileUpload
     box_id = await rig.create_default_box()
-    file_id, _ = await rig.controller.initiate_file_upload(
+    _, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -1062,15 +1034,7 @@ async def test_complete_file_upload_when_box_locked(rig: JointRig):
     assert rig.file_upload_box_dao.latest.state == "locked"
 
     # Now complete the file upload
-    object_id = rig.file_upload_dao.latest.object_id
-    await rig.controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Verify that the upload is now marked complete
     assert rig.file_upload_dao.latest.state == "inbox"
@@ -1089,14 +1053,7 @@ async def test_complete_file_upload_in_terminal_state(
     await rig.file_upload_dao.insert(file_upload)
 
     with pytest.raises(UploadControllerPort.FileUploadStateError) as exc_info:
-        await rig.controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_upload.id,
-            unencrypted_checksum="sha256:checksum",
-            encrypted_checksum="md5:checksum",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     assert str(file_upload.id) in str(exc_info.value)
     assert terminal_state in str(exc_info.value)
@@ -1109,22 +1066,16 @@ async def test_complete_missing_file_upload(rig: JointRig):
     # Create a box first
     box_id = await rig.create_default_box()
 
-    # Try to complete a file upload that doesn't exist
-    non_existent_file_id = uuid4()
+    # Try to complete a file upload that doesn't exist but is assigned to a real box
+    file_upload = make_file_upload(file_id=uuid4())
+    file_upload.box_id = box_id
 
     with pytest.raises(UploadControllerPort.FileUploadNotFound) as exc_info:
-        await rig.controller.complete_file_upload(
-            box_id=box_id,
-            file_id=non_existent_file_id,
-            unencrypted_checksum="sha256:unencrypted_checksum_here",
-            encrypted_checksum="sha256:encrypted_checksum_here",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=file_upload, rig=rig)
     assert not rig.file_upload_dao.resources
 
     # Verify the exception contains the correct file_id
-    assert str(non_existent_file_id) in str(exc_info.value)
+    assert str(file_upload.id) in str(exc_info.value)
 
 
 async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
@@ -1136,7 +1087,7 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
 
     # Create a FileUploadBox and a FileUpload with a valid storage alias
     box_id = await rig.create_default_box()
-    file_id, _ = await controller.initiate_file_upload(
+    _, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -1155,14 +1106,7 @@ async def test_complete_file_upload_with_unknown_storage_alias(rig: JointRig):
 
     # Try to complete the file upload - should raise UnknownStorageAliasError
     with pytest.raises(UploadControllerPort.UnknownStorageAliasError) as exc_info:
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="sha256:unencrypted_checksum_here",
-            encrypted_checksum="sha256:encrypted_checksum_here",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Verify the exception message contains the unknown storage alias
     assert "does_not_exist" in str(exc_info.value)
@@ -1180,7 +1124,7 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
 
     # Create a FileUploadBox and a FileUpload
     box_id = await rig.create_default_box()
-    file_id, _ = await controller.initiate_file_upload(
+    _, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -1198,14 +1142,7 @@ async def test_complete_file_upload_with_s3_error(rig: JointRig):
 
     storage.complete_multipart_upload = do_error
     with pytest.raises(UploadControllerPort.UploadCompletionError) as exc_info:
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="sha256:unencrypted_checksum_here",
-            encrypted_checksum=f"etag_for_{file_id}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Verify the exception contains the S3 upload ID
     s3_upload_id = file_upload_dao.latest.s3_upload_id
@@ -1220,7 +1157,7 @@ async def test_complete_file_upload_size_mismatch(rig: JointRig):
     when the actual S3 object size doesn't match the declared encrypted_size.
     """
     box_id = await rig.create_default_box()
-    file_id, _ = await rig.controller.initiate_file_upload(
+    _, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
@@ -1249,14 +1186,7 @@ async def test_complete_file_upload_size_mismatch(rig: JointRig):
 
     # Now try to complete the upload. Should get the UploadSizeMismatchError.
     with pytest.raises(UploadControllerPort.UploadSizeMismatchError):
-        await rig.controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="sha256:unencrypted_checksum_here",
-            encrypted_checksum=f"etag_for_{object_id}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Make sure the FileUpload attributes are updated
     file_upload = rig.file_upload_dao.latest
@@ -1469,6 +1399,73 @@ async def test_process_interrogation_success_no_file_upload(rig: JointRig):
         await rig.controller.process_interrogation_success(report=report)
 
 
+async def test_process_interrogation_failure_happy(rig: JointRig):
+    """Ensure that when UCS consumes an InterrogationFailure event,
+    the fields are updated and state set to `failed`, but the S3 object
+    is not deleted.
+    """
+    # Initiate and complete a FileUpload
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    completed_upload = await _complete_file_upload(
+        file_upload=rig.file_upload_dao.latest, rig=rig
+    )
+    assert completed_upload.state == "inbox"
+
+    await sleep(MIN_SLEEP)
+    failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
+
+    # Only state, state_updated, and failure_reason should change
+    assert failed_upload.state == "failed"
+    assert failed_upload.failure_reason == "Checksum mismatch reported by FIS"
+    assert failed_upload.state_updated > completed_upload.state_updated
+    excluded = {"state", "failure_reason", "state_updated"}
+    assert failed_upload.model_dump(exclude=excluded) == completed_upload.model_dump(
+        exclude=excluded
+    )
+
+    # Make sure the object is still in the inbox
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    assert await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(failed_upload.object_id)
+    )
+
+
+async def test_process_file_deletion_requested_with_failed_interrogation_files(
+    rig: JointRig,
+):
+    """Verify that `process_file_deletion()` doesn't skip failed-interrogation files."""
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    file_upload = rig.file_upload_dao.latest
+    await _complete_file_upload(file_upload=file_upload, rig=rig)
+    await _fail_interrogation(file_id=file_id, rig=rig)
+
+    # First, quickly check that the S3 object exists
+    bucket_id, storage = rig.object_storages.for_alias(file_upload.storage_alias)
+    assert await storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(file_upload.object_id)
+    )
+    await rig.controller.process_file_deletion_requested(file_id=file_id)
+
+    # Now verify that the object is gone
+    assert not await storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(file_upload.object_id)
+    )
+
+
 async def test_initiate_upload_after_failed(rig: JointRig):
     """Re-initiating an upload with the same alias is allowed when the existing
     FileUpload is in 'failed' state.
@@ -1586,15 +1583,7 @@ async def test_initiate_upload_blocked_for_inbox_state(rig: JointRig):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id_1 = rig.file_upload_dao.latest.object_id
-    await controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id_1,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{object_id_1}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     inbox_upload = await file_upload_dao.get_by_id(file_id_1)
     assert inbox_upload.state == "inbox"
@@ -1643,14 +1632,7 @@ async def test_overwrite_cancels_active_upload(
     object_id_1 = str(rig.file_upload_dao.latest.object_id)
 
     if state == "inbox":
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id_1,
-            unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{object_id_1}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
         assert (await file_upload_dao.get_by_id(file_id_1)).state == "inbox"
 
     file_id_2, _ = await controller.initiate_file_upload(
@@ -1832,7 +1814,7 @@ async def test_box_size_limit(
 async def test_finished_uploads_count_toward_limit(rig: JointRig):
     """Test that when calculating the progress towards the size quota, completed uploads
     are also taken into account rather than only the in-progress uploads. Also check
-    that failed and cancelled uploads are ignored.
+    that we ignore files marked 'cancelled' or that never completed uploading.
     """
     controller = rig.controller
     # Box fits exactly 2 files
@@ -1840,21 +1822,14 @@ async def test_finished_uploads_count_toward_limit(rig: JointRig):
         storage_alias="test", max_size=DECRYPTED_SIZE * 2
     )
     # Upload and complete file1 — now box.size == DECRYPTED_SIZE
-    file_id1, _ = await controller.initiate_file_upload(
+    _, _ = await controller.initiate_file_upload(
         box_id=box_id,
         alias="file1",
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    await controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id1,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{rig.file_upload_dao.latest.object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
     assert rig.file_upload_box_dao.latest.size == DECRYPTED_SIZE
 
     # file2 fits exactly (box.size + 0 init + DECRYPTED_SIZE == max_size)
@@ -1906,6 +1881,49 @@ async def test_finished_uploads_count_toward_limit(rig: JointRig):
     assert rig.file_upload_dao.latest.id == file_id3
 
 
+async def test_failed_interrogation_files_count_toward_limit(rig: JointRig):
+    """Test that when calculating the progress towards the size quota, we still count
+    files that failed interrogation.
+    """
+    controller = rig.controller
+
+    # Box fits exactly 2 files
+    box_id = await controller.create_file_upload_box(
+        storage_alias="test", max_size=DECRYPTED_SIZE * 2
+    )
+    # Upload and complete file1 — now box.size == DECRYPTED_SIZE
+    _, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file1",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    assert rig.file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # add a second file that fills up the box to the byte and then fail it
+    file_id2, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="file2",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    await _fail_interrogation(file_id=file_id2, rig=rig)
+
+    # Try to add a new file. It should be rejected.
+    with pytest.raises(UploadControllerPort.BoxMaxSizeExceededError):
+        _, _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="file3",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+
+
 async def test_concurrent_upload_cap(rig: JointRig):
     """Concurrent upload cap by trying to create a new FileUpload when the current
     file count is below the limit and at the limit.
@@ -1935,14 +1953,7 @@ async def test_concurrent_upload_cap(rig: JointRig):
         )
 
     # Now complete a file to free up a slot
-    await rig.controller.complete_file_upload(
-        box_id=box_id,
-        file_id=rig.file_upload_dao.latest.id,
-        unencrypted_checksum="abc",
-        encrypted_checksum=f"etag_for_{rig.file_upload_dao.latest.object_id}",
-        encrypted_parts_md5=["a1", "b2"],
-        encrypted_parts_sha256=["a1", "b2"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # Test that we can now upload a file again
     _ = await rig.controller.initiate_file_upload(
@@ -1998,7 +2009,9 @@ async def test_part_size_validation(
         )
 
 
-def _make_matching_event(file_upload: FileUpload) -> FileInternallyRegistered:
+def _make_file_internally_registered_event(
+    file_upload: FileUpload,
+) -> FileInternallyRegistered:
     """Create a FileInternallyRegistered event that matches the given FileUpload."""
     return FileInternallyRegistered(
         file_id=file_upload.id,
@@ -2024,7 +2037,7 @@ async def test_handle_internal_file_registration(rig: JointRig):
     # Create the FileUpload and matching FileInternallyRegistered event, but don't
     #  insert the FileUpload just yet. First, check for error handling on absent FileUploads
     file_upload = make_file_upload(state="awaiting_archival")
-    event = _make_matching_event(file_upload)
+    event = _make_file_internally_registered_event(file_upload)
     with pytest.raises(UploadControllerPort.FileUploadNotFound):
         await rig.controller.process_internal_file_registration(
             registration_metadata=event
@@ -2079,7 +2092,7 @@ async def test_handle_internal_file_registration_state_error(
     file_upload.state = file_upload_state
     await rig.file_upload_dao.insert(file_upload)
 
-    event = _make_matching_event(file_upload)
+    event = _make_file_internally_registered_event(file_upload)
     if bad_event_field is not None:
         event = event.model_copy(update={bad_event_field: bad_event_value})
 
@@ -2111,14 +2124,7 @@ async def test_upload_activity_lifecycle(rig: JointRig):
     assert file_upload.id == file_id
 
     # Complete the upload
-    await rig.controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="abc",
-        encrypted_checksum=f"etag_for_{file_upload.object_id}",
-        encrypted_parts_md5=["abc"],
-        encrypted_parts_sha256=["def"],
-    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
 
     # UploadActivity entry should be gone
     with pytest.raises(ResourceNotFoundError):
@@ -2718,11 +2724,8 @@ async def test_remove_file_upload_box_s3_abort_error(rig: JointRig):
 
 
 async def _upload_and_fail(rig: JointRig, alias: str, failure_reason: str):
-    """Complete an upload, then simulate an interrogation failure via a path
-    that leaves the inbox object in place.
-    """
+    """Complete an upload, then simulate an interrogation failure."""
     controller = rig.controller
-    file_upload_dao = rig.file_upload_dao
     box_id = await rig.create_default_box()
     file_id, _ = await controller.initiate_file_upload(
         box_id=box_id,
@@ -2731,21 +2734,16 @@ async def _upload_and_fail(rig: JointRig, alias: str, failure_reason: str):
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    object_id = file_upload_dao.latest.object_id
-    await controller.complete_file_upload(
-        box_id=box_id,
-        file_id=file_id,
-        unencrypted_checksum="unencrypted_checksum",
-        encrypted_checksum=f"etag_for_{object_id}",
-        encrypted_parts_md5=["abc123"],
-        encrypted_parts_sha256=["def456"],
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    await controller.process_interrogation_failure(
+        report=InterrogationFailure(
+            file_id=file_id,
+            storage_alias=rig.file_upload_dao.latest.storage_alias,
+            interrogated_at=now_utc_ms_prec(),
+            reason=failure_reason,
+        )
     )
-    failed_upload = await file_upload_dao.get_by_id(file_id)
-    failed_upload.state = "failed"
-    failed_upload.failure_reason = failure_reason
-    failed_upload.state_updated = now_utc_ms_prec()
-    await file_upload_dao.update(failed_upload)
-    return box_id, file_id, failed_upload
+    return box_id, file_id, rig.file_upload_dao.latest
 
 
 async def test_requeue_file_success(rig: JointRig):
@@ -2851,7 +2849,9 @@ async def test_requeue_file_ignores_stale_interrogation_failure(rig: JointRig):
     after_new_failure = await file_upload_dao.get_by_id(file_id)
     assert after_new_failure.state == "failed"
     assert after_new_failure.failure_reason == "Genuinely new failure"
-    assert not await object_storage.does_object_exist(
+
+    # The object stays in the inbox so the file can be requeued again
+    assert await object_storage.does_object_exist(
         bucket_id=bucket_id, object_id=str(requeued.object_id)
     )
 
@@ -2954,7 +2954,7 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
     # which is required to distinguish the 'deleted' and 'present' categories below.
     original_get_object_metadata = object_storage.get_object_metadata
 
-    async def get_object_metadata_respecting_deletion(
+    async def _get_object_metadata_respecting_deletion(
         *, bucket_id: str, object_id: str
     ):
         if not await object_storage.does_object_exist(
@@ -2967,9 +2967,9 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
             bucket_id=bucket_id, object_id=object_id
         )
 
-    object_storage.get_object_metadata = get_object_metadata_respecting_deletion
+    object_storage.get_object_metadata = _get_object_metadata_respecting_deletion
 
-    async def upload(alias: str):
+    async def _upload(alias: str):
         """Initiate and complete an upload, landing the file in 'inbox'."""
         file_id, _ = await controller.initiate_file_upload(
             box_id=box_id,
@@ -2978,15 +2978,7 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
             encrypted_size=ENCRYPTED_SIZE,
             part_size=PART_SIZE,
         )
-        object_id = file_upload_dao.latest.object_id
-        await controller.complete_file_upload(
-            box_id=box_id,
-            file_id=file_id,
-            unencrypted_checksum="unencrypted_checksum",
-            encrypted_checksum=f"etag_for_{object_id}",
-            encrypted_parts_md5=["abc123"],
-            encrypted_parts_sha256=["def456"],
-        )
+        await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
         return file_id
 
     # 2 'init' uploads
@@ -3001,12 +2993,12 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
 
     # 2 'interrogated' uploads
     for i in range(2):
-        file_id = await upload(f"interrogated_{i}")
+        file_id = await _upload(f"interrogated_{i}")
         success_report = InterrogationSuccess(
             file_id=file_id,
             secret_id=f"secret_{i}",
             storage_alias="test",
-            bucket_id="permanent-bucket",
+            bucket_id="interrogation",
             object_id=uuid4(),
             interrogated_at=now_utc_ms_prec(),
             encrypted_parts_md5=["aaa111"],
@@ -3030,31 +3022,24 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
         await file_upload_dao.update(file_upload)
         never_reached_inbox_ids.append(file_id)
 
-    # 2 'failed' uploads whose inbox object was already deleted
+    # 2 'failed' uploads whose inbox object was already deleted. Interrogation
+    #  failures no longer delete the object, so we do this manually
     deleted_ids: list = []
     for i in range(2):
-        file_id = await upload(f"deleted_{i}")
-        failure_report = InterrogationFailure(
-            file_id=file_id,
-            storage_alias="test",
-            interrogated_at=now_utc_ms_prec(),
-            reason="Checksum mismatch reported by FIS",
+        file_id = await _upload(f"deleted_{i}")
+        failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
+        await object_storage.delete_object(
+            bucket_id=failed_upload.bucket_id, object_id=str(failed_upload.object_id)
         )
-        await controller.process_interrogation_failure(report=failure_report)
         deleted_ids.append(file_id)
 
     # 2 'failed' uploads that still have their data in S3
     present_ids: list = []
     pre_snapshots: dict = {}
     for i in range(2):
-        file_id = await upload(f"present_{i}")
-        failed_upload = await file_upload_dao.get_by_id(file_id)
-        failed_upload.state = "failed"
-        failed_upload.failure_reason = "Checksum mismatch reported by FIS"
-        failed_upload.state_updated = now_utc_ms_prec()
-        await file_upload_dao.update(failed_upload)
+        file_id = await _upload(f"present_{i}")
         present_ids.append(file_id)
-        pre_snapshots[file_id] = failed_upload
+        pre_snapshots[file_id] = await _fail_interrogation(file_id=file_id, rig=rig)
 
     return box_id, present_ids, deleted_ids, never_reached_inbox_ids, pre_snapshots
 

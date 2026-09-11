@@ -89,10 +89,10 @@ class UploadController(UploadControllerPort):
         """Insert a new FileUpload, replacing a failed/cancelled one if needed.
 
         If a unique constraint violation occurs, the existing upload is retrieved and
-        replaced when it is in a failed or cancelled state. If any other error occurs,
-        the upload is marked 'failed' so a subsequent retry can replace it, and the
-        error is re-raised. The associated S3 multipart upload is left for the cleanup
-        job to handle.
+        replaced when it is in a failed (upload not completed) or cancelled state.
+        If any other error occurs, the upload is marked 'failed' so a subsequent retry
+        can replace it, and the error is re-raised. The associated S3 multipart upload
+        is left for the cleanup job to handle.
 
         Raises `FileUploadAlreadyExists` if an active FileUpload already exists for
         this alias and box_id (and is not failed or cancelled).
@@ -221,7 +221,10 @@ class UploadController(UploadControllerPort):
         #  be replaced with the new submission. If not, we have to raise an error.
         #  The user (or a DS) must first stop/remove the upload before it can be
         #  replaced with a new one.
-        if existing_upload.state not in ("failed", "cancelled"):
+        if existing_upload.state not in ("failed", "cancelled") or (
+            existing_upload.state == "failed"
+            and existing_upload.decrypted_sha256 != None
+        ):
             return False
 
         log.info(
@@ -271,7 +274,7 @@ class UploadController(UploadControllerPort):
     async def _remove_completed_file_upload(self, *, file_upload: FileUpload) -> None:
         """Delete a completely uploaded file from S3 or abort any stale multipart.
 
-        Does not delete any data from the DB.
+        Does not delete any data from the DB and does not update box stats.
 
         Raises:
         - `UnknownStorageAliasError` if the storage alias is not known.
@@ -300,7 +303,7 @@ class UploadController(UploadControllerPort):
     async def _remove_incomplete_file_upload(self, *, file_upload: FileUpload) -> None:
         """Abort an incomplete S3 multipart upload.
 
-        Does not delete any data from the DB.
+        Does not delete any data from the DB and does not update box stats.
 
         Raises:
         - `UnknownStorageAliasError` if the storage alias is not known.
@@ -366,6 +369,7 @@ class UploadController(UploadControllerPort):
         extra: dict[str, Any] = {"box_id": box_id, "alias": alias}
         # Get the box and resolve S3 storage details
         box = await self._get_box(box_id=box_id, require_unlocked=True)
+        current_size = box.size
         storage_alias = box.storage_alias
         try:
             bucket_id = self._s3_client.get_bucket_id_for_alias(
@@ -377,8 +381,9 @@ class UploadController(UploadControllerPort):
         extra["bucket_id"] = bucket_id
 
         # If overwrite is requested, cancel any active upload for this alias before
-        # re-deriving size/count. 'failed'/'cancelled' states are handled later by
-        # _insert_file_upload; only 'init'/'inbox' need explicit cancellation here.
+        #  re-deriving size/count. 'init'/'inbox' need explicit cancellation here,
+        #  as well as failed-interrogation files. Failed-upload and cancelled files
+        #  are overwritten automatically by _insert_file_upload().
         if overwrite:
             try:
                 existing_upload = await self._file_upload_dao.find_one(
@@ -387,15 +392,22 @@ class UploadController(UploadControllerPort):
             except NoHitsFoundError:
                 existing_upload = None
 
-            if existing_upload and existing_upload.state in ("init", "inbox"):
+            if existing_upload and (
+                existing_upload.state in ("init", "inbox")
+                or (  # also sweep for failed-interrogation files
+                    existing_upload.state == "failed"
+                    and existing_upload.decrypted_sha256 != None
+                )
+            ):
                 await self.remove_file_upload(
                     box_id=box_id, file_id=existing_upload.id, require_unlocked=True
                 )
-                # Re-fetch box to get the updated size/file count
-                box = await self._get_box(box_id=box_id, require_unlocked=True)
+                # Get updated box size after removal
+                _, current_size = await self._box_stats_aggregator.compute_box_stats(
+                    box_id=box.id
+                )
 
-        # Get both box size + in progress size and the number of in progress files
-        current_size = box.size
+        # Get both box size + in-progress size and the number of in-progress files
         in_progress_count = 0
         async for upload in self._file_upload_dao.find_all(
             mapping={"box_id": box.id, "state": "init"}
@@ -907,10 +919,12 @@ class UploadController(UploadControllerPort):
             log.info(error)
             raise error from err
 
-        # Remove the file from S3 only if it's still in the inbox state. After that
-        #  point, the bucket ID and object ID will refer to another bucket for which UCS
-        #  has no write access.
-        if file_upload.state == "inbox":
+        # Remove the file from S3 only if it's still in the inbox state OR if
+        #  it failed interrogation. After that point, the bucket ID and object
+        #  ID will refer to another bucket for which UCS has no write access.
+        if file_upload.state == "inbox" or (
+            file_upload.state == "failed" and file_upload.decrypted_sha256 != None
+        ):
             await self._remove_completed_file_upload(file_upload=file_upload)
         # Abort the upload if it still hasn't completed
         elif file_upload.state == "init":
@@ -1447,7 +1461,9 @@ class UploadController(UploadControllerPort):
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
     ) -> None:
-        """Update a FileUpload state to 'failed' and remove it from the inbox bucket.
+        """Update a FileUpload state to 'failed'.
+
+        The associated S3 object is not deleted.
 
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
@@ -1477,7 +1493,6 @@ class UploadController(UploadControllerPort):
                         file_id,
                     )
                     return
-                await self._remove_completed_file_upload(file_upload=file_upload)
                 file_upload.state = "failed"
                 file_upload.state_updated = now_utc_ms_prec()
                 file_upload.failure_reason = report.reason
@@ -1544,7 +1559,8 @@ class UploadController(UploadControllerPort):
         """Process a deletion request for the given FileUpload ID.
 
         This will remove the object from the inbox, if it exists.
-        Database objects are untouched.
+        FileUpload objects in the database are updated to the `cancelled` state
+        but not deleted.
 
         If no FileUpload with the given ID exists, merely logs a warning and returns.
         """
@@ -1558,7 +1574,9 @@ class UploadController(UploadControllerPort):
             )
             return
 
-        if file_upload.state in ["cancelled", "failed"]:
+        if file_upload.state == "cancelled" or (
+            file_upload.state == "failed" and file_upload.decrypted_sha256 is None
+        ):
             log.info(
                 "FileUpload %s is already marked '%s', further action presumed unnecessary.",
                 file_id,
@@ -1694,7 +1712,10 @@ class UploadController(UploadControllerPort):
             async for upload in self._file_upload_dao.find_all(
                 mapping={
                     "storage_alias": storage_alias,
-                    "state": {"$in": ["init", "inbox"]},
+                    "$or": [
+                        {"state": {"$in": ["init", "inbox"]}},
+                        {"state": "failed", "decrypted_sha256": {"$ne": None}},
+                    ],
                 }
             )
         ]

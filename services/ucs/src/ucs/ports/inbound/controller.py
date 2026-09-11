@@ -568,7 +568,9 @@ class UploadControllerPort(ABC):
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
     ) -> None:
-        """Update a FileUpload state to 'failed' and remove it from the inbox bucket.
+        """Update a FileUpload state to 'failed'.
+
+        The associated S3 object is not deleted.
 
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
@@ -596,7 +598,8 @@ class UploadControllerPort(ABC):
         """Process a deletion request for the given FileUpload ID.
 
         This will remove the object from the inbox, if it exists.
-        Database objects are untouched.
+        FileUpload objects in the database are updated to the `cancelled` state
+        but not deleted.
 
         If no FileUpload with the given ID exists, merely logs a warning and returns.
         """
