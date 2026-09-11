@@ -3106,7 +3106,7 @@ wheels = [
 
 [[package]]
 name = "ns"
-version = "7.0.1"
+version = "7.0.2"
 source = { editable = "services/notification-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
