@@ -39,13 +39,10 @@ def _parse_retry_after(value: str) -> float | None:
     """
     value = value.strip()
 
-    try:
+    with suppress(ValueError):
         seconds = float(value)
-    except ValueError:
-        pass
-    else:
         # Reject inf and nan, which would otherwise be carried into the sleep below.
-        return max(0.0, seconds) if math.isfinite(seconds) else None
+        return max(0.0, seconds) if math.isfinite(seconds) else None        
 
     with suppress(TypeError, ValueError):
         retry_at = parsedate_to_datetime(value)
