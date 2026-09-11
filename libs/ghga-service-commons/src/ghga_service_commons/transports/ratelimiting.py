@@ -47,14 +47,15 @@ def _parse_retry_after(value: str) -> float | None:
         # Reject inf and nan, which would otherwise be carried into the sleep below.
         return max(0.0, seconds) if math.isfinite(seconds) else None
 
-    try:
+    with suppress(TypeError, ValueError):
         retry_at = parsedate_to_datetime(value)
-    except (TypeError, ValueError):
-        return None
-    if retry_at.tzinfo is None:
-        # A value parsed without a zone would compare wrong.
-        retry_at = retry_at.replace(tzinfo=timezone.utc)
-    return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+        if retry_at.tzinfo is None:
+            # A value parsed without a zone would compare wrong.
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+
+    # No retry-after value found. Return None
+    return None
 
 
 def _retry_after_seconds(headers: httpx2.Headers) -> float:
