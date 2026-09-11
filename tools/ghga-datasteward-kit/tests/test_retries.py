@@ -20,34 +20,29 @@ from tenacity import RetryError
 
 from ghga_datasteward_kit.s3_upload import LegacyConfig
 from ghga_datasteward_kit.s3_upload.http_client import RequestConfigurator, httpx_client
+from ghga_service_commons.api.mock_api import ResponseHandler, fail_with, respond
 from tests.fixtures.config import legacy_config_fixture  # noqa: F401
-from tests.fixtures.mock_api import (
-    ApiMock,
-    MockedEndpoint,
-    ResponseHandler,
-    fail_with,
-    respond,
-)
+from tests.fixtures.mock_api import MockedRetryApi
 
 EXCEPTIONS = [httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.TimeoutException]
 STATUS_CODES = [408, 429, 500, 502, 503, 504]
 PATH = "/test"
-URL = f"http://not-a-real-url{PATH}"
+URL = f"{MockedRetryApi.base_url}{PATH}"
 
 
 pytestmark = pytest.mark.asyncio()
 
 
-def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> MockedEndpoint:
+def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> MockedRetryApi:
     """Point the client at a mocked endpoint answering with `handler`.
 
     The mock replaces only the innermost transport, so requests still pass through the
     rate limiting and retry layers under test.
     """
-    api_mock = ApiMock()
-    endpoint = api_mock.add(method="GET", path=PATH, handler=handler)
-    RequestConfigurator.configure(config, base_transport=api_mock.as_transport())
-    return endpoint
+    retry_api = MockedRetryApi()
+    retry_api.on_get = handler
+    RequestConfigurator.configure(config, base_transport=retry_api.as_transport())
+    return retry_api
 
 
 @pytest.mark.parametrize("status_code", STATUS_CODES)
@@ -62,7 +57,7 @@ async def test_retry_handling_retryable_status_codes(
         await _run_request()
 
     # the request was actually retried instead of failing on the first attempt
-    assert endpoint.call_count > 1
+    assert len(endpoint.calls["on_get"]) > 1
 
 
 @pytest.mark.parametrize("exception", EXCEPTIONS)
@@ -95,7 +90,7 @@ async def test_retry_handling_edge_cases(
         await _run_request()
 
     # a successful response is passed through untouched
-    endpoint.handler = respond(200)
+    endpoint.on_get = respond(200)
     response = await _run_request()
     assert response.status_code == 200
 
