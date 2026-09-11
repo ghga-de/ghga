@@ -1,6 +1,8 @@
 # ADR-0021 — One Pages site for the monorepo, one subpath per documented member
 
-- **Status:** Proposed
+- **Status:** Accepted — implemented 2026-09-09: `docs-publish.yaml`,
+  `scripts/docs_members.py` and the `docs` recipe landed with the decision, and the site is
+  live at `ghga-de.github.io/ghga`
 - **Date:** 2026-09-09
 - **Deciders:** Christoph Zwerschke
 

@@ -155,4 +155,6 @@ and the release workflow always build one image per member. It exists because it
 ## Conventions
 
 See [docs/conventions.md](docs/conventions.md) — workspace layout, the `[tool.ghga]` capability
-markers, naming, and the per-component release-tag scheme (`name/x.y.z`).
+markers, naming, the [branching model](docs/conventions.md#branching) (cut from `dev`, merge
+into `dev`; `main` is the latest release), and the per-component release-tag scheme
+(`name/x.y.z`).

@@ -73,7 +73,9 @@ Further rules:
 
 - Always scope test runs to the member you touched (e.g. `just test services/auth-service`);
 a bare `just test` runs every suite in the workspace.
-- Use `just affected [base]` to decide what to test when a change may cross members.
+- Use `just affected [base]` to decide what to test when a change may cross members. It
+  defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut
+  from `main` instead, pass `origin/main`.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the
   `config.js` generation the launcher does. For anything beyond the `just fe-*`
   recipes, work in `frontend/data-portal` under its own `AGENTS.md`.
@@ -103,7 +105,11 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
 tests, `just lint`), then widen via `just affected` when the change crosses members
 editing a `libs/` member affects every consumer.
 - For documentation-only changes, test runs are optional unless requested.
-- Do not create commits or branches unless explicitly requested.
+- Do not create commits or branches unless explicitly requested. When they are: branch from
+  `dev` and target `dev` in the pull request — `dev` is the integration branch and the repo
+  default, `main` carries the latest release and takes hotfixes only
+  ([branching](docs/conventions.md#branching), [ADR-0020](docs/adr/0020-branching-strategy.md)).
+  Committing to either branch directly is blocked by a pre-commit hook.
 
 ## Definition of done
 

@@ -72,8 +72,8 @@ typecheck:
 hooks:
     uv run pre-commit install
 
-# The branch guard is skipped: it exists to stop commits landing on main, not to fail a
-# full-tree sweep.
+# The branch guard is skipped: it exists to stop commits landing on the long-lived branches
+# (`main` and `dev`, ADR-0020), not to fail a full-tree sweep.
 # Run every hook over the whole tree, as CI's `hygiene` job does.
 hooks-all:
     SKIP=no-commit-to-branch uv run pre-commit run --all-files
