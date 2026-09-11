@@ -25,11 +25,15 @@ from hexkit.utils import now_utc_ms_prec
 from rs.config import Config
 from rs.constants import (
     EXC_ID_ACCESSION_MAP_ERROR,
+    EXC_ID_BOX_NOT_FOUND,
     EXC_ID_BOX_STATE_ERROR,
     EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_FILE_UPLOAD_NOT_FOUND,
     EXC_ID_INCOMPLETE_OR_FAILED,
+    EXC_ID_REQUEUE_ERROR,
 )
 from rs.core.models import (
+    BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
     FileUploadWithAccession,
@@ -1603,4 +1607,244 @@ async def test_get_accession_map(
         registry.reset_mock()
         registry.get_study.side_effect = TypeError()
         response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 500
+
+
+async def test_requeue_single_file_upload_happy(config: Config, ds_auth_headers):
+    """Test that the `POST /{box_id}/uploads/{file_id}/requeue` endpoint works in the happy case.
+
+    Check the following:
+    - The response status code is 204
+    - The response payload is empty
+    - The core method `requeue_single_file_upload()` is called correctly.
+    """
+    registry = AsyncMock()
+    test_file_id = uuid4()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+
+        registry.rdub_manager.requeue_single_file_upload.return_value = None
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 204
+        assert not response.content
+
+        # The requesting Data Steward's ID is forwarded for the audit record
+        registry.rdub_manager.requeue_single_file_upload.assert_awaited_once_with(
+            box_id=TEST_BOX_ID, file_id=test_file_id, data_steward_id=TEST_DS_ID
+        )
+
+
+async def test_requeue_single_file_upload_is_ds_only(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Verify that only Data Stewards can use the
+    `POST /{box_id}/uploads/{file_id}/requeue` endpoint.
+    """
+    registry = AsyncMock()
+    test_file_id = uuid4()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+        registry.rdub_manager.requeue_single_file_upload.return_value = None
+
+        # unauthenticated
+        response = await rest_client.post(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.post(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # regular users are rejected with a 403
+        response = await rest_client.post(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # None of the above should have reached the core
+        registry.rdub_manager.requeue_single_file_upload.assert_not_awaited()
+
+        # Data Stewards are allowed
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 204
+        registry.rdub_manager.requeue_single_file_upload.assert_awaited_once()
+
+
+async def test_requeue_single_file_upload_error_translation(
+    config: Config, ds_auth_headers
+):
+    """Test the core-to-HTTP Response error translation in the
+    `POST /{box_id}/uploads/{file_id}/requeue` endpoint.
+    """
+    registry = AsyncMock()
+    test_file_id = uuid4()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+
+        # handle box not found error from core
+        registry.rdub_manager.requeue_single_file_upload.side_effect = (
+            RDUBManagerPort.BoxNotFoundError(box_id=TEST_BOX_ID)
+        )
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 404
+        assert response.json()["exception_id"] == EXC_ID_BOX_NOT_FOUND
+
+        # handle box state error from core (the box is archived)
+        registry.reset_mock()
+        registry.rdub_manager.requeue_single_file_upload.side_effect = (
+            RDUBManagerPort.BoxStateError(
+                operation="requeue file uploads", state="archived"
+            )
+        )
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == EXC_ID_BOX_STATE_ERROR
+        assert response.json()["data"]["state"] == "archived"
+
+        # handle file upload not found error from core
+        registry.reset_mock()
+        registry.rdub_manager.requeue_single_file_upload.side_effect = (
+            RDUBManagerPort.FileUploadNotFoundError(file_id=test_file_id)
+        )
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 404
+        assert response.json()["exception_id"] == EXC_ID_FILE_UPLOAD_NOT_FOUND
+        assert response.json()["data"]["file_id"] == str(test_file_id)
+
+        # handle requeue error from core - the reason is relayed to the client
+        registry.reset_mock()
+        requeue_error = RDUBManagerPort.RequeueError(
+            f"Cannot requeue FileUpload {test_file_id} because it did not fail"
+            + " interrogation."
+        )
+        registry.rdub_manager.requeue_single_file_upload.side_effect = requeue_error
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == EXC_ID_REQUEUE_ERROR
+        assert response.json()["data"]["file_id"] == str(test_file_id)
+        assert response.json()["description"] == str(requeue_error)
+
+        # handle other exception
+        registry.reset_mock()
+        registry.rdub_manager.requeue_single_file_upload.side_effect = TypeError()
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 500
+
+
+@pytest.mark.parametrize(
+    "requeued_count, skipped_count", [(0, 0), (2, 0), (0, 2), (2, 2)]
+)
+async def test_requeue_whole_box_uploads_happy(
+    config: Config, ds_auth_headers, requeued_count: int, skipped_count: int
+):
+    """Test that the `POST /{box_id}/requeue` endpoint works in the happy case.
+
+    Check the following:
+    - The response status code is 200
+    - The response payload contains an instance of BoxRequeueResults which matches
+      whatever the core returned.
+    - The core method `requeue_all_box_uploads()` is called correctly.
+    """
+    registry = AsyncMock()
+    results = BoxRequeueResult(
+        requeued=[uuid4() for _ in range(requeued_count)],
+        skipped=[uuid4() for _ in range(skipped_count)],
+    )
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/requeue"
+
+        registry.rdub_manager.requeue_all_box_uploads.return_value = results
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == results.model_dump(mode="json")
+
+        # The requesting Data Steward's ID is forwarded for the audit record
+        registry.rdub_manager.requeue_all_box_uploads.assert_awaited_once_with(
+            box_id=TEST_BOX_ID, data_steward_id=TEST_DS_ID
+        )
+
+
+async def test_requeue_whole_box_uploads_is_ds_only(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Verify that only Data Stewards can use the
+    `POST /{box_id}/requeue` endpoint.
+    """
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/requeue"
+        registry.rdub_manager.requeue_all_box_uploads.return_value = BoxRequeueResult(
+            requeued=[], skipped=[]
+        )
+
+        # unauthenticated
+        response = await rest_client.post(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.post(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # regular users are rejected with a 403
+        response = await rest_client.post(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # None of the above should have reached the core
+        registry.rdub_manager.requeue_all_box_uploads.assert_not_awaited()
+
+        # Data Stewards are allowed
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        registry.rdub_manager.requeue_all_box_uploads.assert_awaited_once()
+
+
+async def test_requeue_whole_box_uploads_error_translation(
+    config: Config, ds_auth_headers
+):
+    """Test the core-to-HTTP Response error translation in the
+    `POST /{box_id}/requeue` endpoint works in the happy case.
+    """
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = f"/upload-boxes/{TEST_BOX_ID}/requeue"
+
+        # handle box not found error from core
+        registry.rdub_manager.requeue_all_box_uploads.side_effect = (
+            RDUBManagerPort.BoxNotFoundError(box_id=TEST_BOX_ID)
+        )
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 404
+        assert response.json()["exception_id"] == EXC_ID_BOX_NOT_FOUND
+
+        # handle box state error from core (the box is archived)
+        registry.reset_mock()
+        registry.rdub_manager.requeue_all_box_uploads.side_effect = (
+            RDUBManagerPort.BoxStateError(
+                operation="requeue file uploads", state="archived"
+            )
+        )
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == EXC_ID_BOX_STATE_ERROR
+        assert response.json()["data"]["state"] == "archived"
+
+        # handle other exception
+        registry.reset_mock()
+        registry.rdub_manager.requeue_all_box_uploads.side_effect = TypeError()
+        response = await rest_client.post(url, headers=ds_auth_headers)
         assert response.status_code == 500
