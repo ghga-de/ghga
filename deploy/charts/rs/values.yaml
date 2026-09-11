@@ -231,6 +231,8 @@ config:
   work_order_signing_key: '{}'
   db_version_collection: rsDbVersions
   migration_wait_sec: 5
+  httpx_standard_timeout_sec: 60.0
+  httpx_long_timeout_sec: 600.0
 configPrefix: rs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

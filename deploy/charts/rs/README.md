@@ -30,6 +30,8 @@ for the full set of configurable values.
 | `config.work_order_signing_key` | The private key for signing work order tokens and other JWTs | `null` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.httpx_standard_timeout_sec` | The timeout duration, in seconds, to use for most HTTP calls. | `60.0` |
+| `config.httpx_long_timeout_sec` | The timeout duration, in seconds, to use for HTTP calls which have the potential to be especially long-running. | `600.0` |
 | `config.study_topic` | Name of the event topic containing study events | `null` |
 | `config.accession_map_topic` | The name of the topic used for file accession map events | `null` |
 | `config.research_data_upload_box_topic` | Name of the event topic containing research data upload box events | `null` |
