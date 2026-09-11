@@ -61,6 +61,21 @@ The devcontainer (`.devcontainer/`) is the intended environment: it provisions u
 its docker daemon. Run repo tooling inside the devcontainer; when the environment doesn't match,
 ask rather than installing host tooling or patching scripts around the mismatch.
 
+This is enforced, not just advised: the Python-workspace and hooks recipes depend on a
+`_guard` recipe that fails outside the container. CI is exempt (`$CI`), and `GHGA_ALLOW_HOST=1`
+overrides it. `.venv` sits in the bind-mounted workspace, so a `uv` run on either side leaves
+the other an interpreter symlink into a home directory it has not got — see the README's
+[Work inside the dev container](README.md#work-inside-the-dev-container) for the symptom
+(misleading `pre-commit not found`) and the repair. Do not work around the guard by calling
+`uv` directly; fix the environment instead.
+
+Agent sessions belong in the devcontainer as well, whichever agent it is. Agent state is
+per-machine — a session started on the host keeps its history, settings, and memory in the
+host's home, invisible from in here — so running some sessions on the host and some in the
+container splits the record in two. Only `~/.claude` is currently persisted across rebuilds
+(the `ghga-claude` volume in `devcontainer.json`); another agent whose state should survive a
+rebuild needs its own volume added there.
+
 ## Repo commands (just)
 
 Everything runs through `just`, documented by `just` itself and by the README's

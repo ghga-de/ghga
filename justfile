@@ -12,14 +12,57 @@ image_registry := env_var_or_default("IMAGE_REGISTRY", "docker.io/ghga")
 default:
     @just --list
 
+# --- Environment guard ------------------------------------------------------------------
+# `.venv` lives in the workspace, and the dev container bind-mounts the workspace from the
+# host -- so whichever side ran uv last owns it, and the loser gets an interpreter symlink
+# pointing into a home directory that does not exist on its side.
+#
+# Neither half of that reports itself. The generated .git/hooks/pre-commit hardcodes
+# .venv/bin/python3, so when the symlink dangles the hook falls through to a PATH lookup
+# git has not got and says `pre-commit not found. Did you forget to activate your
+# virtualenv?` -- which is not what went wrong, and sends you looking at activation.
+#
+# Order matters: the host check comes first, because `just sync` is the right repair only
+# on the side you actually work on. Telling a host shell to sync would just flip the
+# ownership back and break the container instead.
+#
+# Exempt: CI ($CI), which runs these recipes on a bare runner by design, and anyone who
+# sets GHGA_ALLOW_HOST=1 -- the deliberate bare-host escape hatch (cf. `just docs`).
+[private]
+_guard-host:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if [ -z "${CI:-}" ] && [ -z "${GHGA_ALLOW_HOST:-}" ] && [ ! -f /.dockerenv ]; then
+        echo "error: repo tooling is meant to run inside the dev container (.devcontainer/)." >&2
+        echo "Running it on the host leaves a .venv only the host can use, and the container" >&2
+        echo "(or its git hooks) then fails in ways that do not name this as the cause." >&2
+        echo "Reopen the folder in the container, or set GHGA_ALLOW_HOST=1 to override." >&2
+        exit 1
+    fi
+
+# The dangling-venv half is separate because `just sync` is the repair it prescribes, and a
+# guard that blocked the repair would be a dead end. `uv sync` rebuilds a venv whose
+# interpreter has gone missing, so sync takes the host check alone.
+[private]
+_guard: _guard-host
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if [ -e .venv ] && [ ! -x .venv/bin/python3 ]; then
+        echo "error: .venv/bin/python3 does not resolve to an interpreter that exists here." >&2
+        echo "That is what a uv run from the other side of the bind mount leaves behind." >&2
+        echo "Rebuild the environment where you are working now:" >&2
+        echo "  just sync" >&2
+        exit 1
+    fi
+
 # --- Python workspace -------------------------------------------------------------------
 # Resolve + install all workspace members, their extras, and the shared dev toolchain.
 # --all-extras is needed so member test suites (which use optional deps) can run.
-sync:
+sync: _guard-host
     uv sync --all-packages --all-extras
 
 # Update the single workspace lockfile.
-lock:
+lock: _guard-host
     uv lock
 
 # `uv run` syncs the environment but does not prune it, so a distribution that is no longer
@@ -32,7 +75,7 @@ lock:
 # different fixes here: `--check` reports a stale ENVIRONMENT but passes a stale LOCK
 # straight through, so the lock is checked on its own first.
 # Assert uv.lock and the environment are current, as CI's `uv sync --locked` does.
-sync-check:
+sync-check: _guard
     #!/usr/bin/env bash
     set -uo pipefail
     if ! out=$(uv lock --check 2>&1); then
@@ -50,12 +93,12 @@ sync-check:
     exit 1
 
 # Lint + format check across the workspace.
-lint:
+lint: _guard
     uv run ruff check .
     uv run ruff format --check .
 
 # Auto-fix lint + format.
-fmt:
+fmt: _guard
     uv run ruff format .
     uv run ruff check --fix .
 
@@ -63,26 +106,26 @@ fmt:
 # depends on the path set it is given -- so the unit, not the file, is what gets checked.
 # scripts/typecheck.py is the same runner the pre-commit hook and CI use.
 # Type-check every member (src + tests) and the non-member Python.
-typecheck:
+typecheck: _guard
     uv run python scripts/typecheck.py --all
 
 # --- Git hooks (pre-commit; ADR-0018) ---------------------------------------------------
 # Once per clone -- the dev container does it for you.
 # Install the git hooks into .git/hooks.
-hooks:
+hooks: _guard
     uv run pre-commit install
 
 # The branch guard is skipped: it exists to stop commits landing on the long-lived branches
 # (`main` and `dev`, ADR-0020), not to fail a full-tree sweep.
 # Run every hook over the whole tree, as CI's `hygiene` job does.
-hooks-all:
+hooks-all: _guard
     SKIP=no-commit-to-branch uv run pre-commit run --all-files
 
 # Only the generic pre-commit-hooks repo carries a `rev`; the ruff / mypy / prettier /
 # eslint hooks take their version from uv.lock and pnpm-lock.yaml, so those are bumped by
 # updating the lockfiles instead.
 # Bump the pinned hook revisions.
-hooks-update:
+hooks-update: _guard
     uv run pre-commit autoupdate
 
 # Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
@@ -102,7 +145,7 @@ hooks-update:
 #   just test services/auth-service/tests/unit   # part of one member's suite
 #
 # Run tests; optionally scope to a tier or a member, e.g. `just test services/auth-service`.
-test target="": sync-check
+test target="": _guard sync-check
     #!/usr/bin/env bash
     set -uo pipefail
     target="{{target}}"
