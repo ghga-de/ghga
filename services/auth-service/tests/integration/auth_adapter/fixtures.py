@@ -40,7 +40,6 @@ from auth_service.user_registry.deps import (
     get_user_dao,
     get_user_registry,
 )
-from ghga_service_commons.api.mock_router import MockRouter
 from ghga_service_commons.api.testing import AsyncTestClient as BareClient
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.providers.akafka.testutils import KafkaFixture
@@ -48,6 +47,7 @@ from hexkit.providers.akafka.testutils import KafkaFixture
 from ...fixtures.utils import (
     USER_INFO,
     MockClaimDao,
+    MockedOidcApi,
     MockUserRegistry,
     MockUserTokenDao,
     create_access_token,
@@ -157,10 +157,10 @@ async def query_new_session(
 
 @pytest_asyncio.fixture(name="client_with_session")
 async def fixture_bare_client_with_session(
-    bare_client: BareClient, mock_router: MockRouter
+    bare_client: BareClient, oidc: MockedOidcApi
 ) -> AsyncGenerator[ClientWithSession]:
     """Get test client for the auth adapter with a logged in user"""
-    mock_userinfo(mock_router, USER_INFO)
+    mock_userinfo(oidc, USER_INFO)
 
     user_registry = MockUserRegistry()
     user_dao = user_registry.mock_user_dao
