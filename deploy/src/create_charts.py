@@ -568,6 +568,13 @@ def chart_readme_text(
     release, so a pinned version here would need updating on every single one - omit
     it and Helm just installs the latest published version, which is what's true at
     the time anyone actually reads this.
+
+    The source links point at `main`, not the default branch `dev`, for the same
+    reason (ADR-0020: `main` is the latest release). A reader arriving from the
+    chart registry installed a published chart, so the released tree is the honest
+    target. The cost is that a chart added on `dev` links to a path `main` does not
+    carry yet, so both links 404 until the next release merge - accepted, because
+    the alternative shows every such reader unreleased values.
     """
     header = f"""\
 # {name}

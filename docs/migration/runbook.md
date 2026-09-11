@@ -155,6 +155,12 @@ Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`
 `git commit`, re-run for the rest. Keep harmonisation root-only and don't restructure service
 `src/` during the window, or conflicts multiply.
 
+Every `main` in this section and in `scripts/migration/` is the **upstream** repo's branch (the
+manifest's optional 5th column, defaulting to `main`), and is unaffected by our own branching
+model. On the monorepo side, sync and retirement work is a branch cut from `dev` and merged
+back into `dev` by pull request like any other change
+([ADR-0020](../adr/0020-branching-strategy.md)).
+
 ### Verifying a repo is fully synced
 
 Before retiring a mainline repo (archiving it and dropping its `repos.tsv` row), prove nothing was

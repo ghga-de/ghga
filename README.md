@@ -31,6 +31,28 @@ just hooks              # install the git hooks (the dev container does this for
 just lint && just test
 ```
 
+### Work inside the dev container
+
+`.devcontainer/` is the intended environment, and `just` now holds you to it: the Python
+workspace and hooks recipes refuse to run on the host. CI is exempt, and `GHGA_ALLOW_HOST=1`
+overrides it for a deliberate bare-host run.
+
+The reason is that `.venv` lives in the workspace and the container bind-mounts the
+workspace from the host, so whichever side ran `uv` last owns it — and leaves the other
+side an interpreter symlink into a home directory that does not exist there.
+
+Nothing reports that plainly, which is the real cost. The usual symptom is the git hooks
+going quiet with `pre-commit not found. Did you forget to activate your virtualenv?`
+Activation is not the problem: `.git/hooks/pre-commit` hardcodes `.venv/bin/python3`, and
+the symlink underneath it has gone stale. Confirm with `readlink -f .venv/bin/python3`
+(empty output means dangling) and repair with `just sync` on the side you are working on —
+reinstalling the hooks is not needed, since the hook's path was right all along.
+
+Coding agents (Claude Code, Copilot, …) belong in the container too. Their state is
+per-machine, so a session started on the host writes its history, settings, and memory into
+the host's home, where the container cannot see it — and work splits across two stores that
+never reconcile.
+
 ## Task runner
 
 Everything runs through [`just`](justfile) — a thin facade over uv / pnpm / helm / kind
@@ -155,4 +177,6 @@ and the release workflow always build one image per member. It exists because it
 ## Conventions
 
 See [docs/conventions.md](docs/conventions.md) — workspace layout, the `[tool.ghga]` capability
-markers, naming, and the per-component release-tag scheme (`name/x.y.z`).
+markers, naming, the [branching model](docs/conventions.md#branching) (cut from `dev`, merge
+into `dev`; `main` is the latest release), and the per-component release-tag scheme
+(`name/x.y.z`).

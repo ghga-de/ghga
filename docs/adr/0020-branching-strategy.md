@@ -1,8 +1,8 @@
 # ADR-0020 — Git Flow: `main` is the latest release, `dev` is the integration branch
 
-- **Status:** Accepted — **amended 2026-09-08**: implemented. `dev` exists and the
-  repo-side changes below have landed; the GitHub-side settings are tracked in
-  "Remaining setup"
+- **Status:** Accepted — **amended 2026-09-08**: the repo-side changes landed —
+  **amended 2026-09-11**: fully implemented. The GitHub-side setup is done as well, so
+  nothing is outstanding; `dev` is the default branch and all work targets it
 - **Date:** 2026-08-28
 - **Deciders:** Byron Himes
 
@@ -60,7 +60,8 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 > [ADR-0004](0004-versioning-and-release-by-tag.md)'s 2026-09-01 amendment (pre-release cuts on
 > `dev`, per-lane branch gate) is backed by the workflow, and was itself amended on 2026-09-08
 > where implementing it showed the per-lane branches had to be sets rather than single names.
-> What is left is GitHub-side and cannot be done from the tree; see "Remaining setup".
+> What is left is GitHub-side and cannot be done from the tree; see "GitHub setup" (done in
+> the meantime, on 2026-09-11).
 
 **Branch**
 - Create `dev` from `main`.
@@ -101,43 +102,25 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 **Local tooling**
 - `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
 
-### Remaining setup
+### GitHub setup — done 2026-09-11
 
-The tree is done; these are repo settings and in-flight work, and have to be done through
-GitHub rather than a commit. Until they are, `dev` works but nothing steers people onto it.
+> **Amended 2026-09-11 — the GitHub-side setup has landed, and this section is now a record
+> rather than a checklist.** `dev` is the default branch and protected like `main`; no open
+> pull request names `main` as its base any more; and the stranded
+> `automated/lockfile-security-update` PR (#160, base `main`) was closed after the flip. The
+> deadline this section carried — that a `schedule` trigger runs the *default branch's* copy
+> of the workflow file, so the nightly `security-scan.yaml` kept scanning `main` and opening
+> its PR with `base: main` until the flip — has therefore expired: the fix in
+> `security-scan.yaml` is in force, and the scan's `base` job resolves `BASE_BRANCH` itself
+> regardless of the setting. Renovate had no `baseBranches` in `renovate.json5`, so the flip
+> retargeted it with no config change, and its stranded `main`-based PRs were superseded the
+> same way the lockfile one was.
 
-**The default-branch flip is the one with a deadline.** GitHub runs a `schedule` trigger from
-the *default branch's* copy of the workflow file, whatever branch the work merged into. So
-between merging this and flipping the default, the nightly `security-scan.yaml` is still
-`main`'s version: scanning `main`, diffing against `:dev` images now built from `dev`, and
-opening its PR with `base: main` — the exact bug this change set fixes, still running once a
-day at 04:17 UTC. Nothing breaks, but the fix is not in force until the flip, so do the two
-together rather than leaving a gap over a weekend. (`renovate.yaml` is untouched here, so
-which copy of it runs makes no difference — what retargets Renovate is the flip itself.)
+Two of the settings are **standing rules for `main`**, not one-off steps, and have to stay
+in force:
 
-- Make `dev` the default branch, and protect it the way `main` is protected. Renovate has no
-  `baseBranches` in `renovate.json5`, so the flip is what retargets it — no config change
-  needed. It does leave Renovate's existing `main`-based PRs stranded, though, exactly as it
-  strands the lockfile PR below: `renovate/dhi.io-node-base-image` and
-  `renovate/dhi.io-python-base-image` are superseded by whatever the next Monday run opens
-  against `dev`, so close them alongside that one. `renovate.yaml` itself needs no change; it
-  has no checkout at all and drives the Renovate action over the API.
-- Keep "Require linear history" *off* for `main` — it would forbid the release merge commit —
-  and forbid squash-merging and rebasing there for the same reason.
-- Retarget the open pull requests that still name `main` as their base. `dev` was branched
-  from `main` at the same commit, so nothing needs rebasing yet; that stops being true as soon
-  as the first PR merges into `dev`.
-- Close the existing `automated/lockfile-security-update` PR by hand, **after** the flip, not
-  before. It is open against `main`, and the new close step looks up its PR with `--base dev`,
-  so it can never match that one — but that is only true once the flip makes the nightly run
-  use this version of the workflow. Until then `main`'s copy is what runs, it still looks up
-  `--base main`, and it will keep that PR refreshed (or close and reopen it) every morning, so
-  closing it early just means closing it again. **After the flip this is blocking, not
-  tidy-up:** the `dev`-based run reuses the same `automated/lockfile-security-update` branch,
-  and the workflow now refuses to push to a branch an open PR is using for a different base
-  rather than force-updating it — so while that PR sits there, the nightly scan finds fixes
-  and opens nothing, reporting the reason in its job summary. Close it (and let the branch be
-  deleted) to unblock.
+- Keep "Require linear history" *off* for `main` — it would forbid the release merge commit.
+- Forbid squash-merging and rebasing on `main`, for the same reason.
 
 ## Open questions
 
@@ -149,7 +132,7 @@ These are being settled separately. None of them change the branch layout.
 - [ADR-0004](0004-versioning-and-release-by-tag.md) was amended on 2026-09-01 for the pre-release cut moving to `dev` and the per-lane branch gate. It will need a further amendment if the questions above resolve toward promoting digests, since that's where release tagging/image publishing/promotion belong.
 
 ## Alternatives considered
-- **Trunk-based on `main` alone** (what we do now). Rejected: no branch represents the released state and `main` is always in flux.
+- **Trunk-based on `main` alone** (what we did until this ADR was implemented). Rejected: no branch represents the released state and `main` is always in flux.
 - **Trunk-based on `main` with merge queues** (remix of status quo).
 Rejected: merge queues would allow PRs to pile up against `main` until certain criteria green-lit the merge.
 This would, in essence, give the same end result as the proposed strategy, except all the changes that would be merged into `dev` would be in a limbo state against `main`.
