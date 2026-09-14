@@ -138,14 +138,26 @@ commit, in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) fo
   `BREAKING CHANGE:` footer. That matters for the members released on their own semver
   ([ADR-0004](0004-versioning-and-release-by-tag.md)).
 
-Pull request `[upload] Add UCS endpoints (GSI-1234)`, merged as #194, lands as:
+Branch `upload/feat/GSI-1234-add-ucs-endpoints`, pull request
+`[upload] Add UCS endpoints (GSI-1234)`, merged as #207:
 
 ```text
-feat(upload): add UCS endpoints (#194)
+feat(upload): add UCS endpoints (#207)
 
 - Add POST /uploads and GET /uploads/{id}
 - Resolve the storage alias from the box configuration
 - Cover both routes in the UCS API tests
+```
+
+The same for a solo pull request, where the scope names the member rather than a stack and a
+small change earns fewer bullets — branch `fix/GSI-2477-enable-requeueing`, pull request
+`Enable requeueing after failed interrogation (GSI-2477)`, merged as #145:
+
+```text
+fix(ucs): requeue after failed interrogation (#145)
+
+- Requeue files whose interrogation failed instead of dropping them
+- Cap retries at the configured limit and log the final failure
 ```
 
 ## Consequences
@@ -153,7 +165,7 @@ feat(upload): add UCS endpoints (#194)
 - A stack holds together in the pull request list: every entry carries `[<stack>]` and the
   branches sort together under `<stack>/`. Neither is enforced; both are visible at a glance.
 - **Every squash merge needs its commit message edited in the merge dialog.** GitHub prefills
-  the subject from the pull request title — `[upload] Add UCS endpoints (GSI-1234) (#194)`,
+  the subject from the pull request title — `[upload] Add UCS endpoints (GSI-1234) (#207)`,
   which is not a Conventional Commit — and the body from the whole description. Both prefills
   stay, because they are the right thing to edit down; the editing is what pull request titles
   that read as prose and commits that parse cost together.
@@ -185,8 +197,8 @@ feat(upload): add UCS endpoints (#194)
   than a type-scope prefix. The body has to be cut down at merge time regardless, so the dialog
   is open either way and the editing does not actually disappear.
 - **The YouTrack key in the commit subject** (`feat(upload): add UCS endpoints (GSI-1234)
-  (#194)`). Rejected: two parenthesised suffixes, and eleven of the 52 characters spent on a
-  key that `(#194)` already leads to.
+  (#207)`). Rejected: two parenthesised suffixes, and eleven of the 52 characters spent on a
+  key that `(#207)` already leads to.
 - **`feature/` rather than `feat/`**, which is the more readable word. Rejected so that the
   branch kind and the commit type are one vocabulary instead of two with a mapping between
   them.
