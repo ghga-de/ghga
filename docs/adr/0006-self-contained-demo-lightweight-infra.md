@@ -33,9 +33,11 @@ additionally enables `state-management-service`
 
 **Amended 2026-09-04 — no Bitnami subcharts left.** The 2025 Bitnami catalogue gating
 broke those pulls, so kafka, mongodb and minio are plain templates in `ghga-demo` itself
-on official images (`apache/kafka`, `mongo`, `minio/minio`), not bundled subcharts. Vault
+on official images (`apache/kafka`, `mongo`, `quay.io/minio/minio`), not bundled subcharts. Vault
 dev-mode, the AAI and MailHog were already in-chart. The decision — operator-free,
 lightweight stand-ins supplied by the umbrella — is unchanged; only the mechanism is.
+MinIO has since stopped publishing community images to Docker Hub; its last builds are
+frozen on quay.io, so the chart pins those release tags (no further security fixes).
 
 ## Consequences
 - One command on a cluster you control brings up a working GHGA with the **real** Gateway-API
