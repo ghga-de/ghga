@@ -333,7 +333,7 @@ class UploadController(UploadControllerPort):
         except S3ClientPort.S3OperationError as err:
             raise self.S3OperationError(details=str(err)) from err
 
-    async def initiate_file_upload(  # noqa: C901, PLR0913, PLR0915
+    async def initiate_file_upload(  # noqa: C901, PLR0912, PLR0913, PLR0915
         self,
         *,
         box_id: UUID4,
@@ -380,10 +380,12 @@ class UploadController(UploadControllerPort):
         extra["storage_alias"] = storage_alias
         extra["bucket_id"] = bucket_id
 
-        # If overwrite is requested, cancel any active upload for this alias before
-        #  re-deriving size/count. 'init'/'inbox' need explicit cancellation here,
-        #  as well as failed-interrogation files. Failed-upload and cancelled files
-        #  are overwritten automatically by _insert_file_upload().
+        # If overwrite is requested, find any active upload for this alias that must be
+        #  removed. 'init'/'inbox' need explicit cancellation here, as well as
+        #  failed-interrogation files. Failed-upload and cancelled files are overwritten
+        #  automatically by _insert_file_upload(). Removal waits until the checks
+        #  below pass so a rejected request leaves the existing upload intact.
+        upload_to_replace: FileUpload | None = None
         if overwrite:
             try:
                 existing_upload = await self._file_upload_dao.find_one(
@@ -399,13 +401,7 @@ class UploadController(UploadControllerPort):
                     and existing_upload.decrypted_sha256 != None
                 )
             ):
-                await self.remove_file_upload(
-                    box_id=box_id, file_id=existing_upload.id, require_unlocked=True
-                )
-                # Get updated box size after removal
-                _, current_size = await self._box_stats_aggregator.compute_box_stats(
-                    box_id=box.id
-                )
+                upload_to_replace = existing_upload
 
         # Get both box size + in-progress size and the number of in-progress files
         in_progress_count = 0
@@ -414,6 +410,12 @@ class UploadController(UploadControllerPort):
         ):
             current_size += upload.decrypted_size
             in_progress_count += 1
+
+        # Don't count the upload being replaced against the box limits
+        if upload_to_replace:
+            current_size -= upload_to_replace.decrypted_size
+            if upload_to_replace.state == "init":
+                in_progress_count -= 1
 
         # Ensure that another upload is allowed at the moment
         max_concurrent = self._config.max_concurrent_uploads_per_box
@@ -439,6 +441,12 @@ class UploadController(UploadControllerPort):
             or ceil(encrypted_size / part_size) > MAX_PART_COUNT
         ):
             raise self.PartSizeError(file_alias=alias, part_size=part_size)
+
+        # All checks passed, so it's now safe to remove the upload being replaced
+        if upload_to_replace:
+            await self.remove_file_upload(
+                box_id=box_id, file_id=upload_to_replace.id, require_unlocked=True
+            )
 
         file_id = uuid4()
         object_id = uuid4()

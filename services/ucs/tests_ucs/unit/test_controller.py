@@ -1765,6 +1765,55 @@ async def test_overwrite_false_still_blocks_active_upload(
     assert upload.state == state
 
 
+async def test_rejected_overwrite_keeps_failed_interrogation_file(rig: JointRig):
+    """Test that when an overwrite of a failed-interrogation file is rejected, the
+    existing FileUpload and its S3 object are left in place so it can still be requeued.
+    """
+    controller = rig.controller
+    file_upload_dao = rig.file_upload_dao
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+
+    # Upload a file and fail its interrogation
+    box_id = await rig.create_default_box()
+    file_id, _ = await controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=file_upload_dao.latest, rig=rig)
+    failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
+    assert failed_upload.state == "failed"
+    object_id = str(failed_upload.object_id)
+
+    # Use all of the box's in-flight quota so the overwrite gets rejected
+    for i in range(rig.config.max_concurrent_uploads_per_box):
+        _ = await controller.initiate_file_upload(
+            box_id=box_id,
+            alias=f"ongoing_{i}",
+            decrypted_size=1,
+            encrypted_size=1,
+            part_size=PART_SIZE,
+        )
+
+    with pytest.raises(UploadControllerPort.TooManyOpenUploadsError):
+        await controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test_file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+            overwrite=True,
+        )
+
+    # The failed FileUpload and its S3 object must be untouched
+    assert (await file_upload_dao.get_by_id(file_id)).state == "failed"
+    assert await object_storage.does_object_exist(
+        bucket_id=bucket_id, object_id=object_id
+    )
+
+
 @pytest.mark.parametrize(
     "max_size, pre_existing_sizes, expect_error",
     [
