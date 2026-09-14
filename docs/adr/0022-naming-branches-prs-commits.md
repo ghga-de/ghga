@@ -22,17 +22,14 @@ previous one and rooted at `dev`, so that a big change stays reviewable in piece
 run to a dozen or more. GitHub supports the stacking itself — a pull request can target
 another's branch, and the chain is visible from any one of them — but that support still sits
 close to the git underneath it: the chain is read off the branches rather than the stack being
-an object in its own right. A stack therefore has no name yet, and the pull request list cannot
-yet be grouped or sorted by one, so in the view where work is triaged its entries scatter and
-whatever holds them together has to be carried in their names. The name is the only thing
-missing: a pull request's position in its chain is already shown, and it shifts every time the
-bottom of the stack merges, so it is the one part of a stack that must not be written into a
-name. Without a naming rule the gap gets patched per stack — a shared prefix on the branches, a
-phrase repeated across the titles — which holds exactly as long as everyone writing an entry
-words it the same way. Both gaps look like ones GitHub will close rather than settled facts,
-which makes the rule below a workaround with an expiry rather than a permanent fixture. Until
-then the name belongs in the branch name and the pull request title, because there is nowhere
-else to put it.
+an object in its own right. A stack therefore has no name, and the pull request list cannot be
+grouped or sorted by one, so in the view where work is triaged its entries scatter and whatever
+holds them together has to be carried in their names. That is the stack name, not the position
+in the chain, which is already shown and shifts every time the bottom of the stack merges.
+Without a naming rule each stack patches the gap its own way — a shared prefix on the branches,
+a phrase repeated across the titles — which holds only as long as everyone words it the same.
+Both gaps look like ones GitHub will close, which makes the rule below a workaround with an
+expiry rather than a permanent fixture.
 
 **Squash merge makes the pull request the commit.** With one commit per pull request, the title
 and description written for review become the permanent record in `git log` — read more often,
