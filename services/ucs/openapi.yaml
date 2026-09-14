@@ -257,9 +257,8 @@ components:
           default: false
           description: If True and a FileUpload for this alias already exists in an
             active state (init, inbox, or failed-interrogation), cancel and replace
-            it atomically. Has no effect on already-failed or already-cancelled uploads.
-            Uploads in interrogated, awaiting_archival, or archived state cannot be
-            overwritten.
+            it. Has no effect on already-failed or already-cancelled uploads. Uploads
+            in interrogated, awaiting_archival, or archived state cannot be overwritten.
           title: Overwrite
           type: boolean
         part_size:
@@ -829,7 +828,8 @@ components:
       title: HttpUploadSizeMismatchErrorData
       type: object
     RequeueAllFailedResponse:
-      description: Response body for a box-wide requeue of failed FileUploads.
+      description: Response body for a box-wide requeue of 'failed-interrogation'
+        FileUploads.
       properties:
         requeued:
           description: The IDs of the FileUploads that were set back to 'inbox'
@@ -839,7 +839,8 @@ components:
           title: Requeued
           type: array
         skipped:
-          description: The FileUploads that were ineligible for a requeue
+          description: The IDs of the FileUploads that couldn't be requeued due to
+            an error
           items:
             format: uuid4
             type: string
@@ -1496,9 +1497,10 @@ paths:
         to ''inbox''.
 
 
-        Files whose object has already been deleted from S3 are reported in the `skipped`
+        Files that couldn''t be requeued due to an error are reported in the `skipped`
+        list
 
-        list instead of failing the whole operation.
+        instead of failing the whole operation.
 
         Requires a `RequeueAllFailedWorkOrder` token.'
       operationId: requeueAllFailedFileUploads

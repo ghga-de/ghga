@@ -871,10 +871,9 @@ async def test_lock_box_with_incomplete_upload(rig: JointRig):
 async def test_lock_box_ignores_terminal_uploads(
     rig: JointRig, terminal_state: FileUploadState
 ):
-    """Locking with force=False must succeed when the only incomplete uploads
-    (inbox_upload_completed=False) are in a terminal state (failed/cancelled).
-    Those uploads are no longer active. The only state that should block locking
-    is 'init'.
+    """Locking with force=False must succeed when the only other uploads are in a
+    terminal state (failed/cancelled). Those uploads are no longer active. Only the
+    'init' and 'failed-interrogation' states should block locking.
     """
     box_id = await rig.create_default_box()
 
@@ -2817,7 +2816,7 @@ async def test_requeue_file_success(rig: JointRig):
     file_upload_dao = rig.file_upload_dao
     bucket_id, object_storage = rig.object_storages.for_alias("test")
 
-    # Requeue a failed file and verify the resulting field changes
+    # Requeue a failed-interrogation file and verify the resulting field changes
     box_id, file_id, failed_file_upload = await _upload_and_fail(
         rig, "test_file", "Checksum mismatch reported by FIS"
     )
@@ -3081,8 +3080,8 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
         await file_upload_dao.update(file_upload)
         never_reached_inbox_ids.append(file_id)
 
-    # 2 'failed-interrogation' uploads whose inbox object was already deleted. Interrogation
-    #  failures no longer delete the object, so we do this manually
+    # 2 'failed-interrogation' uploads whose inbox object is unexpectedly missing.
+    #  Interrogation failures don't delete the object, so we do this manually
     deleted_ids: list = []
     for i in range(2):
         file_id = await _upload(f"deleted_{i}")
@@ -3117,8 +3116,8 @@ async def test_requeue_box_success(rig: JointRig):
 
     Verify that the return value is an instance of BoxRequeueResult, and
     that the `requeued` list contains only the file IDs of the 2 requeued files,
-    while the `skipped` list contains only the file IDs of the 2 failed files whose
-    inbox data was deleted already.
+    while the `skipped` list contains only the file IDs of the 2 'failed-interrogation'
+    files whose inbox object is missing.
     """
     (
         box_id,

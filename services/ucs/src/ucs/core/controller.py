@@ -829,13 +829,10 @@ class UploadController(UploadControllerPort):
         await self._requeue_file_upload(file_upload=file_upload)
 
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
-        """Requeue all failed FileUploads in the specified FileUploadBox.
-
-        Does not attempt to requeue files that failed during initial upload, only
-        files that failed during interrogation.
+        """Requeue all 'failed-interrogation' FileUploads in the given FileUploadBox.
 
         Returns an instance of BoxRequeueResult containing the IDs of files that
-        were requeued and the ones that were skipped.
+        were requeued and the ones that couldn't be requeued due to an error.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found.
@@ -892,7 +889,7 @@ class UploadController(UploadControllerPort):
 
         Raises:
         - `BoxNotFoundError` if the box does not exist.
-        - `BoxStateError` if the box exists but is locked.
+        - `BoxStateError` if `require_unlocked` is True and the box isn't open.
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
@@ -1153,7 +1150,7 @@ class UploadController(UploadControllerPort):
         """Lock an existing FileUploadBox.
 
         If `force` is set to True, the box will be locked even if there
-        are ongoing uploads.
+        are ongoing uploads or files in the 'failed-interrogation' state.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
@@ -1244,7 +1241,8 @@ class UploadController(UploadControllerPort):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
-        - `IncompleteOrFailedError` if the FileUploadBox has incomplete FileUploads.
+        - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
+          'failed-interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         box = await self._get_box(
@@ -1446,8 +1444,6 @@ class UploadController(UploadControllerPort):
 
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
-        - `UnknownStorageAliasError` if the storage alias is not known.
-        - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         """
         file_id = report.file_id
         try:
