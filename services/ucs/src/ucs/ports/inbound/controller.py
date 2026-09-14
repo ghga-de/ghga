@@ -270,9 +270,6 @@ class UploadControllerPort(ABC):
     class PaginationError(RuntimeError):
         """Raised when pagination parameters, such as skip and limit, are invalid"""
 
-    class RequeueError(RuntimeError):
-        """Raised when a FileUpload is not allowed to be requeued."""
-
     @abstractmethod
     async def initiate_file_upload(  # noqa: PLR0913
         self,
@@ -353,7 +350,8 @@ class UploadControllerPort(ABC):
 
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
-        - `FileUploadStateError` if the FileUpload is in a cancelled or failed state.
+        - `FileUploadStateError` if the FileUpload is in a cancelled, failed, or
+          failed-interrogation state.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
@@ -378,10 +376,9 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxStateError` if the box exists but is archived.
         - `FileUploadNotFound` if the FileUpload isn't found.
-        - `FileUploadStateError` if the FileUpload isn't in the `failed` state.
-        - `RequeueError` if the file failed before being interrogated.
-        - `S3ObjectMissingError` if the object was deleted from S3 after
-          the first interrogation failure (this is a legacy failure mode).
+        - `FileUploadStateError` if the FileUpload isn't in the `failed-interrogation` state.
+        - `S3ObjectMissingError` if the object is unexpectedly missing from the inbox
+          bucket.
         """
         ...
 
@@ -433,7 +430,7 @@ class UploadControllerPort(ABC):
         can be initiated mid-deletion.
 
         Files in 'init' state have their S3 multipart upload aborted.
-        Files in 'inbox' state have their S3 object deleted.
+        Files in 'inbox' or 'failed-interrogation' state have their S3 object deleted.
         Files in other states require no S3 interaction.
         Files in 'awaiting_archival' or 'archived' state cause a FileUploadStateError
         (invariant violation: these states require the box to be archived).
@@ -568,7 +565,7 @@ class UploadControllerPort(ABC):
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
     ) -> None:
-        """Update a FileUpload state to 'failed'.
+        """Update a FileUpload state to 'failed-interrogation'.
 
         The associated S3 object is not deleted.
 

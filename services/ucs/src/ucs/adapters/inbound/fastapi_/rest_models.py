@@ -122,8 +122,8 @@ class FileUploadCreationRequest(BaseModel):
         default=False,
         description=(
             "If True and a FileUpload for this alias already exists in an active state"
-            " (init or inbox), cancel and replace it atomically. Has no effect on"
-            " already-failed or already-cancelled uploads."
+            " (init, inbox, or failed-interrogation), cancel and replace it atomically."
+            " Has no effect on already-failed or already-cancelled uploads."
             " Uploads in interrogated, awaiting_archival, or archived state cannot be"
             " overwritten."
         ),
