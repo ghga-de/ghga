@@ -1049,7 +1049,10 @@ class UploadController(UploadControllerPort):
 
             log.debug("Deleting all FileUploads for FileUploadBox %s.", box_id)
             for file_upload in file_uploads:
-                if file_upload.state == "inbox":
+                if file_upload.state == "inbox" or (
+                    file_upload.state == "failed"
+                    and file_upload.decrypted_sha256 is not None
+                ):
                     await self._remove_completed_file_upload(file_upload=file_upload)
                 elif file_upload.state == "init":
                     await self._remove_incomplete_file_upload(file_upload=file_upload)

@@ -2662,6 +2662,8 @@ async def test_remove_file_upload_box_success(
     file_uploads_by_state: dict[str, FileUpload] = {}
     for state in ["init", "inbox", "interrogated", "failed", "cancelled"]:
         file_upload = make_file_upload(state=state, storage_alias=storage_alias)
+        if state == "failed":
+            file_upload.decrypted_sha256 = None
         file_upload.box_id = box_id
         await rig.file_upload_dao.insert(file_upload)
         file_uploads_by_state[state] = file_upload
@@ -2671,15 +2673,21 @@ async def test_remove_file_upload_box_success(
         UploadActivity(file_id=init_file.id, last_activity=now_utc_ms_prec())
     )
 
+    # Add a failed-interrogation file (doesn't need to be added to file_uploads_by_state)
+    file_upload = make_file_upload(state="failed", storage_alias=storage_alias)
+    file_upload.box_id = box_id
+    await rig.file_upload_dao.insert(file_upload)
+
     # Call the box deletion method
     await rig.controller.remove_file_upload_box(box_id=box_id)
 
     # Verify the box is gone
     assert not rig.file_upload_box_dao.resources
 
-    # Should have one file deletion due to 'inbox' and one upload abort due to 'init'
+    # Should have one file deletion due to 'inbox'/'failed interrogation'
+    #  and one upload abort due to 'init'
     assert s3_calls.count("abort_multipart_upload") == 1
-    assert s3_calls.count("delete_inbox_file") == 1
+    assert s3_calls.count("delete_inbox_file") == 2
 
     # Verify that all FileUploads were hard-deleted regardless of state
     assert not rig.file_upload_dao.resources
