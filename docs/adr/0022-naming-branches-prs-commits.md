@@ -259,9 +259,10 @@ fix(ucs): requeue after failed interrogation (#145)
 - **The YouTrack key in the commit subject** (`feat(upload): add UCS endpoints (GSI-1234)
   (#207)`). Rejected: two parenthesised suffixes, and eleven of the 52 characters spent on a
   key that `(#207)` already leads to.
-- **`feature/` rather than `feat/`**, which is the more readable word. Rejected so that the
-  branch kind and the commit type are one vocabulary instead of two with a mapping between
-  them.
+- **`feature/` rather than `feat/`** — the fuller word, and the spelling already in use here,
+  which is what put it on the table. Rejected: `feat` is shorter, it is the common spelling,
+  and it is what Conventional Commits calls the type — so the branch kind and the commit type
+  stay one vocabulary instead of two with a mapping between them.
 - **The full Angular type set** (`perf`, `ci`, `build`, `style`). Rejected: four more
   categories to choose between at the margin, for changes that `chore` already describes
   adequately — and `style` is close to dead weight with ruff and prettier autofixing.
