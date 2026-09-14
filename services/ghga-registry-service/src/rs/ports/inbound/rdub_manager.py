@@ -23,6 +23,7 @@ from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.core.models import (
     PID,
+    BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
     FileUploadBox,
@@ -148,6 +149,18 @@ class RDUBManagerPort(ABC):
                 + f" to '{new_state}'."
             )
             super().__init__(msg)
+
+    class FileUploadNotFoundError(RuntimeError):
+        """Raised when a FileUpload is not found in the file box service."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = f"The FileUpload with ID {file_id} was not found."
+            super().__init__(msg)
+
+    class RequeueError(RuntimeError):
+        """Raised when a FileUpload cannot be requeued, because it didn't fail
+        interrogation or because its uploaded object is no longer in the inbox.
+        """
 
     @abstractmethod
     async def create_research_data_upload_box(
@@ -366,6 +379,49 @@ class RDUBManagerPort(ABC):
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
             BoxStateError: If the box is locked.
+            OperationError: If there's a problem communicating with the file box
+                service.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, data_steward_id: UUID4
+    ) -> None:
+        """Requeue a file upload that failed interrogation.
+
+        The file is set back to the inbox state so it gets interrogated again.
+        The uploaded object remains in S3, so no re-upload is needed.
+        Only files that failed interrogation can be requeued.
+
+        The box can be locked, since files that failed interrogation still
+        have to be resolved after the box is locked.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
+            FileUploadNotFoundError: If the file upload doesn't exist.
+            RequeueError: If the file upload cannot be requeued.
+            OperationError: If there's a problem communicating with the file box
+                service.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_all_box_uploads(
+        self, *, box_id: UUID4, data_steward_id: UUID4
+    ) -> BoxRequeueResult:
+        """Requeue every file upload in a box that failed interrogation.
+
+        Files that failed before this feature was implemented are ineligible
+        for requeuing because their objects have already been deleted from S3.
+        Such files are reported in the result's `skipped` list rather than
+        failing the whole operation. The result's `requeued` list contains the
+        IDs of all requeued files.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
             OperationError: If there's a problem communicating with the file box
                 service.
         """
