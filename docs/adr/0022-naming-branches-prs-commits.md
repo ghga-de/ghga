@@ -6,34 +6,39 @@
 ## Context
 
 [ADR-0020](0020-branching-strategy.md) settled which branch work is cut from and merged into,
-but not what any of it is called. A change carries three names — its branch, its pull request,
-and the commit that lands on `dev` — and all three currently drift. Branch prefixes name the
-member (`ucs/`, `service-commons/`, and `service_commons/` alongside it), slugs mix kebab-case
-and snake_case, YouTrack keys turn up at either end of the slug or not at all, and pull request
-titles carry ad-hoc component abbreviations in whatever casing the author chose: `UCS:`, `RS:`,
-`DHFS:`, `dskit:`, `Connector:`, `metldata:`, `Notification-Service:`.
+but not what any of it is called. A change carries three names — its branch, its pull request
+and the commit that lands on `dev` — and nothing ties them to one another. Left to taste, each
+drifts on its own axis: what the prefix names, which case the slug takes, where the issue key
+sits, whether the component is named and how it is abbreviated. The cost is not aesthetic. The
+branch list, the pull request list and `git log` are the three places work is found, and each
+is only as scannable as its least consistent entry — which makes naming one of the conventions
+that has to be decided once rather than converged on, because the drift is invisible to the
+person creating each name and only shows up to whoever reads the list.
 
-Two forces make this worth deciding rather than leaving to taste.
+Two further forces make this worth settling here rather than leaving to habit.
 
-**We work in stacks.** A stack is a chain of pull requests, each based on the previous one and
-rooted at `dev`, so that a large piece of work stays reviewable in pieces. Three are open at
-the time of writing; the longest is sixteen pull requests deep. GitHub supports the stacking
-itself — a pull request can target another's branch, and the chain is visible from any one of
-them — but a stack has no name and no identity of its own, and the pull request list can be
-neither grouped nor sorted by it. So in the one view where the work is triaged, the entries of
-a stack scatter. Today that is patched by hand — "Part 1", "Part 2" in the title, or a shared
-member prefix on the branch — and a stack comes apart in the list as soon as one entry is
-worded differently. Until GitHub names stacks itself, the name has to live in the branch name
-and the pull request title, because there is nowhere else to put it.
+**Large work arrives in stacks.** A stack is a chain of pull requests, each based on the
+previous one and rooted at `dev`, so that a big change stays reviewable in pieces; a chain can
+run to a dozen or more. GitHub supports the stacking itself — a pull request can target
+another's branch, and the chain is visible from any one of them — but a stack has no name of
+its own, and the pull request list cannot yet be grouped or sorted by one. So in the one view
+where work is triaged, the entries of a stack scatter, and whatever holds them together has to
+be carried in their names. Both look like gaps GitHub will close rather than settled facts,
+which is what makes the rule below a workaround with an expiry rather than a permanent one. Without a rule that gap gets patched per stack —
+"Part 1", "Part 2" in a title, a shared prefix on the branches — which works until one entry is
+worded differently by someone who did not open the first. Until GitHub names stacks itself, the
+name belongs in the branch name and the pull request title, because there is nowhere else to
+put it.
 
 **Squash merge makes the pull request the commit.** With one commit per pull request, the title
-and description a reviewer skims become the permanent record in `git log` — which is read more
-often, and by more tools, than the pull request list ever is.
+and description written for review become the permanent record in `git log` — read more often,
+and by more tools, than the pull request list ever is. A convention for pull request titles is
+therefore a convention for the history, whether or not anyone writes it down as one.
 
 ## Decision
 
 > In the context of a monorepo where large work arrives as stacks of pull requests, facing
-> a GitHub that stacks pull requests but neither names them nor lets the list be grouped by
+> a GitHub that stacks pull requests but does not yet name them or let the list be grouped by
 > them, and a squash-merge history whose quality is whatever
 > the pull request titles happened to be, we decided to derive all three names — branch, pull
 > request and commit — from one grammar of kind, stack and description, and to write the
@@ -209,19 +214,20 @@ fix(ucs): requeue after failed interrogation (#145)
   suggestion. It does mean the answer is on GitHub rather than in the repository.
 - Renaming a stack means renaming every branch in it and retargeting the chain, so the stack
   name is worth choosing when its first pull request is opened.
-- The stack segment is a workaround for a missing GitHub feature, not something we want to own.
-  If the pull request list learns to group and sort by stack, `[<stack>]` and the branch segment
-  become redundant and this part of the convention should be revisited.
+- The stack segment is a workaround for a missing GitHub feature, not something we want to own,
+  and it should not outlive the gap. When stacks get names and the pull request list can be
+  grouped or sorted by them, `[<stack>]` and the branch segment become redundant and this part
+  of the convention should be retired.
 - Nothing enforces any of this. A branch-name ruleset and a commitlint hook are both possible,
   but neither would catch the part that matters — the message is written at merge time, after
   every check has already run.
-- Branches and pull requests already in flight are not renamed; the three open stacks keep
-  their member-prefixed names.
+- The convention applies to what is opened after it. Branches and pull requests in flight are
+  not renamed, so the two schemes coexist until the older work merges.
 
 ## Alternatives considered
 
-- **Member-based branch prefixes** (`ucs/…`, `service-commons/…`) — the de facto convention
-  today, and what most open branches use. Rejected in the kind slot: a great deal of the work
+- **Member-based branch prefixes** (`ucs/…`, `service-commons/…`), where the first segment
+  names the component the work touches. Rejected in the kind slot: a great deal of the work
   crosses members or belongs to none in particular — tooling, CI, charts, the test bed, a
   `libs/` change and the consumers it breaks — so the prefix becomes a judgement call exactly
   where a naming rule should be automatic, and the valid set has to be kept in step with the
@@ -229,8 +235,8 @@ fix(ucs): requeue after failed interrogation (#145)
   branch touches is evident from its diff, its pull request and `just affected`, whereas the
   kind of change — and with it the branch it was cut from, which is the whole point of
   `hotfix` — is recorded nowhere else. The stack slot is the opposite case, and that is why it
-  exists: GitHub stacks pull requests but gives the stack itself no name, so there is nowhere
-  else for one to live. The member survives as the optional
+  exists: GitHub stacks pull requests but does not yet name the stack itself, so there is
+  nowhere else for one to live. The member survives as the optional
   commit scope on solo changes, and in the description.
 - **Conventional-Commit-shaped pull request titles** (`feat(upload): add UCS endpoints`), which
   would make the prefilled squash subject correct with no editing. Rejected: titles are read in

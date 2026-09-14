@@ -88,9 +88,9 @@ A change carries three names, all derived from one grammar
 | commit | `<type>(<stack>): <description> (#<PR>)` | `<type>: <description> (#<PR>)` |
 
 A **stack** is a chain of PRs, each based on the previous one and rooted at `dev`. GitHub
-supports the stacking but gives a stack no name, and the PR list cannot be grouped or sorted by
-one — so the stack name, one or two words and naming the stack rather than the member, is a
-workaround that holds it together in the list. Branch names are lowercase kebab-case, PR titles are
+supports the stacking but does not yet name a stack, and the PR list cannot yet be grouped or
+sorted by one — so the stack name, one or two words and naming the stack rather than the
+member, is a workaround that holds it together in the list. Branch names are lowercase kebab-case, PR titles are
 prose. The YouTrack key goes in front of the description, or in front of the stack name when
 the issue covers the whole stack: `upload/feat/GSI-1234-add-ucs-endpoints` versus
 `GSI-1234-upload/feat/add-ucs-endpoints`. Both are titled `[upload] Add UCS endpoints
