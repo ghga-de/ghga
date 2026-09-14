@@ -4,10 +4,9 @@ One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `
 alongside the Angular `data-portal`, with Helm charts and a Kubernetes integration test bed as
 build products.
 
-> **Status: scaffolding.** The source repos have **not** been imported yet. This is the
-> Phase-1 skeleton (workspace + toolchain + structure) plus the planning docs. The
-> history-preserving import, dependency lock, charts, and CI are deliberate next steps —
-> see the runbook.
+> **Status: cutover in progress.** The source repos are imported, and CI and both release
+> lanes run from here. What remains is the mainline wind-down — see the
+> [docs index](docs/README.md) and the runbook.
 
 ## Layout
 
@@ -23,7 +22,7 @@ build products.
 | [`scripts/`](scripts/) | Codegen, affected-targets, and migration tooling |
 | [`docs/`](docs/) | Architecture, ADRs, migration runbook |
 
-## Getting started (once members are imported)
+## Getting started
 
 ```bash
 uv sync                 # or: just sync
