@@ -38,7 +38,7 @@ often, and by more tools, than the pull request list ever is.
 > the pull request titles happened to be, we decided to derive all three names — branch, pull
 > request and commit — from one grammar of kind, stack and description, and to write the
 > commits as Conventional Commits, to achieve a legible history and stacks that hold together
-> in the pull request list, accepting that every merge needs its commit message edited by hand.
+> in the pull request list, accepting that every merge rewrites its commit message.
 
 This ADR governs the artifacts of the development process. Naming of code and infrastructure
 objects — collections, topics, enums — is a separate matter and stays where it is
@@ -153,7 +153,7 @@ commit, in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) fo
 - **Description** is imperative and lower case, with no trailing period — "add UCS endpoints",
   not "Added UCS endpoints." or "Adds …".
 - **The pull request number** closes the subject as ` (#<PR>)`. GitHub supplies it in the
-  prefill, but the subject is rewritten by hand, so it has to survive that — it is the only
+  prefill, but the subject is rewritten at merge time, so it has to survive that — it is the only
   link from a commit back to the review that produced it.
 - **Subject length** is 52 characters where it fits and 72 at the outside, counting that
   suffix.
@@ -196,11 +196,13 @@ fix(ucs): requeue after failed interrogation (#145)
 
 - A stack holds together in the pull request list: every entry carries `[<stack>]` and the
   branches sort together under `<stack>/`. Neither is enforced; both are visible at a glance.
-- **Every squash merge needs its commit message edited in the merge dialog.** GitHub prefills
-  the subject from the pull request title — `[upload] Add UCS endpoints (GSI-1234) (#207)`,
-  which is not a Conventional Commit — and the body from the whole description. Both prefills
-  stay, because they are the right thing to edit down; the editing is what pull request titles
-  that read as prose and commits that parse cost together.
+- **Every squash merge rewrites its commit message in the merge dialog.** GitHub prefills the
+  subject from the pull request title — `[upload] Add UCS endpoints (GSI-1234) (#207)`, which
+  is not a Conventional Commit — and the body from the whole description. Both prefills stay,
+  because they are the right thing to edit down. Doing the edit is what pull request titles
+  that read as prose and commits that parse cost together; it is also a reasonable thing to
+  hand an agent, which is why the rules above are written to be followed from the pull request
+  alone.
 - Conventional types make a generated changelog possible later. We do not generate one today.
 - Which changes a model substantially wrote stays answerable — the commit's `(#<PR>)` leads to
   the pull request that says so — without a trailer on every commit that used one for a
@@ -211,8 +213,8 @@ fix(ucs): requeue after failed interrogation (#145)
   If the pull request list learns to group and sort by stack, `[<stack>]` and the branch segment
   become redundant and this part of the convention should be revisited.
 - Nothing enforces any of this. A branch-name ruleset and a commitlint hook are both possible,
-  but neither would catch the part that matters — the message is written by hand at merge time,
-  after every check has already run.
+  but neither would catch the part that matters — the message is written at merge time, after
+  every check has already run.
 - Branches and pull requests already in flight are not renamed; the three open stacks keep
   their member-prefixed names.
 
