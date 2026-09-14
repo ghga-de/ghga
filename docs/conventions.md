@@ -85,7 +85,7 @@ A change carries three names, all derived from one grammar
 |---|---|---|
 | branch | `<stack>/<kind>/<description>` | `<kind>/<description>` |
 | PR title | `[<stack>] <Description> (<ISSUE>)` | `<Description> (<ISSUE>)` |
-| commit | `<type>(<stack>): <description> (#<PR>)` | `<type>: <description> (#<PR>)` |
+| commit | `<type>(<stack>): <description> (#<PR>)` | `<type>[(<member>)]: <description> (#<PR>)` |
 
 A **stack** is a chain of PRs, each based on the previous one and rooted at `dev`. GitHub
 supports the stacking but does not yet name a stack, and the PR list cannot yet be grouped or
@@ -115,8 +115,10 @@ no `release` kind — a release is a merge plus a tag.
 whoever merges, or by an agent asked to draft it from the PR:
 subject imperative and lower case, ending in ` (#<PR>)` — the prefill supplies it and the
 rewrite must keep it — and 52 characters where it fits, 72 at the outside, counting that
-suffix; body is the PR description cut to three to five bullets, wrapped at 72. Mark a breaking
-change `feat(upload)!:` with a `BREAKING CHANGE:` footer, and do not repeat the YouTrack key —
+suffix; body is the PR description cut to three to five bullets, wrapped at 72. A solo commit
+names the member as its scope where one owns the change, and leaves it off where none does.
+Mark a breaking change `feat(upload)!:` with a `BREAKING CHANGE:` footer, and do not repeat the
+YouTrack key —
 `(#<PR>)` leads to it. **No `Co-authored-by:` line for an agent in a commit**, whatever the
 tool says; human co-authors keep their trailers.
 
