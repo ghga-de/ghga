@@ -1,8 +1,12 @@
 # ADR-0020 — Git Flow: `main` is the latest release, `dev` is the integration branch
 
 - **Status:** Accepted — **amended 2026-09-08**: the repo-side changes landed —
-  **amended 2026-09-11**: fully implemented. The GitHub-side setup is done as well, so
-  nothing is outstanding; `dev` is the default branch and all work targets it
+  **amended 2026-09-11**: fully implemented, in
+  [#157](https://github.com/ghga-de/ghga/pull/157) (set up `dev`) and
+  [#192](https://github.com/ghga-de/ghga/pull/192) (default-branch flip). The GitHub-side setup
+  is done as well, so nothing is outstanding; `dev` is the default branch and all work targets it —
+  **amended 2026-09-14**: pull requests are squashed into `dev`, and the naming of branches,
+  pull requests and commits moved to [ADR-0022](0022-naming-branches-prs-commits.md)
 - **Date:** 2026-08-28
 - **Deciders:** Byron Himes
 
@@ -28,6 +32,10 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - **`main` reflects the latest platform release.** Its HEAD is always a released state.
 - **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
 - **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
+- **Pull requests are squashed into `dev`** (decided 2026-09-14), so one pull request becomes one commit and `dev` reads as a list of what landed.
+Rebase merges are off; ordinary merge commits stay enabled for the release merge and the hotfix back-merge, which are the two places a merge record is the point.
+- **Branches, pull request titles and commit messages are named per [ADR-0022](0022-naming-branches-prs-commits.md)**, which also carries the kind vocabulary — `feat`, `fix`, `hotfix`, `docs`, `refactor`, `test`, `chore`.
+`hotfix` is the one kind that names a base branch rather than just labelling the work; see the hotfix bullet.
 - **Platform version strings are always up-to-date in `dev`**.
 - **Release candidates are created from `dev`**, where the pre-release git tag is cut. Only
   from `dev` — see the hotfix bullet.
@@ -43,10 +51,17 @@ Creating a `dev` branch to contain all unreleased work addresses the concerns li
 - Releasing is a merge commit plus a tag, and can be prepared and reviewed as a pull request.
 - Two branches must be kept in sync. Every hotfix must be merged back into `dev`, unless `dev` already carries an equivalent fix.
 - Work merged to `dev` is not released until the next release merge.
+- A branch's intermediate commits do not survive the squash; they remain visible in the pull request, which the commit's `(#N)` suffix links to. In exchange, `dev`'s first-parent chain is one line per pull request even when the work arrived as a stack of sixteen.
+- The merge method cannot be enforced by a "Require linear history" rule on `dev`, because the hotfix back-merge from `main` is a merge commit into `dev` by design. Squashing stays a convention.
 - We gain the ability to continuously deploy from `dev` while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
-- PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needs updating is the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
+- PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needed updating was the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
 
-### Necessary changes
+### Changes made
+
+All of the changes below are done — in [#157](https://github.com/ghga-de/ghga/pull/157) and
+[#192](https://github.com/ghga-de/ghga/pull/192). The bullets keep the wording of the original
+plan, so they read as instructions; the dated notes under them record where implementing a
+change departed from what was planned.
 
 > **Amended 2026-09-08 — the repo-side changes have landed.** `dev` is branched from `main`
 > and pushed; `ci.yaml` and `integration.yaml` trigger on pushes to both branches;
@@ -138,6 +153,10 @@ Rejected: merge queues would allow PRs to pile up against `main` until certain c
 This would, in essence, give the same end result as the proposed strategy, except all the changes that would be merged into `dev` would be in a limbo state against `main`.
 It would automate the role of `dev` but in exchange we would lose the concrete state tracking and conceptual simplicity offered by an actual branch.
 This approach might be revisited in the future as part of a production CD strategy when the GHGA platform has gelled more and changes are less disruptive/conflicting.
+- **A merge commit per pull request** (the GitHub default, and what a handful of earlier merges on `dev` used).
+Rejected: a sixteen-deep stack would land sixteen merge commits plus every intermediate commit, and `dev` stops being a readable list of what was merged.
+What squashing costs is the intermediate commits, which are review scaffolding rather than history, and they stay readable in the pull request.
+- **Rebase merges.** Rejected: they keep every intermediate commit *and* lose the merge record, which is the worst of both; they are disabled in the repository settings.
 - **Release branches per version** (full Git Flow). Rejected: with controlled platform releases and hotfixes applied to the latest release only, `main` already serves that role; per-version maintenance branches are not something we want or have the user base to justify. We tried doing this with `hexkit` early on, up through about v3 or v4, but it got tedious quickly.
 
 ## Final Note
