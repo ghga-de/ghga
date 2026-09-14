@@ -544,6 +544,7 @@ FileUploadState = Literal[
     "failed",
     "cancelled",
     "interrogated",
+    "failed-interrogation",
     "awaiting_archival",
     "archived",
 ]
