@@ -88,20 +88,20 @@ The `Status` line takes one of these values:
 
 | Status | Meaning |
 |---|---|
-| `Proposed` | Open for review; not binding yet. |
+| `Proposed` | Open for review; not binding yet. Set to `Accepted` in the pull request before it merges. |
 | `Accepted` | Binding. |
 | `Rejected` | Considered and turned down; kept for the reasoning. |
 | `Deprecated` | No longer binding, and nothing replaces it. |
 | `Superseded by [ADR-NNNN](NNNN-….md)` | No longer binding; the linked ADR replaces it, and its own status line reads `Accepted (supersedes [ADR-NNNN](NNNN-….md))`. |
 
-The status tracks the decision, not its implementation: do not record in it that the
-decision has been carried out.
+The status tracks the decision, not its implementation. An ADR does not discuss whether
+it has been carried out, except as a side note where a reader needs it.
 
 When part of an accepted decision changes but the decision as a whole stands, amend it
-instead of writing a new ADR. Append a dated note to the status line,
-`Accepted — **amended YYYY-MM-DD**: <what changed>`, and mark the changed passage in the
-body the same way. Change that is large enough to replace the decision gets a new ADR
-that supersedes the old one.
+instead of writing a new ADR. Add only the date to the status line, as
+`Accepted · amended YYYY-MM-DD`, keeping the latest date. Describe the change at the
+passage it affects, starting with `**Amended YYYY-MM-DD:**`. Change that is large
+enough to replace the decision gets a new ADR that supersedes the old one.
 
 Before renaming, renumbering or deleting an ADR, find and fix every reference to it, and
 update the index in [`docs/README.md`](README.md#decisions-adrs).
