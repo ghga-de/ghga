@@ -124,13 +124,16 @@ commit, in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) fo
   does (`chore:`).
 - **Description** is imperative and lower case, with no trailing period — "add UCS endpoints",
   not "Added UCS endpoints." or "Adds …".
-- **Subject length** is 52 characters where it fits and 72 at the outside, counting the
-  ` (#<PR>)` that GitHub appends.
+- **The pull request number** closes the subject as ` (#<PR>)`. GitHub supplies it in the
+  prefill, but the subject is rewritten by hand, so it has to survive that — it is the only
+  link from a commit back to the review that produced it.
+- **Subject length** is 52 characters where it fits and 72 at the outside, counting that
+  suffix.
 - **Body** is the pull request description cut down to three to five bullets — fewer for a
   small change — hard-wrapped at 72 columns. Say what changed and why; how the review went
   stays in the pull request.
-- **The YouTrack key is not repeated here.** The appended `(#<PR>)` leads to the pull request,
-  which carries it.
+- **The YouTrack key is not repeated here.** The `(#<PR>)` leads to the pull request, which
+  carries it.
 - **A breaking change** is marked with `!` before the colon and explained in a
   `BREAKING CHANGE:` footer. That matters for the members released on their own semver
   ([ADR-0004](0004-versioning-and-release-by-tag.md)).

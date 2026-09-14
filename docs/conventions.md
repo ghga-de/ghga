@@ -109,9 +109,9 @@ the issue covers the whole stack: `upload/feat/GSI-1234-add-ucs-endpoints` versu
 no `release` kind — a release is a merge plus a tag.
 
 **At merge time** the commit message is written by hand, because neither prefill is right:
-subject imperative and lower case, 52 characters where it fits and 72 at the outside, counting
-the ` (#<PR>)` GitHub appends; body is the PR description cut to three to five bullets, wrapped
-at 72. Mark a breaking change `feat(upload)!:` with a `BREAKING CHANGE:` footer. Do not repeat
+subject imperative and lower case, ending in ` (#<PR>)` — the prefill supplies it and the
+rewrite must keep it — and 52 characters where it fits, 72 at the outside, counting that
+suffix; body is the PR description cut to three to five bullets, wrapped at 72. Mark a breaking change `feat(upload)!:` with a `BREAKING CHANGE:` footer. Do not repeat
 the YouTrack key — `(#<PR>)` leads to it.
 
 `renovate/*` and `automated/*` are owned by Renovate and the nightly security scan. Nothing
