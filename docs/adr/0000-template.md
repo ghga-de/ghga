@@ -1,6 +1,6 @@
 # ADR-NNNN — {Title in sentence case}
 
-- **Status:** Proposed
+- **Status:** proposed
 - **Date:** {YYYY-MM-DD}
 
 <!--
@@ -33,7 +33,7 @@ accepting that **{the drawbacks and costs, short and long term}**.
 
 <!--
 The situation and the forces at play, including requirements. Why a decision is needed
-now. If this ADR supersedes or amends another, say so here with a link.
+now. If this ADR supersedes another, also add `Supersedes` to the header list.
 -->
 
 {context}

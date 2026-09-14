@@ -68,9 +68,11 @@ Start every ADR from [`adr/0000-template.md`](adr/0000-template.md). Name the fi
 `NNNN-kebab-case-title.md`, with the next free number.
 
 - **Title:** `# ADR-NNNN — <Title>`, in sentence case.
-- **Header list:** `Status` and `Date`, in that order. No `Deciders` line — a decision
-  is the team's, and git already records who wrote the file. Older ADRs keep theirs
-  until they are next rewritten.
+- **Header list:** the [fields below](#header-fields-and-status), in that order, one per
+  line. They map one to one onto the YAML frontmatter ADRs will get, so keep values
+  plain: no prose, no formatting beyond links. No `Deciders` line — a decision is the
+  team's, and git records who wrote the file. Older ADRs keep theirs until they are next
+  rewritten.
 - **`## Summary`:** one Y-statement, one clause per paragraph, with the content of each
   clause in bold. A reader who stops here should know what was decided, instead of what,
   and at what price.
@@ -82,24 +84,31 @@ An ADR records a decision and why it was taken. Keep out of it what goes stale f
 implementation checklists belong in the pull request or a runbook, and editorial intent
 ("to be merged into ADR-0011") belongs in a pull request description.
 
-### Status
+### Header fields and status
 
-The `Status` line takes one of these values:
+| Field | Value |
+|---|---|
+| `Status` | One lowercase word from the list below. Always present. |
+| `Date` | `YYYY-MM-DD` the ADR was accepted, or proposed while in review. Always present. |
+| `Amended` | `YYYY-MM-DD` of the latest amendment. Only if amended. |
+| `Supersedes` | Links to the ADRs this one replaces, comma-separated. Only if any. |
+| `Superseded by` | Link to the ADR that replaces this one. Only with `superseded`. |
+
+Status values, the set [MADR](https://adr.github.io/madr/) uses:
 
 | Status | Meaning |
 |---|---|
-| `Proposed` | Open for review; not binding yet. Set to `Accepted` in the pull request before it merges. |
-| `Accepted` | Binding. |
-| `Rejected` | Considered and turned down; kept for the reasoning. |
-| `Deprecated` | No longer binding, and nothing replaces it. |
-| `Superseded by [ADR-NNNN](NNNN-….md)` | No longer binding; the linked ADR replaces it, and its own status line reads `Accepted (supersedes [ADR-NNNN](NNNN-….md))`. |
+| `proposed` | Open for review; not binding yet. Set to `accepted` in the pull request before it merges. |
+| `accepted` | Binding. |
+| `rejected` | Considered and turned down; kept for the reasoning. |
+| `deprecated` | No longer binding, and nothing replaces it. |
+| `superseded` | No longer binding; `Superseded by` names the replacement. |
 
 The status tracks the decision, not its implementation. An ADR does not discuss whether
 it has been carried out, except as a side note where a reader needs it.
 
 When part of an accepted decision changes but the decision as a whole stands, amend it
-instead of writing a new ADR. Add only the date to the status line, as
-`Accepted · amended YYYY-MM-DD`, keeping the latest date. Describe the change at the
+instead of writing a new ADR. Set `Amended` to the date and describe the change at the
 passage it affects, starting with `**Amended YYYY-MM-DD:**`. Change that is large
 enough to replace the decision gets a new ADR that supersedes the old one.
 
