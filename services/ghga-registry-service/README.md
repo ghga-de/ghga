@@ -122,6 +122,10 @@ The service requires the following configuration parameters:
   "audit_record_logged"
   ```
 
+- <a id="properties/httpx_standard_timeout_sec"></a>**`httpx_standard_timeout_sec`** *(number)*: The timeout duration, in seconds, to use for most HTTP calls. Default: `60.0`.
+
+- <a id="properties/httpx_long_timeout_sec"></a>**`httpx_long_timeout_sec`** *(number)*: The timeout duration, in seconds, to use for HTTP calls which have the potential to be especially long-running. Default: `600.0`.
+
 - <a id="properties/work_order_signing_key"></a>**`work_order_signing_key`** *(string, format: password, required and write-only)*: The private key for signing work order tokens and other JWTs.
 
   Examples:
