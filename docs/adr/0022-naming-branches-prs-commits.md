@@ -68,10 +68,17 @@ One vocabulary for branches and commits, taken from
 | `test` | test bed, test tooling, test-only changes | `test` |
 | `chore` | tooling, CI, dependencies, charts — and anything not clearly one of the above | `chore` |
 
-`hotfix` is the only kind that is not also a commit type. It marks the one branch cut from
-`main` rather than `dev` ([ADR-0020](0020-branching-strategy.md)) — a fact that matters while
-the branch exists and not afterwards, so its commits are typed `fix`. There is deliberately no
-`release` kind: a release is a merge plus a tag.
+`hotfix` is the only kind that is not also a commit type, because the two answer different
+questions. A branch kind says where the work lives — what it was cut from and what it merges
+back into — and `hotfix` is the only one whose answer is `main` rather than `dev`
+([ADR-0020](0020-branching-strategy.md)), which is what someone scanning a branch list needs
+without opening anything. A commit type says what kind of change it is, and by that measure a
+hotfix is a fix: Conventional Commits has no type for one, urgency is not a category of change,
+and the same fix is back-merged into `dev`, where a `hotfix` type would classify nothing.
+Nothing is lost either way — a fix released as a hotfix sits on `main` ahead of a release tag
+rather than arriving through a `dev` merge, so the history still says so.
+
+There is deliberately no `release` kind: a release is a merge plus a tag.
 
 The list is short on purpose — anything not clearly one of the others is `chore`. We do not use
 Conventional Commits' `perf`, `ci`, `build` or `style`.
