@@ -42,7 +42,7 @@ do not carry.
 The layout table lives in the [README](README.md#layout). Beyond it:
 
 - `frontend/data-portal/` carries its own `AGENTS.md`, which governs all work there.
--  See [docs/conventions.md](docs/conventions.md) for markers, versioning, and the
+- See [docs/conventions.md](docs/conventions.md) for markers, versioning, and the
   `name/x.y.z` release-tag scheme.
 
 ## Where to read
@@ -50,7 +50,7 @@ The layout table lives in the [README](README.md#layout). Beyond it:
 The core docs (architecture overview, ADRs, migration runbook) are listed in the README's
 [Where to read](README.md#where-to-read). Branch-specific required reading:
 
-- [docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md:
+- [docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md):
 how metadata and files flow.
 - [deploy/README.md](deploy/README.md): how the chart system works.
 
@@ -79,7 +79,7 @@ rebuild needs its own volume added there.
 ## Repo commands (just)
 
 Everything runs through `just`, documented by `just` itself and by the README's
-[Recipe reference](README.md#recipe-reference) plus its[demo](README.md#run-the-demo-locally)
+[Recipe reference](README.md#recipe-reference) plus its [demo](README.md#run-the-demo-locally)
 and [test bed](README.md#run-the-test-bed-locally) walkthroughs (Playwright traces for
 failing browser tests, `just logs`). Read commands from there, and prefer the recipes over
 raw uv/pnpm/helm/kubectl — they encode ordering and environment details the raw commands miss.
@@ -87,7 +87,7 @@ raw uv/pnpm/helm/kubectl — they encode ordering and environment details the ra
 Further rules:
 
 - Always scope test runs to the member you touched (e.g. `just test services/auth-service`);
-a bare `just test` runs every suite in the workspace.
+  a bare `just test` runs every suite in the workspace.
 - Use `just affected [base]` to decide what to test when a change may cross members. It
   defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut
   from `main` instead, pass `origin/main`.
@@ -98,8 +98,8 @@ a bare `just test` runs every suite in the workspace.
 ## Test levels
 
 - **Member unit tests** (pytest, in each member's `tests/`): the default.
-hexkit's testcontainers-based testutils make real Kafka/MongoDB/S3 available here,
-persistence and event handling are unit-testable per service.
+  hexkit's testcontainers-based testutils make real Kafka/MongoDB/S3 available here, so
+  persistence and event handling are unit-testable per service.
 - **Chart tests** (`just charts-test`, `just demo-template`): render-level checks that
   the chart library and the umbrella produce valid manifests.
 - **Test bed** (`testbed/`, `just testbed`): pytest-bdd + Playwright against the full
@@ -108,7 +108,7 @@ persistence and event handling are unit-testable per service.
   are in the README's [test-bed walkthrough](README.md#run-the-test-bed-locally).
 - **Front-end levels** (Vitest unit tests, Playwright smoke tests against MSW mocks) are
   defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md). For the flows
-  whose outcome depends on backend state changing belong here in the test bed.
+  whose outcome depends on backend state changing, the tests belong here in the test bed.
 
 The test bed is **not** a uv workspace member: it runs from its own `.venv-testbed`
 (`just testbed-install`) while shelling out to the workspace-built `ghga-connector` and
@@ -117,8 +117,8 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
 ## Execution policy
 
 - For code changes, run the smallest relevant validation first (the touched member's
-tests, `just lint`), then widen via `just affected` when the change crosses members
-editing a `libs/` member affects every consumer.
+  tests, `just lint`), then widen via `just affected` when the change crosses members;
+  editing a `libs/` member affects every consumer.
 - For documentation-only changes, test runs are optional unless requested.
 - Do not create commits or branches unless explicitly requested. When they are: branch from
   `dev` and target `dev` in the pull request — `dev` is the integration branch and the repo
