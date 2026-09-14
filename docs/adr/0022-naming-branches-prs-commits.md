@@ -17,12 +17,14 @@ Two forces make this worth deciding rather than leaving to taste.
 
 **We work in stacks.** A stack is a chain of pull requests, each based on the previous one and
 rooted at `dev`, so that a large piece of work stays reviewable in pieces. Three are open at
-the time of writing; the longest is sixteen pull requests deep. GitHub models none of it: it
-shows one flat list, and the only thing telling a reader that two entries belong together is
-what they are called. Today that is improvised — "Part 1", "Part 2" in the title, or a shared
-member prefix on the branch — so a stack comes apart in the list as soon as one entry is worded
-differently. The name of the stack has to live in the branch name and the pull request title
-because there is nowhere else to put it.
+the time of writing; the longest is sixteen pull requests deep. GitHub supports the stacking
+itself — a pull request can target another's branch, and the chain is visible from any one of
+them — but a stack has no name and no identity of its own, and the pull request list can be
+neither grouped nor sorted by it. So in the one view where the work is triaged, the entries of
+a stack scatter. Today that is patched by hand — "Part 1", "Part 2" in the title, or a shared
+member prefix on the branch — and a stack comes apart in the list as soon as one entry is
+worded differently. Until GitHub names stacks itself, the name has to live in the branch name
+and the pull request title, because there is nowhere else to put it.
 
 **Squash merge makes the pull request the commit.** With one commit per pull request, the title
 and description a reviewer skims become the permanent record in `git log` — which is read more
@@ -31,7 +33,8 @@ often, and by more tools, than the pull request list ever is.
 ## Decision
 
 > In the context of a monorepo where large work arrives as stacks of pull requests, facing
-> GitHub's lack of any notion of a stack and a squash-merge history whose quality is whatever
+> a GitHub that stacks pull requests but neither names them nor lets the list be grouped by
+> them, and a squash-merge history whose quality is whatever
 > the pull request titles happened to be, we decided to derive all three names — branch, pull
 > request and commit — from one grammar of kind, stack and description, and to write the
 > commits as Conventional Commits, to achieve a legible history and stacks that hold together
@@ -204,6 +207,9 @@ fix(ucs): requeue after failed interrogation (#145)
   suggestion. It does mean the answer is on GitHub rather than in the repository.
 - Renaming a stack means renaming every branch in it and retargeting the chain, so the stack
   name is worth choosing when its first pull request is opened.
+- The stack segment is a workaround for a missing GitHub feature, not something we want to own.
+  If the pull request list learns to group and sort by stack, `[<stack>]` and the branch segment
+  become redundant and this part of the convention should be revisited.
 - Nothing enforces any of this. A branch-name ruleset and a commitlint hook are both possible,
   but neither would catch the part that matters — the message is written by hand at merge time,
   after every check has already run.
@@ -221,7 +227,8 @@ fix(ucs): requeue after failed interrogation (#145)
   branch touches is evident from its diff, its pull request and `just affected`, whereas the
   kind of change — and with it the branch it was cut from, which is the whole point of
   `hotfix` — is recorded nowhere else. The stack slot is the opposite case, and that is why it
-  exists: a stack has no representation in GitHub at all. The member survives as the optional
+  exists: GitHub stacks pull requests but gives the stack itself no name, so there is nowhere
+  else for one to live. The member survives as the optional
   commit scope on solo changes, and in the description.
 - **Conventional-Commit-shaped pull request titles** (`feat(upload): add UCS endpoints`), which
   would make the prefilled squash subject correct with no editing. Rejected: titles are read in
