@@ -27,7 +27,14 @@ from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from rs.constants import HTTPX_TIMEOUT, UCS_UPLOADS_PAGE_SIZE
+from rs.constants import (
+    EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+    HTTPX_TIMEOUT,
+    UCS_UPLOADS_PAGE_SIZE,
+)
 from rs.core.models import (
     BaseWorkOrderToken,
     ChangeFileBoxWorkOrder,
@@ -346,22 +353,29 @@ class FileBoxClient(FileBoxClientPort):
             if field in body:
                 extra[field] = body[field]
 
-        if exception_id == "incompleteUploads":
+        if exception_id == EXC_ID_INCOMPLETE_OR_FAILED:
             # exception_id parsed, so the body is a JSON object we can re-read
-            raw = response.json().get("data", {}).get("incomplete_uploads", [])
-            incomplete_file_ids = [UUID(item[0]) for item in raw]
-            extra["incomplete_uploads"] = incomplete_file_ids
+            data = response.json().get("data", {})
+            # Both groups arrive as (file ID, alias) pairs; only the IDs are relayed
+            incomplete_uploads = [
+                UUID(item[0]) for item in data.get("incomplete_uploads", [])
+            ]
+            need_attention = [UUID(item[0]) for item in data.get("need_attention", [])]
+            extra["incomplete_uploads"] = incomplete_uploads
+            extra["need_attention"] = need_attention
             log.error(
-                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads.",
+                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads and"
+                + " %d file(s) need attention.",
                 operation,
                 box_id,
-                len(incomplete_file_ids),
+                len(incomplete_uploads),
+                len(need_attention),
                 extra=extra,
             )
-            raise self.FUBIncompleteUploadsError(
-                incomplete_file_ids=incomplete_file_ids
+            raise self.FUBIncompleteOrFailedError(
+                incomplete_uploads=incomplete_uploads, need_attention=need_attention
             )
-        if exception_id == "boxVersionOutdated":
+        if exception_id == EXC_ID_BOX_VERSION_OUTDATED:
             log.error(
                 "Failed to %s FileUploadBox %s because the version specified"
                 + " in the request is out of date.",
@@ -370,7 +384,7 @@ class FileBoxClient(FileBoxClientPort):
                 extra=extra,
             )
             raise self.FUBVersionError(box_id=box_id)
-        if exception_id == "boxMaxSizeTooLow":
+        if exception_id == EXC_ID_BOX_MAX_SIZE_TOO_LOW:
             max_size = body["max_size"]
             log.error(
                 "Failed to resize FileUploadBox %s because the new max_size %i is"
@@ -382,7 +396,7 @@ class FileBoxClient(FileBoxClientPort):
             raise self.FUBMaxSizeTooLowError(
                 f"New max_size {max_size} is smaller than the bytes already uploaded."
             )
-        if exception_id == "boxStateError":
+        if exception_id == EXC_ID_BOX_STATE_ERROR:
             msg = (
                 f"Cannot {operation} FileUploadBox {box_id} because the box's state"
                 + " prevents it. The RS and UCS box states might be out of sync."
@@ -441,6 +455,8 @@ class FileBoxClient(FileBoxClientPort):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
+            FUBIncompleteOrFailedError if force=False and there are incomplete uploads
+                or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
