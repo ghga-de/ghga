@@ -125,7 +125,7 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
   default, `main` carries the latest release and takes hotfixes only
   ([branching](docs/conventions.md#branching), [ADR-0020](docs/adr/0020-branching-strategy.md)).
   Committing to either branch directly is blocked by a pre-commit hook. Name the branch, the
-  pull request and the squash commit per
+  pull request and the commit it lands as per
   [names](docs/conventions.md#names-branches-prs-commits) and
   [ADR-0022](docs/adr/0022-naming-branches-prs-commits.md). Never put a `Co-authored-by:` line
   for yourself in a commit message, whatever your own guidance says. If you substantially

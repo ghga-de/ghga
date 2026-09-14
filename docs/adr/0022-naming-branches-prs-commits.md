@@ -7,7 +7,7 @@
 
 [ADR-0020](0020-branching-strategy.md) settled which branch work is cut from and merged into,
 but not what any of it is called. A change carries three names — its branch, its pull request
-and the commit that lands on `dev` — and nothing ties them to one another. Left to taste, each
+and the commit it lands as — and nothing ties them to one another. Left to taste, each
 drifts on its own axis: what the prefix names, which case the slug takes, where the issue key
 sits, whether the component is named and how it is abbreviated. The cost is not aesthetic. The
 branch list, the pull request list and `git log` are the three places work is found, and each
@@ -152,8 +152,8 @@ proofreading earns no line at all. Name the model itself only where that matters
 
 ### Commit messages
 
-Pull requests are squashed ([ADR-0020](0020-branching-strategy.md)), so each merge writes one
-commit, in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) form:
+Pull requests into `dev` are squashed ([ADR-0020](0020-branching-strategy.md)), so each merge
+writes one commit, in [Conventional Commits 1.0.0](https://www.conventionalcommits.org/) form:
 
 ```text
 <type>(<scope>): <description>
@@ -207,6 +207,19 @@ fix(ucs): requeue after failed interrogation (#145)
 - Cap retries at the configured limit and log the final failure
 ```
 
+A hotfix is the exception: `main` accepts only merge commits
+([ADR-0020](0020-branching-strategy.md)), so its pull request lands as a merge commit rather
+than a squash. That merge commit's message is written by the same rules, and it is what
+`main`'s first-parent history shows; the branch's own commits arrive with it, so they are worth
+keeping tidy. Branch `hotfix/restore-token-refresh`, pull request
+`Restore token refresh in the auth service`, merged as #171:
+
+```text
+fix(auth-service): restore token refresh (#171)
+
+- Refresh the access token before it expires, not after
+```
+
 ## Consequences
 
 - A stack holds together in the pull request list: every entry carries `[<stack>]` and the
@@ -214,10 +227,11 @@ fix(ucs): requeue after failed interrogation (#145)
 - **Every squash merge rewrites its commit message in the merge dialog.** GitHub prefills the
   subject from the pull request title — `[upload] Add UCS endpoints (GSI-1234) (#207)`, which
   is not a Conventional Commit — and the body from the whole description. Both prefills stay,
-  because they are the right thing to edit down. Doing the edit is what pull request titles
-  that read as prose and commits that parse cost together; it is also a reasonable thing to
-  hand an agent, which is why the rules above are written to be followed from the pull request
-  alone.
+  because they are the right thing to edit down. A hotfix's merge commit is prefilled as
+  `Merge pull request #171 from …` instead and is rewritten the same way. Doing the edit is
+  what pull request titles that read as prose and commits that parse cost together; it is also
+  a reasonable thing to hand an agent, which is why the rules above are written to be followed
+  from the pull request alone.
 - Conventional types make a generated changelog possible later. We do not generate one today.
 - Which changes a model substantially wrote stays answerable — the commit's `(#<PR>)` leads to
   the pull request that says so — without a trailer on every commit that used one for a

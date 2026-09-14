@@ -59,9 +59,10 @@ is always a released state.
 
 - **Cut feature branches from `dev` and merge them back into `dev`** via pull request. That is
   the default for everything; `just affected` compares against `origin/dev` for the same reason.
-- **Pull requests are squashed** — one pull request, one commit on `dev`. Rebase merges are off.
-- **Hotfixes are the exception:** branch from `main`, merge back into `main`, release, then
-  merge `main` back into `dev` so the fix survives the next release.
+- **Pull requests into `dev` are squashed** — one pull request, one commit. Rebase merges are off.
+- **Hotfixes are the exception:** branch from `main`, merge back into `main` with a merge commit
+  (`main` takes no squash), release, then merge `main` back into `dev` so the fix survives the
+  next release.
 - **Release:** `dev` is merged into `main` with a merge commit (never squashed or rebased —
   that is why "Require linear history" is off for `main`).
 - Committing directly to either branch is blocked by `no-commit-to-branch`
@@ -116,9 +117,9 @@ whoever merges, or by an agent asked to draft it from the PR:
 subject imperative and lower case, ending in ` (#<PR>)` — the prefill supplies it and the
 rewrite must keep it — and 52 characters where it fits, 72 at the outside, counting that
 suffix; body is the PR description cut to three to five bullets, wrapped at 72. A solo commit
-names the member as its scope where one owns the change, and leaves it off where none does.
-Mark a breaking change `feat(upload)!:` with a `BREAKING CHANGE:` footer, and do not repeat the
-YouTrack key —
+names the member as its scope where one owns the change, and leaves it off where none does. A
+hotfix's merge commit is written the same way. Mark a breaking change `feat(upload)!:` with a
+`BREAKING CHANGE:` footer, and do not repeat the YouTrack key —
 `(#<PR>)` leads to it. **No `Co-authored-by:` line for an agent in a commit**, whatever the
 tool says; human co-authors keep their trailers.
 
