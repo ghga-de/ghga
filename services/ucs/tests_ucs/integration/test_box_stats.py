@@ -58,6 +58,7 @@ async def test_box_stats_aggregation(joint_fixture: JointFixture):
             file_upload.box_id = box_id
             file_upload.alias = f"file_{state}"
             file_upload.decrypted_size = 100 * (index + 1)
+            file_upload.decrypted_sha256 = None
             await file_upload_dao.insert(file_upload)
             if state in COUNTED_UPLOAD_STATES:
                 counted_sizes_by_file_id[file_upload.id] = file_upload.decrypted_size
@@ -69,10 +70,22 @@ async def test_box_stats_aggregation(joint_fixture: JointFixture):
         other_box_file_upload.box_id = other_box_id
         await file_upload_dao.insert(other_box_file_upload)
 
+        # Finally, insert a failed-interrogation file
+        failed_interrogation = utils.make_file_upload(state="failed")
+        failed_interrogation.box_id = box_id
+        failed_interrogation.decrypted_sha256 = "a1b2c3d4e5f6"
+        failed_interrogation.decrypted_size = 100 * 500
+        counted_sizes_by_file_id[failed_interrogation.id] = (
+            failed_interrogation.decrypted_size
+        )
+        await file_upload_dao.insert(failed_interrogation)
+
     # Only the counted states of the requested box may contribute to the stats
     assert not_counted_size_total > 0
     file_count, total_size = await box_stats_aggregator.compute_box_stats(box_id=box_id)
-    assert file_count == len(COUNTED_UPLOAD_STATES)
+    assert (
+        file_count == len(COUNTED_UPLOAD_STATES) + 1
+    )  # include failed-interrogation files
     assert total_size == sum(counted_sizes_by_file_id.values())
 
     # Make sure calc only considers files owned by the given box
@@ -87,5 +100,5 @@ async def test_box_stats_aggregation(joint_fixture: JointFixture):
     async with set_correlation_id(uuid4()):
         await file_upload_dao.delete(deleted_file_id)
     file_count, total_size = await box_stats_aggregator.compute_box_stats(box_id=box_id)
-    assert file_count == len(COUNTED_UPLOAD_STATES) - 1
+    assert file_count == len(COUNTED_UPLOAD_STATES)
     assert total_size == sum(counted_sizes_by_file_id.values())
