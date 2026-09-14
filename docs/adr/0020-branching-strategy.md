@@ -1,8 +1,10 @@
 # ADR-0020 — Git Flow: `main` is the latest release, `dev` is the integration branch
 
 - **Status:** Accepted — **amended 2026-09-08**: the repo-side changes landed —
-  **amended 2026-09-11**: fully implemented. The GitHub-side setup is done as well, so
-  nothing is outstanding; `dev` is the default branch and all work targets it —
+  **amended 2026-09-11**: fully implemented, in
+  [#157](https://github.com/ghga-de/ghga/pull/157) (set up `dev`) and
+  [#192](https://github.com/ghga-de/ghga/pull/192) (default-branch flip). The GitHub-side setup
+  is done as well, so nothing is outstanding; `dev` is the default branch and all work targets it —
   **amended 2026-09-14**: pull requests are squashed into `dev`, and the naming of branches,
   pull requests and commits moved to [ADR-0022](0022-naming-branches-prs-commits.md)
 - **Date:** 2026-08-28
@@ -52,9 +54,14 @@ Rebase merges are off; ordinary merge commits stay enabled for the release merge
 - A branch's intermediate commits do not survive the squash; they remain visible in the pull request, which the commit's `(#N)` suffix links to. In exchange, `dev`'s first-parent chain is one line per pull request even when the work arrived as a stack of sixteen.
 - The merge method cannot be enforced by a "Require linear history" rule on `dev`, because the hotfix back-merge from `main` is a merge commit into `dev` by design. Squashing stays a convention.
 - We gain the ability to continuously deploy from `dev` while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
-- PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needs updating is the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
+- PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needed updating was the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
 
-### Necessary changes
+### Changes made
+
+All of the changes below are done — in [#157](https://github.com/ghga-de/ghga/pull/157) and
+[#192](https://github.com/ghga-de/ghga/pull/192). The bullets keep the wording of the original
+plan, so they read as instructions; the dated notes under them record where implementing a
+change departed from what was planned.
 
 > **Amended 2026-09-08 — the repo-side changes have landed.** `dev` is branched from `main`
 > and pushed; `ci.yaml` and `integration.yaml` trigger on pushes to both branches;
