@@ -1,5 +1,9 @@
 # Architecture Decision Records
 
+> [!NOTE]
+> These records predate the monorepo and are being folded into [`docs/adr/`](../adr/).
+> Until then, each one is still in force unless a record there supersedes it.
+
 The architecture decision records follow the [Y-statements](https://medium.com/olzzio/y-statements-10eb07b5a177) for a concise summary
 merged with the recommendations by [Michael Nygard](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions).
 

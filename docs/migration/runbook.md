@@ -25,11 +25,11 @@ Hosting ([ADR-0010](../adr/0010-history-preserving-migration.md)):
 - Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already
   pulls from. Pushed only by manual `workflow_dispatch` runs, authenticated with the org's
   stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the same credentials used to pull
-  the hardened dhi.io base images). PyPI targets are still undecided.
+  the hardened dhi.io base images).
+- PyPI target: pypi.org, rehearsed on TestPyPI first (see §5).
 
-The legacy clones already exist at [.legacy_repos/](../../.legacy_repos/) (snapshot). For the
-initial import you may use them via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`**
-(the live source).
+The initial import could use local legacy clones in `.legacy_repos/` (gitignored, not part of
+the repo) via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`** (the live source).
 
 ## 1. Phase 1 — Monorepo skeleton
 

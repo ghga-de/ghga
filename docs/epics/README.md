@@ -1,5 +1,10 @@
 # Epic Documentation
 
+> [!NOTE]
+> Each specification records the plan as it stood when its epic started and is not
+> updated afterwards. For current behaviour and binding rules, see the
+> [ADRs](../adr/), the [conventions](../conventions.md) and the code.
+
 This repository contains technical specifications for GHGA development epics,
 documenting the scope and plans for each epic before the epic is started.
 
