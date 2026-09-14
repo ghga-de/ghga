@@ -23,6 +23,7 @@ from ghga_service_commons.auth.ghga import AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.core.models import (
     PID,
+    BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
     FileUploadBox,
@@ -95,12 +96,28 @@ class RDUBManagerPort(ABC):
         references a version of the resource that is not current.
         """
 
-    class BoxIncompleteUploadsError(RuntimeError):
-        """Raised when locking is rejected because files have incomplete uploads."""
+    class BoxIncompleteOrFailedError(RuntimeError):
+        """Raised when locking or archiving is rejected because files have incomplete
+        uploads. This also includes files that failed interrogation and require some
+        kind of resolution one way or the other.
+        - `incomplete_uploads`: uploads that have not finished yet. When locking, a
+          user may retry with `force=True` to lock the box and let them run to
+          completion. When archiving, they must finish (or be removed) first.
+        - `need_attention`: files that failed interrogation. These have to be
+          manually resolved by the submitter or a Data Steward. Since file deletion
+          requires an unlocked box, resolving them on a locked box means unlocking it,
+          deleting (or re-uploading) the offending files, and locking it again.
+        """
 
-        def __init__(self, *, incomplete_file_ids: list[UUID4]):
-            self.incomplete_file_ids = incomplete_file_ids
-            super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
+        def __init__(
+            self, *, incomplete_uploads: list[UUID4], need_attention: list[UUID4]
+        ):
+            self.incomplete_uploads = incomplete_uploads
+            self.need_attention = need_attention
+            super().__init__(
+                f"{len(incomplete_uploads)} file(s) are incomplete and"
+                + f" {len(need_attention)} file(s) need attention."
+            )
 
     class BoxTitleExistsError(RuntimeError):
         """Raised when trying to create an upload box with a title that already
@@ -132,6 +149,18 @@ class RDUBManagerPort(ABC):
                 + f" to '{new_state}'."
             )
             super().__init__(msg)
+
+    class FileUploadNotFoundError(RuntimeError):
+        """Raised when a FileUpload is not found in the file box service."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = f"The FileUpload with ID {file_id} was not found."
+            super().__init__(msg)
+
+    class RequeueError(RuntimeError):
+        """Raised when a FileUpload cannot be requeued, because it didn't fail
+        interrogation or because its uploaded object is no longer in the inbox.
+        """
 
     @abstractmethod
     async def create_research_data_upload_box(
@@ -184,6 +213,9 @@ class RDUBManagerPort(ABC):
             StateChangeError: If the requested state transition is invalid.
             OperationError: If there's a problem updating the corresponding
                 FileUploadBox.
+            BoxIncompleteOrFailedError: If locking with `force` unset and the box has
+                ongoing uploads or files that failed interrogation, or if archiving a
+                box that still has uninterrogated or failed files.
             ArchivalPrereqsError: If trying to archive the box and prerequisites
                 aren't met.
             BoxSizeTooSmallError: If the new max_size is smaller than bytes already
@@ -338,10 +370,58 @@ class RDUBManagerPort(ABC):
 
         Requires either the Data Steward role or upload access to the box.
 
+        The box must be unlocked. Since a box can be locked while uploads are still
+        ongoing, a locked box may hold files that need to be deleted (e.g. ones that
+        failed interrogation). In such a case, a Data Steward will have to unlock
+        the box first and lock it again after the deletion.
+
         Raises:
             BoxNotFoundError: If the box doesn't exist.
             BoxAccessError: If the user doesn't have access to the box.
             BoxStateError: If the box is locked.
+            OperationError: If there's a problem communicating with the file box
+                service.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4, data_steward_id: UUID4
+    ) -> None:
+        """Requeue a file upload that failed interrogation.
+
+        The file is set back to the inbox state so it gets interrogated again.
+        The uploaded object remains in S3, so no re-upload is needed.
+        Only files that failed interrogation can be requeued.
+
+        The box can be locked, since files that failed interrogation still
+        have to be resolved after the box is locked.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
+            FileUploadNotFoundError: If the file upload doesn't exist.
+            RequeueError: If the file upload cannot be requeued.
+            OperationError: If there's a problem communicating with the file box
+                service.
+        """
+        ...
+
+    @abstractmethod
+    async def requeue_all_box_uploads(
+        self, *, box_id: UUID4, data_steward_id: UUID4
+    ) -> BoxRequeueResult:
+        """Requeue every file upload in a box that failed interrogation.
+
+        Files that failed before this feature was implemented are ineligible
+        for requeuing because their objects have already been deleted from S3.
+        Such files are reported in the result's `skipped` list rather than
+        failing the whole operation. The result's `requeued` list contains the
+        IDs of all requeued files.
+
+        Raises:
+            BoxNotFoundError: If the box doesn't exist.
+            BoxStateError: If the box is archived.
             OperationError: If there's a problem communicating with the file box
                 service.
         """
@@ -387,7 +467,9 @@ class RDUBManagerPort(ABC):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Files with a state of *cancelled* or *failed* are ignored.**
+        **Cancelled files are ignored, as are files that failed before reaching the
+        inbox. Files that failed interrogation still require a mapping, since they are
+        expected to be resolved rather than dropped.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and the box has not already been archived.

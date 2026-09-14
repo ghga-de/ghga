@@ -18,6 +18,23 @@
 from pydantic import UUID4, BaseModel
 
 from ghga_service_commons.httpyexpect.server import HttpCustomExceptionBase
+from rs.constants import (
+    EXC_ID_ACCESSION_MAP_ERROR,
+    EXC_ID_ARCHIVAL_PREREQS_NOT_MET,
+    EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_NOT_FOUND,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_TITLE_EXISTS,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_FILE_UPLOAD_NOT_FOUND,
+    EXC_ID_GRANT_NOT_FOUND,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+    EXC_ID_INTERNAL_ERROR,
+    EXC_ID_INVALID_STATE_CHANGE,
+    EXC_ID_NOT_AUTHORIZED,
+    EXC_ID_REQUEUE_ERROR,
+    EXC_ID_STUDY_NOT_FOUND,
+)
 
 __all__ = [
     "HttpAccessionMapError",
@@ -27,10 +44,12 @@ __all__ = [
     "HttpBoxStateError",
     "HttpBoxTitleExistsError",
     "HttpBoxVersionError",
+    "HttpFileUploadNotFoundError",
     "HttpGrantNotFoundError",
-    "HttpIncompleteUploadsError",
+    "HttpIncompleteOrFailedError",
     "HttpInternalError",
     "HttpNotAuthorizedError",
+    "HttpRequeueError",
     "HttpStateChangeError",
     "HttpStudyNotFoundError",
 ]
@@ -44,7 +63,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
     accompanying lists are populated for each.
     """
 
-    exception_id = "accessionMapError"
+    exception_id = EXC_ID_ACCESSION_MAP_ERROR
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -79,7 +98,7 @@ class HttpAccessionMapError(HttpCustomExceptionBase):
 class HttpBoxTitleExistsError(HttpCustomExceptionBase):
     """Thrown when a FileUploadBox with the given title already exists."""
 
-    exception_id = "boxTitleExists"
+    exception_id = EXC_ID_BOX_TITLE_EXISTS
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -102,7 +121,7 @@ class HttpArchivalPrereqsError(HttpCustomExceptionBase):
     accessions).
     """
 
-    exception_id = "archivalPrereqsNotMet"
+    exception_id = EXC_ID_ARCHIVAL_PREREQS_NOT_MET
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -116,7 +135,7 @@ class HttpArchivalPrereqsError(HttpCustomExceptionBase):
 class HttpBoxMaxSizeTooLowError(HttpCustomExceptionBase):
     """Thrown when the requested max size is smaller than bytes already uploaded."""
 
-    exception_id = "boxMaxSizeTooLow"
+    exception_id = EXC_ID_BOX_MAX_SIZE_TOO_LOW
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -132,7 +151,7 @@ class HttpBoxMaxSizeTooLowError(HttpCustomExceptionBase):
 class HttpStateChangeError(HttpCustomExceptionBase):
     """Thrown when the requested box state transition is not permitted."""
 
-    exception_id = "invalidStateChange"
+    exception_id = EXC_ID_INVALID_STATE_CHANGE
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -146,7 +165,7 @@ class HttpStateChangeError(HttpCustomExceptionBase):
 class HttpBoxVersionError(HttpCustomExceptionBase):
     """Thrown when a request references an outdated resource version."""
 
-    exception_id = "boxVersionOutdated"
+    exception_id = EXC_ID_BOX_VERSION_OUTDATED
 
     def __init__(self, *, status_code: int = 409):
         """Construct message and init the exception."""
@@ -160,18 +179,20 @@ class HttpBoxVersionError(HttpCustomExceptionBase):
 class HttpBoxStateError(HttpCustomExceptionBase):
     """Thrown when an operation is incompatible with the box's current state."""
 
-    exception_id = "boxStateError"
+    exception_id = EXC_ID_BOX_STATE_ERROR
 
     class DataModel(BaseModel):
         """Model for exception data"""
 
         state: str
 
-    def __init__(self, *, state: str, status_code: int = 409):
+    def __init__(
+        self, *, state: str, operation: str = "deleted", status_code: int = 409
+    ):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description=f"A box in the '{state}' state cannot be deleted.",
+            description=f"A box in the '{state}' state cannot be {operation}.",
             data={"state": state},
         )
 
@@ -179,7 +200,7 @@ class HttpBoxStateError(HttpCustomExceptionBase):
 class HttpBoxNotFoundError(HttpCustomExceptionBase):
     """Thrown when a FileUploadBox with given ID could not be found."""
 
-    exception_id = "boxNotFound"
+    exception_id = EXC_ID_BOX_NOT_FOUND
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -195,10 +216,53 @@ class HttpBoxNotFoundError(HttpCustomExceptionBase):
         )
 
 
+class HttpFileUploadNotFoundError(HttpCustomExceptionBase):
+    """Thrown when a FileUpload with given ID could not be found."""
+
+    exception_id = EXC_ID_FILE_UPLOAD_NOT_FOUND
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, status_code: int = 404):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=(f"FileUpload with ID {file_id} not found."),
+            data={"file_id": str(file_id)},
+        )
+
+
+class HttpRequeueError(HttpCustomExceptionBase):
+    """Thrown when a FileUpload is not in a state that allows a requeue."""
+
+    exception_id = EXC_ID_REQUEUE_ERROR
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, reason: str, status_code: int = 409):
+        """Construct message and init the exception.
+
+        `reason` describes why the requeue operation was blocked for this file,
+        which can be either that the file never successfully uploaded in the
+        first place, or that its S3 object no longer exists.
+        """
+        super().__init__(
+            status_code=status_code,
+            description=reason,
+            data={"file_id": str(file_id)},
+        )
+
+
 class HttpGrantNotFoundError(HttpCustomExceptionBase):
     """Thrown when an upload access grant with given ID could not be found."""
 
-    exception_id = "grantNotFound"
+    exception_id = EXC_ID_GRANT_NOT_FOUND
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -217,7 +281,7 @@ class HttpGrantNotFoundError(HttpCustomExceptionBase):
 class HttpStudyNotFoundError(HttpCustomExceptionBase):
     """Thrown when a study with given ID could not be found."""
 
-    exception_id = "studyNotFound"
+    exception_id = EXC_ID_STUDY_NOT_FOUND
 
     class DataModel(BaseModel):
         """Model for exception data"""
@@ -236,7 +300,7 @@ class HttpStudyNotFoundError(HttpCustomExceptionBase):
 class HttpNotAuthorizedError(HttpCustomExceptionBase):
     """Thrown when the user is not authorized to perform the requested action."""
 
-    exception_id = "notAuthorized"
+    exception_id = EXC_ID_NOT_AUTHORIZED
 
     def __init__(self, *, status_code: int = 403):
         """Construct message and init the exception."""
@@ -247,36 +311,44 @@ class HttpNotAuthorizedError(HttpCustomExceptionBase):
         )
 
 
-class HttpIncompleteUploadsError(HttpCustomExceptionBase):
-    """Thrown when locking a box is rejected because files still have incomplete
-    uploads.
+class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
+    """Thrown when locking a box is rejected because there are unfinished uploads
+    and/or files that failed re-encryption and need attention.
     """
 
-    exception_id = "incompleteUploads"
+    exception_id = EXC_ID_INCOMPLETE_OR_FAILED
 
     class DataModel(BaseModel):
         """Model for exception data"""
 
         incomplete_uploads: list[UUID4]
+        need_attention: list[UUID4]
 
     def __init__(
         self,
         *,
         incomplete_uploads: list[UUID4],
+        need_attention: list[UUID4],
         status_code: int = 409,
     ):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="Cannot lock box: some files still have incomplete uploads.",
-            data={"incomplete_uploads": [str(fid) for fid in incomplete_uploads]},
+            description=(
+                "Cannot update box: there are ongoing uploads and/or re-encryption"
+                + " failures that need attention."
+            ),
+            data={
+                "incomplete_uploads": [str(fid) for fid in incomplete_uploads],
+                "need_attention": [str(fid) for fid in need_attention],
+            },
         )
 
 
 class HttpInternalError(HttpCustomExceptionBase):
     """Thrown for otherwise unhandled exceptions"""
 
-    exception_id = "internalError"
+    exception_id = EXC_ID_INTERNAL_ERROR
 
     def __init__(
         self,

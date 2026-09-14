@@ -21,6 +21,7 @@ from pydantic import UUID4, PositiveInt
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.core.models import (
+    BoxRequeueResult,
     FileUploadWithAccession,
     GrantId,
     UploadGrant,
@@ -53,7 +54,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
     @abstractmethod
     async def revoke_upload_access(self, *, grant_id: UUID4) -> None:
@@ -78,7 +78,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
     @abstractmethod
     async def get_accessible_upload_boxes(self, user_id: UUID4) -> list[UUID4]:
@@ -87,7 +86,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
     @abstractmethod
     async def check_box_access(self, *, user_id: UUID4, box_id: UUID4) -> bool:
@@ -96,7 +94,6 @@ class AccessClientPort(ABC):
         Raises:
             AccessAPIError: if there's a problem during the operation.
         """
-        ...
 
 
 class FileBoxClientPort(ABC):
@@ -118,17 +115,43 @@ class FileBoxClientPort(ABC):
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
-    class FUBIncompleteUploadsError(RuntimeError):
-        """Raised when locking is rejected because some files are still being
-        uploaded.
+    class FUBIncompleteOrFailedError(RuntimeError):
+        """Raised when locking or archiving is rejected because some files are still
+        being uploaded or files that failed interrogation need attention.
+
+        The owning service reports the two groups separately:
+        - `incomplete_uploads`: files still in the `init` state. When archiving,
+          this also includes files in the `inbox` state.
+        - `need_attention`: files that failed interrogation and must be resolved.
         """
 
-        def __init__(self, *, incomplete_file_ids: list[UUID4]):
-            self.incomplete_file_ids = incomplete_file_ids
-            super().__init__(f"{len(incomplete_file_ids)} file(s) are incomplete.")
+        def __init__(
+            self, *, incomplete_uploads: list[UUID4], need_attention: list[UUID4]
+        ):
+            self.incomplete_uploads = incomplete_uploads
+            self.need_attention = need_attention
+            super().__init__(
+                f"{len(incomplete_uploads)} file(s) are incomplete and"
+                + f" {len(need_attention)} file(s) need attention."
+            )
 
     class FUBStateError(RuntimeError):
-        """Raised when the FileUploadBox is locked and the operation cannot proceed."""
+        """Raised when the FileUploadBox's state precludes the operation, i.e. it is
+        locked or archived.
+        """
+
+    class FileUploadNotFoundError(RuntimeError):
+        """Raised when the FileUpload doesn't exist in the owning service."""
+
+        def __init__(self, *, file_id: UUID4):
+            msg = f"FileUpload {file_id} was not found in the owning service."
+            super().__init__(msg)
+
+    class RequeueError(RuntimeError):
+        """Raised when the owning service refuses to requeue a FileUpload because its
+        state doesn't allow it, it never got interrogated, or the uploaded object is
+        no longer in the inbox.
+        """
 
     @abstractmethod
     async def create_file_upload_box(
@@ -139,7 +162,6 @@ class FileBoxClientPort(ABC):
         Raises:
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def lock_file_upload_box(
@@ -148,11 +170,11 @@ class FileBoxClientPort(ABC):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
-            FUBIncompleteUploadsError if files have incomplete uploads and force=False.
+            FUBIncompleteOrFailedError if force=False and there are incomplete uploads
+                or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
@@ -162,7 +184,6 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def get_file_upload_list(  # noqa: PLR0913
@@ -197,7 +218,6 @@ class FileBoxClientPort(ABC):
         Raises:
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def get_all_file_uploads(
@@ -220,17 +240,17 @@ class FileBoxClientPort(ABC):
         Raises:
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive a FileUploadBox in the owning service.
 
         Raises:
+            FUBIncompleteOrFailedError if the box still contains uploads that have not
+                been interrogated yet or files that failed interrogation.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def resize_file_upload_box(
@@ -244,7 +264,6 @@ class FileBoxClientPort(ABC):
             uploaded.
             OperationError if there's a problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def delete_file_upload(self, *, box_id: UUID4, file_id: UUID4) -> None:
@@ -254,7 +273,6 @@ class FileBoxClientPort(ABC):
             FUBStateError if the FileUploadBox is locked.
             OperationError if there's any other problem with the operation.
         """
-        ...
 
     @abstractmethod
     async def delete_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
@@ -267,4 +285,31 @@ class FileBoxClientPort(ABC):
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
         """
-        ...
+
+    @abstractmethod
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4
+    ) -> None:
+        """Requeue a FileUpload that failed interrogation in the owning service.
+
+        The uploaded object is still in the inbox, so the file is only set back to the
+        inbox state - it does not have to be uploaded again.
+
+        Raises:
+            FileUploadNotFoundError if the FileUpload doesn't exist.
+            FUBStateError if the FileUploadBox is archived.
+            RequeueError if the FileUpload cannot be requeued.
+            OperationError if there's any other problem with the operation.
+        """
+
+    @abstractmethod
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue every FileUpload in a FileUploadBox that failed interrogation.
+
+        Files that are ineligible for a requeue are reported in the result's `skipped`
+        list instead of failing the whole operation.
+
+        Raises:
+            FUBStateError if the FileUploadBox is archived.
+            OperationError if there's any other problem with the operation.
+        """

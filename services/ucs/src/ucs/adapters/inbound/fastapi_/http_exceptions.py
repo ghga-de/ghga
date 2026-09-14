@@ -351,22 +351,28 @@ class HttpPartSizeError(HttpCustomExceptionBase):
         )
 
 
-class HttpIncompleteUploadsError(HttpCustomExceptionBase):
-    """Thrown when locking or archiving a box that still has in-progress uploads."""
+class HttpIncompleteOrFailedError(HttpCustomExceptionBase):
+    """Thrown when locking or archiving a box that still has in-progress uploads
+    or uploads that have failed the re-encryption step and require attention.
+    In the case of locking the box, the `force` parameter can be used to override
+    the error.
+    """
 
-    exception_id = "incompleteUploads"
+    exception_id = "incompleteOrFailed"
 
     class DataModel(BaseModel):
         """Model for exception data"""
 
         box_id: UUID4
-        file_ids: list[tuple[UUID4, str]]
+        incomplete_uploads: list[tuple[UUID4, str]]
+        need_attention: list[tuple[UUID4, str]]
 
     def __init__(
         self,
         *,
         box_id: UUID4,
-        file_ids: list[tuple[UUID4, str]],
+        incomplete_uploads: list[tuple[UUID4, str]],
+        need_attention: list[tuple[UUID4, str]],
         status_code: int = 409,
     ):
         """Construct message and init the exception."""
@@ -375,7 +381,10 @@ class HttpIncompleteUploadsError(HttpCustomExceptionBase):
             description="",
             data={
                 "box_id": str(box_id),
-                "file_ids": [[str(fid), alias] for fid, alias in file_ids],
+                "incomplete_uploads": [
+                    [str(fid), alias] for fid, alias in incomplete_uploads
+                ],
+                "need_attention": [[str(fid), alias] for fid, alias in need_attention],
             },
         )
 
@@ -384,6 +393,25 @@ class HttpFileUploadStateError(HttpCustomExceptionBase):
     """Thrown when an action is incompatible with the FileUpload's current state."""
 
     exception_id = "fileUploadStateError"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="",
+            data={"file_id": str(file_id)},
+        )
+
+
+class HttpRequeueError(HttpCustomExceptionBase):
+    """Thrown when a FileUpload is not in a state that allows requeuing."""
+
+    exception_id = "requeueError"
 
     class DataModel(BaseModel):
         """Model for exception data"""

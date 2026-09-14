@@ -261,24 +261,25 @@ async def test_lock_box_force_passed_through(
     )
 
 
-async def test_lock_box_incomplete_uploads_error(
+async def test_lock_box_incomplete_or_failed_error(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test that FUBIncompleteUploadsError is converted to BoxIncompleteUploadsError
+    """Test that FUBIncompleteOrFailedError is converted to BoxIncompleteOrFailedError
     and the box state is rolled back to open.
     """
     box_id = populated_boxes[0]
     box = await rig.box_dao.get_by_id(box_id)
     assert box.state == "open"
 
-    incomplete_file_ids = [uuid4(), uuid4()]
+    incomplete_uploads = [uuid4(), uuid4()]
+    need_attention = [uuid4()]
     rig.file_upload_box_client.lock_file_upload_box.side_effect = (  # type: ignore
-        FileBoxClientPort.FUBIncompleteUploadsError(
-            incomplete_file_ids=incomplete_file_ids
+        FileBoxClientPort.FUBIncompleteOrFailedError(
+            incomplete_uploads=incomplete_uploads, need_attention=need_attention
         )
     )
 
-    with pytest.raises(rig.rdub_manager.BoxIncompleteUploadsError) as exc_info:
+    with pytest.raises(rig.rdub_manager.BoxIncompleteOrFailedError) as exc_info:
         await rig.rdub_manager.update_research_data_upload_box(
             box_id=box_id,
             version=box.version,
@@ -288,7 +289,8 @@ async def test_lock_box_incomplete_uploads_error(
             auth_context=DATA_STEWARD_AUTH_CONTEXT,
         )
 
-    assert exc_info.value.incomplete_file_ids == incomplete_file_ids
+    assert exc_info.value.incomplete_uploads == incomplete_uploads
+    assert exc_info.value.need_attention == need_attention
 
     # Box should have been rolled back to open
     rolled_back_box = await rig.box_dao.get_by_id(box_id)
@@ -1190,13 +1192,16 @@ async def test_store_accession_map_archived_box(
 async def test_store_accession_map_filters_cancelled_and_failed(
     rig: JointRig, populated_boxes: list[UUID]
 ):
-    """Test that cancelled and failed files are filtered out when validating the
-    accession map.
+    """Test which files are filtered out when validating the accession map.
+
+    Cancelled files and files that failed before reaching the inbox are ignored, but
+    files that failed interrogation (i.e. that do have a `decrypted_sha256`) still
+    require a mapping, since they are expected to be resolved rather than dropped.
     """
     box_id = populated_boxes[0]
 
     # Create test file uploads including cancelled and failed ones
-    test_file_ids = [uuid4() for _ in range(4)]
+    test_file_ids = [uuid4() for _ in range(5)]
     test_file_uploads = [
         models.FileUploadWithAccession(
             id=test_file_ids[0],
@@ -1233,7 +1238,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
             bucket_id="inbox",
             object_id=uuid4(),
             alias="test2",
-            decrypted_sha256="checksum2",
+            # No checksum -> the upload never made it to the inbox
             decrypted_size=1000,
             encrypted_size=1100,
             part_size=100,
@@ -1254,20 +1259,40 @@ async def test_store_accession_map_filters_cancelled_and_failed(
             state="awaiting_archival",
             state_updated=now_utc_ms_prec(),
         ),
+        models.FileUploadWithAccession(
+            id=test_file_ids[4],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test4",
+            # Reached the inbox, then failed interrogation -> still needs a mapping
+            decrypted_sha256="checksum4",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="failed",
+            state_updated=now_utc_ms_prec(),
+        ),
     ]
 
     # Mock the file box client
     rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
 
-    # Create an accession map for only the valid files
-    mapping = {"GHGAF001": test_file_ids[0], "GHGAF004": test_file_ids[3]}
+    # Create an accession map for the files that still require one
+    mapping = {
+        "GHGAF001": test_file_ids[0],
+        "GHGAF004": test_file_ids[3],
+        "GHGAF005": test_file_ids[4],
+    }
 
     # The accessions must already be registered as unmapped entries
     await rig.file_controller.register_unmapped_accessions(
         study_id=TEST_STUDY_ID, accessions=set(mapping)
     )
 
-    # This should succeed because cancelled and failed files are ignored
+    # This should succeed: the cancelled file and the failed upload are ignored, and
+    #  every remaining file (including the interrogation failure) is mapped
     await rig.rdub_manager.store_accession_map(
         box_id=box_id,
         box_version=0,
@@ -1277,11 +1302,12 @@ async def test_store_accession_map_filters_cancelled_and_failed(
 
     # Verify the accession map was stored by checking the FileController mock
     file_accessions = await rig.file_accession_dao.find_all(mapping={}).to_list()
-    assert len(file_accessions) == 2
+    assert len(file_accessions) == 3
     file_accessions.sort(key=lambda x: x.pid)
     assert [(fa.pid, fa.file_id) for fa in file_accessions] == [
         ("GHGAF001", test_file_ids[0]),
         ("GHGAF004", test_file_ids[3]),
+        ("GHGAF005", test_file_ids[4]),
     ]
     # The records are mapped (file_id and study_id set, mapped timestamp present)
     for fa in file_accessions:
@@ -1655,6 +1681,99 @@ async def test_archive_box_missing_accessions(
         )
 
 
+@pytest.mark.parametrize(
+    "state, checksum, expect_incomplete",
+    [
+        ("init", None, True),  # still uploading to the inbox
+        ("inbox", "checksum9", True),  # uploaded, not interrogated yet
+        ("failed", "checksum9", False),  # reached the inbox, failed interrogation
+    ],
+)
+async def test_archive_box_unsettled_files(
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    state: str,
+    checksum: str | None,
+    expect_incomplete: bool,
+):
+    """Test that archival is rejected up front when the box still holds files that
+    have not been interrogated or that failed interrogation.
+
+    A box can be locked while uploads are ongoing, so a locked box is not necessarily
+    settled. These files must be reported as incomplete/needing attention rather than
+    as missing an accession, which is what they would otherwise trip over first.
+    """
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    settled_file_id, unsettled_file_id = uuid4(), uuid4()
+    rig.file_upload_box_client.get_all_file_uploads.return_value = [  # type: ignore
+        models.FileUploadWithAccession(
+            id=settled_file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        ),
+        models.FileUploadWithAccession(
+            id=unsettled_file_id,
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test9",
+            decrypted_sha256=checksum,
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state=state,
+            state_updated=now_utc_ms_prec(),
+        ),
+    ]
+
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=settled_file_id)
+    )
+
+    # The first file has its accession and is awaiting archival, so it doesn't trigger an error.
+    # However, the other file is set to a state that does trigger BoxIncompleteOrFailedError.
+    with pytest.raises(rig.rdub_manager.BoxIncompleteOrFailedError) as exc_info:
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+
+    if expect_incomplete:
+        assert exc_info.value.incomplete_uploads == [unsettled_file_id]
+        assert exc_info.value.need_attention == []
+    else:
+        assert exc_info.value.incomplete_uploads == []
+        assert exc_info.value.need_attention == [unsettled_file_id]
+
+    # The file box service should never have been asked to archive
+    rig.file_upload_box_client.archive_file_upload_box.assert_not_called()  # type: ignore
+
+    # Box should have been rolled back to locked
+    rolled_back_box = await rig.box_dao.get_by_id(box_id)
+    assert rolled_back_box.state == "locked"
+    assert rolled_back_box.version == box.version
+
+
 async def test_archive_box_file_upload_box_version_error(
     rig: JointRig, populated_boxes: list[UUID]
 ):
@@ -1713,6 +1832,63 @@ async def test_archive_box_file_upload_box_version_error(
     unchanged_box = await rig.box_dao.get_by_id(box_id)
     assert unchanged_box.state == "locked"  # Still locked, not archived
     assert unchanged_box.version == original_version  # Version rolled back
+
+
+async def test_archive_box_incomplete_or_failed_error(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that the archive branch of _handle_state_change() correctly
+    handles the IncompleteOrFailedError.
+    """
+    box_id = populated_boxes[0]
+
+    # Lock the box
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    # Create test file uploads
+    test_file_ids = [uuid4()]
+    test_file_uploads = [
+        models.FileUploadWithAccession(
+            id=test_file_ids[0],
+            box_id=TEST_FILE_UPLOAD_BOX_ID,
+            storage_alias="HD01",
+            bucket_id="inbox",
+            object_id=uuid4(),
+            alias="test0",
+            decrypted_sha256="checksum0",
+            decrypted_size=1000,
+            encrypted_size=1100,
+            part_size=100,
+            state="awaiting_archival",
+            state_updated=now_utc_ms_prec(),
+        )
+    ]
+
+    # Mock the file box client
+    rig.file_upload_box_client.get_all_file_uploads.return_value = test_file_uploads  # type: ignore
+    incomplete_ids = [uuid4(), uuid4()]
+    rig.file_upload_box_client.archive_file_upload_box = AsyncMock(
+        side_effect=FileBoxClientPort.FUBIncompleteOrFailedError(
+            incomplete_uploads=incomplete_ids, need_attention=[]
+        )
+    )
+
+    # Insert the requisite accession mapping
+    await rig.file_accession_dao.insert(
+        models.FileAccession(pid="GHGAF001", file_id=test_file_ids[0])
+    )
+
+    with pytest.raises(rig.rdub_manager.BoxIncompleteOrFailedError):
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
 
 
 async def test_update_box_max_size(rig: JointRig, populated_boxes: list[UUID]):
@@ -2140,3 +2316,319 @@ async def test_get_boxes_skips_dangling_grant(
 
     assert results.count == 1
     assert [b.id for b in results.boxes] == [existing_box_id]
+
+
+async def test_requeue_single_file_upload_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test the `requeue_single_file_upload()` core method works in the happy case.
+
+    Check that:
+    - the right FileBoxClient method is called with the right parameters
+    - the return type of the core method is None
+    - the correct method on the AuditRepository is called with the right parameters
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    file_id = uuid4()
+
+    await rig.rdub_manager.requeue_single_file_upload(
+        box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
+    )
+
+    # The outbound call has to use the FileUploadBox ID, not the RDUB ID
+    rig.file_upload_box_client.requeue_single_file_upload.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=file_id
+    )
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_awaited_once_with(  # type: ignore
+        file_id=file_id, user_id=TEST_DS_ID
+    )
+
+
+async def test_requeue_single_file_upload_box_locked(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_single_file_upload()` doesn't raise an error
+    if the box is locked. Also verify that the right FileBoxClient and AuditRepository
+    methods are called.
+    """
+    box_id = populated_boxes[0]
+    file_id = uuid4()
+
+    # Lock the box - files that failed interrogation still have to be resolved
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    await rig.rdub_manager.requeue_single_file_upload(
+        box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
+    )
+
+    rig.file_upload_box_client.requeue_single_file_upload.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id, file_id=file_id
+    )
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_awaited_once_with(  # type: ignore
+        file_id=file_id, user_id=TEST_DS_ID
+    )
+
+
+async def test_requeue_single_file_upload_box_archived(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_single_file_upload()` raises an error if
+    the box is archived, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    box_id = populated_boxes[0]
+
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.box_dao.update(box)
+
+    with pytest.raises(rig.rdub_manager.BoxStateError) as exc_info:
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=box_id, file_id=uuid4(), data_steward_id=TEST_DS_ID
+        )
+    assert exc_info.value.state == "archived"
+
+    rig.file_upload_box_client.requeue_single_file_upload.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_single_file_upload_box_not_found(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_single_file_upload()` raises an error if
+    the box is missing, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=uuid4(), file_id=uuid4(), data_steward_id=TEST_DS_ID
+        )
+
+    rig.file_upload_box_client.requeue_single_file_upload.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
+
+
+@pytest.mark.parametrize(
+    "client_error, expected_error",
+    [
+        (
+            FileBoxClientPort.FileUploadNotFoundError(file_id=uuid4()),
+            RDUBManager.FileUploadNotFoundError,
+        ),
+        (
+            FileBoxClientPort.RequeueError(
+                "Cannot requeue FileUpload because it did not fail interrogation."
+            ),
+            RDUBManager.RequeueError,
+        ),
+        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+    ],
+    ids=["FileUploadNotFoundError", "RequeueError", "FUBStateError", "OperationError"],
+)
+async def test_requeue_single_file_upload_fbc_error_translation(
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    client_error: Exception,
+    expected_error: type[Exception],
+):
+    """Test that all FileBoxClient errors are translated correctly by
+    the `requeue_single_file_upload()` core method.
+
+    Expected error translation:
+    - FileUploadNotFoundError -> FileUploadNotFoundError
+    - RequeueError -> RequeueError (the client's reason is preserved)
+    - FUBStateError -> BoxStateError (the box states are out of sync)
+    - OperationError -> OperationError (not translated, propagates as is)
+    """
+    box_id = populated_boxes[0]
+    file_id = uuid4()
+
+    rig.file_upload_box_client.requeue_single_file_upload.side_effect = (  # type: ignore
+        client_error
+    )
+    with pytest.raises(expected_error) as exc_info:
+        await rig.rdub_manager.requeue_single_file_upload(
+            box_id=box_id, file_id=file_id, data_steward_id=TEST_DS_ID
+        )
+
+    # The reason a file can't be requeued is passed on so the API can relay it
+    if isinstance(client_error, FileBoxClientPort.RequeueError):
+        assert str(exc_info.value) == str(client_error)
+
+    # Only an archived box makes the file box service refuse outright
+    if expected_error is RDUBManager.BoxStateError:
+        assert exc_info.value.state == "archived"  # type: ignore
+
+    # A failed requeue is never audited
+    rig.rdub_manager._audit_repository.log_file_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_happy(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that the `requeue_all_box_uploads()` core method works in the happy case.
+
+    Check that:
+    - the right FileBoxClient method is called with the right parameters
+    - the return type of the core method is an instance of BoxRequeueResults
+    - the correct method on the AuditRepository is called with the right parameters
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    expected_results = models.BoxRequeueResult(
+        requeued=[uuid4(), uuid4()], skipped=[uuid4()]
+    )
+    rig.file_upload_box_client.requeue_all_box_uploads.return_value = (  # type: ignore
+        expected_results
+    )
+
+    results = await rig.rdub_manager.requeue_all_box_uploads(
+        box_id=box_id, data_steward_id=TEST_DS_ID
+    )
+    assert isinstance(results, models.BoxRequeueResult)
+    assert results == expected_results
+
+    # The outbound call has to use the FileUploadBox ID, not the RDUB ID
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id
+    )
+
+    # The audit record refers to the RDUB and lists only the requeued files
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_awaited_once_with(  # type: ignore
+        box_id=box_id, user_id=TEST_DS_ID, file_ids=expected_results.requeued
+    )
+
+
+async def test_requeue_all_box_uploads_box_locked(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_all_box_uploads()` doesn't raise an error
+    if the box is locked. Also verify that the right FileBoxClient and AuditRepository
+    methods are called.
+    """
+    box_id = populated_boxes[0]
+    expected_results = models.BoxRequeueResult(requeued=[uuid4()], skipped=[])
+    rig.file_upload_box_client.requeue_all_box_uploads.return_value = (  # type: ignore
+        expected_results
+    )
+
+    # Lock the box - files that failed interrogation still have to be resolved
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "locked"
+    await rig.box_dao.update(box)
+
+    results = await rig.rdub_manager.requeue_all_box_uploads(
+        box_id=box_id, data_steward_id=TEST_DS_ID
+    )
+    assert results == expected_results
+
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_awaited_once_with(  # type: ignore
+        box_id=box.file_upload_box_id
+    )
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_awaited_once_with(  # type: ignore
+        box_id=box_id, user_id=TEST_DS_ID, file_ids=expected_results.requeued
+    )
+
+
+async def test_requeue_all_box_uploads_box_archived(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_all_box_uploads()` raises an error if
+    the box is archived, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    box_id = populated_boxes[0]
+
+    box = await rig.box_dao.get_by_id(box_id)
+    box.state = "archived"
+    await rig.box_dao.update(box)
+
+    with pytest.raises(rig.rdub_manager.BoxStateError) as exc_info:
+        await rig.rdub_manager.requeue_all_box_uploads(
+            box_id=box_id, data_steward_id=TEST_DS_ID
+        )
+    assert exc_info.value.state == "archived"
+
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_box_not_found(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Make sure that `requeue_all_box_uploads()` raises an error if
+    the box is missing, and does NOT make a call to the FileBoxClient OR
+    to the AuditRepository.
+    """
+    with pytest.raises(rig.rdub_manager.BoxNotFoundError):
+        await rig.rdub_manager.requeue_all_box_uploads(
+            box_id=uuid4(), data_steward_id=TEST_DS_ID
+        )
+
+    rig.file_upload_box_client.requeue_all_box_uploads.assert_not_called()  # type: ignore
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
+
+
+@pytest.mark.parametrize(
+    "client_error, expected_error",
+    [
+        (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
+        (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
+    ],
+    ids=["FUBStateError", "OperationError"],
+)
+async def test_requeue_all_box_uploads_fbc_error_translation(
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    client_error: Exception,
+    expected_error: type[Exception],
+):
+    """Test that all FileBoxClient errors are translated correctly by
+    the `requeue_all_box_uploads()` core method.
+
+    Expected error translation:
+    - FUBStateError -> BoxStateError (the box states are out of sync)
+    - OperationError -> OperationError (not translated, propagates as is)
+    """
+    box_id = populated_boxes[0]
+
+    rig.file_upload_box_client.requeue_all_box_uploads.side_effect = (  # type: ignore
+        client_error
+    )
+    with pytest.raises(expected_error) as exc_info:
+        await rig.rdub_manager.requeue_all_box_uploads(
+            box_id=box_id, data_steward_id=TEST_DS_ID
+        )
+
+    # Only an archived box makes the file box service refuse outright
+    if expected_error is RDUBManager.BoxStateError:
+        assert exc_info.value.state == "archived"  # type: ignore
+
+    # A failed requeue is never audited
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore
+
+
+async def test_requeue_all_box_uploads_empty_results(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that when the `requeued` list returned by the FileBoxClient is empty,
+    the `requeue_all_box_uploads()` core method does not call the AuditRepository,
+    but still returns the results.
+    """
+    box_id = populated_boxes[0]
+    expected_results = models.BoxRequeueResult(requeued=[], skipped=[uuid4()])
+    rig.file_upload_box_client.requeue_all_box_uploads.return_value = (  # type: ignore
+        expected_results
+    )
+
+    results = await rig.rdub_manager.requeue_all_box_uploads(
+        box_id=box_id, data_steward_id=TEST_DS_ID
+    )
+    assert results == expected_results
+
+    # Nothing was requeued, so there is nothing to audit
+    rig.rdub_manager._audit_repository.log_whole_box_requeued.assert_not_called()  # type: ignore

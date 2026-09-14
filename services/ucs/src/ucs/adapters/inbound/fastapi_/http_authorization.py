@@ -32,6 +32,8 @@ __all__ = [
     "require_create_file_box_work_order",
     "require_create_file_work_order",
     "require_delete_file_box_work_order",
+    "require_requeue_all_failed_work_order",
+    "require_requeue_file_work_order",
     "require_upload_file_work_order",
     "require_view_file_box_work_order",
 ]
@@ -42,6 +44,8 @@ ViewFileBoxProvider = JWTAuthContextProvider[models.ViewFileBoxWorkOrder]
 CreateFileProvider = JWTAuthContextProvider[models.CreateFileWorkOrder]
 UploadFileProvider = JWTAuthContextProvider[models.UploadFileWorkOrder]
 DeleteFileBoxProvider = JWTAuthContextProvider[models.DeleteFileBoxWorkOrder]
+RequeueFailedFileProvider = JWTAuthContextProvider[models.RequeueFailedFileWorkOrder]
+RequeueAllFailedProvider = JWTAuthContextProvider[models.RequeueAllFailedWorkOrder]
 
 
 class JWTAuthContextProviderBundle:
@@ -94,6 +98,14 @@ class JWTAuthContextProviderBundle:
         self.delete_file_box_provider = JWTAuthContextProvider(
             config=self.rs_auth_config,
             context_class=models.DeleteFileBoxWorkOrder,
+        )
+        self.requeue_file_provider = JWTAuthContextProvider(
+            config=self.rs_auth_config,
+            context_class=models.RequeueFailedFileWorkOrder,
+        )
+        self.requeue_all_failed_provider = JWTAuthContextProvider(
+            config=self.rs_auth_config,
+            context_class=models.RequeueAllFailedWorkOrder,
         )
 
 
@@ -216,6 +228,32 @@ async def _require_delete_file_box_work_order(
     )
 
 
+async def _require_requeue_file_work_order(
+    auth_provider_bundle: Annotated[
+        JWTAuthContextProviderBundle, Depends(dummies.auth_provider_bundle)
+    ],
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+) -> models.RequeueFailedFileWorkOrder:
+    """Require a "requeue file" work order context using FastAPI."""
+    provider = auth_provider_bundle.requeue_file_provider
+    return await require_auth_context_using_credentials(
+        credentials=credentials, auth_provider=provider
+    )
+
+
+async def _require_requeue_all_failed_work_order(
+    auth_provider_bundle: Annotated[
+        JWTAuthContextProviderBundle, Depends(dummies.auth_provider_bundle)
+    ],
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+) -> models.RequeueAllFailedWorkOrder:
+    """Require a "requeue all failed files" work order context using FastAPI."""
+    provider = auth_provider_bundle.requeue_all_failed_provider
+    return await require_auth_context_using_credentials(
+        credentials=credentials, auth_provider=provider
+    )
+
+
 require_create_file_box_work_order = Security(_require_create_file_box_work_order)
 require_change_file_box_work_order = Security(_require_change_file_box_work_order)
 require_view_file_box_work_order = Security(_require_view_file_box_work_order)
@@ -224,3 +262,5 @@ require_upload_file_work_order = Security(_require_upload_file_work_order)
 require_close_file_work_order = Security(_require_close_file_work_order)
 require_delete_file_work_order = Security(_require_delete_file_work_order)
 require_delete_file_box_work_order = Security(_require_delete_file_box_work_order)
+require_requeue_file_work_order = Security(_require_requeue_file_work_order)
+require_requeue_all_failed_work_order = Security(_require_requeue_all_failed_work_order)

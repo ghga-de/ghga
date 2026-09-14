@@ -27,15 +27,28 @@ from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
-from rs.constants import HTTPX_TIMEOUT, UCS_UPLOADS_PAGE_SIZE
+from rs.constants import (
+    EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_NOT_FOUND,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_FILE_UPLOAD_NOT_FOUND,
+    EXC_ID_FILE_UPLOAD_STATE_ERROR,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+    EXC_ID_REQUEUE_ERROR,
+    UCS_UPLOADS_PAGE_SIZE,
+)
 from rs.core.models import (
     BaseWorkOrderToken,
+    BoxRequeueResult,
     ChangeFileBoxWorkOrder,
     CreateFileBoxWorkOrder,
     DeleteFileBoxWorkOrder,
     DeleteFileUploadWorkOrder,
     FileUploadWithAccession,
     GrantId,
+    RequeueAllFailedWorkOrder,
+    RequeueFailedFileWorkOrder,
     ResizeFileBoxWorkOrder,
     UploadGrant,
     ViewFileBoxWorkOrder,
@@ -48,6 +61,8 @@ from rs.ports.outbound.http import (
 
 log = logging.getLogger(__name__)
 
+DEFAULT_HTTPX_TIMEOUT = 60.0
+
 
 @asynccontextmanager
 async def get_configured_httpx_client(
@@ -59,7 +74,7 @@ async def get_configured_httpx_client(
     meant for tests, which can supply a mock transport in its place.
     """
     async with httpx2.AsyncClient(
-        timeout=HTTPX_TIMEOUT, transport=base_transport
+        timeout=DEFAULT_HTTPX_TIMEOUT, transport=base_transport
     ) as client:
         yield client
 
@@ -87,7 +102,23 @@ class WOTSigningConfig(BaseSettings):
     )
 
 
-class AccessApiConfig(BaseSettings):
+class HttpxTimeoutConfig(BaseSettings):
+    """Configuration for long and short timeout durations"""
+
+    httpx_standard_timeout_sec: float = Field(
+        default=60.0,
+        description="The timeout duration, in seconds, to use for most HTTP calls.",
+    )
+    httpx_long_timeout_sec: float = Field(
+        default=600.0,
+        description=(
+            "The timeout duration, in seconds, to use for HTTP calls which"
+            + " have the potential to be especially long-running."
+        ),
+    )
+
+
+class AccessApiConfig(HttpxTimeoutConfig):
     """Config parameters for managing upload access grants."""
 
     access_url: HttpUrl = Field(
@@ -103,6 +134,8 @@ class AccessClient(AccessClientPort):
     def __init__(self, *, config: AccessApiConfig, httpx_client: httpx2.AsyncClient):
         self._access_url = str(config.access_url).rstrip("/")
         self._client = httpx_client
+        self._standard_timeout = config.httpx_standard_timeout_sec
+        self._long_timeout = config.httpx_long_timeout_sec
 
     async def grant_upload_access(
         self,
@@ -129,9 +162,11 @@ class AccessClient(AccessClientPort):
             "valid_until": valid_until.isoformat(),
         }
 
-        response = await self._client.post(url, json=body, timeout=HTTPX_TIMEOUT)
+        response = await self._client.post(
+            url, json=body, timeout=self._standard_timeout
+        )
         if response.status_code != 201:
-            log.error(
+            log.warning(
                 "Failed to grant upload access for user %s to box %s.",
                 user_id,
                 box_id,
@@ -164,13 +199,13 @@ class AccessClient(AccessClientPort):
             AccessAPIError: if there's a problem during the operation.
         """
         url = f"{self._access_url}/upload-access/grants/{grant_id}"
-        response = await self._client.delete(url, timeout=HTTPX_TIMEOUT)
+        response = await self._client.delete(url, timeout=self._standard_timeout)
         if response.status_code == 204:
             return
 
         if response.status_code == 404:
             raise self.GrantNotFoundError()
-        log.error(
+        log.warning(
             "Failed to revoke upload access for grant ID %s.",
             grant_id,
             extra={
@@ -203,10 +238,12 @@ class AccessClient(AccessClientPort):
         params = {key: value for key, value in params.items() if value is not None}
 
         url = f"{self._access_url}/upload-access/grants"
-        response = await self._client.get(url, params=params, timeout=HTTPX_TIMEOUT)
+        response = await self._client.get(
+            url, params=params, timeout=self._standard_timeout
+        )
         if response.status_code != 200:
             msg = "Failed to retrieve upload access grants."
-            log.error(
+            log.warning(
                 msg,
                 extra={
                     **params,
@@ -230,12 +267,12 @@ class AccessClient(AccessClientPort):
             AccessAPIError: if there's a problem during the operation.
         """
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes"
-        response = await self._client.get(url, timeout=HTTPX_TIMEOUT)
+        response = await self._client.get(url, timeout=self._standard_timeout)
         status_code = response.status_code
         if status_code == httpx2.codes.NOT_FOUND:
             return []
         if status_code != httpx2.codes.OK:
-            log.error(
+            log.warning(
                 "Failed to retrieve list of research data upload boxes accessible to"
                 + " user %s from the access API.",
                 user_id,
@@ -262,14 +299,14 @@ class AccessClient(AccessClientPort):
         url = f"{self._access_url}/upload-access/users/{user_id}/boxes/{box_id}"
 
         try:
-            response = await self._client.get(url, timeout=HTTPX_TIMEOUT)
+            response = await self._client.get(url, timeout=self._standard_timeout)
 
             # 200 means user has access, 403/404 means no access
             if response.status_code == 200:
                 return True
             if response.status_code in (403, 404):
                 return False
-            log.error(
+            log.warning(
                 "Unexpected response when checking box access for user %s and box %s.",
                 user_id,
                 box_id,
@@ -283,7 +320,7 @@ class AccessClient(AccessClientPort):
             raise self.AccessAPIError("Failed to check box access.")
 
         except httpx2.RequestError as err:
-            log.error(
+            log.warning(
                 "Request failed when checking box access for user %s and box %s.",
                 user_id,
                 box_id,
@@ -293,7 +330,7 @@ class AccessClient(AccessClientPort):
             raise self.AccessAPIError("Failed to check box access.") from err
 
 
-class FileBoxClientConfig(WOTSigningConfig):
+class FileBoxClientConfig(WOTSigningConfig, HttpxTimeoutConfig):
     """Config parameters for interacting with the service owning
     FileUploadBoxes.
     """
@@ -317,6 +354,8 @@ class FileBoxClient(FileBoxClientPort):
     ):
         self._ucs_url = str(config.ucs_url).rstrip("/")
         self._client = httpx_client
+        self._standard_timeout = config.httpx_standard_timeout_sec
+        self._long_timeout = config.httpx_long_timeout_sec
         self._signing_key = jwk.JWK.from_json(
             config.work_order_signing_key.get_secret_value()
         )
@@ -335,7 +374,14 @@ class FileBoxClient(FileBoxClientPort):
         response: httpx2.Response,
         body: dict[str, Any],
         operation: Literal[
-            "lock", "unlock", "archive", "resize", "delete file from", "delete"
+            "lock",
+            "unlock",
+            "archive",
+            "resize",
+            "delete file from",
+            "delete",
+            "requeue a file in",
+            "requeue all failed files in",
         ],
         box_id: UUID4,
     ):
@@ -346,23 +392,30 @@ class FileBoxClient(FileBoxClientPort):
             if field in body:
                 extra[field] = body[field]
 
-        if exception_id == "incompleteUploads":
+        if exception_id == EXC_ID_INCOMPLETE_OR_FAILED:
             # exception_id parsed, so the body is a JSON object we can re-read
-            raw = response.json().get("data", {}).get("incomplete_uploads", [])
-            incomplete_file_ids = [UUID(item[0]) for item in raw]
-            extra["incomplete_uploads"] = incomplete_file_ids
-            log.error(
-                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads.",
+            data = response.json().get("data", {})
+            # Both groups arrive as (file ID, alias) pairs; only the IDs are relayed
+            incomplete_uploads = [
+                UUID(item[0]) for item in data.get("incomplete_uploads", [])
+            ]
+            need_attention = [UUID(item[0]) for item in data.get("need_attention", [])]
+            extra["incomplete_uploads"] = incomplete_uploads
+            extra["need_attention"] = need_attention
+            log.info(
+                "Failed to %s FileUploadBox %s: %d file(s) have incomplete uploads and"
+                + " %d file(s) need attention.",
                 operation,
                 box_id,
-                len(incomplete_file_ids),
+                len(incomplete_uploads),
+                len(need_attention),
                 extra=extra,
             )
-            raise self.FUBIncompleteUploadsError(
-                incomplete_file_ids=incomplete_file_ids
+            raise self.FUBIncompleteOrFailedError(
+                incomplete_uploads=incomplete_uploads, need_attention=need_attention
             )
-        if exception_id == "boxVersionOutdated":
-            log.error(
+        if exception_id == EXC_ID_BOX_VERSION_OUTDATED:
+            log.info(
                 "Failed to %s FileUploadBox %s because the version specified"
                 + " in the request is out of date.",
                 operation,
@@ -370,9 +423,9 @@ class FileBoxClient(FileBoxClientPort):
                 extra=extra,
             )
             raise self.FUBVersionError(box_id=box_id)
-        if exception_id == "boxMaxSizeTooLow":
+        if exception_id == EXC_ID_BOX_MAX_SIZE_TOO_LOW:
             max_size = body["max_size"]
-            log.error(
+            log.info(
                 "Failed to resize FileUploadBox %s because the new max_size %i is"
                 + " smaller than the bytes already uploaded.",
                 box_id,
@@ -382,19 +435,19 @@ class FileBoxClient(FileBoxClientPort):
             raise self.FUBMaxSizeTooLowError(
                 f"New max_size {max_size} is smaller than the bytes already uploaded."
             )
-        if exception_id == "boxStateError":
+        if exception_id == EXC_ID_BOX_STATE_ERROR:
             msg = (
                 f"Cannot {operation} FileUploadBox {box_id} because the box's state"
                 + " prevents it. The RS and UCS box states might be out of sync."
             )
-            log.error(msg, extra=extra)
+            log.warning(msg, extra=extra)
             raise self.FUBStateError(msg)
         msg = (
             f"Failed to {operation} FileUploadBox {box_id} because the response status"
             + f" code was 409 but the exception ID ({exception_id}) was missing or"
             + " unrecognized."
         )
-        log.error(msg, extra=body)
+        log.warning(msg, extra=body)
         raise self.OperationError(msg)
 
     async def create_file_upload_box(
@@ -408,10 +461,13 @@ class FileBoxClient(FileBoxClientPort):
         headers = self._auth_header(CreateFileBoxWorkOrder())
         body = {"storage_alias": storage_alias, "max_size": max_size}
         response = await self._client.post(
-            f"{self._ucs_url}/boxes", headers=headers, json=body, timeout=HTTPX_TIMEOUT
+            f"{self._ucs_url}/boxes",
+            headers=headers,
+            json=body,
+            timeout=self._standard_timeout,
         )
         if response.status_code != 201:
-            log.error(
+            log.warning(
                 "Error creating new FileUploadBox in external service with storage"
                 " alias %s.",
                 storage_alias,
@@ -441,6 +497,8 @@ class FileBoxClient(FileBoxClientPort):
         """Lock a FileUploadBox in the owning service.
 
         Raises:
+            FUBIncompleteOrFailedError if force=False and there are incomplete uploads
+                or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
         """
@@ -451,14 +509,14 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 409:
             self._raise_for_409(
                 response=response, body=body, operation="lock", box_id=box_id
             )
         elif response.status_code != 204:
-            log.error(
+            log.warning(
                 "Error locking FileUploadBox ID %s in external service.",
                 box_id,
                 extra={
@@ -483,7 +541,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 409:
             self._raise_for_409(
@@ -493,7 +551,7 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
         elif response.status_code != 204:
-            log.error(
+            log.warning(
                 "Error unlocking FileUploadBox ID %s in external service.",
                 box_id,
                 extra={
@@ -549,7 +607,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}/uploads",
             headers=headers,
             params=params,
-            timeout=HTTPX_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code != 200:
             if response.status_code == 404 and missing_box_ok:
@@ -560,7 +618,7 @@ class FileBoxClient(FileBoxClientPort):
                     box_id,
                 )
                 return [], 0
-            log.error(
+            log.warning(
                 "Error getting file list for FileUploadBox %s.",
                 box_id,
                 extra={
@@ -635,7 +693,9 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_TIMEOUT,
+            # Archiving has to settle every FileUpload in the box, so it can
+            #  take much longer than a normal request.
+            timeout=self._long_timeout,
         )
         if response.status_code == 409:
             self._raise_for_409(
@@ -645,7 +705,7 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
         elif response.status_code != 204:
-            log.error(
+            log.warning(
                 "Error archiving FileUploadBox ID %s in external service.",
                 box_id,
                 extra={
@@ -673,7 +733,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             json=body,
-            timeout=HTTPX_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 204:
             return
@@ -685,7 +745,7 @@ class FileBoxClient(FileBoxClientPort):
                 operation="resize",
                 box_id=box_id,
             )
-        log.error(
+        log.warning(
             "Error resizing FileUploadBox ID %s in external service.",
             box_id,
             extra={
@@ -706,7 +766,7 @@ class FileBoxClient(FileBoxClientPort):
         response = await self._client.delete(
             f"{self._ucs_url}/boxes/{box_id}/uploads/{file_id}",
             headers=headers,
-            timeout=HTTPX_TIMEOUT,
+            timeout=self._standard_timeout,
         )
         if response.status_code == 204:
             return
@@ -719,7 +779,7 @@ class FileBoxClient(FileBoxClientPort):
         }
 
         if response.status_code == 404:
-            log.error(
+            log.warning(
                 "FileUploadBox %s not found in external service when attempting to"
                 + " delete FileUpload %s. The RDUB and FUB states may be out of sync.",
                 box_id,
@@ -738,7 +798,7 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
 
-        log.error(
+        log.warning(
             "Error deleting FileUpload %s from FileUploadBox %s.",
             file_id,
             box_id,
@@ -762,7 +822,7 @@ class FileBoxClient(FileBoxClientPort):
             f"{self._ucs_url}/boxes/{box_id}",
             headers=headers,
             params={"version": version},
-            timeout=HTTPX_TIMEOUT,
+            timeout=self._long_timeout,
         )
         if response.status_code == 204:
             return
@@ -791,9 +851,157 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
 
-        log.error(
+        log.warning(
             "Error deleting FileUploadBox %s in external service.",
             box_id,
             extra=extra,
         )
         raise self.OperationError(f"Failed to delete FileUploadBox {box_id}.")
+
+    async def requeue_single_file_upload(
+        self, *, box_id: UUID4, file_id: UUID4
+    ) -> None:
+        """Requeue a FileUpload that failed interrogation in the owning service.
+
+        The uploaded object is still in the inbox, so the file is only set back to the
+        inbox state - it does not have to be uploaded again.
+
+        Raises:
+            FileUploadNotFoundError if the FileUpload doesn't exist.
+            FUBStateError if the FileUploadBox is archived.
+            RequeueError if the FileUpload cannot be requeued.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = RequeueFailedFileWorkOrder(box_id=box_id, file_id=file_id)
+        headers = self._auth_header(wot)
+        response = await self._client.post(
+            f"{self._ucs_url}/rpc/boxes/{box_id}/uploads/{file_id}/requeue",
+            headers=headers,
+            timeout=self._standard_timeout,
+        )
+        if response.status_code == 204:
+            return
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "file_id": file_id,
+            "status_code": response.status_code,
+            "response_text": response.text,
+        }
+        exception_id = _extract_exception_id(response)
+
+        if response.status_code == 404:
+            if exception_id == EXC_ID_FILE_UPLOAD_NOT_FOUND:
+                log.warning(
+                    "FileUpload %s was not found in FileUploadBox %s when attempting"
+                    + " to requeue it.",
+                    file_id,
+                    box_id,
+                    extra=extra,
+                )
+                raise self.FileUploadNotFoundError(file_id=file_id)
+            if exception_id == EXC_ID_REQUEUE_ERROR:
+                # The uploaded object is gone from the inbox, so there is nothing left
+                #  to interrogate again. The file has to be uploaded anew.
+                msg = (
+                    f"Cannot requeue FileUpload {file_id} because its uploaded object"
+                    + " is no longer in the inbox."
+                )
+                log.warning(msg, extra=extra)
+                raise self.RequeueError(msg)
+            if exception_id == EXC_ID_BOX_NOT_FOUND:
+                log.warning(
+                    "FileUploadBox %s not found in external service when attempting to"
+                    + " requeue FileUpload %s. The RDUB and FUB states may be out of sync.",
+                    box_id,
+                    file_id,
+                    extra=extra,
+                )
+                raise self.OperationError(
+                    f"FileUploadBox {box_id} was not found in the external service."
+                )
+
+        if response.status_code == 409:
+            if exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
+                msg = (
+                    f"Cannot requeue FileUpload {file_id} because it was not"
+                    + " successfully uploaded and never made it to interrogation."
+                )
+                log.warning(msg, extra=extra)
+                raise self.RequeueError(msg)
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="requeue a file in",
+                box_id=box_id,
+            )
+
+        log.warning(
+            "Error requeuing FileUpload %s in FileUploadBox %s.",
+            file_id,
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(f"Failed to requeue FileUpload {file_id}.")
+
+    async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
+        """Requeue every FileUpload in a FileUploadBox that failed interrogation.
+
+        Files that are ineligible for a requeue are reported in the result's `skipped`
+        list instead of failing the whole operation.
+
+        Raises:
+            FUBStateError if the FileUploadBox is archived.
+            OperationError if there's any other problem with the operation.
+        """
+        wot = RequeueAllFailedWorkOrder(box_id=box_id)
+        headers = self._auth_header(wot)
+        response = await self._client.post(
+            f"{self._ucs_url}/rpc/boxes/{box_id}/requeue",
+            headers=headers,
+            # A whole-box requeue touches every failed FileUpload in the box,
+            #  so it can take much longer than a normal request.
+            timeout=self._long_timeout,
+        )
+        if response.status_code == 200:
+            try:
+                return BoxRequeueResult(**response.json())
+            except Exception as err:
+                msg = "Failed to extract the requeue results from the response body."
+                log.error(msg, exc_info=True)
+                raise self.OperationError(msg) from err
+
+        extra: dict[str, Any] = {
+            "box_id": box_id,
+            "status_code": response.status_code,
+            "response_text": response.text,
+        }
+
+        if response.status_code == 404:
+            log.warning(
+                "FileUploadBox %s not found in external service when attempting to"
+                + " requeue its failed files. The RDUB and FUB states may be out of"
+                + " sync.",
+                box_id,
+                extra=extra,
+            )
+            raise self.OperationError(
+                f"FileUploadBox {box_id} was not found in the external service."
+            )
+
+        if response.status_code == 409:
+            self._raise_for_409(
+                response=response,
+                body={},
+                operation="requeue all failed files in",
+                box_id=box_id,
+            )
+
+        log.warning(
+            "Error requeuing the failed files in FileUploadBox %s.",
+            box_id,
+            extra=extra,
+        )
+        raise self.OperationError(
+            f"Failed to requeue the failed files in FileUploadBox {box_id}."
+        )

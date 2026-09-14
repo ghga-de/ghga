@@ -26,7 +26,17 @@ from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import FileBoxClient
 from rs.config import Config
-from rs.core.models import FileUploadWithAccession
+from rs.constants import (
+    EXC_ID_BOX_MAX_SIZE_TOO_LOW,
+    EXC_ID_BOX_NOT_FOUND,
+    EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_VERSION_OUTDATED,
+    EXC_ID_FILE_UPLOAD_NOT_FOUND,
+    EXC_ID_FILE_UPLOAD_STATE_ERROR,
+    EXC_ID_INCOMPLETE_OR_FAILED,
+    EXC_ID_REQUEUE_ERROR,
+)
+from rs.core.models import BoxRequeueResult, FileUploadWithAccession
 from tests.fixtures.external_apis import FileBoxApiMock, in_sequence, respond
 from tests.fixtures.utils import TEST_MAX_SIZE
 
@@ -90,7 +100,7 @@ async def test_lock_file_upload_box(
 
     # 409 "boxVersionOutdated" -> FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
@@ -100,7 +110,7 @@ async def test_lock_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
@@ -110,23 +120,66 @@ async def test_lock_file_upload_box(
     )
     assert str(fub_state_err.value) == fub_state_err_msg
 
-    # 409 "incompleteUploads" -> FUBIncompleteUploadsError with list of file IDs
-    incomplete_file_ids = [uuid4(), uuid4()]
+    # 409 "incompleteOrFailed" -> FUBIncompleteOrFailedError, with the two groups of
+    #  file IDs reported by the owning service kept separate
+    incomplete_uploads = [uuid4(), uuid4()]
+    need_attention = [uuid4()]
     file_box_api.on_update_file_upload_box = respond(
         409,
         json={
-            "exception_id": "incompleteUploads",
+            "exception_id": EXC_ID_INCOMPLETE_OR_FAILED,
             "data": {
+                "box_id": str(TEST_BOX_ID),
                 "incomplete_uploads": [
-                    [str(fid), f"alias-{i}"]
-                    for i, fid in enumerate(incomplete_file_ids)
-                ]
+                    [str(fid), f"alias-{i}"] for i, fid in enumerate(incomplete_uploads)
+                ],
+                "need_attention": [
+                    [str(fid), f"failed-alias-{i}"]
+                    for i, fid in enumerate(need_attention)
+                ],
             },
         },
     )
-    with pytest.raises(FileBoxClient.FUBIncompleteUploadsError) as fub_uploads_err:
+    with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
         await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
-    assert fub_uploads_err.value.incomplete_file_ids == incomplete_file_ids
+    assert fub_uploads_err.value.incomplete_uploads == incomplete_uploads
+    assert fub_uploads_err.value.need_attention == need_attention
+
+    # Either group on its own is enough to trigger the error
+    file_box_api.on_update_file_upload_box = respond(
+        409,
+        json={
+            "exception_id": EXC_ID_INCOMPLETE_OR_FAILED,
+            "data": {
+                "box_id": str(TEST_BOX_ID),
+                "incomplete_uploads": [],
+                "need_attention": [[str(need_attention[0]), "failed-alias-0"]],
+            },
+        },
+    )
+    with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
+    assert fub_uploads_err.value.incomplete_uploads == []
+    assert fub_uploads_err.value.need_attention == need_attention
+
+    # ...and check vice versa: incomplete_uploads populated, need_attention empty
+    file_box_api.on_update_file_upload_box = respond(
+        409,
+        json={
+            "exception_id": EXC_ID_INCOMPLETE_OR_FAILED,
+            "data": {
+                "box_id": str(TEST_BOX_ID),
+                "incomplete_uploads": [
+                    [str(fid), f"alias-{i}"] for i, fid in enumerate(incomplete_uploads)
+                ],
+                "need_attention": [],
+            },
+        },
+    )
+    with pytest.raises(FileBoxClient.FUBIncompleteOrFailedError) as fub_uploads_err:
+        await file_upload_box_client.lock_file_upload_box(box_id=TEST_BOX_ID, version=0)
+    assert fub_uploads_err.value.incomplete_uploads == incomplete_uploads
+    assert fub_uploads_err.value.need_attention == []
 
     # Non-409, non-204 -> OperationError
     file_box_api.on_update_file_upload_box = respond(500, json="Some error occurred.")
@@ -150,7 +203,7 @@ async def test_unlock_file_upload_box(
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.unlock_file_upload_box(
@@ -162,7 +215,7 @@ async def test_unlock_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.unlock_file_upload_box(
@@ -270,7 +323,7 @@ async def test_get_file_upload_list_missing_box(
     """Test that a 404 is softened to an empty list when missing_box_ok is set."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     file_box_api.on_get_file_upload_list = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     file_list, total_count = await file_upload_box_client.get_file_upload_list(
         box_id=TEST_BOX_ID, missing_box_ok=True
@@ -409,7 +462,7 @@ async def test_get_all_file_uploads_missing_box(
     """Test that a 404 is softened to an empty list when missing_box_ok is set."""
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     file_box_api.on_get_file_upload_list = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     file_list = await file_upload_box_client.get_all_file_uploads(
         box_id=TEST_BOX_ID, missing_box_ok=True
@@ -438,7 +491,7 @@ async def test_archive_file_upload_box(
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.archive_file_upload_box(
@@ -450,7 +503,7 @@ async def test_archive_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.archive_file_upload_box(
@@ -494,7 +547,7 @@ async def test_resize_file_upload_box(
 
     # Make sure 409 "boxVersionOutdated" is translated as FUBVersionError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.resize_file_upload_box(
@@ -506,7 +559,7 @@ async def test_resize_file_upload_box(
 
     # Make sure 409 "boxMaxSizeTooLow" is translated as FUBMaxSizeTooLowError
     file_box_api.on_update_file_upload_box = respond(
-        409, json={"exception_id": "boxMaxSizeTooLow"}
+        409, json={"exception_id": EXC_ID_BOX_MAX_SIZE_TOO_LOW}
     )
     with pytest.raises(FileBoxClient.FUBMaxSizeTooLowError):
         await file_upload_box_client.resize_file_upload_box(
@@ -547,7 +600,7 @@ async def test_delete_file_upload(
 
     # Make sure 409/boxStateError is translated as FUBStateError
     file_box_api.on_delete_file_upload = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.delete_file_upload(
@@ -600,13 +653,13 @@ async def test_delete_file_upload_box(
 
     # Verify that 404 (boxNotFound) is treated as success so retries are idempotent
     file_box_api.on_delete_file_upload_box = respond(
-        404, json={"exception_id": "boxNotFound"}
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
     await file_upload_box_client.delete_file_upload_box(box_id=TEST_BOX_ID, version=0)
 
     # Verify that 409 "boxVersionOutdated" is translated to an FUBVersionError
     file_box_api.on_delete_file_upload_box = respond(
-        409, json={"exception_id": "boxVersionOutdated"}
+        409, json={"exception_id": EXC_ID_BOX_VERSION_OUTDATED}
     )
     with pytest.raises(FileBoxClient.FUBVersionError) as fub_version_err:
         await file_upload_box_client.delete_file_upload_box(
@@ -618,7 +671,7 @@ async def test_delete_file_upload_box(
 
     # Verify that 409 "boxStateError" is translated to an FUBStateError
     file_box_api.on_delete_file_upload_box = respond(
-        409, json={"exception_id": "boxStateError"}
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
     )
     with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
         await file_upload_box_client.delete_file_upload_box(
@@ -639,3 +692,318 @@ async def test_delete_file_upload_box(
             await file_upload_box_client.delete_file_upload_box(
                 box_id=TEST_BOX_ID, version=0
             )
+
+
+async def test_requeue_single_file_upload(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    work_order_jwk: JWK,
+):
+    """Test the happy path for the FileBoxClient's `requeue_single_file_upload()` method.
+
+    Checks that:
+    - The correct URL is used
+    - The correct HTTP method is used
+    - The correct WOT is used
+    - The expected 'success' code is correct (204, update without payload)
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    test_file_id = uuid4()
+
+    # Set the UCS response to be 204
+    file_box_api.on_requeue_single_file_upload = respond(204)
+    await file_upload_box_client.requeue_single_file_upload(
+        box_id=TEST_BOX_ID, file_id=test_file_id
+    )
+
+    # Verify HTTP method is POST and there's no payload
+    request = file_box_api.requests[0]
+    assert request.method == "POST"
+    assert request.url.path.endswith(
+        f"/rpc/boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+    )
+    assert not request.content
+
+    # Inspect/verify the WOT details
+    raw_token = request.headers["authorization"].removeprefix("Bearer ")
+    wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
+    assert wot_claims["work_type"] == "requeue"
+    assert wot_claims["box_id"] == str(TEST_BOX_ID)
+    assert wot_claims["file_id"] == str(test_file_id)
+
+
+async def test_requeue_single_file_404(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+):
+    """Check `requeue_single_file_upload()` for correct handling of the
+    three 404 cases.
+
+    Does not test outbound HTTP error translation, because that has a
+    dedicated test.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    test_file_id = uuid4()
+
+    # Case #1: 404 "fileUploadNotFound" -> FileUploadNotFoundError
+    file_box_api.on_requeue_single_file_upload = respond(
+        404, json={"exception_id": EXC_ID_FILE_UPLOAD_NOT_FOUND}
+    )
+    with pytest.raises(FileBoxClient.FileUploadNotFoundError) as file_not_found_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(file_not_found_err.value) == str(
+        FileBoxClient.FileUploadNotFoundError(file_id=test_file_id)
+    )
+
+    # Case #2: 404 "requeueError" -> RequeueError naming the missing object
+    file_box_api.on_requeue_single_file_upload = respond(
+        404, json={"exception_id": EXC_ID_REQUEUE_ERROR}
+    )
+    with pytest.raises(FileBoxClient.RequeueError) as requeue_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(requeue_err.value) == (
+        f"Cannot requeue FileUpload {test_file_id} because its uploaded object is no"
+        + " longer in the inbox."
+    )
+
+    # Case #3: 404 fallback interpreted as box not found
+    file_box_api.on_requeue_single_file_upload = respond(
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    box_not_found_msg = (
+        f"FileUploadBox {TEST_BOX_ID} was not found in the external service."
+    )
+    assert str(operation_err.value) == box_not_found_msg
+
+    # Bonus case: 404 with no exception_id
+    file_box_api.on_requeue_single_file_upload = respond(
+        404, json="Some unformatted error text."
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(operation_err.value) == f"Failed to requeue FileUpload {test_file_id}."
+
+
+async def test_requeue_single_file_409(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+):
+    """Check `requeue_single_file_upload()` for correct handling of the
+    three 409 cases.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    test_file_id = uuid4()
+
+    # Check for the case where the FileUpload is not found at all and the case
+    #  where the FileUpload exists, but the S3 content is already gone.
+    requeue_err_msg = (
+        f"Cannot requeue FileUpload {test_file_id} because it was not successfully"
+        + " uploaded and never made it to interrogation."
+    )
+    for exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
+        file_box_api.on_requeue_single_file_upload = respond(
+            409, json={"exception_id": exception_id}
+        )
+        with pytest.raises(FileBoxClient.RequeueError) as requeue_err:
+            await file_upload_box_client.requeue_single_file_upload(
+                box_id=TEST_BOX_ID, file_id=test_file_id
+            )
+        assert str(requeue_err.value) == requeue_err_msg
+
+    # Check the case where the FileUploadBox doesn't exist, which indicates
+    #  a serious sync issue between RS and UCS.
+    file_box_api.on_requeue_single_file_upload = respond(
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
+    )
+    with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(fub_state_err.value) == (
+        f"Cannot requeue a file in FileUploadBox {TEST_BOX_ID} because the box's state"
+        + " prevents it. The RS and UCS box states might be out of sync."
+    )
+
+
+@pytest.mark.parametrize("status_code", [400, 500])
+async def test_requeue_single_file_fallback_error(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    status_code: int,
+):
+    """Check `requeue_single_file_upload()` for correct handling of the
+    case where the response code is not 204, 404, or 409.
+
+    We just check a few samples of possible other off-normal codes.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    test_file_id = uuid4()
+
+    file_box_api.on_requeue_single_file_upload = respond(
+        status_code, json="Some error occurred."
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(operation_err.value) == f"Failed to requeue FileUpload {test_file_id}."
+
+
+async def test_requeue_all_box_uploads(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    work_order_jwk: JWK,
+):
+    """Test the happy path for `requeue_all_box_uploads()`.
+
+    Checks that:
+    - The correct URL is used
+    - The correct HTTP method is used
+    - The correct WOT is used
+    - The expected 'success' code is correct (200, because there is a payload)
+    - The return value (instance of BoxRequeueResult) is correct
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    requeued = [uuid4(), uuid4()]
+    skipped = [uuid4()]
+
+    file_box_api.on_requeue_all_box_uploads = respond(
+        200,
+        json={
+            "requeued": [str(file_id) for file_id in requeued],
+            "skipped": [str(file_id) for file_id in skipped],
+        },
+    )
+    results = await file_upload_box_client.requeue_all_box_uploads(box_id=TEST_BOX_ID)
+    assert results == BoxRequeueResult(requeued=requeued, skipped=skipped)
+
+    # Verify basic request details - the requeue is a payload-free POST
+    request = file_box_api.requests[0]
+    assert request.method == "POST"
+    assert request.url.path.endswith(f"/rpc/boxes/{TEST_BOX_ID}/requeue")
+    assert not request.content
+
+    # Inspect/verify the WOT details. The work type differs from the single-file
+    #  requeue so that a single-file WOT can't authorize a whole-box requeue.
+    raw_token = request.headers["authorization"].removeprefix("Bearer ")
+    wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
+    assert wot_claims["work_type"] == "requeue_box"
+    assert wot_claims["box_id"] == str(TEST_BOX_ID)
+    assert "file_id" not in wot_claims
+
+    # Check with successful status code but garbled response body
+    file_box_api.on_requeue_all_box_uploads = respond(200, json={"requeued": "all"})
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_all_box_uploads(box_id=TEST_BOX_ID)
+    assert str(operation_err.value) == (
+        "Failed to extract the requeue results from the response body."
+    )
+
+
+async def test_requeue_all_box_uploads_empty_lists(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+):
+    """Test the alternative happy path for `requeue_all_box_uploads()`,
+    where both `requeued` and `skipped` are empty.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    file_box_api.on_requeue_all_box_uploads = respond(
+        200, json={"requeued": [], "skipped": []}
+    )
+    results = await file_upload_box_client.requeue_all_box_uploads(box_id=TEST_BOX_ID)
+    assert results == BoxRequeueResult(requeued=[], skipped=[])
+
+
+async def test_requeue_all_box_uploads_404(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+):
+    """Check `requeue_all_box_uploads()` for correct handling of 404.
+
+    At the moment, this op is only set up to expect one 404 situation,
+    and that is for a missing FileUploadBox.
+    This should trigger an OperationError since it means RS and UCS
+    are out of sync.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    file_box_api.on_requeue_all_box_uploads = respond(
+        404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_all_box_uploads(box_id=TEST_BOX_ID)
+    assert str(operation_err.value) == (
+        f"FileUploadBox {TEST_BOX_ID} was not found in the external service."
+    )
+
+
+async def test_requeue_all_box_uploads_409(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+):
+    """Check `requeue_all_box_uploads()` for correct handling of 409.
+
+    At the moment, this op is only set up to expect one 409 situation,
+    and that occurs if the FileUploadBox is marked 'archived'.
+    This shouldn't be possible in normal operations because RS checks
+    upfront if its box is archived and blocks the requeue entirely if
+    so. It's conceivable that subsequent requests sent a just the right
+    interval could trigger the state updates such that UCS's box is
+    archived before RS's box has been updated (but unlikely).
+
+    We're testing it anyway. It should raise an FUBStateError.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    file_box_api.on_requeue_all_box_uploads = respond(
+        409, json={"exception_id": EXC_ID_BOX_STATE_ERROR}
+    )
+    with pytest.raises(FileBoxClient.FUBStateError) as fub_state_err:
+        await file_upload_box_client.requeue_all_box_uploads(box_id=TEST_BOX_ID)
+    assert str(fub_state_err.value) == (
+        f"Cannot requeue all failed files in FileUploadBox {TEST_BOX_ID} because the"
+        + " box's state prevents it. The RS and UCS box states might be out of sync."
+    )
+
+
+@pytest.mark.parametrize("status_code", [400, 500])
+async def test_requeue_all_box_uploads_fallback_error(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    status_code: int,
+):
+    """Check `requeue_all_box_uploads()` for correct handling of the
+    case where the response code is not 200, 404, or 409.
+
+    We just check a few samples of possible other off-normal codes.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    file_box_api.on_requeue_all_box_uploads = respond(
+        status_code, json="Some error occurred."
+    )
+    with pytest.raises(FileBoxClient.OperationError) as operation_err:
+        await file_upload_box_client.requeue_all_box_uploads(box_id=TEST_BOX_ID)
+    assert str(operation_err.value) == (
+        f"Failed to requeue the failed files in FileUploadBox {TEST_BOX_ID}."
+    )

@@ -18,7 +18,7 @@ from typing import Literal
 
 from pydantic import UUID4
 
-from ghga_event_schemas.pydantic_ import AuditRecord
+from ghga_event_schemas.pydantic_ import AuditRecord, FileUpload
 from hexkit.correlation import get_correlation_id
 from hexkit.utils import now_utc_ms_prec
 from rs.core.models import ResearchDataUploadBox
@@ -117,6 +117,36 @@ class AuditRepository(AuditRepositoryPort):
             description=f"User {grantee_id} was granted access by user {grantor_id}"
             + f" to ResearchDataUploadBox {box_id}.",
             user_id=grantor_id,
+            action=None,
+            entity=ResearchDataUploadBox.__name__,
+            entity_id=str(box_id),
+        )
+
+    async def log_file_requeued(self, *, file_id: UUID4, user_id: UUID4) -> None:
+        """Log that a user requeued a FileUpload for interrogation."""
+        await self.create_audit_record(
+            label="FileUpload requeued",
+            description=f"FileUpload {file_id} was requeued for interrogation.",
+            user_id=user_id,
+            action="U",
+            entity=FileUpload.__name__,
+            entity_id=str(file_id),
+        )
+
+    async def log_whole_box_requeued(
+        self, *, box_id: UUID4, user_id: UUID4, file_ids: list[UUID4]
+    ) -> None:
+        """Log that a user requeued all failed FileUploads in a box for interrogation."""
+        # Action is set to None because the box itself isn't updated, just all the files
+        #  within the box.
+        stringified_ids = ", ".join([str(file_id) for file_id in file_ids])
+        await self.create_audit_record(
+            label="All FileUploads in ResearchDataUploadBox requeued",
+            description=(
+                f"All failed FileUploads in box {box_id} were requeued for"
+                + f" interrogation. Requeued File IDs are: {stringified_ids}."
+            ),
+            user_id=user_id,
             action=None,
             entity=ResearchDataUploadBox.__name__,
             entity_id=str(box_id),

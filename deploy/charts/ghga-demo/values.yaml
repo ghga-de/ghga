@@ -77,8 +77,10 @@ mongodb:
 
 minio:
   enabled: true
-  image: minio/minio:latest
-  mcImage: minio/mc:latest
+  # MinIO no longer publishes community images to Docker Hub; the last builds are
+  # frozen on quay.io, so pin the release tags rather than an unmoving `latest`
+  image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+  mcImage: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
   rootUser: demo-access-key
   rootPassword: demo-secret-key
   # The S3 API is published on a node port, which kind maps to the host's 9000
