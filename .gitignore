@@ -46,6 +46,7 @@ claude-backup/
 !/.claude/skills/
 !/.claude/agents/
 !/.claude/commands/
+!/.claude/output-styles/
 # leave out every local claude settings
 **/.claude/settings.local.json
 

@@ -33,8 +33,8 @@ Status mirrors each ADR's own `Status:` line; the last column records supersessi
 cross-ADR amendment, which is how several of these are meant to be read together. "Last
 amended" tracks decisions that moved, not wording that was clarified — an ADR edited only to
 say which branch a sentence now names keeps its previous date, and gains no `Status:` entry to
-mirror here. New ADRs carry no `Deciders` line — a decision here is the team's, and git already
-records who wrote and committed the file; the older ones keep theirs.
+mirror here. Write new ADRs from the [template](adr/0000-template.md), following the
+[dev team house style](style.md#architecture-decision-records).
 
 | # | Decision | Status | Supersedes / superseded by |
 |---|---|---|---|

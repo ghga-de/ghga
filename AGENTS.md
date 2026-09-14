@@ -154,6 +154,13 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
   `just testbed-artifacts`, not committed.
 - Front-end generated directories are listed in its own `AGENTS.md`.
 
+## Writing
+
+Docs, code comments, commits and pull requests follow the dev team house style in
+[docs/style.md](docs/style.md): plain language, prose hard-wrapped at 88 columns in repo
+files, comments that explain why rather than history, and the ADR template. Read the
+relevant section before writing any of them.
+
 ## Python best practices
 
 - The root `pyproject.toml` is the single source of truth for ruff/mypy/pytest
