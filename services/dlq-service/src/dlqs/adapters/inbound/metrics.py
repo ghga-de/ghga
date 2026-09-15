@@ -46,6 +46,20 @@ class DeadLetterCollector(Collector):
         self._dlq_manager = dlq_manager
         self._loop = loop
 
+    def describe(self):
+        """Static metric descriptor, so `REGISTRY.register()` doesn't call `collect()`.
+
+        `register()` calls `describe()` (when present) to learn metric names, on
+        the thread that calls it, i.e. the main event loop thread. Without this,
+        it would fall back to calling `collect()` there instead, which deadlocks:
+        `collect()`'s `run_coroutine_threadsafe(...).result()` would block that
+        same thread while waiting for that same, now-unresponsive, loop.
+        """
+        yield GaugeMetricFamily(
+            "dlqs_dead_letters_total",
+            "Current number of events stored in the dead letter queue.",
+        )
+
     def collect(self):  # noqa: D102
         count = asyncio.run_coroutine_threadsafe(
             self._dlq_manager.count_dead_letters(), self._loop
