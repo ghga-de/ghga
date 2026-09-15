@@ -1,8 +1,8 @@
 {{- /*
 Single-node Kafka in KRaft mode on the official apache/kafka image. Replaces the
 bitnami subchart: since the 2025 Bitnami catalogue gating its images no longer
-pull, and the legacy archive is frozen on old tags (ADR-0006 amended in spirit —
-"lightweight operator-free Kafka" stands, the implementation is a plain template).
+pull, and the legacy archive is frozen on old tags (ADR-0006:
+lightweight, operator-free infra as plain templates).
 Ephemeral by design, like the compose test bed.
 */ -}}
 {{- if .Values.kafka.enabled }}

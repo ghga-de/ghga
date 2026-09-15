@@ -74,7 +74,7 @@ The access/metadata/notification path is in too (ars, mass, dins, rts, ns, nos, 
 sms ships disabled — testbed-only per ADR-0008 — the testbed profile enables it and adds
 it to the protected routes), with a wiremock lox24 SMS-gateway mock beside MailHog. All
 21 deployable services are in the bundle. Still to land: metldata's real artifact model
-(testbed migration) and the host-cluster install (ADR-0017).
+(testbed migration).
 
 Adoption changes vs upstream: Emissary `Mapping`/`AuthService` paths pruned (routing is
 Gateway-API `HTTPRoute`; the backend port lives at `httpRoute.port`), the

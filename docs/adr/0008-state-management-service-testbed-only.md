@@ -1,31 +1,50 @@
-# ADR-0008 — `state-management-service` is test-bed-only and values-gated
+# ADR-0008 — `state-management-service` is test-bed-only
 
-- **Status:** Accepted
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-`state-management-service` (SMS) is a deliberate **test backdoor**: it lets the integration
-suite manipulate application state — empty/seed MongoDB, clear/publish Kafka topics, empty S3
-buckets, reset Vault secrets — without the harness needing direct driver access. The
-`archive-test-bed` uses it in its `reset_state` cascade between BDD scenarios. It is not part of
-the application's runtime behaviour, and it is highly security-sensitive (it can wipe all state).
+## Summary
 
-## Decision
-SMS is a **test-bed-profile-only** component. In the umbrella chart it sits behind a values gate
-(e.g. `testbed.enabled` / `stateManagement.enabled: false` by default) and is **never** deployed
-in the demo or production profiles. Demo/prod seeding (e.g. the data-steward user) is done by a
-**seed Job** + `auth-service`'s `add_as_data_stewards` config, not via SMS.
+In the context of **an integration suite that resets Kafka, MongoDB, S3 and Vault
+between scenarios**
 
-## Consequences
-- The demo (`helm install ghga`) and the test bed diverge by exactly this component: the test
-  bed layers SMS on top so scenarios can reset state.
-- Deploying SMS in a real environment would be a severe security hole; the default-off gate and
-  this ADR make that an explicit, reviewed mistake rather than an accident.
-- Tests that reset state require the test-bed profile; the demo cannot reset itself via SMS
-  (intentional).
+facing **a service that can wipe all application state and must never run where real
+data lives**
 
-## Alternatives considered
-- **Always deploy SMS (as in compose).** Rejected: unacceptable in demo/prod.
-- **Replace SMS with per-test direct driver access.** Rejected: SMS is the existing, working
-  abstraction and keeps the suite decoupled from infra internals.
+we decided for **deploying `state-management-service` only in the test-bed profile,
+disabled by default in the umbrella chart**
+
+and neglected **deploying it everywhere, as docker-compose did, and giving the tests
+direct access to each store**
+
+to achieve **resettable tests without a backdoor in the demo or production**
+
+accepting that **the demo cannot reset its own state, and differs from the test bed by
+this service**.
+
+## Details
+
+### Context
+
+`state-management-service` lets the integration suite empty and seed MongoDB, clear and
+publish Kafka topics, empty S3 buckets and reset Vault secrets, without direct access to
+those stores. The suite uses it between BDD scenarios. It is not part of the
+application, and anyone who can reach it can destroy all state.
+
+### Decision
+
+The umbrella chart ships the service disabled, and only the test-bed profile enables it.
+It is never deployed in the demo or in production. The demo seeds its data steward
+through a Job and `auth-service` configuration instead.
+
+### Consequences
+
+- Deploying the service in a real environment would be a severe security hole; the
+  default and this record make that an explicit choice rather than an accident.
+- Tests that reset state need the test-bed profile.
+
+### Alternatives
+
+- **Deploy it everywhere, as docker-compose did.** Unacceptable outside tests.
+- **Direct store access from the tests.** Couples the suite to each store's internals,
+  which the service already hides.

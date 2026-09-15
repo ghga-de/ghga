@@ -1,4 +1,4 @@
-# CI Stage 2 — the integration gate (runbook §5, ADR-0009).
+# CI Stage 2 — the integration gate (runbook §5, ADR-0006).
 #
 # Installs the same self-reliant ghga-demo umbrella an outside user gets, plus the
 # test-bed profile (state-management service, the test OIDC provider, and the

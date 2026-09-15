@@ -12,12 +12,9 @@
 [`git-filter-repo`](https://github.com/newren/git-filter-repo), `uv`, `just`
 ([ADR-0015](../adr/0015-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
 
-**On the host** ([ADR-0017](../adr/0017-local-integration-host-cluster.md)): a local Kubernetes
-cluster — minikube on Linux/WSL2, or a container runtime's built-in Kubernetes — plus the
-docker/podman that builds
-images next to it. The devcontainer talks to the cluster only via a namespace-scoped kubeconfig;
-it runs **no DinD/DooD for the integration path** (component tests keep DinD until hexkit grows
-in-memory provider alternatives). (No mesh/Istio needed for the self-contained path — the
+**Cluster** ([ADR-0006](../adr/0006-self-contained-demo-lightweight-infra.md)): kind inside the devcontainer's own Docker daemon,
+created by `just cluster`. The host needs only host networking for the devcontainer, see
+`.devcontainer/devcontainer.json`. (No mesh/Istio needed for the self-contained path — the
 umbrella bundles Envoy Gateway, [ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md).)
 
 Hosting ([ADR-0001](../adr/0001-consolidate-into-monorepo.md)):
@@ -109,21 +106,17 @@ incremental sync stays low-conflict:
    ([ADR-0006](../adr/0006-self-contained-demo-lightweight-infra.md),
    [ADR-0007](../adr/0007-local-aai-generic-oidc.md),
    [ADR-0016](../adr/0016-secrets-and-tls.md)).
-3. Port the `testbed/` suite to target the umbrella; re-point its mint-a-user calls at
-   `mock-oauth2-server`; gate `state-management-service` behind the test-bed profile
+3. Port the `testbed/` suite to target the umbrella, with the test OIDC provider for its
+   logins; gate `state-management-service` behind the test-bed profile
    ([ADR-0008](../adr/0008-state-management-service-testbed-only.md)).
-4. Validate locally against the **host-level cluster**
-   ([ADR-0017](../adr/0017-local-integration-host-cluster.md)) — same artifact users install:
+4. Validate locally on kind inside the devcontainer
+   ([ADR-0006](../adr/0006-self-contained-demo-lightweight-infra.md)) — same artifact users
+   install, same recipes CI runs:
    ```bash
-   # on the HOST: start the cluster (once) and build the affected images next to it
-   #   Linux/WSL2:      minikube start --apiserver-names=host.docker.internal ; minikube image build ...
-   #   runtime with k8s: enable it (its docker-built images are directly visible)
-   # in the DEVCONTAINER (scoped kubeconfig):
-   helm install ghga ./deploy/charts/ghga-demo -f deploy/charts/ghga-demo/values-testbed.yaml
-   kubectl port-forward svc/<gateway> 8443:443   # bare cluster: no LoadBalancer
-   uv run pytest testbed/
+   just demo-images-mono   # or `just demo-images` for one image per member
+   just testbed-up mono    # creates the kind cluster, loads the images, installs
+   just testbed
    ```
-   (CI does the same on kind: runner-built images + `kind load image-archive`.)
    > CRD note: Gateway API + Envoy Gateway CRDs ship in the chart's `crds/` (install-only);
    > CRD **upgrades** need a manual `kubectl apply` ([ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md)).
 
@@ -136,8 +129,7 @@ Enabled in two stages (the component gate does **not** wait for the charts):
   computation to include **reverse dependencies** of changed internal libs (a `hexkit` change
   must run its consumers' suites, not just `libs/hexkit`).
 - **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed
-  run ([ADR-0009](../adr/0009-testbed-kind-minikube.md),
-  [ADR-0017](../adr/0017-local-integration-host-cluster.md)).
+  run ([ADR-0006](../adr/0006-self-contained-demo-lightweight-infra.md)).
 - **Image/chart/PyPI publish (live):** a tag push publishes wheels to PyPI, after a TestPyPI
   rehearsal. Images and charts go to Docker Hub, but a tag push only builds them — publishing
   a platform release is a deliberate dispatch
