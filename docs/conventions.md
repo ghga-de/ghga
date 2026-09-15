@@ -150,6 +150,8 @@ enforces the convention, and branches already in flight are not renamed.
 
 ## Versioning & releases
 
+How a release runs end to end is in [releases.md](releases.md).
+
 - Every member keeps its own semver (in `pyproject.toml` / `Chart.yaml` / `package.json`).
 - A pushed git tag **`name/x.y.z`** releases only that component; CI asserts the tag matches the
   member's version at HEAD ([ADR-0004](adr/0004-versioning-and-release-by-tag.md)).

@@ -1,346 +1,100 @@
-# ADR-0004 — Hybrid releases: platform lockstep + per-component PyPI lanes
+# ADR-0004 — Releases: platform lockstep and a PyPI lane
 
-- **Status:** Accepted — **revised 2026-07-23** (supersedes the original per-component-only
-  scheme, which predated the consequences of an always-integrated HEAD) — **amended
-  2026-08-18**: PyPI-lane membership corrected to what the markers declare (see below) —
-  **amended 2026-08-19**: the release set is decided against the index rather than a git
-  diff, and the closure-train rule is narrowed to bumped dependencies (see below) —
-  **amended 2026-08-25**: `ghga-arcticfreeze` and `ghga-jsonsubschema` named in the member
-  list, which had omitted them (see below) — **amended 2026-09-01**: pre-release cuts move to
-  `dev` and the branch gate becomes per-lane, following
-  [ADR-0020](0020-branching-strategy.md) (see below) — **amended 2026-09-01**: a member-named
-  tag releases that member alone; sweeping the whole index gap moves to the reserved
-  `packages` tag (see below) — **amended 2026-09-08**: the per-lane branches are spelled out,
-  and the PyPI lane is confirmed as moving in lockstep with the platform release rather than
-  on an independent cadence (see below)
-- **Date:** 2026-06-30 / 2026-07-23 / 2026-08-18 / 2026-08-19 / 2026-08-25 / 2026-09-01
-  / 2026-09-02 / 2026-09-08
-- **Deciders:** Leon Kuchenbecker; Byron Himes (2026-09-08 amendment, as
-  [ADR-0020](0020-branching-strategy.md)'s decider)
+- **Status:** accepted
+- **Date:** 2026-06-30
 
-## Context
+## Summary
 
-The original decision gave every component an independent `name/x.y.z` release tag. Working
-with the integrated monorepo exposed the flaw: **the only combination CI ever tests is
-HEAD-with-HEAD** ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)). Releasing and
-deploying a single service against older siblings produces a combination *no CI run has seen* —
-recreating in production exactly the version skew the monorepo eliminates in development.
-Meanwhile, published libraries and end-user CLI tools genuinely need per-component semver:
-external consumers pin ranges, and series continuity on PyPI is load-bearing.
+In the context of **an integrated monorepo whose CI only tests HEAD with HEAD, and
+libraries and CLIs that people outside the platform install from PyPI**
 
-## Decision
+facing **per-component releases that would deploy combinations no CI run has seen, and
+external consumers who need semver series they can pin**
 
-Two release lanes, routed by each member's `[tool.ghga]` markers
-([ADR-0014](0014-capability-markers-and-placement.md)):
+we decided for **two release lanes: one platform version for everything deployable,
+built from a single commit, and per-component semver on PyPI for the libraries and
+public CLIs**
 
-### Platform lane — one version for everything deployable
+and neglected **per-component releases for everything, lockstep for PyPI too, and
+CalVer**
 
-- Members: all services (incl. `auth-km-jobs`, a K8s-deployed job), the front end, the charts
-  and the `ghga-demo` umbrella, and `ghga-datasteward-kit` (internal-only, transitional).
-- One pushed tag **`ghga/X.Y.Z`** releases the whole set: build **all** images from the tagged
-  commit, package all charts, stamp everything with the platform version. There is no
-  affected-only shortcut for releases — lockstep is the point; layer caching keeps unchanged
-  members cheap.
-- **Images embed internal libraries from source at the release commit — never from PyPI.**
-  A lib's "independent lifecycle" means an independent *publishing cadence for external
-  consumers*, not an independent integration state (the Kubernetes staging-repos model).
-- **Versioning: operator-oriented semver.** Major = operators must act (breaking external API,
-  migration, required config change); minor = features; patch = fixes. The **initial version is
-  computed at cutover**, not fixed in advance:
-  `N.0.0` where `N = 1 + max(all platform-lane member versions, file-services-backend's
-  repo-level release series, any absorbed image-tag series)` — self-buffering against ongoing
-  mainline development (currently evaluates to 17).
-- **Version stamping happens at image build, after dependency resolution** (keeps `uv.lock`
-  stable and member pyprojects untouched — no sync-window conflicts):
-  - the member's installed `dist-info` `Version:` is rewritten to the platform version (this is
-    what services report via `importlib.metadata`, e.g. in OpenAPI);
-  - workspace-internal libraries inside the image get a **PEP 440 local suffix**
-    (`8.6.0+ghga.17.0.0`) — constraints stay satisfied, SBOM/scanner metadata stays coherent,
-    and local versions are unpublishable to PyPI by design;
-  - OCI labels `org.opencontainers.image.version` / `.revision` and the
-    `GHGA_PLATFORM_VERSION` env var carry the version and commit.
-- The release workflow **verifies rather than re-tests**: it asserts the tagged commit is on
-  a branch its lane releases from, with a green CI run (ADR-0006's gates are the evidence;
-  the tag snapshots it). **The branch half of that check is per-lane** (amended 2026-09-01):
-  it runs after lane routing instead of before it
-  ([ADR-0020](0020-branching-strategy.md)). **Each lane names exactly one branch**
-  (amended 2026-09-08, on implementation):
-  - `ghga/X.Y.Z` — **`main` only**. This is the one guarantee `main` exists to give, and the
-    only one worth failing a release over: production releases come from the released state.
-  - `ghga/X.Y.Z-rc.N` — **`dev` only**. A candidate stages integrated-but-unreleased work,
-    which is exactly what `dev` holds. Hotfixes are the case this rule would otherwise
-    strand, since they never touch `dev` — resolved by ADR-0020 deciding that hotfixes get
-    no candidate and are released from `main` in one step, so an rc tag on `main` is a
-    mistake worth rejecting.
-  - `name/x.y.z` and `packages/x.y.z` — **`main` only**. Both are PyPI-lane tags, so the same
-    rule covers the member-named tag and the reserved sweep tag (amended 2026-09-01) without a
-    special case. This does couple component releases to platform
-    releases: a version bump lands in `dev` and only reaches `main` at the release merge, so
-    `hexkit/8.7.0` cannot be tagged until the next platform release. Implementing the gate
-    raised that as a conflict with this ADR's independent component lifecycle, and accepting
-    the tag on `dev` as well was considered. **Decided 2026-09-08: keep the lockstep.** One
-    cadence is simpler to reason about than two, and the independent lifecycle is worth less
-    in practice than the simplification, now that the platform release is the unit anybody
-    deploys. Revisit if a component ever needs to ship on its own schedule.
+to achieve **one tested combination per deployment, and PyPI series that external
+consumers can rely on**
 
-  What the branch half proves is that the tagged commit sits on a protected, reviewed,
-  CI-gated branch, and on the *right* one of the two. It asks whether the commit was ever
-  that branch's tip (its first-parent chain), not whether the branch can reach it — the two
-  differ as soon as `main` and `dev` merge into each other, which
-  [ADR-0020](0020-branching-strategy.md)'s flow does in both directions. The CI-is-green half does
-  not care about branches and is unchanged. The branch check also runs **before any repo code
-  executes** in the release job, so a tag on an unreviewed commit cannot reach a `python3
-  scripts/...` at all.
-- `ghga-datasteward-kit` is distributed **run-from-repo**: stewards `git clone -b ghga/X.Y.Z`
-  and `uv run ghga-datasteward-kit` — `uv.lock` at the tag reproduces the exact tested
-  combination. No PyPI publishing from the monorepo; requires only `git` + `uv`.
-- At cutover (not before — the fields are mainline-synced until then): platform-lane member
-  versions are fixed at `0.0.0` (build-time stamping supplies the real one), datasteward-kit
-  drops its PyPI lane and pins `requires-python` to the workspace baseline, and `auth-km-jobs`
-  moves to `services/`.
+accepting that **every release rebuilds and rolls unchanged services, and a PyPI release
+waits for the next platform release**.
 
-### PyPI lane — per-component semver for out-of-tree consumers
+## Details
 
-- Members (amended 2026-08-25): the libraries (`hexkit`, `ghga-service-commons`,
-  `schemapack`, `ghga-arcticfreeze`, `ghga-jsonsubschema`) and the public CLI tools
-  (`ghga-connector`, `ghga-validator`, `ghga-transpiler`). Changes against the 2026-07-23
-  list:
-  - `ghga-event-schemas` — **out.** Embedded in the images and consumed from workspace
-    source; nothing outside the deployment installs it, so an external series would have
-    no consumer.
-  - `metldata` — **out.** A library *and* a deployable service, released in the platform
-    lane with the rest of the deployment.
-  - `ghga-transpiler` — **in.** A public CLI stewards install standalone, like
-    `ghga-validator`.
-  - `ghga-arcticfreeze`, `ghga-jsonsubschema` — **in** (2026-08-25). Both were already in
-    the lane through the `libs/*` default and already have PyPI series; this only names
-    them, so the list matches what `scripts/pypi_members.py` enumerates. Neither is
-    optional: `schemapack` depends on both, and a member whose internal dependency sits
-    outside the lane fails the release plan — nobody could install it.
+### Context
 
-  The `[tool.ghga]` markers are the operative source
-  ([ADR-0014](0014-capability-markers-and-placement.md)) and `scripts/pypi_members.py`
-  reads the lane from them; this list records the decision behind them.
-- A pushed tag **`name/x.y.z`** publishes that component's wheel; CI asserts the tag matches
-  the member's version at HEAD. Libraries release **on demand** — when an external consumer
-  needs something or a tool release requires it.
-- **What uploads is decided against the index** — every lane member declaring a version
-  above the latest one PyPI serves, ordered dependencies-first. `release.yaml` asserts the
-  tag, then delegates to `pypi-publish.yaml`, which owns that plan. Nothing is diffed
-  against a git ref: "did this commit bump it?" is a different question, and one that
-  misses a bump made weeks ago and never published. So the lane has one implementation, a
-  bump arriving through the mainline sync is picked up like any other, a missed release
-  repairs itself on the next run, and re-running does not republish: the plan is re-derived
-  from PyPI on every run, so a version already there is dropped before any upload is
-  attempted. Nothing does this for TestPyPI — see the publish-targets entry below. A member
-  *trailing* the index (`ghga-validator` declares 1.1.1 while PyPI serves 1.2.0) is skipped,
-  not an error — being behind is a sync question, not a release one.
-- **The tag chooses how much of that gap closes** (amended 2026-09-01). `release.yaml`'s
-  `resolve` derives a *mode* from the tag name and forwards it:
-  - **`name/x.y.z` — targeted.** That member alone, whatever else the index is behind on.
-    It exists so releasing one library does not drag along someone's unrelated pending
-    work. Note this is about *scope*, not *timing*: since the branch gate cuts PyPI tags
-    from `main` ([ADR-0020](0020-branching-strategy.md)), a targeted release still waits
-    for the platform release that carries its version bump over — so it is currently the
-    narrow option rather than the frequent one. The lockstep is deliberate and revisitable;
-    see the per-lane branch decision above.
-  - **`packages/x.y.z` — sweep.** The reserved name is not a member, so it selects
-    nothing and the plan takes the whole gap, dependencies first. The version component is
-    a label; nothing checks it against a declared version, because there is none to check.
+The first version of this decision gave every component its own `name/x.y.z` release.
+The monorepo showed the flaw: the only combination CI ever tests is HEAD with HEAD
+([ADR-0002](0002-uv-workspace-source-coupled-libs.md)). Releasing one service against
+older siblings would deploy a combination no CI run has seen, which is the version skew
+the monorepo removes. Published libraries and CLIs still need their own semver: external
+consumers pin ranges, and their PyPI series must continue.
 
-  Originally *every* pypi-lane tag swept, and the tag only triggered the run. That made a
-  single-library release impossible to express. The two failure modes swap places rather
-  than disappearing, so each mode is loud about its own: a sweep publishes more than the
-  tag names (by design, and the plan summary lists it), while a targeted tag naming a
-  member with nothing to publish **fails** instead of exiting green on a no-op — a tag that
-  asked for a specific release that cannot happen is a mistake worth surfacing, unlike the
-  same member being silently dropped from a sweep.
-- **Closure-train rule** (amended 2026-08-19): a published tool must not induce untested
-  combinations on user machines. `ghga-connector`'s internal closure
-  (`ghga-service-commons`, `hexkit`) is released **in the same train** when those libraries
-  are themselves candidates, dependencies first, so the tool never reaches the index before
-  a version it needs. `ghga-validator` and `ghga-transpiler` have no internal dependencies —
-  their trains are trivially themselves.
+### Decision
 
-  A targeted tag cannot honour that rule by widening the train — it exists to publish one
-  member — so it **refuses** instead (amended 2026-09-01). If any member of the target's
-  transitive closure is a release candidate, the plan errors and names both ways out:
-  `packages/x.y.z` for the whole train, or the dependencies on their own tags first, in
-  dependency order. The refusal is strict rather than pin-aware: `ghga-connector` pins
-  `hexkit[s3]==9.0.1` exactly, so releasing it against an unpublished hexkit bump would put
-  an *uninstallable* wheel on PyPI, while `schemapack`'s `ghga-arcticfreeze >=1.0, <2` would
-  merely ship a combination nothing tested. Only the first is a hard breakage, but
-  distinguishing them at release time buys a worse guarantee for more machinery, and the
-  remedy is the same either way. There is no override — nothing published can be
-  unpublished, so the escape hatch is the part most likely to be misused under pressure.
+Each member's markers put it in one of two lanes
+([ADR-0014](0014-capability-markers-and-placement.md)).
 
-  Two things the original rule asked for are deliberately **not** done:
+**Platform lane.** Services, the front end, the charts, `metldata` and
+`ghga-datasteward-kit` share one version. A `ghga/X.Y.Z` tag builds every image and
+chart from the tagged commit and stamps them with that version. Images embed internal
+libraries from source at that commit, never from PyPI. The version is operator-oriented
+semver: a major release means operators must act, a minor one adds features, a patch
+fixes, and the series continues from 15.3, the version the charts carried at cutover.
+`ghga-datasteward-kit` is not published; data stewards run it from a clone of the tag.
 
-  - **Exact pinning** is dropped. It would mean editing synced `pyproject.toml`s
-    ([ADR-0001](0001-consolidate-into-monorepo.md)) and would stop users taking
-    dependency fixes. Whatever a member already declares stays the contract, untouched in
-    either direction: `ghga-connector` came from upstream pinning
-    `ghga-service-commons==8.1.0` and `hexkit[s3]==9.0.1` and keeps those exacts, while
-    `schemapack` declares a range (`ghga-arcticfreeze >=1.0, <2`). The lane adds no pins
-    and relaxes none.
-  - **A library that changed without a bump does not block a dependant's release.** For the
-    outside world that library did not change, so the dependant resolves it from the index
-    like any consumer would. Holding an unrelated release hostage to someone's unreleased
-    work — a fix merged to main that is not ready to ship — would be wrong, and "the
-    directory changed" cannot distinguish a docstring edit from a new API.
+**PyPI lane.** The libraries and public CLIs that outside users install keep their own
+semver.
 
-    Still true of the release plan, but **as of 2026-09-02 that state no longer reaches
-    `main`**: the drift gate below requires the bump before a PR can merge. The rule stands
-    unchanged for what it was about — one member's pending work never blocks another's
-    release, and a dependant still resolves by its own declared constraint, so
-    `ghga-connector` pinning `hexkit[s3]==9.0.1` keeps resolving 9.0.1 after hexkit bumps.
-    The "directory changed" objection is narrower now too: the gate watches a member's
-    packaged roots plus the files that ship as its index metadata (`pyproject.toml`,
-    `README`, `LICENSE`), so tests and internal docs no longer trip it. A
-    docstring inside `src/` still does — accepted, because no diff distinguishes a
-    docstring from an API change, and exempting one would put content on PyPI that
-    differs from the platform's.
+- `name/x.y.z` releases that member alone; `packages/x.y.z` releases every member whose
+  declared version is ahead of PyPI.
+- What is uploaded is decided against the index, not against a git diff.
+- A tool never reaches PyPI before an internal library version it needs. A release that
+  would break that is refused rather than widened.
+- A member whose shipped content changed must declare a version PyPI does not serve yet,
+  before its pull request merges. One version never names two contents.
+- The lane adds no pins to members' dependency constraints, and relaxes none.
+- Published members are tested against their dependencies as resolved from PyPI.
 
-  What keeps that honest is the published-combo matrix, which resolves the *same* way: an
-  internal dependency is built from this repo only when it is a release candidate, and
-  otherwise comes from PyPI. So the combination under test is the combination that ships.
-  If a tool genuinely needs unreleased library code, its own floor says so and the install
-  fails there — the accurate signal, at the layer that owns it.
-- **A changed lane member must declare an unpublished version** (added 2026-09-02). CI's
-  `check-pypi-drift` (`scripts/pypi_drift.py`) fails when a member's shipped content
-  changed while the version it declares is one the index already serves. It runs *before*
-  the published-combo matrix, which depends on it: the matrix builds an internal
-  dependency from the repo only when that dependency is a release candidate, so it is only
-  meaningful once every changed member is one. The concern is **version-number integrity, not
-  release coupling**: the platform lane embeds internal libraries from source at the
-  release commit, so without this a library can change, merge, and run in production while
-  PyPI keeps serving that number with the old content — `hexkit 9.0.1` meaning two
-  different things, permanently, with no consumer ever told theirs is behind.
-  `stamp_platform_version.py`'s `+ghga.<version>` local suffix labels the image's copy so
-  SBOM metadata stays coherent, but labelling a divergence is not preventing one.
+**Both lanes.** The release workflow verifies rather than re-tests: the tagged commit
+must be on the lane's branch and have a green CI run. Platform and PyPI tags are cut on
+`main`, release candidates on `dev` ([ADR-0020](0020-branching-strategy.md)). A tag push
+builds; publishing is a deliberate, approved step. Images and charts go to Docker Hub,
+wheels to PyPI after a TestPyPI rehearsal.
 
-  A bump is not a claim that a change was significant — semver's major/minor/patch already
-  carries that, and the developer still chooses it. The bump only asserts that this content
-  is not the content already published. Nothing ships on merge either: publishing still
-  needs a pushed tag, so bumps accumulate and one sweep releases them together.
+[Releases](../releases.md) describes the tags, version stamping, upload planning and
+publish targets in detail.
 
-  The check derives its own change set — a member's packaged roots plus the files that
-  ship as its index metadata (`pyproject.toml`, `README`, `LICENSE`, matched by prefix so
-  extensions do not matter) — rather than reusing `affected_targets.affected()`, which
-  expands to dependents and treats repo-wide paths as touching everything. Both properties
-  are correct for selecting tests and wrong here, where they would spend versions on
-  content no consumer receives.
+### Consequences
 
-  **The check is index-time, not merge-time.** It compares the declared version against
-  what PyPI served *when the job ran*. If a `hexkit/9.1.0` or `packages/*` tag publishes
-  that same version between a PR going green and the PR merging, the passing result is
-  already stale: the index moved, the branch did not. Branch protection cannot close
-  this — "require branches to be up to date" re-runs checks when the *base branch*
-  advances, and nothing in git changed; a merge queue narrows the window to the queue
-  run itself but a tag pushed against that run reproduces it. The failure is loud
-  rather than silent: `main`'s own run of the gate goes red immediately after the
-  merge, and the fix is a second bump. Accepted as inherent to checking a version
-  number against a registry anyone else can also write to.
-- The **published-combo matrix** ([ADR-0002](0002-uv-workspace-source-coupled-libs.md)) — the
-  component against PyPI-resolved dependencies across its supported Python range — is a
-  **prerequisite for the first PyPI-lane release from this repo**, since the workspace only
-  tests the 3.13 source combination.
+- One number describes a deployment: auth-service is the auth-service of platform X.Y.Z.
+  Compatibility is needed between adjacent releases, not arbitrary combinations.
+- Every release rebuilds unchanged services and rolls their pods; cached layers keep the
+  build cheap.
+- Version bumps land on `dev`, so a PyPI release waits for the next platform release.
+  One cadence is simpler than two; revisit if a component needs its own schedule.
+- Every content change to a PyPI member needs a version bump before merge. If a tag
+  publishes the same version between the check and the merge, `dev` fails afterwards and
+  needs a second bump.
+- Library releases cannot lapse while `ghga-connector` publishes, since its wheels need
+  them.
 
-### Both lanes
+### Alternatives
 
-- **Platform image target decided** (2026-08-21): **Docker Hub**, under the `ghga`
-  namespace (`docker.io/ghga/<member>`) — matches what production already pulls from. The
-  platform lane pushes there, authenticated with the org's stored
-  `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the same credentials used to pull the
-  hardened dhi.io base images). GHCR
-  (`ghcr.io/ghga-de/ghga`) remains in use as a separate, deliberately independent scratch
-  registry for `dev-images.yaml`/`security-scan.yaml`'s `:dev`/`:updated` tags — never the
-  release target. **Publishing is dispatch-gated** (corrected 2026-08-26): a `ghga/X.Y.Z`
-  tag push does trigger `release.yaml`, but the `push` input exists only on
-  `workflow_dispatch`, so a tagged platform run verifies the commit, builds every image and
-  packages every chart, and uploads none of them. Publishing is a deliberate dispatch
-  against that tag with `push` set. **Pre-release refs publish by the same route** (amended
-  2026-09-01): the dispatch for a `ghga/X.Y.Z-rc.N` tag resolves against `dev`, so staging can
-  be served the candidate images.
-- **PyPI publish targets decided** (2026-08-26): the lane publishes to **PyPI**, rehearsed
-  on **TestPyPI** first, both by **trusted publishing** (OIDC; no stored tokens). One
-  `pypi-publish.yaml` run builds and checks the whole train before uploading anything, then
-  uploads to TestPyPI, then the *same files* to PyPI. **Neither upload skips a collision**
-  (amended 2026-08-27): `--check-url` was dropped from both, because a rebuilt artifact
-  never byte-matches the index — the flag could only ever fail a run, never skip one — and
-  a skipped rehearsal would send an unrehearsed member to PyPI. So a member already on PyPI
-  is dropped by the plan and never re-uploaded, while one that reached only TestPyPI is
-  still selected and collides on the rehearsal until its version is bumped. The
-  `publish` job runs under `environment: ghga-pypi`, whose required reviewers gate the
-  whole job. The two indexes hold **separate** trusted-publisher
-  entries, matched on owner, repository, workflow filename and environment — a mismatch
-  reports only `invalid-publisher`, so both sides change together. The lane has **one
-  entrance**: `release.yaml` routes `name/x.y.z` and `packages/x.y.z` tags to it via
-  `workflow_call`, so every publish has passed `resolve` (commit on `main`, CI green, and —
-  for a member-named tag — the tag matching the declared version). `pypi-publish.yaml`
-  declares no `workflow_dispatch` of its own — a second entrance would bypass those checks.
-- Local development builds use the same Dockerfile/stamping path with a dev placeholder
-  version (`0.0.0+dev.g<sha>`) — release/local parity is the guarantee that "worked locally"
-  transfers.
-- **Chart publish target decided** (2026-08-24): charts publish as **OCI artifacts**,
-  alongside the images — package + push happen in the same `release.yaml` run that builds
-  the images, from the same tagged commit, stamped with the same platform version. This
-  supersedes the interim `release-charts.yaml` gh-pages index, which published charts
-  independently on every `main` push touching `deploy/` and so let a chart version denote
-  no defined state relative to the images it shipped alongside.
-- **Chart publish target corrected** (2026-08-25): the initial `oci://docker.io/ghga/charts/<chart>`
-  target is invalid — Docker Hub repository paths are exactly two segments
-  (`namespace/repo`), and a chart's name always equals its image's package name
-  (ADR-0014), so publishing under the bare name would collide tag-for-tag with the
-  container image of the same name and version in the same `ghga` namespace. Charts
-  instead publish to `oci://registry-1.docker.io/ghga/<chart>-chart` — same namespace,
-  each chart's own repo, distinguished by a `-chart` suffix (the packaged copy is renamed
-  for this push only; the umbrella's local dependency graph keeps the real chart names).
-  `registry-1.docker.io` is the actual backend host OCI push/pull operations need to
-  hit, distinct from `docker.io`.
-- **Chart push auth fixed** (2026-08-25): a real dispatch 401'd pushing charts —
-  `docker login` only writes Docker Hub credentials under the canonical
-  `https://index.docker.io/v1/` key when given `docker.io` (its recognized alias);
-  logging into `registry-1.docker.io` directly writes credentials under a key ORAS's
-  lookup never finds, so the push goes out unauthenticated. Fix: login targets
-  `docker.io` (same as the image-build login), while the push target stays
-  `registry-1.docker.io` — ORAS does translate a `registry-1.docker.io` lookup back to
-  the canonical key, it's only the write side that needed the alias.
-- **Pre-release cuts** (amended 2026-09-01, per [ADR-0020](0020-branching-strategy.md)):
-  `ghga/X.Y.Z-rc.N` is cut on `dev` and deployed to staging. It runs through the same workflow
-  and keeps the same lockstep guarantee (images and charts from one commit), with a SemVer
-  pre-release identifier on the version. The production release is a second cut: `dev` merges
-  into `main`, `ghga/X.Y.Z` is tagged there, and the images are rebuilt from that commit. The
-  two builds differ in the version they stamp, so the candidate's images are not the ones
-  production runs; the rebuilt images get a confirmatory staging deployment before production.
-  Whether promoting the candidate's digests should replace that rebuild is an open question in
-  ADR-0020.
-
-## Consequences
-
-- "What version is auth-service?" stops having its own answer: it's the auth-service *of
-  platform X.Y.Z*. Per-service version-bump rituals end at cutover.
-- **A PyPI release waits for the next platform release** (decided 2026-09-08). Because
-  `name/x.y.z` is cut on `main` and version bumps land in `dev`, a component's version bump
-  reaches a taggable commit only at the release merge. The independent component lifecycle
-  above is therefore independent in *versioning* but not in *timing*. Accepted as a
-  simplification: what is on PyPI stays derivable from `main`'s tree, and there is one
-  release cadence to reason about instead of two.
-- One number describes a deployment; upgrades, rollbacks, and support conversations are
-  one-dimensional. Adjacent-release compatibility (rolling upgrades) replaces arbitrary-skew
-  compatibility.
-- Unchanged services get rebuilt/retagged each release (cheap: cached layers, deduped storage)
-  and their pods roll on upgrade — accepted, standard for lockstep products.
-- Lib publishing cannot lapse entirely while `ghga-connector` publishes (its closure needs
-  wheels) — the lane is small but load-bearing.
-
-## Alternatives considered
-
-- **Per-component releases for everything** (the original decision). Rejected: deploys
-  untested combinations; ~30 versions and tag rituals whose distinctions nothing consumes.
-- **Full lockstep including libs/tools on PyPI.** Rejected: destroys semver meaning and series
-  continuity for external consumers.
-- **CalVer for the platform.** Workable (and dodges all numeric-ordering concerns), but
-  operator semver was chosen: the major digit carries the "operators must act" signal, which
-  a regulated deployment values; ordering is guaranteed instead by the cutover-day
-  initial-version rule.
+- **Per-component releases for everything.** Deploys untested combinations, and adds
+  some 30 versions whose differences nothing consumes.
+- **Lockstep for PyPI too.** Breaks semver and series continuity for external consumers.
+- **CalVer for the platform.** Workable, but the semver major digit carries the
+  "operators must act" signal.
+- **Choosing the PyPI release set from a git diff.** Misses bumps that were never
+  published; the index is what consumers see.
+- **Every PyPI tag releasing the whole gap.** Leaves no way to release one library
+  alone.
+- **PyPI tags on `dev` as well.** Two release cadences to reason about.
+- **Exact pins on internal dependencies of published tools.** Would stop users from
+  taking dependency fixes.

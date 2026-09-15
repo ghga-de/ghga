@@ -115,6 +115,8 @@ Repo→destination mapping for the import is the source of truth in
 
 ### 3.3 Versioning & release — [ADR-0004](../adr/0004-versioning-and-release-by-tag.md)
 
+The release process in detail is in [releases.md](../releases.md).
+
 - Every component keeps a semver in its `pyproject.toml` (or `Chart.yaml` / `package.json`).
 - A push of a git tag **`name/x.y.z`** (e.g. `hexkit/8.4.0`) releases that one PyPI-lane
   member. The version in the tag must match the version that member declares at HEAD (CI
