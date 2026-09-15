@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-"""Mocks of the APIs the connector calls, served from a `MockRouter`.
+"""Mocks of the APIs the connector calls, built on `MockedApi`.
 
-Every API is modeled once, by a class registering all of its endpoints on the router it
-is handed. An endpoint answers with whatever handler is currently assigned to the
+Every API is modeled once, by a class declaring its endpoints and the base URL it is
+served at. An endpoint answers with whatever handler is currently assigned to the
 matching `on_...` attribute, so a test only states how the endpoints it cares about
 behave and inherits a successful response for the rest:
 ```
@@ -39,22 +39,25 @@ import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
-from uuid import UUID
 
 import httpx2
 import pytest
 
-from ghga_service_commons.api.mock_router import HttpException, MockRouter
+from ghga_connector.core.client import get_ratelimiting_retry_transport
+from ghga_service_commons.api.mock_api import (
+    MockedApi,
+    MockedApis,
+    endpoint,
+    respond,
+)
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.config import get_test_config
-from tests.fixtures.mock_api.router import (
-    MOCK_API_HOST,
-    MockApiTransport,
-    ResponseHandler,
-    api_url,
+from tests.fixtures.mock_api.shared import (
+    DOWNLOAD_API_URL,
+    STORAGE_URL,
+    UPLOAD_API_URL,
+    WORK_PACKAGE_API_URL,
     httpyexpect_error,
-    httpyexpect_response,
-    respond,
 )
 from tests.fixtures.utils import TEST_FILE_ID, TEST_PUBLIC_KEYS, TEST_STORAGE_ALIAS1
 
@@ -68,53 +71,12 @@ __all__ = [
     "DownloadApiMock",
     "MockApis",
     "StagedObject",
+    "StorageMock",
     "UploadApiMock",
     "WkvsMock",
     "WorkPackageApiMock",
     "mock_apis",
 ]
-
-# Where the mocked APIs live. `set_runtime_test_config` points the connector's own
-# config at these same URLs, and the WKVS mock announces them, so a unit test and an
-# integration test reach the same mocks by the same addresses.
-UPLOAD_API_URL = f"http://{MOCK_API_HOST}/upload"
-DOWNLOAD_API_URL = f"http://{MOCK_API_HOST}/download"
-WORK_PACKAGE_API_URL = f"http://{MOCK_API_HOST}/work"
-# Stands in for object storage, which in integration tests is the S3 testcontainer at a
-# real address. Presigned URLs the mocks hand out live under here.
-STORAGE_URL = f"http://{MOCK_API_HOST}/storage"
-
-# Everything the mocks answer for. A request under one of these is served by the router;
-# anything else either belongs to the test environment or is refused outright.
-MOCKED_BASE_URLS = (
-    get_test_config().wkvs_api_url,
-    UPLOAD_API_URL,
-    DOWNLOAD_API_URL,
-    WORK_PACKAGE_API_URL,
-    STORAGE_URL,
-)
-
-
-class _ApiMock:
-    """Shared behavior of the API mocks: recording requests and dispatching handlers."""
-
-    def __init__(self) -> None:
-        self.requests: list[httpx2.Request] = []
-
-    @property
-    def last_request(self) -> httpx2.Request:
-        """The most recent request that reached this mock."""
-        assert self.requests, f"No request reached the {type(self).__name__}"
-        return self.requests[-1]
-
-    async def _handle(
-        self, request: httpx2.Request, handler: ResponseHandler, **path_variables: Any
-    ) -> httpx2.Response:
-        """Record the request and let the currently assigned handler answer it."""
-        self.requests.append(request)
-        answer = handler(request, **path_variables)
-        return answer if isinstance(answer, httpx2.Response) else await answer
-
 
 # The paths the Upload API serves, relative to the Upload API URL
 UPLOADS_PATH = "/boxes/{box_id}/uploads"
@@ -143,7 +105,7 @@ def _created_file_upload(
     )
 
 
-class UploadApiMock(_ApiMock):
+class UploadApiMock(MockedApi):
     """A mock of the Upload API endpoints the connector calls.
 
     By default every endpoint reports success: an upload is created for `TEST_FILE_ID`,
@@ -151,60 +113,13 @@ class UploadApiMock(_ApiMock):
     or deleting an upload succeeds.
     """
 
-    def __init__(self, router: MockRouter, base_url: str = UPLOAD_API_URL) -> None:
-        super().__init__()
-        self.on_create_file_upload: ResponseHandler = _created_file_upload
-        self.on_get_box_uploads: ResponseHandler = respond(200, json=EMPTY_LISTING)
-        self.on_get_part_upload_url: ResponseHandler = respond(200, json=UPLOAD_URL)
-        self.on_complete_file_upload: ResponseHandler = respond(204)
-        self.on_delete_file: ResponseHandler = respond(204)
+    base_url = UPLOAD_API_URL
 
-        @router.post(api_url(base_url, UPLOADS_PATH))
-        async def create_file_upload(
-            box_id: UUID, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Create a new file upload in the box."""
-            return await self._handle(
-                request, self.on_create_file_upload, box_id=box_id
-            )
-
-        @router.get(api_url(base_url, UPLOADS_PATH))
-        async def get_box_uploads(
-            box_id: UUID, request: httpx2.Request
-        ) -> httpx2.Response:
-            """List the uploads the box contains."""
-            return await self._handle(request, self.on_get_box_uploads, box_id=box_id)
-
-        @router.get(api_url(base_url, PART_PATH))
-        async def get_part_upload_url(
-            box_id: UUID, file_id: UUID, part_no: int, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Hand out the presigned upload URL for a part."""
-            return await self._handle(
-                request,
-                self.on_get_part_upload_url,
-                box_id=box_id,
-                file_id=file_id,
-                part_no=part_no,
-            )
-
-        @router.patch(api_url(base_url, UPLOAD_PATH))
-        async def complete_file_upload(
-            box_id: UUID, file_id: UUID, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Complete the file upload."""
-            return await self._handle(
-                request, self.on_complete_file_upload, box_id=box_id, file_id=file_id
-            )
-
-        @router.delete(api_url(base_url, UPLOAD_PATH))
-        async def delete_file(
-            box_id: UUID, file_id: UUID, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Delete the file upload."""
-            return await self._handle(
-                request, self.on_delete_file, box_id=box_id, file_id=file_id
-            )
+    on_create_file_upload = endpoint("POST", UPLOADS_PATH, _created_file_upload)
+    on_get_box_uploads = endpoint("GET", UPLOADS_PATH, respond(200, json=EMPTY_LISTING))
+    on_get_part_upload_url = endpoint("GET", PART_PATH, respond(200, json=UPLOAD_URL))
+    on_complete_file_upload = endpoint("PATCH", UPLOAD_PATH, respond(204))
+    on_delete_file = endpoint("DELETE", UPLOAD_PATH, respond(204))
 
 
 # The paths the Work Package API serves, relative to the Work Package API URL
@@ -230,7 +145,7 @@ def _upload_work_order_token(
     return httpx2.Response(201, json=f"{body['work_type']}_wot_for_{subject}")
 
 
-class WorkPackageApiMock(_ApiMock):
+class WorkPackageApiMock(MockedApi):
     """A mock of the Work Package API endpoints the connector calls.
 
     By default the work package contains no files, and every work order token request is
@@ -238,43 +153,15 @@ class WorkPackageApiMock(_ApiMock):
     string naming the work it authorizes.
     """
 
-    def __init__(
-        self, router: MockRouter, base_url: str = WORK_PACKAGE_API_URL
-    ) -> None:
-        super().__init__()
-        self.on_get_work_package: ResponseHandler = respond(200, json={"files": {}})
-        self.on_get_upload_wot: ResponseHandler = _upload_work_order_token
-        self.on_get_download_wot: ResponseHandler = respond(201, json=WORK_ORDER_TOKEN)
+    base_url = WORK_PACKAGE_API_URL
 
-        @router.get(api_url(base_url, WORK_PACKAGE_PATH))
-        async def get_work_package(
-            package_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Describe the work package, including the files it grants access to."""
-            return await self._handle(
-                request, self.on_get_work_package, package_id=package_id
-            )
-
-        @router.post(api_url(base_url, UPLOAD_WOT_PATH))
-        async def get_upload_wot(
-            package_id: UUID, box_id: UUID, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Hand out a work order token for an upload box."""
-            return await self._handle(
-                request, self.on_get_upload_wot, package_id=package_id, box_id=box_id
-            )
-
-        @router.post(api_url(base_url, DOWNLOAD_WOT_PATH))
-        async def get_download_wot(
-            package_id: str, file_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Hand out a work order token for a file download."""
-            return await self._handle(
-                request,
-                self.on_get_download_wot,
-                package_id=package_id,
-                file_id=file_id,
-            )
+    on_get_work_package = endpoint(
+        "GET", WORK_PACKAGE_PATH, respond(200, json={"files": {}})
+    )
+    on_get_upload_wot = endpoint("POST", UPLOAD_WOT_PATH, _upload_work_order_token)
+    on_get_download_wot = endpoint(
+        "POST", DOWNLOAD_WOT_PATH, respond(201, json=WORK_ORDER_TOKEN)
+    )
 
 
 # The paths the Download API serves, relative to the Download API URL
@@ -307,11 +194,6 @@ class StagedObject:
     envelope: bytes | None = None
 
 
-def envelope_response(envelope: bytes) -> httpx2.Response:
-    """Hand out `envelope` the way the Download API does, base64 encoded."""
-    return httpx2.Response(200, content=base64.b64encode(envelope))
-
-
 def no_such_drs_object(file_id: str) -> httpx2.Response:
     """Report the DRS object as unknown, the way the object endpoint does.
 
@@ -323,9 +205,7 @@ def no_such_drs_object(file_id: str) -> httpx2.Response:
     )
 
 
-def no_such_envelope(
-    request: httpx2.Request, file_id: str, **path_variables: Any
-) -> httpx2.Response:
+def no_such_envelope(file_id: str) -> httpx2.Response:
     """Report the envelope as unknown, the way the envelope endpoint does."""
     return httpyexpect_error(
         404,
@@ -335,7 +215,7 @@ def no_such_envelope(
     )
 
 
-class DownloadApiMock(_ApiMock):
+class DownloadApiMock(MockedApi):
     """A mock of the Download API endpoints the connector calls.
 
     Nothing is staged to begin with, so every file is reported as unknown; assign
@@ -343,28 +223,27 @@ class DownloadApiMock(_ApiMock):
     still-being-staged answer swap `on_get_drs_object` for a handler of their own.
     """
 
-    def __init__(self, router: MockRouter, base_url: str = DOWNLOAD_API_URL) -> None:
-        super().__init__()
+    base_url = DOWNLOAD_API_URL
+
+    def __init__(self, base_url: str = "") -> None:
+        """Start out with nothing staged."""
+        super().__init__(base_url)
         self.staged: StagedObject | None = None
-        self.on_get_drs_object: ResponseHandler = self._describe_drs_object
-        self.on_get_envelope: ResponseHandler = self._hand_out_envelope
 
-        @router.get(api_url(base_url, ENVELOPE_PATH))
-        async def get_envelope(
-            file_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Hand out the Crypt4GH envelope of the file."""
-            return await self._handle(request, self.on_get_envelope, file_id=file_id)
+    @endpoint("GET", ENVELOPE_PATH)
+    def on_get_envelope(
+        self, request: httpx2.Request, *, file_id: str
+    ) -> httpx2.Response:
+        """Hand out the Crypt4GH envelope, for an object that has one."""
+        staged = self.staged
+        if staged is None or file_id != staged.file_id or staged.envelope is None:
+            return no_such_envelope(file_id)
+        # the Download API hands the envelope out base64 encoded
+        return httpx2.Response(200, content=base64.b64encode(staged.envelope))
 
-        @router.get(api_url(base_url, DRS_OBJECT_PATH))
-        async def get_drs_object(
-            file_id: str, request: httpx2.Request
-        ) -> httpx2.Response:
-            """Describe the DRS object, including where to download it from."""
-            return await self._handle(request, self.on_get_drs_object, file_id=file_id)
-
-    async def _describe_drs_object(
-        self, request: httpx2.Request, file_id: str, **path_variables: Any
+    @endpoint("GET", DRS_OBJECT_PATH)
+    async def on_get_drs_object(
+        self, request: httpx2.Request, *, file_id: str
     ) -> httpx2.Response:
         """Describe the object, or report it as unknown."""
         staged = self.staged
@@ -386,25 +265,19 @@ class DownloadApiMock(_ApiMock):
             },
         )
 
-    def _hand_out_envelope(
-        self, request: httpx2.Request, file_id: str, **path_variables: Any
-    ) -> httpx2.Response:
-        """Hand out the Crypt4GH envelope, for an object that has one."""
-        staged = self.staged
-        if staged is None or file_id != staged.file_id or staged.envelope is None:
-            return no_such_envelope(request, file_id)
-        return envelope_response(staged.envelope)
 
-
-class WkvsMock(_ApiMock):
+class WkvsMock(MockedApi):
     """A mock of the well-known-value-service the connector bootstraps itself from.
 
     By default it points the connector at the other mocks in this module.
     """
 
-    def __init__(self, router: MockRouter, base_url: str) -> None:
-        super().__init__()
-        self.on_get_values: ResponseHandler = respond(
+    base_url = get_test_config().wkvs_api_url
+
+    on_get_values = endpoint(
+        "GET",
+        "/values",
+        respond(
             200,
             json={
                 "crypt4gh_public_keys": TEST_PUBLIC_KEYS,
@@ -412,27 +285,39 @@ class WkvsMock(_ApiMock):
                 "dcs_api_url": DOWNLOAD_API_URL,
                 "ucs_api_url": UPLOAD_API_URL,
             },
-        )
-
-        @router.get(api_url(base_url, "/values"))
-        async def get_values(request: httpx2.Request) -> httpx2.Response:
-            """Announce the well-known values, the API URLs among them."""
-            return await self._handle(request, self.on_get_values)
+        ),
+    )
 
 
-@dataclass
-class MockApis:
-    """The mocked GHGA APIs, and the router serving all of them.
+class StorageMock(MockedApi):
+    """Stands in for the object storage the presigned URLs address.
 
-    Everything a test needs to arrange is a handler swap on one of the mocks; `router` is
-    there for the rare endpoint no GHGA API serves.
+    In an integration test those URLs point at the S3 testcontainer instead; this is for
+    the unit tests that only need the upload of a part to go somewhere.
     """
 
-    router: MockRouter
-    wkvs: WkvsMock
-    work_package: WorkPackageApiMock
-    download: DownloadApiMock
-    upload: UploadApiMock
+    base_url = STORAGE_URL
+
+    on_put_part = endpoint("PUT", "/part", respond(200))
+
+
+class MockApis(MockedApis):
+    """The mocked GHGA APIs, and the set serving all of them.
+
+    Everything a test needs to arrange is a handler swap on one of the mocks, and the
+    set itself is right here for a test that wants `reset` or `check_for_complaints`.
+    """
+
+    def __init__(self) -> None:
+        """Build every mock, and serve them all together."""
+        self.wkvs = WkvsMock()
+        self.work_package = WorkPackageApiMock()
+        self.download = DownloadApiMock()
+        self.upload = UploadApiMock()
+        self.storage = StorageMock()
+        super().__init__(
+            self.wkvs, self.work_package, self.download, self.upload, self.storage
+        )
 
 
 @pytest.fixture()
@@ -446,7 +331,7 @@ def mock_apis(monkeypatch) -> MockApis:
     out; anything else is refused, since the connector's default `wkvs_api_url` is a live
     GHGA URL that a misconfigured test would otherwise call for real.
 
-    A request no endpoint matches is answered with the 404 the `MockRouter` raises for it
+    A request no endpoint matches is answered with the 404 `MockedApi` raises for it
     rather than that exception surfacing out of the transport, so the connector sees an
     error response from an unmocked call just as it did from the FastAPI mock app.
     """
@@ -454,21 +339,18 @@ def mock_apis(monkeypatch) -> MockApis:
     # config's `client_num_retries=0` every mocked 5xx would cost a real backoff sleep.
     monkeypatch.setattr("ghga_connector.config.CONFIG", get_test_config())
 
-    router: MockRouter[HttpException] = MockRouter(
-        exception_handler=httpyexpect_response,
-        exceptions_to_handle=(HttpException,),
-    )
-    mocks = MockApis(
-        router=router,
-        wkvs=WkvsMock(router, get_test_config().wkvs_api_url),
-        work_package=WorkPackageApiMock(router),
-        download=DownloadApiMock(router),
-        upload=UploadApiMock(router),
-    )
+    mocks = MockApis()
 
     def mock_mounts(config, limits=None):
         """Stand in for `ratelimiting_retry_proxies`, sorting out where calls may go."""
-        return {"all://": MockApiTransport(router, MOCKED_BASE_URLS, limits=limits)}
+        # what no mock serves and the network policy allows - the S3 testcontainer -
+        # still goes out, and the retry transport wraps both paths as it did before
+        return {
+            "all://": get_ratelimiting_retry_transport(
+                base_transport=mocks.as_transport(httpx2.AsyncHTTPTransport()),
+                limits=limits,
+            )
+        }
 
     monkeypatch.setattr(
         "ghga_connector.core.client.ratelimiting_retry_proxies", mock_mounts

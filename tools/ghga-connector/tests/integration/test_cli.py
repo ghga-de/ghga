@@ -29,6 +29,7 @@ import pytest
 from ghga_connector import exceptions
 from ghga_connector.constants import C4GH, DEFAULT_PART_SIZE
 from ghga_connector.core.main import async_download
+from ghga_service_commons.api.mock_api import respond
 from tests.fixtures import state
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
@@ -37,11 +38,7 @@ from tests.fixtures.mock_api.apis import (
     StagedObject,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import (
-    httpyexpect_error,
-    mock_health_checks,
-    respond,
-)
+from tests.fixtures.mock_api.shared import httpyexpect_error, mock_health_checks
 from tests.fixtures.s3 import (  # noqa: F401
     S3Fixture,
     get_big_s3_object,
@@ -278,10 +275,9 @@ async def test_file_not_downloadable(
 
     # The work order token the connector fetched has to have reached the Download API as
     # the bearer token - `patch_work_package_functions` leaves `_decrypt` as the identity.
-    assert (
-        mock_apis.download.last_request.headers["authorization"]
-        == f"Bearer {WORK_ORDER_TOKEN}"
-    )
+    recorded_request = mock_apis.download.last_request
+    assert recorded_request is not None
+    assert recorded_request.headers["authorization"] == f"Bearer {WORK_ORDER_TOKEN}"
 
     # 403 caused by requesting file ID that's not part of the work order token
     mock_apis.download.on_get_drs_object = lambda request, **path_variables: (

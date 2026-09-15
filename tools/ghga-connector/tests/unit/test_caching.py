@@ -27,6 +27,7 @@ from ghga_connector.core.client import async_client
 from ghga_connector.core.downloading.api_calls import DownloadClient
 from ghga_connector.core.downloading.structs import RetryResponse
 from ghga_connector.core.work_package import WorkPackageClient
+from ghga_service_commons.api.mock_api import respond
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     DRS_OBJECT,
@@ -35,7 +36,6 @@ from tests.fixtures.mock_api.apis import (
     WorkPackageApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import respond
 from tests.fixtures.utils import (
     RecordingClient,
     patch_work_package_functions,  # noqa: F401
