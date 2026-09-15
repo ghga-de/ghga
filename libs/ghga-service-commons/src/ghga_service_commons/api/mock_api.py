@@ -568,7 +568,7 @@ def fail_with(error: Exception) -> ResponseHandler:
 
     def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
         """Raise instead of answering."""
-        raise error
+        raise error.with_traceback(None)
 
     return handler
 
