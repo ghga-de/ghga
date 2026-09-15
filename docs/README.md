@@ -32,53 +32,55 @@ charts and runs its integration tests on Kubernetes.
   templates (exploratory / implementation) live alongside them.
 
 ## Decisions (ADRs)
-Status mirrors each ADR's own `Status:` line. Write new ADRs from the
-[template](adrs/0000-template.md), following the
-[writing style](style.md#architecture-decision-records).
+Write new ADRs from the [template](adrs/0000-template.md), following the
+[writing style](style.md#architecture-decision-records). The table is generated from each
+ADR's frontmatter by `just adrs`; do not edit it by hand.
 
-| # | Decision | Status |
-|---|---|---|
-| [0001](adrs/0001-drop-di-framework.md) | Drop DI framework | Accepted |
-| [0002](adrs/0002-angular-as-frontend-framework.md) | Angular as frontend framework | Accepted |
-| [0003](adrs/0003-custom-2fa-service.md) | Custom 2FA micro service | Accepted |
-| [0004](adrs/0004-user-session-management.md) | User session management in the GHGA data portal | Accepted |
-| [0005](adrs/0005-db-event-consistency.md) | Consistency between events and databases of services | Accepted |
-| [0006](adrs/0006-custom-schema-framework.md) | A custom framework for defining linked metadata models | Proposed |
-| [0007](adrs/0007-sourcing-notifications.md) | Sourcing notifications | Accepted |
-| [0008](adrs/0008-usage-of-enums.md) | Naming and usage of enums | Accepted |
-| [0009](adrs/0009-kafka-dead-letter-queues.md) | Kafka dead letter queues (DLQ) | Accepted |
-| [0010](adrs/0010-naming-mongo-and-kafka.md) | Naming conventions for databases and event streams | Accepted |
-| [0011](adrs/0011-uuids-datetimes-mongodb.md) | UUID and datetime representation in MongoDB | Accepted |
-| [0012](adrs/0012-use-of-ngmodules.md) | Angular with standalone components instead of NgModules | Accepted |
-| [0013](adrs/0013-angular-code-style.md) | Angular code style | Accepted |
-| [0014](adrs/0014-angular-project-documentation.md) | Angular project documentation | Accepted |
-| [0015](adrs/0015-node-runtime-selection.md) | Node runtime for the Angular project | Accepted |
-| [0016](adrs/0016-semantic-web-technologies.md) | Use of semantic web technologies | Accepted |
-| [0017](adrs/0017-server-side-rendering-in-angular.md) | Using Angular server-side rendering | Accepted |
-| [0018](adrs/0018-frontend-architecture.md) | Frontend architecture and modularization | Accepted |
-| [0019](adrs/0019-responsive-design-systems.md) | Responsive design systems | Accepted |
-| [0020](adrs/0020-angular-component-library.md) | Angular UI component library selection | Accepted |
-| [0021](adrs/0021-tailwind.md) | Tailwind | Accepted |
-| [0022](adrs/0022-db-migrations.md) | MongoDB migration code storage | Accepted |
-| [0023](adrs/0023-schema-versioning.md) | Schema versioning | Accepted |
-| [0024](adrs/0024-chart-versioning.md) | Helm charts versioning | Superseded by [0027](adrs/0027-versioning-and-release-by-tag.md) |
-| [0025](adrs/0025-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |
-| [0026](adrs/0026-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted |
-| [0027](adrs/0027-versioning-and-release-by-tag.md) | Releases: platform lockstep (`ghga/X.Y.Z`) and a per-component PyPI lane | Accepted |
-| [0028](adrs/0028-self-contained-demo-lightweight-infra.md) | Demo and test bed are one self-contained umbrella, on kind in CI and in the devcontainer | Accepted |
-| [0029](adrs/0029-local-aai-generic-oidc.md) | Local AAI: mock-oauth2-server in the demo, the test OIDC provider in the test bed | Accepted |
-| [0030](adrs/0030-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated | Accepted |
-| [0031](adrs/0031-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a **hybrid** boundary (app charts own app-coupled CRDs) | Accepted |
-| [0032](adrs/0032-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) | Accepted |
-| [0033](adrs/0033-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults decide what a member builds and releases | Accepted |
-| [0034](adrs/0034-task-runner.md) | Task runner: `just` now, `moon` later | Accepted |
-| [0035](adrs/0035-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) | Accepted |
-| [0036](adrs/0036-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted |
-| [0037](adrs/0037-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted |
-| [0038](adrs/0038-branching-strategy.md) | Branching, merging and naming: `dev` and `main`, squashed pull requests, one naming grammar | Accepted |
-| [0039](adrs/0039-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | Accepted |
-| [0040](adrs/0040-adr-frontmatter.md) | YAML frontmatter replaces the ADR header list; the index is generated from it | Accepted |
-| [0041](adrs/0041-adr-linting.md) | Pre-commit hooks check the ADR set and every ADR reference, and regenerate the index | Accepted |
+<!-- adr-index:start -->
+| # | Title | Status | Tags |
+|---|---|---|---|
+| [0001](adrs/0001-drop-di-framework.md) | Drop DI framework | accepted | backend |
+| [0002](adrs/0002-angular-as-frontend-framework.md) | Angular as frontend framework | accepted | frontend |
+| [0003](adrs/0003-custom-2fa-service.md) | Custom 2FA micro service | accepted | backend, security |
+| [0004](adrs/0004-user-session-management.md) | User session management in the GHGA data portal | accepted | backend, frontend, security |
+| [0005](adrs/0005-db-event-consistency.md) | Consistency between events and databases of services | accepted | backend, data, events |
+| [0006](adrs/0006-custom-schema-framework.md) | A custom framework for defining linked metadata models | proposed | data |
+| [0007](adrs/0007-sourcing-notifications.md) | Sourcing notifications | accepted | backend, events |
+| [0008](adrs/0008-usage-of-enums.md) | Naming and usage of enums | accepted | backend |
+| [0009](adrs/0009-kafka-dead-letter-queues.md) | Kafka dead letter queues (DLQ) | accepted | backend, events |
+| [0010](adrs/0010-naming-mongo-and-kafka.md) | Naming conventions for databases and event streams | accepted | data, events |
+| [0011](adrs/0011-uuids-datetimes-mongodb.md) | UUID and datetime representation in MongoDB | accepted | backend, data |
+| [0012](adrs/0012-use-of-ngmodules.md) | Angular with standalone components instead of NgModules | accepted | frontend |
+| [0013](adrs/0013-angular-code-style.md) | Angular code style | accepted | frontend |
+| [0014](adrs/0014-angular-project-documentation.md) | Angular project documentation | accepted | frontend, docs |
+| [0015](adrs/0015-node-runtime-selection.md) | Node runtime for the Angular project | accepted | frontend, build |
+| [0016](adrs/0016-semantic-web-technologies.md) | Use of semantic web technologies | accepted | data |
+| [0017](adrs/0017-server-side-rendering-in-angular.md) | Using Angular server-side rendering | accepted | frontend |
+| [0018](adrs/0018-frontend-architecture.md) | Frontend architecture and modularization | accepted | frontend |
+| [0019](adrs/0019-responsive-design-systems.md) | Responsive design systems | accepted | frontend |
+| [0020](adrs/0020-angular-component-library.md) | Angular UI component library selection | accepted | frontend |
+| [0021](adrs/0021-tailwind.md) | Tailwind | accepted | frontend |
+| [0022](adrs/0022-db-migrations.md) | MongoDB migration code storage | accepted | backend, data |
+| [0023](adrs/0023-schema-versioning.md) | Schema versioning | accepted | backend, data |
+| [0024](adrs/0024-chart-versioning.md) | Helm charts versioning | superseded by [0027](adrs/0027-versioning-and-release-by-tag.md) | release, deploy |
+| [0025](adrs/0025-consolidate-into-monorepo.md) | Consolidate into one monorepo by history-preserving import | accepted | process, build |
+| [0026](adrs/0026-uv-workspace-source-coupled-libs.md) | `uv` workspace with source-coupled internal libraries | accepted | build |
+| [0027](adrs/0027-versioning-and-release-by-tag.md) | Releases: platform lockstep and a PyPI lane | accepted; supersedes [0024](adrs/0024-chart-versioning.md) | release, deploy |
+| [0028](adrs/0028-self-contained-demo-lightweight-infra.md) | Demo and test bed: one self-contained umbrella on kind | accepted | deploy, testing |
+| [0029](adrs/0029-local-aai-generic-oidc.md) | Local AAI via generic OIDC providers | accepted | security, deploy, testing |
+| [0030](adrs/0030-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only | accepted | deploy, testing |
+| [0031](adrs/0031-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a hybrid boundary | accepted | deploy |
+| [0032](adrs/0032-self-contained-edge-envoy-gateway.md) | Self-contained edge: Envoy Gateway | accepted | deploy, security |
+| [0033](adrs/0033-capability-markers-and-placement.md) | Capability markers decide what a member builds and releases | accepted | build, release |
+| [0034](adrs/0034-task-runner.md) | Task runner: `just`, with `moon` as a later option | accepted | build |
+| [0035](adrs/0035-secrets-and-tls.md) | Secrets and TLS: Kubernetes Secrets in the demo, Vault and cert-manager in production | accepted | security, deploy |
+| [0036](adrs/0036-pre-commit-hooks.md) | One pre-commit configuration for both stacks | accepted | build, process |
+| [0037](adrs/0037-image-signing-sbom-provenance.md) | Sign published images and attach SBOM and provenance | accepted | security, release |
+| [0038](adrs/0038-branching-strategy.md) | Branching, merging and naming | accepted | process, release |
+| [0039](adrs/0039-docs-lane-github-pages.md) | One documentation site for the monorepo | accepted | docs, release |
+| [0040](adrs/0040-adr-frontmatter.md) | YAML frontmatter for ADRs | accepted | docs, process |
+| [0041](adrs/0041-adr-linting.md) | A pre-commit check for ADRs | accepted | docs, process |
+<!-- adr-index:end -->
 
 ## Phased roadmap (high level)
 
@@ -87,7 +89,7 @@ Status mirrors each ADR's own `Status:` line. Write new ADRs from the
 | **1. Skeleton** | `git init`; root `uv` workspace + shared toolchain; gitignore legacy/scratch | runbook §1 |
 | **2. Import** | All repos imported, history-preserving, into `libs/`/`services/`/`tools/`/`frontend/`/`testbed/` | runbook §2, `import-all.sh` |
 | **3. Harmonise** | `[tool.uv.sources]` wiring, single `uv.lock` (skew reconciled), one toolchain, shared Dockerfile, lib matrix | runbook §3, ADR-0026 |
-| **4. Charts & test bed** | Adopt `ghga-common` + generator; `ghga-demo` umbrella (Envoy Gateway edge + lightweight infra + AAI); testbed = the same install on kind | runbook §4, ADR-0031/12/06/07 |
+| **4. Charts & test bed** | Adopt `ghga-common` + generator; `ghga-demo` umbrella (Envoy Gateway edge + lightweight infra + AAI); testbed = the same install on kind | runbook §4, ADR-0031/0032/0028/0029 |
 | **5. CI/CD** | **Done.** Both stages live: the affected-target component gate (`ci.yaml`, incl. reverse-dep closure + front end) and the kind integration gate (`integration.yaml`). Publish targets decided — Docker Hub for images and charts, PyPI for the library lane; a tag push builds, publishing a platform release is a deliberate dispatch | runbook §5, ADR-0027/0028/0037 |
 | **6. Sync** | Periodic one-way sync from mainline keeps the gap small. Quiet since 2026-07-22; the tooling is now mostly used to import further repos | runbook §6, `sync-from-mainline.sh` |
 | **7. Cutover** | **In progress.** Repo lives at `ghga-de/ghga`, the PyPI lane publishes, and the platform lane has cut `ghga/15.3.1-rc.*`. Still open: freezing and archiving the mainline repos, and the version-reconciliation and external-consumer checks in the checklist | runbook §7 |

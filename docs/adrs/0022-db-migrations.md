@@ -1,7 +1,10 @@
-# ADR-0022 — MongoDB migration code storage
+---
+status: accepted
+date: 2025-01-07
+tags: [backend, data]
+---
 
-- **Status:** accepted
-- **Date:** 2025-01-07
+# ADR-0022 — MongoDB migration code storage
 
 ## Summary
 

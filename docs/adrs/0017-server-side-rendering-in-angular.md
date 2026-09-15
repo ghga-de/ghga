@@ -1,7 +1,11 @@
-# ADR-0017 — Using Angular server-side rendering
+---
+status: accepted
+date: 2024-09-24
+tags: [frontend]
+related: [ADR-0016]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-24
+# ADR-0017 — Using Angular server-side rendering
 
 ## Summary
 

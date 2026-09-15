@@ -1,7 +1,10 @@
-# ADR-0036 — One pre-commit configuration for both stacks
+---
+status: accepted
+date: 2026-08-21
+tags: [build, process]
+---
 
-- **Status:** accepted
-- **Date:** 2026-08-21
+# ADR-0036 — One pre-commit configuration for both stacks
 
 ## Summary
 

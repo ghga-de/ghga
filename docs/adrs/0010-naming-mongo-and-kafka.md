@@ -1,7 +1,10 @@
-# ADR-0010 — Naming conventions for databases and event streams
+---
+status: accepted
+date: 2024-08-09
+tags: [data, events]
+---
 
-- **Status:** accepted
-- **Date:** 2024-08-09
+# ADR-0010 — Naming conventions for databases and event streams
 
 ## Summary
 

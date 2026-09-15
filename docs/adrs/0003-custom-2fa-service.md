@@ -1,8 +1,11 @@
-# ADR-0003 — Custom 2FA micro service
+---
+status: accepted
+date: 2023-12-22
+amended: 2026-09-15
+tags: [backend, security]
+---
 
-- **Status:** accepted
-- **Date:** 2023-12-22
-- **Amended:** 2026-09-15
+# ADR-0003 — Custom 2FA micro service
 
 ## Summary
 

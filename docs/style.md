@@ -67,12 +67,10 @@ width by hand: it buries the real change in the diff.
 Start every ADR from [`adrs/0000-template.md`](adrs/0000-template.md). Name the file
 `NNNN-kebab-case-title.md`, with the next free number.
 
-- **Title:** `# ADR-NNNN — <Title>`, in sentence case.
-- **Header list:** the [fields below](#header-fields-and-status), in that order, one per
-  line. They map one to one onto the YAML frontmatter ADRs will get, so keep values
-  plain: no prose, no formatting beyond links. No `Deciders` line — a decision is the
-  team's, and git records who wrote the file. Older ADRs keep theirs until they are next
-  rewritten.
+- **Frontmatter:** a YAML block with the [fields below](#header-fields-and-status), in
+  that order ([ADR-0040](adrs/0040-adr-frontmatter.md)). No `deciders` field — a
+  decision is the team's, and git records who wrote the file.
+- **Title:** `# ADR-NNNN — <Title>`, in sentence case, right after the frontmatter.
 - **`## Summary`:** one Y-statement, one clause per paragraph, with the content of each
   clause in bold. A reader who stops here should know what was decided, instead of what,
   and at what price.
@@ -88,11 +86,13 @@ implementation checklists belong in the pull request or a runbook, and editorial
 
 | Field | Value |
 |---|---|
-| `Status` | One lowercase word from the list below. Always present. |
-| `Date` | `YYYY-MM-DD` the ADR was accepted, or proposed while in review. Always present. |
-| `Amended` | `YYYY-MM-DD` of the latest amendment. Only if amended. |
-| `Supersedes` | Links to the ADRs this one replaces, comma-separated. Only if any. |
-| `Superseded by` | Link to the ADR that replaces this one. Only with `superseded`. |
+| `status` | One word from the list below. Always present. |
+| `date` | `YYYY-MM-DD` the ADR was accepted, or proposed while in review. Always present. |
+| `amended` | `YYYY-MM-DD` of the latest amendment. Only if amended. |
+| `supersedes` | List of the ADRs this one replaces, e.g. `[ADR-0024]`. Only if any. |
+| `superseded-by` | List with the ADR that replaces this one. Only with `superseded`. |
+| `tags` | List of one or more tags from the list below. Always present. |
+| `related` | List of other ADRs a reader of this one should know. Only if any. |
 
 Status values, the set [MADR](https://adr.github.io/madr/) uses:
 
@@ -102,15 +102,21 @@ Status values, the set [MADR](https://adr.github.io/madr/) uses:
 | `accepted` | Binding. |
 | `rejected` | Considered and turned down; kept for the reasoning. |
 | `deprecated` | No longer binding, and nothing replaces it. |
-| `superseded` | No longer binding; `Superseded by` names the replacement. |
+| `superseded` | No longer binding; `superseded-by` names the replacement. |
+
+Tags, for finding ADRs by topic: `backend`, `frontend`, `data`, `events`, `security`,
+`build`, `release`, `deploy`, `testing`, `docs` and `process`. Extend this list before
+using a new tag, and `TAGS` in `scripts/adr_check.py` with it.
 
 The status tracks the decision, not its implementation. An ADR does not discuss whether
 it has been carried out, except as a side note where a reader needs it.
 
 When part of an accepted decision changes but the decision as a whole stands, amend it
-instead of writing a new ADR. Set `Amended` to the date and describe the change at the
+instead of writing a new ADR. Set `amended` to the date and describe the change at the
 passage it affects, starting with `**Amended YYYY-MM-DD:**`. Change that is large
 enough to replace the decision gets a new ADR that supersedes the old one.
 
-Before renaming, renumbering or deleting an ADR, find and fix every reference to it, and
-update the index in [`docs/README.md`](README.md#decisions-adrs).
+The index in [`docs/README.md`](README.md#decisions-adrs) is generated from the
+frontmatter. `scripts/adr_check.py` checks these rules and every ADR reference in the
+tree, and regenerates the index ([ADR-0041](adrs/0041-adr-linting.md)). It runs as a
+pre-commit hook and as `just adrs`.

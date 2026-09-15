@@ -1,8 +1,12 @@
-# ADR-0028 — Demo and test bed: one self-contained umbrella on kind
+---
+status: accepted
+date: 2026-06-30
+amended: 2026-09-15
+tags: [deploy, testing]
+related: [ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0035]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
-- **Amended:** 2026-09-15
+# ADR-0028 — Demo and test bed: one self-contained umbrella on kind
 
 ## Summary
 

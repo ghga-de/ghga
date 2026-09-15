@@ -1,7 +1,11 @@
-# ADR-0035 — Secrets and TLS: Kubernetes Secrets in the demo, Vault and cert-manager in production
+---
+status: accepted
+date: 2026-06-30
+tags: [security, deploy]
+related: [ADR-0031]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0035 — Secrets and TLS: Kubernetes Secrets in the demo, Vault and cert-manager in production
 
 ## Summary
 

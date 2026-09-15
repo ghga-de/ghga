@@ -1,7 +1,10 @@
-# ADR-0029 — Local AAI via generic OIDC providers
+---
+status: accepted
+date: 2026-06-30
+tags: [security, deploy, testing]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0029 — Local AAI via generic OIDC providers
 
 ## Summary
 

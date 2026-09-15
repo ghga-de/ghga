@@ -1,7 +1,11 @@
-# ADR-0031 — Helm charts from `ghga-common` with a hybrid boundary
+---
+status: accepted
+date: 2026-06-30
+tags: [deploy]
+related: [ADR-0028, ADR-0032, ADR-0033, ADR-0035]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0031 — Helm charts from `ghga-common` with a hybrid boundary
 
 ## Summary
 

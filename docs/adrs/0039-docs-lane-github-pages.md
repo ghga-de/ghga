@@ -1,7 +1,11 @@
-# ADR-0039 — One documentation site for the monorepo
+---
+status: accepted
+date: 2026-09-09
+tags: [docs, release]
+related: [ADR-0025, ADR-0033, ADR-0038]
+---
 
-- **Status:** accepted
-- **Date:** 2026-09-09
+# ADR-0039 — One documentation site for the monorepo
 
 ## Summary
 

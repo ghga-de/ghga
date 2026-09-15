@@ -1,7 +1,11 @@
-# ADR-0037 — Sign published images and attach SBOM and provenance
+---
+status: accepted
+date: 2026-08-14
+tags: [security, release]
+related: [ADR-0027, ADR-0031]
+---
 
-- **Status:** accepted
-- **Date:** 2026-08-14
+# ADR-0037 — Sign published images and attach SBOM and provenance
 
 ## Summary
 

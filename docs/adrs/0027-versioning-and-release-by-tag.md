@@ -1,8 +1,12 @@
-# ADR-0027 — Releases: platform lockstep and a PyPI lane
+---
+status: accepted
+date: 2026-06-30
+supersedes: [ADR-0024]
+tags: [release, deploy]
+related: [ADR-0026, ADR-0033, ADR-0038]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
-- **Supersedes:** [ADR-0024](0024-chart-versioning.md)
+# ADR-0027 — Releases: platform lockstep and a PyPI lane
 
 ## Summary
 

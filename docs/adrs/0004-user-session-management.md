@@ -1,7 +1,10 @@
-# ADR-0004 — User session management in the GHGA data portal
+---
+status: accepted
+date: 2023-12-22
+tags: [backend, frontend, security]
+---
 
-- **Status:** accepted
-- **Date:** 2023-12-22
+# ADR-0004 — User session management in the GHGA data portal
 
 ## Summary
 

@@ -1,7 +1,11 @@
-# ADR-0025 — Consolidate into one monorepo by history-preserving import
+---
+status: accepted
+date: 2026-06-30
+tags: [process, build]
+related: [ADR-0026]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0025 — Consolidate into one monorepo by history-preserving import
 
 ## Summary
 

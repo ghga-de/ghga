@@ -1,7 +1,10 @@
-# ADR-0001 — Drop DI framework
+---
+status: accepted
+date: 2023-10-23
+tags: [backend]
+---
 
-- **Status:** accepted
-- **Date:** 2023-10-23
+# ADR-0001 — Drop DI framework
 
 ## Summary
 

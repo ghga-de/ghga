@@ -1,7 +1,10 @@
-# ADR-0006 — A custom framework for defining linked metadata models
+---
+status: proposed
+date: 2024-01-11
+tags: [data]
+---
 
-- **Status:** proposed
-- **Date:** 2024-01-11
+# ADR-0006 — A custom framework for defining linked metadata models
 
 ## Summary
 

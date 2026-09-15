@@ -1,8 +1,11 @@
-# ADR-0024 — Helm charts versioning
+---
+status: superseded
+date: 2025-02-24
+superseded-by: [ADR-0027]
+tags: [release, deploy]
+---
 
-- **Status:** superseded
-- **Date:** 2025-02-24
-- **Superseded by:** [ADR-0027](0027-versioning-and-release-by-tag.md)
+# ADR-0024 — Helm charts versioning
 
 ## Summary
 

@@ -1,7 +1,10 @@
-# ADR-0005 — Consistency between events and databases of services
+---
+status: accepted
+date: 2024-03-21
+tags: [backend, data, events]
+---
 
-- **Status:** accepted
-- **Date:** 2024-03-21
+# ADR-0005 — Consistency between events and databases of services
 
 ## Summary
 

@@ -1,7 +1,10 @@
-# ADR-0009 — Kafka dead letter queues (DLQ)
+---
+status: accepted
+date: 2024-07-10
+tags: [backend, events]
+---
 
-- **Status:** accepted
-- **Date:** 2024-07-10
+# ADR-0009 — Kafka dead letter queues (DLQ)
 
 ## Summary
 

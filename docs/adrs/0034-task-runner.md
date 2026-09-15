@@ -1,7 +1,10 @@
-# ADR-0034 — Task runner: `just`, with `moon` as a later option
+---
+status: accepted
+date: 2026-06-30
+tags: [build]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0034 — Task runner: `just`, with `moon` as a later option
 
 ## Summary
 

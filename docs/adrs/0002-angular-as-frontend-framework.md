@@ -1,7 +1,10 @@
-# ADR-0002 — Angular as frontend framework
+---
+status: accepted
+date: 2024-01-09
+tags: [frontend]
+---
 
-- **Status:** accepted
-- **Date:** 2024-01-09
+# ADR-0002 — Angular as frontend framework
 
 ## Summary
 

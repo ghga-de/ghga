@@ -1,7 +1,10 @@
-# ADR-0016 — Use of semantic web technologies
+---
+status: accepted
+date: 2024-09-24
+tags: [data]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-24
+# ADR-0016 — Use of semantic web technologies
 
 ## Summary
 

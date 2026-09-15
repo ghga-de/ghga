@@ -1,7 +1,11 @@
-# ADR-0038 — Branching, merging and naming
+---
+status: accepted
+date: 2026-08-28
+tags: [process, release]
+related: [ADR-0027]
+---
 
-- **Status:** accepted
-- **Date:** 2026-08-28
+# ADR-0038 — Branching, merging and naming
 
 ## Summary
 

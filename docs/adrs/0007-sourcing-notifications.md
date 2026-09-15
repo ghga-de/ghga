@@ -1,8 +1,11 @@
-# ADR-0007 — Sourcing notifications
+---
+status: accepted
+date: 2024-01-29
+amended: 2026-09-15
+tags: [backend, events]
+---
 
-- **Status:** accepted
-- **Date:** 2024-01-29
-- **Amended:** 2026-09-15
+# ADR-0007 — Sourcing notifications
 
 ## Summary
 

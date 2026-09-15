@@ -128,6 +128,11 @@ hooks-all: _guard
 hooks-update: _guard
     uv run pre-commit autoupdate
 
+# The same check the adr-set pre-commit hook runs (ADR-0041).
+# Check the ADRs and every ADR reference, and regenerate the index in docs/README.md.
+adrs: _guard
+    uv run python scripts/adr_check.py
+
 # Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
 # collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the

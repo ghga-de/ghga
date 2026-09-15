@@ -1,7 +1,10 @@
-# ADR-0013 — Angular code style
+---
+status: accepted
+date: 2024-09-24
+tags: [frontend]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-24
+# ADR-0013 — Angular code style
 
 ## Summary
 

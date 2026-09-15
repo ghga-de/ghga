@@ -102,10 +102,10 @@ def test_link_to_existing_file_is_fine(repo):
 
 def test_link_to_missing_file_is_reported(repo):
     """A renamed or deleted target would 404 on the PyPI page."""
-    _readme_with_link(repo, "docs/adrs/9999-gone.md")
+    _readme_with_link(repo, "docs/gone.md")
     problems = pypi_drift.readme_link_problems(MEMBER)
     assert len(problems) == 1
-    assert "docs/adrs/9999-gone.md" in problems[0]
+    assert "docs/gone.md" in problems[0]
 
 
 def test_link_to_moved_stub_is_reported(repo):
