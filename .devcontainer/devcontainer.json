@@ -18,7 +18,9 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {},
+    // Held at the LTS line, see docs/dependencies.md; the default "lts" would move on
+    // to 26 on the next rebuild after it becomes LTS, ahead of CI and the images.
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       // Debian 13 dropped the moby-* system packages, and the feature hard-errors rather

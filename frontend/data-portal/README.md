@@ -171,6 +171,8 @@ to install the dependencies, or `just fe-install` from the repository root to in
 
 You do not normally need either: the dev container provisions both stacks when it is created, installing these dependencies along with the Chromium build that Playwright uses ([`.devcontainer/post-create.sh`](../../.devcontainer/post-create.sh)). Only `pnpm e2e:all` needs the other browsers, which `pnpm exec playwright install firefox webkit` adds.
 
+Some dependencies are deliberately kept behind their latest version (currently Vitest, TypeScript, Node.js and `@types/node`). [Held-back versions](../../docs/dependencies.md#held-back-versions) lists why and when to update; check it before bumping them.
+
 ### Dependency overrides
 
 There are currently **no dependency overrides** in use.

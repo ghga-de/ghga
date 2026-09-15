@@ -1,6 +1,7 @@
 # Multi-stage Dockerfile for building a production image for the data portal
 
 # BASE: a base image with updated packages
+# Node is held at the LTS line, see docs/dependencies.md
 FROM node:24-alpine AS base
 RUN apk upgrade --no-cache --available
 
@@ -8,7 +9,7 @@ RUN apk upgrade --no-cache --available
 FROM base AS builder
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # install pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
 # install static web server (curl/jq/sudo/which are build-only, intentionally unpinned)
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl jq sudo which \
