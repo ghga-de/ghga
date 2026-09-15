@@ -256,3 +256,37 @@ def test_in_sequence_keeps_the_handler_when_a_value_does_not_cast():
         assert client.get("/nums/three").status_code == 422
         assert client.get("/nums/7").json() is True
         assert client.get("/nums/7").status_code == 418
+
+
+def test_respond_keeps_the_body_and_headers_it_was_built_with():
+    """Test that changing a body or headers after building the handler changes nothing.
+
+    Every mock of an API shares the handler built in its class body, so a change made
+    for one test would otherwise reach every later mock.
+    """
+    body = {"state": "initial"}
+    headers = {"x-state": "initial"}
+
+    class MockedStateApi(MockedApi):
+        base_url = "http://state.test"
+        on_state = endpoint("GET", "/state", respond(200, json=body, headers=headers))
+
+    first_mock = MockedStateApi()
+    body["state"] = "changed"
+    headers["x-state"] = "changed"
+    second_mock = MockedStateApi()
+    for mock in (first_mock, second_mock):
+        with httpx2.Client(
+            base_url=mock.base_url, transport=_as_transport(mock)
+        ) as client:
+            response = client.get("/state")
+        assert response.json() == {"state": "initial"}
+        assert response.headers["x-state"] == "initial"
+
+
+def test_respond_without_a_body_sends_none():
+    """Test that `respond` given neither `json` nor `content` answers with no body."""
+    response = respond(204)(httpx2.Request("GET", "http://empty.test/"))
+    assert isinstance(response, httpx2.Response)
+    assert response.status_code == 204
+    assert response.content == b""

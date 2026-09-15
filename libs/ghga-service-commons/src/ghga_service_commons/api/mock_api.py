@@ -600,20 +600,24 @@ def respond(
 ) -> ResponseHandler:
     """Build a handler that always answers the same way.
 
-    `json=None` is a JSON `null`; without `json` the body is `content`, or nothing.
+    `json=None` is a JSON `null`; without `json` the body is `content`, or nothing. The
+    body and headers are copied now, so changing them later cannot change the answer.
     """
+    # deepcopy would turn the sentinel into a new object that no longer means no body
+    body = json if json is NO_BODY else deepcopy(json)
+    headers = None if headers is None else dict(headers)
 
     def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
         """Answer with the stored response."""
-        if json is NO_BODY:
+        if body is NO_BODY:
             return httpx2.Response(status_code, content=content, headers=headers)
-        if json is None:
+        if body is None:
             # httpx2 would read `json=None` as no body, so encode `null` by hand
             return httpx2.Response(
                 status_code,
                 content=b"null",
                 headers={"content-type": "application/json", **(headers or {})},
             )
-        return httpx2.Response(status_code, json=json, headers=headers)
+        return httpx2.Response(status_code, json=body, headers=headers)
 
     return handler
