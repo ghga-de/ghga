@@ -25,7 +25,7 @@ docker build -f docker/Dockerfile \
 
 - `<member>:<platform-version>` — release artifacts, one image per member
   (`.github/workflows/release.yaml`, manual for now).
-- `platform:dev` + `data-portal:dev` — mutable dev tags tracking `main`
+- `platform:dev` + `data-portal:dev` — mutable dev tags tracking `dev`
   (`.github/workflows/dev-images.yaml`): the mono Python image (VARIANT=mono, all members
   in one venv) and the front-end image. Not release artifacts — they feed the daily
   vulnerability watch (`.github/workflows/security-scan.yaml`), which rescans them,
@@ -33,7 +33,7 @@ docker build -f docker/Dockerfile \
 
 Every published tag also carries a keyless cosign signature (over the resolved digest)
 plus SBOM and SLSA-provenance attestations (buildx-native, `provenance=mode=max`). See
-[ADR-0019](../docs/adr/0019-image-signing-sbom-provenance.md) for the decision record.
+[ADR-0019](../docs/adr/0019-image-signing-sbom-provenance.md) for the decision.
 
 Because buildx's own attestations live inside the OCI index where `cosign` does not look,
 both predicates are additionally re-published as signed cosign attestations
@@ -41,14 +41,28 @@ both predicates are additionally re-published as signed cosign attestations
 `cosign verify-attestation`, and any policy engine built on it, can actually query them.
 `scripts/attest-image.sh` does that re-publishing and is shared by both publish workflows.
 
-That is the **producer** side only. Verifying it back means matching the keyless
-certificate identity, which is **confirmed** for the release lane (`docker.io/ghga/<member>`,
-`.github/workflows/release.yaml`) against a real published image — see ADR-0019
-"Verification identity" for the exact subject shape. The `dev-images.yaml` / GHCR lane's
-identity is still the predicted shape, not yet independently confirmed against a real dev
-image. Admission-control verification lives in the platform/GitOps layer
-([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)); treat the dev-image lane as
-signed-but-identity-unproven until that side confirms it.
+## Verifying images
+
+This repo is the **producer** side only; admission-control verification lives in the
+platform/GitOps layer ([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)).
+Fulcio issues a short-lived certificate per run, bound to the workflow's OIDC claims, so
+a verifier matches those claims rather than a tag or key:
+
+| Workflow | Certificate subject | Status |
+|---|---|---|
+| `release.yaml` | `https://github.com/ghga-de/ghga/.github/workflows/release.yaml@refs/tags/<tag>` | confirmed against a published release candidate |
+| `dev-images.yaml` | `https://github.com/ghga-de/ghga/.github/workflows/dev-images.yaml@refs/heads/dev` | predicted, not yet confirmed on a real dev image |
+
+The issuer is `https://token.actions.githubusercontent.com` for both. The subject is the
+run's `job_workflow_ref`: release dispatches run with "Use workflow from" set to the
+release tag, so the tag appears in it, not a branch. Read the exact subject off a real
+run (`cosign verify … --output json`) before pinning a policy to the dev-image shape.
+
+Predicate types to match: `https://spdx.dev/Document` (SBOM) and
+`https://slsa.dev/provenance/v1` (provenance). Both workflows pin `cosign-release:
+v3.1.3`: cosign v3 publishes attachments as OCI referrers where v2 used
+`sha256-<digest>.att` tags, so the pin fixes the layout a verifier reads. Keyless
+signing writes every signature to the public Rekor log.
 
 > **Verify against a tag, not a digest copied off a UI.** Release images are multi-platform
 > OCI indexes: `cosign sign --recursive` signs the index **and** every per-platform child
