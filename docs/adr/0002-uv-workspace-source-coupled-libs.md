@@ -1,65 +1,67 @@
 # ADR-0002 — `uv` workspace with source-coupled internal libraries
 
-- **Status:** Accepted
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-We want "HEAD of the integration branch is always fully integrated" (`main` when this was
-written; `dev` since [ADR-0020](0020-branching-strategy.md)) and "make use of `uv` as much as
-possible".
+## Summary
 
-Today services depend on internal libraries via **published PyPI version constraints**, which
-allows skew: `ghga-event-schemas` is pinned at both `~=12` and `~=13` across services;
-`ghga-datasteward-kit` pins `ghga-transpiler >=2.1.2,<3` while transpiler is already `3.0.0`
-(unsatisfiable against HEAD). `file-services-backend` already uses `uv pip compile` with a
-single global lock, proving uv at smaller scale.
+In the context of **services, libraries and tools that depend on each other and are
+developed in one repository**
 
-Internal libraries (`hexkit`, `ghga-service-commons`, `ghga-event-schemas`, `schemapack`,
-`metldata`) are also published to PyPI for **external** consumers and support a broad Python
-range (3.9–3.12), whereas services target 3.13.
+facing **internal libraries consumed as PyPI versions, which let services drift onto
+incompatible versions of them**
 
-## Decision
-The repo is a single **`uv` workspace**. Each lib/service/tool is a member with its own
-`pyproject.toml` and **its own version**. Internal libraries are consumed **from source** via
-`[tool.uv.sources]` (`hexkit = { workspace = true }`, …). There is **one `uv.lock`**, so
-exactly one resolved version of every package exists across the whole repo.
+we decided for **one `uv` workspace with one `uv.lock`, internal libraries consumed from
+source, and one tested Python range for the published libraries**
 
-- **Workspace Python baseline = 3.13.**
-- Published libraries keep **broad dependency ranges** in their own `pyproject.toml`; a
-  **per-package standalone matrix** (`uv run --python 3.10…3.13`) validates the *published*
-  combination separately from the workspace lock.
+and neglected **pinned PyPI versions inside the repo, a single root `pyproject.toml`,
+and consuming only some libraries from source**
 
-**Amended 2026-08-24 — common `>=3.11` floor across the PyPI lane.** Every lane member now
-declares `requires-python = ">=3.11"` and carries matching classifiers, and the matrix runs
-**3.11–3.14** (`TEST_PYTHONS` in `scripts/pypi_members.py`), superseding the `3.10…3.13`
-above. The floor is chosen for **workspace coherence**: one range the whole lane is
-actually tested against, rather than per-member floors no surface verified. 3.10 reaches
-end of life shortly, so dropping it costs consumers nothing they should still be relying
-on — `hexkit`, `ghga-service-commons` and `ghga-connector` drop 3.10, `ghga-transpiler` and
-`ghga-validator` drop 3.9 and 3.10, and `schemapack` moves the other way, `>=3.12` →
-`>=3.11`. It also trades away part of the "broad range" premise above: the range is now
-uniform rather than per-library.
+to achieve **a HEAD at which every member works with the current version of every
+other**
 
-The floors live in the members'
-own `pyproject.toml`, so for members still synced from mainline ([ADR-0001](0001-consolidate-into-monorepo.md))
-this is a divergence that conflicts until the same change is made upstream.
+accepting that **a breaking library change must fix all its consumers in the same pull
+request, and published libraries need a second test surface**.
 
-## Consequences
-- Integration is structural: there is no version skew possible at HEAD.
-- **A breaking change to a shared lib must be fixed for all consumers in the same PR.** This is
-  a deliberate change to how teams work (no deferred lib upgrades).
-- "Independent lifecycle" of a library means independent **release cadence**
-  ([ADR-0004](0004-versioning-and-release-by-tag.md)), not consumers lagging behind.
-- Two test surfaces per lib: the workspace lock ("integrated combo") and the matrix
-  ("published combo"). Both are required; CI cost rises modestly.
-- A single `uv.lock` pins one version of each third-party dep for the whole repo — a strong
-  forcing function for keeping everything current.
+## Details
 
-## Alternatives considered
-- **Pinned PyPI versions inside the repo (status quo).** Rejected: reproduces today's skew in
-  one repo; HEAD would not be integrated.
-- **`file-services-backend`'s single-root-pyproject model.** Workable but collapses per-member
-  dependency declarations; the uv workspace is the more scalable, uv-native form.
-- **Hybrid (some libs source, some pinned).** Rejected: partial integration; complexity with
-  little benefit once we accept lockstep lib upgrades.
+### Context
+
+Services depended on internal libraries through PyPI version constraints, which allowed
+skew: `ghga-event-schemas` was required at `~=12` and `~=13` at the same time, and
+`ghga-datasteward-kit` required `ghga-transpiler <3` while the transpiler was at 3.0.0.
+`file-services-backend` had already shown that one lock file with `uv` works. Published
+libraries supported a broad Python range, while services target 3.13.
+
+### Decision
+
+- The repo is one **`uv` workspace**. Each library, service and tool is a member with
+  its own `pyproject.toml` and its own version.
+- Internal libraries are consumed **from source** through `[tool.uv.sources]` (`hexkit =
+  { workspace = true }`). There is **one `uv.lock`**, so every package has exactly one
+  resolved version across the repo.
+- The workspace baseline is **Python 3.13**.
+- The published libraries and CLIs share one `requires-python` floor, currently 3.11,
+  and are tested standalone across 3.11 to 3.14 against dependencies resolved from PyPI
+  ([ADR-0004](0004-versioning-and-release-by-tag.md)).
+
+### Consequences
+
+- There is no version skew at HEAD, by construction.
+- A breaking change to a shared library is fixed for all consumers in the same pull
+  request; library upgrades cannot be deferred.
+- A library's independent lifecycle means its own release cadence, not consumers lagging
+  behind.
+- Each published library has two test surfaces: the workspace lock and the standalone
+  matrix.
+- One version of each third-party dependency for the whole repo forces keeping it
+  current.
+
+### Alternatives
+
+- **Pinned PyPI versions inside the repo.** Reproduces the skew in one repository.
+- **One root `pyproject.toml`**, as in `file-services-backend`. Workable, but loses each
+  member's own dependency declarations.
+- **Some libraries from source, others pinned.** Partial integration, with the
+  complexity of both.
+- **A Python floor per published member.** Ranges that no test verifies.

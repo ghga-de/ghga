@@ -37,9 +37,9 @@ same repository, and with the same flow the released state was buried under work
 next release within days.
 
 A change carries three names: its branch, its pull request and the commit it lands as.
-Left to taste, they drifted apart, in the three lists where work is found. Stacks of pull
-requests cannot be grouped in the pull request list, and once pull requests are squashed,
-their titles become the permanent history.
+Left to taste, they drifted apart, in the three lists where work is found. Stacks of
+pull requests cannot be grouped in the pull request list, and once pull requests are
+squashed, their titles become the permanent history.
 
 ### Decision
 

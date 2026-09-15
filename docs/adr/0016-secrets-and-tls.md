@@ -1,36 +1,61 @@
-# ADR-0016 — Secrets & TLS: K8s Secrets in demo, Vault Agent + cert-manager in prod
+# ADR-0016 — Secrets and TLS: Kubernetes Secrets in the demo, Vault and cert-manager in production
 
-- **Status:** Accepted
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-GHGA needs JWK signing keys, Crypt4GH key pairs, a TOTP encryption key, Vault credentials, and
-TLS certs. The docker-compose test bed generated these at startup (`auth-km-jobs` +
-`set_env.sh`) and mounted them. The existing `ghga-common` chart already supports **Vault Agent
-injection**, and EKSS already reads Crypt4GH keys from **Vault**. The app chart references
-secrets by name regardless of how they are produced ([ADR-0011](0011-helm-chart-boundary-hybrid.md)).
+## Summary
 
-## Decision
-- **Demo / testbed:** a pre-install **secret-gen Job** generates keys + a **self-signed** TLS
-  cert and writes plain **Kubernetes Secrets**; the chart consumes them via env-from-Secret.
-  Simple, self-reliant, no external store ([ADR-0012](0012-self-contained-edge-envoy-gateway.md)).
-- **Production:** secrets come from **Vault via Vault Agent injection** (already in use); TLS is
-  issued by **cert-manager**. `auth-km-jobs` becomes the JWK-rotation CronJob writing to Vault.
-  These are owned by the platform/GitOps layer; the chart only references secret names + toggles
-  the Vault-Agent annotations on.
+In the context of **services that need signing keys, Crypt4GH keys, a TOTP key, Vault
+credentials and TLS certificates**
 
-## Consequences
-- The demo has no Vault/secret-store dependency; prod reuses the existing Vault investment.
-- The secret-consumption shape is a per-profile toggle in `ghga-common`
-  ([ADR-0011](0011-helm-chart-boundary-hybrid.md)) — Vault Agent vs env-from-Secret.
-- TLS differs by environment (self-signed demo cert vs cert-manager) — a values concern, not a
-  template fork.
+facing **a self-contained demo without a secret store, and a production platform that
+already runs Vault**
 
-## Alternatives considered
-- **External Secrets Operator (ESO).** Viable, but adds an operator where Vault Agent already
-  does the job; kept as an alternative.
-- **Sealed Secrets / SOPS (secrets-in-git).** Fits a pure-GitOps model without an external
-  store; an option if the platform prefers it over Vault.
-- **Generate secrets in-cluster in prod (as in compose).** Rejected: reinstall would rotate
-  secrets; not auditable.
+we decided for **a pre-install Job writing plain Kubernetes Secrets in the demo, Vault
+Agent injection and cert-manager in production, and charts that reference secrets only
+by name**
+
+and neglected **the External Secrets Operator, secrets in git, and generating production
+secrets in the cluster**
+
+to achieve **a demo that needs no external store, and production secrets that stay in
+Vault**
+
+accepting that **secrets arrive differently per environment, and the demo serves plain
+HTTP**.
+
+## Details
+
+### Context
+
+The docker-compose test bed generated its keys at start-up and mounted them. The
+`ghga-common` chart already supports Vault Agent injection, and the key store service
+already reads Crypt4GH keys from Vault. App charts reference secrets by name, whatever
+produces them ([ADR-0011](0011-helm-chart-boundary-hybrid.md)).
+
+### Decision
+
+- **Demo and test bed:** a pre-install Job generates the keys and writes plain
+  Kubernetes Secrets, keeping existing ones so an upgrade does not rotate them. Services
+  read them as environment variables. Vault runs in dev mode only as the key store's
+  backend, not for injecting secrets. The demo gateway serves HTTP, without TLS.
+- **Production:** secrets come from Vault through Vault Agent injection, TLS
+  certificates from cert-manager, and `auth-km-jobs` rotates the signing keys in Vault.
+  The platform layer owns all of this; the charts reference secret names and switch the
+  Vault Agent annotations on.
+
+### Consequences
+
+- The demo needs no secret store; production keeps using Vault.
+- How a workload consumes secrets is a per-profile switch in `ghga-common`.
+- TLS is a production concern only. Unencrypted traffic is fine on a local cluster, but
+  not for a demo exposed to a network.
+
+### Alternatives
+
+- **External Secrets Operator.** Adds an operator where Vault Agent already does the
+  job.
+- **Sealed Secrets or SOPS, with secrets in git.** An option if the platform prefers it
+  to Vault.
+- **Generating production secrets in the cluster**, as the compose test bed did. A
+  reinstall would rotate them, and nothing would be auditable.

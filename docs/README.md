@@ -7,9 +7,8 @@ charts and runs its integration tests on Kubernetes.
 > Status: **executed; cutover in progress.** The import is done — 20 services, 7 libraries,
 > 5 tools and the Angular front end are in the tree — CI and both release lanes run from
 > here, and the platform lane has cut `ghga/15.3.1-rc.*`. What remains is the mainline-side
-> wind-down in the [runbook §7](migration/runbook.md) checklist. These documents stay the
-> record of the agreed design; where one has drifted from the repo, the drift is marked
-> with a dated amendment rather than silently rewritten.
+> wind-down in the [runbook §7](migration/runbook.md) checklist. The ADRs record the decisions
+> as they stand; git keeps how they got there.
 
 ## Start here
 - **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout,
@@ -33,30 +32,27 @@ charts and runs its integration tests on Kubernetes.
   templates (exploratory / implementation) live alongside them.
 
 ## Decisions (ADRs)
-Status mirrors each ADR's own `Status:` line; the last column records supersession and
-cross-ADR amendment, which is how several of these are meant to be read together. "Last
-amended" tracks decisions that moved, not wording that was clarified — an ADR edited only to
-say which branch a sentence now names keeps its previous date, and gains no `Status:` entry to
-mirror here. Write new ADRs from the [template](adr/0000-template.md), following the
+Status mirrors each ADR's own `Status:` line. Write new ADRs from the
+[template](adr/0000-template.md), following the
 [writing style](style.md#architecture-decision-records).
 
-| # | Decision | Status | Supersedes / superseded by |
-|---|---|---|---|
-| [0001](adr/0001-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |  |
-| [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted · last amended 2026-08-24 |  |
-| [0004](adr/0004-versioning-and-release-by-tag.md) | Releases: platform lockstep (`ghga/X.Y.Z`) and a per-component PyPI lane | Accepted |  |
-| [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Demo and test bed are one self-contained umbrella, on kind in CI and in the devcontainer | Accepted |  |
-| [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI: mock-oauth2-server in the demo, the test OIDC provider in the test bed | Accepted |  |
-| [0008](adr/0008-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated | Accepted |  |
-| [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a **hybrid** boundary (app charts own app-coupled CRDs) | Accepted |  |
-| [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) | Accepted |  |
-| [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults decide what a member builds and releases | Accepted |  |
-| [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later | Accepted |  |
-| [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) | Accepted |  |
-| [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted |  |
-| [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted |  |
-| [0020](adr/0020-branching-strategy.md) | Branching, merging and naming: `dev` and `main`, squashed pull requests, one naming grammar | Accepted |  |
-| [0021](adr/0021-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | Accepted | deviates from [0014](adr/0014-capability-markers-and-placement.md) on marker vs. config-file discovery |
+| # | Decision | Status |
+|---|---|---|
+| [0001](adr/0001-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |
+| [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted |
+| [0004](adr/0004-versioning-and-release-by-tag.md) | Releases: platform lockstep (`ghga/X.Y.Z`) and a per-component PyPI lane | Accepted |
+| [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Demo and test bed are one self-contained umbrella, on kind in CI and in the devcontainer | Accepted |
+| [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI: mock-oauth2-server in the demo, the test OIDC provider in the test bed | Accepted |
+| [0008](adr/0008-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated | Accepted |
+| [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a **hybrid** boundary (app charts own app-coupled CRDs) | Accepted |
+| [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) | Accepted |
+| [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults decide what a member builds and releases | Accepted |
+| [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later | Accepted |
+| [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) | Accepted |
+| [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted |
+| [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted |
+| [0020](adr/0020-branching-strategy.md) | Branching, merging and naming: `dev` and `main`, squashed pull requests, one naming grammar | Accepted |
+| [0021](adr/0021-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | Accepted |
 
 ## Phased roadmap (high level)
 
