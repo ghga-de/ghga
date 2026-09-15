@@ -627,6 +627,25 @@ describe('UploadBoxManagerDetailComponent', () => {
         'The failed files could not be requeued. Please try again.',
       );
       expect(component.isRequeueing()).toBe(false);
+      expect(uploadBoxService.reloadUploadBox).not.toHaveBeenCalled();
+    });
+
+    it('should refresh when the box was archived before all failed files were requeued', async () => {
+      const conflict = Object.assign(new Error('Conflict'), {
+        status: 409,
+        error: { exception_id: 'boxStateError' },
+      });
+      uploadBoxService.requeueAllFileUploads.mockReturnValueOnce(
+        throwError(() => conflict),
+      );
+
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showError).toHaveBeenCalledWith(
+        'Files in archived upload boxes cannot be requeued.',
+      );
+      expect(uploadBoxService.reloadUploadBox).toHaveBeenCalledWith(lockedBox.id);
     });
 
     it('should load the complete file list to find files to retry', () => {

@@ -12,8 +12,20 @@ export interface RequeueErrorNotice {
   level: 'warning' | 'error';
   /** The message to show */
   message: string;
-  /** Whether the file list is outdated and should be fetched again */
+  /** Whether the shown box and files are outdated and should be fetched again */
   refresh: boolean;
+}
+
+/** Message for a requeue refused because the box has been archived meanwhile */
+const ARCHIVED_BOX_MESSAGE = 'Files in archived upload boxes cannot be requeued.';
+
+/**
+ * Check whether the RS refused a requeue because the upload box is archived.
+ * @param error - the error thrown by the requeue request
+ * @returns true if the box state caused the conflict
+ */
+function isBoxStateConflict(error: MaybeBackendError | undefined): boolean {
+  return error?.status === 409 && error.error?.exception_id === 'boxStateError';
 }
 
 /**
@@ -33,11 +45,11 @@ export function describeRequeueError(err: unknown, alias: string): RequeueErrorN
       refresh: true,
     };
   }
-  if (status === 409 && exceptionId === 'boxStateError') {
+  if (isBoxStateConflict(response)) {
     return {
       level: 'error',
-      message: 'Files in archived upload boxes cannot be requeued.',
-      refresh: false,
+      message: ARCHIVED_BOX_MESSAGE,
+      refresh: true,
     };
   }
   if (status === 404) {
@@ -57,6 +69,22 @@ export function describeRequeueError(err: unknown, alias: string): RequeueErrorN
   return {
     level: 'error',
     message: `The file "${alias}" could not be requeued.`,
+    refresh: false,
+  };
+}
+
+/**
+ * Describe why requeueing all failed file uploads of a box failed.
+ * @param err - the error thrown by the requeue request
+ * @returns the notification to show
+ */
+export function describeRequeueAllError(err: unknown): RequeueErrorNotice {
+  if (isBoxStateConflict(err as MaybeBackendError | undefined)) {
+    return { level: 'error', message: ARCHIVED_BOX_MESSAGE, refresh: true };
+  }
+  return {
+    level: 'error',
+    message: 'The failed files could not be requeued. Please try again.',
     refresh: false,
   };
 }

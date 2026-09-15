@@ -5,7 +5,7 @@
  */
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { describeRequeueError } from './requeue-errors';
+import { describeRequeueAllError, describeRequeueError } from './requeue-errors';
 
 /**
  * Create an RS error response as thrown by the HttpClient.
@@ -31,11 +31,11 @@ describe('describeRequeueError', () => {
     );
   });
 
-  it('should report an archived box', () => {
+  it('should report an archived box and refresh', () => {
     expect(describeRequeueError(rsError(409, 'boxStateError'), 'a.bam')).toEqual({
       level: 'error',
       message: 'Files in archived upload boxes cannot be requeued.',
-      refresh: false,
+      refresh: true,
     });
   });
 
@@ -66,5 +66,25 @@ describe('describeRequeueError', () => {
       generic,
     );
     expect(describeRequeueError(new Error('offline'), 'a.bam')).toEqual(generic);
+  });
+});
+
+describe('describeRequeueAllError', () => {
+  it('should report an archived box and refresh', () => {
+    expect(describeRequeueAllError(rsError(409, 'boxStateError'))).toEqual({
+      level: 'error',
+      message: 'Files in archived upload boxes cannot be requeued.',
+      refresh: true,
+    });
+  });
+
+  it('should fall back to a generic error', () => {
+    const generic = {
+      level: 'error',
+      message: 'The failed files could not be requeued. Please try again.',
+      refresh: false,
+    };
+    expect(describeRequeueAllError(rsError(404, 'boxNotFoundError'))).toEqual(generic);
+    expect(describeRequeueAllError(new Error('offline'))).toEqual(generic);
   });
 });

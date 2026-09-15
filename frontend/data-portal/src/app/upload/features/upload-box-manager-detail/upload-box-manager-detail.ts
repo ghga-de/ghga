@@ -43,18 +43,22 @@ import {
   UploadBoxStateClass,
 } from '@app/upload/models/box';
 import {
+  FileUploadState,
+  FileUploadWithAccession,
+} from '@app/upload/models/file-upload';
+import { UploadGrant } from '@app/upload/models/grant';
+import { UploadBoxService } from '@app/upload/services/upload-box';
+import {
   describeIncompleteOrFailedConflict,
   IncompleteOrFailedConflict,
   incompleteOrFailedConflictTitle,
   parseIncompleteOrFailedConflict,
 } from '@app/upload/utils/box-conflict';
 import {
-  FileUploadState,
-  FileUploadWithAccession,
-} from '@app/upload/models/file-upload';
-import { UploadGrant } from '@app/upload/models/grant';
-import { describeRequeueError } from '@app/upload/utils/requeue-errors';
-import { UploadBoxService } from '@app/upload/services/upload-box';
+  describeRequeueAllError,
+  describeRequeueError,
+  RequeueErrorNotice,
+} from '@app/upload/utils/requeue-errors';
 import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
 import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
 import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
@@ -598,16 +602,22 @@ export class UploadBoxManagerDetailComponent implements OnInit {
         this.#notificationService.showSuccess(
           `The file "${file.alias}" has been queued for re-encryption.`,
         ),
-      error: (err: unknown) => {
-        const notice = describeRequeueError(err, file.alias);
-        if (notice.level === 'warning') {
-          this.#notificationService.showWarning(notice.message);
-        } else {
-          this.#notificationService.showError(notice.message);
-        }
-        if (notice.refresh) this.refresh();
-      },
+      error: (err: unknown) =>
+        this.#showRequeueError(describeRequeueError(err, file.alias)),
     });
+  }
+
+  /**
+   * Show why a requeue failed and refresh the page if its data is outdated.
+   * @param notice - the notification describing the failure
+   */
+  #showRequeueError(notice: RequeueErrorNotice): void {
+    if (notice.level === 'warning') {
+      this.#notificationService.showWarning(notice.message);
+    } else {
+      this.#notificationService.showError(notice.message);
+    }
+    if (notice.refresh) this.refresh();
   }
 
   /**
@@ -681,11 +691,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       },
       error: (err: unknown) => {
         this.isRequeueing.set(false);
-        this.#notificationService.showError(
-          (err as HttpErrorResponse)?.status === 409
-            ? 'Files in archived upload boxes cannot be requeued.'
-            : 'The failed files could not be requeued. Please try again.',
-        );
+        this.#showRequeueError(describeRequeueAllError(err));
       },
     });
   }
