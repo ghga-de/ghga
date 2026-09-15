@@ -9,7 +9,7 @@ Epic planning and implementation follow the
 ### Outline:
 The aim of this epic is to stop serializing UUIDs and datetime objects as strings in
 `hexkit` and instead allow `pymongo` to serialize them to BSON directly, as decided in
-the ADR "[UUID and Datetime Representation in MongoDB](https://github.com/ghga-de/adrs/blob/main/docs/adrs/adr011_uuids_datetimes_mongodb.md)".
+the ADR "[UUID and Datetime Representation in MongoDB](../../adrs/0011-uuids-datetimes-mongodb.md)".
 
 The `hexkit` changes for this epic should be released with the
 [Eurasian Blackbird](../75-eurasian-blackbird/technical_specification.md) `hexkit`
