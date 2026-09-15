@@ -91,9 +91,9 @@ class InterrogationHandler(InterrogationHandlerPort):
 
         If the report relays a failure, publish an InterrogationFailure event.
 
-        In both cases, set `interrogated=True`, `state="interrogated"`, and
-        `state_updated=now()` for the `FileUnderInterrogation` event. In the case of
-        interrogation failure, also set `can_remove=True`.
+        In both cases, set `interrogated=True` and `state_updated` for the
+        `FileUnderInterrogation`. On success, set `state="interrogated"`. On failure,
+        set `state="failed_interrogation"` and `can_remove=True`.
 
         Raises:
         - FileNotFoundError if there's no file with the ID specified in the report.
@@ -190,7 +190,7 @@ class InterrogationHandler(InterrogationHandlerPort):
 
         # If everything goes well, update the FileUnderInterrogation in the DB
         updated_file = file.model_copy(deep=True)
-        updated_file.state = "failed"
+        updated_file.state = "failed_interrogation"
         updated_file.interrogated = True
         updated_file.state_updated = report.interrogated_at
         updated_file.can_remove = True
@@ -293,9 +293,10 @@ class InterrogationHandler(InterrogationHandlerPort):
 
         - 'init': ignored; FIS does not track files until they reach 'inbox'.
         - 'inbox': insert into the DB if not already present (idempotent). If there's
-          already a copy of this file in the 'failed' state, it means a Data Steward
-          requeued the file for interrogation. In that case, reset the interrogation
-          flags and delete the stored report so DHFS picks the file up again.
+          already a copy of this file in the 'failed_interrogation' state, it means a
+          Data Steward requeued the file for interrogation. In that case, reset the
+          interrogation flags and delete the stored report so DHFS picks the file up
+          again.
         - 'cancelled' / 'failed': if the file is known, set can_remove=True and update.
           If not known (i.e., it reached this terminal state before ever hitting 'inbox'),
           log at INFO and ignore since this is a known possibility.
@@ -305,6 +306,8 @@ class InterrogationHandler(InterrogationHandlerPort):
           handle_interrogation_report(), not by this method. If the file is known and
           the incoming timestamp is newer, no update is performed here. If the file is
           unknown (should not happen in normal operation), log a warning and ignore.
+        - 'failed_interrogation': ignored, since FIS already recorded the failure while
+          handling the interrogation report.
         """
         if file.state == "init":
             return
@@ -341,9 +344,10 @@ class InterrogationHandler(InterrogationHandlerPort):
             return
 
         # If file state is 'inbox' and the local copy shows interrogation failed, requeue it.
+        #  Copies made before 'failed_interrogation' existed still say 'failed'.
         if (
             file.state == "inbox"
-            and local_file.state == "failed"
+            and local_file.state in ("failed", "failed_interrogation")
             and local_file.interrogated
         ):
             await self._requeue_file(file=file.model_copy())
