@@ -1,6 +1,6 @@
 # ADR-0011 — UUID and datetime representation in MongoDB
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2024-10-14
 
 ## Summary

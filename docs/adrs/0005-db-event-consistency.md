@@ -1,6 +1,6 @@
 # ADR-0005 — Consistency between events and databases of services
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2024-03-21
 
 ## Summary

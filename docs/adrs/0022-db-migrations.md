@@ -1,6 +1,6 @@
 # ADR-0022 — MongoDB migration code storage
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2025-01-07
 
 ## Summary

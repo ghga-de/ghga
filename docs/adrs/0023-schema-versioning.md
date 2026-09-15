@@ -1,6 +1,6 @@
 # ADR-0023 — Schema versioning
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2024-12-16
 
 ## Summary

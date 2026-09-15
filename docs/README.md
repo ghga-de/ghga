@@ -42,13 +42,13 @@ Status mirrors each ADR's own `Status:` line. Write new ADRs from the
 | [0002](adrs/0002-angular-as-frontend-framework.md) | Angular as frontend framework | Accepted |
 | [0003](adrs/0003-custom-2fa-service.md) | Custom 2FA micro service | Accepted |
 | [0004](adrs/0004-user-session-management.md) | User session management in the GHGA data portal | Accepted |
-| [0005](adrs/0005-db-event-consistency.md) | Consistency between events and databases of services | Proposed |
+| [0005](adrs/0005-db-event-consistency.md) | Consistency between events and databases of services | Accepted |
 | [0006](adrs/0006-custom-schema-framework.md) | A custom framework for defining linked metadata models | Proposed |
 | [0007](adrs/0007-sourcing-notifications.md) | Sourcing notifications | Accepted |
 | [0008](adrs/0008-usage-of-enums.md) | Naming and usage of enums | Accepted |
 | [0009](adrs/0009-kafka-dead-letter-queues.md) | Kafka dead letter queues (DLQ) | Accepted |
 | [0010](adrs/0010-naming-mongo-and-kafka.md) | Naming conventions for databases and event streams | Accepted |
-| [0011](adrs/0011-uuids-datetimes-mongodb.md) | UUID and datetime representation in MongoDB | Proposed |
+| [0011](adrs/0011-uuids-datetimes-mongodb.md) | UUID and datetime representation in MongoDB | Accepted |
 | [0012](adrs/0012-use-of-ngmodules.md) | Angular with standalone components instead of NgModules | Accepted |
 | [0013](adrs/0013-angular-code-style.md) | Angular code style | Accepted |
 | [0014](adrs/0014-angular-project-documentation.md) | Angular project documentation | Accepted |
@@ -59,9 +59,9 @@ Status mirrors each ADR's own `Status:` line. Write new ADRs from the
 | [0019](adrs/0019-responsive-design-systems.md) | Responsive design systems | Accepted |
 | [0020](adrs/0020-angular-component-library.md) | Angular UI component library selection | Accepted |
 | [0021](adrs/0021-tailwind.md) | Tailwind | Accepted |
-| [0022](adrs/0022-db-migrations.md) | MongoDB migration code storage | Proposed |
-| [0023](adrs/0023-schema-versioning.md) | Schema versioning | Proposed |
-| [0024](adrs/0024-chart-versioning.md) | Helm charts versioning | Accepted |
+| [0022](adrs/0022-db-migrations.md) | MongoDB migration code storage | Accepted |
+| [0023](adrs/0023-schema-versioning.md) | Schema versioning | Accepted |
+| [0024](adrs/0024-chart-versioning.md) | Helm charts versioning | Superseded by [0027](adrs/0027-versioning-and-release-by-tag.md) |
 | [0025](adrs/0025-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |
 | [0026](adrs/0026-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted |
 | [0027](adrs/0027-versioning-and-release-by-tag.md) | Releases: platform lockstep (`ghga/X.Y.Z`) and a per-component PyPI lane | Accepted |
