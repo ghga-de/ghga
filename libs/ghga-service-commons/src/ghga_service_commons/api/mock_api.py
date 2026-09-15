@@ -80,6 +80,7 @@ PATH_CONVERTERS = {
 _PARAMETER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-zA-Z_][a-zA-Z0-9_]*))?\}")
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
+POSITIONAL_KINDS = (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
 # Accept the same set of boolean values as Pydantic
 _BOOLEANS = {
     **dict.fromkeys(("1", "on", "t", "true", "y", "yes"), True),
@@ -356,11 +357,20 @@ def _bind_and_cast_path_vars(
 ) -> dict[str, Any]:
     """Cast the path variables to the types `handler` declares for them.
 
-    Two failures, two audiences: a variable the handler cannot take is a `MockSetupError`
-    because the test wired up the wrong handler; a value that will not cast is a 422
-    because that is what the real API would answer.
+    Two failures, two audiences: a variable the handler cannot take, or a parameter no
+    variable fills, is a `MockSetupError` because the test wired up the wrong handler; a
+    value that will not cast is a 422 because that is what the real API would answer.
     """
-    named, positional_only, collects_the_rest = _wanted(handler)
+    named, positional_only, required, collects_the_rest = _wanted(handler)
+
+    unfilled = required - path_variables.keys()
+    if unfilled:
+        unfilled_names = ", ".join(repr(name) for name in sorted(unfilled))
+        raise MockSetupError(
+            f"The handler answering {request.url} needs {unfilled_names}, which the"
+            " endpoint's path does not declare. Declare it in the path, or give it a"
+            " default."
+        )
 
     bound_path_variables: dict[str, Any] = {}
     for name, value in path_variables.items():
@@ -413,13 +423,15 @@ def _boolean(value: str) -> bool:
         raise ValueError(f"{value!r} is not a boolean") from None
 
 
-def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], set[str], bool]:
+def _wanted(
+    handler: ResponseHandler,
+) -> tuple[dict[str, Any], set[str], set[str], bool]:
     """Returns the parameters `handler` names with their types, and how it takes them.
 
-    The set holds the named parameters it takes only positionally, which a path variable
-    cannot fill. The flag says whether it collects the rest. An unannotated parameter
-    stays the string the URL carried. `request` is passed positionally, so it is not
-    one of the variables to bind.
+    Of the named parameters, the first set holds those it takes only positionally, which
+    a path variable cannot fill, and the second those without a default, which one must.
+    The flag says whether it collects the rest. An unannotated parameter stays the
+    string the URL carried. The parameter taking the request is not one of the named.
     """
     parameters = signature(handler).parameters
     is_plain = isfunction(handler) or ismethod(handler)
@@ -430,10 +442,13 @@ def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], set[str], bool]:
     except Exception:
         hints = {}
 
+    # the request is passed to the first parameter positionally, whatever it is called
+    first = next(iter(parameters.values()), None)
+    request_slot = first.name if first and first.kind in POSITIONAL_KINDS else "request"
     named = {
         name: hints.get(name, str)
         for name, parameter in parameters.items()
-        if name != "request" and parameter.kind not in VARIADIC_KINDS
+        if name != request_slot and parameter.kind not in VARIADIC_KINDS
     }
     positional_only = {
         name for name in named if parameters[name].kind is Parameter.POSITIONAL_ONLY
@@ -441,7 +456,8 @@ def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], set[str], bool]:
     collects_the_rest = any(
         parameter.kind is Parameter.VAR_KEYWORD for parameter in parameters.values()
     )
-    return named, positional_only, collects_the_rest
+    required = {name for name in named if parameters[name].default is Parameter.empty}
+    return named, positional_only, required, collects_the_rest
 
 
 def _unconfigured(declared: Endpoint) -> ResponseHandler:

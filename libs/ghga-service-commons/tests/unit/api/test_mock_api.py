@@ -231,3 +231,34 @@ def test_other_bool_spellings_are_a_422(spelling: str):
         response = client.get(f"/flags/{spelling}")
     assert response.status_code == 422
     assert response.json()["exception_id"] == "malformedUrl"
+
+
+class MockedMissingVariableApi(MockedApi):
+    """A mock whose handlers take parameters their endpoints' paths do not declare."""
+
+    base_url = "http://missing.test"
+
+    @endpoint("GET", "/things")
+    def on_things(self, request: httpx2.Request, *, thing_id: int) -> httpx2.Response:
+        """Need a `thing_id` the path never supplies."""
+        return httpx2.Response(200)
+
+    @endpoint("GET", "/pages")
+    def on_pages(self, request: httpx2.Request, *, page: int = 1) -> httpx2.Response:
+        """Take a `page` the path never supplies, but that has a default."""
+        return httpx2.Response(200, text=str(page))
+
+
+def test_handler_parameter_missing_from_the_path_is_a_setup_error():
+    """Test that a required parameter no path variable fills is a setup error.
+
+    A parameter with a default is not required, so the path may leave it out.
+    """
+    mock = MockedMissingVariableApi()
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        with pytest.raises(
+            MockSetupError,
+            match=r"needs 'thing_id', which the endpoint's path does not",
+        ):
+            client.get("/things")
+        assert client.get("/pages").text == "1"
