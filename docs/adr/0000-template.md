@@ -5,7 +5,7 @@
 
 <!--
 Copy this file to NNNN-kebab-case-title.md with the next free number, fill in every {…},
-and delete these comments. The house style for ADRs is in docs/style.md.
+and delete these comments. The ADR shape is described in docs/style.md.
 -->
 
 ## Summary

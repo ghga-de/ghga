@@ -34,7 +34,7 @@ cross-ADR amendment, which is how several of these are meant to be read together
 amended" tracks decisions that moved, not wording that was clarified — an ADR edited only to
 say which branch a sentence now names keeps its previous date, and gains no `Status:` entry to
 mirror here. Write new ADRs from the [template](adr/0000-template.md), following the
-[dev team house style](style.md#architecture-decision-records).
+[writing style](style.md#architecture-decision-records).
 
 | # | Decision | Status | Supersedes / superseded by |
 |---|---|---|---|

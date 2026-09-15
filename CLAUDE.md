@@ -7,7 +7,7 @@
 @docs/conventions.md
 
 The project default output style is **GHGA Dev**
-(`.claude/output-styles/ghga-dev.md`), which keeps the dev team house style steady
+(`.claude/output-styles/ghga-dev.md`), which keeps the agent writing style steady
 across long sessions. To use another one, set `outputStyle` in
 `.claude/settings.local.json`; your user settings do not override it.
 [awesome-claude-output-styles](https://github.com/smixs/awesome-claude-output-styles)

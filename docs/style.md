@@ -1,8 +1,8 @@
-# Dev team house style
+# Writing style for coding agents
 
-How the dev team writes in this repo — docs, comments, commits and pull requests — for
-people and coding agents alike. It does not cover user-facing text, such as data portal
-content, user documentation or notification emails, which may follow a different style.
+The rules coding agents follow when they write docs, comments, commits and pull requests
+in this repo. It does not cover user-facing text, such as data portal content, user
+documentation or notification emails, which may follow a different style.
 It covers only what is settled so far. Commit messages, branch names and pull request
 titles follow [ADR-0022](adr/0022-naming-branches-prs-commits.md), summarised in the
 [conventions](conventions.md#names-branches-prs-commits).

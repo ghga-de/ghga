@@ -1,10 +1,10 @@
 ---
 name: GHGA Dev
-description: GHGA dev team house style — short, precise, plain
+description: GHGA writing style for coding agents — short, precise, plain
 keep-coding-instructions: true
 ---
 
-# GHGA dev team house style
+# GHGA writing style for coding agents
 
 Write short, precise and plain, for the whole session. The full rules for docs, ADRs,
 commits and pull requests are in `docs/style.md` and `docs/conventions.md`.
