@@ -151,3 +151,42 @@ def test_subclass_endpoint_replaces_base_endpoint_of_same_name():
         assert client.get("/status").text == "sub"
         with pytest.raises(NotMockedError):
             client.get("/health")
+
+
+class MockedPositionalApi(MockedApi):
+    """A mock whose handlers take their parameters positionally in different ways."""
+
+    base_url = "http://positional.test"
+
+    @endpoint("GET", "/positional/{thing_id}")
+    def on_positional(
+        self, request: httpx2.Request, thing_id: int, /
+    ) -> httpx2.Response:
+        """Take the path variable only positionally, which it cannot be passed as."""
+        return httpx2.Response(200, text=str(thing_id))
+
+    @endpoint("GET", "/named/{thing_id}")
+    def on_named(self, request: httpx2.Request, /, thing_id: int) -> httpx2.Response:
+        """Take only the request positionally, and the path variable by name."""
+        return httpx2.Response(200, text=str(thing_id))
+
+    # the request slot is positional whatever it is called, so this must keep working
+    on_renamed_request = endpoint(
+        "GET",
+        "/renamed/{thing_id}",
+        lambda req, /, **kw: httpx2.Response(200, text=kw["thing_id"]),
+    )
+
+
+def test_path_variables_are_never_bound_to_positional_only_parameters():
+    """Test that a path variable aimed at a positional-only parameter is a setup error.
+
+    Only a path variable that names such a parameter fails; a positional-only request
+    slot, under any name, still works.
+    """
+    mock = MockedPositionalApi()
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        with pytest.raises(MockSetupError, match=r"takes 'thing_id' positionally only"):
+            client.get("/positional/3")
+        assert client.get("/named/3").text == "3"
+        assert client.get("/renamed/3").text == "3"

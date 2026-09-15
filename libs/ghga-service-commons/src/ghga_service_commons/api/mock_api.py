@@ -355,10 +355,16 @@ def _bind_and_cast_path_vars(
     because the test wired up the wrong handler; a value that will not cast is a 422
     because that is what the real API would answer.
     """
-    named, collects_the_rest = _wanted(handler)
+    named, positional_only, collects_the_rest = _wanted(handler)
 
     bound_path_variables: dict[str, Any] = {}
     for name, value in path_variables.items():
+        if name in positional_only:
+            raise MockSetupError(
+                f"The handler answering {request.url} takes {name!r} positionally only,"
+                " but path variables are passed by name. Move it after the `/` in the"
+                " handler's signature."
+            )
         if name not in named:
             if not collects_the_rest:
                 raise MockSetupError(
@@ -393,11 +399,13 @@ def _bind_and_cast_path_vars(
     return bound_path_variables
 
 
-def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], bool]:
-    """Returns the path variables `handler` names with their types, and whether it takes the rest.
+def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], set[str], bool]:
+    """Returns the parameters `handler` names with their types, and how it takes them.
 
-    An unannotated parameter stays the string the URL carried. `request` is passed
-    positionally, so it is not one of the variables to bind.
+    The set holds the named parameters it takes only positionally, which a path variable
+    cannot fill. The flag says whether it collects the rest. An unannotated parameter
+    stays the string the URL carried. `request` is passed positionally, so it is not
+    one of the variables to bind.
     """
     parameters = signature(handler).parameters
     is_plain = isfunction(handler) or ismethod(handler)
@@ -413,10 +421,13 @@ def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], bool]:
         for name, parameter in parameters.items()
         if name != "request" and parameter.kind not in VARIADIC_KINDS
     }
+    positional_only = {
+        name for name in named if parameters[name].kind is Parameter.POSITIONAL_ONLY
+    }
     collects_the_rest = any(
         parameter.kind is Parameter.VAR_KEYWORD for parameter in parameters.values()
     )
-    return named, collects_the_rest
+    return named, positional_only, collects_the_rest
 
 
 def _unconfigured(declared: Endpoint) -> ResponseHandler:
