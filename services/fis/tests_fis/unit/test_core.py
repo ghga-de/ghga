@@ -75,7 +75,7 @@ async def test_report_handling_successful(rig: JointRig):
 
     # Insert the test file
     assert not file.can_remove
-    assert file.state not in ["interrogated", "failed"]
+    assert file.state not in ["interrogated", "failed_interrogation"]
     await rig.file_dao.insert(file)
 
     secret_id = "test-secret-id-12345"
@@ -128,7 +128,7 @@ async def test_report_handling_failure(rig: JointRig):
     # Verify file was updated and marked for removal
     updated_file2 = await rig.file_dao.get_by_id(file.id)
     assert updated_file2.interrogated is True
-    assert updated_file2.state == "failed"
+    assert updated_file2.state == "failed_interrogation"
     assert updated_file2.can_remove is True
 
     # Verify the report was persisted
@@ -278,8 +278,12 @@ async def test_process_file_upload_updates(
     )
 
 
-async def test_process_file_upload_requeue(rig: JointRig):
-    """Verify that a requeued file is reset for another round of interrogation."""
+@pytest.mark.parametrize("local_state", ["failed_interrogation", "failed"])
+async def test_process_file_upload_requeue(rig: JointRig, local_state: str):
+    """Verify that a requeued file is reset for another round of interrogation.
+
+    A local copy made before the 'failed_interrogation' state existed says 'failed'.
+    """
     file = create_file_under_interrogation(HUB1)
     await rig.interrogation_handler.process_file_upload(file=file)
 
@@ -294,7 +298,10 @@ async def test_process_file_upload_requeue(rig: JointRig):
     await rig.interrogation_handler.handle_interrogation_report(report=failure_report)
 
     failed_file = await rig.file_dao.get_by_id(file.id)
-    assert failed_file.state == "failed"
+    assert failed_file.state == "failed_interrogation"
+    if local_state == "failed":
+        failed_file.state = "failed"
+        await rig.file_dao.update(failed_file)
     assert failed_file.interrogated is True
     assert failed_file.can_remove is True
     assert await rig.interrogation_report_dao.get_by_id(file.id)
@@ -559,7 +566,7 @@ async def test_report_handling_after_requeue(rig: JointRig, passed: bool):
     # Verify the file reflects the outcome of the second interrogation
     db_file = await rig.file_dao.get_by_id(file.id)
     assert db_file.interrogated is True
-    assert db_file.state == ("interrogated" if passed else "failed")
+    assert db_file.state == ("interrogated" if passed else "failed_interrogation")
     assert db_file.can_remove is (not passed)
 
     # Verify the event for the second interrogation was published
