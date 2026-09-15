@@ -1194,7 +1194,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
 ):
     """Test which files are filtered out when validating the accession map.
 
-    Cancelled and failed files are ignored, but files in the 'failed-interrogation'
+    Cancelled and failed files are ignored, but files in the 'failed_interrogation'
     state still require a mapping, since they are expected to be resolved rather than
     dropped.
     """
@@ -1270,7 +1270,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
             decrypted_size=1000,
             encrypted_size=1100,
             part_size=100,
-            state="failed-interrogation",  # This still needs a mapping
+            state="failed_interrogation",  # This still needs a mapping
             state_updated=now_utc_ms_prec(),
         ),
     ]
@@ -1291,7 +1291,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
     )
 
     # This should succeed: the cancelled and 'failed' files are ignored, and every
-    #  remaining file (including the 'failed-interrogation' one) is mapped
+    #  remaining file (including the 'failed_interrogation' one) is mapped
     await rig.rdub_manager.store_accession_map(
         box_id=box_id,
         box_version=0,
@@ -1685,7 +1685,7 @@ async def test_archive_box_missing_accessions(
     [
         ("init", None, True),  # still uploading to the inbox
         ("inbox", "checksum9", True),  # uploaded, not interrogated yet
-        ("failed-interrogation", "checksum9", False),  # failed interrogation
+        ("failed_interrogation", "checksum9", False),  # failed interrogation
     ],
 )
 async def test_archive_box_unsettled_files(
@@ -2422,7 +2422,7 @@ async def test_requeue_single_file_upload_box_not_found(
         (
             FileBoxClientPort.FileUploadStateError(
                 "Cannot requeue FileUpload because it isn't in the"
-                + " 'failed-interrogation' state."
+                + " 'failed_interrogation' state."
             ),
             RDUBManager.FileUploadStateError,
         ),

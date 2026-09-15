@@ -150,7 +150,7 @@ async def delete_file_upload(
         404: {"description": "Upload box or file upload not found."},
         409: {
             "description": (
-                "The file isn't in the 'failed-interrogation' state, or the box has"
+                "The file isn't in the 'failed_interrogation' state, or the box has"
                 + " been archived already."
             )
         },

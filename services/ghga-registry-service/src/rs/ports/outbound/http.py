@@ -149,7 +149,7 @@ class FileBoxClientPort(ABC):
 
     class FileUploadStateError(RuntimeError):
         """Raised when the owning service refuses to requeue a FileUpload because it
-        isn't in the 'failed-interrogation' state.
+        isn't in the 'failed_interrogation' state.
         """
 
     class RequeueError(RuntimeError):
@@ -302,7 +302,7 @@ class FileBoxClientPort(ABC):
         Raises:
             FileUploadNotFoundError if the FileUpload doesn't exist.
             FUBStateError if the FileUploadBox is archived.
-            FileUploadStateError if the FileUpload isn't in the 'failed-interrogation'
+            FileUploadStateError if the FileUpload isn't in the 'failed_interrogation'
                 state.
             RequeueError if the FileUpload's uploaded object is no longer in the inbox.
             OperationError if there's any other problem with the operation.

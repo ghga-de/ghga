@@ -159,7 +159,7 @@ class RDUBManagerPort(ABC):
 
     class FileUploadStateError(RuntimeError):
         """Raised when a FileUpload cannot be requeued because it isn't in the
-        'failed-interrogation' state.
+        'failed_interrogation' state.
         """
 
     class RequeueError(RuntimeError):
@@ -406,7 +406,7 @@ class RDUBManagerPort(ABC):
             BoxNotFoundError: If the box doesn't exist.
             BoxStateError: If the box is archived.
             FileUploadNotFoundError: If the file upload doesn't exist.
-            FileUploadStateError: If the file upload isn't in the 'failed-interrogation'
+            FileUploadStateError: If the file upload isn't in the 'failed_interrogation'
                 state.
             RequeueError: If the file upload's object is no longer in the inbox.
             OperationError: If there's a problem communicating with the file box
@@ -472,7 +472,7 @@ class RDUBManagerPort(ABC):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Cancelled and 'failed' files are ignored. Files in the 'failed-interrogation'
+        **Cancelled and 'failed' files are ignored. Files in the 'failed_interrogation'
         state still require a mapping, since they are expected to be resolved rather
         than dropped.**
 

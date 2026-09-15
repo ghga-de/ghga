@@ -869,7 +869,7 @@ class FileBoxClient(FileBoxClientPort):
         Raises:
             FileUploadNotFoundError if the FileUpload doesn't exist.
             FUBStateError if the FileUploadBox is archived.
-            FileUploadStateError if the FileUpload isn't in the 'failed-interrogation'
+            FileUploadStateError if the FileUpload isn't in the 'failed_interrogation'
                 state.
             RequeueError if the FileUpload's uploaded object is no longer in the inbox.
             OperationError if there's any other problem with the operation.
@@ -918,7 +918,7 @@ class FileBoxClient(FileBoxClientPort):
             if exception_id == EXC_ID_FILE_UPLOAD_STATE_ERROR:
                 msg = (
                     f"Cannot requeue FileUpload {file_id} because it isn't in the"
-                    + " 'failed-interrogation' state."
+                    + " 'failed_interrogation' state."
                 )
                 log.warning(msg, extra=extra)
                 raise self.FileUploadStateError(msg)

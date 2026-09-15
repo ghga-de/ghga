@@ -794,7 +794,7 @@ async def test_requeue_single_file_409(
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     test_file_id = uuid4()
 
-    # Check the case where the FileUpload isn't in the 'failed-interrogation' state
+    # Check the case where the FileUpload isn't in the 'failed_interrogation' state
     file_box_api.on_requeue_single_file_upload = respond(
         409, json={"exception_id": EXC_ID_FILE_UPLOAD_STATE_ERROR}
     )
@@ -804,7 +804,7 @@ async def test_requeue_single_file_409(
         )
     assert str(state_err.value) == (
         f"Cannot requeue FileUpload {test_file_id} because it isn't in the"
-        + " 'failed-interrogation' state."
+        + " 'failed_interrogation' state."
     )
 
     # Check the case where the FileUploadBox doesn't exist, which indicates

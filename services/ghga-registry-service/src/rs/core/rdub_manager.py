@@ -387,7 +387,7 @@ class RDUBManager(RDUBManagerPort):
             (f.id for f in files if f.state in ("init", "inbox")), key=str
         )
         need_attention = sorted(
-            (f.id for f in files if f.state == "failed-interrogation"), key=str
+            (f.id for f in files if f.state == "failed_interrogation"), key=str
         )
         if incomplete_uploads or need_attention:
             error = self.BoxIncompleteOrFailedError(
@@ -1004,7 +1004,7 @@ class RDUBManager(RDUBManagerPort):
             BoxNotFoundError: If the box doesn't exist.
             BoxStateError: If the box is archived.
             FileUploadNotFoundError: If the file upload doesn't exist.
-            FileUploadStateError: If the file upload isn't in the 'failed-interrogation'
+            FileUploadStateError: If the file upload isn't in the 'failed_interrogation'
                 state.
             RequeueError: If the file upload's object is no longer in the inbox.
             OperationError: If there's a problem communicating with the file box
@@ -1215,7 +1215,7 @@ class RDUBManager(RDUBManagerPort):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Cancelled and 'failed' files are ignored. Files in the 'failed-interrogation'
+        **Cancelled and 'failed' files are ignored. Files in the 'failed_interrogation'
         state still require a mapping, since they are expected to be resolved rather
         than dropped.**
 

@@ -1722,7 +1722,7 @@ async def test_requeue_single_file_upload_error_translation(
         registry.reset_mock()
         state_error = RDUBManagerPort.FileUploadStateError(
             f"Cannot requeue FileUpload {test_file_id} because it isn't in the"
-            + " 'failed-interrogation' state."
+            + " 'failed_interrogation' state."
         )
         registry.rdub_manager.requeue_single_file_upload.side_effect = state_error
         response = await rest_client.post(url, headers=ds_auth_headers)
