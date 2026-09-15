@@ -29,13 +29,13 @@ class MockedThingsApi(MockedApi):
 
     # `endpoint` can also be called like a regular function for simpler
     #  endpoints, e.g. where access to state isn't needed or a lambda suffices
-    on_delete_thing = endpoint(
-        "DELETE", "/things/{thing_id}", lambda request, **kw: httpx2.Response(204)
-    )
+    on_delete_thing = endpoint("DELETE", "/things/{thing_id}", respond(204))
 ```
 A `{variable}` reaches the handler as the parameter of that name, cast to whatever that
 parameter is annotated with, and matches one path segment unless it names a converter,
 as in `{file_path:path}`.
+
+A test overrides what it cares about with `things.on_delete_thing = respond(500)`.
 """
 
 from __future__ import annotations
@@ -52,6 +52,7 @@ import httpx2
 from ghga_service_commons.httpyexpect.server.exceptions import HttpException
 
 __all__ = [
+    "NO_BODY",
     "PATH_CONVERTERS",
     "SUPPORTED_METHODS",
     "Endpoint",
@@ -61,8 +62,12 @@ __all__ = [
     "NotMockedError",
     "ResponseHandler",
     "endpoint",
+    "fail_to_connect",
+    "fail_with",
     "httpyexpect_body",
     "httpyexpect_response",
+    "in_sequence",
+    "respond",
 ]
 
 
@@ -90,12 +95,40 @@ _BOOLEANS = {
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
 
 
+# Tells "no body at all" apart from a JSON `null`, which httpx2 cannot.
+NO_BODY: Any = object()
+
+
 class MockSetupError(AssertionError):
     """Raised when a mock is set up wrong to distinguish from actual test failures."""
 
 
 class NotMockedError(MockSetupError):
     """Raised for a request no mock serves that the network policy does not let out."""
+
+
+class _InSequence:
+    """Answers consecutive requests with one handler each."""
+
+    def __init__(self, handlers: tuple[ResponseHandler, ...]) -> None:
+        self._remaining = list(handlers)
+
+    def __call__(
+        self, request: httpx2.Request, **path_variables: str
+    ) -> httpx2.Response | Awaitable[httpx2.Response]:
+        """Answer with the next handler in line, refusing once they are used up.
+
+        This wrapper collects the path variables as strings, so they are cast here for
+        the handler in line. A request that fails that does not use the handler up.
+        """
+        if not self._remaining:
+            raise MockSetupError(f"Unexpected additional request to {request.url}")
+        handler = self._remaining[0]
+        bound_path_variables = _bind_and_cast_path_vars(
+            handler, path_variables, request
+        )
+        self._remaining.pop(0)
+        return handler(request, **bound_path_variables)
 
 
 class Endpoint:
@@ -527,3 +560,64 @@ def endpoint(
 ) -> Endpoint:
     """Declare an endpoint of a `MockedApi`. See `Endpoint`."""
     return Endpoint(method, path, default)
+
+
+def fail_to_connect(reason: str = "All connection attempts failed") -> ResponseHandler:
+    """Build a handler that makes the API look unreachable."""
+
+    def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
+        """Refuse the connection."""
+        raise httpx2.ConnectError(reason, request=request)
+
+    return handler
+
+
+def fail_with(error: Exception) -> ResponseHandler:
+    """Build a handler that raises `error` instead of answering."""
+
+    def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
+        """Raise instead of answering."""
+        raise error.with_traceback(None)
+
+    return handler
+
+
+def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
+    """Build a handler answering consecutive requests with `handlers`, then failing."""
+    if not handlers:
+        raise MockSetupError(
+            "in_sequence() needs at least one handler. It would refuse every request."
+        )
+    return _InSequence(handlers)
+
+
+def respond(
+    status_code: int = 200,
+    *,
+    json: Any = NO_BODY,
+    content: bytes | str | None = None,
+    headers: dict[str, str] | None = None,
+) -> ResponseHandler:
+    """Build a handler that always answers the same way.
+
+    `json=None` is a JSON `null`; without `json` the body is `content`, or nothing. The
+    body and headers are copied now, so changing them later cannot change the answer.
+    """
+    # deepcopy would turn the sentinel into a new object that no longer means no body
+    body = json if json is NO_BODY else deepcopy(json)
+    headers = None if headers is None else dict(headers)
+
+    def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
+        """Answer with the stored response."""
+        if body is NO_BODY:
+            return httpx2.Response(status_code, content=content, headers=headers)
+        if body is None:
+            # httpx2 would read `json=None` as no body, so encode `null` by hand
+            return httpx2.Response(
+                status_code,
+                content=b"null",
+                headers={"content-type": "application/json", **(headers or {})},
+            )
+        return httpx2.Response(status_code, json=body, headers=headers)
+
+    return handler
