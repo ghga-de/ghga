@@ -65,6 +65,10 @@ when you look at this issue.",
     {
       groupName: "Chainguard MinIO images",
       matchDepNames: ["cgr.dev/chainguard/minio", "cgr.dev/chainguard/minio-client"],
+      // Enforces in config what values.yaml's comment says: only the digest moves,
+      // never the tag. Chainguard currently publishes no other tag for these images
+      // anyway, but this stops a future one from being proposed silently.
+      allowedVersions: "/^latest$/",
     },
   ],
 
