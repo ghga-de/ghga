@@ -409,7 +409,9 @@ class HttpFileUploadStateError(HttpCustomExceptionBase):
 
 
 class HttpRequeueError(HttpCustomExceptionBase):
-    """Thrown when a FileUpload is not in a state that allows requeuing."""
+    """Thrown when a 'failed_interrogation' FileUpload can't be requeued because its
+    object is unexpectedly missing from the inbox bucket.
+    """
 
     exception_id = "requeueError"
 
@@ -418,7 +420,7 @@ class HttpRequeueError(HttpCustomExceptionBase):
 
         file_id: UUID4
 
-    def __init__(self, *, file_id: UUID4, status_code: int = 409):
+    def __init__(self, *, file_id: UUID4, status_code: int = 500):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,

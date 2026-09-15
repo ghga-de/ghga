@@ -99,7 +99,8 @@ class UploadActivity(BaseModel):
 
 class BoxRequeueResult(BaseModel):
     """Indicates which files, if any, were requeued or skipped when
-    requesting to requeue all failed FileUploads in a FileUploadBox.
+    requesting to requeue all 'failed_interrogation' FileUploads in a FileUploadBox.
+    Skipped files are those that couldn't be requeued due to an error.
     """
 
     requeued: list[UUID4]

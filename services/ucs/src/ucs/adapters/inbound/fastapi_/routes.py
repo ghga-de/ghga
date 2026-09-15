@@ -174,8 +174,9 @@ ERROR_RESPONSES = {
     "requeueError": {
         "description": (
             "Exceptions by ID:"
-            + "\n- requeueError: The FileUpload is not in a state that allows"
-            + " requeuing."
+            + "\n- requeueError: The FileUpload is in the 'failed_interrogation' state,"
+            + " but its object is unexpectedly missing from the inbox bucket. The file"
+            + " must be uploaded again."
         ),
         "model": http_exceptions.HttpRequeueError.get_body_model(),
     },
@@ -618,11 +619,10 @@ async def complete_file_upload(  # noqa: C901
     response_description="FileUpload requeued successfully",
     responses={
         status.HTTP_404_NOT_FOUND: ERROR_RESPONSES["boxNotFound"]
-        | ERROR_RESPONSES["fileUploadNotFound"]
-        | ERROR_RESPONSES["requeueError"],
+        | ERROR_RESPONSES["fileUploadNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"]
-        | ERROR_RESPONSES["fileUploadStateError"]
-        | ERROR_RESPONSES["requeueError"],
+        | ERROR_RESPONSES["fileUploadStateError"],
+        status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["requeueError"],
     },
 )
 @TRACER.start_as_current_span("routes.requeue_file_upload")
@@ -635,10 +635,11 @@ async def requeue_file_upload(
     ],
     upload_controller: dummies.UploadControllerDummy,
 ) -> None:
-    """Set a failed FileUpload back to the 'inbox' state so it is interrogated again.
+    """Set a 'failed_interrogation' FileUpload back to 'inbox' to interrogate it again.
 
     The object is still in the inbox bucket, so no re-upload is needed.
     Returns 409 if the box is archived or the FileUpload's state precludes a requeue.
+    Returns 500 with `requeueError` if the object is missing from the inbox bucket.
     Requires a `RequeueFailedFileWorkOrder` token.
     """
     if work_order.box_id != box_id or work_order.file_id != file_id:
@@ -659,13 +660,8 @@ async def requeue_file_upload(
     except UploadControllerPort.FileUploadStateError as error:
         raise http_exceptions.HttpFileUploadStateError(file_id=file_id) from error
     except UploadControllerPort.S3ObjectMissingError as error:
-        raise http_exceptions.HttpRequeueError(
-            file_id=file_id, status_code=404
-        ) from error
-    except UploadControllerPort.RequeueError as error:
-        raise http_exceptions.HttpRequeueError(
-            file_id=file_id, status_code=409
-        ) from error
+        # The S3 adapter already logs the missing object at ERROR level
+        raise http_exceptions.HttpRequeueError(file_id=file_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -692,10 +688,10 @@ async def requeue_all_failed_file_uploads(
     ],
     upload_controller: dummies.UploadControllerDummy,
 ) -> rest_models.RequeueAllFailedResponse:
-    """Set every failed FileUpload in the box back to the 'inbox' state.
+    """Set every 'failed_interrogation' FileUpload in the box back to 'inbox'.
 
-    Files whose object has already been deleted from S3 are reported in the `skipped`
-    list instead of failing the whole operation.
+    Files that couldn't be requeued due to an error are reported in the `skipped` list
+    instead of failing the whole operation.
     Requires a `RequeueAllFailedWorkOrder` token.
     """
     if work_order.box_id != box_id:

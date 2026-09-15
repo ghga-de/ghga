@@ -1334,11 +1334,7 @@ async def test_requeue_file_auth(config: ConfigFixture, app_fixture: AppFixture)
             UploadControllerPort.S3ObjectMissingError(
                 bucket_id="test-bucket", object_id=TEST_FILE_ID
             ),
-            http_exceptions.HttpRequeueError(file_id=TEST_FILE_ID, status_code=404),
-        ),
-        (
-            UploadControllerPort.RequeueError("Cannot requeue"),
-            http_exceptions.HttpRequeueError(file_id=TEST_FILE_ID, status_code=409),
+            http_exceptions.HttpRequeueError(file_id=TEST_FILE_ID),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
@@ -1348,7 +1344,6 @@ async def test_requeue_file_auth(config: ConfigFixture, app_fixture: AppFixture)
         "FileUploadNotFound",
         "FileUploadStateError",
         "S3ObjectMissingError",
-        "RequeueError",
         "InternalError",
     ],
 )
