@@ -21,12 +21,14 @@ Model an API once, with the URL it is served at and the endpoints it answers:
 class MockedThingsApi(MockedApi):
     base_url = "http://things.test/api"
 
-    # answers out of the mock's own state, so it is bound like a method via decorator
+    # The `endpoint` decorator registers methods as endpoint functions for a
+    #  given path and method, enabling access to shared state on the MockedApi
     @endpoint("GET", "/things/{thing_id}")
     def on_get_thing(self, request, *, thing_id: UUID) -> httpx2.Response:
         return httpx2.Response(200, json=self.things[thing_id])
 
-    # answers the same way every time, so it takes no `self`
+    # `endpoint` can also be called like a regular function for simpler
+    #  endpoints, e.g. where access to state isn't needed or a lambda suffices
     on_delete_thing = endpoint(
         "DELETE", "/things/{thing_id}", lambda request, **kw: httpx2.Response(204)
     )
