@@ -1,6 +1,6 @@
 # ADR-0041 — A pre-commit check for ADRs
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-09-15
 
 ## Summary
@@ -82,6 +82,7 @@ wording of the Summary, stay with review.
 - Epics are checked only for their ADR references. If their format gets standardised,
   the same script can check it.
 - The template is checked for its headings only, since its values are placeholders.
+
 ### Alternatives
 
 - **markdownlint with a frontmatter schema.** Checks one file at a time, so supersession
