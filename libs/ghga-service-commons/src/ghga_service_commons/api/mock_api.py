@@ -151,6 +151,16 @@ class Endpoint:
         obj._handlers[self.name] = handler
         obj._configured_at[self.name] = len(obj.calls[self.name])
 
+    def __eq__(self, other: object) -> bool:
+        """Endpoints are equal when they serve the same method and path."""
+        if not isinstance(other, Endpoint):
+            return NotImplemented
+        return (self.method, self.path) == (other.method, other.path)
+
+    def __hash__(self) -> int:
+        """Hash the method and path, which `__eq__` compares, so the two agree."""
+        return hash((self.method, self.path))
+
 
 class MockedApi:
     """A mock of one HTTP API, answering the calls a service makes to it.
@@ -172,6 +182,7 @@ class MockedApi:
         self._base = httpx2.URL(self.base_url)
         self._base_path = self._base.path.rstrip("/")
         self._endpoints = _declared_endpoints(type(self))
+        self._ensure_unique_routes()
 
         self.requests: list[httpx2.Request] = []
         self.unmatched: list[httpx2.Request] = []
@@ -179,6 +190,21 @@ class MockedApi:
         self._handlers: dict[str, ResponseHandler] = {}
         self._configured_at: dict[str, int] = {}
         self.reset()
+
+    def _ensure_unique_routes(self) -> None:
+        """Reject two endpoints serving the same method and path.
+
+        Only the first of them would ever match, so the other could never be called.
+        """
+        names_by_endpoint: dict[Endpoint, str] = {}
+        for name, declared in self._endpoints.items():
+            if declared in names_by_endpoint:
+                raise MockSetupError(
+                    f"{type(self).__name__} serves {declared.method} {declared.path}"
+                    f" as both {names_by_endpoint[declared]!r} and {name!r}, so only"
+                    " the first would ever be called. Remove one of them."
+                )
+            names_by_endpoint[declared] = name
 
     def _answer(self, request: httpx2.Request, path: str) -> httpx2.Response:
         """Answer a request made by a synchronous client."""
