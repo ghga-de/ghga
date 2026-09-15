@@ -1425,7 +1425,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "ghga-service-commons"
-version = "8.1.0"
+version = "9.0.0"
 source = { editable = "libs/ghga-service-commons" }
 dependencies = [
     { name = "pydantic" },
