@@ -1123,6 +1123,7 @@ source = { editable = "services/dlq-service" }
 dependencies = [
     { name = "ghga-service-commons", extra = ["api"] },
     { name = "hexkit", extra = ["akafka", "mongodb"] },
+    { name = "prometheus-client" },
     { name = "typer" },
 ]
 
@@ -1130,6 +1131,7 @@ dependencies = [
 requires-dist = [
     { name = "ghga-service-commons", extras = ["api"], editable = "libs/ghga-service-commons" },
     { name = "hexkit", extras = ["akafka", "mongodb"], editable = "libs/hexkit" },
+    { name = "prometheus-client", specifier = ">=0.21" },
     { name = "typer", specifier = ">=0.19" },
 ]
 

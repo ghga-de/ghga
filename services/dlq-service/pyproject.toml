@@ -27,6 +27,7 @@ dependencies = [
     "typer >= 0.19",
     "ghga-service-commons[api] >= 8.0",
     "hexkit[akafka,mongodb] >= 9.0",
+    "prometheus-client >= 0.21",
 ]
 
 [project.license]
