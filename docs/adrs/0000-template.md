@@ -1,11 +1,17 @@
+---
+status: proposed
+date: YYYY-MM-DD
+# one or more from the tag list in docs/style.md
+tags: [process]
+# only when they have a value: amended, supersedes, superseded-by, related
+---
+
 # ADR-NNNN — {Title in sentence case}
 
-- **Status:** proposed
-- **Date:** {YYYY-MM-DD}
-
 <!--
-Copy this file to NNNN-kebab-case-title.md with the next free number, fill in every {…},
-and delete these comments. The ADR shape is described in docs/style.md.
+Copy this file to NNNN-kebab-case-title.md with the next free number, fill in every {…}
+and the frontmatter, and delete these comments. The ADR shape is described in
+docs/style.md.
 -->
 
 ## Summary
@@ -33,7 +39,7 @@ accepting that **{the drawbacks and costs, short and long term}**.
 
 <!--
 The situation and the forces at play, including requirements. Why a decision is needed
-now. If this ADR supersedes another, also add `Supersedes` to the header list.
+now. If this ADR supersedes another, also add `supersedes` to the frontmatter.
 -->
 
 {context}

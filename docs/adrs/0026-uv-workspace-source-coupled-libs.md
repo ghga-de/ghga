@@ -1,7 +1,11 @@
-# ADR-0026 — `uv` workspace with source-coupled internal libraries
+---
+status: accepted
+date: 2026-06-30
+tags: [build]
+related: [ADR-0027]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0026 — `uv` workspace with source-coupled internal libraries
 
 ## Summary
 

@@ -1,7 +1,10 @@
-# ADR-0014 — Angular project documentation
+---
+status: accepted
+date: 2024-09-24
+tags: [frontend, docs]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-24
+# ADR-0014 — Angular project documentation
 
 ## Summary
 

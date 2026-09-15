@@ -56,6 +56,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=1.4" },
     { name = "pytest-cov", specifier = ">=7.1" },
     { name = "pytest-httpx", specifier = ">=0.36" },
+    { name = "pyyaml", specifier = ">=6" },
     { name = "ruff", specifier = ">=0.15.13" },
     { name = "testcontainers", specifier = ">=4.14" },
     { name = "tomli-w", specifier = ">=1.2" },

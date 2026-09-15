@@ -1,7 +1,10 @@
-# ADR-0019 — Responsive design systems
+---
+status: accepted
+date: 2024-09-27
+tags: [frontend]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-27
+# ADR-0019 — Responsive design systems
 
 ## Summary
 

@@ -1,7 +1,11 @@
-# ADR-0033 — Capability markers decide what a member builds and releases
+---
+status: accepted
+date: 2026-06-30
+tags: [build, release]
+related: [ADR-0027]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0033 — Capability markers decide what a member builds and releases
 
 ## Summary
 

@@ -1,7 +1,10 @@
-# ADR-0021 — Tailwind
+---
+status: accepted
+date: 2024-10-11
+tags: [frontend]
+---
 
-- **Status:** accepted
-- **Date:** 2024-10-11
+# ADR-0021 — Tailwind
 
 ## Summary
 

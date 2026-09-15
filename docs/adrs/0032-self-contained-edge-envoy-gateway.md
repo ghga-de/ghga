@@ -1,7 +1,10 @@
-# ADR-0032 — Self-contained edge: Envoy Gateway
+---
+status: accepted
+date: 2026-06-30
+tags: [deploy, security]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0032 — Self-contained edge: Envoy Gateway
 
 ## Summary
 

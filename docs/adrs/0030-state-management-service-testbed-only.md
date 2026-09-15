@@ -1,7 +1,10 @@
-# ADR-0030 — `state-management-service` is test-bed-only
+---
+status: accepted
+date: 2026-06-30
+tags: [deploy, testing]
+---
 
-- **Status:** accepted
-- **Date:** 2026-06-30
+# ADR-0030 — `state-management-service` is test-bed-only
 
 ## Summary
 

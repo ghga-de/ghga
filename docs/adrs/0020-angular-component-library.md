@@ -1,7 +1,11 @@
-# ADR-0020 — Angular UI component library selection
+---
+status: accepted
+date: 2024-10-11
+tags: [frontend]
+related: [ADR-0019]
+---
 
-- **Status:** accepted
-- **Date:** 2024-10-11
+# ADR-0020 — Angular UI component library selection
 
 ## Summary
 

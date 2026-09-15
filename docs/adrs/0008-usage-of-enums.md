@@ -1,7 +1,10 @@
-# ADR-0008 — Naming and usage of enums
+---
+status: accepted
+date: 2024-03-08
+tags: [backend]
+---
 
-- **Status:** accepted
-- **Date:** 2024-03-08
+# ADR-0008 — Naming and usage of enums
 
 ## Summary
 

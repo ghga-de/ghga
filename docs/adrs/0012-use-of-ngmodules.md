@@ -1,7 +1,10 @@
-# ADR-0012 — Angular with standalone components instead of NgModules
+---
+status: accepted
+date: 2024-09-25
+tags: [frontend]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-25
+# ADR-0012 — Angular with standalone components instead of NgModules
 
 ## Summary
 

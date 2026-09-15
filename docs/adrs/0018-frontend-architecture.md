@@ -1,7 +1,11 @@
-# ADR-0018 — Frontend architecture and modularization
+---
+status: accepted
+date: 2024-10-01
+tags: [frontend]
+related: [ADR-0002, ADR-0012, ADR-0013]
+---
 
-- **Status:** accepted
-- **Date:** 2024-10-01
+# ADR-0018 — Frontend architecture and modularization
 
 ## Summary
 

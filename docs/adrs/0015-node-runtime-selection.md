@@ -1,7 +1,11 @@
-# ADR-0015 — Node runtime for the Angular project
+---
+status: accepted
+date: 2024-09-24
+tags: [frontend, build]
+related: [ADR-0017]
+---
 
-- **Status:** accepted
-- **Date:** 2024-09-24
+# ADR-0015 — Node runtime for the Angular project
 
 ## Summary
 

@@ -1,7 +1,11 @@
-# ADR-0023 — Schema versioning
+---
+status: accepted
+date: 2024-12-16
+tags: [backend, data]
+related: [ADR-0022]
+---
 
-- **Status:** accepted
-- **Date:** 2024-12-16
+# ADR-0023 — Schema versioning
 
 ## Summary
 
