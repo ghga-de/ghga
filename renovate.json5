@@ -26,7 +26,10 @@ docs explain what the checkboxes do.\n\nRenovate's scope in this repository is \
 deliberately narrow: only the DHI base-image tags in `docker/Dockerfile` and \
 `frontend/data-portal/Dockerfile.dhi`. The application dependency lockfiles (`uv.lock`, \
 `pnpm-lock.yaml`) are handled by the daily `security-scan.yaml` workflow instead, and \
-Dependabot alerts along with them. See `renovate.json5` for the full configuration.",
+Dependabot alerts along with them. See `renovate.json5` for the full configuration.\n\n\
+Dependencies deliberately kept behind their latest version are listed with the signal to \
+update in [docs/dependencies.md](https://github.com/ghga-de/ghga/blob/dev/docs/dependencies.md#held-back-versions); review it \
+when you look at this issue.",
 
   packageRules: [
     {
@@ -51,6 +54,12 @@ Dependabot alerts along with them. See `renovate.json5` for the full configurati
       // bumps of the 3.13 base — the CVE fixes this config exists for — still flow.
       matchDepNames: ["dhi.io/python"],
       allowedVersions: "/^3\\.13\\./",
+    },
+    {
+      // Node is held at the LTS line that CI, node:24-alpine and the devcontainer run;
+      // docs/dependencies.md says when to lift it. Patch bumps still flow.
+      matchDepNames: ["dhi.io/node"],
+      allowedVersions: "/^24\\./",
     },
   ],
 

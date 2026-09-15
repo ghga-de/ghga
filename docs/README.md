@@ -21,6 +21,8 @@ charts and runs its integration tests on Kubernetes.
   checklist.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the
   [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
+- **[dependencies.md](dependencies.md)** — how dependencies are updated, and which are
+  deliberately kept behind their latest version, why, and the signal to update.
 
 ## Epics
 - **[epics/](epics/README.md)** — technical specifications for GHGA development epics, written

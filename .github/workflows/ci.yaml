@@ -160,12 +160,12 @@ jobs:
         target: ${{ fromJSON(needs.discover.outputs.frontend) }}
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: ${{ matrix.target }}/package.json
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: 24  # held at the LTS line, see docs/dependencies.md
           cache: pnpm
           cache-dependency-path: ${{ matrix.target }}/pnpm-lock.yaml
       - working-directory: ${{ matrix.target }}

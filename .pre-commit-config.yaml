@@ -32,9 +32,11 @@ repos:
         # 379 Go-templated Helm manifests are not YAML; 4 transpiler configs use
         # !!python/object/apply tags that safe_load rejects by design; and one schemapack
         # example is a duplicate-key document on purpose (it is the parse-error fixture).
+        # pnpm 12 writes its lockfile as two documents; pnpm itself validates it.
         exclude: |
           (?x)^(
-              deploy/(charts/[^/]+|src/template|tests/(dummy|template))/templates/.*\.ya?ml
+              frontend/data-portal/pnpm-lock\.yaml
+            | deploy/(charts/[^/]+|src/template|tests/(dummy|template))/templates/.*\.ya?ml
             | tools/ghga-transpiler/(src/ghga_transpiler/configs|tests/fixtures/configs)/.*\.yaml
             | libs/schemapack/examples/datapack/invalid/simple_relations/ParsingError\.duplicate_resource_id\.datapack\.yaml
           )$
