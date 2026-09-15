@@ -1,11 +1,11 @@
 /**
- * Tests for the requeue helpers.
+ * Tests for the requeue error helpers.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
 
 import { HttpErrorResponse } from '@angular/common/http';
-import { describeRequeueError } from './requeue';
+import { describeRequeueError } from './requeue-errors';
 
 /**
  * Create an RS error response as thrown by the HttpClient.

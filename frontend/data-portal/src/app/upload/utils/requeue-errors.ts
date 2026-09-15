@@ -1,18 +1,10 @@
 /**
- * Models and helpers for requeueing file uploads that failed re-encryption
+ * Helpers for errors when requeueing file uploads that failed re-encryption
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
 
-import { HttpErrorResponse } from '@angular/common/http';
-
-/** Result of requeueing all failed file uploads of a box, as returned by the RS */
-export interface BoxRequeueResult {
-  /** IDs of the file uploads that were set back to the inbox state */
-  requeued: string[];
-  /** IDs of the file uploads that could not be requeued due to an error */
-  skipped: string[];
-}
+import { MaybeBackendError } from '@app/shared/utils/errors';
 
 /** A notification describing why requeueing a file upload failed */
 export interface RequeueErrorNotice {
@@ -31,9 +23,9 @@ export interface RequeueErrorNotice {
  * @returns the notification to show
  */
 export function describeRequeueError(err: unknown, alias: string): RequeueErrorNotice {
-  const response = err as HttpErrorResponse | undefined;
+  const response = err as MaybeBackendError | undefined;
   const status = response?.status;
-  const exceptionId: unknown = response?.error?.exception_id;
+  const exceptionId = response?.error?.exception_id;
   if (status === 409 && exceptionId === 'fileUploadStateError') {
     return {
       level: 'warning',

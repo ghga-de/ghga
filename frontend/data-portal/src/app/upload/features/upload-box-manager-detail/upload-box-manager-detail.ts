@@ -47,13 +47,13 @@ import {
   IncompleteOrFailedConflict,
   incompleteOrFailedConflictTitle,
   parseIncompleteOrFailedConflict,
-} from '@app/upload/models/box-conflict';
+} from '@app/upload/utils/box-conflict';
 import {
   FileUploadState,
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
-import { describeRequeueError } from '@app/upload/models/requeue';
+import { describeRequeueError } from '@app/upload/utils/requeue-errors';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
 import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';

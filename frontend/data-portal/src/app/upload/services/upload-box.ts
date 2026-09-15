@@ -13,6 +13,7 @@ import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
 import { firstValueFrom, fromEvent, map, Observable, takeUntil, tap } from 'rxjs';
 import { AccessionMapRequest } from '../models/accession-map';
 import {
+  BoxRequeueResult,
   BoxRetrievalResults,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
@@ -36,7 +37,6 @@ import {
   UploadGrant,
   UploadGrantBase,
 } from '../models/grant';
-import { BoxRequeueResult } from '../models/requeue';
 
 /**
  * Service for managing upload boxes.

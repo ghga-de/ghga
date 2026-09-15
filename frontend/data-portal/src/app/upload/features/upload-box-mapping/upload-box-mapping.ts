@@ -56,7 +56,7 @@ import {
   describeUnsettledFiles,
   IncompleteOrFailedConflict,
   parseIncompleteOrFailedConflict,
-} from '@app/upload/models/box-conflict';
+} from '@app/upload/utils/box-conflict';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { MappedField } from '@app/upload/models/mapping';
 import { Study } from '@app/upload/models/study';

@@ -17,7 +17,7 @@ import {
   IncompleteOrFailedConflict,
   incompleteOrFailedConflictTitle,
   parseIncompleteOrFailedConflict,
-} from '@app/upload/models/box-conflict';
+} from '@app/upload/utils/box-conflict';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UserUploadBoxDetailsDialogComponent } from '@app/upload/features/user-upload-box-details-dialog/user-upload-box-details-dialog';

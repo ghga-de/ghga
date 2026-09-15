@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { HttpErrorResponse } from '@angular/common/http';
+import { MaybeBackendError } from '@app/shared/utils/errors';
 
 /**
  * The file uploads that block locking, submitting or archiving an upload box, as
@@ -37,8 +37,8 @@ function idList(value: unknown): string[] {
 export function parseIncompleteOrFailedConflict(
   err: unknown,
 ): IncompleteOrFailedConflict | null {
-  const response = err as HttpErrorResponse | undefined;
-  const data: unknown = response?.error?.data;
+  const response = err as MaybeBackendError | undefined;
+  const data = response?.error?.data;
   if (response?.status !== 409 || !data || typeof data !== 'object') return null;
   const payload = data as { incomplete_uploads?: unknown; need_attention?: unknown };
   const conflict: IncompleteOrFailedConflict = {
