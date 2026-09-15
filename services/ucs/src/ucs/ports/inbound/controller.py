@@ -36,7 +36,7 @@ class UploadControllerPort(ABC):
 
     class IncompleteOrFailedError(UploadError):
         """Raised when trying to lock or archive a FileUploadBox for which at least
-        one FileUpload is still in progress or is in the 'failed-interrogation' state.
+        one FileUpload is still in progress or is in the 'failed_interrogation' state.
         When locking, the `force` flag overrides this error.
         """
 
@@ -285,7 +285,7 @@ class UploadControllerPort(ABC):
         Returns the file ID and storage alias as a 2-tuple.
 
         If `overwrite` is True and an active FileUpload (in 'init', 'inbox', or
-        'failed-interrogation' state) already exists for this alias, it will be
+        'failed_interrogation' state) already exists for this alias, it will be
         cancelled/aborted before the new upload is created. Uploads in 'interrogated',
         'awaiting_archival', or 'archived' state cannot be overwritten and will still
         raise `FileUploadAlreadyExists`.
@@ -351,7 +351,7 @@ class UploadControllerPort(ABC):
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `FileUploadStateError` if the FileUpload is in a cancelled, failed, or
-          failed-interrogation state.
+          failed_interrogation state.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
@@ -376,7 +376,7 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxStateError` if the box exists but is archived.
         - `FileUploadNotFound` if the FileUpload isn't found.
-        - `FileUploadStateError` if the FileUpload isn't in the `failed-interrogation` state.
+        - `FileUploadStateError` if the FileUpload isn't in the `failed_interrogation` state.
         - `S3ObjectMissingError` if the object is unexpectedly missing from the inbox
           bucket.
         """
@@ -384,7 +384,7 @@ class UploadControllerPort(ABC):
 
     @abstractmethod
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
-        """Requeue all 'failed-interrogation' FileUploads in the given FileUploadBox.
+        """Requeue all 'failed_interrogation' FileUploads in the given FileUploadBox.
 
         Returns an instance of BoxRequeueResult containing the IDs of files that
         were requeued and the ones that couldn't be requeued due to an error.
@@ -427,7 +427,7 @@ class UploadControllerPort(ABC):
         can be initiated mid-deletion.
 
         Files in 'init' state have their S3 multipart upload aborted.
-        Files in 'inbox' or 'failed-interrogation' state have their S3 object deleted.
+        Files in 'inbox' or 'failed_interrogation' state have their S3 object deleted.
         Files in other states require no S3 interaction.
         Files in 'awaiting_archival' or 'archived' state cause a FileUploadStateError
         (invariant violation: these states require the box to be archived).
@@ -510,7 +510,7 @@ class UploadControllerPort(ABC):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
         - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
-          'failed-interrogation' FileUploads.
+          'failed_interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         ...
@@ -563,7 +563,7 @@ class UploadControllerPort(ABC):
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
     ) -> None:
-        """Update a FileUpload state to 'failed-interrogation'.
+        """Update a FileUpload state to 'failed_interrogation'.
 
         The associated S3 object is not deleted.
 

@@ -523,7 +523,7 @@ async def test_get_box_uploads_retrieves_all_states(rig: JointRig):
             "archived",
             "cancelled",
             "failed",
-            "failed-interrogation",
+            "failed_interrogation",
             "inbox",
             "init",
         ]
@@ -696,7 +696,7 @@ async def test_delete_file_upload_when_box_locked(rig: JointRig):
         "archived",
         "cancelled",
         "failed",
-        "failed-interrogation",
+        "failed_interrogation",
         "inbox",
         "init",
     ],
@@ -710,7 +710,7 @@ async def test_remove_file_upload_skips_s3_for_terminal_states(
     are past the multipart upload phase (interrogated, awaiting_archival, archived) or
     already in a terminal state (cancelled, failed).
 
-    Also checks correct calls for inbox, failed-interrogation, and init states for
+    Also checks correct calls for inbox, failed_interrogation, and init states for
     completeness.
     """
     box_id = await rig.create_default_box()
@@ -737,7 +737,7 @@ async def test_remove_file_upload_skips_s3_for_terminal_states(
         box_id=box_id, file_id=file_upload.id, require_unlocked=True
     )
 
-    if state in ["inbox", "failed-interrogation", "init"]:
+    if state in ["inbox", "failed_interrogation", "init"]:
         assert s3_calls == (
             ["abort_multipart_upload"] if state == "init" else ["delete_inbox_file"]
         )
@@ -873,7 +873,7 @@ async def test_lock_box_ignores_terminal_uploads(
 ):
     """Locking with force=False must succeed when the only other uploads are in a
     terminal state (failed/cancelled). Those uploads are no longer active. Only the
-    'init' and 'failed-interrogation' states should block locking.
+    'init' and 'failed_interrogation' states should block locking.
     """
     box_id = await rig.create_default_box()
 
@@ -898,7 +898,7 @@ async def test_lock_box_force(rig: JointRig):
     await rig.file_upload_dao.insert(ongoing_upload)
 
     # Create an upload that failed interrogation
-    failed_upload = make_file_upload(state="failed-interrogation")
+    failed_upload = make_file_upload(state="failed_interrogation")
     failed_upload.box_id = box_id
     await rig.file_upload_dao.insert(failed_upload)
 
@@ -909,7 +909,7 @@ async def test_lock_box_force(rig: JointRig):
     assert (await rig.file_upload_dao.get_by_id(ongoing_upload.id)).state == "init"
     assert (
         await rig.file_upload_dao.get_by_id(failed_upload.id)
-    ).state == "failed-interrogation"
+    ).state == "failed_interrogation"
 
 
 @pytest.mark.parametrize("blocking_state", ["init", "inbox"])
@@ -936,14 +936,14 @@ async def test_archive_box_with_incomplete_upload(
 
 async def test_archive_box_with_failed_interrogation(rig: JointRig):
     """Test error handling for the scenario where the user tries to archive a
-    box for which a FileUpload in the 'failed-interrogation' state exists. Such
+    box for which a FileUpload in the 'failed_interrogation' state exists. Such
     uploads need attention and must block archiving even though they aren't still
     actively uploading.
     """
     box_id = await rig.create_default_box()
     await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
 
-    failed_upload = make_file_upload(state="failed-interrogation")
+    failed_upload = make_file_upload(state="failed_interrogation")
     failed_upload.box_id = box_id
     await rig.file_upload_dao.insert(failed_upload)
 
@@ -1038,12 +1038,12 @@ async def test_complete_file_upload_when_box_locked(rig: JointRig):
 
 
 @pytest.mark.parametrize(
-    "terminal_state", ["cancelled", "failed", "failed-interrogation"]
+    "terminal_state", ["cancelled", "failed", "failed_interrogation"]
 )
 async def test_complete_file_upload_in_terminal_state(
     rig: JointRig, terminal_state: FileUploadState
 ):
-    """Completing a cancelled, failed, or failed-interrogation FileUpload must raise
+    """Completing a cancelled, failed, or failed_interrogation FileUpload must raise
     FileUploadStateError rather than attempting the S3 operation on an already-aborted
     or invalid upload.
     """
@@ -1401,7 +1401,7 @@ async def test_process_interrogation_success_no_file_upload(rig: JointRig):
 
 async def test_process_interrogation_failure_happy(rig: JointRig):
     """Ensure that when UCS consumes an InterrogationFailure event,
-    the fields are updated and state set to `failed-interrogation`, but the S3 object
+    the fields are updated and state set to `failed_interrogation`, but the S3 object
     is not deleted.
     """
     # Initiate and complete a FileUpload
@@ -1422,7 +1422,7 @@ async def test_process_interrogation_failure_happy(rig: JointRig):
     failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
 
     # Only state, state_updated, and failure_reason should change
-    assert failed_upload.state == "failed-interrogation"
+    assert failed_upload.state == "failed_interrogation"
     assert failed_upload.failure_reason == "Checksum mismatch reported by FIS"
     assert failed_upload.state_updated > completed_upload.state_updated
     excluded = {"state", "failure_reason", "state_updated"}
@@ -1440,7 +1440,7 @@ async def test_process_interrogation_failure_happy(rig: JointRig):
 async def test_process_file_deletion_requested_with_failed_interrogation_files(
     rig: JointRig,
 ):
-    """Verify that `process_file_deletion()` doesn't skip failed-interrogation files."""
+    """Verify that `process_file_deletion()` doesn't skip failed_interrogation files."""
     box_id = await rig.create_default_box()
     file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
@@ -1766,7 +1766,7 @@ async def test_overwrite_false_still_blocks_active_upload(
 
 
 async def test_rejected_overwrite_keeps_failed_interrogation_file(rig: JointRig):
-    """Test that when an overwrite of a failed-interrogation file is rejected, the
+    """Test that when an overwrite of a failed_interrogation file is rejected, the
     existing FileUpload and its S3 object are left in place so it can still be requeued.
     """
     controller = rig.controller
@@ -1784,7 +1784,7 @@ async def test_rejected_overwrite_keeps_failed_interrogation_file(rig: JointRig)
     )
     await _complete_file_upload(file_upload=file_upload_dao.latest, rig=rig)
     failed_upload = await _fail_interrogation(file_id=file_id, rig=rig)
-    assert failed_upload.state == "failed-interrogation"
+    assert failed_upload.state == "failed_interrogation"
     object_id = str(failed_upload.object_id)
 
     # Use all of the box's in-flight quota so the overwrite gets rejected
@@ -1808,7 +1808,7 @@ async def test_rejected_overwrite_keeps_failed_interrogation_file(rig: JointRig)
         )
 
     # The failed FileUpload and its S3 object must be untouched
-    assert (await file_upload_dao.get_by_id(file_id)).state == "failed-interrogation"
+    assert (await file_upload_dao.get_by_id(file_id)).state == "failed_interrogation"
     assert await object_storage.does_object_exist(
         bucket_id=bucket_id, object_id=object_id
     )
@@ -2117,7 +2117,7 @@ async def test_handle_internal_file_registration(rig: JointRig):
         ("inbox", None, None),
         ("interrogated", None, None),
         ("failed", None, None),
-        ("failed-interrogation", None, None),
+        ("failed_interrogation", None, None),
         ("cancelled", None, None),
         # Field mismatches - state is correct but event data doesn't match
         ("awaiting_archival", "decrypted_sha256", "wrong-sha256"),
@@ -2687,7 +2687,7 @@ async def test_remove_file_upload_box_success(
 ):
     """Test that removing a box correctly handles each FileUpload state:
     - 'init': S3 multipart upload is aborted
-    - 'inbox', 'failed-interrogation': S3 object is deleted
+    - 'inbox', 'failed_interrogation': S3 object is deleted
     - 'interrogated', 'failed', 'cancelled': no S3 action
 
     The box and all its FileUploads are hard-deleted from the DB and the activity
@@ -2715,7 +2715,7 @@ async def test_remove_file_upload_box_success(
         "inbox",
         "interrogated",
         "failed",
-        "failed-interrogation",
+        "failed_interrogation",
         "cancelled",
     ]:
         file_upload = make_file_upload(state=state, storage_alias=storage_alias)
@@ -2816,7 +2816,7 @@ async def test_requeue_file_success(rig: JointRig):
     file_upload_dao = rig.file_upload_dao
     bucket_id, object_storage = rig.object_storages.for_alias("test")
 
-    # Requeue a failed-interrogation file and verify the resulting field changes
+    # Requeue a failed_interrogation file and verify the resulting field changes
     box_id, file_id, failed_file_upload = await _upload_and_fail(
         rig, "test_file", "Checksum mismatch reported by FIS"
     )
@@ -2905,7 +2905,7 @@ async def test_requeue_file_ignores_stale_interrogation_failure(rig: JointRig):
     )
     await controller.process_interrogation_failure(report=new_failure_report)
     after_new_failure = await file_upload_dao.get_by_id(file_id)
-    assert after_new_failure.state == "failed-interrogation"
+    assert after_new_failure.state == "failed_interrogation"
     assert after_new_failure.failure_reason == "Genuinely new failure"
 
     # The object stays in the inbox so the file can be requeued again
@@ -2941,7 +2941,7 @@ async def test_requeue_file_box_already_archived(rig: JointRig):
 )
 async def test_requeue_file_if_file_not_failed(rig: JointRig, state: FileUploadState):
     """Test that `requeue_single_file_upload()` raises a FileUploadStateError if
-    the FileUpload is not in the `"failed-interrogation"` state.
+    the FileUpload is not in the `"failed_interrogation"` state.
     """
     box_id = await rig.create_default_box()
     file_id = uuid4()
@@ -2993,8 +2993,8 @@ async def test_requeue_file_never_reached_inbox(rig: JointRig):
 async def _setup_box_for_requeue_box_success(rig: JointRig):
     """Build a box with 10 uploads across 5 states, for test_requeue_box_success.
 
-    2 'init', 2 'interrogated', 2 'failed' but not uploaded, 2 'failed-interrogation'
-    that already had their S3 objects deleted, and 2 'failed-interrogation' that
+    2 'init', 2 'interrogated', 2 'failed' but not uploaded, 2 'failed_interrogation'
+    that already had their S3 objects deleted, and 2 'failed_interrogation' that
     still have their data in S3.
 
     Returns (box_id, present_ids, deleted_ids, never_reached_inbox_ids,
@@ -3080,7 +3080,7 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
         await file_upload_dao.update(file_upload)
         never_reached_inbox_ids.append(file_id)
 
-    # 2 'failed-interrogation' uploads whose inbox object is unexpectedly missing.
+    # 2 'failed_interrogation' uploads whose inbox object is unexpectedly missing.
     #  Interrogation failures don't delete the object, so we do this manually
     deleted_ids: list = []
     for i in range(2):
@@ -3091,7 +3091,7 @@ async def _setup_box_for_requeue_box_success(rig: JointRig):
         )
         deleted_ids.append(file_id)
 
-    # 2 'failed-interrogation' uploads that still have their data in S3
+    # 2 'failed_interrogation' uploads that still have their data in S3
     present_ids: list = []
     pre_snapshots: dict = {}
     for i in range(2):
@@ -3107,8 +3107,8 @@ async def test_requeue_box_success(rig: JointRig):
     box that failed interrogation.
 
     Use a box with 10 uploads: 2 'init', 2 'interrogated', 2 'failed' but
-    not uploaded, 2 'failed-interrogation' that already had their S3
-    objects deleted, and 2 'failed-interrogation' that still have their
+    not uploaded, 2 'failed_interrogation' that already had their S3
+    objects deleted, and 2 'failed_interrogation' that still have their
     data in S3.
 
     Verify that the single-file criteria hold for multiple files, where
@@ -3116,7 +3116,7 @@ async def test_requeue_box_success(rig: JointRig):
 
     Verify that the return value is an instance of BoxRequeueResult, and
     that the `requeued` list contains only the file IDs of the 2 requeued files,
-    while the `skipped` list contains only the file IDs of the 2 'failed-interrogation'
+    while the `skipped` list contains only the file IDs of the 2 'failed_interrogation'
     files whose inbox object is missing.
     """
     (
@@ -3151,10 +3151,10 @@ async def test_requeue_box_success(rig: JointRig):
             bucket_id=bucket_id, object_id=str(requeued_upload.object_id)
         )
 
-    # The skipped files should be untouched, and still 'failed-interrogation'
+    # The skipped files should be untouched, and still 'failed_interrogation'
     for file_id in deleted_ids:
         skipped_upload = await file_upload_dao.get_by_id(file_id)
-        assert skipped_upload.state == "failed-interrogation"
+        assert skipped_upload.state == "failed_interrogation"
 
     # The other files (init, interrogated, never-reached-inbox) are untouched
     for file_id in never_reached_inbox_ids:
@@ -3184,7 +3184,7 @@ async def test_requeue_box_only_touches_the_requested_box(rig: JointRig):
 
     # The failed file in the other box must be untouched
     other_after = await rig.file_upload_dao.get_by_id(other_file_id)
-    assert other_after.state == "failed-interrogation"
+    assert other_after.state == "failed_interrogation"
     assert other_after.model_dump() == other_before.model_dump()
 
 

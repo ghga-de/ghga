@@ -26,7 +26,7 @@ FILE_UPLOADS_COLLECTION = "fileUploads"
 COUNTED_UPLOAD_STATES = (
     "inbox",
     "interrogated",
-    "failed-interrogation",
+    "failed_interrogation",
     "awaiting_archival",
     "archived",
 )

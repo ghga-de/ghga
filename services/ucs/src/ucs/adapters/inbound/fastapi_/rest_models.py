@@ -122,7 +122,7 @@ class FileUploadCreationRequest(BaseModel):
         default=False,
         description=(
             "If True and a FileUpload for this alias already exists in an active state"
-            " (init, inbox, or failed-interrogation), cancel and replace it."
+            " (init, inbox, or failed_interrogation), cancel and replace it."
             " Has no effect on already-failed or already-cancelled uploads."
             " Uploads in interrogated, awaiting_archival, or archived state cannot be"
             " overwritten."
@@ -251,11 +251,11 @@ class DeleteFileWorkOrder(BaseWorkOrderToken[Literal["delete"]], _FileUploadToke
 class RequeueFailedFileWorkOrder(
     BaseWorkOrderToken[Literal["requeue"]], _FileUploadToken
 ):
-    """WOT schema authorizing a Data Steward to requeue a 'failed-interrogation' FileUpload"""
+    """WOT schema authorizing a Data Steward to requeue a 'failed_interrogation' FileUpload"""
 
 
 class RequeueAllFailedWorkOrder(BaseWorkOrderToken[Literal["requeue_box"]]):
-    """WOT schema authorizing a Data Steward to requeue all 'failed-interrogation'
+    """WOT schema authorizing a Data Steward to requeue all 'failed_interrogation'
     FileUploads in a box.
     """
 
@@ -274,7 +274,7 @@ class DeleteFileBoxWorkOrder(BaseWorkOrderToken[Literal["delete_box"]]):
 
 
 class RequeueAllFailedResponse(BaseModel):
-    """Response body for a box-wide requeue of 'failed-interrogation' FileUploads."""
+    """Response body for a box-wide requeue of 'failed_interrogation' FileUploads."""
 
     requeued: list[UUID4] = Field(
         ..., description="The IDs of the FileUploads that were set back to 'inbox'"

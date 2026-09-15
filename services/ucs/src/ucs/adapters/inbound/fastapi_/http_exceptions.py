@@ -409,7 +409,7 @@ class HttpFileUploadStateError(HttpCustomExceptionBase):
 
 
 class HttpRequeueError(HttpCustomExceptionBase):
-    """Thrown when a 'failed-interrogation' FileUpload can't be requeued because its
+    """Thrown when a 'failed_interrogation' FileUpload can't be requeued because its
     object is unexpectedly missing from the inbox bucket.
     """
 

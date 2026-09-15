@@ -345,7 +345,7 @@ class UploadController(UploadControllerPort):
         Returns the file ID and storage alias as a 2-tuple.
 
         If `overwrite` is True and an active FileUpload (in 'init', 'inbox', or
-        'failed-interrogation' state) already exists for this alias, it will be
+        'failed_interrogation' state) already exists for this alias, it will be
         cancelled/aborted before the new upload is created. Uploads in 'interrogated',
         'awaiting_archival', or 'archived' state cannot be overwritten and will still
         raise `FileUploadAlreadyExists`.
@@ -379,7 +379,7 @@ class UploadController(UploadControllerPort):
         extra["bucket_id"] = bucket_id
 
         # If overwrite is requested, find any active upload for this alias that must be
-        #  removed. 'init', 'inbox', and 'failed-interrogation' uploads need explicit
+        #  removed. 'init', 'inbox', and 'failed_interrogation' uploads need explicit
         #  cancellation here. 'failed' and 'cancelled' uploads are overwritten
         #  automatically by _insert_file_upload(). Removal waits until the checks
         #  below pass so a rejected request leaves the existing upload intact.
@@ -395,7 +395,7 @@ class UploadController(UploadControllerPort):
             if existing_upload and existing_upload.state in (
                 "init",
                 "inbox",
-                "failed-interrogation",
+                "failed_interrogation",
             ):
                 upload_to_replace = existing_upload
 
@@ -725,7 +725,7 @@ class UploadController(UploadControllerPort):
             log.info(error, extra=extra)
             raise error from err
 
-        if file_upload.state in ("cancelled", "failed", "failed-interrogation"):
+        if file_upload.state in ("cancelled", "failed", "failed_interrogation"):
             error = self.FileUploadStateError(
                 file_id=file_id,
                 details=f"Cannot complete a FileUpload in the '{file_upload.state}' state.",
@@ -803,7 +803,7 @@ class UploadController(UploadControllerPort):
         - `BoxNotFoundError` if the FileUploadBox isn't found.
         - `BoxStateError` if the box exists but is archived.
         - `FileUploadNotFound` if the FileUpload isn't found.
-        - `FileUploadStateError` if the FileUpload isn't in the `failed-interrogation` state.
+        - `FileUploadStateError` if the FileUpload isn't in the `failed_interrogation` state.
         - `S3ObjectMissingError` if the object is unexpectedly missing from the inbox
           bucket.
         """
@@ -818,18 +818,18 @@ class UploadController(UploadControllerPort):
         except ResourceNotFoundError as err:
             raise self.FileUploadNotFound(file_id=file_id) from err
 
-        # Make sure the state is failed-interrogation
-        if file_upload.state != "failed-interrogation":
+        # Make sure the state is failed_interrogation
+        if file_upload.state != "failed_interrogation":
             raise self.FileUploadStateError(
                 file_id=file_upload.id,
-                details="Only 'failed-interrogation' FileUploads can be requeued.",
+                details="Only 'failed_interrogation' FileUploads can be requeued.",
             )
 
         # Requeue it
         await self._requeue_file_upload(file_upload=file_upload)
 
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
-        """Requeue all 'failed-interrogation' FileUploads in the given FileUploadBox.
+        """Requeue all 'failed_interrogation' FileUploads in the given FileUploadBox.
 
         Returns an instance of BoxRequeueResult containing the IDs of files that
         were requeued and the ones that couldn't be requeued due to an error.
@@ -845,7 +845,7 @@ class UploadController(UploadControllerPort):
 
         # Get all FileUploads for this box that failed interrogation
         potential_uploads = self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "state": "failed-interrogation"},
+            mapping={"box_id": box_id, "state": "failed_interrogation"},
             sort=["alias"],
         )
 
@@ -912,7 +912,7 @@ class UploadController(UploadControllerPort):
         # Remove the file from S3 only if it's still in the inbox state OR if
         #  it failed interrogation. After that point, the bucket ID and object
         #  ID will refer to another bucket for which UCS has no write access.
-        if file_upload.state in ("inbox", "failed-interrogation"):
+        if file_upload.state in ("inbox", "failed_interrogation"):
             await self._remove_completed_file_upload(file_upload=file_upload)
         # Abort the upload if it still hasn't completed
         elif file_upload.state == "init":
@@ -940,7 +940,7 @@ class UploadController(UploadControllerPort):
         can be initiated mid-deletion.
 
         Files in 'init' state have their S3 multipart upload aborted.
-        Files in 'inbox' or 'failed-interrogation' state have their S3 object deleted.
+        Files in 'inbox' or 'failed_interrogation' state have their S3 object deleted.
         Files in other states require no S3 interaction.
         Files in 'awaiting_archival' or 'archived' state cause a FileUploadStateError
         (invariant violation: these states require the box to be archived).
@@ -1037,7 +1037,7 @@ class UploadController(UploadControllerPort):
 
             log.debug("Deleting all FileUploads for FileUploadBox %s.", box_id)
             for file_upload in file_uploads:
-                if file_upload.state in ("inbox", "failed-interrogation"):
+                if file_upload.state in ("inbox", "failed_interrogation"):
                     await self._remove_completed_file_upload(file_upload=file_upload)
                 elif file_upload.state == "init":
                     await self._remove_incomplete_file_upload(file_upload=file_upload)
@@ -1150,7 +1150,7 @@ class UploadController(UploadControllerPort):
         """Lock an existing FileUploadBox.
 
         If `force` is set to True, the box will be locked even if there
-        are ongoing uploads or files in the 'failed-interrogation' state.
+        are ongoing uploads or files in the 'failed_interrogation' state.
 
         Raises:
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
@@ -1172,7 +1172,7 @@ class UploadController(UploadControllerPort):
         blocking_files_cursor = self._file_upload_dao.find_all(
             mapping={
                 "box_id": box_id,
-                "state": {"$in": ["init", "failed-interrogation"]},
+                "state": {"$in": ["init", "failed_interrogation"]},
             },
             sort=["alias"],
         )
@@ -1242,7 +1242,7 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is open.
         - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
-          'failed-interrogation' FileUploads.
+          'failed_interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
         """
         box = await self._get_box(
@@ -1257,11 +1257,11 @@ class UploadController(UploadControllerPort):
             log.info("Can't unlock box %s because it's still open.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
 
-        # Scan for incomplete files (including 'inbox') and failed-interrogation files
+        # Scan for incomplete files (including 'inbox') and failed_interrogation files
         blocking_files_cursor = self._file_upload_dao.find_all(
             mapping={
                 "box_id": box_id,
-                "state": {"$in": ["init", "inbox", "failed-interrogation"]},
+                "state": {"$in": ["init", "inbox", "failed_interrogation"]},
             },
             sort=["alias"],
         )
@@ -1438,7 +1438,7 @@ class UploadController(UploadControllerPort):
     async def process_interrogation_failure(
         self, *, report: InterrogationFailure
     ) -> None:
-        """Update a FileUpload state to 'failed-interrogation'.
+        """Update a FileUpload state to 'failed_interrogation'.
 
         The associated S3 object is not deleted.
 
@@ -1468,7 +1468,7 @@ class UploadController(UploadControllerPort):
                         file_id,
                     )
                     return
-                file_upload.state = "failed-interrogation"
+                file_upload.state = "failed_interrogation"
                 file_upload.state_updated = now_utc_ms_prec()
                 file_upload.failure_reason = report.reason
                 log.debug("Marking FileUpload %s as '%s'", file_id, file_upload.state)
@@ -1679,14 +1679,14 @@ class UploadController(UploadControllerPort):
         Orphaned objects are also deleted.
         """
         # Fetch all FileUploads for this storage alias that still have data in the inbox
-        #  bucket ('init', 'inbox', or 'failed-interrogation') to avoid doing a second
+        #  bucket ('init', 'inbox', or 'failed_interrogation') to avoid doing a second
         #  query later when performing object cleanup
         uploads_in_inbox_bucket = [
             upload
             async for upload in self._file_upload_dao.find_all(
                 mapping={
                     "storage_alias": storage_alias,
-                    "state": {"$in": ["init", "inbox", "failed-interrogation"]},
+                    "state": {"$in": ["init", "inbox", "failed_interrogation"]},
                 }
             )
         ]

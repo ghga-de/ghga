@@ -175,7 +175,7 @@ components:
           - failed
           - cancelled
           - interrogated
-          - failed-interrogation
+          - failed_interrogation
           - awaiting_archival
           - archived
           title: State
@@ -256,7 +256,7 @@ components:
         overwrite:
           default: false
           description: If True and a FileUpload for this alias already exists in an
-            active state (init, inbox, or failed-interrogation), cancel and replace
+            active state (init, inbox, or failed_interrogation), cancel and replace
             it. Has no effect on already-failed or already-cancelled uploads. Uploads
             in interrogated, awaiting_archival, or archived state cannot be overwritten.
           title: Overwrite
@@ -828,7 +828,7 @@ components:
       title: HttpUploadSizeMismatchErrorData
       type: object
     RequeueAllFailedResponse:
-      description: Response body for a box-wide requeue of 'failed-interrogation'
+      description: Response body for a box-wide requeue of 'failed_interrogation'
         FileUploads.
       properties:
         requeued:
@@ -1493,7 +1493,7 @@ paths:
       - UploadControllerService
   /rpc/boxes/{box_id}/requeue:
     post:
-      description: 'Set every ''failed-interrogation'' FileUpload in the box back
+      description: 'Set every ''failed_interrogation'' FileUpload in the box back
         to ''inbox''.
 
 
@@ -1548,7 +1548,7 @@ paths:
       - UploadControllerService
   /rpc/boxes/{box_id}/uploads/{file_id}/requeue:
     post:
-      description: 'Set a ''failed-interrogation'' FileUpload back to ''inbox'' to
+      description: 'Set a ''failed_interrogation'' FileUpload back to ''inbox'' to
         interrogate it again.
 
 
@@ -1609,7 +1609,7 @@ paths:
                 $ref: '#/components/schemas/HttpRequeueError'
           description: 'Exceptions by ID:
 
-            - requeueError: The FileUpload is in the ''failed-interrogation'' state,
+            - requeueError: The FileUpload is in the ''failed_interrogation'' state,
             but its object is unexpectedly missing from the inbox bucket. The file
             must be uploaded again.'
       security:

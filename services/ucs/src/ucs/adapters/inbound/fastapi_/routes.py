@@ -174,7 +174,7 @@ ERROR_RESPONSES = {
     "requeueError": {
         "description": (
             "Exceptions by ID:"
-            + "\n- requeueError: The FileUpload is in the 'failed-interrogation' state,"
+            + "\n- requeueError: The FileUpload is in the 'failed_interrogation' state,"
             + " but its object is unexpectedly missing from the inbox bucket. The file"
             + " must be uploaded again."
         ),
@@ -635,7 +635,7 @@ async def requeue_file_upload(
     ],
     upload_controller: dummies.UploadControllerDummy,
 ) -> None:
-    """Set a 'failed-interrogation' FileUpload back to 'inbox' to interrogate it again.
+    """Set a 'failed_interrogation' FileUpload back to 'inbox' to interrogate it again.
 
     The object is still in the inbox bucket, so no re-upload is needed.
     Returns 409 if the box is archived or the FileUpload's state precludes a requeue.
@@ -688,7 +688,7 @@ async def requeue_all_failed_file_uploads(
     ],
     upload_controller: dummies.UploadControllerDummy,
 ) -> rest_models.RequeueAllFailedResponse:
-    """Set every 'failed-interrogation' FileUpload in the box back to 'inbox'.
+    """Set every 'failed_interrogation' FileUpload in the box back to 'inbox'.
 
     Files that couldn't be requeued due to an error are reported in the `skipped` list
     instead of failing the whole operation.
