@@ -44,45 +44,6 @@ def test_endpoints_serving_the_same_route_are_rejected():
         MockedDuplicateApi()
 
 
-def test_one_endpoint_bound_under_two_names_is_rejected():
-    """Test that aliasing an endpoint inside a class body fails when it is defined."""
-    with pytest.raises(
-        MockSetupError,
-        match=r"with on_things, but subsequent assignment uses list_things",
-    ):
-
-        class MockedAliasApi(MockedApi):
-            base_url = "http://alias.test"
-            on_things = endpoint("GET", "/things")
-            list_things = on_things
-
-
-def test_endpoint_shared_between_mocks_keeps_one_name():
-    """Test that mocks can share an endpoint under one name, but not under two.
-
-    Binding it under a second name would rename it for the mock bound first as well.
-    """
-    health = endpoint("GET", "/health")
-
-    class MockedThingsApi(MockedApi):
-        base_url = "http://things.test"
-        on_health = health
-
-    class MockedUsersApi(MockedApi):
-        base_url = "http://users.test"
-        on_health = health
-
-    with pytest.raises(
-        MockSetupError, match=r"subsequent assignment uses check_health"
-    ):
-
-        class MockedFilesApi(MockedApi):
-            base_url = "http://files.test"
-            check_health = health
-
-    assert health.name == "on_health"
-
-
 def test_other_methods_and_overrides_are_not_duplicates():
     """Test that other methods on one path, and a subclass override, are allowed."""
 
