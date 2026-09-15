@@ -190,3 +190,44 @@ def test_path_variables_are_never_bound_to_positional_only_parameters():
             client.get("/positional/3")
         assert client.get("/named/3").text == "3"
         assert client.get("/renamed/3").text == "3"
+
+
+class MockedFlagApi(MockedApi):
+    """A mock whose handler takes a boolean path variable."""
+
+    base_url = "http://flags.test"
+
+    @endpoint("GET", "/flags/{flag}")
+    def on_flag(self, request: httpx2.Request, *, flag: bool) -> httpx2.Response:
+        """Echo the flag as the handler received it."""
+        return httpx2.Response(200, json={"flag": flag})
+
+
+@pytest.mark.parametrize(
+    ("spelling", "expected"),
+    [
+        *[
+            (spelling, True)
+            for spelling in ("true", "TRUE", "1", "yes", "on", "t", "Y")
+        ],
+        *[
+            (spelling, False)
+            for spelling in ("false", "False", "0", "no", "off", "F", "n")
+        ],
+    ],
+)
+def test_bool_path_variables_read_like_fastapi(spelling: str, expected: bool):
+    """Test that boolean path vars are parsed correctly."""
+    mock = MockedFlagApi()
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        assert client.get(f"/flags/{spelling}").json() == {"flag": expected}
+
+
+@pytest.mark.parametrize("spelling", ["maybe", "2", "1.0"])
+def test_other_bool_spellings_are_a_422(spelling: str):
+    """Test some non-boolean values and make sure they trigger a 422."""
+    mock = MockedFlagApi()
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        response = client.get(f"/flags/{spelling}")
+    assert response.status_code == 422
+    assert response.json()["exception_id"] == "malformedUrl"

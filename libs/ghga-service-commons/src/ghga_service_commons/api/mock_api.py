@@ -80,6 +80,11 @@ PATH_CONVERTERS = {
 _PARAMETER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-zA-Z_][a-zA-Z0-9_]*))?\}")
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
+# Accept the same set of boolean values as Pydantic
+_BOOLEANS = {
+    **dict.fromkeys(("1", "on", "t", "true", "y", "yes"), True),
+    **dict.fromkeys(("0", "off", "f", "false", "n", "no"), False),
+}
 
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
 
@@ -379,8 +384,9 @@ def _bind_and_cast_path_vars(
         if wanted_type is str:
             bound_path_variables[name] = value
             continue
+        convert = _boolean if wanted_type is bool else wanted_type
         try:
-            bound_path_variables[name] = wanted_type(value)
+            bound_path_variables[name] = convert(value)
         except (ValueError, TypeError) as error:
             raise HttpException(
                 status_code=422,
@@ -397,6 +403,14 @@ def _bind_and_cast_path_vars(
             ) from error
 
     return bound_path_variables
+
+
+def _boolean(value: str) -> bool:
+    """Read a URL segment as a boolean, raising `ValueError` like the other casts do."""
+    try:
+        return _BOOLEANS[value.lower()]
+    except KeyError:
+        raise ValueError(f"{value!r} is not a boolean") from None
 
 
 def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], set[str], bool]:
