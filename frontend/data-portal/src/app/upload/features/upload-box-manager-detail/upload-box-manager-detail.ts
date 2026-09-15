@@ -186,6 +186,12 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     if (this.#filesRequested) return;
     this.#filesRequested = true;
     this.#uploadBoxService.reloadFileUploadsForBox(id);
+    // Whether any file can be requeued is only known from the complete file list,
+    // which archived boxes do not need. The reload above has already dropped the
+    // cached pages, so the complete list is fetched fresh as well.
+    if (this.uploadBox()?.state !== UploadBoxState.archived) {
+      this.#uploadBoxService.loadAllFileUploadsForBox(id);
+    }
   }
 
   #loadFileUploadsEffect = effect(() => {
@@ -605,12 +611,38 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   }
 
   /**
+   * Whether any file of the box failed re-encryption and can therefore be requeued.
+   * Only the complete file list can tell, since the table shows a single page.
+   */
+  hasRequeuableFiles = computed<boolean>(() => {
+    const box = this.uploadBox();
+    if (!box || this.#uploadBoxService.allBoxFileUploads.isLoading()) return false;
+    return this.#uploadBoxService.allBoxFiles().some(
+      (file) =>
+        // Ignore a list still held for a previously visited box, if the box
+        // tells which file upload box its files belong to.
+        (!box.file_upload_box_id || file.box_id === box.file_upload_box_id) &&
+        file.state === 'failed_interrogation',
+    );
+  });
+
+  /** Tooltip explaining why the whole-box requeue is unavailable, empty if it is available. */
+  requeueAllHint = computed<string>(() => {
+    if (this.hasRequeuableFiles()) return '';
+    return this.#uploadBoxService.allBoxFileUploads.isLoading()
+      ? 'Checking the files of this upload box…'
+      : 'No file in this upload box is waiting for a retry of its re-encryption.';
+  });
+
+  /**
    * Ask for confirmation and, on approval, requeue all files of the box whose
    * re-encryption failed.
    */
   requeueAllFiles(): void {
     const box = this.uploadBox();
-    if (!box || box.state === UploadBoxState.archived) return;
+    if (!box || box.state === UploadBoxState.archived || !this.hasRequeuableFiles()) {
+      return;
+    }
     this.#confirmationService.confirm({
       title: 'Retry all failed re-encryptions?',
       message:

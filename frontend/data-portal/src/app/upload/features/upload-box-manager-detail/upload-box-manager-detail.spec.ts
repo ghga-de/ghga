@@ -628,6 +628,28 @@ describe('UploadBoxManagerDetailComponent', () => {
       );
       expect(component.isRequeueing()).toBe(false);
     });
+
+    it('should load the complete file list to find files to retry', () => {
+      expect(uploadBoxService.loadAllFileUploadsForBox).toHaveBeenCalledWith(
+        lockedBox.id,
+      );
+    });
+
+    it('should disable the whole-box retry when no file failed re-encryption', async () => {
+      uploadBoxService.setFileUploads([uploadBox1FileUploads[0]]);
+      await fixture.whenStable();
+
+      expect(
+        screen.getByRole('button', { name: /retry failed re-encryptions/i }),
+      ).toBeDisabled();
+
+      // Calling it directly must not requeue anything either.
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockDialog.open).not.toHaveBeenCalled();
+      expect(uploadBoxService.requeueAllFileUploads).not.toHaveBeenCalled();
+    });
   });
 
   describe('changing the box state', () => {

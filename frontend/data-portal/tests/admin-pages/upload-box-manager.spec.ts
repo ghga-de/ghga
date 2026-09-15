@@ -139,7 +139,14 @@ test('offers a retry for a file whose re-encryption failed', async ({
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Retry failed re-encryptions' }),
-  ).toBeVisible();
+  ).toBeEnabled();
+
+  // Jane's locked box holds no such file, so the whole-box retry is unavailable.
+  await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68002');
+  await expectTitle(page, 'Upload Box Details');
+  await expect(
+    page.getByRole('button', { name: 'Retry failed re-encryptions' }),
+  ).toBeDisabled();
 });
 
 test('paginates and sorts the file list on the server', async ({ adminPage: page }) => {
