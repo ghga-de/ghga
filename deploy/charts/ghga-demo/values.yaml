@@ -79,6 +79,10 @@ minio:
   enabled: true
   # Chainguard's minimal (distroless, no shell) images, pinned to the "latest" tag's
   # current index digest so arm64 devcontainers still resolve the right manifest.
+  # Tracking "latest" rather than a specific version tag is fine here: Chainguard's
+  # minio/minio-client images only ship security patches on that tag, not major-version
+  # bumps, so there's no upgrade to be surprised by. Renovate (renovate.json5) still only
+  # ever moves the digest, never the tag, so a bump here is always a same-version rebuild.
   image: cgr.dev/chainguard/minio:latest@sha256:21b9e1bccf46098dee2e928952bf5fd4690a5ec30a3b86a1e728f1bb0ceaed0e
   mcImage: cgr.dev/chainguard/minio-client:latest@sha256:669458caf7adc7ad0d4255b40348f16d72db87ab034a3b9cd503568ec6dab171
   rootUser: demo-access-key
