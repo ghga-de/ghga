@@ -1,64 +1,69 @@
-# ADR-0012 — Self-contained edge & ext-authz via Envoy Gateway
+# ADR-0012 — Self-contained edge: Envoy Gateway
 
-- **Status:** Accepted
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-Two priorities pull against each other: (a) integration tests should be close to production,
-and (b) `helm install ghga` must be **self-reliant** — one install on a cluster you control,
-**no external ops setup** (no pre-installed mesh, no cluster-admin sync Jobs, no operators to
-stand up first).
+## Summary
 
-Production's edge: **Istio + Gateway API** — a `Gateway`, per-service `HTTPRoute`, and an
-`AuthorizationPolicy(action: CUSTOM)` → `envoyExtAuthzHttp` extensionProvider →
-the auth-adapter `Service ext-authz:8080`. Because Istio extensionProviders have no CRD, prod
-registers them with a privileged `istio-ext-authz-sync` Job that patches the global `istio`
-MeshConfig ConfigMap. That Job is a *shared-Istio, multi-tenant* workaround — wrong to import
-into a self-contained install. Full Istio is also heavy and needs istiod-readiness/sidecar
-ordering that pushes toward a multi-step installer.
+In the context of **a self-contained install that should also test close to production**
 
-Key realisation: the **app charts emit Gateway API `HTTPRoute`s**, and the integration-critical
-component — the **auth-adapter** — is GHGA's own code speaking **Envoy `ext_authz` (HTTP)** with
-a known header contract. So the edge is the only variable.
+facing **a production Istio edge that registers ext-authz through a privileged job
+patching mesh configuration, and is heavy on a single-node cluster**
 
-## Decision
-The self-contained edge is **[Envoy Gateway](https://gateway.envoyproxy.io/)** (the Envoy
-project's Gateway API implementation): one controller, no mesh, no sidecars, no ConfigMap
-patching. It consumes the **same `HTTPRoute`s** the charts already emit, and its
-`SecurityPolicy.extAuth` runs **real Envoy ext_authz (HTTP)** against the **real auth-adapter**
-with the same headers
-(`includeRequestHeadersInCheck`/`headersToBackend` mirroring the prod
-`envoyExtAuthzHttp` contract).
+we decided for **Envoy Gateway as the self-contained edge, serving the charts' own
+`HTTPRoute`s and calling the real auth adapter through Envoy ext_authz**
 
-- The **same artifact** is `helm install ghga` *and* the per-PR testbed → "what you install ==
-  what CI tests", data-path-faithful to prod.
-- **No `istio-ext-authz-sync` Job** in the self-contained path; the ext-authz wiring is
-  declarative (`SecurityPolicy`).
-- **Full Istio** (mesh mTLS + `AuthorizationPolicy` + extensionProvider + `DestinationRule`)
-  is **not** run per-PR; it is covered by the periodic **staging** check
-  ([ADR-0006](0006-self-contained-demo-lightweight-infra.md)) and is available as an optional
-  higher-fidelity umbrella profile.
-- `helm install ghga` is **one umbrella, one command**: the Envoy Gateway subchart brings the
-  Gateway API + its CRDs; the app CRs reconcile asynchronously (no ordering blocker).
+and neglected **bundling full Istio, a hand-written Envoy configuration, and
+ingress-nginx**
 
-## Consequences
-- Both priorities met: self-reliant single install **and** real Gateway-API routing + real
-  Envoy ext_authz against the real auth-adapter.
-- Residual gap vs prod = the edge-auth **object type** (`SecurityPolicy` vs Istio
-  `AuthorizationPolicy`/extensionProvider) and absence of mesh mTLS/`DestinationRule` — all
-  declarative, validated in staging.
-- Caveats (chart-handled, not "extra ops"): Helm `crds/` are install-only → **document CRD
-  upgrades**; bare clusters have no LoadBalancer → the gateway Service **defaults to NodePort**
-  (+ `port-forward`) in the self-contained profile.
-- Inherent prerequisite: a cluster you control with permission to install cluster-scoped CRDs
-  (kind/minikube/your own) — true of demo/testbed/eval by definition.
+to achieve **a one-command install whose routing and authorization path matches
+production's**
 
-## Alternatives considered
-- **Bundle full Istio into the install (declarative meshConfig, no sync Job).** Max fidelity,
-  but heavy on kind and realistically needs a multi-step installer (CRDs → istiod → app).
-  Kept as an optional profile + the staging check.
-- **Hand-rolled standalone Envoy.** Faithful ext_authz, but its routing config diverges from
-  the charts' `HTTPRoute`, creating a parallel routing definition. Rejected.
-- **ingress-nginx + `auth_request`.** Different ext-authz semantics than Envoy ext_authz →
-  would force auth-adapter changes; demo auth would diverge from prod. Rejected.
+accepting that **the edge auth object, mesh mTLS and `DestinationRule`s differ from
+production and are tested only in staging**.
+
+## Details
+
+### Context
+
+Two priorities pull against each other: integration tests close to production, and a
+`helm install ghga` that needs no pre-installed mesh, no cluster-admin jobs and no
+operators.
+
+Production's edge is Istio with the Gateway API: a `Gateway`, an `HTTPRoute` per
+service, and an `AuthorizationPolicy` that calls the auth adapter through an ext-authz
+extension provider. Istio has no resource for that provider, so production registers it
+with the privileged `istio-ext-authz-sync` Job, which patches the shared mesh
+configuration.
+
+The app charts already emit the `HTTPRoute`s, and the auth adapter is our own code
+speaking Envoy ext_authz over HTTP. Only the edge varies.
+
+### Decision
+
+The self-contained edge is [Envoy Gateway](https://gateway.envoyproxy.io/): one
+controller, no mesh and no sidecars. It serves the `HTTPRoute`s the app charts emit, and
+its `SecurityPolicy` runs Envoy ext_authz against the real auth adapter, with the same
+header contract as production. The umbrella chart brings Envoy Gateway and the Gateway
+API resources as a dependency, so the install stays one command. Full Istio is not run
+per pull request; staging covers it.
+
+### Consequences
+
+- The self-contained install and CI both exercise real Gateway API routing and ext_authz
+  against the auth adapter.
+- What differs from production is declarative and checked in staging: `SecurityPolicy`
+  instead of `AuthorizationPolicy` and its provider, and no mesh mTLS or
+  `DestinationRule`.
+- Helm installs the CRDs but never upgrades them, so CRD upgrades are a manual step.
+- Bare clusters have no load balancer, so the gateway Service uses a NodePort.
+- The install needs a cluster where you may create cluster-scoped resources.
+
+### Alternatives
+
+- **Bundle full Istio.** Closest to production, but heavy on kind and in need of a
+  multi-step installer. An optional Istio profile of the umbrella stays an open idea.
+- **A hand-written Envoy configuration.** A second routing definition next to the
+  `HTTPRoute`s.
+- **ingress-nginx with `auth_request`.** Different ext-authz semantics would force
+  changes to the auth adapter and let demo auth diverge from production.

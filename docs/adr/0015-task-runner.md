@@ -1,29 +1,53 @@
-# ADR-0015 — Cross-language task runner: `just` now, `moon` later if needed
+# ADR-0015 — Task runner: `just`, with `moon` as a later option
 
-- **Status:** Accepted
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-The monorepo spans `uv` (Python), `pnpm` (the Angular front end), Helm, and shell tooling. We
-want one-command DX (`test`, `lint`, `build`, `image <svc>`, `up`) across languages. uv and pnpm
-already cache their own work, and an affected-target script already exists; the main value a
-heavy runner (moon/bazel) would add is cross-language caching + affected-graph — but the actual
-CI long pole is image builds + cluster spin-up, which task caching does not address.
+## Summary
 
-## Decision
-Start with **`just`** as a thin, discoverable facade over `uv`/`pnpm`/`helm` + the affected
-script. Defer adopting **`moon`** until/unless caching + first-class affected detection becomes a
-measured bottleneck. Keep affected-target detection in the existing (generalised) script,
-invoked from both CI and `just`.
+In the context of **a repository spanning `uv`, `pnpm`, Helm and shell tooling**
 
-## Consequences
-- Immediate, low-magic DX; no new build-graph concepts to learn now.
-- No cross-language remote caching yet (acceptable given the image/cluster long pole).
-- `moon` remains a clean upgrade path; the `justfile` recipes map onto moon tasks later.
+facing **the need for one set of commands across languages, while CI's slowest steps are
+image builds and cluster start-up**
 
-## Alternatives considered
-- **`moon` now.** Real polyglot caching/affected, but config + learning cost up front for
-  benefit we can't yet measure.
-- **`turbo`.** JS-centric; poor fit for a Python-majority repo.
-- **`make`.** Ubiquitous but weaker ergonomics for polyglot orchestration.
+we decided for **`just` as a thin facade over the native tools and the affected-target
+script, deferring `moon`**
+
+and neglected **`moon` now, `turbo` and `make`**
+
+to achieve **discoverable commands with no build-graph concepts to learn**
+
+accepting that **there is no task caching across languages**.
+
+## Details
+
+### Context
+
+We want the same few commands, such as test, lint, build, image and up, across
+languages. `uv` and `pnpm` already cache their own work, and an affected-target script
+already existed. What a heavier runner such as `moon` or Bazel adds is caching and an
+affected graph across languages, but CI's slowest steps are image builds and cluster
+start-up, which task caching does not speed up.
+
+### Decision
+
+`just` recipes wrap `uv`, `pnpm`, `helm` and the repo's scripts, and the docs point to
+them. Affected-target detection stays in `scripts/affected_targets.py`, called from CI
+and from `just affected`. We adopt `moon` only if caching or affected detection becomes
+a measured bottleneck.
+
+### Consequences
+
+- Commands are simple and discoverable: `just` lists them.
+- Recipes carry ordering and environment details, so people and agents should use them
+  rather than the raw commands.
+- There is no task caching across languages.
+- The recipes map onto `moon` tasks if we switch.
+
+### Alternatives
+
+- **`moon` now.** Real caching and affected detection, but configuration and learning
+  cost for a benefit we cannot yet measure.
+- **`turbo`.** Centred on JavaScript, a poor fit for a mostly Python repo.
+- **`make`.** Available everywhere, but awkward for recipes with arguments across
+  languages.
