@@ -15,6 +15,10 @@ same version number with the old content. This is the check that prevents it.
 The rule: a member whose shipped content changed must declare a version the index does
 not already serve.
 
+A README is the project page on PyPI, where every version keeps it for good, so its
+links to this repository must still resolve. The same run checks them for every changed
+member, which catches a stale link in the bump that ships it, not after the file moved.
+
 A bump does not claim the change was significant — semver's major/minor/patch carries
 that, and the author still chooses it. It asserts only that this content is not the content
 already published. Nothing is released on merge either: publishing still needs a pushed
@@ -31,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -44,6 +49,15 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # METADATA, the README its Description on the project page, the LICENSE ships in
 # .dist-info. Prefix-matched, so README.md and LICENSE.txt are both picked up.
 METADATA_FILES = ("pyproject.toml", "README", "LICENSE")
+
+# Absolute links are the only kind that work on the PyPI project page.
+REPO_LINK = re.compile(
+    r"https://github\.com/ghga-de/ghga/(?:blob|tree)/main/([^)\s#?\"'<>]+)"
+)
+
+# First line of a file left behind at an old path, so that links already published on
+# PyPI keep resolving. A stub is a target for those, never for a new release.
+MOVED_MARKER = "<!-- moved:"
 
 
 def _packaged_roots(member_path: str) -> list[str]:
@@ -143,6 +157,27 @@ def changed_members(files: list[str], base: str | None = None) -> list[str]:
     return sorted(changed)
 
 
+def readme_link_problems(member_path: str) -> list[str]:
+    """Finds links in a member's README that do not lead to a current file in this repo.
+
+    Args:
+        member_path: The member's folder relative to the repo root, e.g. `libs/hexkit`.
+
+    Returns:
+        One message per link that points to a missing path or to a moved-file stub.
+    """
+    problems = []
+    for readme in sorted((ROOT / member_path).glob("README*")):
+        for target in REPO_LINK.findall(readme.read_text()):
+            path = ROOT / target.rstrip("/")
+            name = readme.relative_to(ROOT)
+            if not path.exists():
+                problems.append(f"{name}: link to {target}, which does not exist")
+            elif path.is_file() and path.read_text().startswith(MOVED_MARKER):
+                problems.append(f"{name}: link to {target}, which has moved")
+    return problems
+
+
 def unbumped_members(member_paths: set[str]) -> list[IndexedMember]:
     """Finds which of `member_paths` still declare a version the index already serves.
 
@@ -195,6 +230,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     print("changed lane members: " + ", ".join(changed))
+    link_problems = [p for member in changed for p in readme_link_problems(member)]
+    for problem in link_problems:
+        print(f"{problem} — point it at a current file", file=sys.stderr)
     needing_a_bump = unbumped_members(set(changed))
     for member in needing_a_bump:
         print(
@@ -203,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
             " contains",
             file=sys.stderr,
         )
-    return 1 if needing_a_bump else 0
+    return 1 if needing_a_bump or link_problems else 0
 
 
 if __name__ == "__main__":

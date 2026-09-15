@@ -86,3 +86,42 @@ def test_readme_change_still_ships(repo):
     base = _git(repo, "rev-parse", "HEAD")
     (repo / README).write_text("# demo\n\nSee ADR-0033.\n")
     assert pypi_drift.changed_members([README], base) == [MEMBER]
+
+
+def _readme_with_link(repo: Path, target: str) -> None:
+    (repo / README).write_text(
+        f"See [it](https://github.com/ghga-de/ghga/blob/main/{target}).\n"
+    )
+
+
+def test_link_to_existing_file_is_fine(repo):
+    """A link that resolves in the tree is what the PyPI page needs."""
+    _readme_with_link(repo, PYPROJECT)
+    assert pypi_drift.readme_link_problems(MEMBER) == []
+
+
+def test_link_to_missing_file_is_reported(repo):
+    """A renamed or deleted target would 404 on the PyPI page."""
+    _readme_with_link(repo, "docs/adrs/9999-gone.md")
+    problems = pypi_drift.readme_link_problems(MEMBER)
+    assert len(problems) == 1
+    assert "docs/adrs/9999-gone.md" in problems[0]
+
+
+def test_link_to_moved_stub_is_reported(repo):
+    """A stub keeps old releases working, but a new release must link past it."""
+    (repo / "docs").mkdir()
+    (repo / "docs/old.md").write_text("<!-- moved: docs/new.md -->\n# Moved\n")
+    _readme_with_link(repo, "docs/old.md")
+    problems = pypi_drift.readme_link_problems(MEMBER)
+    assert len(problems) == 1
+    assert "moved" in problems[0]
+
+
+def test_link_anchor_and_trailing_slash_are_ignored(repo):
+    """Anchors and directory links resolve like the path they name."""
+    (repo / README).write_text(
+        "[a](https://github.com/ghga-de/ghga/blob/main/tools/demo/pyproject.toml#L1)"
+        " [b](https://github.com/ghga-de/ghga/tree/main/tools/demo/)\n"
+    )
+    assert pypi_drift.readme_link_problems(MEMBER) == []
