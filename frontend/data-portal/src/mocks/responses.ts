@@ -294,6 +294,19 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // Delete a single file upload from a box
   'DELETE /api/rs/upload-boxes/*/uploads/*': 204,
 
+  // Requeue a single file upload whose re-encryption failed
+  // (keep before the box-wide requeue route below, whose wildcard would match it)
+  'POST /api/rs/upload-boxes/*/uploads/*/requeue': 204,
+
+  // Requeue all file uploads of a box whose re-encryption failed. Only John's box
+  // holds such a file, so every other box has nothing to requeue.
+  // (keep the specific box before the wildcard route)
+  'POST /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/requeue': {
+    requeued: ['f5b36607a-b53f-49ed-bf3e-a5f2dbc68001'],
+    skipped: [],
+  },
+  'POST /api/rs/upload-boxes/*/requeue': { requeued: [], skipped: [] },
+
   // Delete an entire upload box (keep after the nested uploads route above)
   'DELETE /api/rs/upload-boxes/*': 204,
 

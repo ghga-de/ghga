@@ -13,6 +13,7 @@ import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
 import { firstValueFrom, fromEvent, map, Observable, takeUntil, tap } from 'rxjs';
 import { AccessionMapRequest } from '../models/accession-map';
 import {
+  BoxRequeueResult,
   BoxRetrievalResults,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
@@ -921,6 +922,62 @@ export class UploadBoxService {
           boxes: current.boxes.map((b) => (b.id === boxId ? apply(b) : b)),
         });
       }
+    }
+  }
+
+  /**
+   * Requeue a file upload whose re-encryption failed, so that it is re-encrypted
+   * again without a new upload. On success, the file is moved back to the inbox
+   * state locally, so the file list reflects the change without a re-fetch.
+   * @param boxId - the ID of the upload box the file belongs to
+   * @param file - the file upload to requeue
+   * @returns An observable that completes when the file is requeued
+   */
+  requeueFileUpload(boxId: string, file: FileUploadWithAccession): Observable<void> {
+    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads/${encodeURIComponent(file.id)}/requeue`;
+    return this.#http
+      .post<void>(url, null)
+      .pipe(tap(() => this.#requeueFileUploadsLocally([file.id])));
+  }
+
+  /**
+   * Requeue all file uploads of a box whose re-encryption failed. On success, the
+   * requeued files are moved back to the inbox state locally.
+   * @param boxId - the ID of the upload box
+   * @returns An observable emitting the IDs of the requeued and skipped file uploads
+   */
+  requeueAllFileUploads(boxId: string): Observable<BoxRequeueResult> {
+    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/requeue`;
+    return this.#http
+      .post<BoxRequeueResult>(url, null)
+      .pipe(tap(({ requeued }) => this.#requeueFileUploadsLocally(requeued)));
+  }
+
+  /**
+   * Move requeued file uploads back to the inbox state in the local file lists.
+   * The number of files stays the same, so the current page and the box
+   * statistics remain valid.
+   * @param fileIds - the IDs of the requeued file uploads
+   */
+  #requeueFileUploadsLocally(fileIds: string[]): void {
+    if (!fileIds.length) return;
+    // Later requests must not replay the cached pages from before the change.
+    this.#httpCache.delete(this.#fileUploadsBucket);
+    const requeued = new Set(fileIds);
+    const stateUpdated = new Date().toISOString();
+    const applyRequeue = (files: FileUploadWithAccession[]) =>
+      files.map((f) =>
+        requeued.has(f.id)
+          ? { ...f, state: 'inbox' as const, state_updated: stateUpdated }
+          : f,
+      );
+
+    if (!this.boxFileUploads.error()) {
+      const page = this.boxFileUploads.value();
+      this.boxFileUploads.value.set({ ...page, items: applyRequeue(page.items) });
+    }
+    if (!this.allBoxFileUploads.error()) {
+      this.allBoxFileUploads.value.set(applyRequeue(this.allBoxFileUploads.value()));
     }
   }
 

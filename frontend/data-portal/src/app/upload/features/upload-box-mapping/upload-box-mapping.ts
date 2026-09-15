@@ -59,6 +59,11 @@ import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxMappingStateService } from '@app/upload/services/upload-box-mapping-state';
 import {
+  describeUnsettledFiles,
+  IncompleteOrFailedConflict,
+  parseIncompleteOrFailedConflict,
+} from '@app/upload/utils/box-conflict';
+import {
   MappingConfirmDialogData,
   UploadBoxMappingConfirmDialogComponent,
 } from './upload-box-mapping-confirm-dialog';
@@ -754,11 +759,15 @@ export class UploadBoxMappingComponent implements OnInit {
         mapping,
       })
       .pipe(
-        catchError(() => throwError(() => 'mapping' as const)),
+        catchError(() => throwError(() => ({ phase: 'mapping' as const }))),
         concatMap(() =>
           this.#uploadBoxService
             .archiveUploadBox(box.id, box.version + 1)
-            .pipe(catchError(() => throwError(() => 'archival' as const))),
+            .pipe(
+              catchError((err: unknown) =>
+                throwError(() => ({ phase: 'archival' as const, err })),
+              ),
+            ),
         ),
       )
       .subscribe({
@@ -770,12 +779,17 @@ export class UploadBoxMappingComponent implements OnInit {
           );
           this.archived.emit();
         },
-        error: (phase: 'mapping' | 'archival') => {
+        error: (failure: { phase: 'mapping' | 'archival'; err?: unknown }) => {
           this.isSubmitting.set(false);
+          if (failure.phase === 'mapping') {
+            this.#notificationService.showError('Failed to submit the file mapping.');
+            return;
+          }
+          const conflict = parseIncompleteOrFailedConflict(failure.err);
           this.#notificationService.showError(
-            phase === 'archival'
-              ? 'Mapping was submitted but archival failed.'
-              : 'Failed to submit the file mapping.',
+            conflict
+              ? `Mapping was submitted but archival failed because ${describeUnsettledFiles(conflict)}.`
+              : 'Mapping was submitted but archival failed.',
           );
         },
       });
@@ -792,10 +806,39 @@ export class UploadBoxMappingComponent implements OnInit {
     return file.alias;
   }
 
+  /**
+   * The file uploads that would make archival fail: uploads that are still in
+   * progress or not re-encrypted yet, and uploads whose re-encryption failed.
+   * Read from the complete file list, since `boxFiles` is narrowed for mapping.
+   */
+  #unsettledFiles = computed<IncompleteOrFailedConflict>(() => {
+    const files = this.#uploadBoxService.allBoxFiles();
+    return {
+      incompleteUploads: files
+        .filter((file) => file.state === 'init' || file.state === 'inbox')
+        .map((file) => file.id),
+      needAttention: files
+        .filter((file) => file.state === 'failed_interrogation')
+        .map((file) => file.id),
+    };
+  });
+
+  /** Why the box cannot be archived yet, or null if no file upload blocks archival */
+  archiveBlockedReason = computed<string | null>(() => {
+    const unsettled = this.#unsettledFiles();
+    if (!unsettled.incompleteUploads.length && !unsettled.needAttention.length) {
+      return null;
+    }
+    return `This box cannot be archived yet because ${describeUnsettledFiles(unsettled)}.`;
+  });
+
   /** Whether the "Confirm and archive" button should be enabled */
   canConfirmAndArchive = computed<boolean>(
     () =>
-      !!this.selectedStudyId() && !!this.committedMappedField() && !this.isSubmitting(),
+      !!this.selectedStudyId() &&
+      !!this.committedMappedField() &&
+      !this.isSubmitting() &&
+      !this.archiveBlockedReason(),
   );
 
   /** Whether the Reset button should be enabled */

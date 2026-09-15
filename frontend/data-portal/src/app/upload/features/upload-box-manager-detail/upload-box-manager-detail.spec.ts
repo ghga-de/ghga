@@ -91,6 +91,10 @@ class MockUploadBoxService {
   submitFileMapping = vitest.fn(() => of(undefined));
   archiveUploadBox = vitest.fn(() => of(undefined));
   deleteFileUpload = vitest.fn(() => of(undefined));
+  requeueFileUpload = vitest.fn(() => of(undefined));
+  requeueAllFileUploads = vitest.fn(() =>
+    of({ requeued: [] as string[], skipped: [] as string[] }),
+  );
   lockUploadBox = vitest.fn(() => of(undefined));
   openUploadBox = vitest.fn(() => of(undefined));
   deleteUploadBox = vitest.fn(() => of(undefined));
@@ -191,7 +195,12 @@ class MockUserService {
 }
 
 const mockNavigationService = { back: vitest.fn() };
-const mockNotificationService = { showError: vitest.fn(), showSuccess: vitest.fn() };
+const mockNotificationService = {
+  showError: vitest.fn(),
+  showInfo: vitest.fn(),
+  showSuccess: vitest.fn(),
+  showWarning: vitest.fn(),
+};
 
 describe('UploadBoxManagerDetailComponent', () => {
   let component: UploadBoxManagerDetailComponent;
@@ -406,6 +415,12 @@ describe('UploadBoxManagerDetailComponent', () => {
       ).toBeInTheDocument();
     });
 
+    it('should allow deleting a file that failed re-encryption in an open box', () => {
+      expect(
+        component.canDeleteFile({ ...interrogatedFile, state: 'failed_interrogation' }),
+      ).toBe(true);
+    });
+
     it('should delete an init file directly without confirmation', async () => {
       component.deleteFile(initFile);
       await fixture.whenStable();
@@ -417,6 +432,16 @@ describe('UploadBoxManagerDetailComponent', () => {
       );
       expect(mockNotificationService.showSuccess).toHaveBeenCalled();
       expect(mockNotificationService.showError).not.toHaveBeenCalled();
+    });
+
+    it('should escape the file name in the deletion confirmation', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.deleteFile({ ...interrogatedFile, alias: '<i>x</i>.bam' });
+      await fixture.whenStable();
+
+      const { message } = mockDialog.open.mock.calls[0][1].data;
+      expect(message).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
     });
 
     it('should ask for confirmation and delete on confirm for a re-encrypted file', async () => {
@@ -454,6 +479,215 @@ describe('UploadBoxManagerDetailComponent', () => {
 
       expect(mockNotificationService.showError).toHaveBeenCalled();
       expect(mockNotificationService.showSuccess).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('requeueing files', () => {
+    const failedFile: FileUploadWithAccession = {
+      ...uploadBox1FileUploads[0],
+      id: 'failed-file',
+      alias: 'failed.fastq.gz',
+      state: 'failed_interrogation',
+    };
+    const lockedBox: ResearchDataUploadBox = {
+      ...TEST_BOX,
+      state: UploadBoxState.locked,
+    };
+
+    beforeEach(async () => {
+      mockDialog.open.mockReset();
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+      Object.values(mockNotificationService).forEach((fn) => fn.mockClear());
+      uploadBoxService.requeueFileUpload.mockClear();
+      uploadBoxService.requeueFileUpload.mockReturnValue(of(undefined));
+      uploadBoxService.requeueAllFileUploads.mockClear();
+
+      uploadBoxService.setUploadBoxes([lockedBox]);
+      uploadBoxService.setFileUploads([uploadBox1FileUploads[0], failedFile]);
+      fixture.componentRef.setInput('id', lockedBox.id);
+      await fixture.whenStable();
+      uploadBoxService.reloadUploadBox.mockClear();
+    });
+
+    it('should offer a retry only for files that failed re-encryption', () => {
+      expect(
+        screen.getByLabelText('Retry re-encryption of failed.fastq.gz'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText(
+          `Retry re-encryption of ${uploadBox1FileUploads[0].alias}`,
+        ),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not allow deleting a file that failed re-encryption while the box is locked', () => {
+      expect(component.canDeleteFile(failedFile)).toBe(false);
+    });
+
+    it('should requeue a file after confirmation', async () => {
+      component.requeueFile(failedFile);
+      await fixture.whenStable();
+
+      expect(mockDialog.open).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.requeueFileUpload).toHaveBeenCalledWith(
+        lockedBox.id,
+        failedFile,
+      );
+      expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+        'The file "failed.fastq.gz" has been queued for re-encryption.',
+      );
+    });
+
+    it('should escape the file name in the requeue confirmation', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.requeueFile({ ...failedFile, alias: 'a&b.bam' });
+      await fixture.whenStable();
+
+      const { message } = mockDialog.open.mock.calls[0][1].data;
+      expect(message).toContain('<strong>a&amp;b.bam</strong>');
+    });
+
+    it('should not requeue a file when the confirmation is cancelled', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.requeueFile(failedFile);
+      await fixture.whenStable();
+
+      expect(uploadBoxService.requeueFileUpload).not.toHaveBeenCalled();
+    });
+
+    it('should warn and refresh when the file is no longer waiting for a retry', async () => {
+      const conflict = Object.assign(new Error('Conflict'), {
+        status: 409,
+        error: { exception_id: 'fileUploadStateError' },
+      });
+      uploadBoxService.requeueFileUpload.mockReturnValueOnce(
+        throwError(() => conflict),
+      );
+
+      component.requeueFile(failedFile);
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showWarning).toHaveBeenCalledWith(
+        'The file "failed.fastq.gz" is no longer waiting for a retry.',
+      );
+      expect(uploadBoxService.reloadUploadBox).toHaveBeenCalledWith(lockedBox.id);
+    });
+
+    it('should ask for a new upload when the uploaded data is gone', async () => {
+      const serverError = Object.assign(new Error('Server Error'), {
+        status: 500,
+        error: { exception_id: 'requeueError' },
+      });
+      uploadBoxService.requeueFileUpload.mockReturnValueOnce(
+        throwError(() => serverError),
+      );
+
+      component.requeueFile(failedFile);
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showError).toHaveBeenCalledWith(
+        'The uploaded data of "failed.fastq.gz" is gone. Delete the file and upload it again.',
+      );
+      expect(uploadBoxService.reloadUploadBox).not.toHaveBeenCalled();
+    });
+
+    it('should report the queued files when all failed files are requeued', async () => {
+      uploadBoxService.requeueAllFileUploads.mockReturnValueOnce(
+        of({ requeued: ['failed-file'], skipped: [] }),
+      );
+
+      screen.getByRole('button', { name: /retry failed re-encryptions/i }).click();
+      await fixture.whenStable();
+
+      expect(mockDialog.open).toHaveBeenCalledTimes(1);
+      expect(uploadBoxService.requeueAllFileUploads).toHaveBeenCalledWith(lockedBox.id);
+      expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+        '1 file queued for re-encryption.',
+      );
+      expect(component.isRequeueing()).toBe(false);
+    });
+
+    it('should warn when some failed files could not be requeued', async () => {
+      uploadBoxService.requeueAllFileUploads.mockReturnValueOnce(
+        of({ requeued: ['a', 'b'], skipped: ['c'] }),
+      );
+
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showWarning).toHaveBeenCalledWith(
+        '2 files queued for re-encryption. 1 file could not be requeued.',
+      );
+    });
+
+    it('should tell when no file was waiting for a retry', async () => {
+      uploadBoxService.requeueAllFileUploads.mockReturnValueOnce(
+        of({ requeued: [], skipped: [] }),
+      );
+
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showInfo).toHaveBeenCalledWith(
+        'No files are waiting for a retry of their re-encryption.',
+      );
+    });
+
+    it('should show an error when requeueing all failed files fails', async () => {
+      uploadBoxService.requeueAllFileUploads.mockReturnValueOnce(
+        throwError(() => new Error('failed')),
+      );
+
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showError).toHaveBeenCalledWith(
+        'The failed files could not be requeued. Please try again.',
+      );
+      expect(component.isRequeueing()).toBe(false);
+      expect(uploadBoxService.reloadUploadBox).not.toHaveBeenCalled();
+    });
+
+    it('should refresh when the box was archived before all failed files were requeued', async () => {
+      const conflict = Object.assign(new Error('Conflict'), {
+        status: 409,
+        error: { exception_id: 'boxStateError' },
+      });
+      uploadBoxService.requeueAllFileUploads.mockReturnValueOnce(
+        throwError(() => conflict),
+      );
+
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockNotificationService.showError).toHaveBeenCalledWith(
+        'Files in archived upload boxes cannot be requeued.',
+      );
+      expect(uploadBoxService.reloadUploadBox).toHaveBeenCalledWith(lockedBox.id);
+    });
+
+    it('should load the complete file list to find files to retry', () => {
+      expect(uploadBoxService.loadAllFileUploadsForBox).toHaveBeenCalledWith(
+        lockedBox.id,
+      );
+    });
+
+    it('should hide the whole-box retry when no file failed re-encryption', async () => {
+      uploadBoxService.setFileUploads([uploadBox1FileUploads[0]]);
+      await fixture.whenStable();
+
+      expect(
+        screen.queryByRole('button', { name: /retry failed re-encryptions/i }),
+      ).not.toBeInTheDocument();
+
+      // Calling it directly must not requeue anything either.
+      component.requeueAllFiles();
+      await fixture.whenStable();
+
+      expect(mockDialog.open).not.toHaveBeenCalled();
+      expect(uploadBoxService.requeueAllFileUploads).not.toHaveBeenCalled();
     });
   });
 
@@ -526,6 +760,39 @@ describe('UploadBoxManagerDetailComponent', () => {
         );
         expect(mockNotificationService.showSuccess).toHaveBeenCalled();
         expect(mockNotificationService.showError).not.toHaveBeenCalled();
+      });
+
+      it('should name failed re-encryptions when they block the lock', async () => {
+        mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+        const conflict = Object.assign(new Error('Conflict'), {
+          status: 409,
+          error: {
+            exception_id: 'incompleteOrFailed',
+            data: { incomplete_uploads: [], need_attention: ['file1'] },
+          },
+        });
+        uploadBoxService.lockUploadBox.mockReturnValueOnce(throwError(() => conflict));
+
+        component.lockBox();
+        await fixture.whenStable();
+
+        expect(mockDialog.open).toHaveBeenNthCalledWith(
+          2,
+          expect.anything(),
+          expect.objectContaining({
+            data: expect.objectContaining({
+              title: 'Unresolved files detected!',
+              message:
+                'Locking failed because 1 file failed re-encryption. ' +
+                'Do you want to lock the box anyway?',
+            }),
+          }),
+        );
+        expect(uploadBoxService.lockUploadBox).toHaveBeenLastCalledWith(
+          TEST_BOX.id,
+          TEST_BOX.version,
+          true,
+        );
       });
 
       it('should show an error notification when locking fails', async () => {
