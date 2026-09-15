@@ -3,7 +3,7 @@
 
 Single source of truth for the release image matrix
 (.github/workflows/release.yaml) and the chart generator
-(deploy/src/create_charts.py). Rules per ADR-0014:
+(deploy/src/create_charts.py). Rules per ADR-0033:
 
 - services/*: image by default; opt out via [tool.ghga] release = "pypi"/"none"
   or image = false
@@ -11,7 +11,7 @@ Single source of truth for the release image matrix
 - frontend/*: image when a package.json + Dockerfile.dhi pair is present;
   the image name comes from package.json
 
-Convention (ADR-0014): an image member's console script is named exactly like
+Convention (ADR-0033): an image member's console script is named exactly like
 its distribution, so `package` doubles as the image entrypoint (the shared
 Dockerfile's `test -e` guard enforces this at build time).
 """

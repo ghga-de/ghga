@@ -1,5 +1,5 @@
 # GHGA monorepo task runner — a thin facade over uv / pnpm / helm + the affected script.
-# See docs/adr/0015-task-runner.md. Run `just` to list recipes.
+# See docs/adrs/0034-task-runner.md. Run `just` to list recipes.
 set shell := ["bash", "-uc"]
 
 # Registry root the `image`/`image-mono`/`demo-load` recipes tag/load under. Defaults to
@@ -109,14 +109,14 @@ fmt: _guard
 typecheck: _guard
     uv run python scripts/typecheck.py --all
 
-# --- Git hooks (pre-commit; ADR-0018) ---------------------------------------------------
+# --- Git hooks (pre-commit; ADR-0036) ---------------------------------------------------
 # Once per clone -- the dev container does it for you.
 # Install the git hooks into .git/hooks.
 hooks: _guard
     uv run pre-commit install
 
 # The branch guard is skipped: it exists to stop commits landing on the long-lived branches
-# (`main` and `dev`, ADR-0020), not to fail a full-tree sweep.
+# (`main` and `dev`, ADR-0038), not to fail a full-tree sweep.
 # Run every hook over the whole tree, as CI's `hygiene` job does.
 hooks-all: _guard
     SKIP=no-commit-to-branch uv run pre-commit run --all-files
@@ -197,7 +197,7 @@ test target="": _guard sync-check
     exit $exit_status
 
 # Print the workspace targets affected by the working tree vs a base ref.
-# Defaults to the integration branch, which is what feature branches are cut from (ADR-0020).
+# Defaults to the integration branch, which is what feature branches are cut from (ADR-0038).
 # On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
 affected base="origin/dev":
     uv run python scripts/affected_targets.py --base {{base}}
@@ -225,7 +225,7 @@ published-combo member python="3.12":
     members = json.loads(os.environ['MEMBERS'])
     if not members:
         sys.exit(f'error: {member} is not a PyPI-lane member — check its [tool.ghga]'
-                 ' release marker (ADR-0014)')
+                 ' release marker (ADR-0033)')
     cell = members[0]
     package, declared = cell['package'], cell['requires_python']
     if python not in cell['pythons']:
@@ -287,7 +287,7 @@ published-combo member python="3.12":
     cd "{{member}}"
     "$work/venv/bin/python" -m pytest -q --durations=10
 
-# --- Docs lane (ADR-0021) ---------------------------------------------------------------
+# --- Docs lane (ADR-0039) ---------------------------------------------------------------
 # Build the published documentation. A member is documented iff it carries a
 # `great-docs.yml`; scripts/docs_members.py is the same discovery docs-publish.yaml reads,
 # so a local build cannot drift from the deployed one.
@@ -424,7 +424,7 @@ sync-mainline *args:
 # --- Helm charts --------------------------------------------------------------------------
 # Regenerate the per-service charts from workspace metadata + member chart-values.yaml.
 # Passing no version reuses the committed one: release-charts.yaml publishes whatever is
-# committed, so regenerating must not change it (ADR-0004).
+# committed, so regenerating must not change it (ADR-0027).
 charts version="":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -454,7 +454,7 @@ demo-template:
 
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.
-# Python members use the shared Dockerfile (entrypoint = package name, ADR-0014);
+# Python members use the shared Dockerfile (entrypoint = package name, ADR-0033);
 # members shipping their own Dockerfile.dhi (frontend) build with it in-place.
 # Tags use the release registry scheme with tag 'local' so the charts' generated
 # image references resolve with only a tag override (values-local.yaml).
@@ -462,7 +462,7 @@ demo-template:
 # instead of duplicating the build commands — e.g. security-scan.yaml runs
 # `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
 # attestations needs a docker-container buildx builder, which these `docker build`
-# recipes cannot provide (see ADR-0019).
+# recipes cannot provide (see ADR-0037).
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
@@ -600,7 +600,7 @@ docker-prune:
     docker builder prune -f --keep-storage 5GB
     docker image prune -f
 
-# --- Local cluster (kind in the devcontainer's docker; ADR-0006) ---------------------
+# --- Local cluster (kind in the devcontainer's docker; ADR-0028) ---------------------
 # On hosts whose outer dockerd enforces an nftables FORWARD drop policy (e.g. a Lima
 # docker VM), the nested bridges lose egress after every VM restart — exempt them in
 # the sanctioned DOCKER-USER chain. Idempotent; skipped where iptables-nft is absent.
@@ -676,7 +676,7 @@ down:
     # the images and the next `just up` reloads them without rebuilding
     echo "cluster deleted — the node's images went with it; \`just up\` reloads them (no rebuild)"
 
-# --- Integration testbed (BDD suite in testbed/; ADR-0006) -------------------------------
+# --- Integration testbed (BDD suite in testbed/; ADR-0028) -------------------------------
 # Generate the metldata artifact model from the testbed's example metadata model
 # (DSKit, ADR-aligned: derived artifact, not committed) as a values overlay.
 testbed-artifacts:

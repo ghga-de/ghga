@@ -1,4 +1,4 @@
-# Release — two lanes (revised ADR-0004):
+# Release — two lanes (revised ADR-0027):
 #   ghga/X.Y.Z  -> PLATFORM lane: build ALL images from the tagged commit, stamped with the
 #                  platform version (lockstep; libs embedded from source, never PyPI).
 #   name/x.y.z  -> PYPI lane, TARGETED: that member alone. pypi-publish.yaml refuses if a
@@ -31,7 +31,7 @@
 # That input exists only on workflow_dispatch, so **a tag push is build-only**: pushing
 # `ghga/17.0.0` verifies the commit, builds every image and packages every chart, and
 # publishes none of them. Publishing a platform release is a deliberate dispatch against
-# that tag with `push` ticked (ADR-0004: Docker Hub, dispatch only, no tag triggers yet).
+# that tag with `push` ticked (ADR-0027: Docker Hub, dispatch only, no tag triggers yet).
 # The pypi lane is unaffected — it does not consult `push` at all.
 #
 name: release
@@ -136,14 +136,14 @@ jobs:
           echo "lane=$lane"       >> "$GITHUB_OUTPUT"
           echo "mode=$mode"       >> "$GITHUB_OUTPUT"
 
-      # ADR-0004: the release VERIFIES the integrated HEAD, it does not re-test it. CI
+      # ADR-0027: the release VERIFIES the integrated HEAD, it does not re-test it. CI
       # already proved this commit good; the tag only snapshots that. So the two things
       # worth asserting are that the evidence exists and that it is about a commit anybody
       # reviewed — without them, a tag on an unmerged branch, or on a commit whose CI never
       # ran or went red, would build images and publish wheels exactly as a good one does.
       #
       # The branch half is per-lane, which is why this runs AFTER `route` rather than ahead
-      # of it (ADR-0020): `main` is the latest release and `dev` is the integration branch,
+      # of it (ADR-0038): `main` is the latest release and `dev` is the integration branch,
       # and a release candidate — a build of integrated-but-unreleased work — is cut on
       # `dev`. Checked before routing, this step could only ask about whichever single
       # branch was hardcoded, and would reject every rc. It still runs before any repo code
@@ -189,7 +189,7 @@ jobs:
           git fetch --no-tags --quiet origin "+refs/heads/$branch:refs/remotes/origin/$branch"
 
           # FIRST-PARENT membership, not reachability. `git merge-base --is-ancestor` asks
-          # "can this commit be reached from the branch tip?", and this ADR-0020 flow makes
+          # "can this commit be reached from the branch tip?", and this ADR-0038 flow makes
           # both branches reach into each other by design: the release merge puts every
           # `dev` commit into `main`'s history, and merging a hotfix back into `dev` puts
           # every `main`-only commit into `dev`'s. So reachability stops distinguishing the
@@ -199,7 +199,7 @@ jobs:
           #     `main` by an earlier release merge, rather than only on the release merge
           #     that published it.
           #   - `ghga/17.0.2-rc.1` would be accepted on a hotfix commit once that hotfix
-          #     had been merged back into `dev` — the exact tag ADR-0020 decided to reject.
+          #     had been merged back into `dev` — the exact tag ADR-0038 decided to reject.
           # The first-parent chain is the set of commits that were ever this branch's tip,
           # which is what "cut from `main`" and "cut from `dev`" actually mean. It still
           # accepts the release merge commit and a hotfix merge commit, since a merge sits
@@ -259,7 +259,7 @@ jobs:
           echo "${GITHUB_SHA::12} is on $branch and its CI is green"
 
       # Platform image set = services/* + frontend defaults, plus tools that opt in
-      # via [tool.ghga] (ADR-0014 directory defaults + explicit markers). Convention:
+      # via [tool.ghga] (ADR-0033 directory defaults + explicit markers). Convention:
       # every image member's console script is named exactly like its distribution,
       # so the package name doubles as the ENTRYPOINT (the Dockerfile's `test -e`
       # guard fails the build on any violation).
@@ -273,7 +273,7 @@ jobs:
       - id: images
         run: echo "images=$(python3 scripts/image_members.py)" >> "$GITHUB_OUTPUT"
 
-      # ADR-0004: the tag must name a lane member and match its version at HEAD. What gets
+      # ADR-0027: the tag must name a lane member and match its version at HEAD. What gets
       # uploaded is pypi-publish.yaml's decision; this only stops a tag announcing a
       # release nobody made. It is also what rejects a tag that routing sent to this lane
       # but that names nothing at all (`clown/1.0.0`).
@@ -534,7 +534,7 @@ jobs:
       #
       # ghga-common's own dependency (bitnami's `common` library) is already vendored
       # (deploy/charts/ghga-common/charts/common-2.22.0.tgz + Chart.lock are committed).
-      # Every app chart declares ghga-common as a `file://` dependency (ADR-0011); `helm
+      # Every app chart declares ghga-common as a `file://` dependency (ADR-0031); `helm
       # dep up` per chart would walk into ghga-common's own bitnami dependency and
       # re-validate it against the remote bitnami index every single time — redundant
       # network I/O for a dependency that's already pinned and doesn't change between
@@ -619,7 +619,7 @@ jobs:
             echo "$name $version" >> dist/to-push.txt
           done < dist/manifest.txt
       # Docker Hub repos are exactly namespace/repo (no third path segment), and a
-      # chart's name always equals its image's package name (ADR-0014) — pushing under
+      # chart's name always equals its image's package name (ADR-0033) — pushing under
       # the bare name would collide tag-for-tag with the container image of the same
       # name and version in the same `ghga` namespace. helm derives the OCI push target
       # from the packaged Chart.yaml's `name:` field, so re-pack (from the already

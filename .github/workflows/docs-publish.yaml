@@ -1,9 +1,9 @@
-# Docs lane (ADR-0021) — build every documented member and deploy them as ONE GitHub Pages
+# Docs lane (ADR-0039) — build every documented member and deploy them as ONE GitHub Pages
 # site, each under its own subpath: ghga-de.github.io/ghga/<package>/.
 #
 # A member is documented iff it carries a `great-docs.yml`; scripts/docs_members.py is the
 # discovery, and the justfile's `docs` recipe is the build, so what runs here is what runs
-# locally (ADR-0015).
+# locally (ADR-0034).
 #
 # Trigger: pushes to `main`, plus manual dispatch. The site tracks the latest release state,
 # not work-in-progress — the integration branch is deliberately not published, so unreleased

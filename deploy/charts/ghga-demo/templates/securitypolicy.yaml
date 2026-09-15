@@ -1,5 +1,5 @@
 {{- /*
-Real Envoy ext_authz against the real auth adapter (ADR-0012). One SecurityPolicy
+Real Envoy ext_authz against the real auth adapter (ADR-0032). One SecurityPolicy
 per protected HTTPRoute: Envoy Gateway scopes ext-authz by policy attachment, where
 prod's Istio AuthorizationPolicy scopes by path (/api/*) — same effective surface,
 different object type (the accepted residual gap, validated in staging).

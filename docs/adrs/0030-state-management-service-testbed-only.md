@@ -1,4 +1,4 @@
-# ADR-0008 — `state-management-service` is test-bed-only
+# ADR-0030 — `state-management-service` is test-bed-only
 
 - **Status:** accepted
 - **Date:** 2026-06-30

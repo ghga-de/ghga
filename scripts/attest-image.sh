@@ -2,7 +2,7 @@
 # Publish buildx's SBOM + SLSA provenance as signed cosign attestations.
 #
 # buildx attaches both as unsigned in-toto statements inside the OCI index, where cosign
-# does not look — so without this step nothing downstream can verify them. See ADR-0019.
+# does not look — so without this step nothing downstream can verify them. See ADR-0037.
 #
 # Usage:
 #   scripts/attest-image.sh <registry>/<name>@sha256:<digest>
@@ -14,7 +14,7 @@
 #
 # ---------------------------------------------------------------------------------------
 # Where the constants below come from. Each finding is version-dependent, so this is the
-# file to re-check them in when cosign or buildx moves; ADR-0019 records the decision, not
+# file to re-check them in when cosign or buildx moves; ADR-0037 records the decision, not
 # this. All of it was established against a throwaway image pushed to a local registry:
 #
 #   docker run -d -p 5000:5000 registry:2

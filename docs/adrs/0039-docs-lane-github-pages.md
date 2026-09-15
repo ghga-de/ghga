@@ -1,4 +1,4 @@
-# ADR-0021 — One documentation site for the monorepo
+# ADR-0039 — One documentation site for the monorepo
 
 - **Status:** accepted
 - **Date:** 2026-09-09
@@ -33,7 +33,7 @@ repository disables its Actions while GitHub keeps serving the Pages site as it 
 The URL is also in the immutable PyPI metadata of `hexkit` 9.0.0 and 9.0.1.
 
 The import stripped the build hooks the docs need
-([ADR-0001](0001-consolidate-into-monorepo.md)), so they did not build in the monorepo.
+([ADR-0025](0025-consolidate-into-monorepo.md)), so they did not build in the monorepo.
 
 ### Decision
 
@@ -42,11 +42,11 @@ The import stripped the build hooks the docs need
   repository.
 - **A member is documented if it has a `great-docs.yml`.** The build needs that file
   anyway, so a `[tool.ghga]` marker
-  ([ADR-0014](0014-capability-markers-and-placement.md)) would be a second source that
+  ([ADR-0033](0033-capability-markers-and-placement.md)) would be a second source that
   could disagree. `scripts/docs_members.py` finds the members for both the workflow and
   `just docs`.
 - **The site tracks `main`**, the released state
-  ([ADR-0020](0020-branching-strategy.md)). Building from `dev` would put unreleased API
+  ([ADR-0038](0038-branching-strategy.md)). Building from `dev` would put unreleased API
   behind PyPI's documentation link.
 - **The toolchain has its own `.venv-docs`**, from a `docs` dependency group in the root
   `uv.lock`. Quarto comes from a devcontainer feature and a CI setup step.

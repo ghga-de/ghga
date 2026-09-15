@@ -1,4 +1,4 @@
-# ADR-0012 — Self-contained edge: Envoy Gateway
+# ADR-0032 — Self-contained edge: Envoy Gateway
 
 - **Status:** accepted
 - **Date:** 2026-06-30

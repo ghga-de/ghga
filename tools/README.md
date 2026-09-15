@@ -7,9 +7,9 @@ Planned members (after import): `ghga-connector`, `ghga-datasteward-kit`, `ghga-
 
 - `ghga-connector` and `ghga-datasteward-kit` are **external** CLIs (published to PyPI) **and**
   integration-test actors — they exercise the deployed system in the test bed
-  ([ADR-0001](../docs/adr/0001-consolidate-into-monorepo.md)).
+  ([ADR-0025](../docs/adrs/0025-consolidate-into-monorepo.md)).
 - Some tools are also deployable/services (e.g. `ghga-transpiler`, `ghga-validator`); capability
   is declared with `[tool.ghga]` markers, not by folder
-  ([ADR-0014](../docs/adr/0014-capability-markers-and-placement.md)).
+  ([ADR-0033](../docs/adrs/0033-capability-markers-and-placement.md)).
 - `auth-km-jobs` generates/rotates JWK + Crypt4GH keys; in prod it is the rotation CronJob
-  writing to Vault ([ADR-0016](../docs/adr/0016-secrets-and-tls.md)).
+  writing to Vault ([ADR-0035](../docs/adrs/0035-secrets-and-tls.md)).

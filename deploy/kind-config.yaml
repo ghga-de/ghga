@@ -1,4 +1,4 @@
-# Local/CI integration cluster (ADR-0006: kind runs in the
+# Local/CI integration cluster (ADR-0028: kind runs in the
 # devcontainer's inner docker daemon; ports are published through the nested
 # chain and reach the browser on the host computer because the devcontainer
 # shares the host network namespace — see .devcontainer/devcontainer.json for

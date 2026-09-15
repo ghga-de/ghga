@@ -1,4 +1,4 @@
-# ADR-0002 — `uv` workspace with source-coupled internal libraries
+# ADR-0026 — `uv` workspace with source-coupled internal libraries
 
 - **Status:** accepted
 - **Date:** 2026-06-30
@@ -43,7 +43,7 @@ libraries supported a broad Python range, while services target 3.13.
 - The workspace baseline is **Python 3.13**.
 - The published libraries and CLIs share one `requires-python` floor, currently 3.11,
   and are tested standalone across 3.11 to 3.14 against dependencies resolved from PyPI
-  ([ADR-0004](0004-versioning-and-release-by-tag.md)).
+  ([ADR-0027](0027-versioning-and-release-by-tag.md)).
 
 ### Consequences
 

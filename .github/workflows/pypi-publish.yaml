@@ -1,4 +1,4 @@
-# PyPI lane — publish the libraries and public CLI tools (ADR-0004).
+# PyPI lane — publish the libraries and public CLI tools (ADR-0027).
 #
 # A version bump is the release trigger: every lane member declaring a version above the
 # latest one on PyPI is a candidate. The plan is re-derived from PyPI on every run, so a

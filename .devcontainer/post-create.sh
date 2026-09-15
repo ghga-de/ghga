@@ -31,7 +31,7 @@ if [ "$(kind --version 2> /dev/null || true)" != "kind version ${KIND_VERSION}" 
   chmod +x ~/.local/bin/kind
 fi
 
-# gh-stack links stacked pull requests on GitHub (ADR-0022). Extensions live under
+# gh-stack links stacked pull requests on GitHub (ADR-0038). Extensions live under
 # ~/.local/share/gh, which is not persisted, so a rebuild needs it again. A warning, not a
 # failure: installing calls the GitHub API, which a fresh or offline machine may not reach.
 GH_STACK_VERSION=v0.1.1
@@ -48,6 +48,6 @@ uv tool install --reinstall git-filter-repo
 uv sync --all-packages --all-extras
 (cd frontend/data-portal && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium)
 
-# Git hooks (ADR-0018). Idempotent, and after the sync above because the hooks run ruff,
+# Git hooks (ADR-0036). Idempotent, and after the sync above because the hooks run ruff,
 # mypy, prettier and eslint out of the two workspaces rather than their own environments.
 uv run pre-commit install

@@ -69,6 +69,6 @@ hexkit = { workspace = true }
 
 [tool.ghga]
 # Source-coupled library for the workspace, but also deployed as a service
-# (submission/artifact APIs) — opt in to the platform image matrix (ADR-0014).
+# (submission/artifact APIs) — opt in to the platform image matrix (ADR-0033).
 release = "platform"
 image = true

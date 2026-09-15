@@ -63,7 +63,7 @@ source = [
     "**/lib/python*/site-packages",
 ]
 
-# Capability markers (ADR-0014): public CLI, no internal deps -> PyPI release lane.
+# Capability markers (ADR-0033): public CLI, no internal deps -> PyPI release lane.
 [tool.ghga]
 release = "pypi"
 pypi = true

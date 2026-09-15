@@ -1,7 +1,7 @@
 {{- /*
-Vault in dev mode (ADR-0006): a FUNCTIONAL backend for ekss (crypt4gh secret
+Vault in dev mode (ADR-0028): a FUNCTIONAL backend for ekss (crypt4gh secret
 storage via the KV API) — not used for secret injection; demo secrets are plain
-K8s Secrets (ADR-0016). Dev mode keeps everything in memory with a fixed root
+K8s Secrets (ADR-0035). Dev mode keeps everything in memory with a fixed root
 token; SKIP_SETCAP avoids the mlock capability so the pod stays unprivileged
 (kind for restricted Pod Security Admission).
 */ -}}

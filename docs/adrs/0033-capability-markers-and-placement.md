@@ -1,4 +1,4 @@
-# ADR-0014 — Capability markers decide what a member builds and releases
+# ADR-0033 — Capability markers decide what a member builds and releases
 
 - **Status:** accepted
 - **Date:** 2026-06-30
@@ -35,7 +35,7 @@ published to PyPI", and the folder should not silently decide what gets built.
 
 Each member declares its capabilities in a `[tool.ghga]` table in its `pyproject.toml`:
 its release lane (`platform`, `pypi` or `none`, see
-[ADR-0004](0004-versioning-and-release-by-tag.md)), and whether it builds an image,
+[ADR-0027](0027-versioning-and-release-by-tag.md)), and whether it builds an image,
 publishes a wheel or exposes a CLI. The shared Dockerfile, the chart generator, the
 release lanes and affected-target CI read the markers, not the path.
 

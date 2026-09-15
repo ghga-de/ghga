@@ -1,7 +1,7 @@
 # aai
 
 Local AAI for the self-contained demo/test bed — a generic OIDC provider standing in for
-LS Login (ADR-0007). It runs Navikt mock-oauth2-server; production
+LS Login (ADR-0029). It runs Navikt mock-oauth2-server; production
 points services at an external issuer instead.
 
 ## Installing

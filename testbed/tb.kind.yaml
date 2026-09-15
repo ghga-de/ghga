@@ -1,4 +1,4 @@
-# Testbed configuration for the kind-in-devcontainer demo cluster (ADR-0006).
+# Testbed configuration for the kind-in-devcontainer demo cluster (ADR-0028).
 # Use via:  TB_CONFIG_YAML=testbed/tb.kind.yaml  (the `just testbed` recipe does this
 # and supplies the secret-derived TB_* env vars from the cluster).
 #

@@ -81,7 +81,7 @@ env:
   # PR still holds this branch. The `branch-guard` step in propose-update is what closes
   # that case, by refusing the push rather than by renaming around it.
   PR_BRANCH: ${{ (inputs.base_branch && inputs.base_branch != 'dev') && format('automated/lockfile-security-update-{0}', inputs.base_branch) || 'automated/lockfile-security-update' }}
-  # The branch this workflow measures and targets: the integration branch (ADR-0020),
+  # The branch this workflow measures and targets: the integration branch (ADR-0038),
   # which is also what the :dev images it diffs against are built from. Named rather than
   # left implicit — a bare checkout follows the event's ref, which is the default branch on
   # `schedule` and whatever the "Use workflow from" picker resolved on `workflow_dispatch`.

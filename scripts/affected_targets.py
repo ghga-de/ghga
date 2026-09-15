@@ -194,7 +194,7 @@ def all_targets() -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    # origin/dev: feature branches are cut from the integration branch (ADR-0020). A
+    # origin/dev: feature branches are cut from the integration branch (ADR-0038). A
     # hotfix branch is cut from `main` instead and needs an explicit --base origin/main.
     ap.add_argument("--base", default="origin/dev", help="base ref to diff against")
     ap.add_argument("--format", choices=("json", "lines", "matrix"), default="json")
@@ -213,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
             is_all, targets = affected(changed_files(args.base))
         except BaseRefError as err:
             # The default base is a remote-tracking ref, so the common cause is a clone
-            # that has not fetched since `dev` was created (ADR-0020) rather than a typo.
+            # that has not fetched since `dev` was created (ADR-0038) rather than a typo.
             hint = "pass --base <ref>, or --all to skip diffing"
             if args.base.startswith("origin/"):
                 branch = args.base.removeprefix("origin/")

@@ -8,11 +8,11 @@ workflow uses. Genuine deployment knowledge lives in each member's
 chart-values.yaml, co-located with the member.
 
 Conventions baked into the derived values:
-- chart name == package name == image name == console script (ADR-0014)
+- chart name == package name == image name == console script (ADR-0033)
 - the monorepo images are shell-less hardened bases -> commandStyle=exec,
   no command prefix (executables resolve via the image PATH)
 - image.tag stays empty so the Bitnami image helper falls back to the chart's
-  appVersion == the platform version (ADR-0004)
+  appVersion == the platform version (ADR-0027)
 - image.digest is empty unless --digests supplies one: release.yaml's build-images
   only knows a member's real digest after it pushes, so it is injected here as a
   post-build overlay rather than derived like the other image fields
@@ -368,7 +368,7 @@ def library_defaults() -> dict:
 def current_member_version() -> str:
     """The platform version already stamped on the generated member charts.
 
-    The version is an input to this generator, not a property of it (ADR-0004):
+    The version is an input to this generator, not a property of it (ADR-0027):
     release-charts.yaml publishes whatever is committed, so regenerating without an
     explicit version must preserve it.
     """
@@ -570,7 +570,7 @@ def chart_readme_text(
     the time anyone actually reads this.
 
     The source links point at `main`, not the default branch `dev`, for the same
-    reason (ADR-0020: `main` is the latest release). A reader arriving from the
+    reason (ADR-0038: `main` is the latest release). A reader arriving from the
     chart registry installed a published chart, so the released tree is the honest
     target. The cost is that a chart added on `dev` links to a path `main` does not
     carry yet, so both links 404 until the next release merge - accepted, because
@@ -618,7 +618,7 @@ def main() -> None:
     parser.add_argument(
         "--version",
         help=(
-            "platform version stamped as chart version and appVersion (ADR-0004);"
+            "platform version stamped as chart version and appVersion (ADR-0027);"
             " defaults to the version already on the generated member charts"
         ),
     )

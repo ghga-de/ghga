@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 > [!NOTE]
-> These records predate the monorepo and are being folded into [`docs/adr/`](../adr/).
+> These records predate the monorepo and are being folded into [`docs/adrs/`](../adrs/).
 > Until then, each one is still in force unless a record there supersedes it.
 
 The architecture decision records follow the [Y-statements](https://medium.com/olzzio/y-statements-10eb07b5a177) for a concise summary
