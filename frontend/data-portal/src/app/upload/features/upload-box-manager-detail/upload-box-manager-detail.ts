@@ -37,6 +37,7 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { escapeHtml } from '@app/shared/utils/html';
 import {
   ResearchDataUploadBox,
   UploadBoxState,
@@ -524,7 +525,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       this.#confirmationService.confirm({
         title: 'Confirm file deletion',
         message:
-          `<p>Please confirm that the file <strong>${file.alias}</strong> shall be ` +
+          `<p>Please confirm that the file <strong>${escapeHtml(file.alias)}</strong> shall be ` +
           '<strong>deleted</strong> from this upload box.</p>',
         cancelText: 'Cancel',
         confirmText: 'Delete file',
@@ -581,7 +582,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     this.#confirmationService.confirm({
       title: 'Retry re-encryption?',
       message:
-        `<p>This will requeue the file <strong>${file.alias}</strong> for re-encryption ` +
+        `<p>This will requeue the file <strong>${escapeHtml(file.alias)}</strong> for re-encryption ` +
         'without requiring the submitter to upload it again.</p>',
       cancelText: 'Cancel',
       confirmText: 'Retry',

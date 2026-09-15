@@ -434,6 +434,16 @@ describe('UploadBoxManagerDetailComponent', () => {
       expect(mockNotificationService.showError).not.toHaveBeenCalled();
     });
 
+    it('should escape the file name in the deletion confirmation', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.deleteFile({ ...interrogatedFile, alias: '<i>x</i>.bam' });
+      await fixture.whenStable();
+
+      const { message } = mockDialog.open.mock.calls[0][1].data;
+      expect(message).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
+    });
+
     it('should ask for confirmation and delete on confirm for a re-encrypted file', async () => {
       mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
 
@@ -526,6 +536,16 @@ describe('UploadBoxManagerDetailComponent', () => {
       expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
         'The file "failed.fastq.gz" has been queued for re-encryption.',
       );
+    });
+
+    it('should escape the file name in the requeue confirmation', async () => {
+      mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
+
+      component.requeueFile({ ...failedFile, alias: 'a&b.bam' });
+      await fixture.whenStable();
+
+      const { message } = mockDialog.open.mock.calls[0][1].data;
+      expect(message).toContain('<strong>a&amp;b.bam</strong>');
     });
 
     it('should not requeue a file when the confirmation is cancelled', async () => {
