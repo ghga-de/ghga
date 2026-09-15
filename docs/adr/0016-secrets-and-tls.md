@@ -23,7 +23,7 @@ secrets by name regardless of how they are produced ([ADR-0011](0011-helm-chart-
 ## Consequences
 - The demo has no Vault/secret-store dependency; prod reuses the existing Vault investment.
 - The secret-consumption shape is a per-profile toggle in `ghga-common`
-  ([ADR-0013](0013-adopt-ghga-common-chart-system.md)) — Vault Agent vs env-from-Secret.
+  ([ADR-0011](0011-helm-chart-boundary-hybrid.md)) — Vault Agent vs env-from-Secret.
 - TLS differs by environment (self-signed demo cert vs cert-manager) — a values concern, not a
   template fork.
 

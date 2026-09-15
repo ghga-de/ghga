@@ -21,7 +21,7 @@
 #                                        continues standalone; re-import (history-preserving) when the
 #                                        workspace moves to the schemapack line.
 #   charts                            -> imported once (deploy/), then REMOVED from the sync: the monorepo
-#                                        restructured deploy/ to the ADR-0013 layout (base/ -> charts/ghga-common,
+#                                        restructured deploy/ to the ADR-0011 layout (base/ -> charts/ghga-common,
 #                                        per-service charts generated), so upstream commits no longer apply as
 #                                        patches. Upstream library changes are ported SEMANTICALLY into
 #                                        deploy/charts/ghga-common + the generator instead — see

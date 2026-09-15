@@ -141,12 +141,15 @@ Repo→destination mapping for the import is the source of truth in
 
 ### 3.5 Helm — adopt `ghga-common`; app charts + demo umbrella
 
-We **adopt and evolve the existing `ghga-common` chart system** rather than build from scratch
-([ADR-0013](../adr/0013-adopt-ghga-common-chart-system.md)): the Bitnami-`common`-based library
-chart + the per-service generator move into `deploy/`, the generator is DRYed against workspace
-metadata ([ADR-0014](../adr/0014-capability-markers-and-placement.md)), and the dead Emissary
-paths + the `istio-ext-authz-sync` Job are dropped. `devops-kubernetes-hub` stays as the
-GitOps/platform layer.
+The charts come from GHGA's `ghga-common` chart system
+([ADR-0011](../adr/0011-helm-chart-boundary-hybrid.md)): the Bitnami-`common`-based
+library chart and the per-service generator live in `deploy/`, and the generator derives
+each chart from workspace metadata
+([ADR-0014](../adr/0014-capability-markers-and-placement.md)) plus the member's
+`chart-values.yaml`. Routing is Gateway API `HTTPRoute` only; the Emissary paths and the
+`istio-ext-authz-sync` Job were not carried over. `devops-kubernetes-hub`, outside this
+repo, is the GitOps/platform layer. [deploy/README.md](../../deploy/README.md) covers
+how the charts are generated and tested.
 
 - **App charts (`ghga-common`)** — emit Deployments / Services / ConfigMaps + a **rest/consumer
   role abstraction** (N Deployments sharing config with distinct `service_instance_id`s) **and
@@ -225,8 +228,6 @@ The monorepo is developed **separately from mainline (`ghga-de`) for a while**
 | Migrate without disrupting live repos | One-way incremental, history-preserving sync; harmonise only at the root; keep service `src/` aligned with mainline. |
 
 ## 6. Open items (tracked, not blocking)
-- Detailed `ghga-common` evolution: pruning Emissary, DRYing the generator against
-  `[tool.ghga]` markers, and co-locating per-service chart values with each service.
 - Envoy Gateway `SecurityPolicy.extAuth` field mapping vs the prod `envoyExtAuthzHttp` header
   contract (confirm 1:1 on `includeRequestHeadersInCheck`/`headersToBackend`).
 - Whether the optional **full-Istio** umbrella profile is worth maintaining for an opt-in
@@ -234,7 +235,6 @@ The monorepo is developed **separately from mainline (`ghga-de`) for a while**
 - Observability in the demo (OTLP endpoint target) vs prod Loki/Prometheus/Grafana.
 
 > Resolved since first draft: edge ([ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md)),
-> chart boundary ([ADR-0011](../adr/0011-helm-chart-boundary-hybrid.md)), adopting `ghga-common`
-> ([ADR-0013](../adr/0013-adopt-ghga-common-chart-system.md)), member placement
-> ([ADR-0014](../adr/0014-capability-markers-and-placement.md)), task runner
+> chart boundary and adopting `ghga-common` ([ADR-0011](../adr/0011-helm-chart-boundary-hybrid.md)),
+> member placement ([ADR-0014](../adr/0014-capability-markers-and-placement.md)), task runner
 > ([ADR-0015](../adr/0015-task-runner.md)), secrets ([ADR-0016](../adr/0016-secrets-and-tls.md)).
