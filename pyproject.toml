@@ -68,7 +68,7 @@ exclude = [
     "docs/epics",
     # same ruff >= 0.16 markdown behaviour: this README's ```python fence is upstream
     # content that ghga-de/ghga-jsonsubschema keeps unformatted. Reformatting it here
-    # would diverge a file the one-way sync re-delivers (ADR-0010). Drop this once that
+    # would diverge a file the one-way sync re-delivers (ADR-0001). Drop this once that
     # repo no longer syncs from mainline.
     "libs/ghga-jsonsubschema/README.md",
 ]
@@ -109,7 +109,7 @@ convention = "pep257"
 # (rather than retrofit docstrings etc.). Revisit if the tool is modernised.
 "tools/auth-km-jobs/**" = ["D", "B904", "SIM115", "PLC0415"]
 # libs/ghga-jsonsubschema is a fork of IBM/jsonsubschema, still synced from mainline
-# (ADR-0010), so its code is not ours to restyle. These two entries reproduce the policy its
+# (ADR-0001), so its code is not ours to restyle. These two entries reproduce the policy its
 # own (now removed) [tool.ruff] carried, instead of churning upstream files:
 #   D101-D103 - its pytest suite is bare `def test_x(): assert ...` functions, no docstrings
 #   RUF100    - `# noqa: E501` markers on long literals; E501 is not selected at the root,
