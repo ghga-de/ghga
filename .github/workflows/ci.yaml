@@ -361,9 +361,11 @@ jobs:
             echo "::error::drift check failed: no base commit to compare against ($base) — main was force-pushed or newly created"
             exit 1
           fi
-          # `::error::` lifts the message onto the GitHubs Checks tab.
+          # `::error::` lifts the message onto the GitHubs Checks tab. `--base` is the
+          # merge-base the three-dot diff compares against.
           if git diff --name-only "$base...HEAD" \
-            | uv run -q --script scripts/pypi_drift.py 2> /tmp/drift.err; then
+            | uv run -q --script scripts/pypi_drift.py --base "$(git merge-base "$base" HEAD)" \
+              2> /tmp/drift.err; then
             exit 0
           fi
           # The gate is fail-closed: `pipefail` reds the step whatever failed. But only the
