@@ -103,5 +103,5 @@ spec:
             {{- end }}
           env:
             - name: MC_HOST_local
-              value: http://{{ .Values.minio.rootUser }}:{{ .Values.minio.rootPassword }}@{{ .Release.Name }}-minio:9000
+              value: {{ printf "http://%s:%s@%s-minio:9000" (.Values.minio.rootUser | urlquery) (.Values.minio.rootPassword | urlquery) .Release.Name | quote }}
 {{- end }}

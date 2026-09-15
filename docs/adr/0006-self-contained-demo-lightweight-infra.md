@@ -87,3 +87,8 @@ describes what the umbrella contains and how its profiles stack.
   devcontainer. Worth revisiting once they do not.
 - **Mount the host's Docker socket.** Root-equivalent on the host daemon, which is worse
   than a nested one.
+- **Build our own MinIO image**, instead of Chainguard's. Puts tracking upstream MinIO
+  releases on us instead of a registry that already does it.
+- **Swap in SeaweedFS or Garage**, both actively published. Neither is MinIO — a
+  different admin surface for no test-bed benefit over a maintained image of the same
+  server and client (`mc`).

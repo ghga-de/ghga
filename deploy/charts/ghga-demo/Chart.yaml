@@ -16,8 +16,9 @@ dependencies:
     condition: envoy-gateway.enabled
 
   # ---- lightweight infra (ADR-0006): operator-free stand-ins ---------------------------
-  # kafka/mongodb/minio are plain templates in this chart (official images) — the
-  # bitnami subcharts were dropped when the 2025 catalogue gating broke their pulls
+  # kafka/mongodb/minio are plain templates in this chart (kafka/mongodb on official
+  # images, minio on Chainguard's build) — the bitnami subcharts were dropped when the
+  # 2025 catalogue gating broke their pulls
   - name: aai
     version: 0.1.0
     repository: file://../aai
