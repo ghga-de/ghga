@@ -3,7 +3,8 @@
 # Columns (TAB-separated): kind  source_repo  subpath  dest_path  branch
 #   kind        one of: lib | service | tool | frontend | testbed
 #   source_repo repo name under github.com/ghga-de (and dir name in .legacy_repos/)
-#   subpath     "." for whole repo, or a subdir for repos imported partially (file-services-backend)
+#   subpath     "." for whole repo, or a subdir for repos imported partially (as
+#               file-services-backend was, before its rows were retired)
 #   dest_path   destination path within the monorepo
 #   branch      upstream branch to track (default main). Some repos have a different *compatible*
 #               branch than main — e.g. ghga-transpiler's integrated line is v2, not main (3.x).
@@ -25,10 +26,91 @@
 #                                        deploy/charts/ghga-common + the generator instead — see
 #                                        docs/migration/runbook.md.
 #
+# Retired: upstream repo ARCHIVED (read-only); the monorepo is now the source of truth. The row
+# is REMOVED rather than kept, because an archived repo still clones fine — a sync would succeed
+# as a permanent no-op, and a live row wrongly implies an upstream that still moves. Each was
+# verified fully synced first (runbook: "Verifying a repo is fully synced"). Last upstream commit
+# merged here, with the member version it carried:
+#   auth-service           -> services/auth-service           7e53ecb "Migrate to httpx2 (#158)" 2026-08-07, 10.0.2
+#   ghga-event-schemas     -> libs/ghga-event-schemas         0e1ba03 "Upload Box Size Limit (#78)" 2026-05-04, 13.0.0
+#   ghga-datasteward-kit   -> tools/ghga-datasteward-kit      7d70c58 "Httpx2 migration (#86)" 2026-08-07, 5.4.2
+#   data-portal            -> frontend/data-portal            ccc8676 "Update dependencies (#356)" 2026-08-10, 2.5.15
+#                             (JS toolchain, separate pnpm lockfile)
+#   epic-docs              -> docs/epics                      fcb9b94 "Complete README (#171)" 2026-08-12 (= archived tip)
+#                             (planning docs, no code; outside the libs/*, services/*, tools/* globs,
+#                             so not a uv workspace member)
+#   access-request-service -> services/access-request-service 6af2b32 "Migrate to httpx2 (#57)" 2026-08-07, 8.0.2
+#                             The one later upstream commit, 041d1f21 "Update template and dependencies
+#                             (#58)" 2026-08-10 (= release 8.0.3), was NOT merged: apart from the version
+#                             bump it is only dropped boilerplate (lock/requirements*.txt,
+#                             .pyproject_generation/, a ruff rev: pin in the per-repo pre-commit config).
+#                             The bump was ported by hand instead, so the member here reads 8.0.3 while
+#                             the last merged commit carried 8.0.2.
+#   work-package-service   -> services/work-package-service   4a61871 "Migrate to httpx2 (#72)" 2026-08-07, 11.1.1
+#   ghga-registry-service  -> services/ghga-registry-service  510a085 "Update lock file for cryptography 50" 2026-08-07, 5.0.2
+#                             The one later upstream commit, 7d536b7 "Sparse index (#28)"
+#                             2026-08-11 (= release 5.0.3), was NOT merged: its content was ported
+#                             by hand here instead (387b1f7c + 2dd9172f), so the member reads 5.0.3
+#                             while the last merged commit carried 5.0.2.
+#   mass                   -> services/mass                   32dd385 "Migrate to httpx2 (#51)" 2026-07-31, 7.0.2
+#   hexkit                 -> libs/hexkit                     ad3c710 "Add observability tools docs (#251)" 2026-08-07, 9.0.1
+#                             The member here reads 9.0.3: the docs move (ADR-0021) changed its
+#                             `Documentation` URL and README, which ship in the wheel metadata, so
+#                             the drift gate required a bump (9.0.2 is spent on TestPyPI).
+#                             Its docs site moved to ghga-de.github.io/ghga/hexkit; the archived
+#                             repo still serves ghga-de.github.io/hexkit as redirects to it.
+#   file-services-backend  -> services/{dcs,ekss,fis,ifrs,pcs,ucs}
+#                             c3d833f "Migrate to httpx2 (#218)" 2026-08-07, the one commit that
+#                             touched all six subtrees, carrying dcs 10.3.0, ekss 5.3.0,
+#                             fis 12.0.0, ifrs 7.4.0, pcs 6.4.0, ucs 15.2.0. The only repo imported
+#                             partially: six rows, one per services/<svc> subtree flattened to top
+#                             level. Feature branches stay unmerged on the archived repo (newest
+#                             fix/cleanup_s3_connection_crash 2026-07-31, plus three ucs/* GSI
+#                             branches); none reached main, so none were ever in scope for the sync.
+#                             services/ucs additionally carries monorepo-only work never upstreamed
+#                             (017c7dd9, splitting the missing-S3-multipart-upload log level by
+#                             FileUpload state).
+#   notification-service   -> services/notification-service   0c40356 "Migrate to httpx2 (#37)" 2026-08-06, 7.0.1
+#   notification-orchestration-service -> services/notification-orchestration-service
+#                             49c00a1 "Migrate to httpx2 (#43)" 2026-07-31, 9.0.1
+#                             services/notification-orchestration-service additionally carries
+#                             monorepo-only work never upstreamed (c53f1261, pointing the portal
+#                             link at `access-request-manager/` rather than `access-requests/`).
+#   dataset-information-service -> services/dataset-information-service
+#                             07fd91d "Migrate to httpx2 (#29)" 2026-07-31, 7.0.2
+#   well-known-value-service -> services/well-known-value-service
+#                             fd32763 "Migrate to httpx2 (#25)" 2026-08-06, 3.0.2
+#                             Both keep unmerged feature branches on the archived repo (newest
+#                             dataset-information-service/feature/backport_dhi and
+#                             well-known-value-service/feature/backport_dhi, both 2026-06-05);
+#                             none reached main, so none were ever in scope for the sync.
+#   auth-km-jobs           -> tools/auth-km-jobs              83ff924 "Update dependencies (#21)" 2026-01-14, 0.2.1
+#                             main was its only branch ever, so nothing was out of scope.
+#                             tools/auth-km-jobs additionally carries monorepo-only work never
+#                             upstreamed: testcontainer-based test fixtures (upstream's tests
+#                             expected Vault and MongoDB already running on localhost), the
+#                             `run` -> `auth-km-jobs` console-script rename, and the ADR-0014
+#                             capability markers.
+# Twelve archived tips are deliberately NOT merged — each is an archival/deprecation notice
+# that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
+# access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
+# f474eef (which also makes the PyPI console script print a final-release banner — wanted
+# there, not here), file-services-backend 605be53 (root README and template only, so the
+# partial rows would have filtered it to empty in any case), hexkit 245ca78 "Replace the
+# docs site with redirects to the monorepo (#253)", notification-service 00ca3db1,
+# notification-orchestration-service 285dc85f, dataset-information-service 5afbde4,
+# well-known-value-service 282b4be (all four "Add deprecation note") and auth-km-jobs
+# f27562b "Add retirement note (#22)". Those last six are the only tips that would NOT
+# have filtered to empty: hexkit's is mostly redirect tooling on paths the import drops
+# (.github/, scripts/, .template/, .gitignore), the next four touch nothing else but
+# .readme_generation/ and .template/, and auth-km-jobs' touches nothing but the README,
+# yet each also adds a "this repo has moved" banner to the README, which is kept — an
+# upstream-only notice, wrong to carry here, where that README is the package's own.
+# adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
+# (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
+#
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
-lib	hexkit	.	libs/hexkit	main
 lib	ghga-service-commons	.	libs/ghga-service-commons	main
-lib	ghga-event-schemas	.	libs/ghga-event-schemas	main
 lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main
 # GHGA fork of IBM/jsonsubschema (dist `ghga-jsonsubschema`, import name `jsonsubschema`),
@@ -39,39 +121,17 @@ lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
 # so the two cannot share a venv. libs/schemapack was repointed to `ghga-arcticfreeze` here.
 lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
-# Deployable services from file-services-backend (existing monorepo -> flatten to top-level)
-service	file-services-backend	services/dcs	services/dcs	main
-service	file-services-backend	services/ekss	services/ekss	main
-service	file-services-backend	services/fis	services/fis	main
-service	file-services-backend	services/ifrs	services/ifrs	main
-service	file-services-backend	services/pcs	services/pcs	main
-service	file-services-backend	services/ucs	services/ucs	main
-#
 # Standalone services
-service	auth-service	.	services/auth-service	main
-service	access-request-service	.	services/access-request-service	main
-service	dataset-information-service	.	services/dataset-information-service	main
-service	notification-service	.	services/notification-service	main
-service	notification-orchestration-service	.	services/notification-orchestration-service	main
-service	mass	.	services/mass	main
-service	well-known-value-service	.	services/well-known-value-service	main
-service	work-package-service	.	services/work-package-service	main
 service	dlq-service	.	services/dlq-service	main
 service	state-management-service	.	services/state-management-service	main
-service	ghga-registry-service	.	services/ghga-registry-service	main
 service	reverse-transpiler-service	.	services/reverse-transpiler-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
 tool	ghga-connector	.	tools/ghga-connector	main
-tool	ghga-datasteward-kit	.	tools/ghga-datasteward-kit	main
 # ghga-transpiler: the integrated/compatible line is v2 (2.x, no schemapack dep), NOT main (3.x).
 tool	ghga-transpiler	.	tools/ghga-transpiler	v2
 tool	ghga-validator	.	tools/ghga-validator	main
-tool	auth-km-jobs	.	tools/auth-km-jobs	main
-#
-# Front end (JS toolchain, separate pnpm lockfile)
-frontend	data-portal	.	frontend/data-portal	main
 #
 # Test-only service: the OIDC provider the integration suite and the portal's UI
 # tests authenticate against (deployed by the testbed profile, never in prod)
@@ -79,7 +139,3 @@ service	test-oidc-provider	.	services/test-oidc-provider	main
 #
 # Integration test bed (BDD + Playwright) -> runs against kind + helm
 testbed	archive-test-bed	.	testbed	main
-#
-# Epic technical specifications: planning docs, no code. Not a uv workspace member
-# (docs/epics is outside the libs/*, services/*, tools/* globs).
-docs	epic-docs	.	docs/epics	main

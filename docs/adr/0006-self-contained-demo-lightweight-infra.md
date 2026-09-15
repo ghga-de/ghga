@@ -1,7 +1,8 @@
 # ADR-0006 — Self-contained demo umbrella with lightweight bundled infra
 
 - **Status:** Accepted (revised 2026-06-30 — edge is Envoy Gateway, demo == testbed; see
-  [ADR-0012](0012-self-contained-edge-envoy-gateway.md))
+  [ADR-0012](0012-self-contained-edge-envoy-gateway.md)) — **amended 2026-09-04**: the
+  Bitnami subcharts are gone (see below)
 - **Date:** 2026-06-30
 - **Deciders:** Leon Kuchenbecker
 
@@ -29,6 +30,12 @@ app charts and bundles:
 This **same umbrella is the per-PR test bed** ([ADR-0009](0009-testbed-kind-minikube.md)), which
 additionally enables `state-management-service`
 ([ADR-0008](0008-state-management-service-testbed-only.md)). "What you install == what CI tests."
+
+**Amended 2026-09-04 — no Bitnami subcharts left.** The 2025 Bitnami catalogue gating
+broke those pulls, so kafka, mongodb and minio are plain templates in `ghga-demo` itself
+on official images (`apache/kafka`, `mongo`, `minio/minio`), not bundled subcharts. Vault
+dev-mode, the AAI and MailHog were already in-chart. The decision — operator-free,
+lightweight stand-ins supplied by the umbrella — is unchanged; only the mechanism is.
 
 ## Consequences
 - One command on a cluster you control brings up a working GHGA with the **real** Gateway-API

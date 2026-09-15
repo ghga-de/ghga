@@ -137,7 +137,7 @@ and the release workflow always build one image per member. It exists because it
 
 | area | recipes |
 |---|---|
-| Python workspace | `sync`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
+| Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
 | Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
@@ -148,7 +148,8 @@ and the release workflow always build one image per member. It exists because it
 ## Where to read
 
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/adr/](docs/adr/)** — the decisions (and why), ADR-0001…0018.
+- **[docs/adr/](docs/adr/)** — the decisions (and why), ADR-0001…0020; the
+  [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 
 ## Conventions

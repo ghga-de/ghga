@@ -7,7 +7,6 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
-  _topics: {}
 commandPrefix: ''
 commandStyle: exec
 executable: ""

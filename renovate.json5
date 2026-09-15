@@ -9,6 +9,25 @@
   // security-scan.yaml workflow — do not let Renovate touch those.
   enabledManagers: ["custom.regex"],
 
+  // Same split applies to Dependabot alerts: remediating them belongs to that
+  // workflow, and no manager enabled here could act on an alert anyway. Not
+  // fetching them also means the App needs no Dependabot-alerts permission.
+  vulnerabilityAlerts: { enabled: false },
+
+  // The dashboard issue (#112) is machine-written on a weekly cron, so everything a
+  // reader needs to judge it has to come from here: who writes it, how stale it can
+  // be, and how narrow Renovate's scope in this repo is.
+  dependencyDashboardHeader: "**Renovate writes this issue — edit it by hand and the \
+next run overwrites you.** It is rebuilt by `.github/workflows/renovate.yaml`, weekly on \
+Mondays at 05:17 UTC or on demand via that workflow's *Run workflow* button, so between \
+runs the lists below lag reality — a PR merged or closed since the last run is still \
+listed as open here. The [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) \
+docs explain what the checkboxes do.\n\nRenovate's scope in this repository is \
+deliberately narrow: only the DHI base-image tags in `docker/Dockerfile` and \
+`frontend/data-portal/Dockerfile.dhi`. The application dependency lockfiles (`uv.lock`, \
+`pnpm-lock.yaml`) are handled by the daily `security-scan.yaml` workflow instead, and \
+Dependabot alerts along with them. See `renovate.json5` for the full configuration.",
+
   packageRules: [
     {
       groupName: "dhi.io Python base image",

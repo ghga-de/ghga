@@ -44,3 +44,6 @@ claude-backup/
 
 # buildx --metadata-file output
 metadata.json
+
+# great-docs build output (`just docs`); the trailing slash keeps great-docs.yml tracked
+libs/*/great-docs/

@@ -87,7 +87,15 @@ def changed_files(base: str) -> list[str]:
 
 
 def affected(files: list[str]) -> tuple[bool, list[str]]:
-    """Map changed files to (all?, sorted target list), including dependents."""
+    """Map changed files to (all?, sorted target list), including dependents.
+
+    Over-approximates on purpose: the question is "what might this change break?", where
+    testing a target needlessly costs a runner and skipping one costs a missed failure.
+    That is why `pypi_drift.changed_members` maps a diff *separately* rather than reusing
+    this — it asks "whose published content changed?", where over-approximating would
+    spend PyPI versions on content no consumer receives. The two are meant to disagree;
+    unifying them would break one or the other.
+    """
     if any(f.startswith(GLOBAL_PREFIXES) for f in files):
         return True, all_targets()
     hit: set[str] = set()

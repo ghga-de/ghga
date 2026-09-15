@@ -22,6 +22,33 @@ sync:
 lock:
     uv lock
 
+# `uv run` syncs the environment but does not prune it, so a distribution that is no longer
+# in uv.lock stays installed and can shadow a workspace member's source -- the suite then
+# tests code that is not in the repo. CI cannot drift that way: it builds the environment
+# from the lock (`uv sync --locked`). This is that same assertion, read-only and in ~0.1s,
+# so `just test` cannot report on an environment CI would not recognise.
+#
+# Two assertions, because CI's one `uv sync --locked` covers two failures that need
+# different fixes here: `--check` reports a stale ENVIRONMENT but passes a stale LOCK
+# straight through, so the lock is checked on its own first.
+# Assert uv.lock and the environment are current, as CI's `uv sync --locked` does.
+sync-check:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if ! out=$(uv lock --check 2>&1); then
+        echo "$out" >&2
+        printf '\nerror: uv.lock is out of date with the pyproject.toml files.\n' >&2
+        printf 'Refresh the lock and the environment, then re-run:\n' >&2
+        printf '  just lock && just sync\n' >&2
+        exit 1
+    fi
+    out=$(uv sync --locked --all-packages --all-extras --check 2>&1) && exit 0
+    echo "$out" >&2
+    printf '\nerror: the environment does not match uv.lock, so a test run here would not\n' >&2
+    printf 'be the run CI does. Update the environment, then re-run:\n' >&2
+    printf '  just sync\n' >&2
+    exit 1
+
 # Lint + format check across the workspace.
 lint:
     uv run ruff check .
@@ -58,9 +85,73 @@ hooks-all:
 hooks-update:
     uv run pre-commit autoupdate
 
-# Run tests; optionally scope to a member, e.g. `just test libs/hexkit`.
-test target=".":
-    uv run pytest {{target}}
+# Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
+# over the whole tree dies on the duplicate module names before running anything (the same
+# collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the
+# members' own `[tool.pytest.ini_options]` anyway (auth-service's `testpaths`, say). That
+# collision is why a bare tier ("libs", "services", "tools") is swept member-by-member too,
+# not handed to pytest as one target.
+# So the sweep runs one pytest per member, from the member directory, exactly as CI's
+# check-python matrix does; scripts/ and deploy/ belong to no member and share the root
+# rootdir, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
+# member should not hide the state of the other 31.
+#
+#   just test                                    # every member, then the non-member suites
+#   just test libs                               # every member in one tier
+#   just test services/auth-service              # one member
+#   just test services/auth-service/tests/unit   # part of one member's suite
+#
+# Run tests; optionally scope to a tier or a member, e.g. `just test services/auth-service`.
+test target="": sync-check
+    #!/usr/bin/env bash
+    set -uo pipefail
+    target="{{target}}"
+    # `.` was this recipe's old default; it still means "everything", not "the root as a member"
+    [ "$target" = "." ] && target=""
+    # repeated trailing slashes must not defeat the bare-tier and member checks below
+    while [[ "$target" == */ && "$target" != / ]]; do
+        target="${target%/}"
+    done
+
+    # pytest every member directory matching the given glob(s); no fail-fast, like CI's matrix
+    sweep() {
+        local failed=() member
+        for member in "$@"; do
+            member="${member%/}"
+            [ -f "$member/pyproject.toml" ] || continue
+            echo "== pytest $member =="
+            (cd "$member" && uv run pytest -q --durations=10) || failed+=("$member")
+        done
+        if [ ${#failed[@]} -gt 0 ]; then
+            echo "pytest failed in: ${failed[*]}" >&2
+            return 1
+        fi
+    }
+
+    if [ -n "$target" ]; then
+        tier="${target%%/*}"
+        case "$tier" in
+            libs|services|tools)
+                # a bare tier: sweep just its members, same as the full sweep below
+                [ "$target" = "$tier" ] && { sweep "$tier"/*/; exit $?; }
+                member=$(cut -d/ -f1-2 <<< "$target")
+                # anything deeper than the member is a scope *within* its suite, so it is
+                # passed on relative to the member -- `just test <member>/tests/unit`
+                scope="${target#"$member"}"
+                # explicit, because without -e a failed cd would silently fall back to the
+                # root -- i.e. to the tree-wide run this recipe exists to avoid
+                cd "$member" || { echo "no such member: $member" >&2; exit 1; }
+                exec uv run pytest ${scope:+"${scope#/}"}
+                ;;
+        esac
+        exec uv run pytest "$target"  # scripts/tests, deploy/tests, ... : no member, no cd
+    fi
+
+    exit_status=0
+    sweep libs/*/ services/*/ tools/*/ || exit_status=1
+    echo "== pytest scripts/tests deploy/tests =="
+    uv run pytest -q scripts/tests deploy/tests || { echo "pytest failed in: scripts+deploy" >&2; exit_status=1; }
+    exit $exit_status
 
 # Print the workspace targets affected by the working tree vs a base ref.
 affected base="origin/main":
@@ -150,6 +241,63 @@ published-combo member python="3.12":
     echo "== running {{member}} tests on {{python}} (env: $work/venv)"
     cd "{{member}}"
     "$work/venv/bin/python" -m pytest -q --durations=10
+
+# --- Docs lane (ADR-0021) ---------------------------------------------------------------
+# Build the published documentation. A member is documented iff it carries a
+# `great-docs.yml`; scripts/docs_members.py is the same discovery docs-publish.yaml reads,
+# so a local build cannot drift from the deployed one.
+#
+#   just docs-install      # once per clone
+#   just docs              # every documented member
+#   just docs libs/hexkit  # just one
+#
+# Output lands in <member>/great-docs/_site (gitignored). The workflow uploads exactly that
+# directory, one per member, into the single Pages site under the member's own subpath.
+
+# The toolchain gets its own venv rather than joining the workspace one: great-docs pulls a
+# ~450M tree (Jupyter, IPython, Quarto plumbing) that no test needs, and installing the
+# `docs` group into .venv makes `just sync-check` -- and therefore `just test` -- report the
+# environment as not matching uv.lock. It is still resolved in the single root uv.lock
+# (`[dependency-groups] docs`), so the pin stays locked and Renovate keeps tracking it;
+# UV_PROJECT_ENVIRONMENT only redirects where uv installs it. --no-install-workspace keeps
+# the members out: great-docs reads them from source (griffe prepends the package's src/ to
+# its search path), so nothing here needs them importable.
+# One-time: virtualenv for the docs toolchain (from uv.lock; not the workspace venv).
+docs-install:
+    UV_PROJECT_ENVIRONMENT=.venv-docs uv sync --locked --no-default-groups --group docs --no-install-workspace
+
+# Build the documentation site(s) into <member>/great-docs/_site.
+docs member="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    root=$(git rev-parse --show-toplevel)
+    [ -x "$root/.venv-docs/bin/great-docs" ] || {
+        echo "error: the docs toolchain is not installed. Run: just docs-install" >&2
+        exit 1
+    }
+    # great-docs renders through Quarto, which is a separate binary rather than a Python
+    # dependency, so the docs venv being present is not enough on its own.
+    command -v quarto >/dev/null || {
+        echo "error: the Quarto CLI is not on PATH, and great-docs renders with it." >&2
+        echo "The devcontainer provisions it; rebuild the container, or install it from" >&2
+        echo "https://quarto.org/docs/get-started/ to build the docs on a bare host." >&2
+        exit 1
+    }
+    # A declared URL that disagrees with the deploy subpath breaks canonical links, the
+    # sitemap and asset resolution silently, so it is checked before anything is rendered.
+    uv run --script "$root/scripts/docs_members.py" --check
+    members="{{member}}"
+    [ -n "$members" ] || members=$(uv run --script "$root/scripts/docs_members.py")
+    for member in $members; do
+        [ -f "$root/$member/great-docs.yml" ] || {
+            echo "error: $member carries no great-docs.yml, so it is not documented." >&2
+            exit 1
+        }
+        echo "== great-docs build $member =="
+        # cwd = the member directory: great-docs resolves great-docs.yml, the pre_render
+        # hooks and its build output relative to it.
+        (cd "$root/$member" && "$root/.venv-docs/bin/great-docs" build)
+    done
 
 # --- Front end (data-portal, pnpm) ------------------------------------------------------
 fe-install:

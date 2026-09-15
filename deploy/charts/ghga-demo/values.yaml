@@ -3,9 +3,6 @@
 # Bare clusters have no LoadBalancer: the gateway service defaults to NodePort
 # (set gateway.nodePort, or use port-forward).
 #
-# NOTE on bitnami images: since the 2025 Bitnami catalogue changes, chart-default
-# image repositories may point at gated "secure" images. If pulls fail at install
-# time, override the image repositories to the bitnamilegacy/ equivalents.
 
 # ---- edge -------------------------------------------------------------------------------
 envoy-gateway:
