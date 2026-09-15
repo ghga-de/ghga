@@ -1,59 +1,86 @@
-# ADR-0006 — Self-contained demo umbrella with lightweight bundled infra
+# ADR-0006 — Demo and test bed: one self-contained umbrella on kind
 
-- **Status:** Accepted (revised 2026-06-30 — edge is Envoy Gateway, demo == testbed; see
-  [ADR-0012](0012-self-contained-edge-envoy-gateway.md)) — **amended 2026-09-04**: the
-  Bitnami subcharts are gone (see below)
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-`helm install ghga` must yield a fully functional GHGA, including a local AAI, **self-reliantly**
-— one install on a cluster you control, no external ops. The app charts own app-coupled CRDs but
-not the edge or infra ([ADR-0011](0011-helm-chart-boundary-hybrid.md)), so a self-contained
-experience needs an umbrella that supplies the **edge** + **infra**. Production uses
-operator-managed infra (Istio, Strimzi, prometheus-operator); the demo/test bed runs on
-kind/minikube where operators are heavy.
+## Summary
 
-## Decision
-Add `deploy/charts/ghga-demo`, a self-contained **single-command** umbrella that depends on the
-app charts and bundles:
-- the **edge**: **Envoy Gateway** (Gateway-API-native, runs real Envoy ext_authz against the
-  auth-adapter — [ADR-0012](0012-self-contained-edge-envoy-gateway.md)), gateway Service
-  defaulting to **NodePort** on bare clusters;
-- **lightweight, operator-free infra**: Bitnami Kafka (KRaft, `KafkaUser`/`KafkaTopic` emission
-  toggled off), standalone MongoDB, **MinIO** (replacing LocalStack), Vault dev-mode,
-  **mock-oauth2-server** as the local AAI ([ADR-0007](0007-local-aai-generic-oidc.md)), MailHog;
-- a pre-install **secret-gen Job** (plain K8s Secrets — [ADR-0016](0016-secrets-and-tls.md),
-  replacing the `auth-km-jobs` shell script) and a **seed Job** (data-steward user via
-  `auth-service`'s `add_as_data_stewards`).
+In the context of **a GHGA that installs with one command, and an integration test bed
+that must test what we deploy**
 
-This **same umbrella is the per-PR test bed** ([ADR-0009](0009-testbed-kind-minikube.md)), which
-additionally enables `state-management-service`
-([ADR-0008](0008-state-management-service-testbed-only.md)). "What you install == what CI tests."
+facing **production infrastructure run by operators that is too heavy for a single-node
+cluster, and a docker-compose test bed that did not test the charts**
 
-**Amended 2026-09-04 — no Bitnami subcharts left.** The 2025 Bitnami catalogue gating
-broke those pulls, so kafka, mongodb and minio are plain templates in `ghga-demo` itself
-on official images (`apache/kafka`, `mongo`, `quay.io/minio/minio`), not bundled subcharts. Vault
-dev-mode, the AAI and MailHog were already in-chart. The decision — operator-free,
-lightweight stand-ins supplied by the umbrella — is unchanged; only the mechanism is.
-MinIO has since stopped publishing community images to Docker Hub; its last builds are
-frozen on quay.io, so the chart pins those release tags (no further security fixes).
+we decided for **one umbrella chart bundling an edge and lightweight infrastructure,
+installed as the demo and, with a test-bed profile, as the per-PR test bed, on kind both
+in CI and inside the devcontainer**
 
-## Consequences
-- One command on a cluster you control brings up a working GHGA with the **real** Gateway-API
-  routing + Envoy ext_authz path.
-- **Faithful where it matters, lightweight elsewhere**: the edge/auth data path matches prod;
-  what still differs is the edge-auth *object type* (Envoy Gateway `SecurityPolicy` vs Istio
-  `AuthorizationPolicy`/extensionProvider), mesh mTLS/`DestinationRule`, and Strimzi Kafka
-  specifics (demo uses plain Kafka + topic auto-create).
-- Those residual, declarative differences are covered by a **periodic staging check** that
-  deploys the same app charts against the real Istio/Strimzi platform — not a per-PR gate.
-- Caveats (chart-handled): Helm `crds/` are install-only → document CRD upgrades; NodePort +
-  `port-forward` for access on bare clusters.
+and neglected **bundling full Istio, a demo flag in the app charts, keeping
+docker-compose, minikube, and a host-level cluster**
 
-## Alternatives considered
-- **Bundle full Istio in the demo** (max fidelity). Heavy on kind and wants a multi-step
-  installer; kept as an optional umbrella profile + the staging check
-  ([ADR-0012](0012-self-contained-edge-envoy-gateway.md)).
-- **Single chart with `demo`/`prod` profile flag.** Viable, but a thin app chart + demo umbrella
-  keeps the prod-reusable charts uncontaminated by demo dependencies.
+to achieve **a green integration gate that means the deployable system works, and a
+local loop identical to CI**
+
+accepting that **Istio, mesh mTLS and Strimzi are tested only in staging, and the
+devcontainer runs a privileged Docker daemon**.
+
+## Details
+
+### Context
+
+`helm install ghga` should give a working GHGA, including a local AAI, on a cluster you
+control and without an operations team. App charts own a workload's resources but not
+the edge or the infrastructure ([ADR-0011](0011-helm-chart-boundary-hybrid.md)), so
+something else has to supply those. Production gets them from Istio, Strimzi and other
+operators, which are heavy on a single-node cluster.
+
+The integration suite, BDD and Playwright tests over the whole user journey, ran on
+docker-compose, so a green run said nothing about the charts we deploy.
+
+### Decision
+
+**One umbrella.** `deploy/charts/ghga-demo` depends on the app charts and bundles what
+production gets from the platform: the Envoy Gateway edge with real ext-authz against
+the auth adapter ([ADR-0012](0012-self-contained-edge-envoy-gateway.md)), operator-free
+stand-ins for Kafka, MongoDB, S3 and Vault, a local AAI
+([ADR-0007](0007-local-aai-generic-oidc.md)), a mail sink, and Jobs that generate the
+secrets ([ADR-0016](0016-secrets-and-tls.md)) and seed a data steward.
+
+**The demo is the test bed.** The test bed installs the same umbrella with a test-bed
+profile, which adds the state-management service
+([ADR-0008](0008-state-management-service-testbed-only.md)). What you install is what CI
+tests.
+
+**kind everywhere.** CI runs the umbrella on kind, and so does the local loop, with kind
+inside the devcontainer's own Docker daemon. Local runs and CI use the same recipes.
+
+The [architecture
+overview](../architecture/overview.md#35-helm--adopt-ghga-common-app-charts--demo-umbrella)
+describes what the umbrella contains and how its profiles stack.
+
+### Consequences
+
+- A green integration gate covers the charts, the images, and the real Gateway API
+  routing and ext-authz path.
+- Production still differs in the edge auth object, mesh mTLS and Strimzi specifics.
+  Those are checked in staging, not per pull request.
+- The devcontainer is privileged: code running in it is one step from root on the Docker
+  host. The unit tests' testcontainers need a Docker daemon there anyway.
+- Nested Docker brings its own networking problems, and a devcontainer rebuild loses the
+  cluster and its images.
+- The whole platform has to fit on one kind node.
+
+### Alternatives
+
+- **Bundle full Istio in the demo.** Closest to production, but heavy on kind and needs
+  a multi-step installer.
+- **One app chart with a demo flag.** Mixes demo dependencies into the charts production
+  uses.
+- **Keep docker-compose as the gate.** It does not test the charts.
+- **minikube.** Slower to bring up than kind, locally and in CI.
+- **A host-level cluster with an unprivileged devcontainer**, reached only through a
+  namespace-scoped kubeconfig, and surviving rebuilds. Not built: it needs host setup
+  and image delivery per platform, and the unit tests would still need Docker in the
+  devcontainer. Worth revisiting once they do not.
+- **Mount the host's Docker socket.** Root-equivalent on the host daemon, which is worse
+  than a nested one.

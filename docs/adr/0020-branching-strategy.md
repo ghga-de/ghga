@@ -70,7 +70,7 @@ change departed from what was planned.
 > `scripts/affected_targets.py` and the justfile's `affected` recipe default to `origin/dev`.
 > Prose that described `main` as the integrated branch was swept with it:
 > [ADR-0019](0019-image-signing-sbom-provenance.md) (its predicted provenance subject is now
-> `@refs/heads/dev`), [ADR-0009](0009-testbed-kind-minikube.md), the architecture overview, and
+> `@refs/heads/dev`), [ADR-0006](0006-self-contained-demo-lightweight-infra.md), the architecture overview, and
 > the ADR index. The ADR set and the repo now agree —
 > [ADR-0004](0004-versioning-and-release-by-tag.md)'s 2026-09-01 amendment (pre-release cuts on
 > `dev`, per-lane branch gate) is backed by the workflow, and was itself amended on 2026-09-08

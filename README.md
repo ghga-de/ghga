@@ -17,7 +17,7 @@ build products.
 | [`tools/`](tools/) | CLIs & jobs (ghga-connector, ghga-datasteward-kit, auth-km-jobs, …) |
 | [`frontend/`](frontend/) | The Angular `data-portal` (own `pnpm` workspace) |
 | [`deploy/`](deploy/) | Helm charts (adopted `ghga-common` library + generator, demo umbrella) |
-| [`testbed/`](testbed/) | BDD + Playwright integration suite (runs on kind/minikube) |
+| [`testbed/`](testbed/) | BDD + Playwright integration suite (runs on kind) |
 | [`docker/`](docker/) | Shared Dockerfile(s) |
 | [`scripts/`](scripts/) | Codegen, affected-targets, and migration tooling |
 | [`docs/`](docs/) | Architecture, ADRs, migration runbook |
@@ -123,7 +123,7 @@ profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev`
 
 The BDD + Playwright integration suite ([`testbed/`](testbed/)) against the same umbrella
 plus the test-bed profile — state-management service, test OIDC provider, and the
-generated metldata artifact model ([ADR-0009](docs/adr/0009-testbed-kind-minikube.md)).
+generated metldata artifact model ([ADR-0006](docs/adr/0006-self-contained-demo-lightweight-infra.md)).
 
 ```bash
 just sync               # workspace env: the artifact generation needs ghga-datasteward-kit

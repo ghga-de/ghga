@@ -600,7 +600,7 @@ docker-prune:
     docker builder prune -f --keep-storage 5GB
     docker image prune -f
 
-# --- Local cluster (kind in the devcontainer's docker; ADR-0009/0017 as amended) --------
+# --- Local cluster (kind in the devcontainer's docker; ADR-0006) ---------------------
 # On hosts whose outer dockerd enforces an nftables FORWARD drop policy (e.g. a Lima
 # docker VM), the nested bridges lose egress after every VM restart — exempt them in
 # the sanctioned DOCKER-USER chain. Idempotent; skipped where iptables-nft is absent.
@@ -676,7 +676,7 @@ down:
     # the images and the next `just up` reloads them without rebuilding
     echo "cluster deleted — the node's images went with it; \`just up\` reloads them (no rebuild)"
 
-# --- Integration testbed (BDD suite in testbed/; ADR-0009) -------------------------------
+# --- Integration testbed (BDD suite in testbed/; ADR-0006) -------------------------------
 # Generate the metldata artifact model from the testbed's example metadata model
 # (DSKit, ADR-aligned: derived artifact, not committed) as a values overlay.
 testbed-artifacts:

@@ -43,16 +43,14 @@ mirror here. Write new ADRs from the [template](adr/0000-template.md), following
 | [0001](adr/0001-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |  |
 | [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted · last amended 2026-08-24 |  |
 | [0004](adr/0004-versioning-and-release-by-tag.md) | Hybrid releases: platform lockstep (`ghga/X.Y.Z`) + per-component PyPI lanes | Accepted · revised 2026-07-23 · last amended 2026-09-08 | follows [0020](adr/0020-branching-strategy.md) for the `dev` cut |
-| [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Self-contained demo umbrella; lightweight infra (revised: Envoy Gateway edge, demo == testbed) | Accepted · revised 2026-06-30 · last amended 2026-09-04 |  |
-| [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI via a generic OIDC provider (mock-oauth2-server default) | Accepted · last amended 2026-09-04 |  |
+| [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Demo and test bed are one self-contained umbrella, on kind in CI and in the devcontainer | Accepted |  |
+| [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI: mock-oauth2-server in the demo, the test OIDC provider in the test bed | Accepted |  |
 | [0008](adr/0008-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated | Accepted |  |
-| [0009](adr/0009-testbed-kind-minikube.md) | Integration test bed on kind (CI) / minikube (local); same artifact as the install | Accepted · last amended 2026-09-04 | amended by [0017](adr/0017-local-integration-host-cluster.md) |
 | [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a **hybrid** boundary (app charts own app-coupled CRDs) | Accepted |  |
 | [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) | Accepted |  |
 | [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults route the release lanes | Accepted · last amended 2026-08-18 |  |
 | [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later | Accepted |  |
 | [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) | Accepted |  |
-| [0017](adr/0017-local-integration-host-cluster.md) | Local integration on a host-level cluster; no DinD/DooD in the devcontainer | Accepted · last amended 2026-08-11 | amends [0009](adr/0009-testbed-kind-minikube.md) |
 | [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
 | [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
 | [0020](adr/0020-branching-strategy.md) | Git Flow: `main` is the latest release, `dev` is the integration branch; pull requests are squashed | Accepted · fully implemented 2026-09-11 · last amended 2026-09-14 | amends [0004](adr/0004-versioning-and-release-by-tag.md), [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) · amended by [0022](adr/0022-naming-branches-prs-commits.md) |
@@ -66,8 +64,8 @@ mirror here. Write new ADRs from the [template](adr/0000-template.md), following
 | **1. Skeleton** | `git init`; root `uv` workspace + shared toolchain; gitignore legacy/scratch | runbook §1 |
 | **2. Import** | All repos imported, history-preserving, into `libs/`/`services/`/`tools/`/`frontend/`/`testbed/` | runbook §2, `import-all.sh` |
 | **3. Harmonise** | `[tool.uv.sources]` wiring, single `uv.lock` (skew reconciled), one toolchain, shared Dockerfile, lib matrix | runbook §3, ADR-0002 |
-| **4. Charts & test bed** | Adopt `ghga-common` + generator; `ghga-demo` umbrella (Envoy Gateway edge + lightweight infra + AAI); testbed = the same install on kind | runbook §4, ADR-0011/12/06/07/09 |
-| **5. CI/CD** | **Done.** Both stages live: the affected-target component gate (`ci.yaml`, incl. reverse-dep closure + front end) and the kind integration gate (`integration.yaml`). Publish targets decided — Docker Hub for images and charts, PyPI for the library lane; a tag push builds, publishing a platform release is a deliberate dispatch | runbook §5, ADR-0004/0009/0017/0019 |
+| **4. Charts & test bed** | Adopt `ghga-common` + generator; `ghga-demo` umbrella (Envoy Gateway edge + lightweight infra + AAI); testbed = the same install on kind | runbook §4, ADR-0011/12/06/07 |
+| **5. CI/CD** | **Done.** Both stages live: the affected-target component gate (`ci.yaml`, incl. reverse-dep closure + front end) and the kind integration gate (`integration.yaml`). Publish targets decided — Docker Hub for images and charts, PyPI for the library lane; a tag push builds, publishing a platform release is a deliberate dispatch | runbook §5, ADR-0004/0006/0019 |
 | **6. Sync** | Periodic one-way sync from mainline keeps the gap small. Quiet since 2026-07-22; the tooling is now mostly used to import further repos | runbook §6, `sync-from-mainline.sh` |
 | **7. Cutover** | **In progress.** Repo lives at `ghga-de/ghga`, the PyPI lane publishes, and the platform lane has cut `ghga/15.3.1-rc.*`. Still open: freezing and archiving the mainline repos, and the version-reconciliation and external-consumer checks in the checklist | runbook §7 |
 

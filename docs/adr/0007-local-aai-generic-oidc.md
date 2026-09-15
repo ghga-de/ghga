@@ -1,48 +1,58 @@
-# ADR-0007 — Local AAI via a generic OIDC provider
+# ADR-0007 — Local AAI via generic OIDC providers
 
-- **Status:** Accepted — **amended 2026-09-04**: the premise no longer holds, both OPs
-  now ship (see below)
+- **Status:** accepted
 - **Date:** 2026-06-30
-- **Deciders:** Leon Kuchenbecker
 
-## Context
-GHGA authenticates against **Life Science Login** (LS Login / ELIXIR AAI). For a self-contained
-`helm install ghga` we need a local replacement. The docker-compose test bed used a GHGA image
-`ghga/test-oidc-provider:2.2.0`, but **its source is not among the migrated repos**.
+## Summary
 
-The `auth-service` auth-adapter expects an OP with discovery (`.well-known`), JWKS, and
-userinfo, a trusted issuer, and a claim shape it maps to `ext_id`. Critically, the BDD suite
-**mints tokens for arbitrary users non-interactively** (the old `POST /login` "log in as X").
+In the context of **a self-contained GHGA that cannot use Life Science Login**
 
-## Decision
-Ship a **generic, off-the-shelf OIDC provider** as a swappable `aai` subchart with profiles:
-- **demo / test bed (default):** [`mock-oauth2-server` (Navikt)](https://github.com/navikt/mock-oauth2-server)
-  — tiny, fully claim-configurable, issues tokens for any subject (a near drop-in for the old
-  mint-a-user behaviour);
-- **keycloak:** a more production-like self-hosted AAI option (LS Login is Keycloak-family),
-  with Direct Access Grants for test token minting;
-- **external:** point `oidc_*` config at real LS Login (production).
+facing **services that need a trusted OIDC provider, and a test suite that logs in as
+arbitrary users without a browser**
 
-**Amended 2026-09-04 — premise falsified; both OPs now ship.** `ghga/test-oidc-provider`
-*was* migrated after all: it is a workspace member (`services/test-oidc-provider/`) with
-its own chart (`deploy/charts/test-oidc-provider/`), so "source not available in scope"
-under Alternatives is no longer true. The decision above stands and the two now coexist as
-profiles of the demo umbrella — the **demo** profile runs `mock-oauth2-server` via the
-`aai` subchart, the **test-bed** profile (`values-testbed.yaml`) disables `aai` and swaps
-in the original GHGA test OP, pointing the whole auth stack's `oidc_*` settings at it.
-That also retires the second Consequence below: the test OP's `POST /login` mints tokens
-non-interactively, so the BDD auth fixtures use it as-is rather than being re-pointed at
-the mock's token endpoint.
+we decided for **the off-the-shelf `mock-oauth2-server` in the demo, GHGA's own test
+OIDC provider in the test bed, and Life Science Login in production, chosen through
+configuration**
 
-## Consequences
-- No dependency on an unavailable GHGA image; the local AAI is maintained config, not bespoke
-  code.
-- The test bed's mint-a-user calls must be re-pointed to the mock's token endpoint (a testbed
-  migration task).
-- The chart must template the `auth-service` and `data-portal` `oidc_*` settings from the
-  selected AAI profile so issuer/JWKS/authorize/token/userinfo URLs stay consistent.
+and neglected **Dex and Keycloak**
 
-## Alternatives considered
-- **Ship `ghga/test-oidc-provider`.** Blocked: source not available in scope.
-- **Dex.** Good lightweight OIDC, but less convenient for arbitrary non-interactive test users.
-- **Keycloak as the default.** Heavier than needed for the demo/test loop; kept as a profile.
+to achieve **a demo AAI that is configuration rather than code, and a test bed whose
+login fixtures work unchanged**
+
+accepting that **we run two local providers, and neither of them is Life Science
+Login**.
+
+## Details
+
+### Context
+
+GHGA authenticates users against Life Science Login, and a self-contained install needs
+a local replacement. The auth adapter in `auth-service` needs an issuer it trusts, with
+discovery, JWKS, userinfo and a claim it maps to the external user ID. The BDD suite
+creates tokens for arbitrary users without a browser, through the `POST /login` endpoint
+of GHGA's test OIDC provider.
+
+### Decision
+
+- **Demo:** [`mock-oauth2-server`](https://github.com/navikt/mock-oauth2-server),
+  through the `aai` chart. It is small, configurable per claim, and issues tokens for
+  any subject.
+- **Test bed:** GHGA's test OIDC provider, `services/test-oidc-provider`, which the
+  login fixtures use as they are.
+- **Production:** Life Science Login.
+
+The umbrella points the `oidc_*` settings of `auth-service` and the data portal at the
+selected provider, so the issuer and endpoint URLs stay consistent.
+
+### Consequences
+
+- The demo's AAI is configuration of a maintained image, not code of ours.
+- The test bed needs no change to its login fixtures, at the price of a second provider
+  that we maintain.
+- Login against Life Science Login itself is exercised only outside the demo and test
+  bed.
+
+### Alternatives
+
+- **Dex.** Lightweight, but less convenient for non-interactive test users.
+- **Keycloak.** Closer to Life Science Login, but heavier than the demo needs.

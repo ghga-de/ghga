@@ -60,7 +60,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   - OCI labels `org.opencontainers.image.version` / `.revision` and the
     `GHGA_PLATFORM_VERSION` env var carry the version and commit.
 - The release workflow **verifies rather than re-tests**: it asserts the tagged commit is on
-  a branch its lane releases from, with a green CI run (ADR-0009's gates are the evidence;
+  a branch its lane releases from, with a green CI run (ADR-0006's gates are the evidence;
   the tag snapshots it). **The branch half of that check is per-lane** (amended 2026-09-01):
   it runs after lane routing instead of before it
   ([ADR-0020](0020-branching-strategy.md)). **Each lane names exactly one branch**
