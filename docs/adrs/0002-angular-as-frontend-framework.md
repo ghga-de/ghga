@@ -27,7 +27,7 @@ Contrary to our backend code, where we follow very strict coding guidelines and 
 
 Another reason for reconsidering the usage of React was the discontinuation of the "Create React App" tooling and the official recommendation to use a framework like Next.js or Remix on top of React instead. This means we needed to learn a new framework and re-implement the application anyway, and not only in order to create cleaner code. Therefore it made sense to also consider different frameworks not based on React, particularly since the main advantages of the mentioned React-based frameworks lie in areas like SEO that are not so important for us. Yet another reason to think about Angular was a kind of "renaissance" of the framework in 2023 when standalone components, Signals, a new template control flow syntax and other new features were introduced with the goal of making the Angular framework even more performant and developer friendly.
 
-The most popular and obvious alternatives to React were Angular, which qualifies as a frontend framework and not just a library, and Vue, which takes a kind of middle ground. So the decision to be made here was actually between Angular, and any framework or collection of libraries on top or React and Vue that would provide similar functionality.
+The most popular and obvious alternatives to React were Angular, which qualifies as a frontend framework and not just a library, and Vue, which takes a kind of middle ground. So the decision to be made here was actually between Angular, and any framework or collection of libraries on top of React and Vue that would provide similar functionality.
 
 We created a proof-of-concept re-implementation of core features of the GHGA catalog with Angular and Vue in order to get a feeling for how well these frameworks would support our needs. We also created a decision matrix with criteria explained in the appendix below. The matrix contains 15 differently weighted criteria for scores in the range of 0 to 5. When features were only available by using an extension framework or library, we deducted one or two points from our rating.
 
@@ -39,7 +39,7 @@ The proof-of-concept and the decision matrix both showed a clear advantage of An
 
 The current developers are convinced that this change will result in cleaner, more readable and maintainable code, and increase developer productivity.
 
-However, it could be slightly more difficult to onboard frontend developers, since React is more widely known. On the other hand, the re-implementation of the GHGA portal showed that as a frontend-developer it is not  too difficult to learn any of the other frameworks and to transfer the existing knowledge.
+However, it could be slightly more difficult to onboard frontend developers, since React is more widely known. On the other hand, the re-implementation of the GHGA portal showed that as a frontend-developer it is not too difficult to learn any of the other frameworks and to transfer the existing knowledge.
 
 The re-write connected with the transition to Angular could also take longer than a re-write using a React-based framework. On the other hand, the re-write forces us to re-structure our code base more thoroughly.
 
@@ -74,9 +74,9 @@ We consider React or Vue viable alternatives to Angular, but are confident that 
 
 Remarks regarding the evaluated criteria:
 
-We are aware that the list of criteria and weights is a bit arbitrary and ambiguous due to overlap, but we tried to base it on the concern for more structure, guidance and developer productivity, as explained above. We did not add the availability of UI component libraries and their quality as a criterion, because that would have gone beyond the scope of this evaluation and we do not expect huge differences between the frameworks in this regard. Instead, we decided to choose an appropriate component library after the selection of a framework.
+The list of criteria and weights is a bit arbitrary and ambiguous due to overlap, but we tried to base it on the concern for more structure, guidance and developer productivity, as explained above. We did not add the availability of UI component libraries and their quality as a criterion, because that would have gone beyond the scope of this evaluation and we do not expect huge differences between the frameworks in this regard. Instead, we decided to choose an appropriate component library after the selection of a framework.
 
-We are aware that many of the assigned scores can be disputed. For a proper evaluation year-long experience with all three frameworks would be needed, which are continually evolving. This was just an attempt to quantify our current understanding which is naturally biased and limited. The ratings reflect the state of the three frameworks at the time of the evaluation and the specific needs of our project; they are not meant as a general ranking of these frameworks.
+Many of the assigned scores can be disputed, too. A proper evaluation would need years of experience with all three frameworks, which keep evolving. This was just an attempt to quantify our current understanding which is naturally biased and limited. The ratings reflect the state of the three frameworks at the time of the evaluation and the specific needs of our project; they are not meant as a general ranking of these frameworks.
 
 - Completeness:
 	- Does the framework provide all essential features, like state management and routing? Does it also provide some non-essential, but important features like animations or server-side-rendering?
@@ -101,7 +101,7 @@ We are aware that many of the assigned scores can be disputed. For a proper eval
 	- Angular explicitly supports modularization. All frameworks have been proven to scale to large and complex projects, though at the time of the evaluation we found more published guidance and tooling for scaling Angular and React to very large code bases than for Vue.
 - Ease of learning:
 	- How easy is it to learn using the framework?
-	- It is often said that Angular has a more steep learning curve. However, this is mostly due to the fact that Angular includes more functionality. When using React, you need to learn additional libraries or frameworks. Other reasons for the perceived difficulty of learning Angular are its early support of TypeScript, and use of Reactive Extensions (RxJS). However, we consider TypeScript a necessity anyway. Reactive Extensions are highly useful even outside of Angular, while React hooks also have a learning curve and can not be used outside of React. The latest version of Angular also supports Signals which are easier to understand than Reactive Extensions. For Vue, a significant share of the community documentation and articles is published in Chinese rather than English. Since our team works in English, this reduced the learning material that was directly usable for us.
+	- It is often said that Angular has a more steep learning curve. However, this is mostly due to the fact that Angular includes more functionality. When using React, you need to learn additional libraries or frameworks. Other reasons for the perceived difficulty of learning Angular are its early support of TypeScript, and use of Reactive Extensions (RxJS). However, we consider TypeScript a necessity anyway. Reactive Extensions are highly useful even outside of Angular, while React hooks also have a learning curve and can not be used outside of React. The latest version of Angular also supports Signals which are easier to understand than Reactive Extensions. For Vue, part of the learning material is available primarily in Chinese (see community).
 - Documentation:
 	- This criterion measures the quality and completeness of the documentation for the framework. Clear and comprehensive documentation can save a lot of time and effort during development.
 	- Generally, the documentation for all of the three frameworks is very good. Since Angular is a full-fledged framework, everything is documented in one place, which gives Angular a slight advantage here.
@@ -109,16 +109,16 @@ We are aware that many of the assigned scores can be disputed. For a proper eval
 	- Does the framework support a clean architecture? Are there style and development guidelines? Does it support TypeScript and paradigms like Reactive extensions to make the code more structured and easier to understand? Does it support modularization?
 	- How much does the framework guide developers to create clean and maintainable code?
 	- The separation of template and code is best solved in Angular. Vue and React have them in one file, React even merges them via the JSX language. Angular has extensive coding and style guidelines. It also has a built-in dependency injection system, whereas React and Vue do not have such a system built-in. Data binding seems to be also more clear in Angular. The use of reactive programming in Angular can be challenging at first, but makes handling asynchronous data flows more manageable in the long run.
-- Community support:
+- Community:
 	- How large, active and supportive is the community around the framework? Are there conferences, Internet forums, podcasts?
 	- The three projects all have large communities. While the React community is probably the largest one, Angular also has a large community, conferences, forums, podcasts etc. Vue has a particularly large and active community in China, so part of its forums, documentation and extension projects is primarily available in Chinese, which limited what our English-speaking team could draw on directly.
 - CLI and IDE support:
 	- Does the framework provide a CLI tool to support development? Are there plugins for Visual Studio Code supporting the framework? Are there developer tools that support debugging in the browser?
 	- All frameworks are supported in Visual Studio Code and have developer tool extensions for the Chrome browser. Angular also has a powerful CLI tool to support development. Vue has a comparable tool with a somewhat smaller feature set. React itself has no CLI tool, but one is included in Next.js for instance.
-- Testing:
+- Testing support:
 	- How well does the framework support unit tests and integration tests?
 	- Angular comes with support for unit and end-to-end tests, and the CLI tool also provides scaffolding for tests. Vue and React also provide test utilities, but Angular test environment may be a bit more comprehensive.
--  Security:
+- Security:
 	- How well does the framework protect against common web security threats? Does it come with built-in security features?
 	- Angular provides all important security features out of the box, while some security mechanisms like CSRF protection require additional libraries in React and Vue.
 - Compatibility:
@@ -126,5 +126,5 @@ We are aware that many of the assigned scores can be disputed. For a proper eval
 	- Angular has the most complete support for web components.
 - Licensing
 	- All three frameworks are MIT licensed, therefore we can ignore that criterion.
--  Internationalization:
+- Internationalization:
 	- Since we only plan to support English language, we can ignore this criterion as well.

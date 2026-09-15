@@ -5,17 +5,17 @@
 
 ## Summary
 
-In the context of structuring Angular Components
+In the context of **structuring Angular Components**
 
-facing the choice between NgModules and standalone components
+facing **the choice between NgModules and standalone components**
 
-we decided for using only standalone components
+we decided for **using only standalone components**
 
-and neglected NgModules or using "Single Angular Component Modules"
+and neglected **NgModules or using "Single Angular Component Modules"**
 
-to achieve a modern, flexible code base that allows fine-grained lazy-loading
+to achieve **a modern, flexible code base that allows fine-grained lazy-loading**
 
-accepting that dependencies need to be declared on the component level.
+accepting that **dependencies need to be declared on the component level**.
 
 ## Details
 

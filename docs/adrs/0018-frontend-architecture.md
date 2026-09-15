@@ -49,7 +49,7 @@ A downside of this approach is that this architecture requires more discipline, 
 
 One alternative would be to continue building the application with a less rigid structure, relying solely on the structure and code style guidelines provided by the Angular framework. However, we believe that we should go one step further to achieve a cleaner and scalable architecture following principles from domain driven design.
 
-Another alternative would be to implement feature areas as sub-applications using the micro frontend pattern. We could also add more tooling like Nx that helps with building larger, composed applications. This would be more scalable when adding new sub-applications and development teams. Additionally, it could reduced build times when the application becomes more complex and new feature areas are added. However, we do not expect the complexity of our frontend to grow to a size where any of this would cause us problems.
+Another alternative would be to implement feature areas as sub-applications using the micro frontend pattern. We could also add more tooling like Nx that helps with building larger, composed applications. This would be more scalable when adding new sub-applications and development teams. Additionally, it could reduce build times when the application becomes more complex and new feature areas are added. However, we do not expect the complexity of our frontend to grow to a size where any of this would cause us problems.
 
 ### Additional Implementation Details
 

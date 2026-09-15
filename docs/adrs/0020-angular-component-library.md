@@ -21,9 +21,9 @@ accepting that **other libraries may have more components that could prove usefu
 
 ### Context
 
-Having chosen Material as the design system we would implement for the refactoring of the data portal ([ADR 019](0019-responsive-design-systems.md)), we needed to select a suitable component library that either has already implemented the Material design system, or has enough styling flexibility to allow for us to do so if we choose to.
+Having chosen Material as the design system we would implement for the refactoring of the data portal ([ADR-0019](0019-responsive-design-systems.md)), we needed to select a suitable component library that either has already implemented the Material design system, or has enough styling flexibility to allow for us to do so if we choose to.
 The primary requirements were the ability to implement the Material design system without having to repurpose the library entirely (e.g. having to rewrite all of Nebular's styles to suit Material UI because it is based on the Eva design system); thus component libraries based on other design systems (this does not include libraries that have a default theme but not based on a design system specifically, such as Bootstrap) would be rejected.
-Finally, the goal was to have a solution aiming to avoid excessive work (e.g. rewriting all the theming for Material), was well-maintaned (i.e. so that updates to Material design would be applied to the library without much delay), and comprehensive (i.e. so that the necessary components would be available).
+Finally, the goal was to have a solution aiming to avoid excessive work (e.g. rewriting all the theming for Material), was well-maintained (i.e. so that updates to Material design would be applied to the library without much delay), and comprehensive (i.e. so that the necessary components would be available).
 
 ### Decision
 
@@ -32,7 +32,7 @@ Developer feedback and our own follow-up evaluation raised concerns about the pr
 We therefore widened the search.
 
 Additional exploration of the libraries Tailwind CSS, Taiga UI, Onsen UI, ng-lightning and Spartan UI was thus undertaken in preparation, along with an updated look at the libraries in the previous list.
-In addition, if we were to consider the research done on component libraries of design systems included in [ADR 019](0019-responsive-design-systems.md), we could add Clarity, Ant, and Fluent to this list; though these would be rejected *a priori* in any case, as were Syncfusion and Kendo UI, due to their paid nature which goes against our aim to be based on free and open source software only.
+In addition, if we were to consider the research done on component libraries of design systems included in [ADR-0019](0019-responsive-design-systems.md), we could add Clarity, Ant, and Fluent to this list; though these would be rejected *a priori* in any case, as were Syncfusion and Kendo UI, due to their paid nature which goes against our aim to be based on free and open source software only.
 Due to being based on other design systems, ng-lightning, Nebular (Eva design system), and Foundation were rejected outright.
 
 This left us only with Angular Material, ng- and ngx-Bootstrap, PrimeNG, Semantic UI, UIKit, Tailwind CSS, Taiga UI, Onsen UI, and Spartan UI.
@@ -63,7 +63,7 @@ Other component libraries are rejected.
 
 ### Alternatives
 
-Although most librares did not meet our main requirements, a few of the most viable alternatives to the selection made here are the following:
+Although most libraries did not meet our main requirements, a few of the most viable alternatives to the selection made here are the following:
 PrimeNG offers a wider range of useful components than our selection.
 In our evaluation, however, we ran into behavioural and performance issues in several of the components we tried, and only the basic themes are available free of charge, while further themes and the theming tools are part of a paid offering, which does not fit our aim to build on free and open source software only.
 Onsen UI could also be an interesting choice because it ships a Material implementation, but its focus on small-screen sites and PWAs is a weaker match for our portal.
