@@ -24,6 +24,8 @@ from ghga_service_commons.api.mock_api import (
     MockSetupError,
     NotMockedError,
     endpoint,
+    in_sequence,
+    respond,
 )
 
 
@@ -223,3 +225,34 @@ def test_handler_parameter_missing_from_the_path_is_a_setup_error():
         ):
             client.get("/things")
         assert client.get("/pages").text == "1"
+
+
+def is_over_5(request: httpx2.Request, *, num: int) -> httpx2.Response:
+    """Say whether the number is greater than 5."""
+    return httpx2.Response(200, json=num > 5)
+
+
+class MockedNumbersApi(MockedApi):
+    """A mock whose endpoint casts its path variable to `int`."""
+
+    base_url = "http://numbers.test"
+    on_is_over_5 = endpoint("GET", "/nums/{num}", is_over_5)
+
+
+def test_in_sequence_casts_path_variables_for_each_handler():
+    """Test that handlers wrapped in `in_sequence` get their path variables cast."""
+    mock = MockedNumbersApi()
+    mock.on_is_over_5 = in_sequence(is_over_5, is_over_5)
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        assert client.get("/nums/3").json() is False
+        assert client.get("/nums/7").json() is True
+
+
+def test_in_sequence_keeps_the_handler_when_a_value_does_not_cast():
+    """Test that a request answered with a 422 does not use up the handler in line."""
+    mock = MockedNumbersApi()
+    mock.on_is_over_5 = in_sequence(is_over_5, respond(418))
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        assert client.get("/nums/three").status_code == 422
+        assert client.get("/nums/7").json() is True
+        assert client.get("/nums/7").status_code == 418

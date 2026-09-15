@@ -116,10 +116,19 @@ class _InSequence:
     def __call__(
         self, request: httpx2.Request, **path_variables: str
     ) -> httpx2.Response | Awaitable[httpx2.Response]:
-        """Answer with the next handler in line, refusing once they are used up."""
+        """Answer with the next handler in line, refusing once they are used up.
+
+        This wrapper collects the path variables as strings, so they are cast here for
+        the handler in line. A request that fails that does not use the handler up.
+        """
         if not self._remaining:
             raise MockSetupError(f"Unexpected additional request to {request.url}")
-        return self._remaining.pop(0)(request, **path_variables)
+        handler = self._remaining[0]
+        bound_path_variables = _bind_and_cast_path_vars(
+            handler, path_variables, request
+        )
+        self._remaining.pop()
+        return handler(request, **bound_path_variables)
 
 
 class Endpoint:
