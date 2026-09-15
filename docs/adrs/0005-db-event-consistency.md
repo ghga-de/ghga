@@ -1,6 +1,7 @@
-# Consistency between Events and Databases of Services
+# ADR-0005 — Consistency between events and databases of services
 
-Date: 2024-03-21
+- **Status:** accepted
+- **Date:** 2024-03-21
 
 ## Summary
 
@@ -18,24 +19,18 @@ accepting that **event consumers must allow consuming the same event multiple ti
 
 ## Details
 
-### Status
-
-**proposed**
-
-### Context & Requirements
+### Context
 
 In a microservice architecture coupling between services should be avoided as much as
 possible. However, as soon as services collaborate to realize a user journey, their
 states become dependent on each other. A mechanism must be in place to ensure
 consistency between the services' states.
 
-To achieve that, we rely on publishing
-state changes occurring in one service as events that are consumed by other services.
-The state of a microservice is usually managed in MongoDB database. For event exchange,
-we use Apache Kafka.
-
-To ensure consistency between service states via events, it must first be guaranteed
-that the events in Apache Kafka are consistent with the state stored in MongoDB.
+To achieve that, we publish state changes occurring in one service as events that are
+consumed by other services. The state of a microservice is usually managed in a MongoDB
+database, and events are exchanged via Apache Kafka. Consistency between service states
+therefore first requires that the events in Apache Kafka are consistent with the state
+stored in MongoDB.
 
 ### Decision
 
@@ -121,21 +116,17 @@ initially. This adds additional deployment complexity.
 
 ### Alternatives
 
-We have evaluated the following alternatives:
-
 It would be possible to use the original outbox pattern. However, the database setup
 would be more complex since separate data structures are required for storing the
 primary state and the event representations. This would also require cross-document
 transactions to be implemented into our DAO providers and enabled in MongoDB.
 
-Another alternative would be to use CDC. However, the produced events would mirror
-the documents in the database and thus leak internal details on the service state.
-
-To fix the mentioned issue, CDC could be extended with an additional process that
-consumes the CDC-produced events and transforms them into a public representation. This
-would functionally be equivalent to the proposed solution. However, we would have to
-rely on an additional infrastructure tool, e.g. Kafka Connect. This adds overhead to
-the deployment and operation.
+Another alternative would be to use CDC. However, the produced events would mirror the
+documents in the database and thus leak internal details on the service state. CDC could
+be extended with an additional process that transforms the CDC-produced events into a
+public representation, which would be functionally equivalent to the proposed solution.
+However, we would then rely on an additional infrastructure tool, e.g. Kafka Connect,
+which adds overhead to deployment and operation.
 
 In general, it is desirable to work around the issue of event and database consistency
 by making services entirely stateless, i.e. not requiring a database, but only consuming

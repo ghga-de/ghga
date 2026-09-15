@@ -1,28 +1,25 @@
-# Angular with Standalone Components instead of NgModules
+# ADR-0012 — Angular with standalone components instead of NgModules
 
-Date: 2024-09-25
+- **Status:** accepted
+- **Date:** 2024-09-25
 
 ## Summary
 
-In the context of structuring Angular Components
+In the context of **structuring Angular Components**
 
-facing the choice between NgModules and standalone components
+facing **the choice between NgModules and standalone components**
 
-we decided for using only standalone components
+we decided for **using only standalone components**
 
-and neglected NgModules or using "Single Angular Component Modules"
+and neglected **NgModules or using "Single Angular Component Modules"**
 
-to achieve a modern, flexible code base that allows fine-grained lazy-loading
+to achieve **a modern, flexible code base that allows fine-grained lazy-loading**
 
-accepting that dependencies need to be declared on the component level.
+accepting that **dependencies need to be declared on the component level**.
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 NgModules have long been a core concept of Angular and have seen widespread use. However, with the introduction of the newer concept of standalone components, we need to decide whether to adopt this new approach for building Angular applications or continue using NgModules.
 

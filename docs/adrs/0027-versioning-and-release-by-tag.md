@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-06-30
+- **Supersedes:** [ADR-0024](0024-chart-versioning.md)
 
 ## Summary
 

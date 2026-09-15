@@ -1,6 +1,7 @@
-# Responsive Design Systems
+# ADR-0019 — Responsive design systems
 
-Date: 2024-09-27
+- **Status:** accepted
+- **Date:** 2024-09-27
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **other design systems might be opinionated in a way more compati
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 A design system is necessary to achieve a consistent look of elements and pages in any website, which is vital for providing clear and uncomplicated user experiences.
 Although it would be possible to create one from scratch, this can be a considerable amount of work.
@@ -43,8 +40,7 @@ Its CSS classes might still prove very useful for styling our site and component
 Spartan UI is part of the spartan toolset, which is itself an entire 'opinionated full-stack' of tools, of which Spartan UI is a subset, and Tailwind CSS the base of Spartan UI.
 Spartan UI is not necessarily a design system, and its components are only in alpha, making it unsuitable for much discussion here.
 
-As this was very subjective choice, since the remaining five were all comparable in many aspects, the final choice would be simply based on developer choice.
-In this case, the decision was made to choose Material as the design system to use.
+Since the remaining five were comparable in many aspects, the final choice was a subjective one, made by the developers: Material.
 Material's open source nature, its backing by a large corporation (Google, in this case), its popularity in both adoption and support through various component libraries for Angular (e.g. [Angular Material](https://material.angular.io/)), its likely familiarity to many users due to its use in the Google ecosystem (Android, ChromeOS, Google web apps, etc.) and its continuous development (now currently at version 3, and version 1 for its Web specification) can all be seen as useful criteria for justifying the decision.
 
 ### Consequences

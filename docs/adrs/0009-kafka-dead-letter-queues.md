@@ -1,6 +1,7 @@
-# Kafka Dead Letter Queues (DLQ)
+# ADR-0009 — Kafka dead letter queues (DLQ)
 
-Date: 2024-07-10
+- **Status:** accepted
+- **Date:** 2024-07-10
 
 ## Summary
 
@@ -14,27 +15,21 @@ and neglected **the use of Kafka Connect or multiple dedicated Kafka topics**
 
 to achieve **a lightweight, custom solution requiring no additional products**
 
-accepting that **that we will forgo any of the more robust features offered by Kafka Connect**.
+accepting that **we will forgo any of the more robust features offered by Kafka Connect**.
 
 ## Details
 
-### Status
-
-**Accepted**
-
-### Context & Requirements
+### Context
 
 Before the change described here, an event that resulted in an unhandled exception when
 consumed would stop the consumer without committing the consumer offsets, so that the
 same event was consumed again after a restart. Without a dedicated mechanism, the only
 quick remedy was to commit the offsets regardless of the outcome, i.e. to skip events.
 
-We need a way to handle failed events more elegantly, especially since they can be caused
-by a number of things: timeouts and connection errors, malformed payloads, database
-corruption, application bugs, etc.
-
-We need a mechanism that enables us to set a failed event aside, investigate the cause,
-and ultimately dispose of it or try to consume it again.
+Failed events can have many causes: timeouts and connection errors, malformed payloads,
+database corruption, application bugs, etc. We need a mechanism that enables us to set a
+failed event aside, investigate the cause, and ultimately dispose of it or try to
+consume it again.
 
 ### Decision
 
@@ -71,9 +66,6 @@ Regardless of the approach taken, manual action will still be required to resolv
 underlying problem giving rise to a particular error.
 
 ### Alternatives
-
-There are two primary alternatives. One is an existing product, and the other is merely
-an alternate version of the custom implementation.
 
 The first alternative is to use a product that handles DLQ logic for us. One such
 tool is Kafka Connect. It ships with Kafka and the configuration is compact at the

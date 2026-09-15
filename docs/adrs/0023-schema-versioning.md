@@ -1,6 +1,7 @@
-# Schema Versioning
+# ADR-0023 — Schema versioning
 
-Date: 2024-12-16
+- **Status:** accepted
+- **Date:** 2024-12-16
 
 ## Summary
 
@@ -26,26 +27,16 @@ accepting that **we must take care to implement the solution consistently, that 
 
 ## Details
 
-### Status
-
-**Proposed**
-
-### Context & Requirements
+### Context
 
 **Definitions**
-- ***Migration***: the modification of existing DB documents to make them compatible
-  with the current corresponding Pydantic model.
-- ***Migration script***: some code that performs a migration to one or more
-  collections in the DB. Can be in Python or a MongoDB query.
-- ***Migration process***: The process of running a migration script from start to
-  finish, including any work required to kick it off.
-- ***Schema***: The schema of a Pydantic model (field names and types/definitions).
-  "Pydantic model", "model", and "schema" are used interchangeably here.
+- ***Migration***, ***migration script***, ***migration process*** and ***schema*** are
+  used as defined in [ADR-0022](0022-db-migrations.md); "Pydantic model", "model", and
+  "schema" are used interchangeably here.
 - ***Schema version***: A value that identifies a specific iteration of a schema,
   representing the exact data structure at a given point in time. Can be an integer,
   SemVer string, or similar incrementable value.
 
-**Context**:
 See [this write-up](https://www.mongodb.com/blog/post/building-with-patterns-the-schema-versioning-pattern)
 by the MongoDB team to learn about a recommended approach to schema versioning in
 MongoDB.
@@ -163,15 +154,14 @@ tracked in version control for the application code. The latest collection is qu
 and data from old collections can be migrated to the newer one. However, the documents
 themselves don't feature version information.
 
-This approach works for standalone
-applications, but it isn't well suited for design patterns that rely on shared schemas.
-For us specifically, the models in `ghga-event-schemas` can change independently of
-a given service. Without explicit schema version information, services are subject to a
-variety of potential pitfalls in data validation, some of which might not raise an
-error. Detecting incompatibilities would require schema inspection logic which is
-duplicated for each service that uses the model. It's simpler for both services and
-developers to ensure schema harmonization if there's an explicit value stamped on each
-model.
+This approach works for standalone applications, but it isn't well suited for design
+patterns that rely on shared schemas. For us specifically, the models in
+`ghga-event-schemas` can change independently of a given service. Without explicit
+schema version information, services are subject to a variety of potential pitfalls in
+data validation, some of which might not raise an error. Detecting incompatibilities
+would require schema inspection logic which is duplicated for each service that uses the
+model. It's simpler for both services and developers to ensure schema harmonization if
+there's an explicit value stamped on each model.
 
 **Neglected Path #3 - Explicit Versioning by Class Name**
 We can version schemas by appending the version information to the class name and
@@ -190,13 +180,12 @@ stored in the database and could migrate documents on the fly if needed. It woul
 provide the level of granularity required to ensure that every event payload and
 document used to populate a Pydantic model is what it should be.
 
-However, the
-primary drawbacks are that it requires more maintenance than the chosen solution, is
-significantly harder to turn back from if it turns out to be the wrong approach in the
-long run, and opens the door for having collections featuring documents associated with
-multiple schemas definitions rather than only the current schema. Not only that, but
-adding the `schema_version` field to each model introduces the chance that the required
-settings are incorrectly or not applied, defeating the purpose.
+However, the primary drawbacks are that it requires more maintenance than the chosen
+solution, is significantly harder to turn back from if it turns out to be the wrong
+approach in the long run, and opens the door for collections holding documents
+associated with multiple schema definitions rather than only the current schema. Adding
+the `schema_version` field to each model also introduces the chance that the required
+settings are applied incorrectly or not at all, defeating the purpose.
 
 ### Addendum
 

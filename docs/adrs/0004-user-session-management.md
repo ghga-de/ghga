@@ -1,6 +1,7 @@
-# User Session Management in the GHGA Data Portal
+# ADR-0004 — User session management in the GHGA data portal
 
-Date: 2023-12-22
+- **Status:** accepted
+- **Date:** 2023-12-22
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **using cookies adds another mechanism on top of the already used
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Users need to login to the GHGA data portal (a single-page application) in order to request access, and to upload or download research data.
 The actual upload or download is done using a CLI client outside of the data portal, using special tokens that are created in the data portal. Specifying the datasets and files (once access permissions have been granted) and creating CLI tokens does not take much time.

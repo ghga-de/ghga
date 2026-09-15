@@ -1,14 +1,15 @@
-# Node Runtime for the Angular project
+# ADR-0015 — Node runtime for the Angular project
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
-In the context of **choosing a builder and package manager for the angular project**
+In the context of **choosing a builder and package manager for the Angular project**
 
 facing **the need to have a smooth developer experience**
 
-we decided for **to go with Node.js as a runtime environment and pnpm as a package manager**
+we decided for **going with Node.js as a runtime environment and pnpm as a package manager**
 
 and neglected **yarn, bun, deno, kuto and others**
 
@@ -18,11 +19,7 @@ accepting that **some additional performance improvements could be made by using
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 There are two major building blocks: the JavaScript runtime environment and the package manager. For both, there are various options and they are somewhat mixed because the Node.js runtime environment comes bundled with the node package manager (npm) by default. Also, most package managers simply use the npm online package repository as a source for the dependencies to install.
 
@@ -41,7 +38,7 @@ For our project, npm was the weakest option on all three points: we ran into loc
 
 Bun comes with a package manager that succeeds on all of these points, but it is designed together with its own runtime environment, and we did not want to combine it with the Node.js runtime. Bun also does not execute post-install hooks by default, which some of our dependencies rely on and which is difficult to manage in a large codebase. Bun would be more interesting if we used [SSR](0017-server-side-rendering-in-angular.md) because its faster JavaScript execution would impact user experience. We have, however, decided not to use SSR.
 
-pnpm and yarn are the two remaining options. For Yarn, the split between the v1 and the v2+ (Berry) line means that projects, tooling and documentation are spread over two rather different versions, which was the main drawback for us. pnpm also has an advantage in its way of handling mono-repos, and we therefore decided to use pnpm to install dependencies. For example, [here](https://refine.dev/blog/pnpm-vs-npm-and-yarn/#introduction).
+pnpm and yarn are the two remaining options. For Yarn, the split between the v1 and the v2+ (Berry) line means that projects, tooling and documentation are spread over two rather different versions, which was the main drawback for us. pnpm also has an advantage in its way of handling mono-repos, and we therefore decided to use pnpm to install dependencies (see, for example, [this comparison](https://refine.dev/blog/pnpm-vs-npm-and-yarn/#introduction)).
 
 ### Consequences
 

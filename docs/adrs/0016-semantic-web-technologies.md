@@ -1,6 +1,7 @@
-# Use of semantic web technologies
+# ADR-0016 — Use of semantic web technologies
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **performance in older search engines and general no-js environme
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Using semantic HTML is a complete upgrade over not doing so. It is considered standard, [there is basically complete browser support](https://caniuse.com/html5semantic) and it has no technical downside.
 

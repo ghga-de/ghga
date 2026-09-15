@@ -1,6 +1,7 @@
-# Tailwind
+# ADR-0021 — Tailwind
 
-Date: 2024-10-11
+- **Status:** accepted
+- **Date:** 2024-10-11
 
 ## Summary
 
@@ -14,15 +15,11 @@ and neglected **a single global stylesheet, inline styles or large component sty
 
 to achieve **a well-structured codebase with few code duplications**
 
-accepting that **this will add a dependency**
+accepting that **this will add a dependency**.
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 The application we are building will require at least some CSS to function properly. Not all such rules will be provided by our design system and its ui components. As a consequence, we will need to apply some CSS rules.
 
@@ -36,7 +33,7 @@ We have decided to use tailwind.css. Tailwind offers a wide range of CSS classes
 
 ### Consequences
 
-Our codebase will only contain very little custom CSS. The CSS we use will be tree-shaked and optimized, and we will not have to come up with naming conventions for CSS classes. Additionally, we will not have as many code duplication, and it will be easier to see in the HTML markup, what style actually applies to an element.
+Our codebase will only contain very little custom CSS. The CSS we use will be tree-shaken and optimized, and we will not have to come up with naming conventions for CSS classes. Additionally, we will not have as much code duplication, and it will be easier to see in the HTML markup, what style actually applies to an element.
 
 In exchange, we have an additional dependency. Tailwind requires its own configuration and has to be integrated into the build process to enable tree-shaking of the classes and the minification of the resulting style sheet.
 
@@ -46,9 +43,7 @@ By default, we should be able to go without component style sheets. Color defini
 
 ### Alternatives
 
-The dominant role of tailwind is a rare occurrence in the web ecosystem in that there are no 2 ways to do what tailwind does. The decision is to either use CSS or to abstract it away using tailwind. Additionally, tailwind classes typically only contain one rule or the minimal amount of CSS to achieve what the class is supposed to do. For example: if a CSS class contains multiple rules, there is no way to get rid of rules that have no effect in a given instance. This often occurs because classes tend to grow over time. Since there is no easy way to find all places that use a specific class, developers are hesitant to remove rules from classes, unsure of the impact such a change might have.
-
-Tailwind classes only contain very few instructions that are completely bound to what the rule does (text-bold only makes the font bold, no padding or margin, no font family or sizing etc.) Additionally, these classes are applied directly where they are used so it is clear to determine what the impact of a change will be.
+The dominant role of tailwind is a rare occurrence in the web ecosystem in that there are no two ways to do what tailwind does. The decision is to either use CSS or to abstract it away using tailwind. Custom CSS classes tend to grow over time and collect multiple rules, some of which have no effect in a given instance. Since there is no easy way to find all places that use a specific class, developers are hesitant to remove rules from classes, unsure of the impact such a change might have. Tailwind classes, in contrast, contain only the minimal CSS bound to what the class does (text-bold only makes the font bold, no padding or margin, no font family or sizing etc.), and they are applied directly where they are used, so the impact of a change is clear.
 
 The alternative would be to use custom CSS and to define processes to tackle the resulting issues manually or to accept that the CSS codebase will deteriorate over time. Another alternative is to allow style rules to be passed on to children thus enabling style sharing across the levels of the application hierarchy. This option, however, makes it even harder to determine, which rules apply where and how changes will impact the application.
 

@@ -1,10 +1,11 @@
-# Angular Code Style
+# ADR-0013 — Angular code style
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
-In the context of **style rules and standards use in our new angular project**
+In the context of **style rules and standards used in our new Angular project**
 
 facing **a need for homogenous code style and seamless onboarding and development**
 
@@ -18,11 +19,7 @@ accepting that **this is not a highly individual solution**.
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Starting a new project requires coming up with naming conventions and structure. Angular provides tooling for this (ng generate) that has a built-in standard naming convention. Going with the default here has no real downside and removes the need to customize the schemas. There is a long list of theoretical decisions that do not really incur advantages or disadvantages - it is simply a choice that has to be made and stuck by.
 
@@ -30,7 +27,7 @@ Apart from the file structure conventions and naming conventions the guide propo
 
 Ultimately, naming style for variables, components, folders, services etc. (i.e. PascalCase vs. camelCase) and structuring a codebase is not massively influential on the project - but sticking to the guide *is*. To be able to navigate a codebase, it is useful to have clear structure and easy-to-follow patterns. The Angular Style Guide provides one such pattern that aligns with the tooling that Angular provides.
 
-Since these styles are the de-facto standard for Angular projects, there is also some external tooling to enable those rules that can be checked automatically which would be more difficult to acchieve with self-defined standards.
+Since these styles are the de-facto standard for Angular projects, there is also some external tooling to enable those rules that can be checked automatically which would be more difficult to achieve with self-defined standards.
 
 An advantage of the guide is that it also offers reasoning for the rules, which helps to *understand* them instead of simple rote memorisation.
 
