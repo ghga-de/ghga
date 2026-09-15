@@ -1,94 +1,78 @@
-# ADR-0021 — One Pages site for the monorepo, one subpath per documented member
+# ADR-0021 — One documentation site for the monorepo
 
-- **Status:** Accepted — implemented 2026-09-09: `docs-publish.yaml`,
-  `scripts/docs_members.py` and the `docs` recipe landed with the decision, and the site is
-  live at `ghga-de.github.io/ghga`
+- **Status:** accepted
 - **Date:** 2026-09-09
-- **Deciders:** Christoph Zwerschke
 
-## Context
-`hexkit` is the only member with a documentation site: a hand-written user guide (42 Quarto
-pages — architecture concepts, protocols, per-provider guides, observability, glossary) plus
-an API reference generated from docstrings by [great-docs](https://posit-dev.github.io/great-docs/).
-Upstream published it to `ghga-de.github.io/hexkit` from its own `publish_docs.yml` on every
-push to `main`.
+## Summary
 
-That repo is about to be archived ([runbook §7](../migration/runbook.md)), and archiving
-disables Actions while GitHub keeps serving the existing Pages site. Whatever stands at that
-URL when we archive stands there permanently. The URL is not ours to retire either: it is
-baked into the immutable PyPI metadata of `hexkit` 9.0.0 and 9.0.1 (`Documentation =`) and
-into the README rendered on their PyPI pages.
+In the context of **hexkit's documentation site, whose repository was to be archived and
+whose URL is in published PyPI metadata**
 
-The monorepo has no docs lane at all, and the import made the existing config unbuildable:
-`great-docs.yml` registers two `pre_render` hooks under `scripts/`, which
-`drop_paths_for_kind` strips for every `lib`/`service`/`tool` row
-([ADR-0001](0001-consolidate-into-monorepo.md)). So the decision cannot be deferred by
-"leave it as it is" — as imported, hexkit's docs do not build here.
+facing **a monorepo with no docs lane, in which the imported docs no longer built**
 
-## Decision
-We will publish documentation from the monorepo as **one GitHub Pages site**,
-`ghga-de.github.io/ghga`, with **one subpath per documented member** (`/ghga/hexkit/`) and a
-plain index at the root listing them. GitHub serves one Pages site per repository, so the
-subpath is what makes the site extensible to `schemapack`, `metldata` or the CLIs without a
-second decision.
+we decided for **one GitHub Pages site with a subpath per documented member, found by
+its `great-docs.yml`, built from `main` in its own environment, with redirects at the
+old URL**
 
-**A member is documented iff it carries a `great-docs.yml`.** That file is the build's own
-config and has to exist anyway, so presence is the marker. This deviates from
-[ADR-0014](0014-capability-markers-and-placement.md), which declares capability in
-`[tool.ghga]`: a marker here would be a second source of truth able to disagree with the
-config it describes. `scripts/docs_members.py` is the discovery, read by both the workflow's
-matrix and `just docs`, so a local build cannot drift from the deployed one
-([ADR-0015](0015-task-runner.md)).
+and neglected **retiring the site, keeping the hexkit repository as docs host, versioned
+docs, and the workspace environment**
 
-**The site tracks `main` only.** `main` is the released state
-([ADR-0020](0020-branching-strategy.md)); publishing from the integration branch would put
-unreleased API on the URL that PyPI's `Documentation` link points at.
+to achieve **documentation that outlives the old repositories and takes further members
+without another decision**
 
-**The toolchain lives in its own `.venv-docs`,** resolved from the single root `uv.lock` via
-a `docs` dependency group. great-docs pulls ~450 MB (Jupyter, IPython, Quarto plumbing) that
-no test needs, and installing it into the workspace venv makes `just sync-check` — and
-therefore `just test` — report the environment as not matching the lock. `.venv-testbed` is
-the same pattern. Quarto itself is a standalone binary, not a Python package, so it comes
-from a devcontainer feature and a `quarto-actions/setup` step.
+accepting that **the docs URL changes, two upstream workarounds are ours to carry, and
+every push to `main` rebuilds the whole site**.
 
-**Before the hexkit repo is archived, we will publish a final build at
-`ghga-de.github.io/hexkit`** so the URL in the shipped PyPI metadata keeps resolving. The
-path structure is preserved under the new prefix, so that build can be a mirrored tree of
-redirect stubs; the alternative is the real docs plus a "moved" banner, frozen. That choice
-is open — but it has to be made *before* archiving, because afterwards the URL cannot be
-changed.
+## Details
 
-## Consequences
-- The docs URL changes. `libs/hexkit`'s `Documentation` metadata, its README links and
-  `great-docs.yml` now name the new location; the shipped 9.0.0/9.0.1 metadata cannot be
-  amended and is covered by the final redirect build instead.
-- Two `great-docs.yml` keys must agree with the deploy subpath, and great-docs reads them in
-  different places: `site_url` drives link and asset resolution, while the SEO pass reads
-  `seo.canonical.base_url` and, unset, guesses `https://<owner>.github.io/<repo>/` — which in
-  a monorepo silently drops the member subpath. `docs_members.py --check` asserts both, and
-  the lane fails on a mismatch rather than publishing wrong canonical links and sitemaps.
-- Two upstream great-docs workarounds stay as `pre_render` hooks under
-  `libs/hexkit/scripts/`. `add_member_anchor_ids.py` supplies the qualified anchors
-  great-docs promises in `objects.json` but does not emit. `fix_source_link_paths.py`
-  supplies the member prefix on "view source" URLs; great-docs' advertised `source.path`
-  monorepo override does not help, because it builds the URL as `<source.path>/<basename>`
-  and discards the package subdirectories. Both carry a TODO to drop them when fixed
-  upstream.
-- Contributors need one more one-time step (`just docs-install`) and a devcontainer rebuild
-  for Quarto. `just docs` fails with instructions when either is missing.
-- Every push to `main` rebuilds and redeploys the whole site (~2 minutes per member). There
-  is no `paths:` filter: an accurate one would have to enumerate each documented member's
-  tree, duplicating the list the discovery script exists to own.
+### Context
 
-## Alternatives considered
-- **Retire the docs site.** Rejected: the user guide is 42 hand-written pages, not
-  regenerable from code, and it is the only prose documentation hexkit has.
-- **Keep the `hexkit` repo unarchived as a docs host,** pushed to from the monorepo.
-  Rejected: it contradicts the retirement, and leaves a repo that looks maintained.
-- **A custom domain (`docs.ghga.de`).** Not rejected — deferred. It is a CNAME on top of
-  this Pages site and needs a DNS decision we do not need to make now.
-- **Per-release (versioned) docs** instead of tracking `main`. Rejected for now: great-docs
-  supports it, but it couples the docs lane to the PyPI lane for a site that has always
-  tracked the branch, and `main` is already the released state.
-- **Installing the `docs` group into the workspace venv.** Rejected: verified to break
-  `just sync-check`, which gates `just test`.
+`hexkit` is the only member with a documentation site: a 42-page user guide and an API
+reference, built with great-docs and published from its own repository. Archiving that
+repository disables its Actions while GitHub keeps serving the Pages site as it stands.
+The URL is also in the immutable PyPI metadata of `hexkit` 9.0.0 and 9.0.1.
+
+The import stripped the build hooks the docs need
+([ADR-0001](0001-consolidate-into-monorepo.md)), so they did not build in the monorepo.
+
+### Decision
+
+- **One site**, `ghga-de.github.io/ghga`, with a subpath per documented member
+  (`/ghga/hexkit/`) and an index at the root. GitHub serves one Pages site per
+  repository.
+- **A member is documented if it has a `great-docs.yml`.** The build needs that file
+  anyway, so a `[tool.ghga]` marker
+  ([ADR-0014](0014-capability-markers-and-placement.md)) would be a second source that
+  could disagree. `scripts/docs_members.py` finds the members for both the workflow and
+  `just docs`.
+- **The site tracks `main`**, the released state
+  ([ADR-0020](0020-branching-strategy.md)). Building from `dev` would put unreleased API
+  behind PyPI's documentation link.
+- **The toolchain has its own `.venv-docs`**, from a `docs` dependency group in the root
+  `uv.lock`. Quarto comes from a devcontainer feature and a CI setup step.
+- **The old URL redirects** into the new site, published before the hexkit repository
+  was archived.
+
+### Consequences
+
+- The docs URL changes. `hexkit`'s metadata and README name the new one; the redirects
+  cover the versions already on PyPI.
+- great-docs needs the deploy subpath in two settings, and `docs_members.py --check`
+  fails the lane when they disagree.
+- Two workarounds for great-docs bugs stay as build hooks in `libs/hexkit/scripts/`
+  until fixed upstream.
+- Contributors need `just docs-install` once, and Quarto in the devcontainer.
+- Every push to `main` rebuilds the whole site, about two minutes per member. A path
+  filter would duplicate the member discovery.
+
+### Alternatives
+
+- **Retire the site.** The user guide is hand-written and cannot be regenerated from
+  code.
+- **Keep the hexkit repository as docs host.** Contradicts its retirement and looks
+  maintained.
+- **A custom domain.** Deferred: a DNS decision on top of this site, not needed now.
+- **Versioned docs.** Couples the docs lane to the PyPI lane, while `main` already is
+  the released state.
+- **The `docs` group in the workspace environment.** Makes `just sync-check`, and with
+  it `just test`, fail.
