@@ -21,6 +21,8 @@ charts and runs its integration tests on Kubernetes.
   checklist.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the
   [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
+- **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes,
+  their tags, version stamping, the PyPI upload plan and the publish targets.
 - **[dependencies.md](dependencies.md)** — how dependencies are updated, and which are
   deliberately kept behind their latest version, why, and the signal to update.
 
@@ -42,18 +44,18 @@ mirror here. Write new ADRs from the [template](adr/0000-template.md), following
 |---|---|---|---|
 | [0001](adr/0001-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |  |
 | [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted · last amended 2026-08-24 |  |
-| [0004](adr/0004-versioning-and-release-by-tag.md) | Hybrid releases: platform lockstep (`ghga/X.Y.Z`) + per-component PyPI lanes | Accepted · revised 2026-07-23 · last amended 2026-09-08 | follows [0020](adr/0020-branching-strategy.md) for the `dev` cut |
+| [0004](adr/0004-versioning-and-release-by-tag.md) | Releases: platform lockstep (`ghga/X.Y.Z`) and a per-component PyPI lane | Accepted |  |
 | [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Demo and test bed are one self-contained umbrella, on kind in CI and in the devcontainer | Accepted |  |
 | [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI: mock-oauth2-server in the demo, the test OIDC provider in the test bed | Accepted |  |
 | [0008](adr/0008-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated | Accepted |  |
 | [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a **hybrid** boundary (app charts own app-coupled CRDs) | Accepted |  |
 | [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) | Accepted |  |
-| [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults route the release lanes | Accepted · last amended 2026-08-18 |  |
+| [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults decide what a member builds and releases | Accepted |  |
 | [0015](adr/0015-task-runner.md) | Task runner: `just` now, `moon` later | Accepted |  |
 | [0016](adr/0016-secrets-and-tls.md) | Secrets: K8s Secrets (demo) / Vault Agent + cert-manager (prod) | Accepted |  |
 | [0018](adr/0018-pre-commit-hooks.md) | One root `pre-commit` config for both stacks; hook versions from the lockfiles | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
 | [0019](adr/0019-image-signing-sbom-provenance.md) | Sign published images; attach SBOM + provenance; enforcement stays in the platform layer | Accepted · last amended 2026-09-08 | amended by [0020](adr/0020-branching-strategy.md) |
-| [0020](adr/0020-branching-strategy.md) | Branching, merging and naming: `dev` and `main`, squashed pull requests, one naming grammar | Accepted | amends [0004](adr/0004-versioning-and-release-by-tag.md), [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) |
+| [0020](adr/0020-branching-strategy.md) | Branching, merging and naming: `dev` and `main`, squashed pull requests, one naming grammar | Accepted | amends [0018](adr/0018-pre-commit-hooks.md), [0019](adr/0019-image-signing-sbom-provenance.md) |
 | [0021](adr/0021-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | Accepted · implemented 2026-09-09 | deviates from [0014](adr/0014-capability-markers-and-placement.md) on marker vs. config-file discovery |
 
 ## Phased roadmap (high level)
