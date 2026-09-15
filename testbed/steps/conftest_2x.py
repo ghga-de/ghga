@@ -191,7 +191,10 @@ def write_upload_tsv(file_info: list[tuple[str, Path]], dest_dir: Path) -> Path:
 
 
 def run_batch_upload(
-    file_info: list[tuple[str, Path]], fixtures: JointFixture, upload_token: str
+    file_info: list[tuple[str, Path]],
+    fixtures: JointFixture,
+    upload_token: str,
+    overwrite: bool = False,
 ) -> subprocess.CompletedProcess:
     """Run ghga-connector batch-upload and return the completed process.
 
@@ -201,6 +204,8 @@ def run_batch_upload(
     connector = fixtures.connector
     tsv_path = write_upload_tsv(file_info, connector.config.work_dir)
     cmd = ["ghga-connector", "batch-upload", "--tsv", str(tsv_path), "--debug"]
+    if overwrite:
+        cmd.append("--overwrite")
     completed_upload = subprocess.run(  # nosec B607, B603
         cmd,
         cwd=connector.config.work_dir,

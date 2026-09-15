@@ -163,3 +163,48 @@ def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
     url = f"{fixtures.config.rs_url}/upload-boxes/{rdub_id}"
     headers = fixtures.auth.headers(session=session)
     return fixtures.http.patch(url, headers=headers, json=data)
+
+
+@when(
+    parse('"{full_name}" retrieves the storage overview'),
+    target_fixture="response",
+)
+def retrieve_storage_overview(full_name: str, fixtures: JointFixture) -> Response:
+    """Retrieve the aggregated upload statistics of every data hub."""
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+
+    url = f"{fixtures.config.rs_url}/storages"
+    headers = fixtures.auth.headers(session=session)
+    return fixtures.http.get(url, headers=headers)
+
+
+@then("the storage overview matches the uploaded files of each storage")
+def check_storage_overview(fixtures: JointFixture, response: Response):
+    """Check the per-hub summary against the boxes and files uploaded so far."""
+    summaries = {summary["storage_alias"]: summary for summary in response.json()}
+
+    for storage_name in ("primary", "secondary"):
+        storage_alias = fixtures.s3.get_storage_config(storage_name).storage_alias
+        summary = summaries.get(storage_alias)
+        assert summary, (
+            f"No summary for storage '{storage_alias}', got {sorted(summaries)}"
+        )
+
+        uploaded_files = fixtures.state.get_state(f"rdub_{storage_name}_files")
+        assert uploaded_files, f"No rdub_{storage_name}_files found in state"
+
+        # Every storage is used by exactly one box, the extra box has been deleted.
+        assert summary["box_count"] == 1, (
+            f"Expected one upload box for '{storage_alias}', got {summary['box_count']}"
+        )
+        assert summary["file_count"] == len(uploaded_files), (
+            f"Expected {len(uploaded_files)} file uploads for '{storage_alias}',"
+            f" got {summary['file_count']}"
+        )
+        assert summary["total_size"] > 0, (
+            f"Expected uploaded bytes for '{storage_alias}',"
+            f" got {summary['total_size']}"
+        )
