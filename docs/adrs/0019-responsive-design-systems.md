@@ -1,6 +1,7 @@
-# Responsive Design Systems
+# ADR-0019 — Responsive design systems
 
-Date: 2024-09-27
+- **Status:** accepted
+- **Date:** 2024-09-27
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **other design systems might be opinionated in a way more compati
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 A design system is necessary to achieve a consistent look of elements and pages in any website, which is vital for providing clear and uncomplicated user experiences.
 Although it would be possible to create one from scratch, this can be a considerable amount of work.

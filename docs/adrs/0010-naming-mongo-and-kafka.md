@@ -1,6 +1,7 @@
-# Naming conventions for Databases and Event Streams
+# ADR-0010 — Naming conventions for databases and event streams
 
-Date: 2024-08-09
+- **Status:** accepted
+- **Date:** 2024-08-09
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **we may need to change some already established names to achieve
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 We are currently using MongoDB for service databases and Apache Kafka for event streaming. For the integration of microservices, it is crucial that MongoDB database and collection names, as well as Apache Kafka topic and event type names, are configured correctly and consistently. Unfortunately, the names for these objects used in local and remote deployments, as well in the default and example configurations, were not consistent. Due to this inconsistency, it was often unclear whether composite names should be spelled in camelCase, kebab-case, or snake_case, leading to errors when the same object was spelled differently in two different service configurations. Therefore, we sought a consistent way to spell these names.
 
@@ -68,7 +65,7 @@ The guidelines listed above follow the recommendations found in the MongoDB and 
 
 Some alternative naming conventions are suggested in the Internet, such as using a "DB" suffix for database names or using PascalCase or camelCase for event types. We tend to avoid redundant suffixes, and prefer snake_case for event types, since they are already established in our code base and go well with the Python language used to implement the backend services.
 
-## Links
+### Links
 
 - [MongoDB Naming Restrictions](https://www.mongodb.com/docs/manual/reference/limits/#naming-restrictions/)
 - [Mastering MongoDB Collections](https://dev.to/mohitsinghchauhan/mastering-mongodb-collections-ei4)

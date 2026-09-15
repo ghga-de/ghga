@@ -1,6 +1,7 @@
-# Angular UI Component Library Selection
+# ADR-0020 — Angular UI component library selection
 
-Date: 2024-10-11
+- **Status:** accepted
+- **Date:** 2024-10-11
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **other libraries may have more components that could prove usefu
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Having chosen Material as the design system we would implement for the refactoring of the data portal ([ADR 019](0019-responsive-design-systems.md)), we needed to select a suitable component library that either has already implemented the Material design system, or has enough styling flexibility to allow for us to do so if we choose to.
 The primary requirements were the ability to implement the Material design system without having to repurpose the library entirely (e.g. having to rewrite all of Nebular's styles to suit Material UI because it is based on the Eva design system); thus component libraries based on other design systems (this does not include libraries that have a default theme but not based on a design system specifically, such as Bootstrap) would be rejected.

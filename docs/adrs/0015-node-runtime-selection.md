@@ -1,6 +1,7 @@
-# Node Runtime for the Angular project
+# ADR-0015 — Node runtime for the Angular project
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **some additional performance improvements could be made by using
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 There are two major building blocks: the JavaScript runtime environment and the package manager. For both, there are various options and they are somewhat mixed because the Node.js runtime environment comes bundled with the node package manager (npm) by default. Also, most package managers simply use the npm online package repository as a source for the dependencies to install.
 

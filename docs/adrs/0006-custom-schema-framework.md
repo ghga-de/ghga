@@ -1,6 +1,7 @@
-# A Custom Framework for Defining Linked Metadata Models
+# ADR-0006 — A custom framework for defining linked metadata models
 
-Date: 2024-01-11
+- **Status:** proposed
+- **Date:** 2024-01-11
 
 ## Summary
 
@@ -21,11 +22,7 @@ accepting that **the custom spec and framework need to be implemented and mainta
 
 ## Details
 
-### Status
-
-**proposed**
-
-### Context & Requirements
+### Context
 
 For modeling metadata, we need to be able to not only describe the structure of
 individual metadata resources (such as metadata on Files) but also how resources link to

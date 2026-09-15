@@ -1,6 +1,7 @@
-# UUID and Datetime Representation in MongoDB
+# ADR-0011 — UUID and datetime representation in MongoDB
 
-Date: 2024-10-14
+- **Status:** proposed
+- **Date:** 2024-10-14
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **this will require changes to the hexkit library and reformattin
 
 ## Details
 
-### Status
-
-**proposed**
-
-### Context & Requirements
+### Context
 
 First, some background information.
 

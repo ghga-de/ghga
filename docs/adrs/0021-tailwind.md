@@ -1,6 +1,7 @@
-# Tailwind
+# ADR-0021 — Tailwind
 
-Date: 2024-10-11
+- **Status:** accepted
+- **Date:** 2024-10-11
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **this will add a dependency**
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 The application we are building will require at least some CSS to function properly. Not all such rules will be provided by our design system and its ui components. As a consequence, we will need to apply some CSS rules.
 

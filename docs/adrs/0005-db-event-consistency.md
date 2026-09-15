@@ -1,6 +1,7 @@
-# Consistency between Events and Databases of Services
+# ADR-0005 — Consistency between events and databases of services
 
-Date: 2024-03-21
+- **Status:** proposed
+- **Date:** 2024-03-21
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **event consumers must allow consuming the same event multiple ti
 
 ## Details
 
-### Status
-
-**proposed**
-
-### Context & Requirements
+### Context
 
 In a microservice architecture coupling between services should be avoided as much as
 possible. However, as soon as services collaborate to realize a user journey, their

@@ -1,6 +1,7 @@
-# Angular as Frontend Framework
+# ADR-0002 — Angular as frontend framework
 
-Date: 2024-01-09
+- **Status:** accepted
+- **Date:** 2024-01-09
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **we need to move away from the currently used, very popular Reac
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 The GHGA catalog and the first version of the GHGA data portal have been developed with the very popular React library and the "Create React App" tooling.
 
@@ -52,7 +49,7 @@ As alternatives to Angular, we considered React-based frameworks such as Next.js
 
 We consider React or Vue viable alternatives to Angular, but are confident that using Angular will result in more maintainable, standardized code and a better developer experience.
 
-## Appendix: Evaluation Matrix
+### Appendix: evaluation matrix
 
 | Criterion | Weight | Angular | React | Vue |
 | ---- | ---- | ---- | ---- | ---- |

@@ -1,6 +1,7 @@
-# Using Angular Server-Side Rendering
+# ADR-0017 — Using Angular server-side rendering
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **performance could be reduced and in some cases, SEO might suffe
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 In an Angular app, two ways of code execution are possible: In the client or in the server. Classically, JavaScript only runs in the browser but newer versions of Angular also allow to run functions on the server. In a client-only setup, the website is a static website, that can be delivered by any web server, that simply returns text files based on routes. Dynamic content is requested from APIs.
 

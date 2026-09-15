@@ -1,6 +1,7 @@
-# Schema Versioning
+# ADR-0023 — Schema versioning
 
-Date: 2024-12-16
+- **Status:** proposed
+- **Date:** 2024-12-16
 
 ## Summary
 
@@ -26,11 +27,7 @@ accepting that **we must take care to implement the solution consistently, that 
 
 ## Details
 
-### Status
-
-**Proposed**
-
-### Context & Requirements
+### Context
 
 **Definitions**
 - ***Migration***: the modification of existing DB documents to make them compatible

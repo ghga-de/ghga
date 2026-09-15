@@ -1,6 +1,7 @@
-# Angular Project Documentation
+# ADR-0014 — Angular project documentation
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **features vary between frameworks and there will be effort invol
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 JSDoc is a natural choice because its style is aligned with that of JavaDoc, for example, and is therefore known to most developers. The more important question is which tools to use on top of the information stored in JSDoc and to decide on specifics of how to use JSDoc.
 

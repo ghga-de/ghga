@@ -1,6 +1,7 @@
-# Naming and Usage of Enums
+# ADR-0008 — Naming and usage of enums
 
-Date: 2024-03-08
+- **Status:** accepted
+- **Date:** 2024-03-08
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **there is a case mismatch beween Python enum names and values, a
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Both Python and TypeScript support different kinds of enums, e.g. numeric or string based, and both also support string literals as an alternative. To standardize the usage of enums in the codebase and to avoid problems when sharing enums between backend, frontend, and database, particularly due to conversion from and to JSON, we needed a common naming and usage convention for enums.
 
@@ -82,7 +79,7 @@ We could use `SCREAMING_SNAKE_CASE` everywhere. However, such strings look a bit
 
 In cases where enum values are only used internally and not shared between components or stored in the database, enums with numeric values may also be appropriate.
 
-## Links
+### Links
 
 - [Python support for enumerations](https://docs.python.org/3/library/enum.html)
 - [TypeScript Enums](https://www.typescriptlang.org/docs/handbook/enums.html)

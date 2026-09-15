@@ -1,6 +1,7 @@
-# Angular Code Style
+# ADR-0013 — Angular code style
 
-Date: 2024-09-24
+- **Status:** accepted
+- **Date:** 2024-09-24
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **this is not a highly individual solution**.
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Starting a new project requires coming up with naming conventions and structure. Angular provides tooling for this (ng generate) that has a built-in standard naming convention. Going with the default here has no real downside and removes the need to customize the schemas. There is a long list of theoretical decisions that do not really incur advantages or disadvantages - it is simply a choice that has to be made and stuck by.
 

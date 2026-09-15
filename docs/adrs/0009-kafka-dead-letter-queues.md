@@ -1,6 +1,7 @@
-# Kafka Dead Letter Queues (DLQ)
+# ADR-0009 — Kafka dead letter queues (DLQ)
 
-Date: 2024-07-10
+- **Status:** accepted
+- **Date:** 2024-07-10
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **that we will forgo any of the more robust features offered by K
 
 ## Details
 
-### Status
-
-**Accepted**
-
-### Context & Requirements
+### Context
 
 Before the change described here, an event that resulted in an unhandled exception when
 consumed would stop the consumer without committing the consumer offsets, so that the

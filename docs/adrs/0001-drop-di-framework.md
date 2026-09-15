@@ -1,6 +1,7 @@
-# Drop DI Framework
+# ADR-0001 — Drop DI framework
 
-Date: 2023-10-23
+- **Status:** accepted
+- **Date:** 2023-10-23
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **dependency resolution constructs may be verbose**.
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 Currently, we are using a wrapper around the [dependency_injector](https://github.com/ets-labs/python-dependency-injector)
 library and are experiencing the following problems:

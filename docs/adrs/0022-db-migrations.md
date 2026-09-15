@@ -1,6 +1,7 @@
-# MongoDB Migration Code Storage
+# ADR-0022 — MongoDB migration code storage
 
-Date: 2025-01-07
+- **Status:** proposed
+- **Date:** 2025-01-07
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **this approach involves some code redundancy and there is potent
 
 ## Details
 
-### Status
-
-**Proposed**
-
-### Context & Requirements
+### Context
 
 **Definitions**
 - ***Migration***: the modification of existing DB documents to make them compatible

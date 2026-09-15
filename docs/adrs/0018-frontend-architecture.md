@@ -1,6 +1,7 @@
-# Frontend architecture and modularization
+# ADR-0018 — Frontend architecture and modularization
 
-Date: 2024-10-01
+- **Status:** accepted
+- **Date:** 2024-10-01
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **we will not have the need to embed applications built with diff
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
 On the backend side, we are using micro services with a "triple-hexagonal architecture," which enables us to achieve high code quality with well-structured, highly testable, and decoupled code.
 

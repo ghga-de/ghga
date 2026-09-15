@@ -1,6 +1,8 @@
-# Sourcing Notifications
+# ADR-0007 — Sourcing notifications
 
-Date: 2024-01-29
+- **Status:** accepted
+- **Date:** 2024-01-29
+- **Amended:** 2026-09-15
 
 ## Summary
 
@@ -19,11 +21,7 @@ accepting that **the new service will be coupled to multiple other services**.
 
 ## Details
 
-### Status
-
-**accepted**
-
-### Context & Requirements
+### Context
 
   - "**Notification**" means the final entity which is emitted from the Notification Service, regardless of channel.
     - For the purposes of this ADR, a notification may be thought of as an email to the user.
@@ -74,6 +72,10 @@ We propose designing and implementing a new microservice (name TBD) that solves 
 by centralizing that responsibility. This new service should observe events published by other services and determine when to create
 a notification event. This will require no changes to the existing Notification Service. The exact implementation of the
 notification-sourcing rules should be decided outside of this ADR.
+
+**Amended 2026-09-15:** The new service is the notification orchestration service
+(`nos`). It publishes `EmailNotification` and `SmsNotification` events, which
+replaced the single `Notification` event type referred to above.
 
 ### Consequences
 

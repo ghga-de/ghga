@@ -1,6 +1,7 @@
-# Helm Charts Versioning
+# ADR-0024 — Helm charts versioning
 
-Date: 2025-02-24
+- **Status:** accepted
+- **Date:** 2025-02-24
 
 ## Summary
 
@@ -18,11 +19,7 @@ accepting that **more convincing reasons for a service specific versioning or us
 
 ## Details
 
-### Status
-
-**Accepted**
-
-### Context & Requirements
+### Context
 
 Currently the Chart version is bumped by either a new (i) service release or an update of the (ii) library chart.
 The microservice Charts are instances of the library chart differing only in their values.
