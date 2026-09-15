@@ -12,14 +12,14 @@ import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NotificationService } from '@app/shared/services/notification';
 import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 import { UploadBoxState } from '@app/upload/models/box';
+import { GrantWithBoxInfo } from '@app/upload/models/grant';
+import { UploadBoxService } from '@app/upload/services/upload-box';
 import {
   describeIncompleteOrFailedConflict,
   IncompleteOrFailedConflict,
   incompleteOrFailedConflictTitle,
   parseIncompleteOrFailedConflict,
 } from '@app/upload/utils/box-conflict';
-import { GrantWithBoxInfo } from '@app/upload/models/grant';
-import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UserUploadBoxDetailsDialogComponent } from '@app/upload/features/user-upload-box-details-dialog/user-upload-box-details-dialog';
 // eslint-disable-next-line boundaries/dependencies
 import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';

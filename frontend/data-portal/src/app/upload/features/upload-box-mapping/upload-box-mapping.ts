@@ -52,17 +52,17 @@ import {
   ConfirmDialogData,
 } from '@app/shared/ui/confirm-dialog/confirm-dialog';
 import { ResearchDataUploadBox } from '@app/upload/models/box';
-import {
-  describeUnsettledFiles,
-  IncompleteOrFailedConflict,
-  parseIncompleteOrFailedConflict,
-} from '@app/upload/utils/box-conflict';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { MappedField } from '@app/upload/models/mapping';
 import { Study } from '@app/upload/models/study';
 import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxMappingStateService } from '@app/upload/services/upload-box-mapping-state';
+import {
+  describeUnsettledFiles,
+  IncompleteOrFailedConflict,
+  parseIncompleteOrFailedConflict,
+} from '@app/upload/utils/box-conflict';
 import {
   MappingConfirmDialogData,
   UploadBoxMappingConfirmDialogComponent,
