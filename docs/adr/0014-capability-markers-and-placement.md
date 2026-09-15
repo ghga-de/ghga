@@ -48,7 +48,7 @@ name therefore doubles as the ENTRYPOINT, enforced by the Dockerfile's build-tim
 
 Members are **placed by primary identity** — `metldata` → `libs/`, `ghga-transpiler` /
 `ghga-validator` → `tools/` — and the folder is purely human grouping. The shared Dockerfile,
-the chart generator ([ADR-0013](0013-adopt-ghga-common-chart-system.md)), the release lanes
+the chart generator ([ADR-0011](0011-helm-chart-boundary-hybrid.md)), the release lanes
 (ADR-0004), and the affected-target CI all key off the markers, not the path.
 
 ## Consequences

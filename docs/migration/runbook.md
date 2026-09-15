@@ -97,7 +97,7 @@ incremental sync stays low-conflict:
 
 ## 4. Phase 4 — Charts & test bed
 
-1. **Adopt `ghga-common`** ([ADR-0013](../adr/0013-adopt-ghga-common-chart-system.md)): move the
+1. **Adopt `ghga-common`** ([ADR-0011](../adr/0011-helm-chart-boundary-hybrid.md)): move the
    library chart + generator into `deploy/`; prune the Emissary paths and the
    `istio-ext-authz-sync` Job; DRY the generator against `[tool.ghga]` markers
    ([ADR-0014](../adr/0014-capability-markers-and-placement.md)). App charts keep their
@@ -226,7 +226,7 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 
 ## Deploy (charts): manual semantic port — no textual sync
 
-The `charts` repo row was removed from `repos.tsv` (2026-08): after the ADR-0013
+The `charts` repo row was removed from `repos.tsv` (2026-08): after the ADR-0011
 restructure (`base/` → `deploy/charts/ghga-common`, per-service charts generated),
 upstream commits no longer apply as patches. Instead, port upstream library changes
 **semantically**:

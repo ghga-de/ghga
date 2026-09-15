@@ -534,7 +534,7 @@ jobs:
       #
       # ghga-common's own dependency (bitnami's `common` library) is already vendored
       # (deploy/charts/ghga-common/charts/common-2.22.0.tgz + Chart.lock are committed).
-      # Every app chart declares ghga-common as a `file://` dependency (ADR-0013); `helm
+      # Every app chart declares ghga-common as a `file://` dependency (ADR-0011); `helm
       # dep up` per chart would walk into ghga-common's own bitnami dependency and
       # re-validate it against the remote bitnami index every single time — redundant
       # network I/O for a dependency that's already pinned and doesn't change between

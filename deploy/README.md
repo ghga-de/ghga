@@ -1,7 +1,7 @@
 # `deploy/` — Helm charts (a product of this repo)
 
 We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than build from
-scratch ([ADR-0013](../docs/adr/0013-adopt-ghga-common-chart-system.md)). The system was
+scratch ([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)). The system was
 imported (history-preserving) from the `charts` repo.
 
 ```bash
