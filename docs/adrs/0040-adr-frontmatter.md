@@ -1,6 +1,6 @@
 # ADR-0040 — YAML frontmatter for ADRs
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-09-15
 
 ## Summary
