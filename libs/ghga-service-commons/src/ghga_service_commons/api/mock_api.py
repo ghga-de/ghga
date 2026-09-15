@@ -575,6 +575,10 @@ def fail_with(error: Exception) -> ResponseHandler:
 
 def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
     """Build a handler answering consecutive requests with `handlers`, then failing."""
+    if not handlers:
+        raise MockSetupError(
+            "in_sequence() needs at least one handler. It would refuse every request."
+        )
     return _InSequence(handlers)
 
 
