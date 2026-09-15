@@ -571,8 +571,8 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     this.#confirmationService.confirm({
       title: 'Retry re-encryption?',
       message:
-        `<p>The file <strong>${file.alias}</strong> will be re-encrypted again. ` +
-        'It does not have to be uploaded again.</p>',
+        `<p>This will requeue the file <strong>${file.alias}</strong> for re-encryption ` +
+        'without requiring the submitter to upload it again.</p>',
       cancelText: 'Cancel',
       confirmText: 'Retry',
       callback: (confirmed) => {
