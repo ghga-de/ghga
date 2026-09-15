@@ -125,8 +125,8 @@
 # per-repo [tool.ruff] tables and the per-member .gitignore, dropped in 9ddc8284) — yet
 # each also adds a "this repo has moved" banner to the README, which is kept: an
 # upstream-only notice, wrong to carry here, where that README is the package's own.
-# adrs is archived too but never had a row: it was copied once, flattened, into docs/adr-old
-# (docs/adrs/* -> docs/adr-old/*), and is in sync apart from that same upstream-only notice.
+# adrs is archived too but never had a row: it was copied once, flattened, into
+# docs/adrs as ADR-0001 to ADR-0024 (docs/adrs/adrNNN_name.md -> docs/adrs/0NNN-name.md).
 #
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
 lib	ghga-service-commons	.	libs/ghga-service-commons	main

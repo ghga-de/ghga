@@ -54,8 +54,8 @@ so one number covers code and docs.
   request descriptions, review and issue comments, release notes. GitHub renders a hard
   newline in a comment as a visible line break.
 - **Commit messages:** subject and body wrapped at 72, per the conventions.
-- **Exempt:** [`docs/epics/`](epics/) and [`docs/adr-old/`](adr-old/), which were
-  imported with their own formatting.
+- **Exempt:** [`docs/epics/`](epics/) and ADRs 0001 to 0024 in [`docs/adrs/`](adrs/),
+  which were imported with their own formatting.
 
 Wrap the text you write or rewrite. Do not reflow untouched paragraphs to fix their
 width by hand: it buries the real change in the diff.

@@ -38,6 +38,30 @@ Status mirrors each ADR's own `Status:` line. Write new ADRs from the
 
 | # | Decision | Status |
 |---|---|---|
+| [0001](adrs/0001-drop-di-framework.md) | Drop DI Framework | Accepted |
+| [0002](adrs/0002-angular-as-frontend-framework.md) | Angular as Frontend Framework | Accepted |
+| [0003](adrs/0003-custom-2fa-service.md) | Custom 2FA micro service | Accepted |
+| [0004](adrs/0004-user-session-management.md) | User Session Management in the GHGA Data Portal | Accepted |
+| [0005](adrs/0005-db-event-consistency.md) | Consistency between Events and Databases of Services | Proposed |
+| [0006](adrs/0006-custom-schema-framework.md) | A Custom Framework for Defining Linked Metadata Models | Proposed |
+| [0007](adrs/0007-sourcing-notifications.md) | Sourcing Notifications | Accepted |
+| [0008](adrs/0008-usage-of-enums.md) | Naming and Usage of Enums | Accepted |
+| [0009](adrs/0009-kafka-dead-letter-queues.md) | Kafka Dead Letter Queues (DLQ) | Accepted |
+| [0010](adrs/0010-naming-mongo-and-kafka.md) | Naming conventions for Databases and Event Streams | Accepted |
+| [0011](adrs/0011-uuids-datetimes-mongodb.md) | UUID and Datetime Representation in MongoDB | Proposed |
+| [0012](adrs/0012-use-of-ngmodules.md) | Angular with Standalone Components instead of NgModules | Accepted |
+| [0013](adrs/0013-angular-code-style.md) | Angular Code Style | Accepted |
+| [0014](adrs/0014-angular-project-documentation.md) | Angular Project Documentation | Accepted |
+| [0015](adrs/0015-node-runtime-selection.md) | Node Runtime for the Angular project | Accepted |
+| [0016](adrs/0016-semantic-web-technologies.md) | Use of semantic web technologies | Accepted |
+| [0017](adrs/0017-server-side-rendering-in-angular.md) | Using Angular Server-Side Rendering | Accepted |
+| [0018](adrs/0018-frontend-architecture.md) | Frontend architecture and modularization | Accepted |
+| [0019](adrs/0019-responsive-design-systems.md) | Responsive Design Systems | Accepted |
+| [0020](adrs/0020-angular-component-library.md) | Angular UI Component Library Selection | Accepted |
+| [0021](adrs/0021-tailwind.md) | Tailwind | Accepted |
+| [0022](adrs/0022-db-migrations.md) | MongoDB Migration Code Storage | Proposed |
+| [0023](adrs/0023-schema-versioning.md) | Schema Versioning | Proposed |
+| [0024](adrs/0024-chart-versioning.md) | Helm Charts Versioning | Accepted |
 | [0025](adrs/0025-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |
 | [0026](adrs/0026-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted |
 | [0027](adrs/0027-versioning-and-release-by-tag.md) | Releases: platform lockstep (`ghga/X.Y.Z`) and a per-component PyPI lane | Accepted |
