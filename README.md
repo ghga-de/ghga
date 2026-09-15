@@ -55,7 +55,7 @@ never reconcile.
 ## Task runner
 
 Everything runs through [`just`](justfile) — a thin facade over uv / pnpm / helm / kind
-([ADR-0015](docs/adr/0015-task-runner.md)). Run `just` with no arguments to list every
+([ADR-0034](docs/adrs/0034-task-runner.md)). Run `just` with no arguments to list every
 recipe with its description.
 
 ### Run the demo locally
@@ -76,7 +76,7 @@ reloads rather than rebuilds.
 
 #### Logging in as the data steward
 
-The demo seeds one data steward ([ADR-0006](docs/adr/0006-self-contained-demo-lightweight-infra.md)),
+The demo seeds one data steward ([ADR-0028](docs/adrs/0028-self-contained-demo-lightweight-infra.md)),
 configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
 
 | | |
@@ -123,7 +123,7 @@ profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev`
 
 The BDD + Playwright integration suite ([`testbed/`](testbed/)) against the same umbrella
 plus the test-bed profile — state-management service, test OIDC provider, and the
-generated metldata artifact model ([ADR-0006](docs/adr/0006-self-contained-demo-lightweight-infra.md)).
+generated metldata artifact model ([ADR-0028](docs/adrs/0028-self-contained-demo-lightweight-infra.md)).
 
 ```bash
 just sync               # workspace env: the artifact generation needs ghga-datasteward-kit
@@ -169,7 +169,7 @@ and the release workflow always build one image per member. It exists because it
 ## Where to read
 
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/adr/](docs/adr/)** — the decisions (and why), ADR-0001…0021; the
+- **[docs/adrs/](docs/adrs/)** — the decisions (and why), ADR-0025…0039; the
   [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 - **[docs/style.md](docs/style.md)** — writing style for coding agents.

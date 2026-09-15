@@ -1,4 +1,4 @@
-# ADR-0007 — Local AAI via generic OIDC providers
+# ADR-0029 — Local AAI via generic OIDC providers
 
 - **Status:** accepted
 - **Date:** 2026-06-30

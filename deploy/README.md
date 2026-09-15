@@ -1,7 +1,7 @@
 # `deploy/` — Helm charts (a product of this repo)
 
 We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than build from
-scratch ([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)). The system was
+scratch ([ADR-0031](../docs/adrs/0031-helm-chart-boundary-hybrid.md)). The system was
 imported (history-preserving) from the `charts` repo.
 
 ```bash
@@ -10,7 +10,7 @@ helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version 
 
 Chart version/`appVersion` and publishing are not per-merge: they're stamped and pushed as
 OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via
-[release.yaml](../.github/workflows/release.yaml), ADR-0004), so a chart version always
+[release.yaml](../.github/workflows/release.yaml), ADR-0027), so a chart version always
 matches a released set of images.
 
 Layout:
@@ -21,7 +21,7 @@ deploy/
     ghga-common/          # Bitnami-common-based library chart (the binding contract)
     <per-service charts>/ # generated — do not edit; run `just charts [version]`
     ghga-demo/            # self-contained, single-command umbrella (== the test bed)
-    aai/                  # local AAI subchart (mock-oauth2-server default; ADR-0007)
+    aai/                  # local AAI subchart (mock-oauth2-server default; ADR-0029)
   src/                    # generator (create_charts.py), chart template
   tests/                  # library chart tests (pytest renders the dummy chart via helm)
 ```
@@ -61,7 +61,7 @@ processed for aliased instances). The aai issuer routes through the gateway at
 `/<issuerId>` with no rewrite, so browser and adapter agree on one issuer URL; oidc_* and
 DSN settings for the enabled slice live in the umbrella values (release name `ghga`
 assumed — the config block is plain YAML, not templated). A pre-install secret-gen Job
-(ADR-0006/0016) generates the internal auth JWK pair + TOTP key as plain K8s Secrets
+(ADR-0028/0035) generates the internal auth JWK pair + TOTP key as plain K8s Secrets
 (idempotent — keys survive upgrades; the adapter consumes the private half, the registry
 instance the public half), and the demo data steward is seeded via
 `add_as_data_stewards`. MailHog (SMTP sink, UI via port-forward) and Vault dev-mode
@@ -72,7 +72,7 @@ stands in for both hub localstacks, buckets provisioned by the chart), prod base
 under an /api prefix, ext-authz on every /api/* route, and the full secret matrix
 (distinct signing pairs per role, per-service tokens, crypt4gh file Secret for ekss).
 The access/metadata/notification path is in too (ars, mass, dins, rts, ns, nos, dlqs;
-sms ships disabled — testbed-only per ADR-0008 — the testbed profile enables it and adds
+sms ships disabled — testbed-only per ADR-0030 — the testbed profile enables it and adds
 it to the protected routes), with a wiremock lox24 SMS-gateway mock beside MailHog. All
 21 deployable services are in the bundle. Still to land: metldata's real artifact model
 (testbed migration).
@@ -84,13 +84,13 @@ ext-authz declaratively), `charts_app_versions.yaml` and the per-repo version-pl
 scripts are dissolved into workspace metadata.
 
 Key decisions:
-- **Hybrid boundary** ([ADR-0011](../docs/adr/0011-helm-chart-boundary-hybrid.md)): app charts
+- **Hybrid boundary** ([ADR-0031](../docs/adrs/0031-helm-chart-boundary-hybrid.md)): app charts
   own app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, KafkaUser[toggle]);
   the GitOps/platform layer (`devops-kubernetes-hub`, not in this repo) owns the edge `Gateway`,
   the edge-auth object, and per-env config.
 - **Self-contained edge = Envoy Gateway**
-  ([ADR-0012](../docs/adr/0012-self-contained-edge-envoy-gateway.md)): `helm install ghga` is
+  ([ADR-0032](../docs/adrs/0032-self-contained-edge-envoy-gateway.md)): `helm install ghga` is
   one command, runs real Gateway-API routing + real Envoy ext_authz against the auth-adapter,
   no external ops. Full Istio is reserved for the periodic staging check.
 - **Secrets**: K8s Secrets in the demo, Vault Agent + cert-manager in prod
-  ([ADR-0016](../docs/adr/0016-secrets-and-tls.md)).
+  ([ADR-0035](../docs/adrs/0035-secrets-and-tls.md)).

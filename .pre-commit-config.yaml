@@ -1,7 +1,7 @@
-# GHGA monorepo — one pre-commit config for both stacks (ADR-0018).
+# GHGA monorepo — one pre-commit config for both stacks (ADR-0036).
 #
 # Replaces the ~28 byte-identical copies the microservice-repository-template used to sync
-# into the Python repos (ADR-0001) and the husky hook the data-portal carried.
+# into the Python repos (ADR-0025) and the husky hook the data-portal carried.
 #
 # ruff / mypy / prettier / eslint are `repo: local` on purpose: they must be the versions
 # uv.lock and pnpm-lock.yaml pin, i.e. the ones `just lint`, `just typecheck`, `just fe-lint`
@@ -21,7 +21,7 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
-        # docs/epics/ is imported history (ADR-0001): 36 files there end lines with two
+        # docs/epics/ is imported history (ADR-0025): 36 files there end lines with two
         # spaces as a hard break, and ~116 more lines would still churn with the arg above.
         exclude: ^docs/epics/
       - id: end-of-file-fixer
@@ -56,9 +56,9 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch
-        # both long-lived branches (ADR-0020): `main` is the latest release, `dev` is the
+        # both long-lived branches (ADR-0038): `main` is the latest release, `dev` is the
         # integration branch. Everything else reaches them by pull request; releases are
-        # tags, not branches (ADR-0004).
+        # tags, not branches (ADR-0027).
         args: [--branch, main, --branch, dev]
       # NOT taken from the template: pretty-format-json. It rewrites 39 tracked files,
       # among them angular.json and src/mocks/example-metadata.json, which Prettier owns

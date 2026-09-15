@@ -21,7 +21,7 @@ on:
     branches: [main, dev]
 
 # Keyed on the branch's role, not on the event type. Releases are cut from the two
-# long-lived branches (ADR-0020: final tags on `main`, release candidates on `dev`), and
+# long-lived branches (ADR-0038: final tags on `main`, release candidates on `dev`), and
 # release.yaml requires the tagged commit's OWN CI run to be green — a cancelled run never
 # is — so runs on both group by commit and are never cancelled. Every other ref groups by
 # ref and the newest push wins: a superseded run there proves nothing about a commit anyone
@@ -213,9 +213,9 @@ jobs:
       - name: pytest (non-member Python)
         run: uv run pytest -q scripts/tests deploy/tests
       # The generated charts must stay a pure function of their sources: if they are not,
-      # the whitespace hooks and `just charts` undo each other forever (ADR-0018).
+      # the whitespace hooks and `just charts` undo each other forever (ADR-0036).
       #
-      # The version is an input to the generator (ADR-0004), so no version is pinned here:
+      # The version is an input to the generator (ADR-0027), so no version is pinned here:
       # a bare run reuses the committed one and fails if the member charts disagree on it.
       - name: charts are reproducible
         run: |
@@ -334,7 +334,7 @@ jobs:
 
   # The drift gate. A PyPI-lane member whose *shipped* content changed must declare a
   # version the index does not already serve. Without it a library can change, merge, and
-  # ship inside a platform image — which embeds internal libs from source (ADR-0004) —
+  # ship inside a platform image — which embeds internal libs from source (ADR-0027) —
   # while PyPI keeps serving that same version number with the old content: one version
   # string denoting two different things, permanently, with no consumer ever told theirs
   # is behind. scripts/pypi_drift.py carries the full reasoning.
@@ -380,7 +380,7 @@ jobs:
           fi
           exit 1
 
-  # The published-combo gate (ADR-0002): the same affected members, tested the way external
+  # The published-combo gate (ADR-0026): the same affected members, tested the way external
   # consumers get them. pypi-matrix.yaml drops everything outside the PyPI lane, so a
   # services-only change yields no cells and only its `test` job is skipped — `discover`
   # still runs, and still queries PyPI once per lane member.

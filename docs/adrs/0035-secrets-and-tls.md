@@ -1,4 +1,4 @@
-# ADR-0016 — Secrets and TLS: Kubernetes Secrets in the demo, Vault and cert-manager in production
+# ADR-0035 — Secrets and TLS: Kubernetes Secrets in the demo, Vault and cert-manager in production
 
 - **Status:** accepted
 - **Date:** 2026-06-30
@@ -31,7 +31,7 @@ HTTP**.
 The docker-compose test bed generated its keys at start-up and mounted them. The
 `ghga-common` chart already supports Vault Agent injection, and the key store service
 already reads Crypt4GH keys from Vault. App charts reference secrets by name, whatever
-produces them ([ADR-0011](0011-helm-chart-boundary-hybrid.md)).
+produces them ([ADR-0031](0031-helm-chart-boundary-hybrid.md)).
 
 ### Decision
 

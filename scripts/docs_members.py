@@ -10,7 +10,7 @@
 """Enumerate the members whose documentation the docs lane publishes.
 
 Single source of truth for docs-publish.yaml and the justfile's `docs` recipe, so a
-local build cannot drift from the published one (ADR-0021).
+local build cannot drift from the published one (ADR-0039).
 
 A member is documented iff it carries a `great-docs.yml`. That file is the build's
 own config, so presence is the marker — a separate `[tool.ghga]` flag would be a

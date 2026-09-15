@@ -1,4 +1,4 @@
-# Testbed profile (ADR-0006): layered on top of values-local.yaml —
+# Testbed profile (ADR-0028): layered on top of values-local.yaml —
 #   helm upgrade --install ghga deploy/charts/ghga-demo \
 #     -f values-local.yaml -f values-artifacts.yaml -f values-testbed.yaml
 # Enables the state-management service, deploys the original GHGA test OP
@@ -10,7 +10,7 @@
 aai:
   enabled: false
 
-# testbed-only state manipulation API (ADR-0008)
+# testbed-only state manipulation API (ADR-0030)
 sms:
   enabled: true
 

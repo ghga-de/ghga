@@ -2,10 +2,10 @@
 
 How a release is cut, built and published: the two lanes, their tags, how versions are
 stamped, how the PyPI lane decides what to upload, and where artifacts go. The decisions
-behind it are [ADR-0004](adr/0004-versioning-and-release-by-tag.md) (lanes and tags),
-[ADR-0014](adr/0014-capability-markers-and-placement.md) (markers),
-[ADR-0020](adr/0020-branching-strategy.md) (branches) and
-[ADR-0019](adr/0019-image-signing-sbom-provenance.md) (signing). The workflows are
+behind it are [ADR-0027](adrs/0027-versioning-and-release-by-tag.md) (lanes and tags),
+[ADR-0033](adrs/0033-capability-markers-and-placement.md) (markers),
+[ADR-0038](adrs/0038-branching-strategy.md) (branches) and
+[ADR-0037](adrs/0037-image-signing-sbom-provenance.md) (signing). The workflows are
 `.github/workflows/release.yaml` and `pypi-publish.yaml`.
 
 In short: `ghga/X.Y.Z` builds every deployable image and chart from one commit;
@@ -76,7 +76,7 @@ run ghga-datasteward-kit`, and `uv.lock` at the tag gives the tested combination
 `ghga/X.Y.Z-rc.N` runs through the same workflow on `dev` and is deployed to staging.
 The production release merges `dev` into `main`, tags `ghga/X.Y.Z` and rebuilds the
 images; the rebuilt images go to staging once more before production. Promoting the
-candidate's digests instead is an open question in ADR-0020.
+candidate's digests instead is an open question in ADR-0038.
 
 ## PyPI lane
 

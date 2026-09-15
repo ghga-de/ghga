@@ -21,7 +21,7 @@
 #                                        continues standalone; re-import (history-preserving) when the
 #                                        workspace moves to the schemapack line.
 #   charts                            -> imported once (deploy/), then REMOVED from the sync: the monorepo
-#                                        restructured deploy/ to the ADR-0011 layout (base/ -> charts/ghga-common,
+#                                        restructured deploy/ to the ADR-0031 layout (base/ -> charts/ghga-common,
 #                                        per-service charts generated), so upstream commits no longer apply as
 #                                        patches. Upstream library changes are ported SEMANTICALLY into
 #                                        deploy/charts/ghga-common + the generator instead — see
@@ -55,7 +55,7 @@
 #                             while the last merged commit carried 5.0.2.
 #   mass                   -> services/mass                   32dd385 "Migrate to httpx2 (#51)" 2026-07-31, 7.0.2
 #   hexkit                 -> libs/hexkit                     ad3c710 "Add observability tools docs (#251)" 2026-08-07, 9.0.1
-#                             The member here reads 9.0.3: the docs move (ADR-0021) changed its
+#                             The member here reads 9.0.3: the docs move (ADR-0039) changed its
 #                             `Documentation` URL and README, which ship in the wheel metadata, so
 #                             the drift gate required a bump (9.0.2 is spent on TestPyPI).
 #                             Its docs site moved to ghga-de.github.io/ghga/hexkit; the archived
@@ -90,7 +90,7 @@
 #                             tools/auth-km-jobs additionally carries monorepo-only work never
 #                             upstreamed: testcontainer-based test fixtures (upstream's tests
 #                             expected Vault and MongoDB already running on localhost), the
-#                             `run` -> `auth-km-jobs` console-script rename, and the ADR-0014
+#                             `run` -> `auth-km-jobs` console-script rename, and the ADR-0033
 #                             capability markers.
 #   dlq-service            -> services/dlq-service            42d67fd "Migrate to httpx2 (#20)" 2026-07-31, 4.1.1
 #                             Every PR but one was merged: #19 "Add script to republish dead

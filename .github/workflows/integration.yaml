@@ -1,4 +1,4 @@
-# CI Stage 2 — the integration gate (runbook §5, ADR-0006).
+# CI Stage 2 — the integration gate (runbook §5, ADR-0028).
 #
 # Installs the same self-reliant ghga-demo umbrella an outside user gets, plus the
 # test-bed profile (state-management service, the test OIDC provider, and the
@@ -21,7 +21,7 @@
 name: integration
 
 # A gate: every pull request and every push to the long-lived branches (`dev` takes the
-# merge traffic, `main` moves at release time — ADR-0020), subject to `changes` below.
+# merge traffic, `main` moves at release time — ADR-0038), subject to `changes` below.
 on:
   pull_request:
   push:

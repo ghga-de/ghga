@@ -6,7 +6,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["pyyaml>=6.0"]
 # ///
-"""Assemble the per-member documentation builds into the single Pages site (ADR-0021).
+"""Assemble the per-member documentation builds into the single Pages site (ADR-0039).
 
 Each member's built `_site` becomes `<package>/` in the site root. The root itself gets
 an index listing them, and a 404 page.

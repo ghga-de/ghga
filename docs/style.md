@@ -5,7 +5,7 @@ in this repo. It does not cover user-facing text, such as data portal content, u
 documentation or notification emails, which may follow a different style.
 It covers only what is settled so far. Commit messages, branch names and pull request
 titles follow the [conventions](conventions.md#names-branches-prs-commits), decided in
-[ADR-0020](adr/0020-branching-strategy.md).
+[ADR-0038](adrs/0038-branching-strategy.md).
 
 ## Writing
 
@@ -64,7 +64,7 @@ width by hand: it buries the real change in the diff.
 
 ### Shape
 
-Start every ADR from [`adr/0000-template.md`](adr/0000-template.md). Name the file
+Start every ADR from [`adrs/0000-template.md`](adrs/0000-template.md). Name the file
 `NNNN-kebab-case-title.md`, with the next free number.
 
 - **Title:** `# ADR-NNNN — <Title>`, in sentence case.
@@ -82,7 +82,7 @@ Start every ADR from [`adr/0000-template.md`](adr/0000-template.md). Name the fi
 
 An ADR records a decision and why it was taken. Keep out of it what goes stale first:
 implementation checklists belong in the pull request or a runbook, and editorial intent
-("to be merged into ADR-0011") belongs in a pull request description.
+("to be merged into ADR-0031") belongs in a pull request description.
 
 ### Header fields and status
 

@@ -1,4 +1,4 @@
-# ghga-demo — self-contained profile (ADR-0006). Install as release "ghga":
+# ghga-demo — self-contained profile (ADR-0028). Install as release "ghga":
 #   helm install ghga deploy/charts/ghga-demo
 # Bare clusters have no LoadBalancer: the gateway service defaults to NodePort
 # (set gateway.nodePort, or use port-forward).
@@ -145,7 +145,7 @@ aai:
       - name: ghga
     rewriteHost: localhost
 
-# ---- demo secrets (ADR-0006/0016) --------------------------------------------------------
+# ---- demo secrets (ADR-0028/0035) --------------------------------------------------------
 # Pre-install Job generating plain K8s Secrets (internal auth JWK pair + TOTP key);
 # idempotent, keys stay stable across upgrades. The generator runs the auth-km-jobs
 # image; tags are set by the install tooling (locally built images or a release tag).
@@ -272,7 +272,7 @@ auth-claims:
     oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
     oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
-    # seed data steward (ADR-0006) — log in via the aai with exactly this subject
+    # seed data steward (ADR-0028) — log in via the aai with exactly this subject
     add_as_data_stewards:
       - ext_id: data.steward@ghga.dev
         name: Data Steward
@@ -429,7 +429,7 @@ fis:
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
-    # everything here is built from one commit (lockstep, ADR-0004) and carries
+    # everything here is built from one commit (lockstep, ADR-0027) and carries
     # the dev version stamp, which no ">2.0.0"-style gate accepts; the DHFS
     # compatibility check is meaningful for real data-hub installs, not here
     dhfs_version_constraint: ">=0.0.0"
@@ -653,7 +653,7 @@ dlqs:
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
 
-# test-bed only (ADR-0008): the testbed profile flips this on (and should add
+# test-bed only (ADR-0030): the testbed profile flips this on (and should add
 # 'sms' to extAuth.targetRoutes)
 sms:
   enabled: false

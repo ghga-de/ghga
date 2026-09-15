@@ -1,4 +1,4 @@
-# ADR-0018 — One pre-commit configuration for both stacks
+# ADR-0036 — One pre-commit configuration for both stacks
 
 - **Status:** accepted
 - **Date:** 2026-08-21

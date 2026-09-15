@@ -63,8 +63,8 @@ ghga-transpiler = { workspace = true }
 hexkit = { workspace = true }
 metldata = { workspace = true }
 
-# Capability markers (ADR-0014): internal transitional tool -> platform release
-# lane, distributed run-from-repo at the release tag (no image, no PyPI; ADR-0004).
+# Capability markers (ADR-0033): internal transitional tool -> platform release
+# lane, distributed run-from-repo at the release tag (no image, no PyPI; ADR-0027).
 [tool.ghga]
 release = "platform"
 image = false

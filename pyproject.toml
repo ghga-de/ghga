@@ -5,7 +5,7 @@
 # Members (libs/*, services/*, tools/*) each have their own pyproject.toml + version, and
 # consume internal libraries from source via `[tool.uv.sources] <lib> = { workspace = true }`.
 #
-# See docs/architecture/overview.md and docs/adr/0002-uv-workspace-source-coupled-libs.md.
+# See docs/architecture/overview.md and docs/adrs/0026-uv-workspace-source-coupled-libs.md.
 
 [tool.uv.workspace]
 members = ["libs/*", "services/*", "tools/*"]
@@ -33,7 +33,7 @@ dev = [
     "logot>=1.3",
 ]
 
-# Documentation toolchain (ADR-0021). Kept out of `dev` because it is only ever needed by
+# Documentation toolchain (ADR-0039). Kept out of `dev` because it is only ever needed by
 # the docs lane and pulls a large dependency tree; `uv sync` for tests must not resolve it.
 # Upstream hexkit installed great-docs with a bare `pip install` outside its lock, because
 # the shared dev lock had to stay importable on py310 and great-docs requires >=3.11. The
@@ -68,7 +68,7 @@ exclude = [
     "docs/epics",
     # same ruff >= 0.16 markdown behaviour: this README's ```python fence is upstream
     # content that ghga-de/ghga-jsonsubschema keeps unformatted. Reformatting it here
-    # would diverge a file the one-way sync re-delivers (ADR-0001). Drop this once that
+    # would diverge a file the one-way sync re-delivers (ADR-0025). Drop this once that
     # repo no longer syncs from mainline.
     "libs/ghga-jsonsubschema/README.md",
 ]
@@ -109,7 +109,7 @@ convention = "pep257"
 # (rather than retrofit docstrings etc.). Revisit if the tool is modernised.
 "tools/auth-km-jobs/**" = ["D", "B904", "SIM115", "PLC0415"]
 # libs/ghga-jsonsubschema is a fork of IBM/jsonsubschema, still synced from mainline
-# (ADR-0001), so its code is not ours to restyle. These two entries reproduce the policy its
+# (ADR-0025), so its code is not ours to restyle. These two entries reproduce the policy its
 # own (now removed) [tool.ruff] carried, instead of churning upstream files:
 #   D101-D103 - its pytest suite is bare `def test_x(): assert ...` functions, no docstrings
 #   RUF100    - `# noqa: E501` markers on long literals; E501 is not selected at the root,

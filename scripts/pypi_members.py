@@ -11,7 +11,7 @@
 """Enumerate the PyPI-lane workspace members and the published-combo test matrix.
 
 Single source of truth for pypi-matrix.yaml and pypi-publish.yaml. Lane membership
-follows ADR-0014.
+follows ADR-0033.
 
 What needs releasing is decided against the *index*: a member is a release candidate
 when the version it declares is above the latest one on PyPI. A version bump is the
@@ -52,7 +52,7 @@ from affected_targets import _canonical, internal_dep_graph
 # The versions the matrix runs on.
 TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 
-# Directory defaults for the release lane (ADR-0014).
+# Directory defaults for the release lane (ADR-0033).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
 
 # A cell only runs tests, so formatting tools excluded

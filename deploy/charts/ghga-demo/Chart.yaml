@@ -1,21 +1,21 @@
 name: ghga-demo
 description: Self-contained GHGA — single-command umbrella bundling the app charts,
   an Envoy Gateway edge with real ext-authz, and lightweight operator-free infra
-  (ADR-0006/0012). The same artifact is the per-PR test bed.
+  (ADR-0028/0032). The same artifact is the per-PR test bed.
 type: application
 version: 0.1.0
 appVersion: "0.0.0+dev"
 apiVersion: v2
 
 dependencies:
-  # ---- edge (ADR-0012): Gateway API + Envoy, no mesh, no sidecars ----------------------
+  # ---- edge (ADR-0032): Gateway API + Envoy, no mesh, no sidecars ----------------------
   - name: gateway-helm
     alias: envoy-gateway
     version: 1.8.3
     repository: oci://docker.io/envoyproxy
     condition: envoy-gateway.enabled
 
-  # ---- lightweight infra (ADR-0006): operator-free stand-ins ---------------------------
+  # ---- lightweight infra (ADR-0028): operator-free stand-ins ---------------------------
   # kafka/mongodb/minio are plain templates in this chart (kafka/mongodb on official
   # images, minio on Chainguard's build) — the bitnami subcharts were dropped when the
   # 2025 catalogue gating broke their pulls

@@ -1,6 +1,6 @@
 """Tests for affected_targets.py, focused on what it does when the base ref is missing.
 
-The default base is `origin/dev` (ADR-0020), a remote-tracking ref that a clone which has
+The default base is `origin/dev` (ADR-0038), a remote-tracking ref that a clone which has
 not fetched since `dev` was created simply does not have. Answering that from the working
 tree would report "nothing affected" for a branch whose work is committed — the tree is
 clean, so the fallback saw an empty change set it had never looked at.
