@@ -52,7 +52,7 @@ on:
   # A `schedule` trigger always runs the DEFAULT branch's copy of this file, no matter which
   # branch a change merged into, so an edit here does not reach the nightly run until the
   # default branch carries it. A dispatch is the opposite: it runs the copy on the ref you
-  # pick. ADR-0020's "Remaining setup" tracks this for the `dev` flip.
+  # pick.
   schedule:
     - cron: "17 4 * * *" # daily, off the top of the hour (GitHub's own advice)
   workflow_dispatch:
@@ -550,7 +550,7 @@ jobs:
       # PR_BRANCH is only namespaced for a NON-default `base_branch`, so a dispatch left at
       # the default reuses the nightly branch. That is right once `dev` is the default
       # branch, but in the pre-flip window that same branch still carries the open
-      # `main`-targeted PR (ADR-0020's "Remaining setup" closes it after the flip), and
+      # `main`-targeted PR, and
       # create-pull-request force-updates its head branch — so one dispatch would rewrite a
       # `main` PR with a `dev` diff. Checking the base of whatever already holds the branch
       # covers that without special-casing the transition, and keeps covering any later

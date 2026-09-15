@@ -1,163 +1,113 @@
-# ADR-0020 — Git Flow: `main` is the latest release, `dev` is the integration branch
+# ADR-0020 — Branching, merging and naming
 
-- **Status:** Accepted — **amended 2026-09-08**: the repo-side changes landed —
-  **amended 2026-09-11**: fully implemented, in
-  [#157](https://github.com/ghga-de/ghga/pull/157) (set up `dev`) and
-  [#192](https://github.com/ghga-de/ghga/pull/192) (default-branch flip). The GitHub-side setup
-  is done as well, so nothing is outstanding; `dev` is the default branch and all work targets it —
-  **amended 2026-09-14**: pull requests are squashed into `dev`, and the naming of branches,
-  pull requests and commits moved to [ADR-0022](0022-naming-branches-prs-commits.md)
+- **Status:** accepted
 - **Date:** 2026-08-28
-- **Deciders:** Byron Himes
 
-## Context
-In our previous polyrepo setup, branching was simple: single feature branches were created and merged directly into main.
-This worked because, usually, there was only one dev touching a given repo at any given moment and the maximum scope of the work was limited by the repository.
-There was no possibility of cross-cutting updates or sweeping changes from giant features (except in the File Services Monorepo, but that was a unique case).
-When we weren't sure about which changes had been released or not, we had to look at when the last release had occurred vs when the changes in question had been merged.
-That was doable, if not ideal, because of the small repository size and relatively low rate of change.
-Now that we've moved to a singular monorepo, the dynamic has shifted and none of that holds anymore.
-We're trying to settle on a branching strategy that balances concerns of procedural facility (shouldn't require a complicated SOP), situational clarity (what's deployed, and what changes have been merged since then?), and good change management.
-Since we made the switch to the monorepo a few weeks ago, we've continued to use the old strategy where all the feature branches stemmed from and merged directly back into a single `main` branch.
-The result is that the state of `main` is always in flux, because developers are no longer split among isolated repositories but rather touching the same repo.
-Churn is especially high right now because we're A) making adjustments to the repository tooling and B) multiple big features are in progress with more to come.
-The question of "what is in production?" is never clear because the latest release state gets quickly obscured by new updates in preparation for the _next_ release.
+## Summary
 
-## Decision
+In the context of **one repository in which many developers and several large features
+change the same code between platform releases**
 
-> We decided for a Git Flow variant with two long-lived branches and neglected trunk-based-only and merge queues, to achieve a monorepo with transparent state and separation of concerns (releases vs work), as well as the ability to CD to staging, accepting that we have to keep `dev` and `main` in sync.
+facing **a `main` branch always in flux, which hid what was in production, and names for
+branches, pull requests and commits that drifted apart**
 
-Creating a `dev` branch to contain all unreleased work addresses the concerns listed in the Context section by clearly delineating work-in-progress and the latest release state.
+we decided for **two long-lived branches, `dev` for integration and `main` for the
+latest release, with pull requests squashed into `dev` and all three names derived from
+one grammar of kind, stack and description**
 
-- **`main` reflects the latest platform release.** Its HEAD is always a released state.
-- **`dev` runs alongside `main`** and is the integration branch. It is branched from `main` and is where completed work accumulates between releases.
-- **Feature branches are cut from `dev` and merged back into `dev`** via pull request.
-- **Pull requests are squashed into `dev`** (decided 2026-09-14), so one pull request becomes one commit and `dev` reads as a list of what landed.
-Rebase merges are off; ordinary merge commits stay enabled for the release merge and the hotfix back-merge, which are the two places a merge record is the point.
-- **Branches, pull request titles and commit messages are named per [ADR-0022](0022-naming-branches-prs-commits.md)**, which also carries the kind vocabulary — `feat`, `fix`, `hotfix`, `docs`, `refactor`, `test`, `chore`.
-`hotfix` is the one kind that names a base branch rather than just labelling the work; see the hotfix bullet.
-- **Platform version strings are always up-to-date in `dev`**.
-- **Release candidates are created from `dev`**, where the pre-release git tag is cut. Only
-  from `dev` — see the hotfix bullet.
-- **`dev` is merged back into `main` with a merge commit** for production releases, and the platform release git tag is cut on `main`.
-- **Production images are rebuilt** after release candidates are verified in staging.
-  - The rebuilt images then get a final, confirmatory deployment to staging, so the images production runs have themselves been deployed there, not just their release candidates.
-  - See "Open questions" for more on this.
-- **All hotfixes are made on `main`** (branched from it, merged back into it, released) and are then **merged back into `dev`**, if applicable, so the fix isn't lost on the next release. **Hotfixes get no release candidate** (decided 2026-09-08): they are cut, reviewed and released on `main` in one step. A candidate exists to stage integrated-but-unreleased work, which is what `dev` holds and what a hotfix by definition is not — and a hotfix is the case where the extra round trip costs the most. So `ghga/X.Y.Z-rc.N` is a `dev`-only tag, and the release gate rejects one on `main` rather than accepting it.
-- **Long-lived feature branches are permitted but not mandatory.** How feature branches are structured should be decided on a case-by-case basis, and devs should feel encouraged to communicate and experiment in order to find the best approach.
+and neglected **trunk-based development with or without merge queues, release branches
+per version, merge commits or rebase merges per pull request, and member-based branch
+names**
 
-## Consequences
-- We gain a clear division between deployed state (`main`) and work-in-progress (`dev`).
-- Releasing is a merge commit plus a tag, and can be prepared and reviewed as a pull request.
-- Two branches must be kept in sync. Every hotfix must be merged back into `dev`, unless `dev` already carries an equivalent fix.
-- Work merged to `dev` is not released until the next release merge.
-- A branch's intermediate commits do not survive the squash; they remain visible in the pull request, which the commit's `(#N)` suffix links to. In exchange, `dev`'s first-parent chain is one line per pull request even when the work arrived as a stack of sixteen.
-- The merge method cannot be enforced by a "Require linear history" rule on `dev`, because the hotfix back-merge from `main` is a merge commit into `dev` by design. Squashing stays a convention.
-- We gain the ability to continuously deploy from `dev` while leaving production deployments compartmentalized. With just a `main` branch this would be/is a more difficult process.
-- PR checks are fine as-is, since `ci.yaml` and `integration.yaml` run on every PR no matter the base branch. What needed updating was the stuff tied to a push: post-merge runs, `:dev` images, the release gate, and a couple of local defaults (see below).
+to achieve **a branch that always shows the released state, a history of one readable
+commit per change, and stacks that hold together in the pull request list**
 
-### Changes made
+accepting that **hotfixes must be merged back into `dev`, merged work and component
+releases wait for the platform release, and every squash merge needs its commit message
+rewritten**.
 
-All of the changes below are done — in [#157](https://github.com/ghga-de/ghga/pull/157) and
-[#192](https://github.com/ghga-de/ghga/pull/192). The bullets keep the wording of the original
-plan, so they read as instructions; the dated notes under them record where implementing a
-change departed from what was planned.
+## Details
 
-> **Amended 2026-09-08 — the repo-side changes have landed.** `dev` is branched from `main`
-> and pushed; `ci.yaml` and `integration.yaml` trigger on pushes to both branches;
-> `dev-images.yaml` follows `dev`; `release.yaml` asserts the branch per lane, after routing;
-> `security-scan.yaml` scans and targets `dev`; `no-commit-to-branch` guards both branches; and
-> `scripts/affected_targets.py` and the justfile's `affected` recipe default to `origin/dev`.
-> Prose that described `main` as the integrated branch was swept with it:
-> [ADR-0019](0019-image-signing-sbom-provenance.md) (its predicted provenance subject is now
-> `@refs/heads/dev`), [ADR-0006](0006-self-contained-demo-lightweight-infra.md), the architecture overview, and
-> the ADR index. The ADR set and the repo now agree —
-> [ADR-0004](0004-versioning-and-release-by-tag.md)'s 2026-09-01 amendment (pre-release cuts on
-> `dev`, per-lane branch gate) is backed by the workflow, and was itself amended on 2026-09-08
-> where implementing it showed the per-lane branches had to be sets rather than single names.
-> What is left is GitHub-side and cannot be done from the tree; see "GitHub setup" (done in
-> the meantime, on 2026-09-11).
+### Context
 
-**Branch**
-- Create `dev` from `main`.
-- Rebase all unmerged work which previously targeted `main` onto `dev`, and retarget open PRs.
-- Forbid squash-merging and rebasing on `main`. "Require linear history" must stay *off* for `main`, since it would forbid the release merge commit.
+In the old repositories, one developer at a time worked on a small scope, and feature
+branches merged straight into `main`. What was released could be read off the date of
+the last release. In the monorepo, many people and several large features change the
+same repository, and with the same flow the released state was buried under work for the
+next release within days.
 
-**GitHub configuration**
-- Protect `dev` like we protect `main`, and keep `main` protected too.
-- Make `dev` the default branch so new branches and PRs target it automatically.
-- `security-scan.yaml` opens its lockfile PR against `main`. That needs to become `dev`.
-  - **Corrected while implementing (2026-09-08):** changing the PR base alone was a live bug. The workflow runs on `schedule`/`workflow_dispatch`, where a bare `actions/checkout` follows the event's ref: the *default* branch on a schedule — still `main` until the flip below — and whatever the "Use workflow from" picker resolved on a dispatch. Neither is tied to the branch the scan is about, so the daily run would have scanned `main`'s tree while diffing against `:dev` images now built from `dev`. Two effects, both silent: the lockfiles were resolved from `main`'s manifests, so any dependency change made on `dev` since the branch point would be overwritten by a lockfile that never saw it; and the vulnerability delta was measured on `main`'s tree, so the whole `main..dev` gap was attributed to the lockfile update. (The blast radius was the lockfiles, not the tree — `create-pull-request` commits the working-tree diff, which `add-paths` limits to `uv.lock` and `pnpm-lock.yaml`, onto the base branch. An earlier draft of this bullet said the PR would revert everything merged since the branch point; it would not, and the mechanism does not support that claim.) Every checkout now takes its commit from a `base` job that resolves `BASE_BRANCH` once, which the PR base and the close-step lookup also read — so the workflow is correct regardless of the default-branch setting, and all three jobs see one commit even when a merge lands mid-run. That pin covers the *scan*, not the PR: `create-pull-request` cherry-picks onto the base branch's live tip with `--strategy-option=theirs`, so a lockfile landing on `dev` mid-scan would lose to the older one the run resolved. A guard before the PR step drops the run instead, and the next day's scan starts from the new tip.
+A change carries three names: its branch, its pull request and the commit it lands as.
+Left to taste, they drifted apart, in the three lists where work is found. Stacks of pull
+requests cannot be grouped in the pull request list, and once pull requests are squashed,
+their titles become the permanent history.
 
-**pre-commit**
-- `no-commit-to-branch` in `.pre-commit-config.yaml` only guards `main`, it should guard `dev` too. Its comment ("this repo has only `main`") and the matching note in [ADR-0018](0018-pre-commit-hooks.md) are then stale.
+### Decision
 
-**Workflows**
-- Add `dev` to the `push: branches: [main]` trigger in `ci.yaml` and `integration.yaml`, since that trigger is the post-merge run and merges now land on `dev`. We still need it despite the PR runs, because merging makes a new commit that no PR run has seen, and `release.yaml` looks up CI results by commit SHA. Without it, a git tag cut on `dev` would fail the CI check even though everything passed.
-  - **Added while implementing (2026-09-08):** `ci.yaml`'s concurrency block also had to learn about `dev`. It grouped `main` by commit and never cancelled it, precisely so a tag would find its own green run, and cancelled everything else. Adding the trigger alone would have put `dev` on the cancelling side, where the next merge kills the run a release candidate is about to be cut against — losing the evidence this bullet exists to preserve. Both long-lived branches now group by commit and are never cancelled.
-- `dev-images.yaml` publishes the `:dev` image tags on pushes to `main`. It should follow `dev` instead, since those tags are meant to track integration and `main` only moves at release time.
-- `docs-publish.yaml` (added by [ADR-0021](0021-docs-lane-github-pages.md), which landed on `main` while this work was in flight) stays on `push: branches: [main]` and is **not** in this list. That is deliberate, not an omission: the Pages site is meant to show the released state, which is exactly what `main` becomes here — so the docs rebuild once per release rather than on every merge to `dev`.
-- `release.yaml` checks that the tagged commit is on `main` before it routes the lanes, so right now that check hits every git tag, rc and PyPI ones included. Since release candidates are cut from `dev`, that check has to move after the routing and go per-lane: platform release tags on `main`, rc tags on `dev`, and PyPI tags left on `main`.
-  - **Revised while implementing (2026-09-08):** the bullet's per-lane split is right, and each lane ended up pinned to exactly one branch — but not the ones first written down. Two cases surfaced while implementing it, both settled by decision rather than by loosening the gate:
-    - **Hotfix candidates.** Implementing the gate surfaced that a `dev`-only rc rule makes `ghga/17.0.1-rc.1` unbuildable, since hotfixes never touch `dev`. That was first handled by accepting rc tags on `main` as well, which deferred the question rather than answering it. **Settled 2026-09-08 by the decider: hotfixes get no candidate** (recorded in the Decision above), so the rc lane is `dev`-only after all and rejecting a `-rc.N` tag on `main` is now the intended behaviour, not an accident.
-    - **Component releases serialize behind platform releases.** A PyPI version bump lands in `dev` and only reaches `main` at the release merge, so `hexkit/8.7.0` cannot be tagged until the next platform release — a coupling this ADR introduced without weighing it against [ADR-0004](0004-versioning-and-release-by-tag.md)'s independent component lifecycle. Accepting PyPI tags on `dev` too was considered and rejected. **Settled 2026-09-08: keep the lockstep**, because one release cadence is simpler than two. So "PyPI tags left on `main`" stands as written, now deliberately.
-  - **Corrected in review (2026-09-10):** the gate tested *reachability*
-    (`git merge-base --is-ancestor`), which this flow defeats by construction. The release
-    merge puts every `dev` commit into `main`'s history and the hotfix back-merge puts every
-    `main`-only commit into `dev`'s, so after the first merge in either direction both lanes'
-    rules quietly stop distinguishing the branches: `ghga/17.0.0` would be accepted on any
-    already-released `dev` commit, and `ghga/17.0.2-rc.1` on a back-merged hotfix commit —
-    the one tag the bullet above says is now rejected on purpose. It now tests membership of
-    the branch's **first-parent chain**, i.e. the commits that were ever that branch's tip,
-    which is what "cut from `main`"/"cut from `dev`" means. The release merge commit and a
-    hotfix merge commit still qualify.
-  - **Also while implementing:** the tree-reading half of the routing step (`python3 scripts/image_members.py`) moved *behind* the gate. Routing needs only the ref string, so the gate now runs before anything from the tagged tree executes — previously the on-`main` check ran first and gave that ordering for free.
-- `integration.yaml`'s concurrency block is **deliberately left cancellable** (decided 2026-09-08), unlike `ci.yaml`'s. It groups by ref with `cancel-in-progress: true`, so a post-merge integration run on `dev` is killed by the next merge. That is the same behaviour `main` had before the merge traffic moved; it is acceptable here and not in `ci.yaml` because `release.yaml` reads CI results by commit SHA and never reads integration results, so a cancelled integration run cannot cost anyone a release. Superseding a ~1h job is worth more than the redundant verdict.
+**Branches.**
 
-**Local tooling**
-- `scripts/affected_targets.py` defaults `--base` to `origin/main`, as does the `affected` recipe in the justfile. That needs to be switched to `origin/dev`.
+- `main` is the latest platform release; its HEAD is always a released state.
+- `dev` is the integration branch and the repository default. Work is cut from `dev` and
+  merged back into it by pull request.
+- Release candidates are tagged on `dev`. A release merges `dev` into `main`, and the
+  release tag is cut on `main`.
+- Hotfixes are cut from `main`, merged back into it and released without a candidate,
+  then merged into `dev`.
+- Component releases are tagged on `main` as well, in lockstep with the platform
+  ([ADR-0004](0004-versioning-and-release-by-tag.md)).
+- Long-lived feature branches are allowed, decided case by case.
 
-### GitHub setup — done 2026-09-11
+**Merging.** Pull requests into `dev` are squashed, so one pull request becomes one
+commit. `main` takes merge commits only: the release merge and hotfixes. Rebase merges
+are off.
 
-> **Amended 2026-09-11 — the GitHub-side setup has landed, and this section is now a record
-> rather than a checklist.** `dev` is the default branch and protected like `main`; no open
-> pull request names `main` as its base any more; and the stranded
-> `automated/lockfile-security-update` PR (#160, base `main`) was closed after the flip. The
-> deadline this section carried — that a `schedule` trigger runs the *default branch's* copy
-> of the workflow file, so the nightly `security-scan.yaml` kept scanning `main` and opening
-> its PR with `base: main` until the flip — has therefore expired: the fix in
-> `security-scan.yaml` is in force, and the scan's `base` job resolves `BASE_BRANCH` itself
-> regardless of the setting. Renovate had no `baseBranches` in `renovate.json5`, so the flip
-> retargeted it with no config change, and its stranded `main`-based PRs were superseded the
-> same way the lockfile one was.
+**Names.** Branch, pull request title and commit message follow one grammar:
 
-Two of the settings are **standing rules for `main`**, not one-off steps, and have to stay
-in force:
+- A **kind** from a short list shared with Conventional Commits: `feat`, `fix`, `docs`,
+  `refactor`, `test` and `chore`, plus `hotfix`. `hotfix` is the one kind that names its
+  base branch, and it becomes `fix` in the commit.
+- A **stack name** for work in a stack: in the branch, in brackets in the title, and as
+  the commit scope.
+- A short **description**, with the YouTrack key where there is one.
 
-- Keep "Require linear history" *off* for `main` — it would forbid the release merge commit.
-- Forbid squash-merging and rebasing on `main`, for the same reason.
+The commit message is rewritten at merge time as a Conventional Commit ending in the
+pull request number. A coding agent is credited in the pull request description by how
+much it drafted, never in a commit trailer.
 
-## Open questions
+The formats, examples and tag rules per lane are in
+[docs/conventions.md](../conventions.md#branching).
 
-These are being settled separately. None of them change the branch layout.
+### Consequences
 
-- How a tested candidate becomes the production release: promoting the same image digests, or rebuilding at the release tag. The main point here is that by rebuilding images for production we would deploy something that is technically not tested, even if there should be no material differences. For now we are rebuilding images, but it is a temporary solution until this question is answered.
-- Likewise, how a promoted image would be tagged.
-- Whether `release.yaml` needs to tell promoting apart from building, since a hotfix on `main` has no candidate to promote. **Amended 2026-09-08:** that premise is now a decision rather than an assumption — hotfixes get no candidate (see the Decision), so "hotfix" is a reliable synonym for "nothing to promote" and this question only has to cover the normal `dev` → rc → `main` path.
-- [ADR-0004](0004-versioning-and-release-by-tag.md) was amended on 2026-09-01 for the pre-release cut moving to `dev` and the per-lane branch gate. It will need a further amendment if the questions above resolve toward promoting digests, since that's where release tagging/image publishing/promotion belong.
+- `main` shows what is deployed and `dev` what is not; a release is a reviewable pull
+  request plus a tag.
+- Every hotfix must be merged back into `dev`, unless `dev` already carries an
+  equivalent fix.
+- Merged work waits for the next release, and so do component releases.
+- `dev` has one commit per pull request, even for a long stack. Intermediate commits
+  stay readable in the pull request that the commit's `(#N)` links to.
+- "Require linear history" cannot enforce squashing on `dev`, because the hotfix
+  back-merge is a merge commit, and must stay off for `main`. Squashing and naming are
+  conventions that nothing enforces.
+- Production images are rebuilt at the release tag and deployed to staging once more.
+  Whether to promote the candidates' tested digests instead is still open.
+- The stack name makes up for stacks having no name in the pull request list, and should
+  be retired once they do.
+- The team adopted this model as a trial, to be judged once it has been used long
+  enough.
 
-## Alternatives considered
-- **Trunk-based on `main` alone** (what we did until this ADR was implemented). Rejected: no branch represents the released state and `main` is always in flux.
-- **Trunk-based on `main` with merge queues** (remix of status quo).
-Rejected: merge queues would allow PRs to pile up against `main` until certain criteria green-lit the merge.
-This would, in essence, give the same end result as the proposed strategy, except all the changes that would be merged into `dev` would be in a limbo state against `main`.
-It would automate the role of `dev` but in exchange we would lose the concrete state tracking and conceptual simplicity offered by an actual branch.
-This approach might be revisited in the future as part of a production CD strategy when the GHGA platform has gelled more and changes are less disruptive/conflicting.
-- **A merge commit per pull request** (the GitHub default, and what a handful of earlier merges on `dev` used).
-Rejected: a sixteen-deep stack would land sixteen merge commits plus every intermediate commit, and `dev` stops being a readable list of what was merged.
-What squashing costs is the intermediate commits, which are review scaffolding rather than history, and they stay readable in the pull request.
-- **Rebase merges.** Rejected: they keep every intermediate commit *and* lose the merge record, which is the worst of both; they are disabled in the repository settings.
-- **Release branches per version** (full Git Flow). Rejected: with controlled platform releases and hotfixes applied to the latest release only, `main` already serves that role; per-version maintenance branches are not something we want or have the user base to justify. We tried doing this with `hexkit` early on, up through about v3 or v4, but it got tedious quickly.
+### Alternatives
 
-## Final Note
-The strategy adopted through this ADR is not binding, it's merely a commitment to *try it out* long enough to be able to judge its suitability for our needs.
+- **Trunk-based on `main` alone.** No branch shows the released state.
+- **Merge queues on `main`.** They automate what `dev` does but leave pending work in
+  limbo instead of on a branch. Worth revisiting for continuous delivery to production.
+- **Release branches per version.** We hotfix only the latest release; maintenance
+  branches in `hexkit` proved tedious.
+- **A merge commit per pull request.** A long stack lands as many merge commits plus
+  every intermediate commit.
+- **Rebase merges.** Keep every intermediate commit and lose the merge record.
+- **Branch names prefixed by member.** Much work crosses members or belongs to none, and
+  the diff shows which members a change touches; only the name records its kind and
+  base.
+- **Conventional-Commit pull request titles.** They would make the prefill right, but
+  titles are read as a list by people who do not write the code, and the body needs
+  cutting at merge time anyway.
