@@ -4,8 +4,8 @@ The rules coding agents follow when they write docs, comments, commits and pull 
 in this repo. It does not cover user-facing text, such as data portal content, user
 documentation or notification emails, which may follow a different style.
 It covers only what is settled so far. Commit messages, branch names and pull request
-titles follow [ADR-0022](adr/0022-naming-branches-prs-commits.md), summarised in the
-[conventions](conventions.md#names-branches-prs-commits).
+titles follow the [conventions](conventions.md#names-branches-prs-commits), decided in
+[ADR-0020](adr/0020-branching-strategy.md).
 
 ## Writing
 
@@ -35,7 +35,7 @@ tokens as well as a developer's attention.
 | Text | Target |
 |---|---|
 | Pull request description | Up to 3 short paragraphs, about 150 words |
-| Commit message body | 3 to 5 bullets, per ADR-0022 |
+| Commit message body | 3 to 5 bullets, per the [conventions](conventions.md#names-branches-prs-commits) |
 | Code comment | One line, a few at most |
 | ADR | About 500 words; the Summary alone about 80. Long analysis goes into an architecture document that the ADR links to |
 | Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture documents instead of restating them |
@@ -53,7 +53,7 @@ so one number covers code and docs.
 - **Soft-wrapped (one line per paragraph):** text written in a GitHub web form — pull
   request descriptions, review and issue comments, release notes. GitHub renders a hard
   newline in a comment as a visible line break.
-- **Commit messages:** subject and body wrapped at 72, per ADR-0022.
+- **Commit messages:** subject and body wrapped at 72, per the conventions.
 - **Exempt:** [`docs/epics/`](epics/) and [`docs/adr-old/`](adr-old/), which were
   imported with their own formatting.
 

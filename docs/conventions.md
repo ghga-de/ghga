@@ -65,6 +65,7 @@ is always a released state.
   next release.
 - **Release:** `dev` is merged into `main` with a merge commit (never squashed or rebased —
   that is why "Require linear history" is off for `main`).
+- **Long-lived feature branches** are allowed, and decided case by case.
 - Committing directly to either branch is blocked by `no-commit-to-branch`
   ([ADR-0018](adr/0018-pre-commit-hooks.md)).
 
@@ -80,7 +81,7 @@ of the branch's first-parent chain, so a back-merge does not launder a tag onto 
 ### Names: branches, PRs, commits
 
 A change carries three names, all derived from one grammar
-([ADR-0022](adr/0022-naming-branches-prs-commits.md)):
+([ADR-0020](adr/0020-branching-strategy.md)):
 
 | | in a stack | solo |
 |---|---|---|
@@ -110,7 +111,8 @@ the issue covers the whole stack: `upload/feat/GSI-1234-add-ucs-endpoints` versu
 | `chore` | tooling, CI, dependencies, charts — and anything not clearly one of the above | `dev` | `chore` |
 
 `hotfix` is the only kind that names its base branch; the rest are labels. There is deliberately
-no `release` kind — a release is a merge plus a tag.
+no `release` kind — a release is a merge plus a tag. Conventional Commits' `perf`, `ci`, `build`
+and `style` are not used; they are `chore`.
 
 **At merge time** the commit message is rewritten, because neither prefill is right — by
 whoever merges, or by an agent asked to draft it from the PR:
@@ -121,7 +123,16 @@ names the member as its scope where one owns the change, and leaves it off where
 hotfix's merge commit is written the same way. Mark a breaking change `feat(upload)!:` with a
 `BREAKING CHANGE:` footer, and do not repeat the YouTrack key —
 `(#<PR>)` leads to it. **No `Co-authored-by:` line for an agent in a commit**, whatever the
-tool says; human co-authors keep their trailers.
+tool says; human co-authors keep their trailers. For branch
+`upload/feat/GSI-1234-add-ucs-endpoints`, merged as #207:
+
+```text
+feat(upload): add UCS endpoints (#207)
+
+- Add POST /uploads and GET /uploads/{id}
+- Resolve the storage alias from the box configuration
+- Cover both routes in the UCS API tests
+```
 
 **PR descriptions** are written for the reviewer: a few short paragraphs on what changed, why,
 and what to look at — not a summary of the diff, and not a report on how the work went. Plain
