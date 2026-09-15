@@ -11,6 +11,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSortModule, Sort, SortDirection } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import {
@@ -33,9 +34,11 @@ import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
  * parent is responsible for fetching the matching page.
  *
  * The visible columns depend on the box state: archived boxes show the assigned
- * accession, other boxes show the upload status. When `showDelete` is set, an
- * extra column offers a delete button for each file for which `deletable`
- * returns true, emitting `deleteFile` on click.
+ * accession, other boxes show the upload status. When `showRequeue` is set, an
+ * extra column offers a retry button for each file for which `requeuable`
+ * returns true, emitting `requeueFile` on click. Likewise, when `showDelete` is
+ * set, an extra column offers a delete button for each file for which
+ * `deletable` returns true, emitting `deleteFile` on click.
  */
 @Component({
   selector: 'app-upload-box-files-table',
@@ -45,6 +48,7 @@ import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
     MatPaginatorModule,
     MatSortModule,
     MatTableModule,
+    MatTooltipModule,
     DatePipe,
     ParseBytes,
     FileUploadStatePipe,
@@ -81,6 +85,18 @@ export class UploadBoxFilesTableComponent {
    */
   loading = input<boolean>(false);
 
+  /** Whether to show a column with per-file requeue (retry re-encryption) buttons. */
+  showRequeue = input<boolean>(false);
+
+  /** Predicate deciding whether an individual file may be requeued. */
+  requeuable = input<(file: FileUploadWithAccession) => boolean>(() => false);
+
+  /** Umami analytics event label for the requeue button, if any. */
+  requeueEventLabel = input<string>('');
+
+  /** Emitted when the requeue button of a file is clicked. */
+  requeueFile = output<FileUploadWithAccession>();
+
   /** Whether to show a column with per-file delete buttons. */
   showDelete = input<boolean>(false);
 
@@ -105,12 +121,13 @@ export class UploadBoxFilesTableComponent {
   /** Timezone for date display. */
   readonly timeZone = DEFAULT_TIME_ZONE;
 
-  /** The columns to display, depending on box state and delete availability. */
+  /** The columns to display, depending on box state and available actions. */
   columns = computed<string[]>(() => {
     if (this.boxState() === UploadBoxState.archived) {
       return ['alias', 'accession', 'size', 'uploaded'];
     }
     const columns = ['alias', 'status', 'size', 'uploaded'];
+    if (this.showRequeue()) columns.push('requeue');
     // Files can only be deleted while the box is still open for uploads.
     if (this.showDelete()) columns.push('delete');
     return columns;

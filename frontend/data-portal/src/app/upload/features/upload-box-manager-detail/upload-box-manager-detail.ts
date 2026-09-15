@@ -43,10 +43,17 @@ import {
   UploadBoxStateClass,
 } from '@app/upload/models/box';
 import {
+  describeIncompleteOrFailedConflict,
+  IncompleteOrFailedConflict,
+  incompleteOrFailedConflictTitle,
+  parseIncompleteOrFailedConflict,
+} from '@app/upload/models/box-conflict';
+import {
   FileUploadState,
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
 import { UploadGrant } from '@app/upload/models/grant';
+import { describeRequeueError } from '@app/upload/models/requeue';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
 import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
@@ -281,10 +288,10 @@ export class UploadBoxManagerDetailComponent implements OnInit {
 
   /**
    * Lock the upload box (set state to locked). When the backend rejects the
-   * request with a 409 because some uploads are still incomplete, ask the
-   * user whether to force it and retry once with force=true.
+   * request with a 409 because some uploads are still incomplete or failed
+   * re-encryption, ask the user whether to force it and retry once with force=true.
    * @param box - the upload box to lock
-   * @param force - whether to lock despite incomplete uploads
+   * @param force - whether to lock despite incomplete or failed uploads
    */
   #lockBox(box: ResearchDataUploadBox, force: boolean): void {
     this.isChangingState.set(true);
@@ -295,11 +302,11 @@ export class UploadBoxManagerDetailComponent implements OnInit {
       },
       error: (err: unknown) => {
         // Offer the force option only on the first attempt and only when the
-        // conflict is specifically caused by incomplete uploads. A forced
-        // retry that still fails falls through to the generic message.
-        const incompleteUploads = force ? null : this.#incompleteUploads(err);
-        if (incompleteUploads) {
-          this.#confirmForceLock(box, incompleteUploads.length);
+        // conflict is specifically caused by incomplete or failed uploads. A
+        // forced retry that still fails falls through to the generic message.
+        const conflict = force ? null : parseIncompleteOrFailedConflict(err);
+        if (conflict) {
+          this.#confirmForceLock(box, conflict);
         } else {
           this.isChangingState.set(false);
           this.#notificationService.showError(
@@ -311,30 +318,19 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   }
 
   /**
-   * Extract the incomplete uploads reported by a 409 locking conflict, which
-   * the user may override by forcing the lock.
-   * @param err - the error thrown by the lock request
-   * @returns the incomplete uploads, or null if this is not such a conflict
-   */
-  #incompleteUploads(err: unknown): unknown[] | null {
-    const response = err as HttpErrorResponse;
-    const data: unknown = response?.error?.data;
-    if (response?.status !== 409 || !data || typeof data !== 'object') return null;
-    const uploads = (data as { incomplete_uploads?: unknown }).incomplete_uploads;
-    return Array.isArray(uploads) ? uploads : null;
-  }
-
-  /**
-   * Ask the user whether to lock despite incomplete uploads. On confirmation,
-   * retry the lock with force=true; otherwise leave the box open.
+   * Ask the user whether to lock despite incomplete or failed uploads. On
+   * confirmation, retry the lock with force=true; otherwise leave the box open.
    * @param box - the upload box to lock
-   * @param count - the number of still-incomplete file uploads
+   * @param conflict - the file uploads that blocked the lock
    */
-  #confirmForceLock(box: ResearchDataUploadBox, count: number): void {
-    const [are, uploads] = count === 1 ? ['is', 'upload'] : ['are', 'uploads'];
+  #confirmForceLock(
+    box: ResearchDataUploadBox,
+    conflict: IncompleteOrFailedConflict,
+  ): void {
+    const reason = describeIncompleteOrFailedConflict(conflict, 'Locking');
     this.#confirmationService.confirm({
-      title: 'Incomplete uploads detected!',
-      message: `Locking failed because there ${are} still ${count} incomplete file ${uploads}. Do you want to lock the box anyway?`,
+      title: incompleteOrFailedConflictTitle(conflict),
+      message: `${reason} Do you want to lock the box anyway?`,
       confirmText: 'Lock anyway',
       callback: (confirmed) => {
         if (!confirmed) {
@@ -473,12 +469,14 @@ export class UploadBoxManagerDetailComponent implements OnInit {
 
   /**
    * File states that may be deleted: still being uploaded (init), re-encrypted
-   * (inbox), or already re-encrypted (interrogated).
+   * (inbox), already re-encrypted (interrogated), or failed re-encryption
+   * (failed_interrogation).
    */
   readonly #deletableFileStates: readonly FileUploadState[] = [
     'init',
     'inbox',
     'interrogated',
+    'failed_interrogation',
   ];
 
   /**
@@ -505,8 +503,8 @@ export class UploadBoxManagerDetailComponent implements OnInit {
 
   /**
    * Delete a file upload from the box. Files that are still being uploaded
-   * (init) are deleted right away; files that are being re-encrypted (inbox)
-   * or already re-encrypted (interrogated) require an extra confirmation first.
+   * (init) are deleted right away; all other deletable files (inbox,
+   * interrogated, failed_interrogation) require an extra confirmation first.
    * @param file - the file upload to delete
    */
   deleteFile(file: FileUploadWithAccession): void {
@@ -545,6 +543,118 @@ export class UploadBoxManagerDetailComponent implements OnInit {
         this.#notificationService.showError(
           `The file "${file.alias}" could not be deleted.`,
         ),
+    });
+  }
+
+  /**
+   * Bound predicate passed to the files table so it can decide, per file,
+   * whether to render a requeue button. Only files whose re-encryption failed
+   * can be requeued, and only while the box is not archived.
+   * @param file - the file upload to check
+   * @returns true if the file can be requeued
+   */
+  readonly canRequeueFileFn = (file: FileUploadWithAccession): boolean =>
+    this.uploadBox()?.state !== UploadBoxState.archived &&
+    file.state === 'failed_interrogation';
+
+  /** Whether a requeue of all failed files is currently in flight. */
+  isRequeueing = signal<boolean>(false);
+
+  /**
+   * Ask for confirmation and, on approval, requeue a file whose re-encryption
+   * failed, so that it is re-encrypted again without a new upload.
+   * @param file - the file upload to requeue
+   */
+  requeueFile(file: FileUploadWithAccession): void {
+    const box = this.uploadBox();
+    if (!box) return;
+    this.#confirmationService.confirm({
+      title: 'Retry re-encryption?',
+      message:
+        `<p>The file <strong>${file.alias}</strong> will be re-encrypted again. ` +
+        'It does not have to be uploaded again.</p>',
+      cancelText: 'Cancel',
+      confirmText: 'Retry',
+      callback: (confirmed) => {
+        if (confirmed) this.#performFileRequeue(box.id, file);
+      },
+    });
+  }
+
+  /**
+   * Perform the actual requeue request for a single file and report the outcome.
+   * @param boxId - the ID of the upload box the file belongs to
+   * @param file - the file upload to requeue
+   */
+  #performFileRequeue(boxId: string, file: FileUploadWithAccession): void {
+    this.#uploadBoxService.requeueFileUpload(boxId, file).subscribe({
+      next: () =>
+        this.#notificationService.showSuccess(
+          `The file "${file.alias}" has been queued for re-encryption.`,
+        ),
+      error: (err: unknown) => {
+        const notice = describeRequeueError(err, file.alias);
+        if (notice.level === 'warning') {
+          this.#notificationService.showWarning(notice.message);
+        } else {
+          this.#notificationService.showError(notice.message);
+        }
+        if (notice.refresh) this.refresh();
+      },
+    });
+  }
+
+  /**
+   * Ask for confirmation and, on approval, requeue all files of the box whose
+   * re-encryption failed.
+   */
+  requeueAllFiles(): void {
+    const box = this.uploadBox();
+    if (!box || box.state === UploadBoxState.archived) return;
+    this.#confirmationService.confirm({
+      title: 'Retry all failed re-encryptions?',
+      message:
+        'All files in this upload box whose re-encryption failed will be ' +
+        're-encrypted again. They do not have to be uploaded again.',
+      cancelText: 'Cancel',
+      confirmText: 'Retry all',
+      callback: (confirmed) => {
+        if (confirmed) this.#performRequeueAll(box.id);
+      },
+    });
+  }
+
+  /**
+   * Perform the actual requeue request for all failed files and report the outcome.
+   * @param boxId - the ID of the upload box
+   */
+  #performRequeueAll(boxId: string): void {
+    const files = (count: number) => `${count} ${count === 1 ? 'file' : 'files'}`;
+    this.isRequeueing.set(true);
+    this.#uploadBoxService.requeueAllFileUploads(boxId).subscribe({
+      next: ({ requeued, skipped }) => {
+        this.isRequeueing.set(false);
+        const queued = `${files(requeued.length)} queued for re-encryption.`;
+        if (skipped.length) {
+          this.#notificationService.showWarning(
+            `${queued} ${files(skipped.length)} could not be requeued.`,
+          );
+        } else if (requeued.length) {
+          this.#notificationService.showSuccess(queued);
+        } else {
+          this.#notificationService.showInfo(
+            'No files are waiting for a retry of their re-encryption.',
+          );
+        }
+      },
+      error: (err: unknown) => {
+        this.isRequeueing.set(false);
+        this.#notificationService.showError(
+          (err as HttpErrorResponse)?.status === 409
+            ? 'Files in archived upload boxes cannot be requeued.'
+            : 'The failed files could not be requeued. Please try again.',
+        );
+      },
     });
   }
 

@@ -305,6 +305,9 @@
                   mat-raised-button
                   color="primary"
                   [disabled]="!canConfirmAndArchive()"
+                  [attr.aria-describedby]="
+                    archiveBlockedReason() ? 'archive-blocked-reason' : null
+                  "
                   (click)="onConfirmAndArchive()"
                 >
                   <mat-icon fontIcon="archive" />
@@ -325,6 +328,11 @@
                   </button>
                 </div>
               </div>
+              @if (archiveBlockedReason(); as reason) {
+                <p id="archive-blocked-reason" class="text-warning mt-2">{{
+                  reason
+                }}</p>
+              }
             } @else if (pendingMappedField()) {
               <div class="flex flex-wrap items-center gap-3">
                 <button mat-stroked-button (click)="onCancel()">

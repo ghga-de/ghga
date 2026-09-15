@@ -42,12 +42,20 @@ const pageFiles: FileUploadWithAccession[] = [
   makeFile({ id: 'f2', alias: 'beta.txt', state: 'interrogated' }),
 ];
 
+const failedFile = makeFile({
+  id: 'f3',
+  alias: 'gamma.txt',
+  state: 'failed_interrogation',
+});
+
 /**
  * Render the component with the given inputs.
  * @param inputs - the signal inputs to set
  * @param inputs.pageFiles - the file uploads on the page to display
  * @param inputs.boxState - the state of the box the files belong to
  * @param inputs.loading - whether the file list is still loading
+ * @param inputs.showRequeue - whether to show the requeue column
+ * @param inputs.requeuable - predicate deciding which files are requeuable
  * @param inputs.showDelete - whether to show the delete column
  * @param inputs.deletable - predicate deciding which files are deletable
  * @param inputs.totalCount - the total number of files across all pages
@@ -57,6 +65,8 @@ async function createComponent(inputs: {
   pageFiles: FileUploadWithAccession[];
   boxState: UploadBoxState;
   loading?: boolean;
+  showRequeue?: boolean;
+  requeuable?: (file: FileUploadWithAccession) => boolean;
   showDelete?: boolean;
   deletable?: (file: FileUploadWithAccession) => boolean;
   totalCount?: number;
@@ -74,6 +84,12 @@ async function createComponent(inputs: {
   if (inputs.loading !== undefined) {
     fixture.componentRef.setInput('loading', inputs.loading);
   }
+  if (inputs.showRequeue !== undefined) {
+    fixture.componentRef.setInput('showRequeue', inputs.showRequeue);
+  }
+  if (inputs.requeuable !== undefined) {
+    fixture.componentRef.setInput('requeuable', inputs.requeuable);
+  }
   if (inputs.showDelete !== undefined) {
     fixture.componentRef.setInput('showDelete', inputs.showDelete);
   }
@@ -89,6 +105,11 @@ describe('UploadBoxFilesTableComponent', () => {
     await createComponent({ pageFiles, boxState: UploadBoxState.open });
     expect(screen.getByText('alpha.txt')).toBeInTheDocument();
     expect(screen.getByText('beta.txt')).toBeInTheDocument();
+  });
+
+  it('should show a file that failed re-encryption as an error', async () => {
+    await createComponent({ pageFiles: [failedFile], boxState: UploadBoxState.open });
+    expect(screen.getByText('re-encryption failed')).toHaveClass('text-error');
   });
 
   it('should not show a delete column unless enabled', async () => {
@@ -123,6 +144,44 @@ describe('UploadBoxFilesTableComponent', () => {
     screen.getByLabelText('Delete file alpha.txt').click();
     expect(emitted).toHaveLength(1);
     expect(emitted[0].alias).toBe('alpha.txt');
+  });
+
+  it('should not show a requeue column unless enabled', async () => {
+    await createComponent({
+      pageFiles: [...pageFiles, failedFile],
+      boxState: UploadBoxState.locked,
+      requeuable: () => true,
+    });
+    expect(screen.queryByLabelText(/^Retry re-encryption of/)).not.toBeInTheDocument();
+  });
+
+  it('should show requeue buttons only for requeuable files when enabled', async () => {
+    await createComponent({
+      pageFiles: [...pageFiles, failedFile],
+      boxState: UploadBoxState.locked,
+      showRequeue: true,
+      requeuable: (file) => file.state === 'failed_interrogation',
+    });
+    expect(
+      screen.getByLabelText('Retry re-encryption of gamma.txt'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Retry re-encryption of alpha.txt'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('should emit requeueFile when a requeue button is clicked', async () => {
+    const fixture = await createComponent({
+      pageFiles: [failedFile],
+      boxState: UploadBoxState.open,
+      showRequeue: true,
+      requeuable: () => true,
+    });
+    const emitted: FileUploadWithAccession[] = [];
+    fixture.componentInstance.requeueFile.subscribe((file) => emitted.push(file));
+    screen.getByLabelText('Retry re-encryption of gamma.txt').click();
+    expect(emitted).toHaveLength(1);
+    expect(emitted[0].id).toBe('f3');
   });
 
   it('should request a new sort order instead of reordering the page itself', async () => {

@@ -36,6 +36,7 @@ import {
   UploadGrant,
   UploadGrantBase,
 } from '../models/grant';
+import { BoxRequeueResult } from '../models/requeue';
 
 /**
  * Service for managing upload boxes.
@@ -922,6 +923,47 @@ export class UploadBoxService {
         });
       }
     }
+  }
+
+  /**
+   * Requeue a file upload whose re-encryption failed, so that it is re-encrypted
+   * again without a new upload. On success, the file uploads of the box are
+   * fetched again, since the state of the file has changed.
+   * @param boxId - the ID of the upload box the file belongs to
+   * @param file - the file upload to requeue
+   * @returns An observable that completes when the file is requeued
+   */
+  requeueFileUpload(boxId: string, file: FileUploadWithAccession): Observable<void> {
+    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads/${encodeURIComponent(file.id)}/requeue`;
+    return this.#http.post<void>(url, null).pipe(tap(() => this.#reloadFileUploads()));
+  }
+
+  /**
+   * Requeue all file uploads of a box whose re-encryption failed. On success, the
+   * file uploads of the box are fetched again if any file was requeued.
+   * @param boxId - the ID of the upload box
+   * @returns An observable emitting the IDs of the requeued and skipped file uploads
+   */
+  requeueAllFileUploads(boxId: string): Observable<BoxRequeueResult> {
+    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/requeue`;
+    return this.#http.post<BoxRequeueResult>(url, null).pipe(
+      tap((result) => {
+        if (result.requeued.length) this.#reloadFileUploads();
+      }),
+    );
+  }
+
+  /**
+   * Fetch the file uploads of the current box again after their states changed on
+   * the server. The number of files stays the same, so the current page and the
+   * box statistics remain valid.
+   */
+  #reloadFileUploads(): void {
+    // The cached pages must go first, otherwise the reloads would just replay the
+    // responses from before the change.
+    this.#httpCache.delete(this.#fileUploadsBucket);
+    this.boxFileUploads.reload();
+    this.allBoxFileUploads.reload();
   }
 
   /**

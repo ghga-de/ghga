@@ -11,6 +11,7 @@ export type FileUploadState =
   | 'failed'
   | 'cancelled'
   | 'interrogated'
+  | 'failed_interrogation'
   | 'awaiting_archival'
   | 'archived';
 
@@ -19,6 +20,7 @@ export const FileUploadStatePrintable: Record<FileUploadState, string> = {
   init: 'uploading…',
   inbox: 're-encrypting…',
   interrogated: 're-encrypted',
+  failed_interrogation: 're-encryption failed',
   awaiting_archival: 'awaiting archival…',
   archived: 'archived',
   failed: 'failed',
@@ -30,6 +32,7 @@ export const FileUploadStateClass: Record<FileUploadState, string> = {
   init: 'text-warning',
   inbox: 'text-warning',
   interrogated: 'text-success',
+  failed_interrogation: 'text-error',
   awaiting_archival: 'text-warning',
   archived: 'text-gray-600',
   failed: 'text-error',

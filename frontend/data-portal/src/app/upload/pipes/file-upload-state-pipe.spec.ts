@@ -37,6 +37,21 @@ describe('FileUploadStatePipe', () => {
     });
   });
 
+  it('should provide a friendly name and class for the failed_interrogation state', () => {
+    const pipe = new FileUploadStatePipe();
+    const result = pipe.transform('failed_interrogation');
+    expect(result).toStrictEqual({
+      name: 're-encryption failed',
+      class: 'text-error',
+    });
+  });
+
+  it('should provide a friendly name and class for the failed state', () => {
+    const pipe = new FileUploadStatePipe();
+    const result = pipe.transform('failed');
+    expect(result).toStrictEqual({ name: 'failed', class: 'text-error' });
+  });
+
   it('should provide a friendly name and class for the cancelled state', () => {
     const pipe = new FileUploadStatePipe();
     const result = pipe.transform('cancelled');

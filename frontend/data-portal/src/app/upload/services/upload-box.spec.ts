@@ -1252,4 +1252,69 @@ describe('UploadBoxService with the HTTP cache in place', () => {
     httpMock.expectOne(USER_GRANTS_URL).flush([]);
     await Promise.resolve();
   });
+
+  it('should fetch the file uploads again after a file was requeued', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const failedFile = {
+      id: 'file-1',
+      state: 'failed_interrogation',
+    } as unknown as FileUploadWithAccession;
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [failedFile], total_count: 1 });
+    await Promise.resolve();
+
+    service.requeueFileUpload(BOX.id, failedFile).subscribe();
+    const requeueReq = httpMock.expectOne(`${UPLOADS_URL}/file-1/requeue`);
+    expect(requeueReq.request.method).toBe('POST');
+    expect(requeueReq.request.body).toBeNull();
+    requeueReq.flush(null, { status: 204, statusText: 'No Content' });
+    await Promise.resolve();
+
+    // The requeued file changed its state, so the page must not be replayed from
+    // the cache.
+    testBed.tick();
+    const requeuedFile = { ...failedFile, state: 'inbox' };
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [requeuedFile], total_count: 1 });
+    await Promise.resolve();
+    expect(service.boxFiles()).toEqual([requeuedFile]);
+  });
+
+  it('should fetch the file uploads again only when a box-wide requeue requeued files', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 2 });
+    await Promise.resolve();
+
+    let result: { requeued: string[]; skipped: string[] } | undefined;
+    service.requeueAllFileUploads(BOX.id).subscribe((value) => (result = value));
+    const emptyReq = httpMock.expectOne(`${BOX_URL}/requeue`);
+    expect(emptyReq.request.method).toBe('POST');
+    expect(emptyReq.request.body).toBeNull();
+    emptyReq.flush({ requeued: [], skipped: [] });
+    await Promise.resolve();
+    testBed.tick();
+    httpMock.expectNone((req) => req.url === UPLOADS_URL);
+    expect(result).toEqual({ requeued: [], skipped: [] });
+
+    service.requeueAllFileUploads(BOX.id).subscribe();
+    httpMock
+      .expectOne(`${BOX_URL}/requeue`)
+      .flush({ requeued: ['file-1'], skipped: ['file-2'] });
+    await Promise.resolve();
+    testBed.tick();
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: [], total_count: 2 });
+    await Promise.resolve();
+  });
 });

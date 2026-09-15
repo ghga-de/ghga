@@ -1155,7 +1155,7 @@ export const uploadBoxes: BoxRetrievalResults = {
       description: 'Upload box for RNA sequencing files of study GHGAS12345678901234',
       last_changed: '2025-02-01T09:00:00Z',
       changed_by: 'doe@test.dev',
-      file_count: 4,
+      file_count: 5,
       size: 123456789,
       storage_alias: 'TUE01',
       max_size: 10_995_116_277_760, // 10 TiB
@@ -1330,6 +1330,20 @@ export const uploadBox1FileUploads: FileUploadWithAccession[] = [
     decrypted_sha256: null,
     decrypted_size: 2147483648, // 2 GB
     encrypted_size: 2147520000,
+    part_size: 16777216,
+    accession: null,
+  },
+  {
+    id: 'f5b36607a-b53f-49ed-bf3e-a5f2dbc68001',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
+    alias: 'sample_rna_002_R2.fastq.gz',
+    state: 'failed_interrogation',
+    state_updated: '2026-01-10T10:15:00Z',
+    storage_alias: 'TUE01',
+    bucket_id: 'inbox-tue01',
+    decrypted_sha256: 'c'.repeat(64),
+    decrypted_size: 2254857830, // ~2.1 GB
+    encrypted_size: 2254890000,
     part_size: 16777216,
     accession: null,
   },
