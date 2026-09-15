@@ -23,12 +23,15 @@ tag, so bumps accumulate and one run ships them together.
 Usage (`uv run --script`, so the PEP 723 block above resolves):
     git diff --name-only origin/main...HEAD | uv run --script scripts/pypi_drift.py
     git diff --name-only origin/main...HEAD | uv run --script scripts/pypi_drift.py --list
+    git diff --name-only origin/main...HEAD \
+        | uv run --script scripts/pypi_drift.py --base "$(git merge-base origin/main HEAD)"
 """
 
 from __future__ import annotations
 
 import argparse
 import pathlib
+import subprocess
 import sys
 
 import tomllib
@@ -67,7 +70,34 @@ def _packaged_roots(member_path: str) -> list[str]:
     )
 
 
-def changed_members(files: list[str]) -> list[str]:
+def _same_toml(base: str, file: str) -> bool:
+    """Tells whether a TOML file parses to the same data at `base` as in the working tree.
+
+    Comments and formatting in `pyproject.toml` never reach the wheel's METADATA, so a
+    change to only those ships nothing.
+
+    Args:
+        base: The commit the change set is compared against.
+        file: The file path, relative to the repo root.
+
+    Returns:
+        True only if both versions exist, parse, and are equal; anything that cannot be
+        compared counts as changed.
+    """
+    try:
+        before = subprocess.run(
+            ["git", "show", f"{base}:{file}"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        return tomllib.loads(before) == tomllib.loads((ROOT / file).read_text())
+    except (subprocess.CalledProcessError, OSError, tomllib.TOMLDecodeError):
+        return False
+
+
+def changed_members(files: list[str], base: str | None = None) -> list[str]:
     """Selects the lane members whose shipped content `files` touches.
 
     Deliberately not `affected_targets.affected()`, which answers "what might this break?"
@@ -78,6 +108,8 @@ def changed_members(files: list[str]) -> list[str]:
 
     Args:
         files: Changed file paths, relative to the repo root.
+        base: The commit `files` were diffed against. When given, a `pyproject.toml`
+            whose parsed content is unchanged, such as a comment-only edit, is ignored.
 
     Returns:
         The sorted member folders whose shipped content changed, e.g. `["libs/hexkit"]`.
@@ -94,6 +126,13 @@ def changed_members(files: list[str]) -> list[str]:
             "error: cannot establish what these members ship, so drift in them would go"
             f" unnoticed: {', '.join(unknown)}"
         )
+
+    if base is not None:
+        files = [
+            f
+            for f in files
+            if not (f.endswith("/pyproject.toml") and _same_toml(base, f))
+        ]
 
     changed = set()
     for path, packaged in roots.items():
@@ -140,9 +179,14 @@ def main(argv: list[str] | None = None) -> int:
         help="print the lane members the change set ships into and stop, without asking"
         " the index anything",
     )
+    parser.add_argument(
+        "--base",
+        help="the commit the file list was diffed against; lets a comment-only"
+        " pyproject.toml change pass",
+    )
     args = parser.parse_args(argv)
 
-    changed = changed_members(sys.stdin.read().splitlines())
+    changed = changed_members(sys.stdin.read().splitlines(), args.base)
     if args.list:
         print("\n".join(changed))
         return 0
