@@ -448,10 +448,10 @@ def _canonical_loopback(url: httpx2.URL) -> httpx2.URL:
 def _declared_endpoints(mock_class: type) -> dict[str, Endpoint]:
     """Collect the endpoints a mock class declares, a subclass overriding its bases."""
     endpoints: dict[str, Endpoint] = {}
-    for base in reversed(mock_class.__mro__):
+    for base in mock_class.__mro__:
         for name, attribute in vars(base).items():
             if isinstance(attribute, Endpoint):
-                endpoints[name] = attribute
+                endpoints.setdefault(name, attribute)
     return endpoints
 
 

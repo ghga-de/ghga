@@ -14,11 +14,17 @@
 # limitations under the License.
 #
 
-"""Testing the setup checks of the MockedApi."""
+"""Testing the MockedApi from the api subpackage."""
 
+import httpx2
 import pytest
 
-from ghga_service_commons.api.mock_api import MockedApi, MockSetupError, endpoint
+from ghga_service_commons.api.mock_api import (
+    MockedApi,
+    MockSetupError,
+    NotMockedError,
+    endpoint,
+)
 
 
 def test_endpoints_serving_the_same_route_are_rejected():
@@ -90,3 +96,58 @@ def test_other_methods_and_overrides_are_not_duplicates():
 
     MockedBaseApi()
     MockedSubApi()
+
+
+class MockedWildcardApi(MockedApi):
+    """A base mock whose wildcard route also matches the subclass routes."""
+
+    base_url = "http://things.test"
+    on_any_thing = endpoint(
+        "GET",
+        "/things/{thing_id}",
+        lambda request, **kw: httpx2.Response(200, text="any"),
+    )
+    on_health = endpoint(
+        "GET", "/health", lambda request, **kw: httpx2.Response(200, text="base")
+    )
+
+
+class MockedSpecificApi(MockedWildcardApi):
+    """A subclass adding a specific route and redeclaring `on_health`."""
+
+    on_latest_thing = endpoint(
+        "GET",
+        "/things/latest",
+        lambda request, **kw: httpx2.Response(200, text="latest"),
+    )
+    on_health = endpoint(
+        "GET", "/status", lambda request, **kw: httpx2.Response(200, text="sub")
+    )
+
+
+def _as_transport(mock: MockedApi) -> httpx2.MockTransport:
+    """Mount `mock` by hand, since `MockedApi` does not offer a transport itself."""
+
+    def answer(request: httpx2.Request) -> httpx2.Response:
+        path = mock._path_relative_to_base_url(request.url)
+        assert path is not None
+        return mock._answer(request, path)
+
+    return httpx2.MockTransport(answer)
+
+
+def test_subclass_routes_are_tried_before_base_routes():
+    """Test that a subclass route wins over a base route that also matches the path."""
+    mock = MockedSpecificApi()
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        assert client.get("/things/latest").text == "latest"
+        assert client.get("/things/other").text == "any"
+
+
+def test_subclass_endpoint_replaces_base_endpoint_of_same_name():
+    """Test that redeclaring an endpoint name in a subclass serves only the new route."""
+    mock = MockedSpecificApi()
+    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+        assert client.get("/status").text == "sub"
+        with pytest.raises(NotMockedError):
+            client.get("/health")
