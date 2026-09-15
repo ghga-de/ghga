@@ -869,7 +869,9 @@ class FileBoxClient(FileBoxClientPort):
         Raises:
             FileUploadNotFoundError if the FileUpload doesn't exist.
             FUBStateError if the FileUploadBox is archived.
-            RequeueError if the FileUpload cannot be requeued.
+            FileUploadStateError if the FileUpload isn't in the 'failed_interrogation'
+                state.
+            RequeueError if the FileUpload's uploaded object is no longer in the inbox.
             OperationError if there's any other problem with the operation.
         """
         wot = RequeueFailedFileWorkOrder(box_id=box_id, file_id=file_id)
@@ -900,15 +902,6 @@ class FileBoxClient(FileBoxClientPort):
                     extra=extra,
                 )
                 raise self.FileUploadNotFoundError(file_id=file_id)
-            if exception_id == EXC_ID_REQUEUE_ERROR:
-                # The uploaded object is gone from the inbox, so there is nothing left
-                #  to interrogate again. The file has to be uploaded anew.
-                msg = (
-                    f"Cannot requeue FileUpload {file_id} because its uploaded object"
-                    + " is no longer in the inbox."
-                )
-                log.warning(msg, extra=extra)
-                raise self.RequeueError(msg)
             if exception_id == EXC_ID_BOX_NOT_FOUND:
                 log.warning(
                     "FileUploadBox %s not found in external service when attempting to"
@@ -922,19 +915,29 @@ class FileBoxClient(FileBoxClientPort):
                 )
 
         if response.status_code == 409:
-            if exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
+            if exception_id == EXC_ID_FILE_UPLOAD_STATE_ERROR:
                 msg = (
-                    f"Cannot requeue FileUpload {file_id} because it was not"
-                    + " successfully uploaded and never made it to interrogation."
+                    f"Cannot requeue FileUpload {file_id} because it isn't in the"
+                    + " 'failed_interrogation' state."
                 )
                 log.warning(msg, extra=extra)
-                raise self.RequeueError(msg)
+                raise self.FileUploadStateError(msg)
             self._raise_for_409(
                 response=response,
                 body={},
                 operation="requeue a file in",
                 box_id=box_id,
             )
+
+        if response.status_code == 500 and exception_id == EXC_ID_REQUEUE_ERROR:
+            # The uploaded object is gone from the inbox, so there is nothing left
+            #  to interrogate again. The file has to be uploaded anew.
+            msg = (
+                f"Cannot requeue FileUpload {file_id} because its uploaded object"
+                + " is no longer in the inbox."
+            )
+            log.warning(msg, extra=extra)
+            raise self.RequeueError(msg)
 
         log.warning(
             "Error requeuing FileUpload %s in FileUploadBox %s.",
@@ -947,8 +950,8 @@ class FileBoxClient(FileBoxClientPort):
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
         """Requeue every FileUpload in a FileUploadBox that failed interrogation.
 
-        Files that are ineligible for a requeue are reported in the result's `skipped`
-        list instead of failing the whole operation.
+        Files that couldn't be requeued due to an error are reported in the result's
+        `skipped` list instead of failing the whole operation.
 
         Raises:
             FUBStateError if the FileUploadBox is archived.

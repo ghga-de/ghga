@@ -147,10 +147,14 @@ class FileBoxClientPort(ABC):
             msg = f"FileUpload {file_id} was not found in the owning service."
             super().__init__(msg)
 
+    class FileUploadStateError(RuntimeError):
+        """Raised when the owning service refuses to requeue a FileUpload because it
+        isn't in the 'failed_interrogation' state.
+        """
+
     class RequeueError(RuntimeError):
-        """Raised when the owning service refuses to requeue a FileUpload because its
-        state doesn't allow it, it never got interrogated, or the uploaded object is
-        no longer in the inbox.
+        """Raised when the owning service can't requeue a FileUpload because its
+        uploaded object is no longer in the inbox.
         """
 
     @abstractmethod
@@ -298,7 +302,9 @@ class FileBoxClientPort(ABC):
         Raises:
             FileUploadNotFoundError if the FileUpload doesn't exist.
             FUBStateError if the FileUploadBox is archived.
-            RequeueError if the FileUpload cannot be requeued.
+            FileUploadStateError if the FileUpload isn't in the 'failed_interrogation'
+                state.
+            RequeueError if the FileUpload's uploaded object is no longer in the inbox.
             OperationError if there's any other problem with the operation.
         """
 
@@ -306,8 +312,8 @@ class FileBoxClientPort(ABC):
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
         """Requeue every FileUpload in a FileUploadBox that failed interrogation.
 
-        Files that are ineligible for a requeue are reported in the result's `skipped`
-        list instead of failing the whole operation.
+        Files that couldn't be requeued due to an error are reported in the result's
+        `skipped` list instead of failing the whole operation.
 
         Raises:
             FUBStateError if the FileUploadBox is archived.

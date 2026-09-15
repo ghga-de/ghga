@@ -387,12 +387,7 @@ class RDUBManager(RDUBManagerPort):
             (f.id for f in files if f.state in ("init", "inbox")), key=str
         )
         need_attention = sorted(
-            (
-                f.id
-                for f in files
-                if f.state == "failed" and f.decrypted_sha256 is not None
-            ),
-            key=str,
+            (f.id for f in files if f.state == "failed_interrogation"), key=str
         )
         if incomplete_uploads or need_attention:
             error = self.BoxIncompleteOrFailedError(
@@ -1009,7 +1004,9 @@ class RDUBManager(RDUBManagerPort):
             BoxNotFoundError: If the box doesn't exist.
             BoxStateError: If the box is archived.
             FileUploadNotFoundError: If the file upload doesn't exist.
-            RequeueError: If the file upload cannot be requeued.
+            FileUploadStateError: If the file upload isn't in the 'failed_interrogation'
+                state.
+            RequeueError: If the file upload's object is no longer in the inbox.
             OperationError: If there's a problem communicating with the file box
                 service.
         """
@@ -1024,6 +1021,10 @@ class RDUBManager(RDUBManagerPort):
             file_not_found_error = self.FileUploadNotFoundError(file_id=file_id)
             log.info(file_not_found_error, extra=extra)
             raise file_not_found_error from err
+        except FileBoxClientPort.FileUploadStateError as err:
+            file_upload_state_error = self.FileUploadStateError(str(err))
+            log.info(file_upload_state_error, extra=extra)
+            raise file_upload_state_error from err
         except FileBoxClientPort.RequeueError as err:
             requeue_error = self.RequeueError(str(err))
             log.info(requeue_error, extra=extra)
@@ -1047,11 +1048,9 @@ class RDUBManager(RDUBManagerPort):
     ) -> BoxRequeueResult:
         """Requeue every file upload in a box that failed interrogation.
 
-        Files that failed before this feature was implemented are ineligible
-        for requeuing because their objects have already been deleted from S3.
-        Such files are reported in the result's `skipped` list rather than
-        failing the whole operation. The result's `requeued` list contains the
-        IDs of all requeued files.
+        Files that couldn't be requeued due to an error are reported in the
+        result's `skipped` list rather than failing the whole operation. The
+        result's `requeued` list contains the IDs of all requeued files.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
@@ -1216,9 +1215,9 @@ class RDUBManager(RDUBManagerPort):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Cancelled files are ignored, as are files that failed before reaching the
-        inbox. Files that failed interrogation still require a mapping, since they are
-        expected to be resolved rather than dropped.**
+        **Cancelled and 'failed' files are ignored. Files in the 'failed_interrogation'
+        state still require a mapping, since they are expected to be resolved rather
+        than dropped.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and the box has not already been archived.
@@ -1307,10 +1306,7 @@ class RDUBManager(RDUBManagerPort):
 
         # Make sure all specified file IDs are active uploads in the box.
         file_ids_in_box = {
-            f.id
-            for f in files
-            if f.state != "cancelled"
-            and (f.state != "failed" or f.decrypted_sha256 is not None)
+            f.id for f in files if f.state not in ("cancelled", "failed")
         }
 
         if invalid_ids := (requested_file_ids - file_ids_in_box):

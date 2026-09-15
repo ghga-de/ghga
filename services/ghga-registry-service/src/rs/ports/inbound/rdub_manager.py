@@ -157,9 +157,14 @@ class RDUBManagerPort(ABC):
             msg = f"The FileUpload with ID {file_id} was not found."
             super().__init__(msg)
 
+    class FileUploadStateError(RuntimeError):
+        """Raised when a FileUpload cannot be requeued because it isn't in the
+        'failed_interrogation' state.
+        """
+
     class RequeueError(RuntimeError):
-        """Raised when a FileUpload cannot be requeued, because it didn't fail
-        interrogation or because its uploaded object is no longer in the inbox.
+        """Raised when a FileUpload cannot be requeued because its uploaded object is
+        no longer in the inbox.
         """
 
     @abstractmethod
@@ -401,7 +406,9 @@ class RDUBManagerPort(ABC):
             BoxNotFoundError: If the box doesn't exist.
             BoxStateError: If the box is archived.
             FileUploadNotFoundError: If the file upload doesn't exist.
-            RequeueError: If the file upload cannot be requeued.
+            FileUploadStateError: If the file upload isn't in the 'failed_interrogation'
+                state.
+            RequeueError: If the file upload's object is no longer in the inbox.
             OperationError: If there's a problem communicating with the file box
                 service.
         """
@@ -413,11 +420,9 @@ class RDUBManagerPort(ABC):
     ) -> BoxRequeueResult:
         """Requeue every file upload in a box that failed interrogation.
 
-        Files that failed before this feature was implemented are ineligible
-        for requeuing because their objects have already been deleted from S3.
-        Such files are reported in the result's `skipped` list rather than
-        failing the whole operation. The result's `requeued` list contains the
-        IDs of all requeued files.
+        Files that couldn't be requeued due to an error are reported in the
+        result's `skipped` list rather than failing the whole operation. The
+        result's `requeued` list contains the IDs of all requeued files.
 
         Raises:
             BoxNotFoundError: If the box doesn't exist.
@@ -467,9 +472,9 @@ class RDUBManagerPort(ABC):
         """Update the file accession map for a given box and publish an outbox event.
         This results in a version increment for the ResearchDataUploadBox.
 
-        **Cancelled files are ignored, as are files that failed before reaching the
-        inbox. Files that failed interrogation still require a mapping, since they are
-        expected to be resolved rather than dropped.**
+        **Cancelled and 'failed' files are ignored. Files in the 'failed_interrogation'
+        state still require a mapping, since they are expected to be resolved rather
+        than dropped.**
 
         Check the specified ResearchDataUploadBox to verify it exists, that the version
         stated in the request is current, and the box has not already been archived.

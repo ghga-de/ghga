@@ -739,7 +739,7 @@ async def test_requeue_single_file_404(
     httpx_client: httpx2.AsyncClient,
 ):
     """Check `requeue_single_file_upload()` for correct handling of the
-    three 404 cases.
+    two 404 cases.
 
     Does not test outbound HTTP error translation, because that has a
     dedicated test.
@@ -759,20 +759,7 @@ async def test_requeue_single_file_404(
         FileBoxClient.FileUploadNotFoundError(file_id=test_file_id)
     )
 
-    # Case #2: 404 "requeueError" -> RequeueError naming the missing object
-    file_box_api.on_requeue_single_file_upload = respond(
-        404, json={"exception_id": EXC_ID_REQUEUE_ERROR}
-    )
-    with pytest.raises(FileBoxClient.RequeueError) as requeue_err:
-        await file_upload_box_client.requeue_single_file_upload(
-            box_id=TEST_BOX_ID, file_id=test_file_id
-        )
-    assert str(requeue_err.value) == (
-        f"Cannot requeue FileUpload {test_file_id} because its uploaded object is no"
-        + " longer in the inbox."
-    )
-
-    # Case #3: 404 fallback interpreted as box not found
+    # Case #2: 404 fallback interpreted as box not found
     file_box_api.on_requeue_single_file_upload = respond(
         404, json={"exception_id": EXC_ID_BOX_NOT_FOUND}
     )
@@ -802,26 +789,23 @@ async def test_requeue_single_file_409(
     httpx_client: httpx2.AsyncClient,
 ):
     """Check `requeue_single_file_upload()` for correct handling of the
-    three 409 cases.
+    two 409 cases.
     """
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     test_file_id = uuid4()
 
-    # Check for the case where the FileUpload is not found at all and the case
-    #  where the FileUpload exists, but the S3 content is already gone.
-    requeue_err_msg = (
-        f"Cannot requeue FileUpload {test_file_id} because it was not successfully"
-        + " uploaded and never made it to interrogation."
+    # Check the case where the FileUpload isn't in the 'failed_interrogation' state
+    file_box_api.on_requeue_single_file_upload = respond(
+        409, json={"exception_id": EXC_ID_FILE_UPLOAD_STATE_ERROR}
     )
-    for exception_id in (EXC_ID_FILE_UPLOAD_STATE_ERROR, EXC_ID_REQUEUE_ERROR):
-        file_box_api.on_requeue_single_file_upload = respond(
-            409, json={"exception_id": exception_id}
+    with pytest.raises(FileBoxClient.FileUploadStateError) as state_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
         )
-        with pytest.raises(FileBoxClient.RequeueError) as requeue_err:
-            await file_upload_box_client.requeue_single_file_upload(
-                box_id=TEST_BOX_ID, file_id=test_file_id
-            )
-        assert str(requeue_err.value) == requeue_err_msg
+    assert str(state_err.value) == (
+        f"Cannot requeue FileUpload {test_file_id} because it isn't in the"
+        + " 'failed_interrogation' state."
+    )
 
     # Check the case where the FileUploadBox doesn't exist, which indicates
     #  a serious sync issue between RS and UCS.
@@ -835,6 +819,30 @@ async def test_requeue_single_file_409(
     assert str(fub_state_err.value) == (
         f"Cannot requeue a file in FileUploadBox {TEST_BOX_ID} because the box's state"
         + " prevents it. The RS and UCS box states might be out of sync."
+    )
+
+
+async def test_requeue_single_file_500(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+):
+    """Check that `requeue_single_file_upload()` raises a RequeueError naming the
+    missing object when the response is a 500 "requeueError".
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    test_file_id = uuid4()
+
+    file_box_api.on_requeue_single_file_upload = respond(
+        500, json={"exception_id": EXC_ID_REQUEUE_ERROR}
+    )
+    with pytest.raises(FileBoxClient.RequeueError) as requeue_err:
+        await file_upload_box_client.requeue_single_file_upload(
+            box_id=TEST_BOX_ID, file_id=test_file_id
+        )
+    assert str(requeue_err.value) == (
+        f"Cannot requeue FileUpload {test_file_id} because its uploaded object is no"
+        + " longer in the inbox."
     )
 
 
