@@ -927,43 +927,58 @@ export class UploadBoxService {
 
   /**
    * Requeue a file upload whose re-encryption failed, so that it is re-encrypted
-   * again without a new upload. On success, the file uploads of the box are
-   * fetched again, since the state of the file has changed.
+   * again without a new upload. On success, the file is moved back to the inbox
+   * state locally, so the file list reflects the change without a re-fetch.
    * @param boxId - the ID of the upload box the file belongs to
    * @param file - the file upload to requeue
    * @returns An observable that completes when the file is requeued
    */
   requeueFileUpload(boxId: string, file: FileUploadWithAccession): Observable<void> {
     const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads/${encodeURIComponent(file.id)}/requeue`;
-    return this.#http.post<void>(url, null).pipe(tap(() => this.#reloadFileUploads()));
+    return this.#http
+      .post<void>(url, null)
+      .pipe(tap(() => this.#requeueFileUploadsLocally([file.id])));
   }
 
   /**
    * Requeue all file uploads of a box whose re-encryption failed. On success, the
-   * file uploads of the box are fetched again if any file was requeued.
+   * requeued files are moved back to the inbox state locally.
    * @param boxId - the ID of the upload box
    * @returns An observable emitting the IDs of the requeued and skipped file uploads
    */
   requeueAllFileUploads(boxId: string): Observable<BoxRequeueResult> {
     const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/requeue`;
-    return this.#http.post<BoxRequeueResult>(url, null).pipe(
-      tap((result) => {
-        if (result.requeued.length) this.#reloadFileUploads();
-      }),
-    );
+    return this.#http
+      .post<BoxRequeueResult>(url, null)
+      .pipe(tap(({ requeued }) => this.#requeueFileUploadsLocally(requeued)));
   }
 
   /**
-   * Fetch the file uploads of the current box again after their states changed on
-   * the server. The number of files stays the same, so the current page and the
-   * box statistics remain valid.
+   * Move requeued file uploads back to the inbox state in the local file lists.
+   * The number of files stays the same, so the current page and the box
+   * statistics remain valid.
+   * @param fileIds - the IDs of the requeued file uploads
    */
-  #reloadFileUploads(): void {
-    // The cached pages must go first, otherwise the reloads would just replay the
-    // responses from before the change.
+  #requeueFileUploadsLocally(fileIds: string[]): void {
+    if (!fileIds.length) return;
+    // Later requests must not replay the cached pages from before the change.
     this.#httpCache.delete(this.#fileUploadsBucket);
-    this.boxFileUploads.reload();
-    this.allBoxFileUploads.reload();
+    const requeued = new Set(fileIds);
+    const stateUpdated = new Date().toISOString();
+    const applyRequeue = (files: FileUploadWithAccession[]) =>
+      files.map((f) =>
+        requeued.has(f.id)
+          ? { ...f, state: 'inbox' as const, state_updated: stateUpdated }
+          : f,
+      );
+
+    if (!this.boxFileUploads.error()) {
+      const page = this.boxFileUploads.value();
+      this.boxFileUploads.value.set({ ...page, items: applyRequeue(page.items) });
+    }
+    if (!this.allBoxFileUploads.error()) {
+      this.allBoxFileUploads.value.set(applyRequeue(this.allBoxFileUploads.value()));
+    }
   }
 
   /**

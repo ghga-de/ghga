@@ -1253,19 +1253,23 @@ describe('UploadBoxService with the HTTP cache in place', () => {
     await Promise.resolve();
   });
 
-  it('should fetch the file uploads again after a file was requeued', async () => {
+  it('should move a requeued file back to the inbox state locally', async () => {
     await flushUserGrants();
 
     service.loadFileUploadsForBox(BOX.id);
+    service.loadAllFileUploadsForBox(BOX.id);
     testBed.tick();
     const failedFile = {
       id: 'file-1',
       state: 'failed_interrogation',
+      state_updated: '2025-01-01T00:00:00Z',
     } as unknown as FileUploadWithAccession;
-    httpMock
-      .expectOne((req) => req.url === UPLOADS_URL)
-      .flush({ items: [failedFile], total_count: 1 });
-    await Promise.resolve();
+    const otherFile = { id: 'file-2', state: 'failed_interrogation' };
+    const page = { items: [failedFile, otherFile], total_count: 2 };
+    for (const req of httpMock.match((req) => req.url === UPLOADS_URL)) {
+      req.flush(page);
+    }
+    await new Promise((resolve) => setTimeout(resolve));
 
     service.requeueFileUpload(BOX.id, failedFile).subscribe();
     const requeueReq = httpMock.expectOne(`${UPLOADS_URL}/file-1/requeue`);
@@ -1273,48 +1277,45 @@ describe('UploadBoxService with the HTTP cache in place', () => {
     expect(requeueReq.request.body).toBeNull();
     requeueReq.flush(null, { status: 204, statusText: 'No Content' });
     await Promise.resolve();
-
-    // The requeued file changed its state, so the page must not be replayed from
-    // the cache.
     testBed.tick();
-    const requeuedFile = { ...failedFile, state: 'inbox' };
-    httpMock
-      .expectOne((req) => req.url === UPLOADS_URL)
-      .flush({ items: [requeuedFile], total_count: 1 });
-    await Promise.resolve();
-    expect(service.boxFiles()).toEqual([requeuedFile]);
+
+    // The file lists are updated in place instead of being fetched again.
+    httpMock.expectNone((req) => req.url === UPLOADS_URL);
+    for (const files of [service.boxFiles(), service.allBoxFiles()]) {
+      expect(files[0].state).toBe('inbox');
+      expect(files[0].state_updated).not.toBe(failedFile.state_updated);
+      expect(files[1]).toEqual(otherFile);
+    }
   });
 
-  it('should fetch the file uploads again only when a box-wide requeue requeued files', async () => {
+  it('should move the files of a box-wide requeue back to the inbox state locally', async () => {
     await flushUserGrants();
 
     service.loadFileUploadsForBox(BOX.id);
     testBed.tick();
+    const files = [
+      { id: 'file-1', state: 'failed_interrogation' },
+      { id: 'file-2', state: 'failed_interrogation' },
+    ];
     httpMock
       .expectOne((req) => req.url === UPLOADS_URL)
-      .flush({ items: [], total_count: 2 });
+      .flush({ items: files, total_count: 2 });
     await Promise.resolve();
 
     let result: { requeued: string[]; skipped: string[] } | undefined;
     service.requeueAllFileUploads(BOX.id).subscribe((value) => (result = value));
-    const emptyReq = httpMock.expectOne(`${BOX_URL}/requeue`);
-    expect(emptyReq.request.method).toBe('POST');
-    expect(emptyReq.request.body).toBeNull();
-    emptyReq.flush({ requeued: [], skipped: [] });
+    const requeueReq = httpMock.expectOne(`${BOX_URL}/requeue`);
+    expect(requeueReq.request.method).toBe('POST');
+    expect(requeueReq.request.body).toBeNull();
+    requeueReq.flush({ requeued: ['file-1'], skipped: ['file-2'] });
     await Promise.resolve();
     testBed.tick();
-    httpMock.expectNone((req) => req.url === UPLOADS_URL);
-    expect(result).toEqual({ requeued: [], skipped: [] });
 
-    service.requeueAllFileUploads(BOX.id).subscribe();
-    httpMock
-      .expectOne(`${BOX_URL}/requeue`)
-      .flush({ requeued: ['file-1'], skipped: ['file-2'] });
-    await Promise.resolve();
-    testBed.tick();
-    httpMock
-      .expectOne((req) => req.url === UPLOADS_URL)
-      .flush({ items: [], total_count: 2 });
-    await Promise.resolve();
+    httpMock.expectNone((req) => req.url === UPLOADS_URL);
+    expect(result).toEqual({ requeued: ['file-1'], skipped: ['file-2'] });
+    expect(service.boxFiles().map((f) => f.state)).toEqual([
+      'inbox',
+      'failed_interrogation',
+    ]);
   });
 });
