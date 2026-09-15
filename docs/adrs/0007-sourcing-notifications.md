@@ -42,22 +42,18 @@ via email, but it is not yet in use by the wider microservice ecosystem. The onl
 the publication of a notification event, which is then consumed by the Notification Service. This approach is straightforward
 but has drawbacks.
 
-The main problem is that notification sources are distributed throughout services, meaning any systematic
-change to notification events is then multiplied by the number of relevant services. That results in more reviews, more
-opportunity for error, etc. For example, a small change such as updating all occurrences of "data steward" to use title
-case ("Data Steward") in notification text could affect multiple repositories. That is not so bad if the changes are isolated,
-but what if there is a large, mandatory template update which requires manual changes? The "simple" two-letter update evolves
-into a larger PR with the potential for errors due to the required manual changes, meaning multiple reviews could be required.
-This larger-than-expected PR must be repeated, too, for each service publishing notification events containing "data steward".
+The main problem is that notification sources are distributed throughout services, so
+any systematic change to notification events is multiplied by the number of services
+involved, with more reviews and more opportunity for error. Even a small change, such as
+writing "data steward" in title case in all notification texts, could affect multiple
+repositories. If it comes with a mandatory template update that requires manual changes,
+each of those services needs a larger pull request and its own review. A dedicated
+service publishing the notification events avoids most of this interference.
 
-Thus, while publishing notification events close to the source seems convenient, it can become compounded by
-orthogonal changes to the same repository/service. This kind of interference can mostly be mitigated
-if the notification events are instead published by a dedicated service.
-
-Additionally, it is reasonable to assume that the number of deployed microservices will increase over time as features
-are added or expanded, further highlighting the need for a sustainable solution. Moreover, arbitrarily adding
-notifications to a given service is an example of scope creep, which is important to avoid if we value microservices
-with clearly defined responsibilities.
+The number of deployed microservices will also grow as features are added or expanded,
+which makes a sustainable solution more pressing. Adding notifications to a given
+service at will is also scope creep, which we want to avoid for microservices with
+clearly defined responsibilities.
 
 Moreover, many notifications require a contextual understanding of a larger user journey that goes far beyond the responsibility of a given microservice. E.g. the upload controller service has the sole responsibility of facilitating the upload of individual files. Once all uploads for a given submission have been completed, we might want to notify not only the uploading user but also all co-applicants of the submission and the responsible data steward. To do so context is needed on (1) which file uploads belong to a submission, i.e. when is a submission completely uploaded, (2) who is co-applicant to the corresponding submission, and (3) who is the responsible data steward. The upload controller service should not worry about any of that. Indeed, it does not even need to know that file uploads are grouped into submissions.
 
@@ -93,12 +89,12 @@ necessitate extra diligence during development and testing.
 
 ### Alternatives
 
-As an alternative, we could decide to adapt our event publishing mechanisms in required services and publish notification events directly.
-This would be easier to implement in the short term, and the relationship between sources and resulting notification events would be clearer.
-However, required maintenance in the long term would likely exceed what would be incurred by the proposed solution.
-If the notification event needs to be restructured, then not only would the Notification Service need to be updated,
-but so would every service that sends a notification. If notifications are implemented in one service but later deemed unnecessary,
-then the service would probably need to be updated to remove the unused code (including tests).
+As an alternative, we could adapt the event publishing in the services concerned and
+publish notification events directly. This would be easier to implement in the short
+term, and the relationship between sources and notification events would be clearer. In
+the long term, however, it would likely need more maintenance: restructuring the
+notification event would mean updating every service that sends one, and a notification
+later deemed unnecessary would have to be removed from its service, tests included.
 
 If it was determined with reasonable certainty that only one or two kinds of notifications would ever need to be issued by GHGA,
 then perhaps it would make more sense to publish the notification events directly.

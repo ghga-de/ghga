@@ -21,8 +21,6 @@ accepting that **this will require changes to the hexkit library and reformattin
 
 ### Context
 
-First, some background information.
-
 *Relevant Types:*
 The Python data types discussed in this document include UUIDs and Dates.
 We use UUID4 primarily but the exact UUID version is irrelevant for this discussion.
@@ -52,22 +50,20 @@ obviously makes sense if the ID is genuinely a string, but oftentimes it is actu
 UUID. Pydantic offers a [UUID4 type](https://docs.pydantic.dev/latest/api/types/#pydantic.types.UUID4)
 for validating such values, but `hexkit` has only recently been modified to allow
 UUID-typed fields for DTO Pydantic models. Regardless of the field's type, UUIDs will only
-be processed by `pymongo` as strings right now because of the serialization processed
+be processed by `pymongo` as strings right now because of the serialization process
 described in the paragraph above. Dates are similar.
 
-Now, on to the proposed change:
-
 The main issues we face with regard to UUIDs and dates include:
-- Indexes for string UUIDs use roughly double the space required by binary UUIDs.
+- Storing UUIDs and dates as strings requires more space than the binary equivalents;
+  indexes for string UUIDs use roughly double the space required by binary UUIDs.
 - In string format, dates cannot be (easily) sorted or compared in MongoDB queries.
   - Iso-formatted date strings can be sorted, but they are not compatible with date-specific
-  MongoDB operations like `$dateAdd` or `$dateDiff` without first being cast to a string.
+  MongoDB operations like `$dateAdd` or `$dateDiff` without first being cast to a date.
   This increases the complexity of writing and maintaining MongoDB queries containing
   date operations, but also reduces their performance.
 - The Pydantic models in our application use `str`-typed date fields that depend on
   custom validation logic. This is directly influenced by our practice of storing dates
   as strings. The application-side string specification complicates validation.
-- Storing UUIDs and dates as strings in MongoDB requires more space than the binary equivalents.
 - Some minor effort is spent when creating new methods or models that work with these
   types because they must use the same string representation methods and validation
   checks as the rest of the codebase.
@@ -131,20 +127,18 @@ Benefits:
   is welcome when there are few disadvantages.
 
 Drawbacks:
-- Compatibility Issues: External systems or components that expect UUIDs and dates
-  as strings may require adjustments or data conversion layers to ensure consistency.
-  If two APIs return string representations of a date, we must ensure they both use
-  the same conversion method (barring unique requirements, naturally).
+- Compatibility Issues: External systems or components that expect UUIDs and dates as
+  strings may require adjustments or data conversion layers to ensure consistency. If
+  two APIs return string representations of a date, we must ensure they both use the
+  same conversion method (barring unique requirements, naturally).
 - Codebase Adjustments: Modifications to existing code, tests, and documentation are
   necessary to support the new data handling approach, and would ideally be rolled out
   together to minimize the risk of problems. If we want to move a given service's DTO
   models over to UUID-typed fields, for example, then we will have to update the models
   and tests and apply a data fix. Not a big change for the service code though.
-- Data migration: Ties with the point above, just from the database side.
-  Existing data needs to be processed to use the new format. There is
-  always a risk of data corruption when doing this, even with proper testing. We need to
-  think about the various services and ensure their updates are coordinated in sync with
-  the data migration.
+- Data migration: Existing data needs to be converted to the new format. There is always
+  a risk of data corruption when doing this, even with proper testing, and the service
+  updates must be coordinated with the migration.
 
 ### Alternatives
 

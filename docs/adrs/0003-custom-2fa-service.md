@@ -40,13 +40,18 @@ above.
 
 The advantage is that the custom solution can be kept simpler and better tailored to our needs, and can be implemented, integrated and maintained in the same way as our existing micro services.
 
-The disadvantage is that more implementation work is needed, and that we take on responsibility for implementing the security-relevant parts ourselves, following established practice for TOTP. A 3rd party solution would provide these out of the box. However, the existing dashboards and customer portals of these solutions would need to be customized or replaced, so additional implementation work will be necessary anyway.
+The disadvantage is that more implementation work is needed, and that we take on
+responsibility for implementing the security-relevant parts ourselves, following
+established practice for TOTP. A third-party solution would provide these out of the
+box, but its dashboards and self-service portal would need to be customized or replaced,
+which is work as well.
 
 ### Alternatives
 
-As an alternative, we could run an existing authentication system supporting 2FA tokens, such as [privacyIDEA](https://www.privacyidea.org/), instead of our custom 2FA service.
-
-However, we would then become dependent on that 3rd party component and the involved additional costs for learning, configuring, and maintaining it.
+As an alternative, we could run an existing authentication system supporting 2FA tokens,
+such as [privacyIDEA](https://www.privacyidea.org/), instead of our custom 2FA service.
+We would then depend on that third-party component, with the costs of learning,
+configuring and maintaining it.
 
 Using privacyIDEA would require us to operate and maintain an SQL database in addition to the NoSQL databases used by our other services. Its broader feature set, self-service portal, and administration interface exceeded this portal's requirements. Integrating its portal into the existing UI would also require additional work, while users already interact with LS Login and their home organizations for the first factor. Introducing a further interface for the second factor could make the authentication journey less coherent. For the requirements we had at that time, we therefore judged a focused, custom integration to be the better fit.
 

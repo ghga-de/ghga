@@ -15,7 +15,7 @@ and neglected **alternative naming conventions that prefer SCREAMING_SNAKE_CASE*
 
 to achieve **a naming convention that is easy on the eyes, appropriate for the used languages and makes conversion as simple as possible**
 
-accepting that **there is a case mismatch beween Python enum names and values, and it does not go so well with GraphQL**.
+accepting that **there is a case mismatch between Python enum names and values, and it does not go so well with GraphQL**.
 
 ## Details
 

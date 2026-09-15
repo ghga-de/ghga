@@ -80,11 +80,9 @@ process metadata of different models.
 ### Decision
 
 We decided to use JSON schema directly for modeling the content of resources. In
-addition to that, a
-lightweight specification and associated framework are implemented to describe and
-validate links
-between resources. A proof-of-concept for such a specification/framework, called
-schemapack, was implemented
+addition, a lightweight specification and associated framework are implemented to
+describe and validate links between resources. A proof-of-concept for such a
+specification and framework, called schemapack, was implemented
 [here](https://github.com/ghga-de/schemapack/tree/1f30214d29249888651363f2ea8f3344e90abfe2).
 A re-implementation of two transformation steps in the metldata framework was
 demonstrated
@@ -109,17 +107,15 @@ to be returned from REST APIs. This makes schemapack instrumental for the use in
 metadata transformation workflows.
 
 As demonstrated in the proof-of-concept implementation in metldata, realizing
-transformations using schemapack comes with a small implementation overhead.
+transformations using schemapack comes with a small implementation overhead. The runtime
+for executing transformations of data and metadata is reduced to the millisecond range,
+so a full re-implementation of a complex transformation workflow applied to a typical
+metadata submission is likely to complete within a few seconds. The design also allows
+for further optimization through caching or alternative libraries for JSON parsing and
+JSON Schema validation.
 
-Moreover, the runtime for executing transformations of data and metadata is reduced to
-the millisecond range. Thus, a full re-implementation of a complex transformation workflow
-applied to a typical metadata submission is likely to be complete within a few seconds.
-Moreover, the current design allows for further optimization through caching or the
-use of alternative libraries for JSON parsing and JSON Schema validation.
-
-The custom specification allows to flexibly introduce additional features related to
-linking between resources as needed. E.g. checking the uniqueness of fields other than
-the
+The custom specification allows us to introduce additional features related to linking
+between resources as needed, e.g. checking the uniqueness of fields other than the
 identifier across resources, or referencing ontologies. The design already comes with a
 plugin mechanism that allows adding validation functionality without needing changes to
 the core specification or framework.
@@ -145,23 +141,22 @@ aware, its main adoption at that point was for the Common Workflow Language, so 
 have needed to evaluate its fit for our rather different requirements much more
 extensively before adopting it.
 
-The implementation of custom tooling based on a minimal subset of the LinkML language
-would come with a much larger overhead than the proposed solution. This is because, for
-LinkML, we would not only have to implement features for validating linking between
-resources but also capabilities for validating the content of resources. This would
-effectively mean replicating the functionality of a JSON Schema validation library or
-re-implementing a LinkML to JSON Schema transpiler and subsequently using a
-JSON Schema library. Both options come with high complexity. Furthermore, the
-benefits from the circumstance that we would not change the specification of the
-metadata model are only very limited. Only the metadata model itself might stay without
-requiring a major overhaul. However, all implementation work would have to be redone
-anyway since the tooling changes. Moreover, the aspects of the LinkML specification that
-do not fit our workflow would remain. In our experience it required a considerable
-onboarding effort for new engineers, and it combines structural validation and resource
-linkage in a single mental model, whereas we wanted to keep these two concerns
-separate. We would need to agree on a convention on top of LinkML for structuring
-resources of submissions so that they fit the expectations of metldata. Overall making
-this option very costly.
+Custom tooling based on a minimal subset of the LinkML language would come with a much
+larger overhead than the proposed solution. For LinkML, we would have to implement not
+only the validation of links between resources but also the validation of their content.
+That would effectively mean replicating a JSON Schema validation library, or
+re-implementing a LinkML to JSON Schema transpiler and then using a JSON Schema library,
+both with high complexity.
+
+Keeping the specification of the metadata model would bring only limited benefits: the
+model itself might not need a major overhaul, but all implementation work would have to
+be redone anyway since the tooling changes. The aspects of LinkML that do not fit our
+workflow would also remain. In our experience it required a considerable onboarding
+effort for new engineers, and it combines structural validation and resource linkage in
+a single mental model, whereas we wanted to keep these two concerns separate. We would
+also need to agree on a convention on top of LinkML for structuring the resources of
+submissions so that they fit the expectations of metldata. Overall, this option would be
+very costly.
 
 ### Addendum
 

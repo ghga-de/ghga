@@ -31,7 +31,6 @@ finish, including any work required to kick it off.
 - ***Schema***: The schema of a Pydantic model (field names and types/definitions).
 "Pydantic model" and "schema" can be used interchangeably.
 
-**Context**:
 MongoDB is a No-SQL database, meaning there are no rigid table schemas applied to data
 stored within. In this case, table schemas (from SQL database design) correspond to the
 schemas of the Pydantic models we use to represent structured data in application code.
@@ -63,7 +62,6 @@ any outdated documents are updated before any business logic is performed.
 ### Consequences
 
 **Advantages**:
-The chosen solution features numerous benefits:
 - The relevant Pydantic model(s) can be referenced in the migration code.
 - The migration logic can be reviewed in the same PR that contains the schema change(s).
 - The migration logic is kept with the service for which it's immediately relevant.
@@ -73,8 +71,8 @@ automatically when a service starts up.
 - The migration script has access to service config, so configured logging and DB
 connections are available without writing new config.
 - Migration scripts can be tested locally with less hassle.
-- Can run migrations when an application is started. Because the code is located with
-the service, there is the possibility to perform on-the-fly migration if appropriate.
+- Because the code is located with the service, migrations can also be performed on the
+fly if appropriate.
 
 **Disadvantages**:
 The chosen approach has the typical microservice-related drawback where any changes we
