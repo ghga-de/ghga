@@ -38,7 +38,7 @@ GH_STACK_VERSION=v0.1.1
 # plain grep, not -q — under pipefail an early exit can fail `gh extension list` with SIGPIPE
 if ! gh extension list 2> /dev/null | grep -E "github/gh-stack[[:space:]].*${GH_STACK_VERSION}([[:space:]]|$)" > /dev/null; then
   gh extension install github/gh-stack --pin "${GH_STACK_VERSION}" --force \
-    || echo "warning: gh-stack not installed; run: gh extension install github/gh-stack" >&2
+    || echo "warning: gh-stack not installed; run: gh extension install github/gh-stack --pin ${GH_STACK_VERSION} --force" >&2
 fi
 
 # Migration tooling
