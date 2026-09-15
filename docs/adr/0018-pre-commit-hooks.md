@@ -11,7 +11,7 @@ The monorepo had no git hooks at all. Both predecessor setups were lost in the i
 - Each of the ~28 Python repos carried a byte-identical `.pre-commit-config.yaml` synced from the
   retired `microservice-repository-template`. `scripts/migration/lib.sh` strips it on import by
   design — one root config was always the intended end state
-  ([ADR-0003](0003-repository-scope.md), [runbook §3.3](../migration/runbook.md)).
+  ([ADR-0001](0001-consolidate-into-monorepo.md), [runbook §3.3](../migration/runbook.md)).
 - The data-portal used husky. Its hook came across but never ran once: husky v9 refuses to install
   when `.git` is not the parent of the husky directory, so `core.hooksPath` stayed unset. It ran a
   `main`-branch guard, `pnpm format:check` and `ng lint`.

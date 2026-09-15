@@ -1,7 +1,7 @@
 # GHGA Monorepo — Migration Runbook
 
 > Executable, step-by-step migration plan. Decisions behind it:
-> [ADR-0010](../adr/0010-history-preserving-migration.md) (migration),
+> [ADR-0001](../adr/0001-consolidate-into-monorepo.md) (migration),
 > [ADR-0002](../adr/0002-uv-workspace-source-coupled-libs.md) (uv workspace),
 > [ADR-0004](../adr/0004-versioning-and-release-by-tag.md) (release).
 > Tooling: [scripts/migration/](../../scripts/migration/) — **review before running.**
@@ -20,7 +20,7 @@ it runs **no DinD/DooD for the integration path** (component tests keep DinD unt
 in-memory provider alternatives). (No mesh/Istio needed for the self-contained path — the
 umbrella bundles Envoy Gateway, [ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md).)
 
-Hosting ([ADR-0010](../adr/0010-history-preserving-migration.md)):
+Hosting ([ADR-0001](../adr/0001-consolidate-into-monorepo.md)):
 - GitHub: repo at **`github.com/ghga-de/ghga`**.
 - Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already
   pulls from. Pushed only by manual `workflow_dispatch` runs, authenticated with the org's
@@ -78,7 +78,7 @@ git -C . ls-files | cut -d/ -f1-2 | sort -u   # sanity-check the tree shape
 
 ## 3. Phase 3 — Harmonisation (root-only; keep service `src/` aligned)
 
-Per [ADR-0010](../adr/0010-history-preserving-migration.md), do **all** of this at the root so
+Per [ADR-0001](../adr/0001-consolidate-into-monorepo.md), do **all** of this at the root so
 incremental sync stays low-conflict:
 
 1. **Workspace wiring:** in each member's `pyproject.toml`, replace PyPI pins on internal libs

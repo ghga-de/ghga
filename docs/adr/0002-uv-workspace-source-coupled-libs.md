@@ -42,7 +42,7 @@ on — `hexkit`, `ghga-service-commons` and `ghga-connector` drop 3.10, `ghga-tr
 uniform rather than per-library.
 
 The floors live in the members'
-own `pyproject.toml`, so for members still synced from mainline ([ADR-0010](0010-history-preserving-migration.md))
+own `pyproject.toml`, so for members still synced from mainline ([ADR-0001](0001-consolidate-into-monorepo.md))
 this is a divergence that conflicts until the same change is made upstream.
 
 ## Consequences

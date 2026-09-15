@@ -177,7 +177,7 @@ Two release lanes, routed by each member's `[tool.ghga]` markers
   Two things the original rule asked for are deliberately **not** done:
 
   - **Exact pinning** is dropped. It would mean editing synced `pyproject.toml`s
-    ([ADR-0010](0010-history-preserving-migration.md)) and would stop users taking
+    ([ADR-0001](0001-consolidate-into-monorepo.md)) and would stop users taking
     dependency fixes. Whatever a member already declares stays the contract, untouched in
     either direction: `ghga-connector` came from upstream pinning
     `ghga-service-commons==8.1.0` and `hexkit[s3]==9.0.1` and keeps those exacts, while

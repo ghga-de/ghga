@@ -27,7 +27,7 @@ charts and runs its integration tests on Kubernetes.
 ## Epics
 - **[epics/](epics/README.md)** — technical specifications for GHGA development epics, written
   before each epic starts. Imported history-preserving from `ghga-de/epic-docs`
-  ([ADR-0010](adr/0010-history-preserving-migration.md)); authoring conventions and the two
+  ([ADR-0001](adr/0001-consolidate-into-monorepo.md)); authoring conventions and the two
   templates (exploratory / implementation) live alongside them.
 
 ## Decisions (ADRs)
@@ -40,15 +40,13 @@ mirror here. Write new ADRs from the [template](adr/0000-template.md), following
 
 | # | Decision | Status | Supersedes / superseded by |
 |---|---|---|---|
-| [0001](adr/0001-consolidate-into-monorepo.md) | Consolidate into one polyglot monorepo; retire the template + `.template/` sync | Accepted |  |
+| [0001](adr/0001-consolidate-into-monorepo.md) | One monorepo for everything except `datahub-test-bed`, imported history-preserving and synced one way | Accepted |  |
 | [0002](adr/0002-uv-workspace-source-coupled-libs.md) | `uv` workspace; internal libs source-coupled; one `uv.lock` | Accepted · last amended 2026-08-24 |  |
-| [0003](adr/0003-repository-scope.md) | Scope: everything except `datahub-test-bed` | Accepted |  |
 | [0004](adr/0004-versioning-and-release-by-tag.md) | Hybrid releases: platform lockstep (`ghga/X.Y.Z`) + per-component PyPI lanes | Accepted · revised 2026-07-23 · last amended 2026-09-08 | follows [0020](adr/0020-branching-strategy.md) for the `dev` cut |
 | [0006](adr/0006-self-contained-demo-lightweight-infra.md) | Self-contained demo umbrella; lightweight infra (revised: Envoy Gateway edge, demo == testbed) | Accepted · revised 2026-06-30 · last amended 2026-09-04 |  |
 | [0007](adr/0007-local-aai-generic-oidc.md) | Local AAI via a generic OIDC provider (mock-oauth2-server default) | Accepted · last amended 2026-09-04 |  |
 | [0008](adr/0008-state-management-service-testbed-only.md) | `state-management-service` is test-bed-only, values-gated | Accepted |  |
 | [0009](adr/0009-testbed-kind-minikube.md) | Integration test bed on kind (CI) / minikube (local); same artifact as the install | Accepted · last amended 2026-09-04 | amended by [0017](adr/0017-local-integration-host-cluster.md) |
-| [0010](adr/0010-history-preserving-migration.md) | History-preserving import + one-way sync; hosted at `ghga-de/ghga` | Accepted · last amended 2026-09-04 |  |
 | [0011](adr/0011-helm-chart-boundary-hybrid.md) | Helm charts from `ghga-common` with a **hybrid** boundary (app charts own app-coupled CRDs) | Accepted |  |
 | [0012](adr/0012-self-contained-edge-envoy-gateway.md) | Self-contained edge & ext-authz via **Envoy Gateway** (Istio → staging) | Accepted |  |
 | [0014](adr/0014-capability-markers-and-placement.md) | `[tool.ghga]` markers + directory defaults route the release lanes | Accepted · last amended 2026-08-18 |  |

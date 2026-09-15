@@ -22,7 +22,7 @@ into the README rendered on their PyPI pages.
 The monorepo has no docs lane at all, and the import made the existing config unbuildable:
 `great-docs.yml` registers two `pre_render` hooks under `scripts/`, which
 `drop_paths_for_kind` strips for every `lib`/`service`/`tool` row
-([ADR-0010](0010-history-preserving-migration.md)). So the decision cannot be deferred by
+([ADR-0001](0001-consolidate-into-monorepo.md)). So the decision cannot be deferred by
 "leave it as it is" — as imported, hexkit's docs do not build here.
 
 ## Decision
