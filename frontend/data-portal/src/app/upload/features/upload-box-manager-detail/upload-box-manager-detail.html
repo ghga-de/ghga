@@ -233,23 +233,18 @@
               (page)="onFilesPage($event)"
               (sortChange)="onFilesSort($event)"
             />
-            @if (box.state !== 'archived') {
-              <!-- The tooltip lives on the wrapper so it still shows when the button is
-                disabled (a disabled Material button has pointer-events: none). -->
-              <div class="mt-4 inline-block" [matTooltip]="requeueAllHint()">
-                <button
-                  mat-raised-button
-                  color="primary"
-                  (click)="requeueAllFiles()"
-                  [disabled]="
-                    !hasRequeuableFiles() || isRequeueing() || isChangingState()
-                  "
-                  data-umami-event="Upload Box Manager Detail Requeue All Clicked"
-                >
-                  <mat-icon fontIcon="replay"></mat-icon>
-                  Retry failed re-encryptions
-                </button>
-              </div>
+            @if (box.state !== 'archived' && hasRequeuableFiles()) {
+              <button
+                mat-raised-button
+                color="primary"
+                class="mt-4"
+                (click)="requeueAllFiles()"
+                [disabled]="isRequeueing() || isChangingState()"
+                data-umami-event="Upload Box Manager Detail Requeue All Clicked"
+              >
+                <mat-icon fontIcon="replay"></mat-icon>
+                Retry failed re-encryptions
+              </button>
             }
           } @else {
             <p class="text-warning mt-2">This upload box is still empty.</p>

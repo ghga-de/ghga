@@ -637,14 +637,6 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     );
   });
 
-  /** Tooltip explaining why the whole-box requeue is unavailable, empty if it is available. */
-  requeueAllHint = computed<string>(() => {
-    if (this.hasRequeuableFiles()) return '';
-    return this.#uploadBoxService.allBoxFileUploads.isLoading()
-      ? 'Checking the files of this upload box…'
-      : 'No file in this upload box is waiting for a retry of its re-encryption.';
-  });
-
   /**
    * Ask for confirmation and, on approval, requeue all files of the box whose
    * re-encryption failed.

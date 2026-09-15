@@ -674,13 +674,13 @@ describe('UploadBoxManagerDetailComponent', () => {
       );
     });
 
-    it('should disable the whole-box retry when no file failed re-encryption', async () => {
+    it('should hide the whole-box retry when no file failed re-encryption', async () => {
       uploadBoxService.setFileUploads([uploadBox1FileUploads[0]]);
       await fixture.whenStable();
 
       expect(
-        screen.getByRole('button', { name: /retry failed re-encryptions/i }),
-      ).toBeDisabled();
+        screen.queryByRole('button', { name: /retry failed re-encryptions/i }),
+      ).not.toBeInTheDocument();
 
       // Calling it directly must not requeue anything either.
       component.requeueAllFiles();
