@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-06-30
+- **Amended:** 2026-09-15
 
 ## Summary
 
@@ -44,7 +45,9 @@ production gets from the platform: the Envoy Gateway edge with real ext-authz ag
 the auth adapter ([ADR-0012](0012-self-contained-edge-envoy-gateway.md)), operator-free
 stand-ins for Kafka, MongoDB, S3 and Vault, a local AAI
 ([ADR-0007](0007-local-aai-generic-oidc.md)), a mail sink, and Jobs that generate the
-secrets ([ADR-0016](0016-secrets-and-tls.md)) and seed a data steward.
+secrets ([ADR-0016](0016-secrets-and-tls.md)) and seed a data steward. **Amended
+2026-09-15:** the S3 stand-in is Chainguard's MinIO build, digest-pinned and tracked by
+Renovate, because upstream stopped publishing images.
 
 **The demo is the test bed.** The test bed installs the same umbrella with a test-bed
 profile, which adds the state-management service
@@ -84,3 +87,8 @@ describes what the umbrella contains and how its profiles stack.
   devcontainer. Worth revisiting once they do not.
 - **Mount the host's Docker socket.** Root-equivalent on the host daemon, which is worse
   than a nested one.
+- **Build our own MinIO image**, instead of Chainguard's. Puts tracking upstream MinIO
+  releases on us instead of a registry that already does it.
+- **Swap in SeaweedFS or Garage**, both actively published. Neither is MinIO — a
+  different admin surface for no test-bed benefit over a maintained image of the same
+  server and client (`mc`).

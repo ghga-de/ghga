@@ -49,9 +49,10 @@ helm install <release-name> <chart>
 The demo umbrella (`helm install ghga deploy/charts/ghga-demo`) bundles the Envoy Gateway
 edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route
 `SecurityPolicy` ext-authz against the auth adapter (headers mirror the prod
-`envoyExtAuthzHttp` provider verbatim), lightweight infra (in-chart Kafka KRaft/MongoDB/
-MinIO on official images, `aai`), and the app charts behind enable conditions. Chart dependencies build
-bottom-up — `just demo-template` does the ordered dep-up + render smoke check.
+`envoyExtAuthzHttp` provider verbatim), lightweight infra (in-chart Kafka KRaft/MongoDB
+on official images, MinIO on Chainguard's build, `aai`), and the app charts behind
+enable conditions. Chart dependencies build bottom-up — `just demo-template` does the
+ordered dep-up + render smoke check.
 
 Demo wiring so far: auth-service deploys twice (aliases `auth-adapter`/`auth-rest`,
 selected via `config.provide_apis`) — which is why generated charts flatten the library

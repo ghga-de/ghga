@@ -77,10 +77,15 @@ mongodb:
 
 minio:
   enabled: true
-  # MinIO no longer publishes community images to Docker Hub; the last builds are
-  # frozen on quay.io, so pin the release tags rather than an unmoving `latest`
-  image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-  mcImage: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+  # Chainguard's minimal (distroless, no shell) images, pinned to the "latest" tag's
+  # current index digest so arm64 devcontainers still resolve the right manifest.
+  # "latest" is the only tag Chainguard publishes for these images, and it moves onto new
+  # MinIO releases as they build them, not just security patches on one version. Using it
+  # is still fine: renovate.json5's allowedVersions pins the tag to "latest", so a bump
+  # here only ever moves the digest, and every such bump runs through the testbed like
+  # any other change before it merges.
+  image: cgr.dev/chainguard/minio:latest@sha256:21b9e1bccf46098dee2e928952bf5fd4690a5ec30a3b86a1e728f1bb0ceaed0e
+  mcImage: cgr.dev/chainguard/minio-client:latest@sha256:669458caf7adc7ad0d4255b40348f16d72db87ab034a3b9cd503568ec6dab171
   rootUser: demo-access-key
   rootPassword: demo-secret-key
   # The S3 API is published on a node port, which kind maps to the host's 9000

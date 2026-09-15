@@ -162,9 +162,10 @@ how the charts are generated and tested.
   ([ADR-0006](../adr/0006-self-contained-demo-lightweight-infra.md)) that bundles the
   **edge** (Envoy Gateway with real ext_authz against the auth adapter, gateway Service on
   a NodePort — [ADR-0012](../adr/0012-self-contained-edge-envoy-gateway.md)) and
-  **lightweight infra** as plain in-chart templates on official images: Kafka in KRaft
-  mode (`KafkaUser`/`KafkaTopic` toggled off), MongoDB, MinIO, Vault in dev mode, MailHog
-  and a wiremock SMS gateway. The **local AAI** is `mock-oauth2-server` through the `aai`
+  **lightweight infra** as plain in-chart templates: Kafka in KRaft mode
+  (`KafkaUser`/`KafkaTopic` toggled off) and MongoDB on official images, MinIO on
+  Chainguard's build, Vault in dev mode, MailHog and a wiremock SMS gateway. The
+  **local AAI** is `mock-oauth2-server` through the `aai`
   chart ([ADR-0007](../adr/0007-local-aai-generic-oidc.md)). A pre-install **secret-gen
   Job** writes plain K8s Secrets ([ADR-0016](../adr/0016-secrets-and-tls.md)), and the
   data steward is seeded through `auth-service` config. This same umbrella **is** the

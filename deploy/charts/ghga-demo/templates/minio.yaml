@@ -1,7 +1,8 @@
 {{- /*
-MinIO on the official image (replaces the gated bitnami subchart). A companion
-Job creates the hub buckets with mc, retrying until MinIO answers. Ephemeral by
-design; console on :9001 via port-forward.
+MinIO on Chainguard's minimal image (replaces the gated bitnami subchart). A companion
+Job creates the hub buckets with mc, both shell-free — the Job has no wait loop of its
+own, so backoffLimit/restartPolicy below do the retrying until MinIO answers. Ephemeral
+by design; console on :9001 via port-forward.
 */ -}}
 {{- if .Values.minio.enabled }}
 apiVersion: apps/v1
@@ -26,6 +27,8 @@ spec:
         app.kubernetes.io/name: minio
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      securityContext:
+        fsGroup: 65532
       containers:
         - name: minio
           image: {{ .Values.minio.image }}
@@ -92,21 +95,13 @@ spec:
         - name: mc
           image: {{ .Values.minio.mcImage }}
           imagePullPolicy: IfNotPresent
-          command:
-            - sh
-            - -ec
-            - |
-              until mc alias set local http://{{ .Release.Name }}-minio:9000 \
-                  "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" > /dev/null 2>&1; do
-                echo "waiting for minio..."; sleep 3
-              done
-              {{- range .Values.minio.buckets }}
-              mc mb --ignore-existing local/{{ . }}
-              {{- end }}
-              echo "buckets ready"
+          args:
+            - mb
+            - --ignore-existing
+            {{- range .Values.minio.buckets }}
+            - local/{{ . }}
+            {{- end }}
           env:
-            - name: MINIO_ROOT_USER
-              value: {{ .Values.minio.rootUser | quote }}
-            - name: MINIO_ROOT_PASSWORD
-              value: {{ .Values.minio.rootPassword | quote }}
+            - name: MC_HOST_local
+              value: {{ printf "http://%s:%s@%s-minio:9000" (.Values.minio.rootUser | urlquery) (.Values.minio.rootPassword | urlquery) .Release.Name | quote }}
 {{- end }}

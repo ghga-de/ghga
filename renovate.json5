@@ -4,9 +4,9 @@
   timezone: "Europe/Berlin",
   labels: ["dependencies", "docker-base-image"],
 
-  // Scope: only the DHI base images below. Application dependency lockfiles
-  // (uv.lock, pnpm-lock.yaml) are already handled by the bespoke daily
-  // security-scan.yaml workflow — do not let Renovate touch those.
+  // Scope: only the custom-managed images below (DHI base images, MinIO). Application
+  // dependency lockfiles (uv.lock, pnpm-lock.yaml) are already handled by the bespoke
+  // daily security-scan.yaml workflow — do not let Renovate touch those.
   enabledManagers: ["custom.regex"],
 
   // Same split applies to Dependabot alerts: remediating them belongs to that
@@ -23,8 +23,9 @@ Mondays at 05:17 UTC or on demand via that workflow's *Run workflow* button, so 
 runs the lists below lag reality — a PR merged or closed since the last run is still \
 listed as open here. The [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) \
 docs explain what the checkboxes do.\n\nRenovate's scope in this repository is \
-deliberately narrow: only the DHI base-image tags in `docker/Dockerfile` and \
-`frontend/data-portal/Dockerfile.dhi`. The application dependency lockfiles (`uv.lock`, \
+deliberately narrow: the DHI base-image tags in `docker/Dockerfile` and \
+`frontend/data-portal/Dockerfile.dhi`, and the digest-pinned Chainguard MinIO images in \
+`deploy/charts/ghga-demo/values.yaml`. The application dependency lockfiles (`uv.lock`, \
 `pnpm-lock.yaml`) are handled by the daily `security-scan.yaml` workflow instead, and \
 Dependabot alerts along with them. See `renovate.json5` for the full configuration.\n\n\
 Dependencies deliberately kept behind their latest version are listed with the signal to \
@@ -61,6 +62,14 @@ when you look at this issue.",
       matchDepNames: ["dhi.io/node"],
       allowedVersions: "/^24\\./",
     },
+    {
+      groupName: "Chainguard MinIO images",
+      matchDepNames: ["cgr.dev/chainguard/minio", "cgr.dev/chainguard/minio-client"],
+      // Enforces in config what values.yaml's comment says: only the digest moves,
+      // never the tag. Chainguard currently publishes no other tag for these images
+      // anyway, but this stops a future one from being proposed silently.
+      allowedVersions: "/^latest$/",
+    },
   ],
 
   customManagers: [
@@ -84,6 +93,17 @@ when you look at this issue.",
       ],
       datasourceTemplate: "docker",
       depNameTemplate: "dhi.io/node",
+      versioningTemplate: "docker",
+    },
+    {
+      customType: "regex",
+      description: "Chainguard MinIO images, pinned by digest (deploy/charts/ghga-demo/values.yaml)",
+      managerFilePatterns: ["/^deploy/charts/ghga-demo/values\\.yaml$/"],
+      matchStrings: [
+        "image: (?<depName>cgr\\.dev/chainguard/minio):(?<currentValue>[\\w.-]+)@(?<currentDigest>sha256:[a-f0-9]+)",
+        "mcImage: (?<depName>cgr\\.dev/chainguard/minio-client):(?<currentValue>[\\w.-]+)@(?<currentDigest>sha256:[a-f0-9]+)",
+      ],
+      datasourceTemplate: "docker",
       versioningTemplate: "docker",
     },
   ],
