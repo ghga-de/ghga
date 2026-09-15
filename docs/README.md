@@ -78,6 +78,7 @@ Status mirrors each ADR's own `Status:` line. Write new ADRs from the
 | [0038](adrs/0038-branching-strategy.md) | Branching, merging and naming: `dev` and `main`, squashed pull requests, one naming grammar | Accepted |
 | [0039](adrs/0039-docs-lane-github-pages.md) | One Pages site for the repo; one subpath per documented member, tracking `main` | Accepted |
 | [0040](adrs/0040-adr-frontmatter.md) | YAML frontmatter replaces the ADR header list; the index is generated from it | Accepted |
+| [0041](adrs/0041-adr-linting.md) | A pre-commit hook checks the ADR set and every ADR reference, and regenerates the index | Proposed |
 
 ## Phased roadmap (high level)
 
