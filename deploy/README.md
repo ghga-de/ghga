@@ -61,7 +61,7 @@ processed for aliased instances). The aai issuer routes through the gateway at
 `/<issuerId>` with no rewrite, so browser and adapter agree on one issuer URL; oidc_* and
 DSN settings for the enabled slice live in the umbrella values (release name `ghga`
 assumed — the config block is plain YAML, not templated). A pre-install secret-gen Job
-(ADR-0028/0016) generates the internal auth JWK pair + TOTP key as plain K8s Secrets
+(ADR-0028/0035) generates the internal auth JWK pair + TOTP key as plain K8s Secrets
 (idempotent — keys survive upgrades; the adapter consumes the private half, the registry
 instance the public half), and the demo data steward is seeded via
 `add_as_data_stewards`. MailHog (SMTP sink, UI via port-forward) and Vault dev-mode

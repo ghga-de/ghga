@@ -145,7 +145,7 @@ aai:
       - name: ghga
     rewriteHost: localhost
 
-# ---- demo secrets (ADR-0028/0016) --------------------------------------------------------
+# ---- demo secrets (ADR-0028/0035) --------------------------------------------------------
 # Pre-install Job generating plain K8s Secrets (internal auth JWK pair + TOTP key);
 # idempotent, keys stay stable across upgrades. The generator runs the auth-km-jobs
 # image; tags are set by the install tooling (locally built images or a release tag).
