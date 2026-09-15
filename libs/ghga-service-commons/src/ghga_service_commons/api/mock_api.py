@@ -127,7 +127,7 @@ class _InSequence:
         bound_path_variables = _bind_and_cast_path_vars(
             handler, path_variables, request
         )
-        self._remaining.pop()
+        self._remaining.pop(0)
         return handler(request, **bound_path_variables)
 
 
