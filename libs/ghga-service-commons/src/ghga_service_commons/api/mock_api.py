@@ -125,6 +125,11 @@ class Endpoint:
 
     def __set_name__(self, owner: type, name: str) -> None:
         """Take the attribute name the class body binds this endpoint to."""
+        if self.name and self.name != name:
+            raise MockSetupError(
+                "Mock endpoint registered under different names. First registered"
+                + f" with {self.name}, but subsequent assignment uses {name}."
+            )
         self.name = name
 
     # The overloads let a test read the handler, and `MockedApi` read the endpoint.
