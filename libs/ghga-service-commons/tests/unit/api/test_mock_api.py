@@ -90,21 +90,10 @@ class MockedSpecificApi(MockedWildcardApi):
     )
 
 
-def _as_transport(mock: MockedApi) -> httpx2.MockTransport:
-    """Mount `mock` by hand, since `MockedApi` does not offer a transport itself."""
-
-    def answer(request: httpx2.Request) -> httpx2.Response:
-        path = mock._path_relative_to_base_url(request.url)
-        assert path is not None
-        return mock._answer(request, path)
-
-    return httpx2.MockTransport(answer)
-
-
 def test_subclass_routes_are_tried_before_base_routes():
     """Test that a subclass route wins over a base route that also matches the path."""
     mock = MockedSpecificApi()
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         assert client.get("/things/latest").text == "latest"
         assert client.get("/things/other").text == "any"
 
@@ -112,7 +101,7 @@ def test_subclass_routes_are_tried_before_base_routes():
 def test_subclass_endpoint_replaces_base_endpoint_of_same_name():
     """Test that redeclaring an endpoint name in a subclass serves only the new route."""
     mock = MockedSpecificApi()
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         assert client.get("/status").text == "sub"
         with pytest.raises(NotMockedError):
             client.get("/health")
@@ -150,7 +139,7 @@ def test_path_variables_are_never_bound_to_positional_only_parameters():
     slot, under any name, still works.
     """
     mock = MockedPositionalApi()
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         with pytest.raises(MockSetupError, match=r"takes 'thing_id' positionally only"):
             client.get("/positional/3")
         assert client.get("/named/3").text == "3"
@@ -184,7 +173,7 @@ class MockedFlagApi(MockedApi):
 def test_bool_path_variables_read_like_fastapi(spelling: str, expected: bool):
     """Test that boolean path vars are parsed correctly."""
     mock = MockedFlagApi()
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         assert client.get(f"/flags/{spelling}").json() == {"flag": expected}
 
 
@@ -192,7 +181,7 @@ def test_bool_path_variables_read_like_fastapi(spelling: str, expected: bool):
 def test_other_bool_spellings_are_a_422(spelling: str):
     """Test some non-boolean values and make sure they trigger a 422."""
     mock = MockedFlagApi()
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         response = client.get(f"/flags/{spelling}")
     assert response.status_code == 422
     assert response.json()["exception_id"] == "malformedUrl"
@@ -220,7 +209,7 @@ def test_handler_parameter_missing_from_the_path_is_a_setup_error():
     A parameter with a default is not required, so the path may leave it out.
     """
     mock = MockedMissingVariableApi()
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         with pytest.raises(
             MockSetupError,
             match=r"needs 'thing_id', which the endpoint's path does not",
@@ -245,7 +234,7 @@ def test_in_sequence_casts_path_variables_for_each_handler():
     """Test that handlers wrapped in `in_sequence` get their path variables cast."""
     mock = MockedNumbersApi()
     mock.on_is_over_5 = in_sequence(is_over_5, is_over_5)
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         assert client.get("/nums/3").json() is False
         assert client.get("/nums/7").json() is True
 
@@ -254,7 +243,7 @@ def test_in_sequence_keeps_the_handler_when_a_value_does_not_cast():
     """Test that a request answered with a 422 does not use up the handler in line."""
     mock = MockedNumbersApi()
     mock.on_is_over_5 = in_sequence(is_over_5, respond(418))
-    with httpx2.Client(base_url=mock.base_url, transport=_as_transport(mock)) as client:
+    with httpx2.Client(base_url=mock.base_url, transport=mock.as_transport()) as client:
         assert client.get("/nums/three").status_code == 422
         assert client.get("/nums/7").json() is True
         assert client.get("/nums/7").status_code == 418
@@ -279,7 +268,7 @@ def test_respond_keeps_the_body_and_headers_it_was_built_with():
     second_mock = MockedStateApi()
     for mock in (first_mock, second_mock):
         with httpx2.Client(
-            base_url=mock.base_url, transport=_as_transport(mock)
+            base_url=mock.base_url, transport=mock.as_transport()
         ) as client:
             response = client.get("/state")
         assert response.json() == {"state": "initial"}
