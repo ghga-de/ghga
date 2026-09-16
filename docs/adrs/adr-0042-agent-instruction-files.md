@@ -37,7 +37,9 @@ for agents, stewarded by the Agentic AI Foundation under the Linux Foundation an
 by Codex, Copilot, Cursor, Zed, Aider and some twenty more. It prescribes no headings,
 and an agent reads the nearest file in the directory tree, so a subproject ships its own
 and it takes precedence. That nesting rule makes the layering below a property of the
-format rather than a local invention.
+format rather than a local invention. Task procedures have a standard of their own,
+[Agent Skills](https://agentskills.io) — a folder with a `SKILL.md`, read by some forty
+tools from `.agents/skills/`, and the shape our existing skills already have.
 
 The repo carries three `AGENTS.md` files, each with a `CLAUDE.md` beside it. They came
 in with the repositories they belong to, which supported coding agents to different
@@ -83,7 +85,7 @@ The decision itself:
   load:** `AGENTS.md`
   how we work here, always on; `README.md` what the thing is, published and standing on
   its own; `docs/` the rules themselves, read when a task touches them; and
-  `.claude/skills/` the steps of a recurring task, read when invoked. A rule lives in
+  `.agents/skills/` the steps of a recurring task, read when invoked. A rule lives in
   one of them, and the others link it. `AGENTS.md` is written for agents first and a
   README for humans first, which sets the register of each — not who is bound by it. The
   rules in an `AGENTS.md` are the team's, and an agent changes them by proposing a diff
@@ -110,9 +112,9 @@ The decision itself:
 - The layout is one more document to keep true, but it is the one the `AGENTS.md` files
   link instead of restating it seven times. Where a passage belongs stays a judgement
   call the check cannot make.
-- Skills are a Claude Code and Copilot feature, not part of the `AGENTS.md` standard.
-  An agent without support still reads them as Markdown once pointed at the directory,
-  so the split costs a line, not portability.
+- Skills sit at the standard path, so every tool that reads `.agents/skills/` finds
+  them. Claude Code reads `.claude/skills/` only, so each skill is symlinked there —
+  documented and supported, and the symlink goes when it reads the standard path.
 - Copilot needs `chat.useNestedAgentsMdFiles` in the committed `.vscode/settings.json`,
   and its CLI may still read only the root file until the gap closes.
 

@@ -12,7 +12,7 @@ is in the [writing style](style.md), and what the format itself guarantees is at
 | `AGENTS.md` | how we work here: placement, commands, execution policy, definition of done | agents first, but it binds people too | always, the root file plus the area in hand |
 | `README.md` | what the thing is, how to install and run it; published, so it stands alone | humans first, agents read it too | on demand |
 | `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves | both, written once | on demand, when a task touches them |
-| `.claude/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
+| `.agents/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
 
 The reader decides the register, not who the rules apply to. `AGENTS.md` instructs: it
 may assume the repo is open and a task under way, and it says which command to run and
@@ -87,11 +87,21 @@ file governs agents and is to be kept current.
 
 ## Skills
 
-Reusable task procedures live in `.claude/skills/`, where they cost a name and a
-description until they are invoked. `AGENTS.md` names the directory and says no more
-about it: Claude Code and Copilot list the skills they find, and an index in prose would
-only duplicate them and go stale. The line is there so other agents know the directory
-holds procedures they can read as plain Markdown.
+Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, where they cost a
+name and a description until they are invoked. The folder-with-a-`SKILL.md` shape is the
+[Agent Skills](https://agentskills.io) standard — open, stewarded like `AGENTS.md`, and
+read by some forty tools; `.agents/skills/` is its tool-agnostic location, and our own
+dependencies ship skills there.
+
+Claude Code reads `.claude/skills/` only, so each skill gets a symlink,
+`.claude/skills/<name>` → `../../.agents/skills/<name>`, which its documentation
+supports. The symlink is the stub for skills, the same trick as `CLAUDE.md`, and it goes
+when Claude Code reads the standard path.
+
+`AGENTS.md` names the directory and says no more about it: the tools list the skills
+they find, and an index in prose would only duplicate them and go stale. The line is
+there so an agent without skill support knows the directory holds procedures it can read
+as plain Markdown.
 
 A passage is a skill when it is only needed while doing one named task and runs to more
 than a couple of lines — writing an ADR, cutting a release, running the test bed,
