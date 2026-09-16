@@ -504,9 +504,10 @@ class MockedApis:
         )
         if installed_now != self._installed:
             raise MockSetupError(
-                "These mocks were installed before another set that is still installed,"
-                " so they cannot be taken off yet. Uninstall the sets in the order they"
-                " were installed."
+                "These mocks cannot be taken off yet: httpx2 was patched again after"
+                " they were installed, most likely by another `MockedApis` that is"
+                " still installed. Uninstall each `MockedApis` in reverse order, the"
+                " one installed last first."
             )
         network, network_async = self._replaced
         httpx2.HTTPTransport.handle_request = network  # type: ignore[method-assign]

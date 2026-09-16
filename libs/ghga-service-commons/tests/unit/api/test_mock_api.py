@@ -329,3 +329,29 @@ def test_network_at_rejects_what_is_not_a_host():
     """Test that a host with a port fails when the policy is built, not when it runs."""
     with pytest.raises(MockSetupError, match=r"takes host names"):
         network_at("localhost:8080")
+
+
+def test_mocked_apis_come_off_in_reverse_order(monkeypatch: pytest.MonkeyPatch):
+    """Test that uninstalling a `MockedApis` fails while a later one is installed.
+
+    The `MockSetupError` asks for reverse order. Following it, later one first,
+    restores httpx2's original transport methods.
+    """
+    network = httpx2.HTTPTransport.handle_request
+    network_async = httpx2.AsyncHTTPTransport.handle_async_request
+    # set to themselves, so the originals come back even if this test fails midway
+    monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", network)
+    monkeypatch.setattr(
+        httpx2.AsyncHTTPTransport, "handle_async_request", network_async
+    )
+
+    first, second = MockedApis(), MockedApis()
+    first.install()
+    second.install()
+    with pytest.raises(MockSetupError, match=r"reverse order"):
+        first.uninstall()
+
+    second.uninstall()
+    first.uninstall()
+    assert httpx2.HTTPTransport.handle_request is network
+    assert httpx2.AsyncHTTPTransport.handle_async_request is network_async
