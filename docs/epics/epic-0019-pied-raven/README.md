@@ -51,7 +51,7 @@ However, this might be more fitting to consider in conjunction with a refactorin
 ## API Definitions:
 
 ### RESTful/Synchronous:
-[Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/19-pied-raven/api_definitions/rest/encryption_key_store.yml) - This supersedes the 18 Hooded Crow version.
+[Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0019-pied-raven/api_definitions/rest/encryption_key_store.yml) - This supersedes the 18 Hooded Crow version.
 
 ## Additional Implementation Details:
 

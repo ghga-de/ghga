@@ -72,7 +72,7 @@ When access was granted or denied:
 - DR should see the newly accessible dataset
 - DR can now create a work package for download.
 Creating work packages is covered by
-[epic 26](https://github.com/ghga-de/epic-docs/blob/main/26-dracula-ant/technical_specification.md).
+[Epic-0026](../epic-0026-dracula-ant.md).
 
 ## API Definitions
 

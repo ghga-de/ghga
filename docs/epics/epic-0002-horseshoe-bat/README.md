@@ -214,14 +214,14 @@ The definitions are hosted here:
 
 The RESTful service API are described using OpenAPI:
 
-MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/cdadcf3a2926c0f564fec9c89052d43ce4eb423f/2_horseshoe_bat/api_definitions/rest/metadata_repository.yaml)
+MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0002-horseshoe-bat/api_definitions/rest/metadata_repository.yaml)
 
 
 ### Payload Schemas for Asynchronous Topics:
 
 The payloads for asynchronous topics are described using JSON schemas:
 
-- new_study_created: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/new_study_created.json)
+- new_study_created: [JSON Schema](../epic-0001-red-lipped-batfish/api_definitions/message_topics/new_study_created.json)
 
 
 ## Technical planning:

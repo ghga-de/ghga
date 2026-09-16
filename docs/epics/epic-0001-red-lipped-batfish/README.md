@@ -51,8 +51,8 @@ The data submitter can create a new downloadable bundle by posting metadata for 
 The RESTful service API are described using OpenAPI:
 
 
-**DRS3**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/rest/drs3.yaml)
-**Upload Controller**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/rest/upload_controller.yaml)
+**DRS3**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0001-red-lipped-batfish/api_definitions/rest/drs3.yaml)
+**Upload Controller**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0001-red-lipped-batfish/api_definitions/rest/upload_controller.yaml)
 
 (The OpenAPI specifications are hosted in the `./api_defitions/rest` sub-directory. Please make sure the links are pointing to the main branch, even if the file doesn't exist there because the PR has not being merged, yet.)
 
@@ -61,12 +61,12 @@ The RESTful service API are described using OpenAPI:
 The payloads for asynchronous topics are described using JSON schemas:
 
 
-- non_staged_file_requested: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/non_staged_file_requested.json)
-- file_staged_for_download: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/file_staged_for_download.json)
-- new_study_created: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/new_study_created.json)
-- file_upload_received: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/file_upload_received.json)
-- file_internally_registered: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/file_internally_registered.json)
-- drs_object_registered: [JSON Schema](https://raw.githubusercontent.com/ghga-de/epic-docs/main/1_red-lipped_batfish/api_definitions/message_topics/drs_object_registered.json)
+- non_staged_file_requested: [JSON Schema](./api_definitions/message_topics/non_staged_file_requested.json)
+- file_staged_for_download: [JSON Schema](./api_definitions/message_topics/file_staged_for_download.json)
+- new_study_created: [JSON Schema](./api_definitions/message_topics/new_study_created.json)
+- file_upload_received: [JSON Schema](./api_definitions/message_topics/file_upload_received.json)
+- file_internally_registered: [JSON Schema](./api_definitions/message_topics/file_internally_registered.json)
+- drs_object_registered: [JSON Schema](./api_definitions/message_topics/drs_object_registered.json)
 
 
 ## Human Resource/Time Estimation:

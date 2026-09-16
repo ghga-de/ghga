@@ -83,7 +83,7 @@ Adjusting and integrating existing services will also be handled in that same ep
 ## API Definitions:
 
 ### RESTful/Synchronous:
-[Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/18-hooded-crow/api_definitions/rest/encryption_key_store.yml)
+[Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0018-hooded-crow/api_definitions/rest/encryption_key_store.yml)
 
 ## Additional Implementation Details:
 

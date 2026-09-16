@@ -108,7 +108,7 @@ stateDiagram-v2
 
 ### API Definition:
 
-[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/4-star-nosed_mole/api_definitions/rest/ucs.yaml)
+[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0004-star-nosed-mole/api_definitions/rest/ucs.yaml)
 
 ## Additional Implementation Details:
 

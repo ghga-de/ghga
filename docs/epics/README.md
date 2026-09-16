@@ -20,7 +20,7 @@ There are three epic types: `Exploratory Epic`, `Implementation Epic`, and `Expl
 
 Please have a look at the templates ([exploratory](./epic-template-exploratory), [implementation](./epic-template-implementation)) and especially the contained technical specifications ([exploratory](./epic-template-exploratory/README.md), [implementation](./epic-template-implementation/README.md)).
 
-These specifications are part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+These specifications are part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/). (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
 
 ## The Saga so far
 
