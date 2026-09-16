@@ -43,9 +43,10 @@ never sees is answered:
 with MockedApis(things, widgets):
     ...
 ```
-A request no mock serves is refused unless `allow_network` lets it out. `verify()`
-reports a call nothing served or a handler nothing called, and `raise_for_complaints()`
-turns that report into a failure.
+A request that doesn't match any defined endpoints is refused unless `allow_network`
+lets it out. The `check_for_complaints()` function reports such request as well as
+handlers that weren't called. The function `raise_for_complaints()` raises an error
+if `check_for_complaints()` finds anything.
 """
 
 from __future__ import annotations
@@ -420,7 +421,7 @@ class MockedApis:
         return self
 
     def __exit__(self, *exc_info: object) -> None:
-        """Take the mocks off, leaving `verify` to whoever wants to look."""
+        """Take the mocks off."""
         self.uninstall()
 
     def _route(self, request: httpx2.Request) -> tuple[MockedApi, str] | None:
