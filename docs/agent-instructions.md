@@ -14,10 +14,14 @@ is in the [writing style](style.md), and what the format itself guarantees is at
 | `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves | both, written once | on demand, when a task touches them |
 | `.agents/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
 
-Who reads a file decides how it is written, not who its rules apply to. `AGENTS.md`
-instructs: it may assume the repo is open and a task under way, and says which command
-to run and what not to do. A README explains, to someone who has neither. `docs/` argues
-a rule once for both, and a skill is a procedure no human would read end to end.
+How a file is written depends on who reads it. Who has to follow it is a separate
+question, answered in [Keeping them true](#keeping-them-true).
+
+`AGENTS.md` instructs. Its reader has the repository open and a task in hand, so it can
+name the command to run and the mistake to avoid, and leave out everything else. A
+README explains: its reader may have no checkout and no task, and needs to know what the
+thing is before anything else. `docs/` states a rule once, in a form that serves both
+readers. A skill is a step-by-step procedure, written to be followed rather than read.
 
 A rule lives in one place. `docs/style.md` says *how* to write an ADR, a commit message
 or a comment; `AGENTS.md` says only *that* writing follows it, and when to go and read
