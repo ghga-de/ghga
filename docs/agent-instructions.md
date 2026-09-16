@@ -7,12 +7,17 @@ is in the [writing style](style.md), and what the format itself guarantees is at
 
 ## The four kinds of file
 
-| File | Holds | Read |
-|---|---|---|
-| `AGENTS.md` | how we work here: placement, commands, execution policy, definition of done | always, the root file plus the area in hand |
-| `README.md` | what the thing is, how to install and run it; published, so it stands alone | on demand |
-| `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves, written once for humans and agents alike | on demand, when a task touches them |
-| `.claude/skills/` | the steps of a recurring task | when the skill is invoked |
+| File | Holds | Written for | Loaded |
+|---|---|---|---|
+| `AGENTS.md` | how we work here: placement, commands, execution policy, definition of done | agents first, humans keep it true | always, the root file plus the area in hand |
+| `README.md` | what the thing is, how to install and run it; published, so it stands alone | humans first, agents read it too | on demand |
+| `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves | both, written once | on demand, when a task touches them |
+| `.claude/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
+
+The reader decides the register. `AGENTS.md` instructs: it may assume the repo is open
+and a task is under way, and it says which command to run and what not to do. A README
+explains, to someone who may have neither. `docs/` argues a rule once for both, and a
+skill is a procedure no human would read end to end.
 
 A rule lives in one place. `docs/style.md` says *how* to write an ADR, a commit message
 or a comment; `AGENTS.md` says only *that* writing follows it, and when to go and read

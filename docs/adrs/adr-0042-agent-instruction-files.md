@@ -79,11 +79,13 @@ The decision itself:
 - **Areas, not members.** A set covers the repo root, `frontend/data-portal/`,
   `libs/ghga-jsonsubschema/`, `libs/`, `services/`, `deploy/` and `testbed/` — the
   places whose working rules genuinely differ. The 35 members share theirs.
-- **Four kinds of file, told apart by what they hold and when they load:** `AGENTS.md`
+- **Four kinds of file, told apart by whom they address, what they hold and when they
+  load:** `AGENTS.md`
   how we work here, always on; `README.md` what the thing is, published and standing on
   its own; `docs/` the rules themselves, read when a task touches them; and
   `.claude/skills/` the steps of a recurring task, read when invoked. A rule lives in
-  one of them, and the others link it.
+  one of them, and the others link it. `AGENTS.md` is written for agents first and a
+  README for humans first, which sets the register of each.
 - **Placement follows the loading cost.** A passage belongs in the root file only if it
   holds for every area; anything narrower moves down, and anything needed only while
   doing one named task becomes a skill. Each file aims at 100 to 150 lines, and nothing
