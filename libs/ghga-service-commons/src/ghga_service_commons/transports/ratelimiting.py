@@ -16,8 +16,11 @@
 """Provides an httpx2.AsyncTransport that handles rate limiting responses."""
 
 import asyncio
+import math
 import random
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from logging import getLogger
 from types import TracebackType
 
@@ -26,6 +29,46 @@ import httpx2
 from ghga_service_commons.transports.config import RateLimitingTransportConfig
 
 log = getLogger(__name__)
+
+
+def _parse_retry_after(value: str) -> float | None:
+    """Turn a single Retry-After value into a number of seconds to wait.
+
+    RFC 9110 allows the header to carry either a number of seconds or an HTTP date, so
+    both forms are accepted. Returns None when the value is neither.
+    """
+    value = value.strip()
+
+    with suppress(ValueError):
+        seconds = float(value)
+        # Reject inf and nan, which would otherwise be carried into the sleep below.
+        return max(0.0, seconds) if math.isfinite(seconds) else None        
+
+    with suppress(TypeError, ValueError):
+        retry_at = parsedate_to_datetime(value)
+        if retry_at.tzinfo is None:
+            # A value parsed without a zone would compare wrong.
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+
+    # No retry-after value found. Return None
+    return None
+
+
+def _retry_after_seconds(headers: httpx2.Headers) -> float:
+    """Determine how long a 429 response asks the client to wait.
+
+    A response may carry Retry-After more than once and the longest wait wins.
+    Values that cannot be parsed are skipped. The default of 0.0 means
+    no usable Retry-After was found, and the client should retry immediately.
+    """
+    waits = [
+        seconds
+        for key, value in headers.multi_items()
+        if key.lower() == "retry-after"
+        and (seconds := _parse_retry_after(value)) is not None
+    ]
+    return max(waits, default=0.0)
 
 
 class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
@@ -79,17 +122,14 @@ class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
         # Update state
         self._num_requests += 1
         if response.status_code == 429:
-            retry_after = 0.0
-            for k, v in response.headers.items():
-                if k.lower() == "retry-after":
-                    retry_after = float(v)
+            retry_after = _retry_after_seconds(response.headers)
             if retry_after:
                 self._wait_time = retry_after
                 log.info("Received retry after response: %.3f s.", self._wait_time)
                 self._last_retry_after_received = time.monotonic()
             else:
                 log.warning(
-                    "Retry-After header not present in 429 response.\nDelegating to underlying wait strategy."
+                    "No usable Retry-After header in 429 response.\nDelegating to underlying wait strategy."
                 )
                 # Modify response headers to communicate intent to retry layer
                 response.headers["Should-Wait"] = "true"
