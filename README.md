@@ -174,6 +174,8 @@ and the release workflow always build one image per member. It exists because it
   [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 - **[docs/style.md](docs/style.md)** — writing style for coding agents.
+- **[docs/agent-instructions.md](docs/agent-instructions.md)** — which instruction file
+  holds what, and where the `AGENTS.md` files sit.
 
 ## Conventions
 
