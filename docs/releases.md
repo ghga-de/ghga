@@ -2,10 +2,10 @@
 
 How a release is cut, built and published: the two lanes, their tags, how versions are
 stamped, how the PyPI lane decides what to upload, and where artifacts go. The decisions
-behind it are [ADR-0027](adrs/0027-versioning-and-release-by-tag.md) (lanes and tags),
-[ADR-0033](adrs/0033-capability-markers-and-placement.md) (markers),
-[ADR-0038](adrs/0038-branching-strategy.md) (branches) and
-[ADR-0037](adrs/0037-image-signing-sbom-provenance.md) (signing). The workflows are
+behind it are [ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md) (lanes and
+tags), [ADR-0033](adrs/adr-0033-capability-markers-and-placement.md) (markers),
+[ADR-0038](adrs/adr-0038-branching-strategy.md) (branches) and
+[ADR-0037](adrs/adr-0037-image-signing-sbom-provenance.md) (signing). The workflows are
 `.github/workflows/release.yaml` and `pypi-publish.yaml`.
 
 In short: `ghga/X.Y.Z` builds every deployable image and chart from one commit;

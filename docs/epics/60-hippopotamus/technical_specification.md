@@ -21,19 +21,19 @@ It should already implement the proper overall visual layout and design (styling
 - The experimental repository "angular-portal" will only be used as a reference and then archived.
 - Use a suitable Node.js based docker image for the devcontainer.
 - Create the base Angular project files and directory structure using `ng new` with Angular v19.
-- Configure the application to run zoneless and without SSR according to [ADR017](../../adrs/0017-server-side-rendering-in-angular.md).
-- Configure the project to use pnpm as a package manager as specified in [ADR015](../../adrs/0015-node-runtime-selection.md).
+- Configure the application to run zoneless and without SSR according to [ADR017](../../adrs/adr-0017-server-side-rendering-in-angular.md).
+- Configure the project to use pnpm as a package manager as specified in [ADR015](../../adrs/adr-0015-node-runtime-selection.md).
 - Add pre-commit hooks and configuration for Prettier, ESLint and other useful linters.
-- Add `@angular-eslint/eslint-plugin` with the recommended rules as specified in [ADR013](../../adrs/0013-angular-code-style.md).
-- Add subdirectories as specified in [ADR018](../../adrs/0018-frontend-architecture.md).
-- Add `eslint-plugin-boundaries` configuration as specified in [ADR018](../../adrs/0018-frontend-architecture.md).
-- Add and configure ESLint plugin to enforce documentation via JSDoc as specified in [ADR014](../../adrs/0014-angular-project-documentation.md).
-- Add support for Compodoc as specified in [ADR014](../../adrs/0014-angular-project-documentation.md).
-- Add the latest Angular Material version as a dependency as specified in [ADR019](../../adrs/0019-responsive-design-systems.md) and [ADR020](../../adrs/0020-angular-component-library.md).
-- Add Tailwind CSS as a dependency as specified in [ADR021](../../adrs/0021-tailwind.md).
+- Add `@angular-eslint/eslint-plugin` with the recommended rules as specified in [ADR013](../../adrs/adr-0013-angular-code-style.md).
+- Add subdirectories as specified in [ADR018](../../adrs/adr-0018-frontend-architecture.md).
+- Add `eslint-plugin-boundaries` configuration as specified in [ADR018](../../adrs/adr-0018-frontend-architecture.md).
+- Add and configure ESLint plugin to enforce documentation via JSDoc as specified in [ADR014](../../adrs/adr-0014-angular-project-documentation.md).
+- Add support for Compodoc as specified in [ADR014](../../adrs/adr-0014-angular-project-documentation.md).
+- Add the latest Angular Material version as a dependency as specified in [ADR019](../../adrs/adr-0019-responsive-design-systems.md) and [ADR020](../../adrs/adr-0020-angular-component-library.md).
+- Add Tailwind CSS as a dependency as specified in [ADR021](../../adrs/adr-0021-tailwind.md).
 - Add a Node.js run script that injects the runtime configuration and a configuration service that can be used by components and other services to fetch the configuration.
 - Create the base components (app component, header, footer, landing page) and style them according to our existing corporate design, make everything look similar to the legacy application.
-- Make sure the application uses the proper semantic tags according to [ADR016](../../adrs/0016-semantic-web-technologies.md).
+- Make sure the application uses the proper semantic tags according to [ADR016](../../adrs/adr-0016-semantic-web-technologies.md).
 - Add a minimal multi-stage production docker file that uses the run script to inject the configuration without rebuilding the application and SWS (`static-web-server`) to serve it as a single-page application.
 - Add and configure `cashew` for caching HTTP requests as a dependency.
 - Add and configure `MSW` (Mock Service Worker) for mocking the backend as a dependency.

@@ -35,15 +35,15 @@ waits for the next platform release**.
 
 The first version of this decision gave every component its own `name/x.y.z` release.
 The monorepo showed the flaw: the only combination CI ever tests is HEAD with HEAD
-([ADR-0026](0026-uv-workspace-source-coupled-libs.md)). Releasing one service against
-older siblings would deploy a combination no CI run has seen, which is the version skew
-the monorepo removes. Published libraries and CLIs still need their own semver: external
-consumers pin ranges, and their PyPI series must continue.
+([ADR-0026](adr-0026-uv-workspace-source-coupled-libs.md)). Releasing one service
+against older siblings would deploy a combination no CI run has seen, which is the
+version skew the monorepo removes. Published libraries and CLIs still need their own
+semver: external consumers pin ranges, and their PyPI series must continue.
 
 ### Decision
 
 Each member's markers put it in one of two lanes
-([ADR-0033](0033-capability-markers-and-placement.md)).
+([ADR-0033](adr-0033-capability-markers-and-placement.md)).
 
 **Platform lane.** Services, the front end, the charts, `metldata` and
 `ghga-datasteward-kit` share one version. A `ghga/X.Y.Z` tag builds every image and
@@ -68,9 +68,9 @@ semver.
 
 **Both lanes.** The release workflow verifies rather than re-tests: the tagged commit
 must be on the lane's branch and have a green CI run. Platform and PyPI tags are cut on
-`main`, release candidates on `dev` ([ADR-0038](0038-branching-strategy.md)). A tag push
-builds; publishing is a deliberate, approved step. Images and charts go to Docker Hub,
-wheels to PyPI after a TestPyPI rehearsal.
+`main`, release candidates on `dev` ([ADR-0038](adr-0038-branching-strategy.md)). A tag
+push builds; publishing is a deliberate, approved step. Images and charts go to Docker
+Hub, wheels to PyPI after a TestPyPI rehearsal.
 
 [Releases](../releases.md) describes the tags, version stamping, upload planning and
 publish targets in detail.

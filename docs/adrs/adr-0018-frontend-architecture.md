@@ -27,7 +27,7 @@ accepting that **we will not have the need to embed applications built with diff
 
 On the backend side, we are using micro services with a "triple-hexagonal architecture," which enables us to achieve high code quality with well-structured, highly testable, and decoupled code.
 
-On the frontend side, our existing React based application did not have an explicitly defined and enforced architecture, so that over time the structure became less consistent, and thereby harder to maintain and extend. Also, features like lazy-loading parts of the application were not implemented and would be difficult when the code is not decoupled well enough. We take the [decision to move from React to Angular](0002-angular-as-frontend-framework.md) as an opportunity to establish a well-defined and clean architecture on the frontend side as well.
+On the frontend side, our existing React based application did not have an explicitly defined and enforced architecture, so that over time the structure became less consistent, and thereby harder to maintain and extend. Also, features like lazy-loading parts of the application were not implemented and would be difficult when the code is not decoupled well enough. We take the [decision to move from React to Angular](adr-0002-angular-as-frontend-framework.md) as an opportunity to establish a well-defined and clean architecture on the frontend side as well.
 
 Since we are already using micro services on the backend side to achieve the well-known benefits from this approach, another obvious question was whether we should also use micro frontends, which would give us similar benefits on the frontend side. Tools like [Nx](https://nx.dev) and concepts like module federation make building micro frontends nowadays a lot easier and more popular.
 
@@ -89,7 +89,7 @@ These rules already help avoiding cyclic dependencies, but care must still be ta
 
 #### Tooling to Enforce the Architecture
 
-The article mentioned above suggests using [Sheriff](https://github.com/softarc-consulting/sheriff) to enforce these rules. However, Sheriff is currently based on `index.ts` files ("barrels") to define its module boundaries. This approach can create problems with lazy-loading and tree-shaking when [using standalone components](0012-use-of-ngmodules.md). Additionally, Sheriff can only define rules based on either of the two dimensions of the matrix, not on the combination, and always checks all rules without allowing exceptions. Due to these limitations, using Sheriff is currently not feasible for us.
+The article mentioned above suggests using [Sheriff](https://github.com/softarc-consulting/sheriff) to enforce these rules. However, Sheriff is currently based on `index.ts` files ("barrels") to define its module boundaries. This approach can create problems with lazy-loading and tree-shaking when [using standalone components](adr-0012-use-of-ngmodules.md). Additionally, Sheriff can only define rules based on either of the two dimensions of the matrix, not on the combination, and always checks all rules without allowing exceptions. Due to these limitations, using Sheriff is currently not feasible for us.
 
 For the time being, we decided to use [eslint-plugin-boundaries](https://github.com/javierbrea/eslint-plugin-boundaries) instead of Sheriff. Although it is more complicated to configure and requires additional packages to support TypeScript, it provides more flexibility. It allows defining boundaries solely in the configuration without needing to create `index.ts` files. It also supports rule-specific error messages, which can be helpful for developers. At the time of writing, support for the current ESLint version is only available in a beta release of this plugin, with correspondingly limited documentation. Since this is only a developer tool, this is acceptable. We have already created a proof of concept solution that verified the beta version works and is flexible enough to enforce the rules listed above.
 
@@ -97,7 +97,7 @@ We also checked that our solution works well with [lazy-loading](https://angular
 
 After the release of Sheriff v1 which is expected to support barrel-less modules, we can reconsider using Sheriff. It appears less complicated and has been specifically created for Angular applications using such an architecture matrix.
 
-Note that Sheriff also provides an ESLint plugin, so both solutions are compatible with our [decision to use ESLint as a linting tool](0013-angular-code-style.md).
+Note that Sheriff also provides an ESLint plugin, so both solutions are compatible with our [decision to use ESLint as a linting tool](adr-0013-angular-code-style.md).
 
 #### Possible directory structure
 

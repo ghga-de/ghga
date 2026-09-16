@@ -33,8 +33,8 @@ the Bitnami `common` library along**.
 ### Context
 
 Helm charts are a product of this repo, and we want the same app chart in production and
-in the demo ([ADR-0028](0028-self-contained-demo-lightweight-infra.md)). Production runs
-Istio, Strimzi-managed Kafka and Vault, configured from the GitOps repo
+in the demo ([ADR-0028](adr-0028-self-contained-demo-lightweight-infra.md)). Production
+runs Istio, Strimzi-managed Kafka and Vault, configured from the GitOps repo
 `devops-kubernetes-hub`.
 
 GHGA already had a chart system in the `charts` repo: the library chart `ghga-common`
@@ -47,14 +47,14 @@ repo. We call this split the hybrid boundary.
 
 We adopt `ghga-common` and its generator into `deploy/`, and the per-service charts
 become a generated build product. The generator reads workspace metadata
-([ADR-0033](0033-capability-markers-and-placement.md)), and each member keeps its chart
-values next to its code. What the old system carried but we no longer use stays behind:
-the Emissary routing paths, and the `istio-ext-authz-sync` Job in the self-contained
-path ([ADR-0032](0032-self-contained-edge-envoy-gateway.md)).
+([ADR-0033](adr-0033-capability-markers-and-placement.md)), and each member keeps its
+chart values next to its code. What the old system carried but we no longer use stays
+behind: the Emissary routing paths, and the `istio-ext-authz-sync` Job in the
+self-contained path ([ADR-0032](adr-0032-self-contained-edge-envoy-gateway.md)).
 
 App charts own the resources that are one-to-one with a workload: `HTTPRoute`,
 `DestinationRule`, `NetworkPolicy`, `KafkaUser` and `KafkaTopic`, and the way the
-workload consumes secrets ([ADR-0035](0035-secrets-and-tls.md)). Each one can be
+workload consumes secrets ([ADR-0035](adr-0035-secrets-and-tls.md)). Each one can be
 switched off in the values, so the chart works with or without Istio, Envoy Gateway or
 Strimzi.
 

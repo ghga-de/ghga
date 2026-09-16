@@ -33,7 +33,7 @@ docker build -f docker/Dockerfile \
 
 Every published tag also carries a keyless cosign signature (over the resolved digest)
 plus SBOM and SLSA-provenance attestations (buildx-native, `provenance=mode=max`). See
-[ADR-0037](../docs/adrs/0037-image-signing-sbom-provenance.md) for the decision.
+[ADR-0037](../docs/adrs/adr-0037-image-signing-sbom-provenance.md) for the decision.
 
 Because buildx's own attestations live inside the OCI index where `cosign` does not look,
 both predicates are additionally re-published as signed cosign attestations
@@ -44,7 +44,7 @@ both predicates are additionally re-published as signed cosign attestations
 ## Verifying images
 
 This repo is the **producer** side only; admission-control verification lives in the
-platform/GitOps layer ([ADR-0031](../docs/adrs/0031-helm-chart-boundary-hybrid.md)).
+platform/GitOps layer ([ADR-0031](../docs/adrs/adr-0031-helm-chart-boundary-hybrid.md)).
 Fulcio issues a short-lived certificate per run, bound to the workflow's OIDC claims, so
 a verifier matches those claims rather than a tag or key:
 

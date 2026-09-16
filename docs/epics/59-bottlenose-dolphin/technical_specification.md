@@ -4,7 +4,7 @@
 
 ## Principle Components of Exploration:
 
-As outlined in [ADR002](../../adrs/0002-angular-as-frontend-framework.md), we decided to migrate our existing GHGA data portal from React to Angular.
+As outlined in [ADR002](../../adrs/adr-0002-angular-as-frontend-framework.md), we decided to migrate our existing GHGA data portal from React to Angular.
 
 This exploratory epic is concerned with laying out a plan for achieving this goal that includes the most important architecture and design decisions that should be made upfront. We expect that these may be revised later, but we want to start with a solid and reasonable foundation to achieve a maintainable solution with our limited resources.
 

@@ -55,8 +55,8 @@ never reconcile.
 ## Task runner
 
 Everything runs through [`just`](justfile) — a thin facade over uv / pnpm / helm / kind
-([ADR-0034](docs/adrs/0034-task-runner.md)). Run `just` with no arguments to list every
-recipe with its description.
+([ADR-0034](docs/adrs/adr-0034-task-runner.md)). Run `just` with no arguments to list
+every recipe with its description.
 
 ### Run the demo locally
 
@@ -76,7 +76,7 @@ reloads rather than rebuilds.
 
 #### Logging in as the data steward
 
-The demo seeds one data steward ([ADR-0028](docs/adrs/0028-self-contained-demo-lightweight-infra.md)),
+The demo seeds one data steward ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)),
 configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
 
 | | |
@@ -123,7 +123,7 @@ profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev`
 
 The BDD + Playwright integration suite ([`testbed/`](testbed/)) against the same umbrella
 plus the test-bed profile — state-management service, test OIDC provider, and the
-generated metldata artifact model ([ADR-0028](docs/adrs/0028-self-contained-demo-lightweight-infra.md)).
+generated metldata artifact model ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
 
 ```bash
 just sync               # workspace env: the artifact generation needs ghga-datasteward-kit

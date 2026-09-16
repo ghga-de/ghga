@@ -2,6 +2,7 @@
 status: accepted
 date: 2026-09-15
 tags: [docs, process]
+amended: 2026-09-16
 related: [ADR-0036, ADR-0040]
 ---
 
@@ -10,7 +11,7 @@ related: [ADR-0036, ADR-0040]
 ## Summary
 
 In the context of **ADRs with YAML frontmatter and a generated index
-([ADR-0040](0040-adr-frontmatter.md))**
+([ADR-0040](adr-0040-adr-frontmatter.md))**
 
 facing **rules for fields, headings and references that only review enforces, and ADR
 references across the tree that break when files move**
@@ -40,7 +41,7 @@ the sweep missed.
 
 ADR-0040 makes the header machine-readable, which turns most of these rules into checks.
 Hook tools come from the lockfiles, and CI's `hygiene` job runs every hook over the
-whole tree ([ADR-0036](0036-pre-commit-hooks.md)).
+whole tree ([ADR-0036](adr-0036-pre-commit-hooks.md)).
 
 ### Decision
 
@@ -56,8 +57,11 @@ hooks, and by hand through a `just` recipe:
 
 Together they fail when:
 
-- **The file name** is not `NNNN-kebab-case.md`, a number is taken twice, or the heading
-  is not `# ADR-NNNN — Title` with the number from the file name.
+- **The file name** is not `adr-NNNN-kebab-case.md`, a number is taken twice, or the
+  heading is not `# ADR-NNNN — Title` with the number from the file name.
+  **Amended 2026-09-16:** the name carries an `adr-` prefix, so a file listing shows
+  the type and the name holds the reference form (`adr-0041` ↔ `ADR-0041`). The
+  template is `adr-template.md`, since it has no number to hold.
 - **The frontmatter** lacks a required field, has an unknown one, or has a status, date
   or tag outside the values in the writing style.
 - **The headings** `Summary`, `Details`, `Context`, `Decision`, `Consequences` and

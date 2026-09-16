@@ -1,23 +1,23 @@
 # GHGA Monorepo — Migration Runbook
 
 > Executable, step-by-step migration plan. Decisions behind it:
-> [ADR-0025](../adrs/0025-consolidate-into-monorepo.md) (migration),
-> [ADR-0026](../adrs/0026-uv-workspace-source-coupled-libs.md) (uv workspace),
-> [ADR-0027](../adrs/0027-versioning-and-release-by-tag.md) (release).
+> [ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md) (migration),
+> [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md) (uv workspace),
+> [ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md) (release).
 > Tooling: [scripts/migration/](../../scripts/migration/) — **review before running.**
 
 ## 0. Prerequisites
 
 **In the devcontainer** (provisioned automatically): `git`,
 [`git-filter-repo`](https://github.com/newren/git-filter-repo), `uv`, `just`
-([ADR-0034](../adrs/0034-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
+([ADR-0034](../adrs/adr-0034-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
 
-**Cluster** ([ADR-0028](../adrs/0028-self-contained-demo-lightweight-infra.md)): kind inside the devcontainer's own Docker daemon,
+**Cluster** ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)): kind inside the devcontainer's own Docker daemon,
 created by `just cluster`. The host needs only host networking for the devcontainer, see
 `.devcontainer/devcontainer.json`. (No mesh/Istio needed for the self-contained path — the
-umbrella bundles Envoy Gateway, [ADR-0032](../adrs/0032-self-contained-edge-envoy-gateway.md).)
+umbrella bundles Envoy Gateway, [ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md).)
 
-Hosting ([ADR-0025](../adrs/0025-consolidate-into-monorepo.md)):
+Hosting ([ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md)):
 - GitHub: repo at **`github.com/ghga-de/ghga`**.
 - Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already
   pulls from. Pushed only by manual `workflow_dispatch` runs, authenticated with the org's
@@ -75,7 +75,7 @@ git -C . ls-files | cut -d/ -f1-2 | sort -u   # sanity-check the tree shape
 
 ## 3. Phase 3 — Harmonisation (root-only; keep service `src/` aligned)
 
-Per [ADR-0025](../adrs/0025-consolidate-into-monorepo.md), do **all** of this at the root so
+Per [ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md), do **all** of this at the root so
 incremental sync stays low-conflict:
 
 1. **Workspace wiring:** in each member's `pyproject.toml`, replace PyPI pins on internal libs
@@ -85,32 +85,34 @@ incremental sync stays low-conflict:
    today's `event-schemas 12 vs 13` / `transpiler <3 vs 3.0.0` skew gets reconciled).
 3. **Toolchain:** one `ruff`/`mypy`/`pre-commit` config; delete per-member copies (already dropped
    on import). **Done** — the root `.pre-commit-config.yaml` covers both stacks and the last
-   per-member copy (testbed's) is gone ([ADR-0036](../adrs/0036-pre-commit-hooks.md)).
+   per-member copy (testbed's) is gone
+   ([ADR-0036](../adrs/adr-0036-pre-commit-hooks.md)).
 4. **Containers:** one shared `docker/Dockerfile` (+ DHI), ENTRYPOINT chosen per service; the
    frontend keeps its bespoke Dockerfile.
 5. **Per-package lib matrix:** a CI job that runs each `libs/*` standalone across its supported
-   Python range ([ADR-0026](../adrs/0026-uv-workspace-source-coupled-libs.md)).
+   Python range ([ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 6. Run `uv sync && uv run pytest` per affected target; commit.
 
 ## 4. Phase 4 — Charts & test bed
 
-1. **Adopt `ghga-common`** ([ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)): move the
+1. **Adopt `ghga-common`** ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)): move the
    library chart + generator into `deploy/`; prune the Emissary paths and the
    `istio-ext-authz-sync` Job; DRY the generator against `[tool.ghga]` markers
-   ([ADR-0033](../adrs/0033-capability-markers-and-placement.md)). App charts keep their
-   app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, KafkaUser[toggle]) —
-   the *hybrid* boundary ([ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)).
+   ([ADR-0033](../adrs/adr-0033-capability-markers-and-placement.md)). App charts keep
+   their app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy,
+   KafkaUser[toggle]) — the *hybrid* boundary
+   ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)).
 2. `deploy/charts/ghga-demo` — single-command umbrella bundling the **Envoy Gateway** edge
-   ([ADR-0032](../adrs/0032-self-contained-edge-envoy-gateway.md); `SecurityPolicy.extAuth` →
+   ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md); `SecurityPolicy.extAuth` →
    auth-adapter; gateway Service → NodePort) + lightweight infra + AAI + secret-gen/seed Jobs
-   ([ADR-0028](../adrs/0028-self-contained-demo-lightweight-infra.md),
-   [ADR-0029](../adrs/0029-local-aai-generic-oidc.md),
-   [ADR-0035](../adrs/0035-secrets-and-tls.md)).
+   ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md),
+   [ADR-0029](../adrs/adr-0029-local-aai-generic-oidc.md),
+   [ADR-0035](../adrs/adr-0035-secrets-and-tls.md)).
 3. Port the `testbed/` suite to target the umbrella, with the test OIDC provider for its
    logins; gate `state-management-service` behind the test-bed profile
-   ([ADR-0030](../adrs/0030-state-management-service-testbed-only.md)).
+   ([ADR-0030](../adrs/adr-0030-state-management-service-testbed-only.md)).
 4. Validate locally on kind inside the devcontainer
-   ([ADR-0028](../adrs/0028-self-contained-demo-lightweight-infra.md)) — same artifact users
+   ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)) — same artifact users
    install, same recipes CI runs:
    ```bash
    just demo-images-mono   # or `just demo-images` for one image per member
@@ -118,7 +120,7 @@ incremental sync stays low-conflict:
    just testbed
    ```
    > CRD note: Gateway API + Envoy Gateway CRDs ship in the chart's `crds/` (install-only);
-   > CRD **upgrades** need a manual `kubectl apply` ([ADR-0032](../adrs/0032-self-contained-edge-envoy-gateway.md)).
+   > CRD **upgrades** need a manual `kubectl apply` ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)).
 
 ## 5. Phase 5 — CI/CD
 
@@ -129,11 +131,11 @@ Enabled in two stages (the component gate does **not** wait for the charts):
   computation to include **reverse dependencies** of changed internal libs (a `hexkit` change
   must run its consumers' suites, not just `libs/hexkit`).
 - **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed
-  run ([ADR-0028](../adrs/0028-self-contained-demo-lightweight-infra.md)).
+  run ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
 - **Image/chart/PyPI publish (live):** a tag push publishes wheels to PyPI, after a TestPyPI
   rehearsal. Images and charts go to Docker Hub, but a tag push only builds them — publishing
   a platform release is a deliberate dispatch
-  ([ADR-0027](../adrs/0027-versioning-and-release-by-tag.md)).
+  ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - Push the repo to `github.com/ghga-de/ghga`.
 
 ## 6. Ongoing — one-way incremental sync
@@ -151,7 +153,7 @@ Every `main` in this section and in `scripts/migration/` is the **upstream** rep
 manifest's optional 5th column, defaulting to `main`), and is unaffected by our own branching
 model. On the monorepo side, sync and retirement work is a branch cut from `dev` and merged
 back into `dev` by pull request like any other change
-([ADR-0038](../adrs/0038-branching-strategy.md)).
+([ADR-0038](../adrs/adr-0038-branching-strategy.md)).
 
 ### Verifying a repo is fully synced
 
@@ -184,7 +186,7 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 - [x] Wire the CD targets, add the required secrets, enable the release workflow's tag trigger
       and write permissions. **Done (2026-09):** images and charts to Docker Hub, wheels to
       PyPI after a TestPyPI rehearsal (trusted publishing on both indexes)
-      ([ADR-0027](../adrs/0027-versioning-and-release-by-tag.md)).
+      ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image
       series (no version regressions).
 - [ ] Move the repo to `github.com/ghga-de/<monorepo>`; set CODEOWNERS per path.
@@ -200,7 +202,7 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
       each. Verify a repo is fully synced (§6) before dropping its row.
       `hexkit` additionally published a documentation site, so its archived Pages site was
       replaced with redirects to `ghga-de.github.io/ghga/hexkit`
-      ([ADR-0039](../adrs/0039-docs-lane-github-pages.md)) before archiving — an archived repo
+      ([ADR-0039](../adrs/adr-0039-docs-lane-github-pages.md)) before archiving — an archived repo
       keeps serving Pages but cannot run Actions, so that deploy could not be redone.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
@@ -213,7 +215,7 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
   `git-filter-repo` version** across runs.
 - Historical release tags are **not** imported (they'd reference rewritten SHAs); the new scheme
   is `name/x.y.z`, plus `packages/x.y.z` to sweep the PyPI lane
-  ([ADR-0027](../adrs/0027-versioning-and-release-by-tag.md)).
+  ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - `.legacy_repos/` and `.migration-work/` must stay gitignored (nested `.git` dirs; scratch).
 
 ## Deploy (charts): manual semantic port — no textual sync

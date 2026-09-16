@@ -1,8 +1,8 @@
 # `deploy/` — Helm charts (a product of this repo)
 
 We **adopt and evolve** GHGA's existing `ghga-common` chart system rather than build from
-scratch ([ADR-0031](../docs/adrs/0031-helm-chart-boundary-hybrid.md)). The system was
-imported (history-preserving) from the `charts` repo.
+scratch ([ADR-0031](../docs/adrs/adr-0031-helm-chart-boundary-hybrid.md)). The system
+was imported (history-preserving) from the `charts` repo.
 
 ```bash
 helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version X.Y.Z
@@ -84,13 +84,13 @@ ext-authz declaratively), `charts_app_versions.yaml` and the per-repo version-pl
 scripts are dissolved into workspace metadata.
 
 Key decisions:
-- **Hybrid boundary** ([ADR-0031](../docs/adrs/0031-helm-chart-boundary-hybrid.md)): app charts
+- **Hybrid boundary** ([ADR-0031](../docs/adrs/adr-0031-helm-chart-boundary-hybrid.md)): app charts
   own app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, KafkaUser[toggle]);
   the GitOps/platform layer (`devops-kubernetes-hub`, not in this repo) owns the edge `Gateway`,
   the edge-auth object, and per-env config.
 - **Self-contained edge = Envoy Gateway**
-  ([ADR-0032](../docs/adrs/0032-self-contained-edge-envoy-gateway.md)): `helm install ghga` is
+  ([ADR-0032](../docs/adrs/adr-0032-self-contained-edge-envoy-gateway.md)): `helm install ghga` is
   one command, runs real Gateway-API routing + real Envoy ext_authz against the auth-adapter,
   no external ops. Full Istio is reserved for the periodic staging check.
 - **Secrets**: K8s Secrets in the demo, Vault Agent + cert-manager in prod
-  ([ADR-0035](../docs/adrs/0035-secrets-and-tls.md)).
+  ([ADR-0035](../docs/adrs/adr-0035-secrets-and-tls.md)).

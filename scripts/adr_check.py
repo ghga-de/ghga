@@ -29,7 +29,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ADR_DIR = "docs/adrs"
 INDEX_FILE = "docs/README.md"
-TEMPLATE = "0000-template.md"
+TEMPLATE = "adr-template.md"
 
 STATUSES = ("proposed", "accepted", "rejected", "deprecated", "superseded")
 TAGS = (
@@ -57,7 +57,7 @@ HEADINGS = (
     "### Alternatives",
 )
 
-FILE_NAME = re.compile(r"^(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
+FILE_NAME = re.compile(r"^adr-(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 TITLE = re.compile(r"^# ADR-(\d{4}) — (\S.*)$")
 FRONTMATTER = re.compile(r"\A---\n(.*?\n)---\n", re.DOTALL)
 REF_VALUE = re.compile(r"^ADR-(\d{4})$")
@@ -67,8 +67,8 @@ REF_VALUE = re.compile(r"^ADR-(\d{4})$")
 REFERENCE = re.compile(r"\bADR-(\d{4})((?:[/\u2013]\d+)*)")
 REFERENCE_TAIL = re.compile(r"[/\u2013](\d+)")
 # A path into docs/adrs/ from anywhere, and a sibling link inside docs/adrs/ itself.
-PATH_LINK = re.compile(r"\badrs/(\d{4}-[a-z0-9-]+\.md)")
-SIBLING_LINK = re.compile(r"\]\((\d{4}-[a-z0-9-]+\.md)")
+PATH_LINK = re.compile(r"\badrs/(adr-\d{4}-[a-z0-9-]+\.md)")
+SIBLING_LINK = re.compile(r"\]\((adr-\d{4}-[a-z0-9-]+\.md)")
 
 INDEX_START = "<!-- adr-index:start -->"
 INDEX_END = "<!-- adr-index:end -->"
@@ -210,14 +210,14 @@ def load_adrs(root: pathlib.Path) -> tuple[dict[str, Adr], list[str]]:
     for path in files:
         name = path.name
         match = FILE_NAME.match(name)
-        if not match:
-            problems.append(f"{name}: file name is not NNNN-kebab-case.md")
+        if not match and name != TEMPLATE:
+            problems.append(f"{name}: file name is not adr-NNNN-kebab-case.md")
             continue
-        number = match.group(1)
         meta, body = _split(path.read_text(encoding="utf-8"))
         problems += _check_headings(name, body)
-        if name == TEMPLATE:
+        if not match:  # the template carries placeholders, not values
             continue
+        number = match.group(1)
         if number in adrs:
             problems.append(f"{name}: number {number} is taken by {adrs[number].name}")
             continue
@@ -252,7 +252,7 @@ def check_references(
         paths: The files to scan; binary and missing files are skipped.
         adr_names: The file names in docs/adrs/, the template included.
     """
-    numbers = {n[:4] for n in adr_names}
+    numbers = {m.group(1) for n in adr_names if (m := FILE_NAME.match(n))}
     problems = []
     for rel in paths:
         if rel in REF_EXCLUDED:

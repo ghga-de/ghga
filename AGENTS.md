@@ -123,7 +123,7 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
 - Do not create commits or branches unless explicitly requested. When they are: branch from
   `dev` and target `dev` in the pull request — `dev` is the integration branch and the repo
   default, `main` carries the latest release and takes hotfixes only
-  ([branching](docs/conventions.md#branching), [ADR-0038](docs/adrs/0038-branching-strategy.md)).
+  ([branching](docs/conventions.md#branching), [ADR-0038](docs/adrs/adr-0038-branching-strategy.md)).
   Committing to either branch directly is blocked by a pre-commit hook. Name the branch, the
   pull request and the commit it lands as per
   [names](docs/conventions.md#names-branches-prs-commits). Never put a `Co-authored-by:` line

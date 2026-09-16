@@ -1,5 +1,5 @@
 # GHGA monorepo task runner — a thin facade over uv / pnpm / helm + the affected script.
-# See docs/adrs/0034-task-runner.md. Run `just` to list recipes.
+# See docs/adrs/adr-0034-task-runner.md. Run `just` to list recipes.
 set shell := ["bash", "-uc"]
 
 # Registry root the `image`/`image-mono`/`demo-load` recipes tag/load under. Defaults to

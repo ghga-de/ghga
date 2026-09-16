@@ -50,7 +50,7 @@ The toolchain is defined once, at the root.
 
 **Scope.** Every repository comes in except `datahub-test-bed` and the retired template.
 The libraries have to, since services consume them from source
-([ADR-0026](0026-uv-workspace-source-coupled-libs.md)). The external CLIs
+([ADR-0026](adr-0026-uv-workspace-source-coupled-libs.md)). The external CLIs
 `ghga-connector` and `ghga-datasteward-kit` come in as well: they depend on internal
 libraries and drive the test bed, so they are tested against HEAD. Documentation
 repositories such as the epic specifications come in as the design record of the code.
