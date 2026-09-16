@@ -1303,7 +1303,7 @@ wheels = [
 
 [[package]]
 name = "ghga-arcticfreeze"
-version = "1.1.1"
+version = "1.1.2"
 source = { editable = "libs/ghga-arcticfreeze" }
 dependencies = [
     { name = "immutabledict" },
@@ -1323,7 +1323,7 @@ provides-extras = ["pydantic"]
 
 [[package]]
 name = "ghga-connector"
-version = "4.0.0"
+version = "4.0.1"
 source = { editable = "tools/ghga-connector" }
 dependencies = [
     { name = "async-lru" },
@@ -1426,7 +1426,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "ghga-service-commons"
-version = "8.1.0"
+version = "8.1.1"
 source = { editable = "libs/ghga-service-commons" }
 dependencies = [
     { name = "pydantic" },
@@ -1494,7 +1494,7 @@ provides-extras = ["api", "http", "auth", "crypt", "dev", "objectstorage", "tran
 
 [[package]]
 name = "ghga-transpiler"
-version = "2.5.0"
+version = "2.5.1"
 source = { editable = "tools/ghga-transpiler" }
 dependencies = [
     { name = "click" },
@@ -1519,7 +1519,7 @@ requires-dist = [
 
 [[package]]
 name = "ghga-validator"
-version = "1.2.2"
+version = "1.2.3"
 source = { editable = "tools/ghga-validator" }
 dependencies = [
     { name = "linkml" },
@@ -4641,7 +4641,7 @@ wheels = [
 
 [[package]]
 name = "schemapack"
-version = "4.4.0"
+version = "4.4.1"
 source = { editable = "libs/schemapack" }
 dependencies = [
     { name = "ghga-arcticfreeze" },
