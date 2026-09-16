@@ -2,13 +2,14 @@
 """Check the ADRs and the epics, and the references to them, across the tree (ADR-0041).
 
 Without arguments it checks both sets: ADR file names, frontmatter, headings and
-supersession, epic names and shape, and every reference in the tracked text files. It
-then regenerates the ADR index in docs/README.md and the epic index in
-docs/epics/README.md, and fails when that changed a file, so the fix is to stage the
-result. With `--refs` it checks only the references in the files given.
+supersession, epic names and shape, the shape of the instruction files for coding
+agents, and every reference in the tracked text files. It then regenerates the ADR index
+in docs/README.md and the epic index in docs/epics/README.md, and fails when that
+changed a file, so the fix is to stage the result. With `--refs` it checks only the
+references in the files given.
 
-The rules are the ones in docs/style.md and docs/epics/README.md; a change to one needs
-a change to the other.
+The rules are the ones in docs/style.md, docs/epics/README.md and
+docs/agent-instructions.md; a change to one needs a change to the other.
 
 Usage:
     uv run python scripts/docs_check.py
@@ -89,6 +90,19 @@ EPIC_TYPES = (
 # A link to an epic from inside docs/epics/, and one from anywhere else.
 EPIC_SIBLING_LINK = re.compile(r"\]\((\.{1,2}/epic-[a-z0-9-]+(?:/README)?\.md)\)")
 EPIC_PATH_LINK = re.compile(r"\bepics/(epic-[a-z0-9-]+(?:/README)?\.md)")
+
+# Instruction files for coding agents (ADR-0042, docs/agent-instructions.md). A stub
+# points at the AGENTS.md beside it and holds nothing of its own, so it is allowed the
+# import, one heading and a few lines of prose.
+STUB_IMPORT = "@AGENTS.md"
+STUB_MAX_LINES = 6
+STUB_CONTENT = re.compile(r"^(?:[-*+]\s|\d+\.\s|>|\||#{1,6}\s|```|@)")
+COPILOT_STUB = ".github/copilot-instructions.md"
+SKILL_DIR = ".agents/skills"
+SKILL_FILE = "SKILL.md"
+# Paths that were instruction files for one tool and that no tool reads here.
+ORPHAN_DIRS = (".copilot/", ".github/instructions/", ".cursor/rules/")
+ORPHAN_NAMES = (".cursorrules", ".clinerules", ".windsurfrules", ".aider.conf.yml")
 
 ADR_INDEX_START = "<!-- adr-index:start -->"
 ADR_INDEX_END = "<!-- adr-index:end -->"
@@ -482,6 +496,84 @@ def _regenerate(
     return [f"{rel}: regenerated the index; stage the file"]
 
 
+def _tracked(root: pathlib.Path) -> list[str]:
+    """Return every tracked path, so a check can see the shape of the whole tree."""
+    result = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=root, capture_output=True, text=True
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr)
+    return [p for p in result.stdout.split("\0") if p]
+
+
+def _stub_problems(rel: str, text: str, wants_import: bool) -> list[str]:
+    """Report content a pointer stub carries beyond the import, a heading and a sentence."""
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return [f"{rel}: the stub is empty; it points at the AGENTS.md beside it"]
+    problems = []
+    if wants_import and lines[0].strip() != STUB_IMPORT:
+        problems.append(f"{rel}: the first line must be the `{STUB_IMPORT}` import")
+    elif not wants_import and "AGENTS.md" not in text:
+        problems.append(f"{rel}: the stub must point at AGENTS.md")
+    body = lines[1:] if wants_import else lines
+    headings = [line for line in body if line.startswith("#")]
+    if len(headings) > 1:
+        problems.append(f"{rel}: a stub carries one heading, not {len(headings)}")
+    for line in body:
+        if line not in headings and STUB_CONTENT.match(line):
+            problems.append(f"{rel}: a stub carries no content of its own: {line!r}")
+            break
+    if len(lines) > STUB_MAX_LINES:
+        problems.append(
+            f"{rel}: the stub is {len(lines)} lines; at most {STUB_MAX_LINES},"
+            " the rest belongs in the AGENTS.md beside it"
+        )
+    return problems
+
+
+def check_instruction_files(root: pathlib.Path) -> list[str]:
+    """Report instruction files that break the layout in docs/agent-instructions.md.
+
+    Every AGENTS.md needs its CLAUDE.md stub beside it, a stub carries nothing but the
+    import, a heading and a sentence, and no instruction file sits at a path no tool
+    reads ([ADR-0042](docs/adrs/adr-0042-agent-instruction-files.md)).
+    """
+    tracked = _tracked(root)
+    areas = {
+        str(pathlib.PurePosixPath(p).parent) for p in tracked if p.endswith("AGENTS.md")
+    }
+    stubs = {
+        str(pathlib.PurePosixPath(p).parent) for p in tracked if p.endswith("CLAUDE.md")
+    }
+    problems = [
+        f"{area}/AGENTS.md: no CLAUDE.md stub beside it".lstrip("./")
+        for area in sorted(areas - stubs)
+    ]
+    problems += [
+        f"{area}/CLAUDE.md: no AGENTS.md beside it".lstrip("./")
+        for area in sorted(stubs - areas)
+    ]
+
+    for rel in sorted(p for p in tracked if p.endswith("CLAUDE.md")):
+        problems += _stub_problems(rel, (root / rel).read_text(encoding="utf-8"), True)
+    if "." in areas:
+        if COPILOT_STUB in tracked:
+            text = (root / COPILOT_STUB).read_text(encoding="utf-8")
+            problems += _stub_problems(COPILOT_STUB, text, False)
+        else:
+            problems.append(
+                f"{COPILOT_STUB}: missing; Copilot has no pointer to AGENTS.md"
+            )
+
+    for rel in tracked:
+        if any(d in f"/{rel}" for d in ORPHAN_DIRS) or rel.endswith(ORPHAN_NAMES):
+            problems.append(f"{rel}: an instruction file at a path no tool reads")
+        elif rel.endswith(SKILL_FILE) and SKILL_DIR not in rel:
+            problems.append(f"{rel}: a skill belongs under {SKILL_DIR}/<name>/")
+    return sorted(problems)
+
+
 def _tracked_files(root: pathlib.Path) -> list[str]:
     """Return the tracked text files that could hold a reference to an ADR or an epic."""
     result = subprocess.run(
@@ -510,6 +602,7 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         adrs, problems = load_adrs(root)
         epics, epic_problems = load_epics(root)
         problems += epic_problems
+        problems += check_instruction_files(root)
         # sibling links inside docs/adrs/ need none of the search terms
         paths = set(_tracked_files(root)) | {f"{ADR_DIR}/{n}" for n in adr_names}
         problems += check_references(root, sorted(paths), adr_names)

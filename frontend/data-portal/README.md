@@ -213,7 +213,7 @@ Two levels of automated tests live in this repository, and a third lives elsewhe
 | ------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
 | Unit tests (Vitest)      | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
 | "E2E" tests (Playwright) | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
-| GHGA archive test bed    | the real backend and database, in a separate repository                                    | does this flow actually work end to end?          |
+| GHGA archive test bed    | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
 
 Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring all belong there. The two other levels each add something the level above cannot see, and each costs more to run.
 
@@ -233,7 +233,7 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 
 We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
-"End-to-end" is admittedly a misnomer here. These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design. What is covered is the frontend from the browser inwards — everything above the network boundary. Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository.
+"End-to-end" is admittedly a misnomer here. These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design. What is covered is the frontend from the browser inwards — everything above the network boundary. Comprehensive end-to-end tests for real backend behavior are maintained in the GHGA archive test bed, in `testbed/` of this monorepo.
 
 Within that boundary, however, these tests are considerably more real than unit tests, and catch a class of problems unit tests structurally cannot:
 

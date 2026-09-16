@@ -330,3 +330,94 @@ def test_missing_index_markers(repo, capsys):
     (repo / "docs/README.md").write_text("# Docs\n")
     _, out = _run(repo, capsys)
     assert "missing <!-- adr-index:start -->" in out
+
+
+STUB = "@AGENTS.md\n\n# Claude Code instructions\n\n`AGENTS.md` holds the rules.\n"
+COPILOT = "# GitHub Copilot instructions\n\n`AGENTS.md` holds the rules.\n"
+
+
+@pytest.fixture
+def agents(repo):
+    """The `repo` fixture with a conforming set of instruction files on top."""
+    (repo / "AGENTS.md").write_text("# Agent Instructions\n")
+    (repo / "CLAUDE.md").write_text(STUB)
+    (repo / ".github").mkdir()
+    (repo / ".github/copilot-instructions.md").write_text(COPILOT)
+    (repo / "libs").mkdir()
+    (repo / "libs/AGENTS.md").write_text("# Agent Instructions for libs\n")
+    (repo / "libs/CLAUDE.md").write_text(STUB)
+    (repo / "libs/.agents/skills/qa").mkdir(parents=True)
+    (repo / "libs/.agents/skills/qa/SKILL.md").write_text("---\nname: qa\n---\n")
+    return repo
+
+
+def _instruction_problems(repo: Path) -> list[str]:
+    _stage(repo)
+    return docs_check.check_instruction_files(repo)
+
+
+def test_conforming_instruction_files(agents):
+    """A complete set of area files, stubs and skills reports nothing."""
+    assert _instruction_problems(agents) == []
+
+
+def test_agents_file_needs_its_stub(agents):
+    """Claude Code finds a nested area file only through the CLAUDE.md beside it."""
+    (agents / "libs/CLAUDE.md").unlink()
+    assert _instruction_problems(agents) == [
+        "libs/AGENTS.md: no CLAUDE.md stub beside it"
+    ]
+
+
+def test_stub_needs_its_agents_file(agents):
+    """A stub pointing at nothing is a dangling import."""
+    (agents / "services").mkdir()
+    (agents / "services/CLAUDE.md").write_text(STUB)
+    assert "services/CLAUDE.md: no AGENTS.md beside it" in _instruction_problems(agents)
+
+
+def test_missing_copilot_stub(agents):
+    """The root set owes Copilot its one pointer."""
+    (agents / ".github/copilot-instructions.md").unlink()
+    problems = _instruction_problems(agents)
+    assert problems == [
+        ".github/copilot-instructions.md: missing; Copilot has no pointer to AGENTS.md"
+    ]
+
+
+@pytest.mark.parametrize(
+    "stub,expected",
+    [
+        ("", "the stub is empty"),
+        ("# Claude\n\nSee AGENTS.md.\n", "the first line must be"),
+        (STUB + "\n## More\n\nRules.\n", "carries one heading, not 2"),
+        (STUB + "\n- Prefer minimal diffs\n", "carries no content of its own"),
+        (STUB + "\n@docs/style.md\n", "carries no content of its own"),
+        (STUB + "\nOne.\nTwo.\nThree.\nFour.\n", "the stub is 7 lines"),
+    ],
+)
+def test_stub_carries_nothing_of_its_own(agents, stub, expected):
+    """Anything beyond the import, a heading and a sentence belongs in the AGENTS.md."""
+    (agents / "libs/CLAUDE.md").write_text(stub)
+    problems = _instruction_problems(agents)
+    assert any(expected in p for p in problems), problems
+
+
+def test_orphan_instruction_paths(agents):
+    """An instruction file no tool reads is worse than none: it looks maintained."""
+    (agents / "docs/epics/.copilot").mkdir()
+    (agents / "docs/epics/.copilot/instructions.md").write_text("Write epics.\n")
+    (agents / ".cursorrules").write_text("Be brief.\n")
+    assert _instruction_problems(agents) == [
+        ".cursorrules: an instruction file at a path no tool reads",
+        "docs/epics/.copilot/instructions.md: an instruction file at a path no tool reads",
+    ]
+
+
+def test_skill_outside_the_standard_path(agents):
+    """Only `.agents/skills/` is read by every tool, so that is where a skill lives."""
+    (agents / "libs/.claude/skills/qa").mkdir(parents=True)
+    (agents / "libs/.claude/skills/qa/SKILL.md").write_text("---\nname: qa\n---\n")
+    assert _instruction_problems(agents) == [
+        "libs/.claude/skills/qa/SKILL.md: a skill belongs under .agents/skills/<name>/"
+    ]
