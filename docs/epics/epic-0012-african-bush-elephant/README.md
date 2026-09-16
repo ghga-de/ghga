@@ -1,4 +1,5 @@
 # Metadata Submission via Data Portal UI (African Bush Elephant)
+**Epic Type:** Implementation Epic
 
 ## The Scope
 

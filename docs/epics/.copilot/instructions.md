@@ -20,7 +20,9 @@ There are two template directories:
 - `epic-template-exploratory` for exploratory epics
 - `epic-template-implementation` for implementation epics
 
-The format and content of the technical specification are different depending on the epic type (exploratory or implementation). The structure of the documentation should follow these templates.
+The format and content of the technical specification are different depending on the epic type. The structure of the documentation should follow these templates; an epic that is half exploration and half implementation follows whichever fits better.
+
+The three epic types are `Exploratory Epic`, `Implementation Epic` and `Exploration and Implementation Epic`. Every specification names its own on an `**Epic Type:**` line below the heading, and `just docs-check` rejects anything else.
 
 When creating new epics, always follow the structure of the respective template files in this directory and make sure to use a unique code name:
 

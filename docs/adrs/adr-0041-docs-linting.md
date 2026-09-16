@@ -6,25 +6,25 @@ amended: 2026-09-16
 related: [ADR-0036, ADR-0040]
 ---
 
-# ADR-0041 — A pre-commit check for ADRs
+# ADR-0041 — A pre-commit check for ADRs and epics
 
 ## Summary
 
 In the context of **ADRs with YAML frontmatter and a generated index
-([ADR-0040](adr-0040-adr-frontmatter.md))**
+([ADR-0040](adr-0040-adr-frontmatter.md)), and epics with a name and layout rule**
 
-facing **rules for fields, headings and references that only review enforces, and ADR
+facing **rules for fields, headings, shape and references that only review enforces, and
 references across the tree that break when files move**
 
 we decided for **a script in `scripts/`, run by two repo-local pre-commit hooks: one
-checks the whole ADR set and regenerates the index when ADRs change, the other checks
-ADR references in the files of every commit**
+checks the ADR and epic sets and regenerates their indexes when either changes, the
+other checks references to both in the files of every commit**
 
 and neglected **markdownlint with a frontmatter schema, a schema check alone, a CI-only
 check, and ADR tools with their own format**
 
-to achieve **ADRs that follow the template, an index and references that cannot go
-stale, and the same result locally and in CI**
+to achieve **ADRs that follow the template, epics that follow their layout, indexes
+and references that cannot go stale, and the same result locally and in CI**
 
 accepting that **the checks are ours to maintain, and a rule change means changing both
 the script and the writing style**.
@@ -43,14 +43,19 @@ ADR-0040 makes the header machine-readable, which turns most of these rules into
 Hook tools come from the lockfiles, and CI's `hygiene` job runs every hook over the
 whole tree ([ADR-0036](adr-0036-pre-commit-hooks.md)).
 
+**Amended 2026-09-16:** the epics were renamed and reshaped the same way, so they gained
+rules worth checking and an index that a hand-run script kept
+([`docs/epics/README.md`](../epics/README.md)). One script covers both, and it is
+`scripts/docs_check.py`.
+
 ### Decision
 
-A script in `scripts/` checks the ADRs, run through `uv run` by two `repo: local`
-hooks, and by hand through a `just` recipe:
+`scripts/docs_check.py` checks the ADRs and the epics, run through `uv run` by two
+`repo: local` hooks, and by hand through `just docs-check`:
 
-- **The set hook** runs when a commit touches `docs/adrs/` or `docs/README.md`. It
-  checks the whole set, since most rules span files, and references across the tree,
-  since removing or renumbering an ADR can break any of them.
+- **The set hook** runs when a commit touches `docs/adrs/`, `docs/epics/` or
+  `docs/README.md`. It checks both sets, since most rules span files, and references
+  across the tree, since removing or renumbering an ADR can break any of them.
 - **The reference hook** runs on every commit, and checks references only in the
   committed files. A new reference can appear in any file, and grepping the staged
   files keeps the cost to the `uv run` startup.
@@ -69,11 +74,17 @@ Together they fail when:
 - **Supersession** is one-sided: `superseded-by` needs status `superseded` and a
   matching `supersedes` in the other ADR, and the reverse.
 - **A reference dangles:** an `ADR-NNNN` mention, including compound forms such as
-  `ADR-0028/0035`, or a link into `docs/adrs/`, in any tracked text file, names an ADR
-  that does not exist.
+  `ADR-0028/0035`, or a link into `docs/adrs/` or `docs/epics/`, in any tracked text
+  file, names an ADR or epic that does not exist.
+- **An epic name, shape or header is wrong:** the name is not `epic-NNNN-kebab-case`, a
+  number is taken twice, the first heading is not `# Description (Code Name)`, the
+  `**Epic Type:**` line is missing or names something outside the three types, or a
+  directory holds no `README.md` — or nothing besides it, where a single file is the
+  shape.
 
-The set hook also regenerates the index in `docs/README.md` and fails when that changed
-the file, as the whitespace fixers do, so the fix is to stage the result.
+The set hook also regenerates the ADR index in `docs/README.md` and the epic index in
+`docs/epics/README.md`, and fails when that changed a file, as the whitespace fixers do,
+so the fix is to stage the result. It replaces the hand-run `docs/epics/create_toc.py`.
 
 The script has unit tests in `scripts/tests/`. Prose rules, such as length and the
 wording of the Summary, stay with review.
@@ -87,8 +98,8 @@ wording of the Summary, stay with review.
   ADRs pays about 0.7 seconds, most of it for the scan of the tree.
 - A new field, status or tag means changing the writing style and the script in the
   same pull request.
-- Epics are checked only for their ADR references. If their format gets standardised,
-  the same script can check it.
+- The epic layout is enforced, not just written down: a directory means an epic has
+  supporting files, so the listing stays readable as epics accumulate.
 - The template is checked for its headings only, since its values are placeholders.
 
 ### Alternatives
@@ -103,3 +114,5 @@ wording of the Summary, stay with review.
   it locally is small.
 - **adr-tools or log4brains.** Each brings its own file format and commands, and neither
   checks references from outside the ADR directory.
+- **A separate checker per document kind.** Two scripts and four hooks for one set of
+  rules about names, links and generated indexes; the cost is one file, not two.

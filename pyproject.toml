@@ -23,7 +23,7 @@ dev = [
     "ruff>=0.15.13",
     "httpx>=0.28.1",
     "tomli_w>=1.2",
-    "pyyaml>=6",  # scripts/adr_check.py reads ADR frontmatter
+    "pyyaml>=6",  # scripts/docs_check.py reads ADR frontmatter
     # per-member test deps recovered from the dropped lock/requirements-dev.in files.
     # testcontainers is needed by hexkit's provider testutils across most suites; make it a
     # first-class dev dep so container tests fail on the Docker daemon (not on import).

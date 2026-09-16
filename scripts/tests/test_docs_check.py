@@ -1,4 +1,4 @@
-"""Tests for adr_check.py: the per-file rules, supersession, references and the index."""
+"""Tests for docs_check.py: the ADR rules, the epic shape, references and the indexes."""
 
 import subprocess
 import sys
@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import adr_check
+import docs_check
 
 BODY = """
 ## Summary
@@ -32,9 +32,13 @@ def _adr(number: str, title: str = "A decision", fields: str = "", body: str = B
     return f"---\n{meta}---\n\n# ADR-{number} — {title}\n{body}"
 
 
+def _epic(title: str, code_name: str, kind: str = "Implementation Epic"):
+    return f"# {title} ({code_name})\n**Epic Type:** {kind}\n"
+
+
 @pytest.fixture
 def repo(tmp_path):
-    """A git repo with two valid ADRs, a template and an empty index."""
+    """A git repo with two valid ADRs, two valid epics, and empty indexes."""
     adrs = tmp_path / "docs/adrs"
     adrs.mkdir(parents=True)
     (adrs / "adr-template.md").write_text("# ADR-NNNN — {Title}\n" + BODY)
@@ -43,12 +47,24 @@ def repo(tmp_path):
     (tmp_path / "docs/README.md").write_text(
         "# Docs\n\n<!-- adr-index:start -->\n<!-- adr-index:end -->\n\nMore.\n"
     )
+    epics = tmp_path / "docs/epics"
+    epics.mkdir()
+    (epics / "epic-0001-blob-fish.md").write_text(_epic("Catalog", "Blob Fish"))
+    (epics / "epic-0002-wood-ant").mkdir()
+    (epics / "epic-0002-wood-ant/README.md").write_text(
+        _epic("Identity", "Wood Ant", "Exploratory Epic")
+    )
+    (epics / "epic-0002-wood-ant/images").mkdir()
+    (epics / "epic-0002-wood-ant/images/j.png").write_bytes(b"x")
+    (epics / "README.md").write_text(
+        "# Epics\n\n<!-- epic-index:start -->\n<!-- epic-index:end -->\n"
+    )
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     return tmp_path
 
 
 def _run(repo: Path, capsys, *argv: str) -> tuple[int, str]:
-    code = adr_check.main(list(argv), root=repo)
+    code = docs_check.main(list(argv), root=repo)
     return code, capsys.readouterr().err
 
 
@@ -56,17 +72,130 @@ def _stage(repo: Path) -> None:
     subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
 
 
-def test_valid_set_regenerates_index_once(repo, capsys):
-    """The first run writes the index and fails; the second finds nothing to do."""
+def test_valid_set_regenerates_indexes_once(repo, capsys):
+    """The first run writes both indexes and fails; the second finds nothing to do."""
     _stage(repo)
     code, out = _run(repo, capsys)
     assert code == 1
-    assert "regenerated the ADR index" in out
+    assert out.splitlines() == [
+        "docs/README.md: regenerated the index; stage the file",
+        "docs/epics/README.md: regenerated the index; stage the file",
+    ]
     readme = (repo / "docs/README.md").read_text()
     assert "| [0001](adrs/adr-0001-first.md) | First | accepted | docs |" in readme
     assert "0000" not in readme
     assert readme.endswith("<!-- adr-index:end -->\n\nMore.\n")
+    epics = (repo / "docs/epics/README.md").read_text()
+    assert "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n" in epics
+    assert "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n" in epics
     assert _run(repo, capsys) == (0, "")
+
+
+def test_epic_index_numbers_gaps(repo, capsys):
+    """A gap in the numbering switches the index from an ordered to a bullet list."""
+    epics = repo / "docs/epics"
+    (epics / "epic-0004-giraffe.md").write_text(_epic("Lifecycle", "Giraffe"))
+    _stage(repo)
+    _run(repo, capsys)
+    lines = (epics / "README.md").read_text()
+    assert "- (1) [Blob Fish](./epic-0001-blob-fish.md): Catalog\n" in lines
+    assert "- (4) [Giraffe](./epic-0004-giraffe.md): Lifecycle\n" in lines
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("epic-12-short.md", "name is not epic-NNNN-kebab-case"),
+        ("epic-0003-Bad_Name.md", "name is not epic-NNNN-kebab-case"),
+        ("epic-0001-blob-fish.md", "number 0001 is taken"),
+    ],
+)
+def test_epic_names(repo, name, expected):
+    (repo / "docs/epics" / name.replace("0001-blob-fish", "0001-other")).write_text(
+        _epic("X", "Y")
+    )
+    problems = docs_check.load_epics(repo)[1]
+    assert any(expected in p for p in problems), problems
+
+
+def test_epic_shape_must_earn_its_directory(repo):
+    """A directory with nothing but the spec should be a single file instead."""
+    epics = repo / "docs/epics"
+    (epics / "epic-0003-axolotl").mkdir()
+    (epics / "epic-0003-axolotl/README.md").write_text(_epic("Mocking", "Axolotl"))
+    (epics / "epic-0005-nautilus").mkdir()
+    (epics / "epic-0005-nautilus/notes.md").write_text("no spec here\n")
+    problems = docs_check.load_epics(repo)[1]
+    assert "epic-0003-axolotl: is a directory with nothing but README.md" in " ".join(
+        problems
+    )
+    assert any(
+        "epic-0005-nautilus: is a directory without README.md" in p for p in problems
+    )
+
+
+def test_epic_file_and_directory_collide(repo):
+    (repo / "docs/epics/epic-0001-blob-fish").mkdir()
+    (repo / "docs/epics/epic-0001-blob-fish/README.md").write_text(
+        _epic("C", "Blob Fish")
+    )
+    problems = docs_check.load_epics(repo)[1]
+    assert problems == ["epic-0001-blob-fish: exists as a file and as a directory"]
+
+
+def test_epic_title_must_name_the_code_name(repo):
+    (repo / "docs/epics/epic-0001-blob-fish.md").write_text(
+        "# Catalog\n**Epic Type:** Implementation Epic\n"
+    )
+    problems = docs_check.load_epics(repo)[1]
+    assert problems == [
+        "epic-0001-blob-fish: first heading must be '# Description (Code Name)'"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("", "no '**Epic Type:** ...' line"),
+        (
+            "**Epic Type:** Half Exploration",
+            "epic type 'Half Exploration' is not one of",
+        ),
+        ("**Epic Type:** implementation epic", "is not one of"),
+    ],
+)
+def test_epic_type(repo, line, expected):
+    (repo / "docs/epics/epic-0001-blob-fish.md").write_text(
+        f"# Catalog (Blob Fish)\n{line}\n"
+    )
+    problems = docs_check.load_epics(repo)[1]
+    assert any(expected in p for p in problems), problems
+
+
+def test_epic_type_allows_the_mixed_kind(repo):
+    (repo / "docs/epics/epic-0001-blob-fish.md").write_text(
+        _epic("Catalog", "Blob Fish", "Exploration and Implementation Epic")
+    )
+    assert docs_check.load_epics(repo)[1] == []
+
+
+def test_epic_links(repo, capsys):
+    (repo / "notes.md").write_text(
+        "[ok](docs/epics/epic-0001-blob-fish.md) [gone](docs/epics/epic-0009-gone.md)\n"
+    )
+    (repo / "docs/epics/epic-0001-blob-fish.md").write_text(
+        _epic("Catalog", "Blob Fish")
+        + "\n[ok](./epic-0002-wood-ant/README.md) [x](./epic-0009-gone.md)\n"
+    )
+    code, out = _run(
+        repo, capsys, "--refs", "notes.md", "docs/epics/epic-0001-blob-fish.md"
+    )
+    assert code == 1
+    assert out.splitlines() == [
+        "notes.md:1: link to docs/epics/epic-0009-gone.md, which does not exist",
+        "docs/epics/epic-0001-blob-fish.md:4: link to "
+        "docs/epics/epic-0009-gone.md, which does not exist",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -90,7 +219,7 @@ def test_valid_set_regenerates_index_once(repo, capsys):
 )
 def test_frontmatter_rules(repo, fields, expected):
     (repo / "docs/adrs/adr-0001-first.md").write_text(_adr("0001", "First", fields))
-    _, problems = adr_check.load_adrs(repo)
+    _, problems = docs_check.load_adrs(repo)
     assert any(expected in p for p in problems), problems
 
 
@@ -99,7 +228,7 @@ def test_file_name_title_and_duplicates(repo):
     (adrs / "0003_bad.md").write_text(_adr("0003"))
     (adrs / "adr-0002-again.md").write_text(_adr("0002"))
     (adrs / "adr-0004-wrong-number.md").write_text(_adr("0005"))
-    _, problems = adr_check.load_adrs(repo)
+    _, problems = docs_check.load_adrs(repo)
     assert any("0003_bad.md: file name" in p for p in problems)
     assert any("number 0002 is taken" in p for p in problems)
     assert any("adr-0004-wrong-number.md: first line" in p for p in problems)
@@ -112,7 +241,7 @@ def test_headings_out_of_order_and_extra_level_two(repo):
     (repo / "docs/adrs/adr-0001-first.md").write_text(_adr("0001", body=swapped))
     extra = BODY + "\n### Further\n\n## Appendix\n"
     (repo / "docs/adrs/adr-0002-second.md").write_text(_adr("0002", body=extra))
-    _, problems = adr_check.load_adrs(repo)
+    _, problems = docs_check.load_adrs(repo)
     assert any(p.startswith("adr-0001-first.md: headings") for p in problems)
     assert any("'## Appendix'" in p for p in problems)
     assert not any("Further" in p for p in problems)
@@ -123,7 +252,7 @@ def test_supersession_must_be_symmetric(repo):
     (repo / "docs/adrs/adr-0001-first.md").write_text(
         _adr("0001", fields=superseded + "superseded-by: [ADR-0002]\n")
     )
-    _, problems = adr_check.load_adrs(repo)
+    _, problems = docs_check.load_adrs(repo)
     assert problems == [
         "adr-0001-first.md: superseded by ADR-0002, which lacks supersedes: [ADR-0001]"
     ]
@@ -134,14 +263,14 @@ def test_supersession_must_be_symmetric(repo):
             "supersedes: [ADR-0001]\n",
         )
     )
-    assert adr_check.load_adrs(repo)[1] == []
+    assert docs_check.load_adrs(repo)[1] == []
 
 
 def test_superseded_status_needs_superseded_by(repo):
     (repo / "docs/adrs/adr-0001-first.md").write_text(
         _adr("0001", fields="status: superseded\ndate: 2026-09-15\ntags: [docs]\n")
     )
-    assert adr_check.load_adrs(repo)[1] == [
+    assert docs_check.load_adrs(repo)[1] == [
         "adr-0001-first.md: status superseded needs superseded-by"
     ]
 

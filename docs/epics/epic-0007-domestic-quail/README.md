@@ -1,5 +1,5 @@
 # Pilot Study for 3-Hex Chassis Lib (Domestic Quail)
-**Epic Type:** Half Exploration / Half Implementation
+**Epic Type:** Exploration and Implementation Epic
 
 **Attention: Please do not put any confidential content here.**
 
