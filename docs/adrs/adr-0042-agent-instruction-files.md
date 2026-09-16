@@ -34,12 +34,12 @@ workaround to find them**.
 
 [AGENTS.md](https://agents.md) is an open format for instructing coding agents, a README
 for agents, stewarded by the Agentic AI Foundation under the Linux Foundation and read
-by Codex, Copilot, Cursor, Zed, Aider and some twenty more. It doesn't prescribe any particular headings,
-and an agent reads the nearest file in the directory tree, so a subproject ships its own
-and it takes precedence. That nesting rule makes the layering below a property of the
-format rather than a local invention. Task procedures have a standard of their own,
-[Agent Skills](https://agentskills.io) — a folder with a `SKILL.md`, read by some forty
-tools from `.agents/skills/`, and the shape our existing skills already have.
+by Codex, Copilot, Cursor, Zed, Aider and some twenty more. It doesn't prescribe any
+particular headings, and an agent reads the nearest file in the directory tree, so a
+subproject ships its own and it takes precedence. That nesting rule makes the layering
+below a property of the format rather than a local invention. Task procedures have a
+standard of their own, [Agent Skills](https://agentskills.io) — a folder with a
+`SKILL.md` under `.agents/skills/`.
 
 The repo carries three `AGENTS.md` files, each with a `CLAUDE.md` beside it. They came
 in with the repositories they belong to, which supported coding agents to different
@@ -58,14 +58,12 @@ there at all.
 Size and reachability decide whether a file is used.
 [Measurements published by Augment Code](https://www.augmentcode.com/blog/how-to-write-good-agents-dot-md-files)
 put the useful size at 100 to 150 lines with a few referenced documents beside it, and
-rank discovery: the `AGENTS.md` itself is read every session, a document it links in
-about nine of ten, a directory README in eight, a nested README in four, and a document
-nothing references in fewer than one. Our root file is 194 lines and the data portal's
-264.
+find that a document no `AGENTS.md` references is read in fewer than one session in
+ten. Our root file is 194 lines and the data portal's 264.
 
 Loading is the other force. The root `CLAUDE.md` imports the [style](../style.md) and
 [conventions](../conventions.md) with `@`, so about 4200 words enter every session
-whether or not it writes an ADR — and `@` is Claude syntax that other agents read as
+whether or not it writes an ADR — but `@` is Claude syntax that other agents read as
 noise.
 
 ### Decision

@@ -18,6 +18,8 @@ titles follow the [conventions](conventions.md#names-branches-prs-commits), deci
   order they need it, and stop.
 - **Plain language.** Short sentences, concrete words, no hype or filler ("robust",
   "seamless", "leverage", "it's worth noting").
+- **Every prohibition names the alternative.** "Don't X" leaves the reader guessing;
+  say what to do instead.
 - **Link instead of restating.** A rule lives in one place — an ADR, the conventions,
   this file — and everything else points to it.
 - **Headings carry no trailing punctuation.** A heading is a label, not a sentence. A

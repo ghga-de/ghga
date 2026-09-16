@@ -80,22 +80,21 @@ file governs agents and is to be kept current.
 ## Placement
 
 - A passage belongs in the root file only if it holds for every area. Anything narrower
-  moves down; anything needed only while doing one named task moves into a skill.
-- Each move leaves a line pointing to where it went.
+  moves down, with a pointer left where an agent would still look for it; anything
+  needed only while doing one named task moves into a skill.
 - Aim at 100 to 150 lines per file. Past that, agents read it less reliably and every
-  session pays for it.
+  line dilutes the ones around it.
 - Everything an agent needs is reachable from an `AGENTS.md`. A document nothing links
   is read in under a tenth of sessions, so a new one either earns a pointer or is not
   worth writing.
-- State every prohibition with the thing to do instead.
 
 ## Skills
 
-Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, where they cost a
-name and a description until they are invoked. The folder-with-a-`SKILL.md` shape is the
-[Agent Skills](https://agentskills.io) standard — open, stewarded like `AGENTS.md`, and
-read by some forty tools; `.agents/skills/` is its tool-agnostic location, and our own
-dependencies ship skills there.
+Reusable task procedures live in `.agents/skills/<name>/SKILL.md`. Only a name and a
+description load until the skill is invoked. The folder-with-a-`SKILL.md` shape is the
+[Agent Skills](https://agentskills.io) standard — open and stewarded like `AGENTS.md`;
+`.agents/skills/` is its tool-agnostic location, and our own dependencies ship skills
+there.
 
 Claude Code reads `.claude/skills/` only, so each skill gets a symlink,
 `.claude/skills/<name>` → `../../.agents/skills/<name>`, which its documentation
@@ -125,7 +124,7 @@ silent edit in the middle of another task.
 Two limits, because the instinct is always to add a line:
 
 - **An addition says what it replaces.** The file has a size budget, and a rule earned
-  in one session is rarely worth the tokens it costs in every later one.
+  in one session dilutes the ones that hold in all of them.
 - **No war stories.** "This once broke X" belongs in the commit message; the file states
   the rule and, where it is not obvious, why it holds — the same test the
   [writing style](style.md) applies to comments.
