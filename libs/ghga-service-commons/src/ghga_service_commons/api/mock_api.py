@@ -416,7 +416,14 @@ class MockedApis:
         )
 
     def __enter__(self) -> MockedApis:
-        """Install the mocks when used as context manager."""
+        """Install the mocks when used as context manager.
+
+        State is NOT cleared on entry. Call counts, `unmatched` and any handler the
+        test assigned all survive into the next block, so reusing one `MockedApis`
+        across tests carries the earlier test's record with it. Call `reset()`
+        yourself, or build a fresh set per test - resetting here would wipe handlers
+        a test deliberately configured before entering.
+        """
         self.install()
         return self
 
