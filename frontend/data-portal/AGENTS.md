@@ -6,8 +6,9 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 
 - `AGENTS.md` is the canonical AI entrypoint for this repository.
 - `AGENTS.md` may reference additional project documentation (for example `README.md` and files in `docs/`) that is also authoritative and intended for both human developers and agents.
-- Keep `.github/copilot-instructions.md` and `CLAUDE.md` short and focused on tool-specific notes that link back to this file.
+- `CLAUDE.md` beside this file is a stub pointing here and holds nothing else; Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
 - Avoid duplicating AI-specific guidance across files to prevent instruction drift; prefer linking from `AGENTS.md`.
+- [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
 
 ## Prime Directive
 
@@ -163,12 +164,17 @@ For layout/visual tasks on authenticated pages, always ask the user to open the 
 - Consult `context7` when external API behavior or recommended usage is uncertain, especially for version-sensitive questions.
 - If external guidance conflicts with repository conventions, prioritize `AGENTS.md`, `README.md`, relevant files in `docs/`, and existing code patterns in this repository.
 
+Claude Code and Copilot read different MCP config files, so this directory carries both:
+
+- `.mcp.json` (key `mcpServers`) is Claude Code's config; `.vscode/mcp.json` (key `servers`) is Copilot's. They are kept separate on purpose — do not try to reconcile them into one.
+- `.mcp.json` lists only `angular-cli`. `context7` is omitted there because Claude Code already has Context7 via the claude.ai-hosted connector, so the npx server would be redundant. (Copilot has no such connector, so `.vscode/mcp.json` lists both.)
+
 ## AI agent integration
 
 - `AGENTS.md` is the shared instruction source for all coding agents in this repository.
-- GitHub Copilot in VS Code consumes repository guidance from `.github/copilot-instructions.md`, agent instruction files such as `AGENTS.md`, and MCP servers configured in `.vscode/mcp.json`.
+- GitHub Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`, and its MCP servers in `.vscode/mcp.json`.
 - Claude Code consumes project guidance from `CLAUDE.md`; keep `CLAUDE.md` importing `AGENTS.md` so Claude reads the same shared rules.
-- For reusable project workflows that should work across both Copilot agent mode and Claude Code, prefer project skills in `.claude/skills/`.
+- Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, symlinked into `.claude/skills/` until Claude Code reads the standard path.
 - Keep always-on rules in `AGENTS.md`; move longer task procedures into skills so they only load when relevant.
 
 ## Execution policy
