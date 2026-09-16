@@ -598,10 +598,17 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
     rather than having to narrow to the sync or the async half.
     """
 
-    def __init__(self, mocks: MockedApis, live_transport: Any = None) -> None:
+    def __init__(
+        self,
+        mocks: MockedApis,
+        live_transport: httpx2.BaseTransport | httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
         """Answer from `mocks`, sending what they do not serve to `live_transport`."""
         self._mocks = mocks
         self._live_transport = live_transport
+        self._transport_is_async = isinstance(
+            self._live_transport, httpx2.AsyncBaseTransport
+        )
 
     def _refuse(self, request: httpx2.Request) -> httpx2.Response:
         """Explain that a permitted request has nowhere to go from here."""
@@ -614,10 +621,12 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
 
     def handle_request(self, request: httpx2.Request) -> httpx2.Response:
         """Answer a request made by a synchronous client."""
+        if self._transport_is_async:
+            raise TypeError("Request is sync, but transport is async.")
         return self._mocks._answered(
             request,
             lambda: (
-                self._live_transport.handle_request(request)
+                self._live_transport.handle_request(request)  # type: ignore
                 if self._live_transport is not None
                 else self._refuse(request)
             ),
@@ -625,25 +634,27 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Answer a request made by an asynchronous client."""
+        if not self._transport_is_async:
+            raise TypeError("Request is async, but transport is sync.")
         await request.aread()
 
         async def unmocked() -> httpx2.Response:
             """Send the request on, if there is anything to send it with."""
             if self._live_transport is None:
                 return self._refuse(request)
-            return await self._live_transport.handle_async_request(request)
+            return await self._live_transport.handle_async_request(request)  # type: ignore
 
         return await self._mocks._answered_async(request, unmocked)
 
     def close(self) -> None:
         """Close the transport underneath, which this one was handed to close."""
         if self._live_transport is not None:
-            self._live_transport.close()
+            self._live_transport.close()  # type: ignore
 
     async def aclose(self) -> None:
         """Close the transport underneath, the way an asynchronous client asks."""
         if self._live_transport is not None:
-            await self._live_transport.aclose()
+            await self._live_transport.aclose()  # type: ignore
 
 
 def _compiled(path: str) -> re.Pattern[str]:
