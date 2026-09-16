@@ -106,7 +106,7 @@ Status values, the set [MADR](https://adr.github.io/madr/) uses:
 
 Tags, for finding ADRs by topic: `backend`, `frontend`, `data`, `events`, `security`,
 `build`, `release`, `deploy`, `testing`, `docs` and `process`. Extend this list before
-using a new tag, and `TAGS` in `scripts/adr_check.py` with it.
+using a new tag, and `TAGS` in `scripts/docs_check.py` with it.
 
 The status tracks the decision, not its implementation. An ADR does not discuss whether
 it has been carried out, except as a side note where a reader needs it.
@@ -117,6 +117,7 @@ passage it affects, starting with `**Amended YYYY-MM-DD:**`. Change that is larg
 enough to replace the decision gets a new ADR that supersedes the old one.
 
 The index in [`docs/README.md`](README.md#decisions-adrs) is generated from the
-frontmatter. `scripts/adr_check.py` checks these rules and every ADR reference in the
-tree, and regenerates the index ([ADR-0041](adrs/adr-0041-adr-linting.md)). It runs as a
-pre-commit hook and as `just adrs`.
+frontmatter. `scripts/docs_check.py` checks these rules and every ADR reference in the
+tree, and regenerates the index ([ADR-0041](adrs/adr-0041-docs-linting.md)). The same
+script checks the epics and their index; it runs as a pre-commit hook and as
+`just docs-check`.

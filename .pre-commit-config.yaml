@@ -100,24 +100,25 @@ repos:
         # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
         entry: shellcheck -x -P SCRIPTDIR
 
-      # ---- ADRs (ADR-0041) ----------------------------------------------------------------
-      # The set hook checks the whole set and the references across the tree, since most
-      # rules span files; it regenerates the index and fails when that changed it. The
-      # reference hook checks only the committed files, so every commit pays little.
-      - id: adr-set
-        name: ADR set and index
+      # ---- ADRs and epics (ADR-0041) --------------------------------------------------------
+      # The set hook checks both sets and the references across the tree, since most
+      # rules span files; it regenerates the two indexes and fails when that changed a
+      # file. The reference hook checks only the committed files, so every commit pays
+      # little.
+      - id: docs-set
+        name: ADR and epic sets and indexes
         language: system
-        files: ^docs/(adrs/|README\.md$)
+        files: ^docs/(adrs/|epics/|README\.md$)
         pass_filenames: false
         require_serial: true
-        entry: uv run python scripts/adr_check.py
+        entry: uv run python scripts/docs_check.py
 
-      - id: adr-refs
-        name: ADR references
+      - id: docs-refs
+        name: ADR and epic references
         language: system
         types: [text]
         require_serial: true
-        entry: uv run python scripts/adr_check.py --refs
+        entry: uv run python scripts/docs_check.py --refs
 
       # ---- Front end (data-portal) -----------------------------------------------------
       # Both tools REQUIRE cwd = frontend/data-portal: eslint-plugin-boundaries' settings and

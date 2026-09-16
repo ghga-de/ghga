@@ -34,7 +34,7 @@ charts and runs its integration tests on Kubernetes.
 ## Decisions (ADRs)
 Write new ADRs from the [template](adrs/adr-template.md), following the
 [writing style](style.md#architecture-decision-records). The table is generated from each
-ADR's frontmatter by `just adrs`; do not edit it by hand.
+ADR's frontmatter by `just docs-check`; do not edit it by hand.
 
 <!-- adr-index:start -->
 | # | Title | Status | Tags |
@@ -79,7 +79,7 @@ ADR's frontmatter by `just adrs`; do not edit it by hand.
 | [0038](adrs/adr-0038-branching-strategy.md) | Branching, merging and naming | accepted | process, release |
 | [0039](adrs/adr-0039-docs-lane-github-pages.md) | One documentation site for the monorepo | accepted | docs, release |
 | [0040](adrs/adr-0040-adr-frontmatter.md) | YAML frontmatter for ADRs | accepted | docs, process |
-| [0041](adrs/adr-0041-adr-linting.md) | A pre-commit check for ADRs | accepted | docs, process |
+| [0041](adrs/adr-0041-docs-linting.md) | A pre-commit check for ADRs and epics | accepted | docs, process |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)

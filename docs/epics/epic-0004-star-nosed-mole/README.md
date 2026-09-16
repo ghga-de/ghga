@@ -1,4 +1,5 @@
 # Up-/Download Client & Production POC (Star-Nosed Mole)
+**Epic Type:** Implementation Epic
 
 ## Scope:
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/fAFzCQ

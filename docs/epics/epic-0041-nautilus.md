@@ -1,5 +1,5 @@
 # Refactoring Priorities (Nautilus)
-**Epic Type:** Implementation/Exploratory Epic
+**Epic Type:** Exploration and Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).

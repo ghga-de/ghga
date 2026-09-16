@@ -1,4 +1,5 @@
 # Metadata Submission via REST API (Horseshoe Bat)
+**Epic Type:** Implementation Epic
 
 ## The Scope
 

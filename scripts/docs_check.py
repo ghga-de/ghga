@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
-"""Check the ADRs in docs/adrs/ and the ADR references across the tree (ADR-0041).
+"""Check the ADRs and the epics, and the references to them, across the tree (ADR-0041).
 
-Without arguments it checks the whole set: file names, frontmatter, headings,
-supersession, and every ADR reference in the tracked text files. It then regenerates
-the index in docs/README.md and fails when that changed the file, so the fix is to
-stage the result. With `--refs` it checks only the references in the files given.
+Without arguments it checks both sets: ADR file names, frontmatter, headings and
+supersession, epic names and shape, and every reference in the tracked text files. It
+then regenerates the ADR index in docs/README.md and the epic index in
+docs/epics/README.md, and fails when that changed a file, so the fix is to stage the
+result. With `--refs` it checks only the references in the files given.
 
-The rules for fields, statuses and tags are the ones in docs/style.md; a change to one
-needs a change to the other.
+The rules are the ones in docs/style.md and docs/epics/README.md; a change to one needs
+a change to the other.
 
 Usage:
-    uv run python scripts/adr_check.py
-    uv run python scripts/adr_check.py --refs README.md docs/conventions.md
+    uv run python scripts/docs_check.py
+    uv run python scripts/docs_check.py --refs README.md docs/conventions.md
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime
+import os
 import pathlib
 import re
 import subprocess
@@ -28,8 +30,11 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ADR_DIR = "docs/adrs"
-INDEX_FILE = "docs/README.md"
+ADR_INDEX_FILE = "docs/README.md"
 TEMPLATE = "adr-template.md"
+EPIC_DIR = "docs/epics"
+EPIC_INDEX_FILE = "docs/epics/README.md"
+EPIC_SPEC = "README.md"
 
 STATUSES = ("proposed", "accepted", "rejected", "deprecated", "superseded")
 TAGS = (
@@ -70,11 +75,28 @@ REFERENCE_TAIL = re.compile(r"[/\u2013](\d+)")
 PATH_LINK = re.compile(r"\badrs/(adr-\d{4}-[a-z0-9-]+\.md)")
 SIBLING_LINK = re.compile(r"\]\((adr-\d{4}-[a-z0-9-]+\.md)")
 
-INDEX_START = "<!-- adr-index:start -->"
-INDEX_END = "<!-- adr-index:end -->"
+# An epic is a single Markdown file, or a directory holding README.md next to the
+# supporting files that earned it the directory (docs/epics/README.md).
+EPIC_NAME = re.compile(r"^epic-(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*$")
+EPIC_TEMPLATE = re.compile(r"^epic-template-(?:exploratory|implementation)$")
+EPIC_TITLE = re.compile(r"^# (\S.*\S) \(([^()]+)\)$")
+EPIC_TYPE = re.compile(r"^\*\*Epic Type:\*\* (.+)$")
+EPIC_TYPES = (
+    "Exploratory Epic",
+    "Implementation Epic",
+    "Exploration and Implementation Epic",
+)
+# A link to an epic from inside docs/epics/, and one from anywhere else.
+EPIC_SIBLING_LINK = re.compile(r"\]\((\.{1,2}/epic-[a-z0-9-]+(?:/README)?\.md)\)")
+EPIC_PATH_LINK = re.compile(r"\bepics/(epic-[a-z0-9-]+(?:/README)?\.md)")
+
+ADR_INDEX_START = "<!-- adr-index:start -->"
+ADR_INDEX_END = "<!-- adr-index:end -->"
+EPIC_INDEX_START = "<!-- epic-index:start -->"
+EPIC_INDEX_END = "<!-- epic-index:end -->"
 
 # Test data that holds broken ADRs and references on purpose.
-REF_EXCLUDED = ("scripts/tests/test_adr_check.py",)
+REF_EXCLUDED = ("scripts/tests/test_docs_check.py",)
 
 
 @dataclass
@@ -90,6 +112,18 @@ class Adr:
         """Return the ADR numbers a reference field names, e.g. `["0024"]`."""
         values = self.meta.get(key) or []
         return [m.group(1) for v in values if (m := REF_VALUE.match(str(v)))]
+
+
+@dataclass
+class Epic:
+    """One epic, as a single Markdown file or as a directory holding README.md."""
+
+    name: str
+    number: int
+    path: str  # the spec, relative to docs/epics/
+    title: str = ""
+    code_name: str = ""
+    type: str = ""
 
 
 def _split(text: str) -> tuple[dict | None, str]:
@@ -261,13 +295,13 @@ def check_references(
             text = (root / rel).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        if "ADR-" not in text and "adrs/" not in text and not rel.startswith(ADR_DIR):
-            continue
         in_adr_dir = rel.startswith(f"{ADR_DIR}/")
+        if not (in_adr_dir or any(term in text for term in ("ADR-", "adrs/", "epic-"))):
+            continue
         for lineno, line in enumerate(text.splitlines(), 1):
-            problems += _line_problems(
-                f"{rel}:{lineno}", line, in_adr_dir, adr_names, numbers
-            )
+            where = f"{rel}:{lineno}"
+            problems += _line_problems(where, line, in_adr_dir, adr_names, numbers)
+            problems += _epic_link_problems(where, line, rel, root)
     return problems
 
 
@@ -293,6 +327,118 @@ def _line_problems(
     return problems
 
 
+def _epic_spec(base: pathlib.Path, entry: pathlib.Path) -> tuple[str | None, list[str]]:
+    """Return the epic's spec path relative to docs/epics/, and the shape problems."""
+    name = entry.name
+    if entry.is_file():
+        return name, []
+    spec = entry / EPIC_SPEC
+    problems = []
+    if not spec.exists():
+        problems.append(f"{name}: is a directory without {EPIC_SPEC}")
+    if not any(p.name != EPIC_SPEC for p in entry.iterdir()):
+        problems.append(
+            f"{name}: is a directory with nothing but {EPIC_SPEC}; make it {name}.md"
+        )
+    return (f"{name}/{EPIC_SPEC}" if not problems else None), problems
+
+
+def load_epics(root: pathlib.Path) -> tuple[list[Epic], list[str]]:
+    """Parse every epic and check the names, the shape and the titles.
+
+    Returns:
+        The epics in number order, the templates excluded, and the problems found.
+    """
+    base = root / EPIC_DIR
+    epics: dict[int, Epic] = {}
+    problems: list[str] = []
+    for entry in sorted(base.iterdir()):
+        name = entry.name
+        if entry.is_file() and name.endswith(".md"):
+            name = name[: -len(".md")]
+        if not name.startswith("epic-"):
+            continue
+        if (base / name).exists() and (base / f"{name}.md").exists():
+            if entry.is_file():  # report the pair once
+                problems.append(f"{name}: exists as a file and as a directory")
+            continue
+        if EPIC_TEMPLATE.match(name):
+            problems += _epic_spec(base, entry)[1]
+            continue
+        match = EPIC_NAME.match(name)
+        if not match:
+            problems.append(f"{name}: name is not epic-NNNN-kebab-case")
+            continue
+        number = int(match.group(1))
+        if number in epics:
+            problems.append(
+                f"{name}: number {number:04d} is taken by {epics[number].name}"
+            )
+            continue
+        path, shape_problems = _epic_spec(base, entry)
+        problems += shape_problems
+        if path is None:
+            continue
+        epic = Epic(name, number, path)
+        epics[number] = epic
+        problems += _epic_header(base, epic)
+    return [epics[n] for n in sorted(epics)], problems
+
+
+def _epic_header(base: pathlib.Path, epic: Epic) -> list[str]:
+    """Fill in the epic's description, code name and type from its first two fields."""
+    lines = [
+        line.rstrip()
+        for line in (base / epic.path).read_text(encoding="utf-8").splitlines()
+    ]
+    problems = []
+    heading = next((line for line in lines if line.startswith("# ")), "")
+    match = EPIC_TITLE.match(heading)
+    if not match:
+        problems.append(
+            f"{epic.name}: first heading must be '# Description (Code Name)'"
+        )
+    else:
+        epic.title, epic.code_name = match.group(1), match.group(2).strip().title()
+    kind = next((m for line in lines if (m := EPIC_TYPE.match(line))), None)
+    if not kind:
+        problems.append(f"{epic.name}: no '**Epic Type:** ...' line")
+    elif kind.group(1) not in EPIC_TYPES:
+        problems.append(
+            f"{epic.name}: epic type '{kind.group(1)}' is not one of {EPIC_TYPES}"
+        )
+    else:
+        epic.type = kind.group(1)
+    return problems
+
+
+def render_epic_index(epics: list[Epic]) -> str:
+    """Render the epic index, one line per epic in number order."""
+    if not epics:
+        return ""
+    continuous = epics[-1].number - epics[0].number == len(epics) - 1
+    rows = []
+    for epic in epics:
+        link = f"[{epic.code_name}](./{epic.path})"
+        head = f"{epic.number}." if continuous else f"- ({epic.number})"
+        rows.append(f"{head} {link}: {epic.title}")
+    return "\n".join(rows) + "\n"
+
+
+def _epic_link_problems(
+    where: str, line: str, rel: str, root: pathlib.Path
+) -> list[str]:
+    """Report the links to epics in one line that resolve to nothing."""
+    base = (root / rel).parent
+    targets = [base / t for t in EPIC_SIBLING_LINK.findall(line)]
+    targets += [root / EPIC_DIR / t for t in EPIC_PATH_LINK.findall(line)]
+    return [
+        f"{where}: link to {os.path.relpath(path, root)}, which does not exist"
+        for path in targets
+        if not path.exists()
+    ]
+
+
 def render_index(adrs: dict[str, Adr]) -> str:
     """Render the index table, one row per ADR in number order."""
 
@@ -313,18 +459,33 @@ def render_index(adrs: dict[str, Adr]) -> str:
     return "\n".join(rows) + "\n"
 
 
-def update_index(text: str, table: str) -> str | None:
+def update_index(text: str, table: str, start_mark: str, end_mark: str) -> str | None:
     """Replace the table between the index markers; None when a marker is missing."""
-    start, end = text.find(INDEX_START), text.find(INDEX_END)
+    start, end = text.find(start_mark), text.find(end_mark)
     if start < 0 or end < start:
         return None
-    return f"{text[: start + len(INDEX_START)]}\n{table}{text[end:]}"
+    return f"{text[: start + len(start_mark)]}\n{table}{text[end:]}"
+
+
+def _regenerate(
+    root: pathlib.Path, rel: str, table: str, marks: tuple[str, str]
+) -> list[str]:
+    """Write the index between the markers; report when a marker or the staging is missing."""
+    path = root / rel
+    text = path.read_text(encoding="utf-8")
+    updated = update_index(text, table, *marks)
+    if updated is None:
+        return [f"{rel}: missing {marks[0]} or {marks[1]}"]
+    if updated == text:
+        return []
+    path.write_text(updated, encoding="utf-8")
+    return [f"{rel}: regenerated the index; stage the file"]
 
 
 def _tracked_files(root: pathlib.Path) -> list[str]:
-    """Return the tracked text files that could hold an ADR reference."""
+    """Return the tracked text files that could hold a reference to an ADR or an epic."""
     result = subprocess.run(
-        ["git", "grep", "-lzI", "-e", "ADR-", "-e", "adrs/"],
+        ["git", "grep", "-lzI", "-e", "ADR-", "-e", "adrs/", "-e", "epic-"],
         cwd=root,
         capture_output=True,
         text=True,
@@ -347,17 +508,20 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         problems = check_references(root, args.refs, adr_names)
     else:
         adrs, problems = load_adrs(root)
-        # sibling links inside docs/adrs/ need neither search term
+        epics, epic_problems = load_epics(root)
+        problems += epic_problems
+        # sibling links inside docs/adrs/ need none of the search terms
         paths = set(_tracked_files(root)) | {f"{ADR_DIR}/{n}" for n in adr_names}
         problems += check_references(root, sorted(paths), adr_names)
-        index_path = root / INDEX_FILE
-        text = index_path.read_text(encoding="utf-8")
-        updated = update_index(text, render_index(adrs))
-        if updated is None:
-            problems.append(f"{INDEX_FILE}: missing {INDEX_START} or {INDEX_END}")
-        elif updated != text:
-            index_path.write_text(updated, encoding="utf-8")
-            problems.append(f"{INDEX_FILE}: regenerated the ADR index; stage the file")
+        problems += _regenerate(
+            root, ADR_INDEX_FILE, render_index(adrs), (ADR_INDEX_START, ADR_INDEX_END)
+        )
+        problems += _regenerate(
+            root,
+            EPIC_INDEX_FILE,
+            render_epic_index(epics),
+            (EPIC_INDEX_START, EPIC_INDEX_END),
+        )
 
     for problem in problems:
         print(problem, file=sys.stderr)
