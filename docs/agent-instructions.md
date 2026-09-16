@@ -9,15 +9,15 @@ is in the [writing style](style.md), and what the format itself guarantees is at
 
 | File | Holds | Written for | Loaded |
 |---|---|---|---|
-| `AGENTS.md` | how we work here: placement, commands, execution policy, definition of done | agents first, humans keep it true | always, the root file plus the area in hand |
+| `AGENTS.md` | how we work here: placement, commands, execution policy, definition of done | agents first, but it binds people too | always, the root file plus the area in hand |
 | `README.md` | what the thing is, how to install and run it; published, so it stands alone | humans first, agents read it too | on demand |
 | `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves | both, written once | on demand, when a task touches them |
 | `.claude/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
 
-The reader decides the register. `AGENTS.md` instructs: it may assume the repo is open
-and a task is under way, and it says which command to run and what not to do. A README
-explains, to someone who may have neither. `docs/` argues a rule once for both, and a
-skill is a procedure no human would read end to end.
+The reader decides the register, not who the rules apply to. `AGENTS.md` instructs: it
+may assume the repo is open and a task under way, and it says which command to run and
+what not to do. A README explains, to someone who has neither. `docs/` argues a rule
+once for both, and a skill is a procedure no human would read end to end.
 
 A rule lives in one place. `docs/style.md` says *how* to write an ADR, a commit message
 or a comment; `AGENTS.md` says only *that* writing follows it, and when to go and read
@@ -96,6 +96,25 @@ holds procedures they can read as plain Markdown.
 A passage is a skill when it is only needed while doing one named task and runs to more
 than a couple of lines — writing an ADR, cutting a release, running the test bed,
 regenerating the charts. It stays in `AGENTS.md` when it changes how any task is done.
+
+## Keeping them true
+
+The rules in an `AGENTS.md` are the team's rules — branch names, test scoping, the
+definition of done — so people follow them too. Only the few that describe how an agent
+is to behave, such as not committing unless asked, apply to agents alone.
+
+An agent may improve the file it works under, and often should: it is the one that finds
+an instruction ambiguous, contradicted by the code, or followed to a wrong result. It
+proposes the change as a diff in a pull request, reviewed like any other, never as a
+silent edit in the middle of another task.
+
+Two limits, because the instinct is always to add a line:
+
+- **An addition says what it replaces.** The file has a size budget, and a rule earned
+  in one session is rarely worth the tokens it costs in every later one.
+- **No war stories.** "This once broke X" belongs in the commit message; the file states
+  the rule and, where it is not obvious, why it holds — the same test the
+  [writing style](style.md) applies to comments.
 
 ## Checks
 

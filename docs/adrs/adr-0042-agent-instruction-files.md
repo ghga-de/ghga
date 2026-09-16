@@ -85,7 +85,9 @@ The decision itself:
   its own; `docs/` the rules themselves, read when a task touches them; and
   `.claude/skills/` the steps of a recurring task, read when invoked. A rule lives in
   one of them, and the others link it. `AGENTS.md` is written for agents first and a
-  README for humans first, which sets the register of each.
+  README for humans first, which sets the register of each — not who is bound by it. The
+  rules in an `AGENTS.md` are the team's, and an agent changes them by proposing a diff
+  like any other.
 - **Placement follows the loading cost.** A passage belongs in the root file only if it
   holds for every area; anything narrower moves down, and anything needed only while
   doing one named task becomes a skill. Each file aims at 100 to 150 lines, and nothing
