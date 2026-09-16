@@ -9,22 +9,25 @@ titles follow the [conventions](conventions.md#names-branches-prs-commits), deci
 
 ## Writing
 
-- **Short and precise above all.** Walls of text do not get read. One exact sentence
-  beats three approximate ones; cut every sentence the reader would not miss. As a
-  default, keep paragraphs to 3 sentences, sentences to 25 words and pull request
-  descriptions to 3 paragraphs.
+- **Short and precise above all.** One exact sentence beats three approximate ones; cut
+  every sentence the reader would not miss. As a default, keep paragraphs to 3
+  sentences, sentences to 25 words and pull request descriptions to 3 paragraphs.
 - **Write for the reader in front of the text**: a reviewer with the diff open, a
-  developer reading the code now, someone scanning `git log`. Say what they need, in the
-  order they need it, and stop.
+  developer reading the code now, someone scanning `git log`. Assume fluent non-native
+  English and the vocabulary of computer science and biology, not that of other fields.
+  Say what they need, in the order they need it, and stop.
 - **Plain language.** Short sentences, concrete words, no hype or filler ("robust",
-  "seamless", "leverage", "it's worth noting").
+  "seamless", "leverage", "it's worth noting"). One word, one meaning: *register* reads
+  as a registry, not as a way of writing, so use the everyday word or say what you mean.
+  The word count is not the test: if you have to read your own sentence twice, split it.
+- **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the
+  same page"). Name the literal action instead.
 - **Every prohibition names the alternative.** "Don't X" leaves the reader guessing;
   say what to do instead.
 - **Link instead of restating.** A rule lives in one place — an ADR, the conventions,
   this file — and everything else points to it.
-- **Headings carry no trailing punctuation.** A heading is a label, not a sentence. A
-  colon belongs on the paragraph or bold lead-in that introduces a list, not on the
-  heading above it.
+- **Headings carry no trailing punctuation.** A heading is a label, not a sentence: a
+  colon belongs on the paragraph or bold lead-in introducing a list, not on the heading.
 - **Comments explain why, not history.** State why the code is the way it is, where the
   code does not show it. Incidents, dates and "this used to be X" belong in the commit
   message.
