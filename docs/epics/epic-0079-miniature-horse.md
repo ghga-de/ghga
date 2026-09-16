@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic seeks to perform two tasks in three different domains.  
 These domains are: accessibility, responsiveness, and semantics.
@@ -16,18 +16,18 @@ The first task of this epic relates to the overhaul of the data portal to improv
 
 The second task is that of creating a development document in a suitable location within the data portal repository (e.g. `./docs/semantics.md`) containing guidelines (viz. SOPs) and best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
 
-### Included/Required:
+### Included/Required
 
 - The data portal should be fully compliant with the European Accessibility Act (EAA, which also makes reference to EN 301 549), and the Web Content Accessibility Guidelines (WCAG).
 - The data portal should make full use of semantic tags and aria attributes whenever applicable, and should ensure the implementation of [ADR016](../adrs/adr-0016-semantic-web-technologies.md).
 - The data portal should implement responsiveness in a more standardised manner that nevertheless remains suited for the specific purpose of the elements to make responsive.
 - Developers should have available documentation and SOPs for best practices on the implementation of accessibility, responsiveness, and semantics, as well as for ensuring that any new features to be released are accessibility-compliant.
 
-### Optional:
+### Optional
 
 - Developers should have available a list of useful tools and extensions to better implement accessibility features.
 
-### Not included:
+### Not included
 
 - The development of our own accessibility standards; only best practices for implementing legally required and any additional standards.
 - The implementation of accessibility standards for the administration features unless this is required by relevant staff in GHGA.
@@ -42,7 +42,7 @@ This epic covers the following user journeys:
 
 ^*^: These also include all features available to logged-in users (e.g. request access features, IVA creation, etc.), but not the data steward specific administration pages and features.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 - The documentation and implementation should be based on the a11y and responsiveness features that are already provided by Angular, Angular Material, Tailwind CSS, and any other library already in use that provides relevant features. Additional helper code can be provided in the shared directory of the data portal if needed, and additional libraries can be also added for this purpose.
 
@@ -61,7 +61,7 @@ This epic covers the following user journeys:
 - [MDN Reference for HTML elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements)
 - [Angular Accessibility Workshop by Angular Architects](https://www.angulararchitects.io/en/training/angular-accessibility-workshop/)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 4
 

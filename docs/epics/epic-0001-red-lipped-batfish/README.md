@@ -4,7 +4,7 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/TgFzCQ
 
@@ -12,7 +12,7 @@ A scope definition can be found here: https://wiki.verbis.dkfz.de/x/TgFzCQ
 
 This epic covers two user journeys: (1) downloading and (2) uploading data.
 
-### Data Download:
+### Data Download
 
 ![Data Download](./images/data_download.jpg)
 **Figure 1| A Data Requester downloads data.** (An editable version of this figure can be found here.)
@@ -26,7 +26,7 @@ The Data Requester's client retries the download request after the prescribed am
 The Data Requester downloads the file directly from S3:
 By following the pre-signed URL, the Data Requester can directly download the file from S3 (3.0).
 
-### Data Upload:
+### Data Upload
 
 ![Data Upload](./images/data_upload.jpg)
 **Figure 2| Data Upload.** (An editable version of this figure can be found here.)
@@ -48,9 +48,9 @@ The Data Submitter confirms the upload by notifying the Upload Controller (4.0).
 The Data Submitter creates a new dataset:
 The data submitter can create a new downloadable bundle by posting metadata for a new dataset to the Metadata Repository service (5.0). Among others, this metadata includes references to all files that should be part of this dataset. The consumption of this event is not implemented in this epic.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 The RESTful service APIs are described using OpenAPI:
 
@@ -59,7 +59,7 @@ The RESTful service APIs are described using OpenAPI:
 
 (The OpenAPI specifications are hosted in the `./api_definitions/rest` sub-directory. Please make sure the links are pointing to the main branch, even if the file doesn't exist there because the PR has not been merged, yet.)
 
-### Payload Schemas for Asynchronous Topics:
+### Payload Schemas for Asynchronous Topics
 
 The payloads for asynchronous topics are described using JSON schemas:
 
@@ -70,7 +70,7 @@ The payloads for asynchronous topics are described using JSON schemas:
 - file_internally_registered: [JSON Schema](./api_definitions/message_topics/file_internally_registered.json)
 - drs_object_registered: [JSON Schema](./api_definitions/message_topics/drs_object_registered.json)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: -
 

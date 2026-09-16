@@ -2,7 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 As outlined in [ADR002](../adrs/adr-0002-angular-as-frontend-framework.md), we decided to migrate our existing GHGA data portal from React to Angular.
 
@@ -86,14 +86,14 @@ Since reverting some decisions can be very costly, we should identify these and 
 
 For easily reversible decisions, we can choose any option that is good enough to get started. If it proves unfeasible during implementation or if better solutions arise, we can easily make changes.
 
-## Not part of this Exploration:
+## Not part of this Exploration
 
 All aspects that shall be ignored during the exploration:
 
 - coding and implementation other than for demonstration and experimental purposes
 - the specification of the exact components and services that will be used
 
-## Material and Resources:
+## Material and Resources
 
 Here are some of the resources that should be consulted:
 
@@ -121,7 +121,7 @@ Design systems:
 - [Implementierung mit Angular Material & Google’s Material 3](https://www.youtube.com/watch?v=h7zW9FCvU0A) (webinar 2024, part 1/3)
 - [The big Angular UI library comparison](https://dev.to/kinginit/the-big-angular-ui-library-comparison-4ifp) (article, 2024)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

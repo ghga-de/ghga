@@ -4,11 +4,11 @@
 
 This Epic aims to provide a script for prototyping all actions done by the future interrogation room and encrypted key store service laid out in the architecture concept for file validation and encryption (file upload as well as file download).
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 The prototyping script will consist of two parts, upload and download. They should be run in sequence.
 
-### Upload:
+### Upload
 
 #### Interrogation room service functionality
 
@@ -32,7 +32,7 @@ The prototyping script will consist of two parts, upload and download. They shou
 - determine offset of the content
 - return file encryption secret, secret ID and content offset to interrogation room
 
-### Download:
+### Download
 
 In download, we currently do not use the interrogation room service.
 
@@ -52,12 +52,12 @@ In download, we currently do not use the interrogation room service.
 - Implement multiple files which can be tested, provide all combinations of users and files as crypt4gh-encrypted files.
 - Prepare functioning envelopes for all combinations of users and files to compare them with the produced envelopes at the end of the script.
 
-## Material and Resources:
+## Material and Resources
 
 - File Validation and Encryption Concept for the workflow (https://github.com/ghga-de/arch_concepts/blob/main/file_validation_and_encryption.md)
 - Crypt4GH Experiments for header separation (https://github.com/ghga-de/crypt4gh_experiments)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 This Epic aims to only produce functions that will be executed within the interrogation room or the encrypted key store.
 Communication between these services will only be simulated via function calls.
@@ -65,7 +65,7 @@ Communication with other services will be hardcoded.
 Files that should be on object storage will be read from disk.
 Public and private keys needed for encryption will either be hardcoded or read from disk.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

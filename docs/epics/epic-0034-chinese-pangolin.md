@@ -4,13 +4,13 @@
 
 ## Scope
 
-### Outline:
+### Outline
 
 This Epic adds a new service, which provides a deletion endpoint for files.
 Calling this endpoint internally publishes an event.
 All services subscribing to this event will then delete the corresponding file and information pertaining to it from their databases and from the S3 buckets they have write access to.
 
-### Included/Required:
+### Included/Required
 
 This Epic includes:
 
@@ -33,7 +33,7 @@ These parts of the epic are described in detail below.
 - Each time a file is successfully accessed via a download request, update its "last_accessed" field
 - Provide a script that scans the "last_accessed" field of all files currently present in the Outbox. If the timedelta since the last access is above a certain (to be determined) threshold, delete the respective file from the Outbox.
 
-### Not included:
+### Not included
 
 Any functionality concerning caching/cleanup of the upload path.
 
@@ -41,9 +41,9 @@ Any functionality concerning caching/cleanup of the upload path.
 - Delete files from Inbox
 - Delete files from Staging
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 The PCS should have a single endpoint that can be accessed to delete files, conforming to the GDPR's right to be forgotten.
 
@@ -61,7 +61,7 @@ The EKSS will get a corresponding endpoint to delete a file secret.
     - Response: 204 'No Content'
     - If the secret could not be found, send 404 with a "secretNotFoundError"
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 A deletion event schema will be defined in the ghga-event-schemas repository.
 The event schema will contain:
@@ -79,7 +79,7 @@ The exact field names and constraints will be provided in the ghga-event-schemas
 
 This event will announce the deletion of a file from the S3 storage buckets that fall within the responsibility of the service emitting the event and the removal of all corresponding entries in the service database.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

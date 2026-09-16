@@ -77,7 +77,7 @@ The service configuration shall allow renaming the sheets according to a map. It
 - source_topic: ...
 ```
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

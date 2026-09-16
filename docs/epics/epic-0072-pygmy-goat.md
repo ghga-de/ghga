@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 `Hexkit` currently has very little documentation regarding its use, terminology,
 or architectural concepts. Some of this knowledge *is* documented in an unconsolidated
@@ -19,7 +19,7 @@ The aggregated documentation will be written in Markdown and processed using MkD
 Optionally, we can publish it using GitHub Pages. This approach ensures accessibility
 for both internal developers and third parties.
 
-### Included/Required:
+### Included/Required
 
 The following points should be covered in the documentation:
 
@@ -75,7 +75,7 @@ The following is one example of a possible structure for the documentation:
 - Logging
 - Correlation IDs
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

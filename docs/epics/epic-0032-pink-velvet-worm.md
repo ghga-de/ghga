@@ -4,26 +4,26 @@
 
 ## Scope
 
-### Outline:
+### Outline
 
 The metadata search service will be rewritten to conform to standards/best practices of our current architectural approach. The focus is on re-implementing the service and not on adding or altering functionality.
 
-### Included/Required:
+### Included/Required
 
 - Restructuring the project to conform to the Triple Hexagonal architectural approach
 - Implementing usage of tools like hexkit where applicable
 - Testing
 
-### Not included:
+### Not included
 
 - Implementing additional features like displaying search hit context will not be included.
 
-## API Definitions:
+## API Definitions
 
 The API will remain essentially the same, but all parameters will be moved into the request body (no query string parameters).
 The hits returned in the response will contain the fully embedded documents, which differs from the current search service in that the current service returns only the datasets' information, and all embedded references are expanded upon in subsequent queries.
 
-### RPC:
+### RPC
 
 - POST /rpc/search: Submit search query
   - Request Body:
@@ -41,7 +41,7 @@ The hits returned in the response will contain the fully embedded documents, whi
   - Response Body:
     - searchable_classes: JSON - for each class, contains the name of the class, a description, and its facetable properties
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Configuration
 
@@ -69,7 +69,7 @@ searchable_classes:
       name: Project Alias
 ```
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

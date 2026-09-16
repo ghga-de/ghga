@@ -55,6 +55,7 @@ Sometimes epics relate to Architecture Decision Records, which are in `docs/adrs
 - Follow the structure defined in the templates
 - Use consistent formatting and capitalization
 - Use proper hierarchy (h1 = title, h2 = section, h3 = subsection)
+- End headings without a colon or other punctuation; a colon introduces a list from the line above it
 - Include diagrams using Mermaid syntax when helpful
 - Include specification of APIs and data schemas where needed
 - Include migration paths for breaking changes

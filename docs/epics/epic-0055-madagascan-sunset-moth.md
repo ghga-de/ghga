@@ -4,12 +4,12 @@
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic aims to change the current quasi hardcoded solution for propagating the correct storage location of files uploaded via the Datasteward Kit to a user facing decision.
 Instead of setting a storage alias in the config of the File Ingest Service, the alias information should be part of the information the DS Kit sends to the File Ingest Service.
 
-### Included/Required:
+### Included/Required
 
 Storage alias information in the DS Kit should be provided during the file upload step.
 Therefore, the current metadata needs to be updated to include the storage alias for the specific file.
@@ -23,9 +23,9 @@ Credentials for the different storage nodes still need to be set locally.
 
 In addition, the File Ingest Service also needs to have all valid storage aliases configured to validate the data sent by the DS Kit.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 The following existing File Ingest Service endpoints need to be changed:
 
@@ -42,11 +42,11 @@ In addition, the Well Known Value Service needs to provide a new value at the ex
 endpoint.
 The proposed value name is `storage_aliases` and this endpoint should return a map of all configured storage aliases and their respective URLs.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 The Datasteward Kit/File Ingest Service interaction for both non-secret ingest endpoints is changed slightly, by only including the storage alias in the payload sent and received. Theoretically this results in an additional overhead of calling the WKVS for each payload received, but as aliases should not be removed, results can simply be cached in memory and only re-requested when an alias is not found in the local cache.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

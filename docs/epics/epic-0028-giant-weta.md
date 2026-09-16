@@ -4,7 +4,7 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 This Epic covers the following features to be implemented into the GHGA-Connector:
 
@@ -15,7 +15,7 @@ It does not include:
 
 - Batch upload of multiple files
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Batch Download
 
@@ -47,7 +47,7 @@ For either one, the script will provide an output, explaining which files alread
 The user is prompted to either skip those files or cancel the batch download.
 This prompt can also be skipped by setting individual flags (e.g. `--skip-downloaded`, `--skip-unavailable`)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

@@ -7,11 +7,11 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The release of `hexkit v4` necessitates updates to a number of GHGA repositories.
 
-### Included/Required:
+### Included/Required
 
 `ghga-service-commons` should be updated first because the current release requires
 `hexkit < 4`, and many of the affected services use both `hexkit` and
@@ -30,14 +30,14 @@ services have to be updated (or their dependencies capped):
 - `ghga-connector`
 - `metldata`
 
-### Optional:
+### Optional
 
 - `wkvs` requires `hexkit`, but only for the configured logging. Nothing needs to be
 done at the moment.
 - `ds-kit`: Doesn't currently require functionality from `v4` and its dependency is
   capped.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 The MongoDB and Kafka providers and related protocols have changed the most, while
 the S3 tools are more or less unchanged.
@@ -73,7 +73,7 @@ Given that the DLQ Service is still in development and that the DLQ updates in
 `hexkit` are optional for services, it might make sense to defer the DLQ-specific
 rollout. That would keep the PRs for this epic focused in scope.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

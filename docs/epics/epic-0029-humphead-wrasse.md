@@ -2,7 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope:
+## Scope
 
 This epic will include a microservice that will listen for events instructing it to send notifications to users.
 It will include:
@@ -16,7 +16,7 @@ It does not include:
 - Changing existing services to send notification events
 - Alternative notification event handling (i.e. only email notifications are supported in this epic)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Notification Event
 
@@ -52,7 +52,7 @@ Emails will be sent via SMTP, and email contents will be injected into configura
       - $plaintext_body: The body text of the email, located between the greeting and signature. Nothing here will be further substituted, so don't include any variables within this section.
     - If the template variables are not named correctly, the email will not be generated correctly.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

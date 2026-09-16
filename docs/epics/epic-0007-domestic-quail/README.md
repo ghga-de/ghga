@@ -4,7 +4,7 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/tQAECg
 
@@ -18,12 +18,12 @@ The following documents might be helpful to understand the context and objective
 
 This epic specifically tries to deliver a draft for the library proposed in document 3.
 
-## Implementation Details:
+## Implementation Details
 
 This epic aims at prototyping the triple hexagonal architecture by exemplarily implementing protocols and providers for event handling as summarized in following figure and further discussed below.
 ![](./images/protocol_and_providers_overview.jpg)
 
-### Protocols:
+### Protocols
 
 The event subscription protocol defines an interface that uses the following vocabulary:
 
@@ -36,7 +36,7 @@ The event publishing protocol defines an interface that, in addition to the voca
 
 - **event_key**: of type string. The protocol provider should guarantee that events with the same key are delivered in the same order as they were produced. The string is typically set to the identifier of the event subject. E.g. for a user with the username "Batman27", events of the following types might happen: "user_account_created" and "user_account_deleted". Of course, it would make no sense that the "user_account_deleted" event is consumed before the "user_account_created". Thus the key of these events can be set to the username "Batman27" to ensure that all of them are delivered in order.
 
-### Providers:
+### Providers
 
 For the above protocols, providers specific for event handling using Apache Kafka shall be implemented.
 
@@ -48,7 +48,7 @@ Moreover, a provider that uses a lightweight local (single machine only) in-memo
 *This is currently not possible, as the UCS code base is entirely synchronous, while the Kafka providers are async. Before applying the hexkit building blocks to a microservice, protocol/provider pairs for other infrastructure need to be implemented.
 Most importantly, this includes interactions with an S3-base object storage and with a MongoDB-based database.*
 
-## Exploratory Part / Open Questions:
+## Exploratory Part / Open Questions
 
 One question that remains to be evaluated is how to best represent protocols in code. A simple option is to subclass from python's typing.Protocol or abc.ABC (abstract base class) to simulate interfaces as they exist in Java or C#. However, other options that provide more structure might be explored, too. Thereby, it might be useful to choose different strategies for inbound and outbound protocols because of their fundamental difference in the way they are called: inbound protocols are called by the provider, while outbound protocols are called by the abstract translator.
 
@@ -68,7 +68,7 @@ still be interesting, however, that investigation shall be part of another epic.
 ~~Another area of research is how dependency injection can help to glue all of the triple hexagonal architecture components together (providers to protocols to translators to ports). Thereby, a specific focus should be set on the question of how to inject config parameters that are needed throughout all of these components and are typically defined via YAML files or environment variables.~~
 *This is still interesting but will be postponed.*
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

@@ -101,14 +101,13 @@ These changes mainly include:
   instances to ensure that `pymongo` returns unambiguous, tz-aware datetimes.
 - Adding or adapting tests to verify the new functionality.
 
-Existing Data:
-A one-time data fix must be applied to migrate existing data to use the new formatting.
-This will involve identifying the data, testing the migration process, and eventually
-applying it to the production data. This data migration must be applied for all services
-which currently use a database and which house data that contain dates and/or UUIDs in
-BSON string representation. For the cleanest outcome, it makes the most sense for the
-rollout of the new `hexkit` version to the services and the data migration(s)
-to occur simultaneously.
+**Existing data:** A one-time data fix must be applied to migrate existing data to use
+the new formatting. This will involve identifying the data, testing the migration
+process, and eventually applying it to the production data. This data migration must be
+applied for all services which currently use a database and which house data that
+contain dates and/or UUIDs in BSON string representation. For the cleanest outcome, it
+makes the most sense for the rollout of the new `hexkit` version to the services and the
+data migration(s) to occur simultaneously.
 
 ### Consequences
 

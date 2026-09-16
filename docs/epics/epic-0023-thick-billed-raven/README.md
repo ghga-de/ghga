@@ -4,7 +4,7 @@
 
 The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](../epic-0019-pied-raven/README.md). This includes updating dependency versions in all services as well as ironing out possible differences in API usage and event processing to include the complete file upload path.
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/pages/viewpage.action?pageId=220790885
 
@@ -23,7 +23,7 @@ The GHGA-Connector now sends the public key used in decrypting the crypt4gh head
 The new OpenAPI doc can be found here:
 [OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0023-thick-billed-raven/api_definitions/rest/ucs.yaml)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### All Services
 
@@ -44,7 +44,7 @@ The new OpenAPI doc can be found here:
 - add the public key to the database (of the current upload attempt)
 - once an upload has been received, send the public key with the *file_upload_received* event
 
-### Testbed:
+### Testbed
 
 - Add GHGA-Connector, UCS, IFRS, DCS
 - Add MongoDB instances for UCS, IFRS, DCS
@@ -61,7 +61,7 @@ The new OpenAPI doc can be found here:
         - does the unencrypted checksum in the IFRS DB match the real checksum?
         - with the secret id from the IFRS DB, check if the secret exists in vault and if it matches.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

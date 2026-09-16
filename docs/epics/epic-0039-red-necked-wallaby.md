@@ -7,11 +7,11 @@
 This epic consists of refactoring tasks for the preliminary and non-preliminary upload path.
 This includes changes to 1) the datasteward-kit and file ingest service, regarding how file encryption/decryption secrets are ingested, 2) finishing the ongoing refactoring of the GHGA Connector to make the code base less rigid for future modifications and 3) bringing the upload controller up to speed with the rest of the microservice landscape.
 
-### Outline:
+### Outline
 
 All three major tasks are independent of each other and can be done in parallel.
 
-#### Datasteward-Kit Changes:
+#### Datasteward-Kit Changes
 
 - Keep the existing ingest and file upload commands, but rename them and mark them as legacy/deprecated (e.g. legacy-files upload/legacy-files batch-upload)
 
@@ -19,7 +19,7 @@ All three major tasks are independent of each other and can be done in parallel.
     - Before writing the output metadata file, the file secret is stored and a secret ID returned by calling the new `POST /federated/ingest_secret` endpoint
     - If the secret deposition fails, the uploaded file needs to be cleaned up, i.e. deleted after retry logic is exhausted
 
-#### File Ingest Service Changes:
+#### File Ingest Service Changes
 
 - Keep the existing `POST /ingest` endpoint to handle metadata for already updated files
 - Add two new endpoints that split the existing functionality between them:
@@ -28,15 +28,15 @@ All three major tasks are independent of each other and can be done in parallel.
 
 - All endpoints should use the security measures employed by the existing endpoint, i.e. token/token hash pairs for authentication, asymmetric payload encryption using Crypt4GH keypairs and communication only over HTTPS
 
-#### GHGA Connector Changes:
+#### GHGA Connector Changes
 
 - The Connector currently is a bit brittle with regard to being modifiable/extendable. Existing upload/download code should be refactored to a more object oriented approach, using abstract base classes to decouple concerns between different parts of the functionality where possible.
 
-#### Upload Controller Changes:
+#### Upload Controller Changes
 
 - The upload controller is currently the most outdated service in the file backend microservice landscape. Thus two subtasks are needed to bring it up to state with the other microservices: 1) Investigate what needs to be changed/updated and 2) implement the required changes.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

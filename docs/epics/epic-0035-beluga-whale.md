@@ -18,7 +18,7 @@ The epic includes:
 - Implementing the setup of the initial state for the file to be downloaded.
 - Refactoring of the file download happy test case.
 
-### Not included:
+### Not included
 
 This epic does not include:
 
@@ -42,7 +42,7 @@ This epic covers the following test journey:
 - Optional: Decrypting the downloaded output file and comparing the checksum (using connector).
 - Removing the test artifacts (via fixtures).
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 Before executing the tests, following setup should be achieved
 
@@ -58,7 +58,7 @@ Cleanup after test:
   - for s3 delete used buckets
   - for kafka delete used topics
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of weeks required: 2
 

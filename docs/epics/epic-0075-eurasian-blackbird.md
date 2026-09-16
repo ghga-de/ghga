@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The aim of this epic is to provide Kafka event identification for deduplication by
 canonizing a UUID4 header for all events (`event_id`). The `NOS`, `NS`, and `DLQS` will
@@ -16,7 +16,7 @@ receive updates targeting this change after updating `hexkit`.
 Changes for `hexkit` should be included in the same release as the changes from the
 [Slow Worm](./epic-0074-slow-worm.md) epic.
 
-### Motivation:
+### Motivation
 
 Currently, idempotence is only achievable
 by consumers when they store some portion of an event, directly or indirectly,
@@ -56,7 +56,7 @@ In the highly improbable case that an inbound event's ID collides with that of a
 event in a deduplication store, the event will go to the DLQ and we can just give it
 another ID.
 
-### Included/Required:
+### Included/Required
 
 Hexkit:
 
@@ -106,15 +106,15 @@ DLQ Service:
 - Update `stored_event_from_raw_event()` to operate with new header structure.
 - Migrate stored events in DB by generating new UUIDs.
 
-### Optional:
+### Optional
 
 - Configure retention and cleanup policy for `notifications` topic, set matching
   duration for a TTL index on the NS's event ID collection.
 - Log the `event_id` from inside `KafkaEventPublisher` when publishing an event.
 
-## API Definitions:
+## API Definitions
 
-### `EventSubscriberProtocol`:
+### `EventSubscriberProtocol`
 
 The subscriber protocol gets the new event_id field as shown below. It's up to service
 code to decide how to handle the value, if at all.
@@ -144,7 +144,7 @@ async def _consume_validated(
 ...
 ```
 
-### Event Header Overview:
+### Event Header Overview
 
 To summarize, most events' headers will only change by gaining an `event_id` field.
 
@@ -171,7 +171,7 @@ provides value, however, and will be preserved in its own field.
 }
 ```
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

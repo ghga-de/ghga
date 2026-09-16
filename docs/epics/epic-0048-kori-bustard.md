@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to create a base implementation for a new service that
 publishes notification events upon consuming events corresponding to specific points
@@ -21,14 +21,14 @@ consumed notification events, while the new NOS will be responsible for producin
 notification events. The relationship is effectively that the NOS sends commands to the
 notification service in the form of notification events.
 
-### Included/Required:
+### Included/Required
 
 - Initial implementation of NOS
 - Notification Service Idempotence
 - Addition of new event schemas to ghga-event-schemas
 - Replace ARS notification events
 
-## Notification Summary:
+## Notification Summary
 
 ### List of Notification Sources
 
@@ -85,7 +85,7 @@ _**Data Request and Download**_
 | DRR          | *Data access expiration reminder| Dataset ID, User ID|
 | DRR          | *Data access expired            | Dataset ID, User ID|
 
-## Tasks/Additional Implementation Details:
+## Tasks/Additional Implementation Details
 
 The Notification Orchestration Service will use an event subscriber to consume events
 from other services. Some of these events already exist, while others still
@@ -133,7 +133,7 @@ with this epic to allow for modifications. Once a satisfactory solution is agree
 the remaining notifications may be implemented.
 The ghga-event-schema changes could be completed first to widen the available selection.
 
-### Notification Service Idempotence:
+### Notification Service Idempotence
 
 The Notification Service needs to maintain idempotence with regard to event processing,
 yet ensure that notifications are issued once and only once. This requirement is not
@@ -170,7 +170,7 @@ status of access requests. The notification events should be removed, and the se
 should instead publish the RequestCreated, RequestAllowed, and RequestDenied events.
 The content of the notifications module can be moved to NOS.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

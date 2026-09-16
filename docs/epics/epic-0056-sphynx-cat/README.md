@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to both define and implement a mechanism to deal with Kafka
 events that result in unhandled exceptions when consumed. Such errors can be caused
@@ -39,18 +39,18 @@ without considerable work.
 > manual intervention. It merely provides the means to perform diagnostics and corrective
 > action while allowing the service to continue processing events in the background.
 
-### Included/Required:
+### Included/Required
 
 - ADR Proposal
 - Implementation of DLQ Providers in `hexkit`
 - Implementation of DLQ logic in services
 - Internal Documentation: Async Interservice Communication Architecture Concept
 
-### Not included:
+### Not included
 
 - Setup of a dedicated DLQ monitor or dashboard service (more on this below)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Dead Letter Queues in Kafka
 
@@ -110,9 +110,9 @@ functionality is not desired:
 - `kafka_enable_dlq`: Whether or not to use the DLQ (default=`False`).
 - `kafka_retry_backoff`: The number of seconds to wait between "immediate" retries. This value is doubled with each subsequent retry (default=`0`).
 
-## Other:
+## Other
 
-### Potential Problems:
+### Potential Problems
 
 > [!NOTE]
 > The following list is by no means exhaustive:
@@ -164,7 +164,7 @@ service-level resolution (i.e. discarding/requeueing), then we need to do some w
 keep Kafka UI in sync with the service level consumers. This requires more digging and
 discussion; maybe there is a simple solution.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

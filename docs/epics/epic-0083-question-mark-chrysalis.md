@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to implement a service for the transformation of Experimental Metadata (EM) from one representation/model to another.
 This service shall provide functionality around the configurable workflow concept from the `metldata` library to enable these transformations.
@@ -31,7 +31,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Model`: an object that holds all information necessary for the transformation service regarding an EMIM or transformed model.
 
-### Included/Required:
+### Included/Required
 
 - Implement a service that persists the `AnnotatedEMPack`, `Model`, `Workflow`, and `Route` entities.
 - Implement logic to process incoming AnnotatedEMPacks, execute the corresponding workflows and store the resulting AnnotatedEMPacks if required.
@@ -391,7 +391,7 @@ When they differ, the service adopts the new configuration and performs:
 1. Re-derivation of all transformed schemas (as described in "Model Derivation")
 2. Re-transformation of all original AnnotatedEMPacks (as described in "Service Consumer Transforms An Original AnnotatedEMPack")
 
-### Not included (but possible future extensions):
+### Not included (but possible future extensions)
 
 - A REST API to retrieve the currently used public schemas, which would be useful for frontend developers for inspection purposes.
 - A REST API to push configuration data instead of loading it from YAML files at startup.

@@ -4,7 +4,7 @@
 
 ## The Scope
 
-### Summary:
+### Summary
 
 The aim of this epic is to extend the "Blobfish" version of the Metadata Repository Service
 to include a submission API.
@@ -12,7 +12,7 @@ to include a submission API.
 Moreover, the service should be integrated into the mesh of file-oriented services
 ("Red-lipped Batfish" epic).
 
-### Included/Required:
+### Included/Required
 
 - strategy for data submission interface via spreadsheet
 - implement service that validates a spreadsheet and transforms it into a JSON object
@@ -21,12 +21,12 @@ ready to use for submission to the Metadata Repository Service API
 - publish event upon submission of metadata for new study receive once file has been uploaded
 and is available for download (has a DRS URI)
 
-### Optional:
+### Optional
 
 - metadata update/versioning
 - UI implementation
 
-### Not included:
+### Not included
 
 - user authentication & authorization
 - restricted/encrypted metadata
@@ -186,30 +186,30 @@ and `status: released`.
 The MRS looks up the corresponding Dataset and changes its status from `unreleased`
 to `released` (7.1). This ensures that the Dataset is now released for public consumption.
 
-## User Journeys that are not part of this Epic:
+## User Journeys that are not part of this Epic
 
 - Submitter wants to delete a Submission
 - Submitter wants to update a submission that has already been marked 'complete'
 - Submitter wants to update a submission that has already been released for public consumption
 - Submitter wants to deprecate a submission and replace it with a newer submission
 
-## API Definitions:
+## API Definitions
 
 The definitions are hosted here:
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 The RESTful service APIs are described using OpenAPI:
 
 MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0002-horseshoe-bat/api_definitions/rest/metadata_repository.yaml)
 
-### Payload Schemas for Asynchronous Topics:
+### Payload Schemas for Asynchronous Topics
 
 The payloads for asynchronous topics are described using JSON schemas:
 
 - new_study_created: [JSON Schema](../epic-0001-red-lipped-batfish/api_definitions/message_topics/new_study_created.json)
 
-## Technical planning:
+## Technical planning
 
 Number of sprints required: 2
 

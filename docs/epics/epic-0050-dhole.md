@@ -9,11 +9,11 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The aim is to rewrite all existing metldata transformations to use schemapack.
 
-### Included/Required:
+### Included/Required
 
 - add possibility to use custom embedding profile to configure the denormalization
   in schemapack
@@ -27,7 +27,7 @@ The aim is to rewrite all existing metldata transformations to use schemapack.
 - re-evaluate and potentially refactor the following transformations:
   - aggregate
 
-### Not included:
+### Not included
 
 - Reimplementation of the custom_embeddings transformation is not required since it will already
   be covered by builtin functionality of schemapack
@@ -37,9 +37,9 @@ The aim is to rewrite all existing metldata transformations to use schemapack.
   be in place first and would make this epic dependent on other lines of work).
 - The normalize_model transformation is not needed anymore
 
-## Additional Details:
+## Additional Details
 
-### Embedding Profile to Configure Denormalization:
+### Embedding Profile to Configure Denormalization
 
 This helps to control which relations (and relations of relations) will be embedded and
 which won't. It can even be used to deal with circular dependencies that would otherwise
@@ -160,7 +160,7 @@ manager:
     manager: null
 ```
 
-### Immutability of Datapack and Schemapack Objects:
+### Immutability of Datapack and Schemapack Objects
 
 Currently, the pydantic models for interacting with DataPack and SchemaPack
 definitions are not fully frozen, yet, however in the future they will be.
@@ -170,7 +170,7 @@ using methods that would also work on frozen pydantic models (e.g.
 the `model_copy(update={...})` method). This is also true for the already
 migrated transformation.
 
-### Refactor merge_slots transformation:
+### Refactor merge_slots transformation
 
 The original merge_slots transformation should be replaced by two new transformations:
 
@@ -251,7 +251,7 @@ B. For merging relation properties:
           - old_property_b
   ```
 
-### Refactor aggregate transformation:
+### Refactor aggregate transformation
 
 The former `aggregate` transformation shall be replaced by a mixture of existing
 and to be written transformations. The following new transformations shall be
@@ -392,7 +392,7 @@ As the name suggests, following the conventions used in the aforementioned trans
   content_path: property.nested_property
 ```
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

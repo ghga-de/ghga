@@ -4,13 +4,13 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 The aim of this study is to create a proof of concept implementation of the strategy
 outlined in
 https://docs.ghga-dev.de/main/architecture_concepts/ac002_metadata_lifecycle.html.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 - An implementation that can be run by data stewards locally,
   no production-ready and independently deployed services.
@@ -33,7 +33,7 @@ https://docs.ghga-dev.de/main/architecture_concepts/ac002_metadata_lifecycle.htm
     - Deprecation and emptying of submissions
     - multiple schemas and schema migrations
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

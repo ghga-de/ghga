@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to improve the documentation of concepts and procedures in preparation for the product launch.
 
@@ -55,7 +55,7 @@ In addition, a secrets registry shall be designed and integrated into the intern
 - Recovery from Loss
 - Recovery from Leak
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

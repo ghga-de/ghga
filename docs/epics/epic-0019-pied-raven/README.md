@@ -2,7 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/4AC2D
 
@@ -38,7 +38,7 @@ The implementation of this journey consists of:
 - a docker-compose for local deployment of all services along with relying infrastructure (MongoDB, HashiCorp Vault, Apache Kafka, LocalStack S3)
 - one or more minimal test cases that set up certain states in the infrastructure and simulate a basic user journey involving all the services
 
-## Optional User Journeys:
+## Optional User Journeys
 
 ### Integrate with and adapt adjacent services
 
@@ -51,7 +51,7 @@ Check and adjust all of the following services:
 3. Internal File Registry - handling of success event from Interrogation Room
 4. Download Controller - request and receive envelope, attach envelope to outgoing file content
 
-## User Journeys that are not part of this Epic:
+## User Journeys that are not part of this Epic
 
 ### Decide on user public key propagation/storage/retrieval mechanism
 
@@ -59,15 +59,15 @@ Currently a user's public key is piped through the interrogation room into the e
 We need to discuss specifics of public key propagation and storage, as this permeates some of the models/events and issues like source of truth and expulsion of keys need to be resolved.
 However, this might be more fitting to consider in conjunction with a refactoring step for integration with the auth story.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 [Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0019-pied-raven/api_definitions/rest/encryption_key_store.yml) - This supersedes the 18 Hooded Crow version.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2-3
 

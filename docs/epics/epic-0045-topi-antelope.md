@@ -9,7 +9,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The aim of this epic is to implement tools that enable consistent structured logging,
 with the result being a set of minimally-invasive, configurable logging tools. The
@@ -18,17 +18,17 @@ but rather be provided as a utility similar to the basic correlation ID function
 In addition, `uvicorn` needs to be configured such that its formatting is consistent
 with other logs.
 
-### Included/Required:
+### Included/Required
 
 - Logging Tools in Hexkit
 - Consolidating Uvicorn Logging
 - Pilot Repository
 
-### Not Included:
+### Not Included
 
 - Updating services to use new logging tools.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Logging Tools in `Hexkit`
 
@@ -93,7 +93,7 @@ A single repository (which is to be determined) will be updated as part of this 
 The purpose of this is to verify the aforementioned changes and identify any problems
 before rolling out the changes to other services.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

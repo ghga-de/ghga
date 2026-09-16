@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 We have different configuration key names that refer to the same topic or type in
 different services, complicating the proper configuration of the services when they
@@ -38,17 +38,17 @@ propagation & maintenance costs in the potential event that we drastically
 rework our use of Kafka. This could later be married with the currently dormant
 `schema_registry` so Kafka-related domain concepts are fully co-located.
 
-### Included/Required:
+### Included/Required
 
 - Standardized Config in `ghga-event-schemas` and release
 - Replace independent config implementations with the standardized versions
 - Chart/diagram/map explaining config name changes (e.g. to help update PROD config)
 
-### Not Included:
+### Not Included
 
 - Tie new standard configs to the corresponding schema definitions in `schema_registry`
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 We already have an unofficial document mapping the relationships between all
 the various Kafka configurations, so this epic will lean on that information.
@@ -372,7 +372,7 @@ UMS:
 
 </table>
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

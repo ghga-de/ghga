@@ -11,19 +11,19 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 \<Provide a brief outline of the goal of this epic in one or few sentences.\>
 
-### Included/Required:
+### Included/Required
 
 \<List the required features without going into too much technical detail.\>
 
-### Optional:
+### Optional
 
 \<List any optional features that may or may not be realized as part of this epic.\>
 
-### Not included:
+### Not included
 
 \<List features that will not be addressed as part of this epic.\>
 
@@ -35,9 +35,9 @@ This epic covers the following user journeys:
 
 ![\<Example Image\>](./images/data_upload.jpg)
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 \<List all endpoints in the following way:\>
 
@@ -45,15 +45,15 @@ This epic covers the following user journeys:
 - POST /submissions: Post a submission
 - ...
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 \<Describe the schema of events either using example events or JSON schemas\>
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 - \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)\>
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: \<Insert a number.\>
 

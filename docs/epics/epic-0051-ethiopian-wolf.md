@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 **Attention: Please do not put any confidential content here.**
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 This epic aims at the establishment of a monorepo template that can be used to host
 multiple microservices. Specifically, it shall satisfy the requirements imposed by
@@ -51,7 +51,7 @@ Specifically, the following questions shall be answered:
 - Is frontend part of a monorepo? I.e. vertical slice architecture?
     - In that case, how to manage authentication?
 
-## Material and Resources:
+## Material and Resources
 
 Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to:
 
@@ -79,7 +79,7 @@ Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and
     - https://medium.com/@davidsmithtech/dry-and-efficient-python-mono-repos-with-code-example-bc7ee8292e9d
     - https://betterprogramming.pub/the-pros-and-cons-monorepos-explained-f86c998392e1
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 Moving the existing file services into a monorepo might serve as a good proof of
 concept as these services are fully evolved and understood.
@@ -89,7 +89,7 @@ has highest priority and should serve a long-lasting solution. The other aspects
 less critical and might change in the future with a preliminary solution being
 acceptable.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

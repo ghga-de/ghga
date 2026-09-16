@@ -6,7 +6,7 @@ The goal is to create a prototype.
 
 <!-- **Attention: Please do not put any confidential content here.** -->
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 - Metadata generator based on GHGA model
     - Controlled vocabulary for CV fields
@@ -23,7 +23,7 @@ The goal is to create a prototype.
 - Connection between metadata and file generators for file related parameters
 - Run time - Not a focus on the performance, but aim for reasonable
 
-<!-- ## Material and Resources:
+<!-- ## Material and Resources
  -->
 
 ## User Journeys
@@ -42,16 +42,16 @@ This epic covers the following user journeys:
 
 ![\scenario3](./images/scenario3.png)
 
-<!-- ## User Journeys that are not part of this Epic:
+<!-- ## User Journeys that are not part of this Epic
 \<This is optional for exploratory epics\>
 #
 - \<Provide a list here.\> -->
 
-<!-- ## Additional Implementation Details:
+<!-- ## Additional Implementation Details
 
 - \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)> -->
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 3
 

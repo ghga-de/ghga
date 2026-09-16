@@ -4,7 +4,7 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/SwFzCQ
 
@@ -27,11 +27,11 @@ The Data Requester is greeted with a browse view. On this page, he/she can look 
 The Data Requester browses metadata for the search hits:
 While browsing the search hits (4.0), the full metadata for a specific item (dataset/experiment/file/study/etc.) is retrieved on demand from the RESTful Metadata Repository service (4.1).
 
-## API Definitions:
+## API Definitions
 
 The definitions are hosted here:
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 The RESTful service APIs are described using OpenAPI:
 
@@ -41,17 +41,17 @@ The RESTful service APIs are described using OpenAPI:
 
 (The OpenAPI specifications are hosted in the `./api_definitions/rest` sub-directory. Please make sure the links are pointing to the main branch, even if the file doesn't exist there because the PR has not been merged, yet.)
 
-### Metadata Schema Definition:
+### Metadata Schema Definition
 
 https://github.com/ghga-de/ghga-metadata-schema/releases/tag/0.2.0
 
 (The metadata release might be simplified a bit to account for the limited information that we can get out of the existing EGA submissions.)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 Further questions here: https://docs.google.com/document/d/1xR6_93E3ySxhucKHKsyZ_1g_Eb5NUsrwsfl1bw8cQhA/edit?usp=sharing
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: -
 

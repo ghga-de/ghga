@@ -9,13 +9,13 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The aim of this epic is to implement the functionality required to use interservice
 correlation IDs for tracking request flows.
 Please see the prototype [here](https://github.com/ghga-de/prototype-correlation-id).
 
-### Included/Required:
+### Included/Required
 
 - Generate Correlation ID in API Gateway
 - Correlation ID Utilities in Hexkit
@@ -23,11 +23,11 @@ Please see the prototype [here](https://github.com/ghga-de/prototype-correlation
 - Middleware for FastAPI Apps
 - Pilot Repositories
 
-### Not Included:
+### Not Included
 
 - Updating services to use correlation IDs
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Generate Correlation ID in API Gateway
 
@@ -103,7 +103,7 @@ Examples of such pairings:
 - File Ingest Service (`fis`) and the Internal File Registry Service (`ifrs`)
 - Access Request Service (`ars`) and the Notification Service (`ns`)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 
