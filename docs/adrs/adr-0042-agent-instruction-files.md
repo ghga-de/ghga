@@ -34,7 +34,7 @@ workaround to find them**.
 
 [AGENTS.md](https://agents.md) is an open format for instructing coding agents, a README
 for agents, stewarded by the Agentic AI Foundation under the Linux Foundation and read
-by Codex, Copilot, Cursor, Zed, Aider and some twenty more. It prescribes no headings,
+by Codex, Copilot, Cursor, Zed, Aider and some twenty more. It doesn't prescribe any particular headings,
 and an agent reads the nearest file in the directory tree, so a subproject ships its own
 and it takes precedence. That nesting rule makes the layering below a property of the
 format rather than a local invention. Task procedures have a standard of their own,
