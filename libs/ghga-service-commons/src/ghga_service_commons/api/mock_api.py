@@ -477,7 +477,7 @@ class MockedApis:
         This replaces two methods on httpx2's transport classes for the whole
         process. Unhandled errors have the potential to leave the patch in place
         if `uninstall()` is not called somewhere along the line. This can disrupt
-        subsequent tests. For this reason, prefer to use Prefer `with MockedApis(...)`,
+        subsequent tests. For this reason, prefer to use `with MockedApis(...)`,
         which pairs them for you.
         """
         if self._installed:
