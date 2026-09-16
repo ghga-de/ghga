@@ -1,21 +1,24 @@
 # Hexkit Support for BSON UUIDs and Datetimes (Slow Worm)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
+
 ### Outline:
+
 The aim of this epic is to stop serializing UUIDs and datetime objects as strings in
 `hexkit` and instead allow `pymongo` to serialize them to BSON directly, as decided in
 the ADR "[UUID and Datetime Representation in MongoDB](../adrs/adr-0011-uuids-datetimes-mongodb.md)".
 
 The `hexkit` changes for this epic should be released with the
 [Eurasian Blackbird](./epic-0075-eurasian-blackbird.md) `hexkit`
-changes. 
+changes.
 
 ### Included/Required:
+
 - Update `hexkit` to remove string serialization for UUIDs and datetimes, as well as
   add support for BSON UUID and Date types in MongoDB providers.
 - Update `hexkit` to replace `motor` with the async tools from `pymongo`.
@@ -25,8 +28,9 @@ changes.
     - Update references to `correlation_id` that are str-typed
     - Replace string UUIDs and Datetimes in tests and service code
     - Write migrations for all services that store UUIDs and Datetimes as strings
-  
+
 ### Deployment Note:
+
 The `NS`'s `notifications` collection should be dropped once deployment is
 complete (see below).
 
@@ -35,6 +39,7 @@ complete (see below).
 ### Payload Schemas for Events:
 
 Models Containing String Datetimes or UUIDs in `ghga-event-schemas`:
+
 - UploadDateModel
 - FileUploadReceived
 - FileUploadValidationSuccess
@@ -49,12 +54,12 @@ Models Containing String Datetimes or UUIDs in `ghga-event-schemas`:
 - AccessRequestDetails
 - UserIvaState
 
-
 ## Additional Implementation Details:
 
 ### Hexkit
 
 Changes needed:
+
 - Remove UUID and datetime-specific string serialization in the MongoDB provider
 - Set MongoDB to use the correct UUID representation (Binary Subtype 4) in the provider.
 - MongoDB stores dates as UTC. We already require dates to be in UTC, but we
@@ -82,17 +87,18 @@ Changes needed:
 ### Database Migrations:
 
 We need to author migrations for any services storing str-based UUID or Datetime fields.
-This not only includes models defined in `ghga-event-schemas` or the services 
+This not only includes models defined in `ghga-event-schemas` or the services
 themselves, but also any persisted event data due to the `created` field.
 Stored correlation IDs have to be updated, too, though this primarily affects
-outbox publishers. 
+outbox publishers.
 
 The `NS` currently stores correlation IDs as part of its idempotence
 check, but that will be supplanted in the Eurasian Blackbird epic. As a result, it
-shouldn't be migrated. If problematic, we can disable tests temporarily to satisfy CI 
+shouldn't be migrated. If problematic, we can disable tests temporarily to satisfy CI
 checks until both epics are complete.
 
 List of services that require migrations:
+
 - IFRS
 - FIS
 - DCS

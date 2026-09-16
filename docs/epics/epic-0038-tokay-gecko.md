@@ -1,4 +1,5 @@
 # Missing Glue Code for Metadata Ingress Inter-service Communication (Tokay Gecko)
+
 **Epic Type:** Implementation Epic
 
 ## Scope
@@ -20,7 +21,7 @@ This epic aims to fill in the missing parts in inter-service communication along
 - Add functionality to populate entities
 - Add functionality to delete entities
 - embedded_dataset artifact as input in form of MASS models.Resource
-- Kafka Key Name: dataset_ebmedded_{id}
+- Kafka Key Name: dataset_embedded_{id}
 
 #### WPS:
 

@@ -15,7 +15,7 @@ to support two-factor authentication (2FA) and independent verification addresse
 ### Included/Required
 
 The implementation must include all changes necessary to support the full functionality described
-in [GFRC007: User authentication and identification](https://docs.ghga-dev.de/main/grfcs/grfc007_auth_and_identity.html)
+in [GRFC007: User authentication and identification](https://docs.ghga-dev.de/main/grfcs/grfc007_auth_and_identity.html)
 and in the [white paper on 2FA and identity verification](https://docs.ghga-dev.de/main/white_papers/auth_and_identity.html).
 
 These changes are outlined in the following sections. They affect both the frontend and the backend.
@@ -51,7 +51,7 @@ The Auth Adapter creates an auth session and tracks users as soon as they have l
 
 Instead of converting the OIDC access token to our internal access token, the Auth Adapter should now convert the content of the user session into the internal access token. The internal access token will change a bit, as outlined in a section below.
 
-The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks using CSRF tokens. Thereby, the first request that creates the session responds also creates a CSRF token, which should be a unique and unpredictable string stored as part of the session. Contrary to the session cookie, the CSRF token must be made known to the frontend application, so that it can be passed in the request header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string stored in the backend session.
+The Auth Adapter must also be extended with a mechanism that prevents "session riding" attacks using CSRF tokens. Thereby, the first request that creates the session also creates a CSRF token, which should be a unique and unpredictable string stored as part of the session. Contrary to the session cookie, the CSRF token must be made known to the frontend application, so that it can be passed in the request header as a CSRF token for each request to the backend. The Auth Adapter needs to compare the CSRF token with the unique string stored in the backend session.
 
 The following endpoints will be implemented in the Auth Adapter for managing sessions. These endpoints are not proxied by the API gateway, but respond directly back to the client.
 
@@ -107,8 +107,8 @@ The session should have a state attribute that can have the following values:
 - **has-totp-token**
   The user has installed a TOTP token and it was confirmed to be working.
 - **lost-totp-token** (frontend only)
-- Set via `update_session()`.
   The user indicated that the TOTP token was lost and needs to be re-generated.
+  Set via `update_session()`.
 - **authenticated**
   The user is fully authenticated with two factors.
   Set via `POST /rpc/verify-totp`.
@@ -130,7 +130,7 @@ The Auth Adapter should intercept the following four endpoints:
     - `text`: string (the secret as text)
     - `svg`: string (URI as QR-code in SVG format)
 
-This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login. It then verifies that the session refers to an already registered user, and that the user has the same user ID as specified in the request body. Next, if `force` is not set to `true`, it verifies that this user does not already have an active TOTP token. If any of these verification steps fail, it responds with the HTTP status `401 Unauthorized`. Otherwise, creates a TOTP token and returns its provisioning URI which also contains the secret (seed) used by this token as a query parameter, using the HTTP status `201 Created`.
+This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login. It then verifies that the session refers to an already registered user, and that the user has the same user ID as specified in the request body. Next, if `force` is not set to `true`, it verifies that this user does not already have an active TOTP token. If any of these verification steps fail, it responds with the HTTP status `401 Unauthorized`. Otherwise, it creates a TOTP token and returns its provisioning URI which also contains the secret (seed) used by this token as a query parameter, using the HTTP status `201 Created`.
 
 The implementation only supports a single TOTP token per user. If an activated token (a TOTP token that has already been successfully validated at least once) already exists and the `force` flag is set to `true`, then the existing TOTP token will be replaced by the newly created one.
 
@@ -144,7 +144,7 @@ The QR code should be created in the frontend, e.g. using `react-qr-code` or the
   - request body:
     - *empty* (cannot be passed via ExtAuth)
 
-This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login. It then verifies that the session refers to an already registered user, and that the user has the same user ID as specified in the request body. Next, it verifies that this user has already created a TOTP token. Finally, it verifies the given one-time password in `totp` using the current time and a configurable time window. If all verification steps succeed, the token is activated, and the HTTP status `204 No Content` is send in an empty response. Otherwise, if the one-time password could be verified, it responds with the HTTP status `401 Unauthorized`.
+This endpoint first verifies that the user has a valid auth session, i.e. has been successfully logged in via LS Login. It then verifies that the session refers to an already registered user, and that the user has the same user ID as specified in the request body. Next, it verifies that this user has already created a TOTP token. Finally, it verifies the given one-time password in `totp` using the current time and a configurable time window. If all verification steps succeed, the token is activated, and the HTTP status `204 No Content` is sent in an empty response. Otherwise, if the one-time password could not be verified, it responds with the HTTP status `401 Unauthorized`.
 
 Note again that these endpoints do not respond with the HTTP status code `200 OK` so that the responses are returned directly to the client.
 
@@ -258,7 +258,7 @@ Currently, the data stewards are defined via the configuration of the claims rep
 
 This means that at least for one data steward, the verification of the corresponding IVA needs to be set manually in the database. This data steward can then also verify the IVAs of other data stewards via the API. The inter-service integration tests need to set the state of the first data steward via the "state management service" since this cannot be done with pure black-box testing via the API.
 
- Note that the seeding process mentioned above first removes all existing data steward claims before adding the configured claims, but it keeps the existing data stewards and the IVAs including the state of these IVAs.
+Note that the seeding process mentioned above first removes all existing data steward claims before adding the configured claims, but it keeps the existing data stewards and the IVAs including the state of these IVAs.
 
 ### Access Request Service
 
@@ -276,7 +276,7 @@ The internal access token will be only created and passed on by the Auth Adapter
 
 The `state` field will be removed from the token. The existence of the token always implies that the user account is active and not invalid.
 
-The `ext_id` field will be removed from the token. There are only two exceptional cases where it is needed, and in theses cases it can be stored in the `id` field instead. The `id` field will also be made mandatory and required to be a non-empty string.
+The `ext_id` field will be removed from the token. There are only two exceptional cases where it is needed, and in these cases it can be stored in the `id` field instead. The `id` field will also be made mandatory and required to be a non-empty string.
 
 There are only the following two exceptions where the token will be also added by the Auth Adapter if the user is only logged in via LS Login:
 
@@ -284,7 +284,7 @@ There are only the following two exceptions where the token will be also added b
   - used to self-register a user
   - the `id` field of the auth context will contain the external id, not the internal id
 - `PUT /users/{user_id}`
-   when requested by users to confirm a name an email change
+  - when requested by users to confirm a name or email change
   - the user must be already registered
   - the `id` field of the auth context will contain the internal id of the user, and it must correspond to the `user_id` in the path
 
@@ -315,7 +315,7 @@ The Auth Adapter should store user sessions using a `Session` model with the fol
 - `created`: timestamp (when the session was created)
 - `last_used`: timestamp (when the session was last used)
 
-The backed user session can be requested by the frontend using the `/rpc/login` endpoint mentioned above, which returns it serialized to an `X-Session`, which should have the following fields:
+The backend user session can be requested by the frontend using the `/rpc/login` endpoint mentioned above, which returns it serialized to an `X-Session`, which should have the following fields:
 
 - `ext_id` = `Session.ext_id`
 - `id` = `Session.user_id` (if set)
@@ -327,7 +327,7 @@ The backed user session can be requested by the frontend using the `/rpc/login` 
 - `timeout` = number of seconds until the session times out if not used
 - `extends` = number of seconds that the session can still be extended
 
-Note that the Session ID and the TOTP token are not part of this structure. The Session ID is passed only in the auth cookie and should not be visible to the client so that it can not leak outside. The TOTP token is returned only in the provisioning URI by the `/totp-token` endpoint. It should only be used to setup the authenticator app, but it should not be used or stored on the client side otherwise.
+Note that the Session ID and the TOTP token are not part of this structure. The Session ID is passed only in the auth cookie and should not be visible to the client so that it cannot leak outside. The TOTP token is returned only in the provisioning URI by the `/totp-token` endpoint. It should only be used to set up the authenticator app, but it should not be used or stored on the client side otherwise.
 
 A new `IVA` (independent verification address) model must be added to the User Management service:
 
@@ -346,7 +346,7 @@ The `IVA`s should be maintained in a separate collection by the User Management 
 The `verification_code_hash` and `verification_attempts` fields should only be stored in the database and not be returned via the REST interface. The verification code itself should be created randomly and only be shown to the data steward or transmitted directly to the user, it should not be stored in the database.
 The `verification_code_hash` should be created using a random salt and a dedicated password hashing algorithm from the verification code.
 The `verification_attempts` field tracks how often the user attempted to send the verification code in the `code_transmitted` state.
-After three failed attempts or when the `last_changed` field indicates that the verification process takes too long ago (the number of days should be configurable), the state should be set back to `unverified`.
+After three failed attempts or when the `last_changed` field indicates that the verification process takes too long (the number of days should be configurable), the state should be set back to `unverified`.
 The `state` transitions from `unverified` (after creation), over `code_requested` (user requested a verification), `code_created` (a verification code has been created) and `code_transmitted` (the verification code has been transmitted to the user) to `verified` (the user confirmed the receipt of the verification code by returning it properly).
 
 The `Claims` model must be extended so that claims in addition to referencing a user, it can optionally also reference an `IVA` via an additional property `iva_id`.
@@ -363,22 +363,22 @@ To initiate the authentication process, the user must first log in via LS Login 
 
 Now let's assume the user is in the state `identified`.
 
-The frontend then requests the user data from the user management service using the `POST /rpc/login` endpoint, passing the the OIDC access token. On the backend side, this will create an auth session, of which a view with the relevant fields is passed back to the frontend via the `X-Session` header.
+The frontend then requests the user data from the user management service using the `POST /rpc/login` endpoint, passing the OIDC access token. On the backend side, this will create an auth session, of which a view with the relevant fields is passed back to the frontend via the `X-Session` header.
 
 The state from the backend is now used as frontend session state, and depending on the state, the user can be redirected to a different route.
 
 If the user is not yet registered, the state is set to `needs-registration` and the frontend asks the user to register.
 
 If the user info from LS Login does not match the registered user info, the user will not be considered valid by the backend, the state is set to `needs-re-registration`, and the frontend should show a message accordingly, asking the user to confirm and thereby re-register. After re-registration, a notification is sent to the user by the
-notificaton orchestration service.
+notification orchestration service.
 
 If the state is `needs-registration` or `needs-re-registration`, the user is requested to newly register or confirm the changed user data. Registration of users has already been implemented in the frontend and in the backend and does not need to be changed. After registration, the frontend also gets the user info from the backend and stores it in the session storage.
 
-If the session state is `registered`, the user will be shown the registered data (maye with an option to change them via re-registration) and informed that a second factor needs to be created. If the user confirms, the state progresses to `needs-totp-token`.
+If the session state is `registered`, the user will be shown the registered data (maybe with an option to change them via re-registration) and informed that a second factor needs to be created. If the user confirms, the state progresses to `needs-totp-token`.
 
 The frontend then uses the `POST /totp-token` endpoint to create a provisioning URL, presents it in form of a QR code to the user and asks the user to scan the QR code using an authenticator app. It should also show a button or link to display the secret as text as fallback for manually entering the secret and as backup code.
 
-The frontend should recommend using Aegis (for Android) or 2FAS (for Android and iOS) as authenticator apps. The authenticators provided by Microsoft and Google (both are available for Android and iOS) can also be mentioned, since some users may already have them installed. However, the Google authenticator should not be explicitly recommended, since it does not require unlocking the phone and therefore is less secure. The also popular Authy should not be recommend at all, since it stores the secrets in the cloud and does not provide a means for the user to retrieve them, which makes it impossible to migrate them to another app.
+The frontend should recommend using Aegis (for Android) or 2FAS (for Android and iOS) as authenticator apps. The authenticators provided by Microsoft and Google (both are available for Android and iOS) can also be mentioned, since some users may already have them installed. However, the Google authenticator should not be explicitly recommended, since it does not require unlocking the phone and therefore is less secure. The also popular Authy should not be recommended at all, since it stores the secrets in the cloud and does not provide a means for the user to retrieve them, which makes it impossible to migrate them to another app.
 
 On the same page, the frontend also asks the user to enter the one-time password (six-digit code) shown in the authenticator app to validate the creation of the second factor in a text input field.
 
@@ -398,7 +398,7 @@ A few changes need to be made to the access request functionality implemented in
 
 The Access Request Submission Form does not need to be changed, since the IVA is not required at this time. Users can formulate Data Access Requests without entering or verifying an IVA.
 
-The Access Request Browser itself does not need to be changed, either. It may interesting to show the corresponding IVA for allowed accesses, but this does not need to be implemented as part of this epic.
+The Access Request Browser itself does not need to be changed, either. It may be interesting to show the corresponding IVA for allowed accesses, but this does not need to be implemented as part of this epic.
 
 However, the Access Request Details Form that allows granting or denying access needs some changes.
 
@@ -406,7 +406,7 @@ In addition to the "allow" and "deny" buttons, it should also have a selector th
 
 ### IVA Verification
 
-On the user profile page, it should be possible to create one ore more IVAs and to list the existing IVAs of the user.
+On the user profile page, it should be possible to create one or more IVAs and to list the existing IVAs of the user.
 
 The IVA creation dialog should allow to select the type and enter the value of the new IVA.
 
@@ -419,7 +419,7 @@ After clicking "request verification", the state of the IVA should be moved from
 
 After clicking "verify", the verification code should be requested from the user via an input field, and the state of the IVA should be moved from `code-transmitted` to `verified`, but only if the verification succeeds. If this does not succeed, a corresponding error message must be shown to the user. After three failed attempts or when the verification code expired, users should be informed that they need to re-request the verification because the verification code is no longer valid.
 
-After the user requested verification, a data steward should have received a notification. The data steward should be able to access an "IVA browser" page that lists all users and their IVAs, similar to the "access request browser". The IVAs in the state `code_requested` or `code_created` should have a button "(Re)create code". After clicking the button, the IVA should be moved to the state `code_created` and a dialog should appear that shows the verification code and ask the data steward to send it to the user via the selected IVA. The dialog should have three buttons: "Cancel" would revert the creation of the code and reset the state to `code_requested`, "Send later" would do nothing, but remind the data steward to confirm the transmission of the code later, and "Confirm transmission" would move the IVA to the state `code-transmitted`. This will also notify the user via an email that the code has been transmitted. Of course the code itself should *not* be sent in the notification email since it is expected to be sent via the transmission channel specified in the IVA. The IVAs in the state `code_created` should also have a button "Confirm transmission". All IVAs should also have a button "Invalidate" that would reset its state to `unverified` and inform the user via a notification.
+After the user requested verification, a data steward should have received a notification. The data steward should be able to access an "IVA browser" page that lists all users and their IVAs, similar to the "access request browser". The IVAs in the state `code_requested` or `code_created` should have a button "(Re)create code". After clicking the button, the IVA should be moved to the state `code_created` and a dialog should appear that shows the verification code and asks the data steward to send it to the user via the selected IVA. The dialog should have three buttons: "Cancel" would revert the creation of the code and reset the state to `code_requested`, "Send later" would do nothing, but remind the data steward to confirm the transmission of the code later, and "Confirm transmission" would move the IVA to the state `code-transmitted`. This will also notify the user via an email that the code has been transmitted. Of course the code itself should *not* be sent in the notification email since it is expected to be sent via the transmission channel specified in the IVA. The IVAs in the state `code_created` should also have a button "Confirm transmission". All IVAs should also have a button "Invalidate" that would reset its state to `unverified` and inform the user via a notification.
 
 The RPC-style endpoints that can be used to move the state of the IVAs and send corresponding notifications are explained in the section "IVA Management" above.
 

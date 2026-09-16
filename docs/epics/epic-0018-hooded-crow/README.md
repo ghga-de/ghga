@@ -1,15 +1,17 @@
 # File Encryption & Decryption Services (Hooded Crow)
+
 **Epic Type:** Implementation Epic
 
-
 ## Scope:
+
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/TgA5D
+
 ## User Journeys
 
 Building on the [*16 - Cuban Crow*](../epic-0016-cuban-crow.md) epic, this implementation epic aims to develop the functionality explored in the prototype script into fully fledged services to deal with encryption and decryption functionality using Crypt4GH along both the download and upload path.
 For this purpose, work is separated into two general user journeys, one for upload and one for download.
 
-### 1. Implement *Interrogation Room* and  *Encryption Key Store* services for file upload
+### 1. Implement *Interrogation Room* and *Encryption Key Store* services for file upload
 
 The diagram below shows the general flow between already existing services and the position of the new services in this network of interactions.
 
@@ -27,12 +29,14 @@ graph TD
     ir -. 10a. send success  message .-> ifr[Internal File Registry]
     ir -. 10b. send failure message .-> ulc
 ```
+
 This user journey comprises a set of goals for both the *Interrogation Room* and *Encryption Key Store*.
 The user should be able to upload a file encrypted with the crypt4gh tool using his private and the current GHGA public key, which will further be processed by the two services.
-In addition a SHA256 checksum of the unencrypted file needs to be provided by either the user or computed by the CLI which is used to verify intergrity of the confirmed upload (will be done in an upcoming epic).
+In addition a SHA256 checksum of the unencrypted file needs to be provided by either the user or computed by the CLI which is used to verify integrity of the confirmed upload (will be done in an upcoming epic).
 
 > *Interrogation Room*
-> 1. The first file part of the confirmed uploaded file ist requested and forwarded to the *Encryption Key Store* to process information contained in the Crypt4GH envelope.
+>
+> 1. The first file part of the confirmed uploaded file is requested and forwarded to the *Encryption Key Store* to process information contained in the Crypt4GH envelope.
 > 2. The information returned is used to produce SHA256 checksums for all encrypted file parts corresponding to actual file content, i.e. excluding the envelope.
 File part sizes correspond to the part size used in the multipart upload for all but the last part.
 Due to the removed envelope, part content is different, though.
@@ -43,6 +47,7 @@ Else an event is emitted to be processed by the *Internal File Registry* and the
 Defining the message formats for those events is part of an upcoming epic.
 
 > *Encryption Key Store*
+>
 > 1. Retrieve the GHGA secret key from HashiCorp Vault.
 > 2. Crypt4GH functionality is used to find the envelope and extract the file encryption/decryption secret contained within using the GHGA secret key.
 Furthermore, the file content offset is obtained.
@@ -50,6 +55,7 @@ Furthermore, the file content offset is obtained.
 > 4. The key, its ID and the file content offset are returned as response to the *Interrogation Room*.
 
 ### 2. Implement *Encryption Key Store* service for file download
+
 The diagram below shows the general flow between already existing services and the position of the new service in this network of interactions.
 
 ```mermaid
@@ -70,9 +76,11 @@ graph TD
     outbox -- 14. deliver file parts --> dlc
     dlc -- 15. deliver file parts - combined file --> cli
 ```
+
 Following implementation goals for the *Encryption Key Store* shall be achieved in the context of this journey:
+>
 > 1. The *Encryption Key Store* receives a secret ID corresponding to a file for which a personalized envelope shall be generated for a given user's public key.
-> 2. The GHGA secret key and the file encryption/decryption key idenified by the provided secret ID are retrieved.
+> 2. The GHGA secret key and the file encryption/decryption key identified by the provided secret ID are retrieved.
 > 3. A personalized envelope is constructed based on those three keys and returned to the download controller.
 
 ## User Journeys that are not part of this Epic:
@@ -83,6 +91,7 @@ Adjusting and integrating existing services will also be handled in that same ep
 ## API Definitions:
 
 ### RESTful/Synchronous:
+
 [Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0018-hooded-crow/api_definitions/rest/encryption_key_store.yml)
 
 ## Additional Implementation Details:

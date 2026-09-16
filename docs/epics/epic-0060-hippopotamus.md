@@ -13,7 +13,7 @@ The goal of this epic is to create a repository that can be used as a baseline f
 
 The baseline application should follow the decisions that we made in the [Bottlenose Dolphin](./epic-0059-bottlenose-dolphin.md) epic.
 
-It should already implement the proper overall visual layout and design (styling and theming). It should be runnable against the mock backend and the real backend and should exemplify using at least one REST endpoint (e.g. the global stats shown on the homepage). It should cover all tooling to provide a good developer experience, linting and running unit and e2e testes.
+It should already implement the proper overall visual layout and design (styling and theming). It should be runnable against the mock backend and the real backend and should exemplify using at least one REST endpoint (e.g. the global stats shown on the homepage). It should cover all tooling to provide a good developer experience, linting and running unit and e2e tests.
 
 ### Included/Required:
 
@@ -40,7 +40,7 @@ It should already implement the proper overall visual layout and design (styling
 - Add authentication (login via LS Login, registration, 2FA) using `oidc-client-ts` (will be moved to the backend later). The profile page can be incomplete.
 - Components that require authentication should be guarded and lazy-loaded.
 - Provide and document a way to easily switch between testing the application manually on localhost against MSW and against the staging or testing backend deployment.
-- Remove Karma and Jasmine and add Jest as well as `jest-preset-angular` and `jest-marbles` as dependencies for unit testing. 
+- Remove Karma and Jasmine and add Jest as well as `jest-preset-angular` and `jest-marbles` as dependencies for unit testing.
 - Add some example unit tests using Jest.
 - Add and configure Playwright for e2e-testing. These tests only need to work with MSW. Later we may also add e2e-tests against the testing deployment in this repo, but they could also be added to the Archive Test Bed instead.
 - Add some example tests with Playwright.

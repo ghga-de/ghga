@@ -22,11 +22,11 @@ Used by the web frontend to create work packages:
   - request body:
     - `dataset_id`: string (the ID of a dataset)
     - `type`: enum (download/upload)
-    - `file_ids`: array of strings  (null = all files of the dataset)
+    - `file_ids`: array of strings (null = all files of the dataset)
     - `user_public_crypt4gh_key`: string (the user's public Crypt4GH key)
   - response body:
     - `id`: string (the ID of the created work package)
-    - `token`: string (encrypted work and base64 encoded package access token)
+    - `token`: string (encrypted and base64 encoded work package access token)
 
 *Possible extension (not in this epic)*: The response body could also contain info about the expiration of the token.
 
@@ -43,7 +43,7 @@ The following endpoints could be added later to manage work packages in the web 
 
 - `GET /work-packages`
   - auth header: internal access token
-  - gets all list of all work packages of the current user
+  - gets a list of all work packages of the current user
 - `GET /work-packages/{work_package_id}`
   - auth header: internal access token
   - gets work package with given id if it belongs to the current user
@@ -90,7 +90,7 @@ To allow the Work Package Service to check whether a given user has *download* a
 
 *Possible extension (not in this epic)*: Instead of true/false, the latter endpoint could return null or the date when the access expires (null could be confused with unlimited access though). This could be used by the Work Package Service to limit the expiration date of the tokens, even though the Work Package Service re-checks access on every operation anyway.
 
-In order to facilitate authorization, the path of these endpoint starts with `download-access` and not with `users` which is already used by other endpoints of the user registry and claims repository.
+In order to facilitate authorization, the path of these endpoints starts with `download-access` and not with `users` which is already used by other endpoints of the user registry and claims repository.
 
 Note that this is a shortcut as long as we don't have a visa issuer service. Later, the claims repository should not be contacted directly, but the information about access grants will be requested from the visa issuer service and checked with the help of the visa library.
 

@@ -25,11 +25,11 @@ accepting that **performance could be reduced and in some cases, SEO might suffe
 
 ### Context
 
-In an Angular app, two ways of code execution are possible: In the client or in the server. Classically, JavaScript only runs in the browser but newer versions of Angular also allow to run functions on the server. In a client-only setup, the website is a static website, that can be delivered by any web server, that simply returns text files based on routes. Dynamic content is requested from APIs.
+In an Angular app, two ways of code execution are possible: on the client or on the server. Classically, JavaScript only runs in the browser but newer versions of Angular also allow to run functions on the server. In a client-only setup, the website is a static website, that can be delivered by any web server, that simply returns text files based on routes. Dynamic content is requested from APIs.
 
 When using Server Side Rendering (SSR), a specific web server is built (on the basis of Node.js), that not only returns files but can also execute logic. In this setup, the client doesn't have to rely on external APIs. Instead, the client triggers the execution of functions in the server, that may have better access to the data if they run in the same cloud environment as the APIs and can also handle server side authentication, simplifying certain workflows.
 
-SSR can lead to performance improvements because the client directly receives HTML data that can be added to the DOM instead of having to update the DOM dynamically by transforming a (for example JSON type) API response. Since some search engines crawlers don't execute JavaScript code, SSR can improve SEO performance of the website.
+SSR can lead to performance improvements because the client directly receives HTML data that can be added to the DOM instead of having to update the DOM dynamically by transforming a (for example JSON type) API response. Since some search engine crawlers don't execute JavaScript code, SSR can improve SEO performance of the website.
 
 ### Decision
 

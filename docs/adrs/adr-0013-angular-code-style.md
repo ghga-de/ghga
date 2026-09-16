@@ -10,7 +10,7 @@ tags: [frontend]
 
 In the context of **style rules and standards used in our new Angular project**
 
-facing **a need for homogenous code style and seamless onboarding and development**
+facing **a need for homogeneous code style and seamless onboarding and development**
 
 we decided for **using the [Angular Style Guide](https://angular.dev/style-guide) and [linter plugins](https://www.npmjs.com/package/@angular-eslint/eslint-plugin) to enable it**
 

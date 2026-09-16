@@ -1,11 +1,14 @@
 # Kafka Event Config Standardization (Oryx)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
+
 ### Outline:
+
 We have different configuration key names that refer to the same topic or type in
 different services, complicating the proper configuration of the services when they
 are deployed jointly. To clarify,
@@ -35,21 +38,24 @@ propagation & maintenance costs in the potential event that we drastically
 rework our use of Kafka. This could later be married with the currently dormant
 `schema_registry` so Kafka-related domain concepts are fully co-located.
 
-
 ### Included/Required:
+
 - Standardized Config in `ghga-event-schemas` and release
 - Replace independent config implementations with the standardized versions
 - Chart/diagram/map explaining config name changes (e.g. to help update PROD config)
 
 ### Not Included:
+
 - Tie new standard configs to the corresponding schema definitions in `schema_registry`
 
 ## Additional Implementation Details:
+
 We already have an unofficial document mapping the relationships between all
 the various Kafka configurations, so this epic will lean on that information.
 Developer review will help identify mistakes.
 
 The config schema standardization process will involve three steps:
+
 1. Identify existing Kafka pub/sub config schemas that refer to the same thing, i.e.
    the same topic & type.
 2. Create a configuration class in `ghga-event-schemas` to standardize the config.
@@ -62,6 +68,7 @@ will have to share configuration. If the schema is centrally defined, the config
 should be too.
 
 ### A Note on "Normal" (non-outbox, e.g. stateless) Events Using the Outbox Pattern
+
 We have events that don't communicate state but that nevertheless use the
 outbox pattern solely for persistence. The motivation for storing these *stateless*
 events is to aid in application restoration following the loss of Kafka data.
@@ -71,8 +78,8 @@ concept. The result is a "shoehorned" process that actually needs a dedicated
 mechanism in `hexkit`. That mechanism, a class that mimics some of the outbox
 DAO's functionality, can be created in another epic.
 
-
 ### Proposed Config Classes
+
 > (stateful) means these events communicate state and should use the outbox pattern
 
 > \* means the marked config naming has changed
@@ -364,7 +371,6 @@ UMS:
 </tr>
 
 </table>
-
 
 ## Human Resource/Time Estimation:
 

@@ -1,12 +1,14 @@
 # Notification Orchestration Service (Kori Bustard)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
+
 ### Outline:
+
 The goal of this epic is to create a base implementation for a new service that
 publishes notification events upon consuming events corresponding to specific points
 in user journeys.
@@ -20,11 +22,11 @@ notification events. The relationship is effectively that the NOS sends commands
 notification service in the form of notification events.
 
 ### Included/Required:
+
 - Initial implementation of NOS
 - Notification Service Idempotence
 - Addition of new event schemas to ghga-event-schemas
 - Replace ARS notification events
-
 
 ## Notification Summary:
 
@@ -49,10 +51,10 @@ _**Authentication**_
 | Central Data Steward | IVA verification code submitted by user   | User ID       |
 | User         | 2nd Authentication Factor Recreated               | User ID       |
 
-
 _**Data Submission**_
 
 > Abbreviations:
+>
 > - RD: Research Data
 >
 > For the "Research data upload completion" notification, the Research Data Controller's
@@ -62,11 +64,10 @@ _**Data Submission**_
 |---------------|---------------------------------|------------|
 | RD Controller | Research data upload completion | File ID    |
 
-
-
 _**Data Request and Download**_
 
 > Abbreviations:
+>
 > - DRR: Data Requester Representative
 >
 > If there is a stored entity linking the request to both the dataset and user IDs, then
@@ -101,6 +102,7 @@ change to a user's email field could be used to drive the creation of a notifica
 
 The initial implementation assumes that it has access to a database containing
 documents storing required relationships:
+
 - User ID to user email, full name, and title
 - Dataset to Local Data Steward email, full name, and title
 - Dataset to Research Data Controller email, full name, and title
@@ -108,6 +110,7 @@ documents storing required relationships:
 **Structure**
 
 The NOS will comprise four primary components:
+
 1. An inbound adapter, an event subscriber, to consume notification source events
 2. A core containing notification content and relevant logic
 3. An outbound adapter for obtaining required information stored in the database
@@ -149,6 +152,7 @@ New event schemas must be added to ghga-event-schemas for notification sources w
 not already publish such an event (see tables above).
 
 There are at least two fields that must be included in the outstanding events:
+
 - `user_id`: string representing the unique user ID stored in the database
 - `dataset_id`: string representing the accession number of a dataset
 

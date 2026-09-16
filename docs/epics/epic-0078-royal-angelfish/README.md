@@ -48,8 +48,9 @@ Rough mockups of the UI to be implemented:
 - Access Grant: ![Access Grant](./Access_Grant.png)
 
 The existing UI of the access request and IVA manager should be adapted to match the new UI as part of this epic:
+
 - Reduce the number of filter fields by combining some of the fields
-- Add detail buttons in addition to making table row clickable
+- Add detail buttons in addition to making the table row clickable
 - Add a hover and focus effect for the table rows
 - Convert detail dialogs to navigable standalone pages, with transitions
 
@@ -70,6 +71,7 @@ The backend API does not yet provide the necessary information for the frontend 
 ### Endpoint Specifications:
 
 The `GET` endpoints should return a list of all matching download access grants with:
+
 - Corresponding user, IVA, and dataset IDs
 - Validity periods and assertion dates
 - Unique ID (matching the corresponding claim ID in the Claims Repository)
@@ -87,12 +89,13 @@ The User Registry already has an endpoint `PATCH /users/{id}` to deactivate and 
 ## Notifications
 
 The backend API must also send corresponding notifications to the users:
+
 - when they are deactivated, re-activated or their account is deleted
 - when any of their access grants is revoked
 
 ## Extensions
 
-After we have refined the role concept to allow other elevated roles such as admin or superuser, and after implementation of an improved audit logging in our new  architecture, and after careful assessment of the security related and legal implications, we can consider a follow-up epic which would add the following functionality:
+After we have refined the role concept to allow other elevated roles such as admin or superuser, and after implementation of an improved audit logging in our new architecture, and after careful assessment of the security related and legal implications, we can consider a follow-up epic which would add the following functionality:
 
 - As part of the user management, we could also
   - show roles and allow superusers to grant or revoke them

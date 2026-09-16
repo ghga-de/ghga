@@ -1,4 +1,5 @@
 # Parallelize DHFS File Interrogation (Army Ant)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
@@ -19,7 +20,7 @@ This epic changes the interrogation loop so DHFS works on several files at once,
 - Add a second config setting bounding how much part data DHFS may hold in memory across all files at once (e.g. `max_interrogation_memory_mib`). The file count on its own does not limit memory use, for the reasons described under "Memory use and admission control" below.
 - Add a check to the start of `interrogate_file()` that consults both `max_concurrent_files` and `max_interrogation_memory_mib`, so a file only begins when allowed. `asyncio.Semaphore` alone can gate based on `max_concurrent_files`, but it can't handle the memory limitation side of things. That check should be based on part size.
 - Update `AsyncRateLimitingTransport` (from `ghga-service-commons`) so its internal 429/backoff handling (`_num_requests`, `_last_retry_after_received`, `_wait_time`) stays correct when several requests go through it at once. Right now these are used without any coordination, so retry handling will be tangled with concurrent requests. Alternatively, handle all retry logic in DHFS itself and/or implement a custom transport.
-- Set explicit connection pool limits (`httpx2.Limits`) on the shared client DHFS builds in `get_configured_httpx_client()` (`services/datahub-file-service/src/dhfs/adapters/outbound/http.py`). The plumbing for this already exists in `CompositeTransportFactory.create_ratelimiting_retry_transport()`, it just isn't being used yet. Without it, the default pool size becomes a hidden cap on how much concurrency we actually get. 
+- Set explicit connection pool limits (`httpx2.Limits`) on the shared client DHFS builds in `get_configured_httpx_client()` (`services/datahub-file-service/src/dhfs/adapters/outbound/http.py`). The plumbing for this already exists in `CompositeTransportFactory.create_ratelimiting_retry_transport()`, it just isn't being used yet. Without it, the default pool size becomes a hidden cap on how much concurrency we actually get.
 - Widen the gap between `DOWNLOAD_URL_LIFESPAN` and `DOWNLOAD_URL_CACHE_TIME` (`services/datahub-file-service/src/dhfs/constants.py`) from 5 seconds to 15, so a cached presigned URL is less likely to expire while the request waits its turn.
 - Rework the per-file timing log at the end of `_process_file_parts()`. The `*_s` and `*_mib_per_s` fields are measured as wall clock time around each phase, so once files overlap they also count time the file spent waiting behind other files, and the throughput figures stop describing the phase they are named after. Either report the elapsed times without the derived MiB/s fields, or move throughput reporting up to the batch level.
 - Update the DHFS README's configuration section to document the new settings. The README section is generated from `config_schema.json`, so `config_schema.json` and `example_config.yaml` need regenerating too.
@@ -37,7 +38,6 @@ This epic changes the interrogation loop so DHFS works on several files at once,
 
 ### Current behavior
 
-
 `interrogate_new_files()` fetches a full batch of pending files from FIS and then loops over them with a plain `for` loop, calling `await self.interrogate_file(file)` on each one. The next file won't start until the current one is fully processed.
 
 ```mermaid
@@ -53,14 +53,13 @@ flowchart TD
 
 ### Target behavior
 
-
 Wrap the same loop so that each file passes through an admission step before its task is created, then run the calls in an `asyncio.TaskGroup`. Admission holds an `asyncio.Semaphore(config.max_concurrent_files)` for the file count and a memory budget for the part data. Each `interrogate_file()` call still does its own download/decrypt/re-encrypt/upload/report sequence, but several of them run concurrently. Everything for a given file (secrets, checksums, upload buffer) lives on the call stack of the `interrogate_file()` call.
 
 `TaskGroup` is the right choice over `asyncio.gather` here because a `CriticalError` is supposed to stop DHFS, and the TaskGroup cancels the sibling files instead of leaving them running unattended while the service shuts down. Those files are simply picked up again on the next poll.
 
 Two consequences of using a TaskGroup need handling. The first is that it wraps whatever the child tasks raise in an `ExceptionGroup`, and `ExceptionGroup` is itself a subclass of `Exception`. The `except InterrogatorPort.CriticalError` branch in `run_interrogator()` would therefore stop matching, the group would fall through to the general `except Exception` branch below it, and DHFS would log an ordinary error and go back to polling instead of shutting down. So we need to make sure either `interrogate_new_files()` unwraps the group and re-raises the `CriticalError`, or `run_interrogator()` switches to `except*`.
 
-The second is that we need some way to clean up MPUs of other ongoing files when encountering a `CriticalError`. 
+The second is that we need some way to clean up MPUs of other ongoing files when encountering a `CriticalError`.
 
 ```mermaid
 flowchart TD
@@ -76,12 +75,13 @@ flowchart TD
 
 ### Why the prerequisite fixes matter
 
-- **Rate limiter state**: the transport's backoff logic assumes one request finishes before the next one starts reading the same fields. Under concurrency, two requests can both read a stale wait time, both decide it's safe to go, and both fire before the required wait time (from a 429) as elapsed. This can be fixed with a lock around the read-modify-write in `handle_async_request()`. The lock needs to cover only the state update. That method also contains the `await asyncio.sleep()` and the call that delegates to the wrapped transport, and holding the lock across either of those would put every request back into series, defeating the purpose of this epic.
+- **Rate limiter state**: the transport's backoff logic assumes one request finishes before the next one starts reading the same fields. Under concurrency, two requests can both read a stale wait time, both decide it's safe to go, and both fire before the required wait time (from a 429) has elapsed. This can be fixed with a lock around the read-modify-write in `handle_async_request()`. The lock needs to cover only the state update. That method also contains the `await asyncio.sleep()` and the call that delegates to the wrapped transport, and holding the lock across either of those would put every request back into series, defeating the purpose of this epic.
 - **Connection pool limits**: httpx2's default pool caps total connections at 100 and keepalive at 20. Parts within a single file are downloaded and uploaded one after another, so each `interrogate_file()` call only ever has one request in flight and the number of connections tracks `max_concurrent_files` directly. At the concurrency this epic is aiming for the defaults are not a hard cap, though going past 20 files at once means connections get closed and reopened that could have been kept alive. Setting the limits explicitly from `max_concurrent_files` keeps the pool sized on purpose, and it starts to matter a lot more if the optional part-level concurrency is added later, since that puts several requests in flight per file.
 
 ### Memory use and admission control
 
 Every file being worked on holds several copies of the current part in memory at the same time:
+
 - the encrypted part downloaded from the inbox
 - the decrypted part
 - the re-encrypted part

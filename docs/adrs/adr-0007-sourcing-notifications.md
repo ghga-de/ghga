@@ -9,7 +9,7 @@ tags: [backend, events]
 
 ## Summary
 
-In the context of **sourcing and issuing notifications events in a microservice architecture**
+In the context of **sourcing and issuing notification events in a microservice architecture**
 
 facing **the need for a sustainable solution that minimizes maintenance costs**
 
@@ -26,19 +26,19 @@ accepting that **the new service will be coupled to multiple other services**.
 
 ### Context
 
-  - "**Notification**" means the final entity which is emitted from the Notification Service, regardless of channel.
-    - For the purposes of this ADR, a notification may be thought of as an email to the user.
+- "**Notification**" means the final entity which is emitted from the Notification Service, regardless of channel.
+  - For the purposes of this ADR, a notification may be thought of as an email to the user.
 
-  - "**Notification source**" refers to the reason a notification needs to be sent.
-    If a file upload fails and a notification needs to be sent, the source is the failed file upload (and in code is the
-    place where the microservice became aware of the failure). Publishing the notification "close to the source" would mean
-    publishing a notification event directly from the same service where the file upload failure occurred.
+- "**Notification source**" refers to the reason a notification needs to be sent.
+  If a file upload fails and a notification needs to be sent, the source is the failed file upload (and in code is the
+  place where the microservice became aware of the failure). Publishing the notification "close to the source" would mean
+  publishing a notification event directly from the same service where the file upload failure occurred.
 
-  - "**Sourcing notifications**" means identifying notification sources in order to publish notification events.
+- "**Sourcing notifications**" means identifying notification sources in order to publish notification events.
 
-  - "**Notification event**" refers to the `Notification` event type as defined in
-    [`ghga-event-schemas`](https://github.com/ghga-de/ghga-event-schemas/blob/fc23f0a2fda44473ad5993ad592e2c9e7d642fed/src/ghga_event_schemas/pydantic_.py#L348).
-    This is a command instructing a dedicated service to send a notification.
+- "**Notification event**" refers to the `Notification` event type as defined in
+  [`ghga-event-schemas`](https://github.com/ghga-de/ghga-event-schemas/blob/fc23f0a2fda44473ad5993ad592e2c9e7d642fed/src/ghga_event_schemas/pydantic_.py#L348).
+  This is a command instructing a dedicated service to send a notification.
 
 A microservice called the Notification Service currently exists with the functionality to send notifications, for example
 via email, but it is not yet in use by the wider microservice ecosystem. The only action required to use this service is

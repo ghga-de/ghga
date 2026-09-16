@@ -26,7 +26,7 @@ accepting that **other design systems might be opinionated in a way more compati
 
 A design system is necessary to achieve a consistent look of elements and pages in any website, which is vital for providing clear and uncomplicated user experiences.
 Although it would be possible to create one from scratch, this can be a considerable amount of work.
-In addition, since we already are using a fully-fledged well-maintained and widely-adopted Javascript framework, the implementation of existing design systems is trivially easy with a component or style library implementation.
+In addition, since we already are using a fully-fledged well-maintained and widely-adopted JavaScript framework, the implementation of existing design systems is trivially easy with a component or style library implementation.
 
 ### Decision
 
@@ -54,4 +54,4 @@ On the other hand, Material is opinionated and less familiar to users accustomed
 
 ### Alternatives
 
-The other design systems that were evaluated but not selected remain alternatives, as are many other design systems that were not even assessed in this process.
+The other design systems that were evaluated but not selected remain alternatives, as do many other design systems that were not even assessed in this process.

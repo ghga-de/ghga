@@ -14,7 +14,7 @@ facing **the problem that names for the same kind of objects were given inconsis
 
 we decided for **the naming conventions listed below**
 
-and neglected **other recommendations that can be found in the Internet**
+and neglected **other recommendations that can be found on the Internet**
 
 to achieve **a consistent naming pattern that goes well with the used languages and the names we have been using so far**
 
@@ -29,28 +29,33 @@ We are currently using MongoDB for service databases and Apache Kafka for event 
 ### Decision
 
 **General Rules:**
+
 - Stick to ASCII letters and digits. Start names with a letter.
 - Use uppercase letters only where camelCase names are used as outlined below.
 - Do not use blanks or special characters except underscores, hyphens and dots in some cases as outlined below.
 
 **MongoDB Database Names:**
+
 - Service databases should use the lowercase short form of the service name as the database name (e.g., "auth" for the authentication service or "wps" for the work package service).
 - Do not append a "DB" suffix since it is redundant and the default databases don't use it either.
 - Do not use dots in database names. Prefixes for test branches should be separated using a hyphen.
 
 **MongoDB Collection Names:**
+
 - The name should reflect the kind of entity stored in the collection.
 - Use the plural form (e.g., "users" instead of "user").
 - Avoid names with multiple components, but if needed, use camelCase (e.g., "accessRequests" instead of "access_requests" or "access-requests").
 - Use dots for higher detail collections, e.g., "users.tokens" (though we prefer to include the details in the main collection).
 
 **Kafka Topic Names:**
+
 - Topic names should always be lowercase.
 - Avoid names with multiple components, but if needed, use kebab-case (e.g., "access-requests" instead of "access_requests" or "accessRequests").
 - Use dots if subtopics are needed, e.g., "files.deletions" (though we prefer a flat namespace for now).
 - Prefixes for test branches should be separated using a hyphen, same as for database name prefixes.
 
 **Kafka Event Type Names:**
+
 - The event types should match the corresponding event schema class names but can be more specific.
 - To distinguish them from the schema class names and since they usually correspond to Python methods, use snake_case for event types.
 - They should follow a noun-verb format, with the verb usually in past tense (e.g., "searchable_resource_deleted").
@@ -66,7 +71,7 @@ Adopting a naming convention will simplify service integration by providing a st
 
 The guidelines listed above follow the recommendations found in the MongoDB and Kafka documentation and on StackOverflow.
 
-Some alternative naming conventions are suggested in the Internet, such as using a "DB" suffix for database names or using PascalCase or camelCase for event types. We tend to avoid redundant suffixes, and prefer snake_case for event types, since they are already established in our code base and go well with the Python language used to implement the backend services.
+Some alternative naming conventions are suggested on the Internet, such as using a "DB" suffix for database names or using PascalCase or camelCase for event types. We tend to avoid redundant suffixes, and prefer snake_case for event types, since they are already established in our code base and go well with the Python language used to implement the backend services.
 
 ### Links
 

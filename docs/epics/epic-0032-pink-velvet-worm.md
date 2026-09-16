@@ -1,17 +1,21 @@
 # Reimplementation of metadata search service (Pink Velvet Worm)
+
 **Epic Type:** Implementation Epic
 
-
 ## Scope
+
 ### Outline:
+
 The metadata search service will be rewritten to conform to standards/best practices of our current architectural approach. The focus is on re-implementing the service and not on adding or altering functionality.
 
 ### Included/Required:
+
 - Restructuring the project to conform to the Triple Hexagonal architectural approach
 - Implementing usage of tools like hexkit where applicable
 - Testing
 
 ### Not included:
+
 - Implementing additional features like displaying search hit context will not be included.
 
 ## API Definitions:

@@ -1,11 +1,14 @@
 # Hexkit Documentation (Pygmy Goat)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
+
 ### Outline:
+
 `Hexkit` currently has very little documentation regarding its use, terminology,
 or architectural concepts. Some of this knowledge *is* documented in an unconsolidated
 fashion, with files spread across Confluence, Google Docs, and the internal docs
@@ -16,9 +19,10 @@ The aggregated documentation will be written in Markdown and processed using MkD
 Optionally, we can publish it using GitHub Pages. This approach ensures accessibility
 for both internal developers and third parties.
 
-
 ### Included/Required:
+
 The following points should be covered in the documentation:
+
 - Glossary
 - Update, improve and expand the existing code in the examples directory
   - Document these examples, and add some more usage examples if needed
@@ -27,8 +31,8 @@ The following points should be covered in the documentation:
 - Requirements for adding new functionality, e.g. new protocols or new DAO providers
 - Auto-generated API reference docs
 
-
 ### Additional Implementation Details
+
 The following is one example of a possible structure for the documentation:
 
 - Architecture Concepts
@@ -70,7 +74,6 @@ The following is one example of a possible structure for the documentation:
   - Migration Tools
 - Logging
 - Correlation IDs
-
 
 ## Human Resource/Time Estimation:
 

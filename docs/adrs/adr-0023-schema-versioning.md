@@ -27,13 +27,14 @@ to achieve **a solution that is simple to implement, easy to maintain, unobtrusi
 accepting that **we must take care to implement the solution consistently, that there**
 **is no perfect way to prevent developer error, that some challenges may appear**
 **when dealing with inheritance, and that we might need to deal with instances where**
-**data adhering to an old schema definition crosses service boundaries**
+**data adhering to an old schema definition crosses service boundaries**.
 
 ## Details
 
 ### Context
 
 **Definitions**
+
 - ***Migration***, ***migration script***, ***migration process*** and ***schema*** are
   used as defined in [ADR-0022](adr-0022-db-migrations.md); "Pydantic model", "model",
   and "schema" are used interchangeably here.
@@ -46,6 +47,7 @@ by the MongoDB team to learn about a recommended approach to schema versioning i
 MongoDB.
 
 **Requirements**
+
 - **Easy to maintain**: The solution should not burden developers or require frequent
   changes outside of the changes required when a schema update occurs.
 - **Simple to implement**: We must implement the solution multiple times due to the
@@ -67,8 +69,9 @@ occur for every modified collection/schema *per database version*. Each database
 will correspond to a single service update or PR, but not every update or PR will
 result in a database version bump. The database version number should be increased any
 time that an update occurs to:
+
 - a model inside the service which is used to store data in the DB
-- a model outside of the service, but which is relied upon the service for storing data
+- a model outside of the service, but which is relied upon by the service for storing data
   in the DB.
 
 The database version number should be stored in code that is checked into VC (i.e. it
@@ -82,6 +85,7 @@ the date the database was migrated to each listed version number.
 ### Consequences
 
 **Benefits**
+
 - Easy to maintain -- just increment the database version number for a service when
   there is a change in a model used by the service.
 - Quick implementation: The database version number and the logic for reading and acting
@@ -96,6 +100,7 @@ the date the database was migrated to each listed version number.
   pursue an alternate approach, it should cost little to do so.
 
 **Drawbacks**
+
 - Inheritance: Some of our schemas are constructed via inheritance. If `SharedBaseModel`
   from `ghga-event-schemas` is subclassed by `ChildModel` in a service, then developers
   must be extra diligent to catch that change and apply the appropriate database version
@@ -120,7 +125,7 @@ presence, absence, or content of given fields. For example, say documents with t
 fields `title`, `author`, and `description` are used in an early version of an
 application. One document might be:
 
-```
+```text
 {
     title: "The Final Empire"
     author: "Brandon Sanderson"
@@ -131,7 +136,7 @@ application. One document might be:
 After a time, the developers decide to split the author field into a first and last name.
 The example becomes:
 
-```
+```text
 {
     title: "The Final Empire"
     author_first_name: "Brandon"

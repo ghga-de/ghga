@@ -1,4 +1,5 @@
 # Batch Download for the CLI Client (Giant Weta)
+
 **Epic Type:** Implementation Epic
 
 **Attention: Please do not put any confidential content here.**
@@ -11,6 +12,7 @@ This Epic covers the following features to be implemented into the GHGA-Connecto
 - files will be downloaded in sequence, no parallelization across files
 
 It does not include:
+
 - Batch upload of multiple files
 
 ## Additional Implementation Details:
@@ -26,7 +28,7 @@ For now, we want to have an explicit function that pulls the information from en
 - The user’s public crypt4GH key to use
 - The current GHGA public crypt4GH key to use
 
-An additional check should be implemented to compare the retrieved users public key with the one provided by the WPS.
+An additional check should be implemented to compare the retrieved user's public key with the one provided by the WPS.
 
 With the newly added file ending, we want to add the file ending to the file for the following structure:
 `{file_id}.{file_extension}.c4gh`
@@ -38,13 +40,12 @@ Also, if a `.part` file already exists upon starting a download, we just replace
 
 At last, we will add a batch script, which will take the list of files to call the download function for each file.
 Before that, at first each file will be called using the `GET /objects/{object_id}` endpoint.
-This for one checks, if the file is actually availble for download and also triggers staging it in the `outbox` bucket.
+This for one checks if the file is actually available for download and also triggers staging it in the `outbox` bucket.
 The list will also be re-ordered according to the shortest wait time (Files that are already staged will be downloaded first).
 This batch script will also check if files already exist in the provided download location.
 For either one, the script will provide an output, explaining which files already exist in the outbox and which files won't be available to download.
 The user is prompted to either skip those files or cancel the batch download.
 This prompt can also be skipped by setting individual flags (e.g. `--skip-downloaded`, `--skip-unavailable`)
-
 
 ## Human Resource/Time Estimation:
 

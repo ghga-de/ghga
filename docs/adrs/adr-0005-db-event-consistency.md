@@ -41,6 +41,7 @@ We realize consistency between published events and the database by making it po
 to create events from the state of the database.
 
 The following assumptions are made:
+
 - each MongoDB collection contains data on one resource type (it might have other
   resource types embedded)
 - each document in a collection focuses on one instance of the resource type
@@ -58,8 +59,9 @@ used to hide internal details of the service state from the service API.
 
 In addition to the actual resource content, each document in MongoDB contains
 metadata on whether:
+
 - the current version of the resource content has already been
-published
+  published
 - the resource has been deleted
 
 We have implemented a triple hexagonal protocol for a factory to generate DAOs that automatically take
@@ -69,6 +71,7 @@ and an associated provider based on MongoDB and Apache Kafka
 (https://github.com/ghga-de/hexkit/blob/6a86fdd31daa8faeb4f0434b82758992e778995d/src/hexkit/providers/mongokafka/provider.py#L363).
 
 In brief, the workflow for creating or changing a resource is the following:
+
 1. A DAO is used to alter the state (including creation and deletion) of a resource in the database.
 2. The update to the resource will be persisted to the database, thereby the metadata
    in the corresponding document will indicate that the document has not been published,
@@ -109,9 +112,9 @@ primary state.
 
 The proposed implementation provides a simple mechanism for ensuring consistency between
 the published events and the state in the database and, thereby, it also guarantees
-consistency between the state of services. It requires only little changes to the
+consistency between the state of services. It requires only few changes to the
 DAO and event handling interface of services. Moreover, since the state of Apache Kafka
-can be reconstructed from the database, it is only necessary to backup the database.
+can be reconstructed from the database, it is only necessary to back up the database.
 A disadvantage is that all consumers must be idempotent, i.e. prepared to receive
 the same event multiple times. Moreover, in addition to the main service process(es),
 a cron job must be periodically executed to publish changes that failed to publish

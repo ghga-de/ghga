@@ -1,8 +1,8 @@
-# GA4GH-oriented Auth Concept (Carpenter Ant) 
+# GA4GH-oriented Auth Concept (Carpenter Ant)
 
 **Epic Type:** Exploratory Epic
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/YgFzCQ
 
@@ -79,7 +79,7 @@ Some visas might be retrieved from an external source like EGA, however, most vi
 
 In principle, any user that authenticates via an external passport broker could carry out the auth workflow described above. However, we may want to restrict access for some interactions to only a subset of users that are registered in the GHGA system.
 
-These user registrations may partially take place automatically (e.g. users of a specific institution might always be allowed to register), but in some cases (e.g. unknown/untrusted affiliation), they must be approved manually by a GHGA Data Steward, as show in the following diagram:
+These user registrations may partially take place automatically (e.g. users of a specific institution might always be allowed to register), but in some cases (e.g. unknown/untrusted affiliation), they must be approved manually by a GHGA Data Steward, as shown in the following diagram:
 
 ![Registration of New Users](./images/user_journey_4.jpg)
 

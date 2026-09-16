@@ -1,11 +1,12 @@
 # Synthetic Data Generator (White Stork)
+
 **Epic Type:** Exploratory Epic
 
 The goal is to create a prototype.
 
 <!-- **Attention: Please do not put any confidential content here.** -->
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 - Metadata generator based on GHGA model
     - Controlled vocabulary for CV fields
@@ -22,36 +23,33 @@ The goal is to create a prototype.
 - Connection between metadata and file generators for file related parameters
 - Run time - Not a focus on the performance, but aim for reasonable
 
-
 <!-- ## Material and Resources:
  -->
-
 
 ## User Journeys
 
 This epic covers the following user journeys:
 
-### User reguests both metadata and correspoding files
+### User requests both metadata and corresponding files
 
 ![\scenario1](./images/scenario1.png)
 
 ### User requests only metadata
+
 ![\scenario2](./images/scenario2.png)
 
 ### User requests only fastq files
-![\scenario3](./images/scenario3.png)
 
+![\scenario3](./images/scenario3.png)
 
 <!-- ## User Journeys that are not part of this Epic:
 \<This is optional for exploratory epics\>
 #
 - \<Provide a list here.\> -->
 
-
 <!-- ## Additional Implementation Details:
 
-- \<List further implemenation details here. (Anything that might be relevant for defining and executing tasks.)> -->
-
+- \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)> -->
 
 ## Human Resource/Time Estimation:
 

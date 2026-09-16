@@ -34,6 +34,7 @@ The field of JavaScript runtimes and package managers (with implications on deve
 On the runtime side (that also includes the compiler / build process), there is the original default Node.js and many secondary ones that aim for individual goals (Deno - enhanced security, Bun - overall performance, LLRT - fast initial load, Kuto - smaller bundle size, etc.). At the time of writing, each of these runtimes implements a subset of the Node API, in line with its own design goals and target use cases. For a mainstream TypeScript stack like ours (test framework, many dependencies, linters etc.), that means a migration would carry a real risk of running into incompatibilities, in exchange for a comparatively small gain in build time. As a consequence, we should stick with Node.js (which offers the full Node API implementation) and accept that builds can take some seconds longer.
 
 The package manager side is harder to decide. Typically, these package managers create a lockfile, to list the currently installed package versions. This can then be used to recreate the build. There are three main considerations:
+
 1. The builds should be reproducible,
 2. Installing the dependencies should work, i.e. the package manager should be able to resolve and successfully install our dependencies
 3. The installation should be reasonably fast.

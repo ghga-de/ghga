@@ -1,7 +1,9 @@
 # Preliminary Storage Selection (Madagascan Sunset Moth)
+
 **Epic Type:** Implementation Epic
 
 ## Scope
+
 ### Outline:
 
 This epic aims to change the current quasi hardcoded solution for propagating the correct storage location of files uploaded via the Datasteward Kit to a user facing decision.
@@ -19,7 +21,7 @@ The local storage configuration needs to match what is configured for the servic
 To this end, the Well Known Value Service should provide a map of all configured storage aliases and their respective URLs.
 Credentials for the different storage nodes still need to be set locally.
 
-In addition, the File Ingest Service also needs to have all valid storge aliases configured to validate the data sent by the DS Kit.
+In addition, the File Ingest Service also needs to have all valid storage aliases configured to validate the data sent by the DS Kit.
 
 ## API Definitions:
 
@@ -37,7 +39,7 @@ In addition, the Well Known Value Service needs to provide a new value at the ex
 
 - GET /values/{value_name}
 
-endpoint. 
+endpoint.
 The proposed value name is `storage_aliases` and this endpoint should return a map of all configured storage aliases and their respective URLs.
 
 ## Additional Implementation Details:

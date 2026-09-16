@@ -57,13 +57,14 @@ be processed by `pymongo` as strings right now because of the serialization proc
 described in the paragraph above. Dates are similar.
 
 The main issues we face with regard to UUIDs and dates include:
+
 - Storing UUIDs and dates as strings requires more space than the binary equivalents;
   indexes for string UUIDs use roughly double the space required by binary UUIDs.
 - In string format, dates cannot be (easily) sorted or compared in MongoDB queries.
-  - Iso-formatted date strings can be sorted, but they are not compatible with date-specific
-  MongoDB operations like `$dateAdd` or `$dateDiff` without first being cast to a date.
-  This increases the complexity of writing and maintaining MongoDB queries containing
-  date operations, but also reduces their performance.
+  - ISO-formatted date strings can be sorted, but they are not compatible with date-specific
+    MongoDB operations like `$dateAdd` or `$dateDiff` without first being cast to a date.
+    This increases the complexity of writing and maintaining MongoDB queries containing
+    date operations, but also reduces their performance.
 - The Pydantic models in our application use `str`-typed date fields that depend on
   custom validation logic. This is directly influenced by our practice of storing dates
   as strings. The application-side string specification complicates validation.
@@ -74,7 +75,7 @@ The main issues we face with regard to UUIDs and dates include:
   maintaining a mental model of the de-/serialization mechanism in `hexkit` `MongoDbDao`
   provider.
   - This is a disadvantage for `hexkit` developers as well as users of `hexkit` who write
-  tests that might manually interact with the database. We are both.
+    tests that might manually interact with the database. We are both.
 
 *A final clarification:*
 This ADR is not concerned with prescribing a standard for representing UUIDs or dates on
@@ -112,6 +113,7 @@ to occur simultaneously.
 ### Consequences
 
 Benefits:
+
 - Improved Query Performance: Leveraging native data types allows MongoDB to use optimized
   indexes and query operators, resulting in faster query execution.
 - Data Integrity and Validation: Storing data in its actual type (UUID or date) helps ensure
@@ -130,6 +132,7 @@ Benefits:
   is welcome when there are few disadvantages.
 
 Drawbacks:
+
 - Compatibility Issues: External systems or components that expect UUIDs and dates as
   strings may require adjustments or data conversion layers to ensure consistency. If
   two APIs return string representations of a date, we must ensure they both use the

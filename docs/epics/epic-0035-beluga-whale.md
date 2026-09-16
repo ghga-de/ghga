@@ -42,24 +42,24 @@ This epic covers the following test journey:
 - Optional: Decrypting the downloaded output file and comparing the checksum (using connector).
 - Removing the test artifacts (via fixtures).
 
-
 ## Additional Implementation Details:
 
 Before executing the tests, following setup should be achieved
+
 - Create storage buckets
 - Set vault AppRole for Encryption Key Store Service
 - Set auth key
 - Set signing key for Work Package Service
 
 Cleanup after test:
+
 - Extend existing fixtures to clean up the test state after executing:
   - for MongoDB, drop used database
   - for s3 delete used buckets
   - for kafka delete used topics
 
-
 ## Human Resource/Time Estimation:
 
-Number of week required: 2
+Number of weeks required: 2
 
 Number of developers required: 2

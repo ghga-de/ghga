@@ -86,6 +86,6 @@ In cases where enum values are only used internally and not shared between compo
 
 - [Python support for enumerations](https://docs.python.org/3/library/enum.html)
 - [TypeScript Enums](https://www.typescriptlang.org/docs/handbook/enums.html)
-- [Enums vs String Literal Types in TypeScript ](https://brockherion.dev/blog/posts/enums-vs-typed-strings-in-typescript/)
+- [Enums vs String Literal Types in TypeScript](https://brockherion.dev/blog/posts/enums-vs-typed-strings-in-typescript/)
 - [TypeScript's Literal Types Are Better Than Enums](https://danielbarta.com/typescript-literal-types-are-stronger-than-enums/)
 - [Enums vs. String Literal Unions in TypeScript](https://contra.com/p/W3ol7m3o-enums-vs-string-literal-unions-in-type-script)

@@ -103,7 +103,7 @@ Note that Sheriff also provides an ESLint plugin, so both solutions are compatib
 
 Here is an example directory structure of an Angular application implementing the above architecture matrix:
 
-```
+```text
 +---node_modules
 +---public
 +---src

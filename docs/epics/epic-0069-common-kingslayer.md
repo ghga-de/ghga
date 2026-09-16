@@ -1,10 +1,12 @@
 # Distributed tracing with OpenTelemetry and Jaeger (Common Kingslayer)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
+
 ### Outline:
 
 Based on some previous exploration work, this epic aims to implement 1) OpenTelemetry instrumentation across file services in the file service monorepo and 2) in the remaining backend services along the download path, i.e. at least work-package and auth services and 3) necessary OpenTelemetry functionality inside of hexkit and/or ghga-service-commons.
@@ -16,10 +18,11 @@ In addition, a viable setup of Jaeger and its components needs to be devised and
 While OpenTelemetry supports tracing, metrics and logging, this epic will focus on enabling collection of distributed tracing data and neglect the other two aspects.
 
 #### File Services:
+
 File services can export tracing data using manual or autoinstrumentation or a combination of both.
 Autoinstrumentation works by installing specific libraries that monkeypatch existing functionality to inject information that can be propagated across service boundaries.
 In this document autoinstrumentation always means instrumentation provided by third-party libraries.
-While these are quite quite useful, they should be vetted for what data is attached to the traces and manual instrumentation should be used instead, if sensitive information is included.
+While these are quite useful, they should be vetted for what data is attached to the traces and manual instrumentation should be used instead, if sensitive information is included.
 If autoinstrumentation can be used in all/most cases, additional implementation work can be kept to a minimum.
 
 The following list of (auto)instrumentation libraries have been used during exploration and seem the most promising:
@@ -51,12 +54,12 @@ If any of these third-party libraries are not fit for our use case, they need to
 
 Additional manual instrumentation can be provided by creating a global `TracerProvider` and opening spans within the code using either contextmanagers or decorators.
 By default these will attach to an existing parent span generating a hierarchy of subspans across services.
-Additionally, to traverse service boundaries, HTTP and Kafka headers are populated with the necessary information, which is extracted at the receving end.
+Additionally, to traverse service boundaries, HTTP and Kafka headers are populated with the necessary information, which is extracted at the receiving end.
 Some additional code dealing with this process will be required, if the corresponding autoinstrumentation library is not used which can be implemented in hexkit for Kafka, MongoDB and boto or as middleware in ghga-service-commons for HTTP operations.
 
 As a basic example, assume a parent span already exists for a FastAPI application, then a custom subspan could be opened with the following code
 
-```
+```python
 # Initialize the TracerProvider in the service inject.py
 
 from opentelemetry import trace
@@ -90,18 +93,20 @@ This will produce a very lightweight span in both cases, which can be enriched w
 For this purpose, the context manager is more flexible, as additional span data can be populated dynamically within the function body, while the decorator can only be enriched with statically available data.
 
 #### Correlation ID
+
 It is not fully clear if we can inject and thus reuse our existing correlation ID within the OpenTelemetry framework.
 With the current understanding of how context propagation across services works, this might be as easy as renaming the corresponding headers for both HTTP requests and Kafka events to something that OpenTelemetry understands.
 The open question here is if autoinstrumentation libraries would interfere with this and overwrite the value or if, conversely, we might need to intercept autoinstrumentation headers and modify them.
 
 #### Hexkit/Service Commons:
+
 Hexkit needs some changes introducing logic around event subscribers to correctly propagate tracing context across service boundaries as the autoinstrumentation for Kafka does not open a new child span, ending the propagation at the event subscriber.
 
 Depending on if some autoinstrumentation is replaced or enhanced by manual instrumentation, there might be a need to touch some middleware, which would be done in ghga-service-commons.
 
 #### Jaeger Setup:
 
-Jaeger consists of three different components: Jaeger Collector, Jager Query and Jaeger UI. 
+Jaeger consists of three different components: Jaeger Collector, Jaeger Query and Jaeger UI.
 An all-in-one deployment bundling all three components is also available, which is normally used for development, but could be a viable option for our deployment for now.
 Jaeger Collector additionally needs a backing database for persistent storage of the traces it receives via OpenTelemetry, with multiple options available to choose from.
 

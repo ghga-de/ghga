@@ -136,7 +136,7 @@ when the change was made.
 Note that we currently only allow status transitions from "pending" to
 "allowed" or "denied". All other changes should return an error.
 
-Transitions from "denied to "pending" or "allowed" to "denied" may later
+Transitions from "denied" to "pending" or "allowed" to "denied" may later
 be supported as well. In the latter case, care must be taken to remove existing
 access grants. Edge cases should be handled carefully (user having access
 grants for the same dataset with different validity periods).
@@ -161,7 +161,7 @@ The access requests are stored in the database with the following details:
 - `full_user_name`: string (the full user name with title)
 - `email`: string (the e-mail address of the requester for notifications)
 - `request_text`: string (the text submitted with the request)
-- `access_starts`: data (when the access permission should start)
+- `access_starts`: date (when the access permission should start)
 - `access_ends`: date (when the access permission should end)
 - `request_created`: date (when the request has been created)
 - `status`: enum (allowed/denied/pending)
@@ -197,7 +197,7 @@ the latter provides the following *internal* endpoint:
   - returns nothing
 
 This will add a controlled access grant for the specified user and dataset
-with the given dates will be added to the Claims Repository.
+with the given dates to the Claims Repository.
 
 In order to facilitate authorization, the path of these endpoints starts with
 `download-access` and not with `users` which is already used by other endpoints
@@ -335,7 +335,7 @@ ID of the Data Access object is the same as the one of the corresponding
 Claim Object.
 
 Both of these endpoints of the Claims Repository should be proxied by the ARS
-to allow client access by data stewards, since the Clais Repository does not
+to allow client access by data stewards, since the Claims Repository does not
 have a public API that can be used by data stewards.
 
 ## Human Resource/Time Estimation

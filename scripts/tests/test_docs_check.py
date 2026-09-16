@@ -102,6 +102,20 @@ def test_epic_index_numbers_gaps(repo, capsys):
     assert "- (4) [Giraffe](./epic-0004-giraffe.md): Lifecycle\n" in lines
 
 
+def test_epic_index_keeps_the_heading_casing(repo, capsys):
+    """The code name is taken from the heading as written, not title-cased."""
+    epics = repo / "docs/epics"
+    (epics / "epic-0003-mermaids-purse.md").write_text(_epic("IDs", "Mermaid's Purse"))
+    (epics / "epic-0004-red-billed-quelea.md").write_text(
+        _epic("Batch", "Red-billed Quelea")
+    )
+    _stage(repo)
+    _run(repo, capsys)
+    index = (epics / "README.md").read_text()
+    assert "3. [Mermaid's Purse](./epic-0003-mermaids-purse.md): IDs\n" in index
+    assert "4. [Red-billed Quelea](./epic-0004-red-billed-quelea.md): Batch\n" in index
+
+
 @pytest.mark.parametrize(
     ("name", "expected"),
     [

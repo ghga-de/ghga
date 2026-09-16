@@ -5,12 +5,11 @@
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
 
 ### Outline:
 
-This epic aims to extend the `Dao` protocol in hexkit with batch methods that apply the existing  CRUD operations to several resources in a single call. 
+This epic aims to extend the `Dao` protocol in hexkit with batch methods that apply the existing CRUD operations to several resources in a single call.
 The corresponding MongoDB provider will implement those methods and the in-memory DAO testing utility will be updated accordingly.
 
 This will allow services to perform common bulk operations using one database round-trip per resource batch instead of one round-trip per resource.
@@ -23,9 +22,8 @@ This will allow services to perform common bulk operations using one database ro
 
 ### Not included:
 
-- Automatic chunking of very large documents. 
+- Automatic chunking of very large documents.
 As with the current single resource variants, we don't chunk when we would exceed MongoDB's 16 MB request size.
-
 
 ## API Definitions
 
@@ -39,7 +37,7 @@ class Dao(typing.Protocol[Dto]):
     async def insert_many(self, dtos: Collection[Dto]) -> None:
         """Insert multiple resources in a single call.
 
-        Raises `BatchOperationError if any DTO's ID already exists or if any DTO would violate a unique index constraint on a field other than the ID.
+        Raises a `BatchOperationError` if any DTO's ID already exists or if any DTO would violate a unique index constraint on a field other than the ID.
         """
 
     async def update_many(self, dtos: Collection[Dto]) -> None:

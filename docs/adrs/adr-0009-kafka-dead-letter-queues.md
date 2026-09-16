@@ -38,9 +38,10 @@ consume it again.
 
 We propose to implement a custom solution that takes advantage of the tools already
 available in `hexkit` and adapt them to provide the required functionality:
+
 1. Move a failing event to a new topic (the dead letter queue).
 2. Deal with the events from the dead letter queue by discarding them or republishing
-them via a new service (DLQ Service).
+   them via a new service (DLQ Service).
 
 We will publish failed events to a single DLQ topic, after which point they will be
 stored in a database. Following a resolution process, we will publish the events

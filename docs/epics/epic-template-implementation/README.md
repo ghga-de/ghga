@@ -1,4 +1,5 @@
 # \<Epic Title\> (\<Epic Code Name\>)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
@@ -9,16 +10,21 @@ Epic planning and implementation follow the
 \<Please replace all appearances of `<...>`.\>
 
 ## Scope
+
 ### Outline:
+
 \<Provide a brief outline of the goal of this epic in one or few sentences.\>
 
 ### Included/Required:
+
 \<List the required features without going into too much technical detail.\>
 
 ### Optional:
+
 \<List any optional features that may or may not be realized as part of this epic.\>
 
 ### Not included:
+
 \<List features that will not be addressed as part of this epic.\>
 
 ## User Journeys (optional)
@@ -26,7 +32,6 @@ Epic planning and implementation follow the
 This epic covers the following user journeys:
 
 \<Images and descriptions of user journeys go here. Adding an image turns the epic into a directory: move the specification to `README.md` and deposit the images in the `./images` sub-directory next to it.\>
-
 
 ![\<Example Image\>](./images/data_upload.jpg)
 
@@ -42,13 +47,11 @@ This epic covers the following user journeys:
 
 ### Payload Schemas for Events:
 
-\<Describe the schema of event either using example events or json schemas\>
-
+\<Describe the schema of events either using example events or JSON schemas\>
 
 ## Additional Implementation Details:
 
-- \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)>
-
+- \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)\>
 
 ## Human Resource/Time Estimation:
 

@@ -13,7 +13,7 @@ In the context of **modeling linked metadata on research data**
 facing **the performance and development-effort constraints we ran into with the
 LinkML-based tooling in our prototype**
 
-we decided for **implementing a custom specification and framework for modelling linked
+we decided for **implementing a custom specification and framework for modeling linked
 data based on JSON schema**
 
 and neglected **implementing custom tooling for LinkML or using the schema_salad
