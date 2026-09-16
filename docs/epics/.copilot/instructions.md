@@ -2,39 +2,40 @@
 
 ## Context
 
-This repository contains technical specifications for GHGA (German Human Genome-Phenome Archive) development epics.
+The `docs/epics` directory contains technical specifications for GHGA (German Human Genome-Phenome Archive) development epics.
 
-## Repository Structure and Naming Conventions
+## Structure and Naming Conventions
 
-Each epic is documented in a directory with a filename consisting of the number and code name of the epic, separated by hyphens (e.g., `0-blob-fish/` or `77-alpine-longhorn-beetle/`).
+Each epic is named `epic-NNNN-<code-name>`, with the epic number padded to four digits and the code name in kebab-case (e.g., `epic-0000-blob-fish` or `epic-0077-alpine-longhorn-beetle`).
 
-See the `README` file in the root directory for all details.
+An epic without supporting files is a single Markdown file under that name (e.g., `epic-0093-giraffe.md`). An epic with supporting files is a directory under that name, holding the specification as `README.md` next to them (e.g., `epic-0019-pied-raven/README.md` next to `images/`). Start a new epic as a single file, and turn it into a directory in the same commit that adds the first supporting file, so a directory always means there is something else in it.
+
+See the `README` file in this directory for all details.
 
 ## Document Structure
 
 The documentation should contain the full title and type of the epic, its scope, implementation details and a time estimation.
 
 There are two template directories:
-- `template_exploratory_epic` for exploratory epics
-- `template_implementation_epic` for implementation epics
+- `epic-template-exploratory` for exploratory epics
+- `epic-template-implementation` for implementation epics
 
 The format and content of the technical specification are different depending on the epic type (exploratory or implementation). The structure of the documentation should follow these templates.
 
-When creating new epics, always follow the structure of the respective template files in the repository and make sure to use a unique code name:
+When creating new epics, always follow the structure of the respective template files in this directory and make sure to use a unique code name:
 
-- Use `template_exploratory_epic/technical_specification.md` for exploratory epics
-- Use `template_implementation_epic/technical_specification.md` for implementation epics
+- Use `epic-template-exploratory/README.md` for exploratory epics
+- Use `epic-template-implementation/README.md` for implementation epics
 
-The main specification document should be always called `technical_specification.md`
-like in the template. It starts with a summary of the goal that should be achieved with this epic. It lists all the anticipated features as well as which features should not be addressed as part of the epic. Furthermore, any results of the epics (such as documents, or code repositories) are linked here. On top of that, implementation details on how to reach the anticipated outcome/output of this epic are provided.
+The main specification document is the epic's own Markdown file, `epic-NNNN-<code-name>.md` or `epic-NNNN-<code-name>/README.md`. It starts with a summary of the goal that should be achieved with this epic. It lists all the anticipated features as well as which features should not be addressed as part of the epic. Furthermore, any results of the epics (such as documents, or code repositories) are linked here. On top of that, implementation details on how to reach the anticipated outcome/output of this epic are provided.
 
 These template files contain the exact structure and placeholders that must be followed.
 
-## Related Repositories
+## Related Code and Decisions
 
-Most related repositories, particularly for the services and libraries developed by GHGA, can be found under https://github.com/ghga-de/.
+The services, libraries and tools an epic describes live in the same monorepo, under `services/`, `libs/`, `tools/` and `frontend/`; the delivery side is in `deploy/` and `testbed/`.
 
-Sometimes epics relate to Architecture Decision Records that can be found under https://github.com/ghga-de/adrs.
+Sometimes epics relate to Architecture Decision Records, which are in `docs/adrs`.
 
 ## Writing Guidelines
 

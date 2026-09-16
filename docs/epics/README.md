@@ -3,115 +3,115 @@
 > [!NOTE]
 > Each specification records the plan as it stood when its epic started and is not
 > updated afterwards. For current behaviour and binding rules, see the
-> [ADRs](../adr/), the [conventions](../conventions.md) and the code.
+> [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
 
-This repository contains technical specifications for GHGA development epics,
+This directory contains technical specifications for GHGA development epics,
 documenting the scope and plans for each epic before the epic is started.
 
 ## Structure and Conventions
 
 Each epic should have a descriptive title, a number and code name which should be the name of an animal (e.g. Blob Fish or Alpine Longhorn Beetle).
 
-The documentation for each epic should go into its own numbered directory (e.g., `0-blob-fish/` or `77-alpine-longhorn-beetle/`).
+Each epic is named `epic-NNNN-<code-name>`, with the number padded to four digits and the code name in kebab-case (e.g., `epic-0000-blob-fish` or `epic-0077-alpine-longhorn-beetle`).
 
-Each directory should contain a Markdown file `technical_specification.md`  as the main specification document, and additional supporting files or subdirectories as needed.
+An epic without supporting files is a single Markdown file under that name (e.g., `epic-0093-giraffe.md`). An epic with supporting files is a directory under that name, holding the specification as `README.md` next to them (e.g., `epic-0019-pied-raven/README.md` next to `images/`). Start a new epic as a single file, and turn it into a directory in the same commit that adds the first supporting file, so a directory always means there is something else in it.
 
 There are two different types of epics: Exploratory Epics and Implementation Epics.
 
-Please have a look at the templates ([exploratory](./template_exploratory_epic), [implementation](./template_implementation_epic)) and especially the contained technical specifications ([exploratory](./template_exploratory_epic/technical_specification.md), [implementation](./template_implementation_epic/technical_specification.md)).
+Please have a look at the templates ([exploratory](./epic-template-exploratory), [implementation](./epic-template-implementation)) and especially the contained technical specifications ([exploratory](./epic-template-exploratory/README.md), [implementation](./epic-template-implementation/README.md)).
 
-This repository is part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+These specifications are part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## The Saga so far
 
-- (0) [Blobfish](./0-blob-fish/technical_specification.md): Basic Metadata Catalog & UI
-- (1) [Red-Lipped Batfish](./1-red-lipped-batfish/technical_specification.md): Basic File IO Service
-- (2) [Horseshoe Bat](./2-horseshoe-bat/technical_specification.md): Metadata Submission via REST API
-- (4) [Star-Nosed Mole](./4-star-nosed-mole/technical_specification.md): Up-/Download Client & Production POC
-- (7) [Domestic Quail](./7-domestic-quail/technical_specification.md): Pilot Study for 3-Hex Chassis Lib
-- (8) [Carpenter Ant](./8-carpenter-ant/technical_specification.md): GA4GH-oriented Auth Concept
-- (9) [Wood Ant](./9-wood-ant/technical_specification.md): Life Science AAI as Identity Provider
-- (10) [Carrion Crow](./10-carrion-crow/technical_specification.md): File Tech Stack Exploration
-- (11) [Golden Quail](./11-golden_quail/technical_specification.md): Expanding Hexkit to Abstract the Persistence Layer
-- (12) [African Bush Elephant](./12-african-bush-elephant/technical_specification.md): Metadata Submission via Data Portal UI
-- (13) [Hawaiian Crow](./13-hawaiian-crow/technical_specification.md): S3 File I/O Benchmarking using hexkit and CLI
-- (14) [Coral Guard Crab](./14-coral-guard-crab/technical_specification.md): OIDC and API gateway integration
-- (15) [Morning Sun Star](./15-morning-sun-star/technical_specification.md): Basic User Registry
-- (16) [Cuban Crow](./16-cuban-crow/technical_specification.md): Prototyping Encryption & Decryption Workflow
-- (17) [Amitermes](./17-amitermes/technical_specification.md): Hexagonal File Service Refactoring
-- (18) [Hooded Crow](./18-hooded-crow/technical_specification.md): File Encryption & Decryption Services
-- (19) [Pied Crow](./19-pied-raven/technical_specification.md): File Encryption & Decryption Service Integration
-- (20) [Red Knob Sea Star](./20-red-knob-sea-star/technical_specification.md): Claims Repository
-- (21) [White Stork](./21-white_stork/technical_specification.md): Synthetic Data Generator
-- (22) [Crayfish](./22-crayfish/technical_specification.md): Exploration and conception for the metadata service refactoring
-- (23) [Thick Billed Raven](./23-thick-billed-raven/technical_specification.md): Integration of all File Services - Upload Stream
-- (24) [Common Raven](./24-common-raven/technical_specification.md): Integration of all File Services - Download Stream
-- (25) [Pacific Lamprey](./25-pacific_lamprey/technical_specification.md): Metadata refactoring proof of concept
-- (26) [Dracula Ant](./26-dracula-ant/technical_specification.md): Implementation of a Work Package Service for CLI client authentication
-- (27) [Paddlefish](./27-paddlefish/technical_specification.md): Implementation of encryption and parallel file part processing in uploads and downloads for ghga-connector
-- (28) [Giant Weta](./28-giant_weta/technical_specification.md): Batch Download for the CLI Client
-- (29) [Humphead Wrasse](./29-humphead-wrasse/technical_specification.md): Notification Service
-- (30) [Purple Frog](./30-purple_frog/technical_specification.md): Integration of Connector (CLI) with the Work Package Service
-- (31) [Red Kangaroo](./31-red-kangaroo/technical_specification.md): Angular/Vue for Data Portal
-- (32) [Pink Velvet Worm](./32-pink-velvet-worm/technical_specification.md): Reimplementation of metadata search service
-- (33) [Green Wrasse](./33-green-wrasse/technical_specification.md): Download Request Management
-- (34) [Chinese Pangolin](./34-chinese-pangolin/technical_specification.md): File Deletion and Outbox Cache Strategy
-- (35) [Beluga Whale](./35-beluga-whale/technical_specification.md): Archive Testing Framework - Happy Path
-- (36) [Axolotl](./36-axolotl/technical_specification.md): Biomedical Metadata Mocking
-- (37) [Proboscis Monkey](./37-proboscis-monkey/technical_specification.md): Upload Metadata Ingest and Unique S3 ID for Permanent Storage
-- (38) [Tokay Gecko](./38-tokay-gecko/technical_specification.md): Missing Glue Code for Metadata Ingress Inter-service Communication
-- (39) [Red-Necked Wallaby](./39-red-necked-wallaby/technical_specification.md): Upload refactoring and cleanup
-- (40) [Agile Wallaby](./40-agile-wallaby/technical_specification.md): Prepare for Federated Object Storage
-- (41) [Nautilus](./41-nautilus/technical_specification.md): Refactoring Priorities
-- (42) [Eurasian Wolf](./42-eurasian_wolf/technical_specification.md): Custom Specification Separating Schema Validation and Schema Linkage
-- (43) [Marabou Stork](./43-marabou-stork/technical_specification.md): Correlation ID Implementation
-- (44) [Common Wallaroo](./44-common-wallaroo/technical_specification.md): Choose frontend framework and component library
-- (45) [Topi Antelope](./45-topi-antelope/technical_specification.md): Structured Logging Tools
-- (46) [Sugar Ant](./46-sugar-ant/technical_specification.md): Integrate 2FA and IVA functionality
-- (47) [Bluestreak Cleaner Wrasse](./47-bluestreak-cleaner-wrasse/technical_specification.md): Automatically remove stale content from buckets
-- (48) [Kori Bustard](./48-kori-bustard/technical_specification.md): Notification Orchestration Service
-- (49) [Jackal](./49-jackal/technical_specification.md): Re-Implementation of the Metadata Schema in Schemapack
-- (50) [Dhole](./50-dhole/technical_specification.md): Rewriting existing metldata transformations
-- (51) [Ethiopian Wolf](./51-ethiopian-wolf/technical_specification.md): Monorepo Setup for Multiple Microservices
-- (52) [Hero Shrew](./52-hero-shrew/technical_specification.md): Outbox Pattern Refactoring
-- (53) [Honey Bee](./53-honey-bee/technical_specification.md): DevOps Production Preparation 1
-- (54) [Peacock Spider](./54-peacock-spider/technical_specification.md): Dataset Information Service
-- (55) [Madagascan Sunset Moth](./55-madagascan-sunset-moth/technical_specification.md): Preliminary Storage Selection
-- (56) [Sphynx Cat](./56-sphynx-cat/technical_specification.md): Kakfa Dead Letter Queues
-- (57) [Monkfish](./57-monkfish/technical_specification.md): State Management Service
-- (58) [Poodle Moth](./58-poodle-moth/technical_specification.md): Storing Data as strings vs BSON in MongoDB
-- (59) [Bottlenose Dolphin](./59-bottlenose-dolphin/technical_specification.md): Angular implementation plan and migration strategy
-- (60) [Hippopotamus](./60-hippopotamus/technical_specification.md): Create baseline for Angular implementation
-- (61) [Matamata Turtle](./61-matamata-turtle/technical_specification.md): DLQ Service
-- (62) [California Condor](./62-california-condor/technical_specification.md): DB Versioning
-- (63) [Thorny Devil](./63-thorny-devil/technical_specification.md): Download Path Service Response Caching
-- (64) [Blue Whale](./64-blue-whale/technical_specification.md): Reimplement frontend features in Angular
-- (65) [Striped Skunk](./65-striped-skunk/technical_specification.md): Hexkit v4 Rollout
-- (66) [Irukandji](./66-irukandji/technical_specification.md): Schemapack
-- (67) [Oryx](./67-oryx/technical_specification.md): Kafka Event Config Standardization
-- (68) [Gemsbok](./68-gemsbok/technical_specification.md): Persistent Kafka Publisher
-- (69) [Common Kingslayer](./69-common-kingslayer/technical_specification.md): Distributed tracing with OpenTelemetry and Jaeger
-- (70) [Common Furniture Beetle](./70-common-furniture-beetle/technical_specification.md): Metldata Transformation Finalzation
-- (71) [Carpenter Bee](./71-carpenter-bee/technical_specification.md): Metldata Configurable Workflows
-- (72) [Pygmy Goat](./72-pygmy-goat/technical_specification.md): Hexkit Documentation
-- (73) [Ballan Wrasse](./73-ballan-wrasse/technical_specification.md): Access Request Management Improvements
-- (74) [Slow Worm](./74-slow-worm/technical_specification.md): Hexkit Support for BSON UUIDs and Datetimes
-- (75) [Eurasian Blackbird](./75-eurasian-blackbird/technical_specification.md): Kafka Event IDs
-- (76) [Lynx Boreal](./76-lynx-boreal/technical_specification.md): Upload Service Intermediary Revision
-- (77) [Alpine Longhorn Beetle](./77-alpine-longhorn-beetle/technical_specification.md): Make Metadata Downloadable
-- (78) [Royal Angelfish](./78-royal-angelfish/technical_specification.md): Basic User and Access Management
-- (79) [Miniature Horse](./79-miniature-horse/technical_specification.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
-- (80) [Hedgehog Seahorse](./80-hedgehog-seahorse/technical_specification.md): GHGA Connector refactoring/rewrite and upload path implementation
-- (81) [Laotian Rock Rat](./81-laotian-rock-rat/technical_specification.md): Client Retry Logic Refactoring for Ratelimiting
-- (82) [Scissor Grinder Cicada](./82-scissor-grinder-cicada/technical_specification.md): Notification Service Update
-- (83) [Question Mark Chrysalis](./83-question-mark-chrysalis/technical_specification.md): Preliminary Experimental Metadata (EM) Transformation Service
-- (84) [Sarcastic Fringehead](./84-sarcastic-fringehead/technical_specification.md): File Upload Path Pt. 2
-- (85) [Tasselled Wobbegong](./85-tasselled-wobbegong/technical_specification.md): Support for Key-Value-Store in Hexkit
-- (86) [Archaeopteryx](./86-archaeopteryx/technical_specification.md): Basic Research Data Upload Box Frontend
-- (87) [Mermaid'S Purse](./87-mermaids-purse/technical_specification.md): Global Unique IDs, Aggregate Transformations, and Workflow API
-- (88) [Pistol Shrimp](./88-pistol-shrimp/technical_specification.md): UCS Upload Permission Guardrails
-- (89) [Apollo](./89-apollo/technical_specification.md): Initial Version of the GHGA Registry Service
-- (90) [Red-Billed Quelea](./90-red-billed-quelea/technical_specification.md): Support for Batch DAO Operations in Hexkit
-- (91) [Army Ant](./91-army-ant/technical_specification.md): Parallelize DHFS File Interrogation
-- (92) [Shovelnose Guitarfish](./92-shovelnose-guitarfish/technical_specification.md): Force Resolution of Failed Uploads
-- (93) [Giraffe](./93-giraffe/technical_specification.md): Early Data Lifecycle Rollout
+- (0) [Blobfish](./epic-0000-blob-fish/README.md): Basic Metadata Catalog & UI
+- (1) [Red-Lipped Batfish](./epic-0001-red-lipped-batfish/README.md): Basic File IO Service
+- (2) [Horseshoe Bat](./epic-0002-horseshoe-bat/README.md): Metadata Submission via REST API
+- (4) [Star-Nosed Mole](./epic-0004-star-nosed-mole/README.md): Up-/Download Client & Production POC
+- (7) [Domestic Quail](./epic-0007-domestic-quail/README.md): Pilot Study for 3-Hex Chassis Lib
+- (8) [Carpenter Ant](./epic-0008-carpenter-ant/README.md): GA4GH-oriented Auth Concept
+- (9) [Wood Ant](./epic-0009-wood-ant/README.md): Life Science AAI as Identity Provider
+- (10) [Carrion Crow](./epic-0010-carrion-crow.md): File Tech Stack Exploration
+- (11) [Golden Quail](./epic-0011-golden-quail/README.md): Expanding Hexkit to Abstract the Persistence Layer
+- (12) [African Bush Elephant](./epic-0012-african-bush-elephant/README.md): Metadata Submission via Data Portal UI
+- (13) [Hawaiian Crow](./epic-0013-hawaiian-crow.md): S3 File I/O Benchmarking using hexkit and CLI
+- (14) [Coral Guard Crab](./epic-0014-coral-guard-crab/README.md): OIDC and API gateway integration
+- (15) [Morning Sun Star](./epic-0015-morning-sun-star/README.md): Basic User Registry
+- (16) [Cuban Crow](./epic-0016-cuban-crow.md): Prototyping Encryption & Decryption Workflow
+- (17) [Amitermes](./epic-0017-amitermes.md): Hexagonal File Service Refactoring
+- (18) [Hooded Crow](./epic-0018-hooded-crow/README.md): File Encryption & Decryption Services
+- (19) [Pied Crow](./epic-0019-pied-raven/README.md): File Encryption & Decryption Service Integration
+- (20) [Red Knob Sea Star](./epic-0020-red-knob-sea-star/README.md): Claims Repository
+- (21) [White Stork](./epic-0021-white-stork/README.md): Synthetic Data Generator
+- (22) [Crayfish](./epic-0022-crayfish.md): Exploration and conception for the metadata service refactoring
+- (23) [Thick Billed Raven](./epic-0023-thick-billed-raven/README.md): Integration of all File Services - Upload Stream
+- (24) [Common Raven](./epic-0024-common-raven.md): Integration of all File Services - Download Stream
+- (25) [Pacific Lamprey](./epic-0025-pacific-lamprey.md): Metadata refactoring proof of concept
+- (26) [Dracula Ant](./epic-0026-dracula-ant.md): Implementation of a Work Package Service for CLI client authentication
+- (27) [Paddlefish](./epic-0027-paddlefish.md): Implementation of encryption and parallel file part processing in uploads and downloads for ghga-connector
+- (28) [Giant Weta](./epic-0028-giant-weta.md): Batch Download for the CLI Client
+- (29) [Humphead Wrasse](./epic-0029-humphead-wrasse.md): Notification Service
+- (30) [Purple Frog](./epic-0030-purple-frog.md): Integration of Connector (CLI) with the Work Package Service
+- (31) [Red Kangaroo](./epic-0031-red-kangaroo.md): Angular/Vue for Data Portal
+- (32) [Pink Velvet Worm](./epic-0032-pink-velvet-worm.md): Reimplementation of metadata search service
+- (33) [Green Wrasse](./epic-0033-green-wrasse/README.md): Download Request Management
+- (34) [Chinese Pangolin](./epic-0034-chinese-pangolin.md): File Deletion and Outbox Cache Strategy
+- (35) [Beluga Whale](./epic-0035-beluga-whale.md): Archive Testing Framework - Happy Path
+- (36) [Axolotl](./epic-0036-axolotl.md): Biomedical Metadata Mocking
+- (37) [Proboscis Monkey](./epic-0037-proboscis-monkey.md): Upload Metadata Ingest and Unique S3 ID for Permanent Storage
+- (38) [Tokay Gecko](./epic-0038-tokay-gecko.md): Missing Glue Code for Metadata Ingress Inter-service Communication
+- (39) [Red-Necked Wallaby](./epic-0039-red-necked-wallaby.md): Upload refactoring and cleanup
+- (40) [Agile Wallaby](./epic-0040-agile-wallaby.md): Prepare for Federated Object Storage
+- (41) [Nautilus](./epic-0041-nautilus.md): Refactoring Priorities
+- (42) [Eurasian Wolf](./epic-0042-eurasian-wolf.md): Custom Specification Separating Schema Validation and Schema Linkage
+- (43) [Marabou Stork](./epic-0043-marabou-stork.md): Correlation ID Implementation
+- (44) [Common Wallaroo](./epic-0044-common-wallaroo.md): Choose frontend framework and component library
+- (45) [Topi Antelope](./epic-0045-topi-antelope.md): Structured Logging Tools
+- (46) [Sugar Ant](./epic-0046-sugar-ant/README.md): Integrate 2FA and IVA functionality
+- (47) [Bluestreak Cleaner Wrasse](./epic-0047-bluestreak-cleaner-wrasse.md): Automatically remove stale content from buckets
+- (48) [Kori Bustard](./epic-0048-kori-bustard.md): Notification Orchestration Service
+- (49) [Jackal](./epic-0049-jackal.md): Re-Implementation of the Metadata Schema in Schemapack
+- (50) [Dhole](./epic-0050-dhole.md): Rewriting existing metldata transformations
+- (51) [Ethiopian Wolf](./epic-0051-ethiopian-wolf.md): Monorepo Setup for Multiple Microservices
+- (52) [Hero Shrew](./epic-0052-hero-shrew.md): Outbox Pattern Refactoring
+- (53) [Honey Bee](./epic-0053-honey-bee.md): DevOps Production Preparation 1
+- (54) [Peacock Spider](./epic-0054-peacock-spider.md): Dataset Information Service
+- (55) [Madagascan Sunset Moth](./epic-0055-madagascan-sunset-moth.md): Preliminary Storage Selection
+- (56) [Sphynx Cat](./epic-0056-sphynx-cat/README.md): Kakfa Dead Letter Queues
+- (57) [Monkfish](./epic-0057-monkfish.md): State Management Service
+- (58) [Poodle Moth](./epic-0058-poodle-moth.md): Storing Data as strings vs BSON in MongoDB
+- (59) [Bottlenose Dolphin](./epic-0059-bottlenose-dolphin.md): Angular implementation plan and migration strategy
+- (60) [Hippopotamus](./epic-0060-hippopotamus.md): Create baseline for Angular implementation
+- (61) [Matamata Turtle](./epic-0061-matamata-turtle/README.md): DLQ Service
+- (62) [California Condor](./epic-0062-california-condor/README.md): DB Versioning
+- (63) [Thorny Devil](./epic-0063-thorny-devil/README.md): Download Path Service Response Caching
+- (64) [Blue Whale](./epic-0064-blue-whale.md): Reimplement frontend features in Angular
+- (65) [Striped Skunk](./epic-0065-striped-skunk.md): Hexkit v4 Rollout
+- (66) [Irukandji](./epic-0066-irukandji.md): Schemapack
+- (67) [Oryx](./epic-0067-oryx.md): Kafka Event Config Standardization
+- (68) [Gemsbok](./epic-0068-gemsbok.md): Persistent Kafka Publisher
+- (69) [Common Kingslayer](./epic-0069-common-kingslayer.md): Distributed tracing with OpenTelemetry and Jaeger
+- (70) [Common Furniture Beetle](./epic-0070-common-furniture-beetle.md): Metldata Transformation Finalzation
+- (71) [Carpenter Bee](./epic-0071-carpenter-bee/README.md): Metldata Configurable Workflows
+- (72) [Pygmy Goat](./epic-0072-pygmy-goat.md): Hexkit Documentation
+- (73) [Ballan Wrasse](./epic-0073-ballan-wrasse.md): Access Request Management Improvements
+- (74) [Slow Worm](./epic-0074-slow-worm.md): Hexkit Support for BSON UUIDs and Datetimes
+- (75) [Eurasian Blackbird](./epic-0075-eurasian-blackbird.md): Kafka Event IDs
+- (76) [Lynx Boreal](./epic-0076-lynx-boreal/README.md): Upload Service Intermediary Revision
+- (77) [Alpine Longhorn Beetle](./epic-0077-alpine-longhorn-beetle/README.md): Make Metadata Downloadable
+- (78) [Royal Angelfish](./epic-0078-royal-angelfish/README.md): Basic User and Access Management
+- (79) [Miniature Horse](./epic-0079-miniature-horse.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
+- (80) [Hedgehog Seahorse](./epic-0080-hedgehog-seahorse.md): GHGA Connector refactoring/rewrite and upload path implementation
+- (81) [Laotian Rock Rat](./epic-0081-laotian-rock-rat/README.md): Client Retry Logic Refactoring for Ratelimiting
+- (82) [Scissor Grinder Cicada](./epic-0082-scissor-grinder-cicada.md): Notification Service Update
+- (83) [Question Mark Chrysalis](./epic-0083-question-mark-chrysalis.md): Preliminary Experimental Metadata (EM) Transformation Service
+- (84) [Sarcastic Fringehead](./epic-0084-sarcastic-fringehead/README.md): File Upload Path Pt. 2
+- (85) [Tasselled Wobbegong](./epic-0085-tasselled-wobbegong.md): Support for Key-Value-Store in Hexkit
+- (86) [Archaeopteryx](./epic-0086-archaeopteryx/README.md): Basic Research Data Upload Box Frontend
+- (87) [Mermaid'S Purse](./epic-0087-mermaids-purse.md): Global Unique IDs, Aggregate Transformations, and Workflow API
+- (88) [Pistol Shrimp](./epic-0088-pistol-shrimp.md): UCS Upload Permission Guardrails
+- (89) [Apollo](./epic-0089-apollo.md): Initial Version of the GHGA Registry Service
+- (90) [Red-Billed Quelea](./epic-0090-red-billed-quelea.md): Support for Batch DAO Operations in Hexkit
+- (91) [Army Ant](./epic-0091-army-ant.md): Parallelize DHFS File Interrogation
+- (92) [Shovelnose Guitarfish](./epic-0092-shovelnose-guitarfish.md): Force Resolution of Failed Uploads
+- (93) [Giraffe](./epic-0093-giraffe.md): Early Data Lifecycle Rollout
