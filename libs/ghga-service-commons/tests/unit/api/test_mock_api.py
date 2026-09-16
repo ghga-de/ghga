@@ -21,10 +21,12 @@ import pytest
 
 from ghga_service_commons.api.mock_api import (
     MockedApi,
+    MockedApis,
     MockSetupError,
     NotMockedError,
     endpoint,
     in_sequence,
+    network_at,
     respond,
 )
 
@@ -290,3 +292,40 @@ def test_respond_without_a_body_sends_none():
     assert isinstance(response, httpx2.Response)
     assert response.status_code == 204
     assert response.content == b""
+
+
+def _fake_network(
+    transport: httpx2.HTTPTransport, request: httpx2.Request
+) -> httpx2.Response:
+    """Stand in for the real network, so a request let out needs no server."""
+    return httpx2.Response(200, text="network")
+
+
+@pytest.mark.parametrize(
+    "allowed_host", ["localhost", "LOCALHOST", "127.0.0.1", "::1", "[::1]"]
+)
+@pytest.mark.parametrize(
+    "requested_url", ["http://localhost:9/", "http://127.0.0.1:9/", "http://[::1]:9/"]
+)
+def test_network_at_lets_loopback_out_however_it_is_spelled(
+    monkeypatch: pytest.MonkeyPatch, allowed_host: str, requested_url: str
+):
+    """Test that `network_at` matches a loopback call whichever alias either side uses."""
+    monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", _fake_network)
+    with MockedApis(allow_network=network_at(allowed_host)), httpx2.Client() as client:
+        assert client.get(requested_url).text == "network"
+
+
+def test_network_at_ignores_the_case_of_hosts(monkeypatch: pytest.MonkeyPatch):
+    """Test that `network_at` compares hosts the way URLs do, and still refuses others."""
+    monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", _fake_network)
+    with MockedApis(allow_network=network_at("Things.TEST")), httpx2.Client() as client:
+        assert client.get("http://things.test/").text == "network"
+        with pytest.raises(NotMockedError):
+            client.get("http://other.test/")
+
+
+def test_network_at_rejects_what_is_not_a_host():
+    """Test that a host with a port fails when the policy is built, not when it runs."""
+    with pytest.raises(MockSetupError, match=r"takes host names"):
+        network_at("localhost:8080")

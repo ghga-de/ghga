@@ -111,6 +111,7 @@ _BOOLEANS = {
 
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
 
+# A policy gets the URL as `MockedApis` routes it: lowercase, loopback as 127.0.0.1.
 NetworkPolicy = Callable[[httpx2.URL], bool]
 
 
@@ -706,6 +707,18 @@ def _canonical_loopback(url: httpx2.URL) -> httpx2.URL:
     return url.copy_with(host="127.0.0.1") if url.host in LOOPBACK_HOSTS else url
 
 
+def _canonical_host(host: str) -> str:
+    """Spell a host the way `MockedApis` spells the URL it hands a network policy."""
+    try:
+        url = httpx2.URL(scheme="http", host=host)
+    except httpx2.InvalidURL as error:
+        raise MockSetupError(
+            f"network_at() takes host names, but {host!r} is not one. Leave out the"
+            " scheme and the port."
+        ) from error
+    return _canonical_loopback(url).host
+
+
 def _declared_endpoints(mock_class: type) -> dict[str, Endpoint]:
     """Collect the endpoints a mock class declares, a subclass overriding its bases."""
     endpoints: dict[str, Endpoint] = {}
@@ -784,8 +797,12 @@ def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
 
 
 def network_at(*hosts: str) -> NetworkPolicy:
-    """Let out only the calls to the named hosts."""
-    allowed = frozenset(hosts)
+    """Let out only the calls to the named hosts.
+
+    Hosts are spelled the way requests are routed, so `LOCALHOST`, `[::1]` and
+    `127.0.0.1` all name the same loopback host.
+    """
+    allowed = frozenset(_canonical_host(host) for host in hosts)
 
     def policy(url: httpx2.URL) -> bool:
         """Whether the request is bound for one of the named hosts."""
