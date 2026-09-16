@@ -22,6 +22,8 @@ titles follow the [conventions](conventions.md#names-branches-prs-commits), deci
   The word count is not the test: if you have to read your own sentence twice, split it.
 - **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the
   same page"). Name the literal action instead.
+- **Every prohibition names the alternative.** "Don't X" leaves the reader guessing;
+  say what to do instead.
 - **Link instead of restating.** A rule lives in one place — an ADR, the conventions,
   this file — and everything else points to it.
 - **Headings carry no trailing punctuation.** A heading is a label, not a sentence: a

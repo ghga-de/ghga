@@ -22,6 +22,9 @@ charts and runs its integration tests on Kubernetes.
   [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
 - **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes,
   their tags, version stamping, the PyPI upload plan and the publish targets.
+- **[agent-instructions.md](agent-instructions.md)** — where guidance for coding agents
+  lives: the `AGENTS.md` files, their stubs, the READMEs and the skills, and what belongs
+  in each ([ADR-0042](adrs/adr-0042-agent-instruction-files.md)).
 - **[dependencies.md](dependencies.md)** — how dependencies are updated, and which are
   deliberately kept behind their latest version, why, and the signal to update.
 
@@ -80,6 +83,7 @@ ADR's frontmatter by `just docs-check`; do not edit it by hand.
 | [0039](adrs/adr-0039-docs-lane-github-pages.md) | One documentation site for the monorepo | accepted | docs, release |
 | [0040](adrs/adr-0040-adr-frontmatter.md) | YAML frontmatter for ADRs | accepted | docs, process |
 | [0041](adrs/adr-0041-docs-linting.md) | A pre-commit check for ADRs and epics | accepted | docs, process |
+| [0042](adrs/adr-0042-agent-instruction-files.md) | Layered AGENTS.md for coding agents | proposed | docs, process |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)
