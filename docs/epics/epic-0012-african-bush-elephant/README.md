@@ -100,7 +100,7 @@ The definitions are hosted here:
 
 The RESTful service API are described using OpenAPI:
 
-MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/cdadcf3a2926c0f564fec9c89052d43ce4eb423f/11_african-bush-elephant/api_definitions/rest/metadata_repository.yaml)
+MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0012-african-bush-elephant/api_definitions/rest/metadata_repository.yaml)
 
 ## Technical planning:
 

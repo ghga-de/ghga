@@ -36,9 +36,9 @@ The definitions are hosted here:
 The RESTful service API are described using OpenAPI:
 
 
-**Metadata Repository**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/0_blob_fish/api_definitions/rest/metadata_repository.yaml)
+**Metadata Repository**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0000-blob-fish/api_definitions/rest/metadata_repository.yaml)
 
-**Metadata Search**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/0_blob_fish/api_definitions/rest/metadata_search.yaml)
+**Metadata Search**: [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0000-blob-fish/api_definitions/rest/metadata_search.yaml)
 
 (The OpenAPI specifications are hosted in the `./api_defitions/rest` sub-directory. Please make sure the links are pointing to the main branch, even if the file doesn't exist there because the PR has not being merged, yet.)
 

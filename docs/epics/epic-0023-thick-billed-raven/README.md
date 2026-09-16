@@ -19,7 +19,7 @@ Integrate all File Services (UCS, IFRS, DCS) as well as the GHGA Connector into 
 The GHGA-Connector now sends the public key used in decrypting the crypt4gh header in the **POST** */uploads* API call.
 
 The new OpenAPI doc can be found here:
-[OpenAPI YAML](./api_definitions/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/23-thick-billed-raven/api_definitions/ucs.yaml)
+[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0023-thick-billed-raven/api_definitions/rest/ucs.yaml)
 
 ## Additional Implementation Details:
 

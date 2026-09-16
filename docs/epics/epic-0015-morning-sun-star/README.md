@@ -50,7 +50,7 @@ The definitions are hosted here:
 
 The RESTful service API is described using OpenAPI:
 
-**User Registry Service**: [OpenAPI YAML](api_definitions/rest/user_registry.yaml), [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/epic-docs/main/15-morning-sun-star/api_definitions/rest/user_registry.yaml)
+**User Registry Service**: [OpenAPI YAML](api_definitions/rest/user_registry.yaml), [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0015-morning-sun-star/api_definitions/rest/user_registry.yaml)
 
 ### Payload Schemas for Asynchronous Topics
 

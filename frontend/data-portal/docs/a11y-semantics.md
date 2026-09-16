@@ -45,7 +45,7 @@ Therefore we need a high-contrast mode and palette.
 These styles can be applied with either native CSS (using [`prefers-contrast`](https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-contrast)) or a dedicated toggle button (which requires a session cookie to persist the setting across pages and reloads).
 Tools to check for colour contrast ratios can be found in the links above.
 
-See also [links in Epic Spec 79](https://github.com/ghga-de/epic-docs/blob/main/79-miniature-horse/technical_specification.md#list-of-online-resources).
+See also [the list of online resources in Epic-0079](../../../docs/epics/epic-0079-miniature-horse.md#list-of-online-resources).
 
 ## Specific Implementation Details
 
