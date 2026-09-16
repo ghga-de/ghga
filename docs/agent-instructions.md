@@ -15,8 +15,8 @@ is in the [writing style](style.md), and what the format itself guarantees is at
 | `.agents/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
 
 Who reads a file decides how it is written, not who its rules apply to. `AGENTS.md`
-instructs: it may assume the repo is open and a task under way, and says which command to
-run and what not to do. A README explains, to someone who has neither. `docs/` argues a
+instructs: it may assume the repo is open and a task under way, and says which command
+to run and what not to do. A README explains, to someone who has neither. `docs/` argues a
 rule once for both, and a skill is a procedure no human would read end to end.
 
 A rule lives in one place. `docs/style.md` says *how* to write an ADR, a commit message
