@@ -606,9 +606,6 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
         """Answer from `mocks`, sending what they do not serve to `live_transport`."""
         self._mocks = mocks
         self._live_transport = live_transport
-        self._transport_is_async = isinstance(
-            self._live_transport, httpx2.AsyncBaseTransport
-        )
 
     def _refuse(self, request: httpx2.Request) -> httpx2.Response:
         """Explain that a permitted request has nowhere to go from here."""
@@ -621,40 +618,53 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
 
     def handle_request(self, request: httpx2.Request) -> httpx2.Response:
         """Answer a request made by a synchronous client."""
-        if self._transport_is_async:
-            raise TypeError("Request is sync, but transport is async.")
+        live_transport = self._live_transport
+        if live_transport is not None and not isinstance(
+            live_transport, httpx2.BaseTransport
+        ):
+            raise TypeError(
+                f"A synchronous client cannot use {type(live_transport).__name__} as"
+                " `live_transport`. Pass an `httpx2.BaseTransport` instead."
+            )
         return self._mocks._answered(
             request,
             lambda: (
-                self._live_transport.handle_request(request)  # type: ignore
-                if self._live_transport is not None
+                live_transport.handle_request(request)
+                if live_transport is not None
                 else self._refuse(request)
             ),
         )
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Answer a request made by an asynchronous client."""
-        if not self._transport_is_async:
-            raise TypeError("Request is async, but transport is sync.")
+        live_transport = self._live_transport
+        if live_transport is not None and not isinstance(
+            live_transport, httpx2.AsyncBaseTransport
+        ):
+            raise TypeError(
+                f"An asynchronous client cannot use {type(live_transport).__name__} as"
+                " `live_transport`. Pass an `httpx2.AsyncBaseTransport` instead."
+            )
         await request.aread()
 
         async def unmocked() -> httpx2.Response:
             """Send the request on, if there is anything to send it with."""
-            if self._live_transport is None:
+            if live_transport is None:
                 return self._refuse(request)
-            return await self._live_transport.handle_async_request(request)  # type: ignore
+            return await live_transport.handle_async_request(request)
 
         return await self._mocks._answered_async(request, unmocked)
 
     def close(self) -> None:
         """Close the transport underneath, which this one was handed to close."""
-        if self._live_transport is not None:
-            self._live_transport.close()  # type: ignore
+        # skip the other kind: raising here would hide the TypeError the request raised
+        if isinstance(self._live_transport, httpx2.BaseTransport):
+            self._live_transport.close()
 
     async def aclose(self) -> None:
         """Close the transport underneath, the way an asynchronous client asks."""
-        if self._live_transport is not None:
-            await self._live_transport.aclose()  # type: ignore
+        if isinstance(self._live_transport, httpx2.AsyncBaseTransport):
+            await self._live_transport.aclose()
 
 
 def _compiled(path: str) -> re.Pattern[str]:

@@ -355,3 +355,55 @@ def test_mocked_apis_come_off_in_reverse_order(monkeypatch: pytest.MonkeyPatch):
     first.uninstall()
     assert httpx2.HTTPTransport.handle_request is network
     assert httpx2.AsyncHTTPTransport.handle_async_request is network_async
+
+
+@pytest.mark.asyncio
+async def test_transport_without_live_transport_serves_async_clients():
+    """Test that a transport with nothing to let calls out to answers an async client."""
+    transport = MockedWildcardApi().as_transport()
+    async with httpx2.AsyncClient(transport=transport) as client:
+        response = await client.get("http://things.test/things/1")
+    assert response.text == "any"
+
+
+def test_live_transport_serving_both_kinds_serves_sync_clients():
+    """Test that a live transport for both kinds of client takes a sync client's calls."""
+    live_transport = httpx2.MockTransport(
+        lambda request: httpx2.Response(200, text="network")
+    )
+    transport = MockedApis(MockedWildcardApi()).as_transport(
+        live_transport=live_transport
+    )
+    with httpx2.Client(transport=transport) as client:
+        assert client.get("http://127.0.0.1:9/").text == "network"
+
+
+def test_async_live_transport_is_refused_for_sync_clients():
+    """Test that a sync client with an async-only live transport gets a TypeError.
+
+    Even a mocked call raises it, and closing the client on the way out does not
+    replace it.
+    """
+    transport = MockedApis(MockedWildcardApi()).as_transport(
+        live_transport=httpx2.AsyncHTTPTransport()
+    )
+    with (
+        pytest.raises(TypeError, match=r"A synchronous client cannot use AsyncHTTP"),
+        httpx2.Client(transport=transport) as client,
+    ):
+        client.get("http://things.test/things/1")
+
+
+@pytest.mark.asyncio
+async def test_sync_live_transport_is_refused_for_async_clients():
+    """Test that an async client with a sync-only live transport gets a TypeError.
+
+    Even a mocked call raises it, and closing the client on the way out does not
+    replace it.
+    """
+    transport = MockedApis(MockedWildcardApi()).as_transport(
+        live_transport=httpx2.HTTPTransport()
+    )
+    with pytest.raises(TypeError, match=r"An asynchronous client cannot use HTTP"):
+        async with httpx2.AsyncClient(transport=transport) as client:
+            await client.get("http://things.test/things/1")
