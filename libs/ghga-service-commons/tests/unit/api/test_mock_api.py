@@ -29,6 +29,8 @@ from ghga_service_commons.api.mock_api import (
     network_at,
     respond,
 )
+from ghga_service_commons.transports.config import CompositeConfig
+from ghga_service_commons.transports.factory import CompositeTransportFactory
 
 
 def test_endpoints_serving_the_same_route_are_rejected():
@@ -396,3 +398,31 @@ async def test_sync_live_transport_is_refused_for_async_clients():
     with pytest.raises(TypeError, match=r"An asynchronous client cannot use HTTP"):
         async with httpx2.AsyncClient(transport=transport) as client:
             await client.get("http://things.test/things/1")
+
+
+def test_transport_refuses_calls_outside_every_mock():
+    """Test that a call to no mocked API raises `NotMockedError` through the transport."""
+    mock = MockedWildcardApi()
+    with httpx2.Client(transport=mock.as_transport()) as client:
+        with pytest.raises(NotMockedError):
+            client.get("http://other.test/things/1")
+
+
+@pytest.mark.asyncio
+async def test_transport_serves_the_retry_stack_from_its_base():
+    """Test that the mocks answer every attempt made by the retrying transport stack.
+
+    The backoff is capped at zero, so the 503 is retried without waiting.
+    """
+    mock = MockedWildcardApi()
+    mock.on_any_thing = in_sequence(respond(503), respond(200, json={"id": "t1"}))
+    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+        CompositeConfig(client_exponential_backoff_max=0),
+        base_transport=mock.as_transport(),
+    )
+    async with httpx2.AsyncClient(
+        base_url=mock.base_url, transport=transport
+    ) as client:
+        response = await client.get("/things/1")
+    assert response.json() == {"id": "t1"}
+    assert len(mock.calls["on_any_thing"]) == 2
