@@ -9,7 +9,7 @@ Quick reference for how the repo is organised and what is automated from metadat
   `deploy/` (charts), `testbed/`, `docker/`, `scripts/`, `docs/` are support.
 - Members are placed by **primary identity**, not by capability — a `libs/` member can still
   produce an image; a `tools/` member can still be a workspace dependency
-  ([ADR-0033](adrs/0033-capability-markers-and-placement.md)).
+  ([ADR-0033](adrs/adr-0033-capability-markers-and-placement.md)).
 
 ## `[tool.ghga]` capability markers
 
@@ -31,7 +31,7 @@ roles = ["rest", "consumer"]  # deployment roles (distinct service_instance_id p
 Directories supply the defaults, so a marker is only written where a member deviates:
 `services/*` and `frontend/*` default to the platform lane with an image, `libs/*` to the
 PyPI lane, `tools/*` to no lane at all
-([ADR-0033](adrs/0033-capability-markers-and-placement.md)).
+([ADR-0033](adrs/adr-0033-capability-markers-and-placement.md)).
 
 Examples: `libs/hexkit` → `{pypi}` and `services/auth-service` → `{platform, image}`, both by
 default; `libs/metldata` → `{platform, image}` (a library that is also deployed);
@@ -49,13 +49,13 @@ ghga-event-schemas = { workspace = true }
 ```
 
 One `uv.lock` governs the whole repo → HEAD is always integrated
-([ADR-0026](adrs/0026-uv-workspace-source-coupled-libs.md)).
+([ADR-0026](adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 
 ## Branching
 
-Two long-lived branches ([ADR-0038](adrs/0038-branching-strategy.md)): **`dev`** is the
-integration branch and the repo default, **`main`** is the latest platform release — its HEAD
-is always a released state.
+Two long-lived branches ([ADR-0038](adrs/adr-0038-branching-strategy.md)): **`dev`** is
+the integration branch and the repo default, **`main`** is the latest platform release —
+its HEAD is always a released state.
 
 - **Cut feature branches from `dev` and merge them back into `dev`** via pull request. That is
   the default for everything; `just affected` compares against `origin/dev` for the same reason.
@@ -67,7 +67,7 @@ is always a released state.
   that is why "Require linear history" is off for `main`).
 - **Long-lived feature branches** are allowed, and decided case by case.
 - Committing directly to either branch is blocked by `no-commit-to-branch`
-  ([ADR-0036](adrs/0036-pre-commit-hooks.md)).
+  ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)).
 
 Which branch a tag is cut on is **enforced** by `release.yaml`, per lane — it tests membership
 of the branch's first-parent chain, so a back-merge does not launder a tag onto the wrong lane:
@@ -81,7 +81,7 @@ of the branch's first-parent chain, so a back-merge does not launder a tag onto 
 ### Names: branches, PRs, commits
 
 A change carries three names, all derived from one grammar
-([ADR-0038](adrs/0038-branching-strategy.md)):
+([ADR-0038](adrs/adr-0038-branching-strategy.md)):
 
 | | in a stack | solo |
 |---|---|---|
@@ -154,22 +154,22 @@ How a release runs end to end is in [releases.md](releases.md).
 
 - Every member keeps its own semver (in `pyproject.toml` / `Chart.yaml` / `package.json`).
 - A pushed git tag **`name/x.y.z`** releases only that component; CI asserts the tag matches the
-  member's version at HEAD ([ADR-0027](adrs/0027-versioning-and-release-by-tag.md)).
+  member's version at HEAD ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
 - A pushed git tag **`packages/x.y.z`** releases every PyPI-lane member the index is behind
   on, dependencies first; the version is a label naming no member
-  ([ADR-0027](adrs/0027-versioning-and-release-by-tag.md)).
+  ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
 - Wheels publish to **PyPI**, rehearsed on **TestPyPI** first, both by trusted publishing.
   Images publish to `docker.io/ghga/<member>` and charts as OCI artifacts under
   `ghga/<chart>-chart` — a tag push builds both; publishing them is a deliberate dispatch
-  ([ADR-0027](adrs/0027-versioning-and-release-by-tag.md)).
+  ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
 
 ## Toolchain
 
 - One `ruff` / `mypy` / `pytest` config at the repo root (in `pyproject.toml`); no per-member
   copies (the old `.template/` sync is retired).
-- `just` is the task facade ([ADR-0034](adrs/0034-task-runner.md)); `uv` manages Python 3.13.
+- `just` is the task facade ([ADR-0034](adrs/adr-0034-task-runner.md)); `uv` manages Python 3.13.
 - One `.pre-commit-config.yaml` at the root covers **both** stacks
-  ([ADR-0036](adrs/0036-pre-commit-hooks.md)). `just hooks` installs it, `just hooks-all` runs
+  ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)). `just hooks` installs it, `just hooks-all` runs
   everything. The ruff / mypy / prettier / eslint hooks take their version from `uv.lock` and
   `pnpm-lock.yaml`, not from a `rev:` pin, so a hook can never disagree with CI.
 - mypy runs per member (`src` + tests) via `scripts/typecheck.py` — the same runner behind

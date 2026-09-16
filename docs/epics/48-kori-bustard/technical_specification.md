@@ -11,7 +11,7 @@ The goal of this epic is to create a base implementation for a new service that
 publishes notification events upon consuming events corresponding to specific points
 in user journeys.
 A description of the concept can be found in
-[this ADR](../../adrs/0007-sourcing-notifications.md).
+[this ADR](../../adrs/adr-0007-sourcing-notifications.md).
 The name of the new service is the **Notification Orchestration Service (NOS)**. It does
 not replace or in any way supersede the similarly-named Notification Service. These are
 two distinct services. The latter produces notifications, such as emails, from

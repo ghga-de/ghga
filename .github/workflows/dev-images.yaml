@@ -25,7 +25,7 @@
 # rather than the justfile's `image`/`image-mono` recipes: those are also used for
 # local/demo builds that load into the docker store or a kind cluster, which is
 # incompatible with attestations (they turn the push into an OCI index the classic
-# docker store can't represent) — see docs/adrs/0037-image-signing-sbom-provenance.md.
+# docker store can't represent) — see docs/adrs/adr-0037-image-signing-sbom-provenance.md.
 name: dev-images
 
 on:

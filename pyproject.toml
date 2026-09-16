@@ -5,7 +5,7 @@
 # Members (libs/*, services/*, tools/*) each have their own pyproject.toml + version, and
 # consume internal libraries from source via `[tool.uv.sources] <lib> = { workspace = true }`.
 #
-# See docs/architecture/overview.md and docs/adrs/0026-uv-workspace-source-coupled-libs.md.
+# See docs/architecture/overview.md and docs/adrs/adr-0026-uv-workspace-source-coupled-libs.md.
 
 [tool.uv.workspace]
 members = ["libs/*", "services/*", "tools/*"]

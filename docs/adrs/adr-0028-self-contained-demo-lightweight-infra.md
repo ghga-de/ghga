@@ -35,7 +35,7 @@ devcontainer runs a privileged Docker daemon**.
 
 `helm install ghga` should give a working GHGA, including a local AAI, on a cluster you
 control and without an operations team. App charts own a workload's resources but not
-the edge or the infrastructure ([ADR-0031](0031-helm-chart-boundary-hybrid.md)), so
+the edge or the infrastructure ([ADR-0031](adr-0031-helm-chart-boundary-hybrid.md)), so
 something else has to supply those. Production gets them from Istio, Strimzi and other
 operators, which are heavy on a single-node cluster.
 
@@ -46,17 +46,17 @@ docker-compose, so a green run said nothing about the charts we deploy.
 
 **One umbrella.** `deploy/charts/ghga-demo` depends on the app charts and bundles what
 production gets from the platform: the Envoy Gateway edge with real ext-authz against
-the auth adapter ([ADR-0032](0032-self-contained-edge-envoy-gateway.md)), operator-free
-stand-ins for Kafka, MongoDB, S3 and Vault, a local AAI
-([ADR-0029](0029-local-aai-generic-oidc.md)), a mail sink, and Jobs that generate the
-secrets ([ADR-0035](0035-secrets-and-tls.md)) and seed a data steward. **Amended
+the auth adapter ([ADR-0032](adr-0032-self-contained-edge-envoy-gateway.md)),
+operator-free stand-ins for Kafka, MongoDB, S3 and Vault, a local AAI
+([ADR-0029](adr-0029-local-aai-generic-oidc.md)), a mail sink, and Jobs that generate
+the secrets ([ADR-0035](adr-0035-secrets-and-tls.md)) and seed a data steward. **Amended
 2026-09-15:** the S3 stand-in is Chainguard's MinIO build, digest-pinned and tracked by
 Renovate, because upstream stopped publishing images.
 
 **The demo is the test bed.** The test bed installs the same umbrella with a test-bed
 profile, which adds the state-management service
-([ADR-0030](0030-state-management-service-testbed-only.md)). What you install is what CI
-tests.
+([ADR-0030](adr-0030-state-management-service-testbed-only.md)). What you install is
+what CI tests.
 
 **kind everywhere.** CI runs the umbrella on kind, and so does the local loop, with kind
 inside the devcontainer's own Docker daemon. Local runs and CI use the same recipes.

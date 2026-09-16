@@ -79,7 +79,7 @@ This endpoint simply removes the auth session that is tracked in the Auth Adapte
 
 When an auth session already exists and any other request is made, the expiration date of the session should be automatically extended. The timeout for auth sessions and their maximum duration should be made configurable.
 
-See also: [ADR: user session management](../../adrs/0004-user-session-management.md)
+See also: [ADR: user session management](../../adrs/adr-0004-user-session-management.md)
 
 ### Session states
 
@@ -150,7 +150,7 @@ Note again that these endpoints do not respond with the HTTP status code `200 OK
 
 The application logic for the TOTP related endpoints should be implemented in the TOTP Management module. This module should also implement rate limiting and replay attack prevention.
 
-See also: [ADR: custom 2FA micro service](../../adrs/0003-custom-2fa-service.md)
+See also: [ADR: custom 2FA micro service](../../adrs/adr-0003-custom-2fa-service.md)
 
 ### IVA management
 

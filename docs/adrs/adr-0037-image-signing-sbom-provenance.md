@@ -34,13 +34,13 @@ is attested by our own workflow**.
 Every deployable image is built on Docker Hardened Images and published by one of two
 workflows: `dev-images.yaml` pushes `:dev` tags to GHCR on every merge to `dev`, and
 `release.yaml` pushes release images to Docker Hub
-([ADR-0027](0027-versioning-and-release-by-tag.md)). Neither produced an SBOM,
+([ADR-0027](adr-0027-versioning-and-release-by-tag.md)). Neither produced an SBOM,
 provenance or a signature.
 
 Admission control, such as a Kyverno policy that verifies images, is an environment-wide
 concern and belongs to the platform repository, like the cluster auth policy
-([ADR-0031](0031-helm-chart-boundary-hybrid.md)). This repo's part is the producer side:
-sign what it publishes, and attach what a policy verifies against.
+([ADR-0031](adr-0031-helm-chart-boundary-hybrid.md)). This repo's part is the producer
+side: sign what it publishes, and attach what a policy verifies against.
 
 ### Decision
 

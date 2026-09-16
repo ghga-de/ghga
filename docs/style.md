@@ -5,7 +5,7 @@ in this repo. It does not cover user-facing text, such as data portal content, u
 documentation or notification emails, which may follow a different style.
 It covers only what is settled so far. Commit messages, branch names and pull request
 titles follow the [conventions](conventions.md#names-branches-prs-commits), decided in
-[ADR-0038](adrs/0038-branching-strategy.md).
+[ADR-0038](adrs/adr-0038-branching-strategy.md).
 
 ## Writing
 
@@ -64,11 +64,11 @@ width by hand: it buries the real change in the diff.
 
 ### Shape
 
-Start every ADR from [`adrs/0000-template.md`](adrs/0000-template.md). Name the file
-`NNNN-kebab-case-title.md`, with the next free number.
+Start every ADR from [`adrs/adr-template.md`](adrs/adr-template.md). Name the file
+`adr-NNNN-kebab-case-title.md`, with the next free number.
 
 - **Frontmatter:** a YAML block with the [fields below](#header-fields-and-status), in
-  that order ([ADR-0040](adrs/0040-adr-frontmatter.md)). No `deciders` field — a
+  that order ([ADR-0040](adrs/adr-0040-adr-frontmatter.md)). No `deciders` field — a
   decision is the team's, and git records who wrote the file.
 - **Title:** `# ADR-NNNN — <Title>`, in sentence case, right after the frontmatter.
 - **`## Summary`:** one Y-statement, one clause per paragraph, with the content of each
@@ -118,5 +118,5 @@ enough to replace the decision gets a new ADR that supersedes the old one.
 
 The index in [`docs/README.md`](README.md#decisions-adrs) is generated from the
 frontmatter. `scripts/adr_check.py` checks these rules and every ADR reference in the
-tree, and regenerates the index ([ADR-0041](adrs/0041-adr-linting.md)). It runs as a
+tree, and regenerates the index ([ADR-0041](adrs/adr-0041-adr-linting.md)). It runs as a
 pre-commit hook and as `just adrs`.

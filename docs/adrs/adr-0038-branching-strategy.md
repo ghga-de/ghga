@@ -57,7 +57,7 @@ squashed, their titles become the permanent history.
 - Hotfixes are cut from `main`, merged back into it and released without a candidate,
   then merged into `dev`.
 - Component releases are tagged on `main` as well, in lockstep with the platform
-  ([ADR-0027](0027-versioning-and-release-by-tag.md)).
+  ([ADR-0027](adr-0027-versioning-and-release-by-tag.md)).
 - Long-lived feature branches are allowed, decided case by case.
 
 **Merging.** Pull requests into `dev` are squashed, so one pull request becomes one

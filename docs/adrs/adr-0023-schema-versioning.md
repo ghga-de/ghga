@@ -35,8 +35,8 @@ accepting that **we must take care to implement the solution consistently, that 
 
 **Definitions**
 - ***Migration***, ***migration script***, ***migration process*** and ***schema*** are
-  used as defined in [ADR-0022](0022-db-migrations.md); "Pydantic model", "model", and
-  "schema" are used interchangeably here.
+  used as defined in [ADR-0022](adr-0022-db-migrations.md); "Pydantic model", "model",
+  and "schema" are used interchangeably here.
 - ***Schema version***: A value that identifies a specific iteration of a schema,
   representing the exact data structure at a given point in time. Can be an integer,
   SemVer string, or similar incrementable value.

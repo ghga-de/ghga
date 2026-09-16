@@ -15,4 +15,4 @@ Planned members (after import): `auth-service`, `access-request-service`,
 - Most services run as a **rest** + **consumer** pair — modelled in the chart as N Deployments
   sharing config with distinct `service_instance_id`s.
 - `state-management-service` is **test-bed-only** and values-gated — never in demo/prod
-  ([ADR-0030](../docs/adrs/0030-state-management-service-testbed-only.md)).
+  ([ADR-0030](../docs/adrs/adr-0030-state-management-service-testbed-only.md)).

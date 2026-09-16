@@ -16,18 +16,19 @@
   mechanism. One toolchain, defined once at the repo root, replaces N synchronised copies.
 - **HEAD of the integration branch is always fully integrated.** A single `uv.lock` and
   source-level coupling of internal libraries make this true by construction (see §3.2).
-  That branch is `dev` since [ADR-0038](../adrs/0038-branching-strategy.md); `main` carries the
+  That branch is `dev` since [ADR-0038](../adrs/adr-0038-branching-strategy.md); `main` carries the
   latest release.
 - **Helm charts are a product of this repo.** `helm install ghga` yields a working GHGA,
   including a local AAI (Life Science Login replacement).
 - **Integration testing on Kubernetes** (kind, in CI and inside the devcontainer — ADR-0028)
   using the same charts, replacing the docker-compose test bed.
 - **CI/CD keeps `dev` green** by running the integration tests on proposed changes
-  ([ADR-0038](../adrs/0038-branching-strategy.md); `main` moves only at release time).
+  ([ADR-0038](../adrs/adr-0038-branching-strategy.md); `main` moves only at release
+  time).
 - **Independent component lifecycle** preserved *in versioning*: tagging `name/version`
   releases just that component, and nothing else. Not in *timing* — the tag is cut on `main`,
   so a component's release rides the platform cadence rather than running ahead of it
-  ([ADR-0027](../adrs/0027-versioning-and-release-by-tag.md), decided 2026-09-08).
+  ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md), decided 2026-09-08).
 
 ### Non-goals
 - Replacing the application architecture itself (hexagonal services, Kafka event bus,
@@ -35,7 +36,8 @@
 - Re-platforming production. Production keeps its "bells and whistles" (Istio mesh + ingress,
   Strimzi-managed Kafka, Loki/Prometheus/Grafana). This repo produces the **app layer** (incl.
   app-coupled CRDs); the platform/GitOps layer owns the cluster edge + auth + per-env config
-  (the *hybrid* boundary, see [ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)).
+  (the *hybrid* boundary, see
+  [ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)).
 - Importing `datahub-test-bed` (different audience) or the retired template.
 
 ## 2. Current state (summary)
@@ -93,7 +95,7 @@ ghga-monorepo/
 Repo→destination mapping for the import is the source of truth in
 [scripts/migration/repos.tsv](../../scripts/migration/repos.tsv).
 
-### 3.2 Python: uv workspace & dependency model — [ADR-0026](../adrs/0026-uv-workspace-source-coupled-libs.md)
+### 3.2 Python: uv workspace & dependency model — [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md)
 
 - The repo is **one `uv` workspace**. Each lib/service/tool is a workspace **member** with its
   own `pyproject.toml` and **its own version**.
@@ -107,13 +109,13 @@ Repo→destination mapping for the import is the source of truth in
 - **Workspace Python baseline = 3.13** (the services' target). The workspace lock resolves for
   one interpreter.
 - **Published libraries keep broad support** (3.11–3.14 today, a floor now uniform across the
-  lane — [ADR-0026](../adrs/0026-uv-workspace-source-coupled-libs.md), amended 2026-08-24).
+  lane — [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md), amended 2026-08-24).
   Their declared dependency *ranges* stay broad in their own `pyproject.toml`; a **per-package
   standalone matrix** job (`TEST_PYTHONS` in `scripts/pypi_members.py`) validates the
   *published* combination. So: the workspace lock tests "the integrated combo"; the matrix
   tests "the published combo". Both are required.
 
-### 3.3 Versioning & release — [ADR-0027](../adrs/0027-versioning-and-release-by-tag.md)
+### 3.3 Versioning & release — [ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)
 
 The release process in detail is in [releases.md](../releases.md).
 
@@ -143,10 +145,10 @@ The release process in detail is in [releases.md](../releases.md).
 ### 3.5 Helm — adopt `ghga-common`; app charts + demo umbrella
 
 The charts come from GHGA's `ghga-common` chart system
-([ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)): the Bitnami-`common`-based
+([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)): the Bitnami-`common`-based
 library chart and the per-service generator live in `deploy/`, and the generator derives
 each chart from workspace metadata
-([ADR-0033](../adrs/0033-capability-markers-and-placement.md)) plus the member's
+([ADR-0033](../adrs/adr-0033-capability-markers-and-placement.md)) plus the member's
 `chart-values.yaml`. Routing is Gateway API `HTTPRoute` only; the Emissary paths and the
 `istio-ext-authz-sync` Job were not carried over. `devops-kubernetes-hub`, outside this
 repo, is the GitOps/platform layer. [deploy/README.md](../../deploy/README.md) covers
@@ -157,19 +159,19 @@ how the charts are generated and tested.
   the app-coupled CRDs** they already own: `HTTPRoute` (Gateway API), `DestinationRule` (toggle),
   `NetworkPolicy`, `KafkaUser`/`KafkaTopic` (toggle), plus the secret-consumption shape. The
   GitOps/platform layer owns the **edge** (`Gateway`), the **edge-auth** object, and **per-env**
-  config — the *hybrid* boundary ([ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)).
+  config — the *hybrid* boundary ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)).
 - **`deploy/charts/ghga-demo`** — a self-contained **single-command** umbrella
-  ([ADR-0028](../adrs/0028-self-contained-demo-lightweight-infra.md)) that bundles the
-  **edge** (Envoy Gateway with real ext_authz against the auth adapter, gateway Service on
-  a NodePort — [ADR-0032](../adrs/0032-self-contained-edge-envoy-gateway.md)) and
-  **lightweight infra** as plain in-chart templates: Kafka in KRaft mode
-  (`KafkaUser`/`KafkaTopic` toggled off) and MongoDB on official images, MinIO on
-  Chainguard's build, Vault in dev mode, MailHog and a wiremock SMS gateway. The
-  **local AAI** is `mock-oauth2-server` through the `aai`
-  chart ([ADR-0029](../adrs/0029-local-aai-generic-oidc.md)). A pre-install **secret-gen
-  Job** writes plain K8s Secrets ([ADR-0035](../adrs/0035-secrets-and-tls.md)), and the
-  data steward is seeded through `auth-service` config. This same umbrella **is** the
-  test bed.
+  ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)) that bundles
+  the **edge** (Envoy Gateway with real ext_authz against the auth adapter, gateway
+  Service on a NodePort —
+  [ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)) and **lightweight
+  infra** as plain in-chart templates: Kafka in KRaft mode (`KafkaUser`/`KafkaTopic`
+  toggled off) and MongoDB on official images, MinIO on Chainguard's build, Vault in dev
+  mode, MailHog and a wiremock SMS gateway. The **local AAI** is `mock-oauth2-server`
+  through the `aai` chart ([ADR-0029](../adrs/adr-0029-local-aai-generic-oidc.md)). A
+  pre-install **secret-gen Job** writes plain K8s Secrets
+  ([ADR-0035](../adrs/adr-0035-secrets-and-tls.md)), and the data steward is seeded
+  through `auth-service` config. This same umbrella **is** the test bed.
 
 **Profiles** are values files layered on the umbrella, in this order:
 
@@ -178,7 +180,7 @@ how the charts are generated and tested.
 | `values.yaml` | The self-contained demo, pulling released images |
 | `values-local.yaml` | Locally built images (tag `local`), demo-sized resources for one kind node |
 | `values-artifacts.yaml` | Test bed: the metldata artifact model, generated by `just testbed-artifacts` |
-| `values-testbed.yaml` | Test bed: enables `state-management-service` ([ADR-0030](../adrs/0030-state-management-service-testbed-only.md)) and swaps the `aai` chart for GHGA's test OIDC provider |
+| `values-testbed.yaml` | Test bed: enables `state-management-service` ([ADR-0030](../adrs/adr-0030-state-management-service-testbed-only.md)) and swaps the `aai` chart for GHGA's test OIDC provider |
 | `values-mono.yaml` | Optional, last: every Python member on one image, for faster builds (see the [README](../../README.md#image-profiles)) |
 
 **App-chart binding contract** (already met by `ghga-common`; kept as hard requirements):
@@ -189,7 +191,7 @@ how the charts are generated and tested.
 - secret consumption toggle: Vault Agent (prod) vs env-from-Secret (demo);
 - seed/secret-gen **Jobs default to `sidecar.istio.io/inject: "false"`**.
 
-### 3.6 Integration test bed — [ADR-0028](../adrs/0028-self-contained-demo-lightweight-infra.md)
+### 3.6 Integration test bed — [ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)
 
 - The BDD + Playwright suite in `testbed/` runs against **the same `ghga-demo` umbrella** a
   user installs, with the test-bed profiles on top. "What you install == what CI tests."
@@ -203,9 +205,9 @@ how the charts are generated and tested.
   routing + Envoy ext_authz path against the real auth-adapter — not a stand-in.
 - **`state-management-service`** resets Kafka, MongoDB, S3 and Vault between scenarios. It
   is enabled only by `values-testbed.yaml`, **never** in demo or production
-  ([ADR-0030](../adrs/0030-state-management-service-testbed-only.md)).
+  ([ADR-0030](../adrs/adr-0030-state-management-service-testbed-only.md)).
 - Logins: the suite's auth fixtures create tokens through the test OIDC provider's
-  `POST /login` ([ADR-0029](../adrs/0029-local-aai-generic-oidc.md)).
+  `POST /login` ([ADR-0029](../adrs/adr-0029-local-aai-generic-oidc.md)).
 - Still **not** per-PR: the prod Istio edge-auth CRs, mesh mTLS, and Strimzi specifics —
   covered in **staging** against the real platform.
 
@@ -221,12 +223,12 @@ how the charts are generated and tested.
 ## 4. Sandbox phase & migration
 
 The monorepo is developed **separately from mainline (`ghga-de`) for a while**
-([ADR-0025](../adrs/0025-consolidate-into-monorepo.md)):
+([ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md)):
 
 - Hosted at **`github.com/ghga-de/ghga`** (a new repo, separate from the per-component repos).
   Publish targets are decided and both lanes are live — images and charts to Docker Hub,
   wheels to PyPI after a TestPyPI rehearsal
-  ([ADR-0027](../adrs/0027-versioning-and-release-by-tag.md)).
+  ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - **History-preserving import** via `git filter-repo` (subdir move + boilerplate drop), then a
   **one-way incremental sync** from mainline until cutover. See the
   [runbook](../migration/runbook.md).
@@ -237,8 +239,8 @@ The monorepo is developed **separately from mainline (`ghga-de`) for a while**
 |---|---|
 | "HEAD always integrated" vs "independent lifecycle" | Source-coupled libs (one `uv.lock`) → integration is structural; *independent lifecycle* applies to **release cadence** (per-component tags), not to consumers lagging on lib versions. |
 | Services need 3.13, libs need 3.9–3.12 | Workspace baseline 3.13; libs keep broad ranges + a standalone per-Python **matrix** job. |
-| Self-reliant `helm install ghga` vs prod-faithful tests | One self-contained umbrella with an **Envoy Gateway** edge ([ADR-0032](../adrs/0032-self-contained-edge-envoy-gateway.md)) is **both** the install and the test bed: real Gateway-API routing + real Envoy ext_authz against the real auth-adapter, no external ops. Residual prod-only bits (Istio edge-auth CRs, mesh mTLS, Strimzi) → periodic staging check. |
-| App chart portability (Istio prod vs Envoy Gateway demo) | *Hybrid* boundary ([ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)): app charts own app-coupled CRDs (HTTPRoute, etc.) with toggles; the edge + edge-auth object live in the GitOps/demo layer and differ per environment. |
+| Self-reliant `helm install ghga` vs prod-faithful tests | One self-contained umbrella with an **Envoy Gateway** edge ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)) is **both** the install and the test bed: real Gateway-API routing + real Envoy ext_authz against the real auth-adapter, no external ops. Residual prod-only bits (Istio edge-auth CRs, mesh mTLS, Strimzi) → periodic staging check. |
+| App chart portability (Istio prod vs Envoy Gateway demo) | *Hybrid* boundary ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)): app charts own app-coupled CRDs (HTTPRoute, etc.) with toggles; the edge + edge-auth object live in the GitOps/demo layer and differ per environment. |
 | `state-management-service` power | Test-only, values-gated, never in demo/prod. |
 | Migrate without disrupting live repos | One-way incremental, history-preserving sync; harmonise only at the root; keep service `src/` aligned with mainline. |
 
@@ -249,7 +251,7 @@ The monorepo is developed **separately from mainline (`ghga-de`) for a while**
   higher-fidelity gate, or staging-only is sufficient.
 - Observability in the demo (OTLP endpoint target) vs prod Loki/Prometheus/Grafana.
 
-> Resolved since first draft: edge ([ADR-0032](../adrs/0032-self-contained-edge-envoy-gateway.md)),
-> chart boundary and adopting `ghga-common` ([ADR-0031](../adrs/0031-helm-chart-boundary-hybrid.md)),
-> member placement ([ADR-0033](../adrs/0033-capability-markers-and-placement.md)), task runner
-> ([ADR-0034](../adrs/0034-task-runner.md)), secrets ([ADR-0035](../adrs/0035-secrets-and-tls.md)).
+> Resolved since first draft: edge ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)),
+> chart boundary and adopting `ghga-common` ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)),
+> member placement ([ADR-0033](../adrs/adr-0033-capability-markers-and-placement.md)), task runner
+> ([ADR-0034](../adrs/adr-0034-task-runner.md)), secrets ([ADR-0035](../adrs/adr-0035-secrets-and-tls.md)).
