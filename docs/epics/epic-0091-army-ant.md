@@ -7,13 +7,13 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 DHFS (Data Hub File Service) polls FIS for files that need interrogation and re-encryption, then works through them one file at a time. It downloads a file, decrypts it, re-encrypts it with a new secret, uploads it, and reports back to FIS before moving on to the next file. When there's a large backlog for a given Data Hub, or a batch of big files, this adds up. Files sit around waiting their turn even though nothing requires them to be processed in order.
 
 This epic changes the interrogation loop so DHFS works on several files at once, up to a configurable limit, instead of sequentially. Before we can do that safely, a few pieces of shared client code need small fixes, because they were written assuming only one request is ever in flight at a time.
 
-### Included/Required:
+### Included/Required
 
 - Add bounded concurrency to the file loop in `Interrogator.interrogate_new_files()` so multiple `interrogate_file()` calls run simultaneously.
 - Add a new config setting for how many files DHFS is allowed to work on at once (e.g. `max_concurrent_files`), alongside the existing `min_run_interval_seconds` poll setting.
@@ -25,16 +25,16 @@ This epic changes the interrogation loop so DHFS works on several files at once,
 - Rework the per-file timing log at the end of `_process_file_parts()`. The `*_s` and `*_mib_per_s` fields are measured as wall clock time around each phase, so once files overlap they also count time the file spent waiting behind other files, and the throughput figures stop describing the phase they are named after. Either report the elapsed times without the derived MiB/s fields, or move throughput reporting up to the batch level.
 - Update the DHFS README's configuration section to document the new settings. The README section is generated from `config_schema.json`, so `config_schema.json` and `example_config.yaml` need regenerating too.
 
-### Optional:
+### Optional
 
 - Apply the same bounded-concurrency treatment to the part-level loop inside a single file (`_process_file_parts()`), so very large files also see a speedup. This is more involved because parts have to be assembled into the multipart upload buffer in order, so it needs either an ordered queue or a way to reassemble out-of-order results before uploading.
 
-### Not included:
+### Not included
 
 - Running multiple DHFS replicas per hub as a way to add throughput. There is currently no claim or lease mechanism between DHFS and FIS, so two replicas would both pick up and redundantly process the same file. Making that safe is a separate design challenge involving FIS.
 - Any change to what FIS returns from `GET /storages/{alias}/uploads`. FIS still hands back the whole batch of pending files in one call, with no pagination or per-file claiming.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Current behavior
 
@@ -129,7 +129,7 @@ Also note that hexkit already routes every boto3 call through `asyncio.to_thread
 - Pin `PEAK_PART_COPIES` with a `tracemalloc` test over `_process_file_parts()`, so that the constant the budget relies on doesn't silently drift when that loop is edited later.
 - Load test against a local S3-compatible backend (e.g. MinIO) with a batch of files to check that throughput actually improves and that the connection pool limit change doesn't get maxed out or exhausted unexpectedly.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

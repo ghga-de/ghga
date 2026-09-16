@@ -7,20 +7,20 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic aims to extend the `Dao` protocol in hexkit with batch methods that apply the existing CRUD operations to several resources in a single call.
 The corresponding MongoDB provider will implement those methods and the in-memory DAO testing utility will be updated accordingly.
 
 This will allow services to perform common bulk operations using one database round-trip per resource batch instead of one round-trip per resource.
 
-### Included/Required:
+### Included/Required
 
 - Extend the `Dao` protocol in `hexkit.protocols.dao` with four new methods, `insert_many`, `update_many`, `upsert_many` and `delete_many`, keeping the protocol backend-agnostic.
 - Implement the four methods on the `MongoDbDao` provider in `hexkit.providers.mongodb.provider.dao`
 - Extend the in-memory DAO provider so that it supports the new methods with equivalent semantics.
 
-### Not included:
+### Not included
 
 - Automatic chunking of very large documents.
 As with the current single resource variants, we don't chunk when we would exceed MongoDB's 16 MB request size.

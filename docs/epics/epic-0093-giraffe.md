@@ -9,7 +9,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 GHGA so far has no notion of study identity, versioning or replacement. A submission may in
 principle carry several studies — the loader silently keeps only the first — and a re-submission
@@ -62,7 +62,7 @@ relation, written by the loader and read by the data portal.
 
 `RDUB` / `FUB`: Research Data Upload Box (RS-owned) and File Upload Box (UCS-owned).
 
-### Included/Required:
+### Included/Required
 
 - **One study per submission.** dskit must reject any submission whose metadata contains more than
   one study, and the metldata loader must assert the same rather than silently truncating. Every
@@ -115,7 +115,7 @@ relation, written by the loader and read by the data portal.
   instead of deleting it on first merge, serve it to any accession bound to that file however late
   it arrives, and clear all such accessions when the file is deleted.
 
-### Optional:
+### Optional
 
 - **"This study replaced A, B and C" note.** The reverse direction of the portal's "updated version
   available" hint, as a line on `study/:id` rather than a screen of its own, listing direct
@@ -125,7 +125,7 @@ relation, written by the loader and read by the data portal.
   predecessors as an array; `GET /studies/{study_pid}/successor` resolves only the forward
   direction.
 
-### Not included:
+### Not included
 
 - **The schemapack services** — resource-registry, resource-search, em-transformation-service — and
   the schemapack migration itself. This epic is deliberately confined to the LinkML plus
@@ -199,9 +199,9 @@ This epic covers the following user journeys.
 9. The file admin panel lists every archived file in GHGA, including files archived but not yet
    mapped to any metadata.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 **metldata — new**
 
@@ -261,7 +261,7 @@ model — the mapping tool simply calls it once per archived box it is working a
   warnings without prompting.
 - `dskit metadata replace-study <old PID> <new PID>` — new command.
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 **No changes to `libs/ghga-event-schemas` are required.**
 
@@ -281,7 +281,7 @@ Should RS later need `superseded_by_id` populated, that is the point at which a 
 Keep any such change additive, and mind that this monorepo is source-coupled to a single schema
 version — all consumers see the same one.
 
-### Configuration:
+### Configuration
 
 Proposed new config fields. All must have safe defaults.
 
@@ -299,7 +299,7 @@ later is possible in principle — already-minted PIDs stay valid, since a longe
 sequences that were never used. Removing or reassigning characters is not, as that can invalidate
 PIDs already minted.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 **Land on main incrementally, in this order:** one-study enforcement first, since everything else
 assumes it; then the reuse accession; then the PID scheme and the submission-store extensions; then
@@ -350,7 +350,7 @@ with the metadata and the lineage that justify it. Version continuation is answe
 it needs the predecessor's submitted metadata and not just its accession string, as is
 lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff already reads.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the config fields
       above
@@ -412,7 +412,7 @@ current one ("what applies now?"). The loader denormalises the result into an ac
 governance collection, mirroring the ancestry collection above; governance only changes at load, so
 precomputing costs no freshness. `POST /file-governance/query` serves that collection to RS.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Persist the declared replacement on the submission record, enforcing that each study is
       replaced by at most one successor
@@ -474,7 +474,7 @@ Note that the "reused file must belong to my own lineage" rule is deliberately *
 anywhere. Merging removes any single lineage to validate against, which is why the judgement moves
 offline into these warnings.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Reject multi-study submissions at `submit`, naming the studies found
 - [ ] Enforce alias uniqueness across all entities within the study, with a clear error
@@ -564,7 +564,7 @@ contract unchanged. Same shape as the `superseded_by_id` handover under "Not inc
 metldata records and propagates it. `superseded_by_id` is left unset in this rollout, as recorded
 under "Not included".
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Add `POST /studies/{study_id}/file-ids`, taking one accession map for the whole study across
       archived boxes, including the "already maps to studies X, Y" report
@@ -606,7 +606,7 @@ DINS must therefore:
 3. Clear all such accessions when the file is deleted. `delete_file_information` currently resolves
    a `file_id` to a single accession via `find_one` and deletes only that one.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Stop deleting the per-file record after a successful merge
 - [ ] Merge the retained record into every later accession bound to the same `file_id`
@@ -629,7 +629,7 @@ There is no retained "hidden" flag and no steward search that can still see supe
 They remain reachable by direct URL through the artifacts API, which is the only guaranteed route to
 them once they leave the index.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Confirm by integration test that a declared replacement removes the predecessor's datasets
       from search while leaving them retrievable by URL
@@ -657,7 +657,7 @@ them once they leave the index.
   archived-but-unmapped file becomes findable. Expect it to be used to *find* the files a later
   mapping pass needs, so filtering by mapped/unmapped and by box matters more than presentation.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Resolve and render the "updated version available" hint on `dataset/:id` and `study/:id`
 - [ ] Rework `upload-box-mapping/` and its services from box-centric to study-centric
@@ -677,7 +677,7 @@ forbids and must be split into two submissions.
 Feature files referencing the two studies and needing review: `202_upload_completed.feature`,
 `320_search_datasets.feature`, `350_combined_browsing.feature`, `502_data_portal_uploads.feature`.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Split the example metadata into two single-study submissions
 - [ ] Update the affected feature files and their step implementations
@@ -685,7 +685,7 @@ Feature files referencing the two studies and needing review: `202_upload_comple
 - [ ] Add a scenario covering file reuse across two studies end to end, including DINS serving size
       and checksum for the later accession
 
-## Cross-cutting invariants to preserve:
+## Cross-cutting invariants to preserve
 
 - **One study per submission** — dskit `submit`, asserted again in the loader.
 - **Aliases unique within a study revision** — dskit `submit`; child accessions derive from the
@@ -703,7 +703,7 @@ Feature files referencing the two studies and needing review: `202_upload_comple
   the index without deleting the artifacts.
 - **Re-load and re-declare are idempotent** — consumers already tolerate missing targets.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 3
 

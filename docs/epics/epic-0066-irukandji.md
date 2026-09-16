@@ -7,13 +7,13 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic aims to make datapack navigation independent of its corresponding schemapack. Currently, since the relation class is not explicitly provided in the datapack, resolving target classes requires referring back to the schemapack. This epic introduces changes to eliminate this dependency, allowing the datapack to be self-contained for navigation.
 
 Additionally, this epic introduces configurable embedding depth in datapack denormalization. This ensures more control over how deeply related entities are embedded, enabling partial embedding instead of always including all related data at the highest level.
 
-### Included/Required:
+### Included/Required
 
 #### Example datapacks/schemapacks
 
@@ -57,7 +57,7 @@ For example, given that an experiment has relations to sample, sample has relati
 
 The new implementation will allow the embedding until a given depth. The current denormalize is a recursive function which will be converted to depth-limited recursion. The function will take an integer depth parameter that controls how many levels of references should be expanded.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

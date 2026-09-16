@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to overhaul the Upload Controller Service (UCS) as part of the
 new [File Upload concept](https://ghga.pages.hzdr.de/internal.ghga.de/feature_archconcept-file-upload/developer/architecture_concepts/ac007_file_upload/).
@@ -17,7 +17,7 @@ rely upon some shortcuts, such as extra Data Steward involvement. When the full
 architectural concept is realized, the appropriate adaptations will follow in a future
 epic.
 
-### Included/Required:
+### Included/Required
 
 - Implement new Upload Orchestrator Service as described below
 - Revamp existing UCS logic
@@ -25,7 +25,7 @@ epic.
 - Adapt CRS to also manage claims for upload boxes
 - Add new schemas to `ghga-event-schemas`
 
-### Not included:
+### Not included
 
 - Archive test bed integration
 - Subsequent FIS or IFRS updates for the upload path
@@ -445,11 +445,11 @@ A Data Steward uses the Data Portal to make a request to revoke a given upload a
 
 A Data Steward uses the Data Portal to see the complete or partial list of existing upload grants. The Data Portal sends a request to the UOS, which verifies that the Data Steward has the requisite role. The UOS makes a call to the CRS's `GET /upload-access/grants` endpoint, including any search filters provided by the DS as query parameters. The CRS returns a compiled list of grants to the UOS, which returns the information to the Data Portal.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
-#### Upload Controller Service:
+#### Upload Controller Service
 
 - `POST /boxes`: Create a new `FileUploadBox`
   - Requires `CreateUploadWorkOrder` token and only allowed for Data Stewards via the UOS.
@@ -479,7 +479,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
   - Deletes the `FileUpload` and tells S3 to cancel the multipart upload if applicable.
   - Path args and token must agree on box ID and file ID
 
-#### Upload Orchestration Service:
+#### Upload Orchestration Service
 
 - `GET /boxes`: Retrieve all boxes allowed based on claims or user role
 - `GET /boxes/{box_id}`: Retrieve a `ResearchDataUploadBox` by ID
@@ -517,7 +517,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
 - `GET /boxes/{box_id}/uploads`: Retrieve list of file IDs for `ResearchDataUploadBox`
   - Signs a `ViewFileBoxWorkOrder` token and calls matching UCS endpoint
 
-#### Work Package Service:
+#### Work Package Service
 
 - `GET /users/{user_id}/boxes`: List all `ResearchDataUploadBox` IDs available to the user based on upload access grants in the CRS
 - `POST /work-packages/{work_package_id}/boxes/{box_id}/work-order-tokens`: Create a WOT for uploading files
@@ -526,7 +526,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
     work type
   - The box ID is the ID of a `ResearchDataUploadBox`, and the WPS exchanges that for the ID of the associated `FileUploadBox` in its database when making the WOT.
 
-#### Claims Repository Service:
+#### Claims Repository Service
 
 - CRS Authentication for upload endpoints should match existing download counterparts
 - `GET /upload-access/grants`: lists existing upload access grants
@@ -536,7 +536,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
   - This is called by the UOS when the Data Steward grants a user upload access
 - `DELETE /upload-access/grants/{grant_id}`: revoke upload access
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 ```python
 class FileUploadBox(BaseModel):
@@ -592,7 +592,7 @@ class AuditRecord(BaseModel):
   entity_id: str | None = None
 ```
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### WOT Modifications in WPS
 
@@ -662,7 +662,7 @@ Tests need to cover at least the following items (not exhaustive):
   - Exception being to re-open the `FileUploadBox`
 - UOS rejects requests for locked `ResearchDataUploadBoxes`, except to move state to `OPEN` or `CLOSED`
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 3
 

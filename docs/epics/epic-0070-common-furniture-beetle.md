@@ -7,11 +7,11 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to implement and refactor transformations to transition to schemapack and a new workflow language in metldata.
 
-### Included / Required:
+### Included / Required
 
 The following additional transformations shall be implemented or refactored in metldata.
 
@@ -71,7 +71,7 @@ The transformations implemented as a part of Dhole epic `count_content_values`, 
 
 Any existing content schema transformation involving a passive path element will be represented with two transformations; one for resolving the path and adding the relation (with `infer_relations`), the other one transforming the content (with `transform_content`). If not needed, the temporary relation may be deleted in subsequent workflow steps.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: ?
 

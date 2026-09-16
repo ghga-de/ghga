@@ -2,7 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 In order to start refactoring our frontend, we need to make a final decision regarding the frontend framework, design system and component library that we will use to build the next version of the data portal and potentially also the follow-up products.
 
@@ -21,19 +21,19 @@ This evaluation can be split into the following tasks:
 - Try to evaluate the libraries given these criteria, without creating test implementations, and finalize the decision for the component library.
 - Summarize the decisions in an architecture decision record (ADR).
 
-## Not part of this Exploration:
+## Not part of this Exploration
 
 Aspects that shall be ignored during the exploration:
 
 - Creating test implementations for different component libraries or mock designs with various systems (this would be too time-consuming).
 
-## Material and Resources:
+## Material and Resources
 
 - see [Red Kangaroo](./epic-0031-red-kangaroo.md) epic for frontend frameworks
 - [What Is a Front-End Design System, and Why Is It Necessary?](https://semaphoreci.com/blog/front-end-design-system)
 - [Overview of 25+ UI Component Libraries in 2023](https://www.builder.io/blog/25-plus-ui-component-libraries)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

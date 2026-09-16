@@ -7,27 +7,27 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 In this epic, support for key-value stores should be added to the hexkit library,
 with concrete implementations for various backends.
 
 We can use this to implement external session storage in the Auth Service using Redis or Memcached (which will allow us to scale the service horizontally) and to make the secret management in the Encryption Key Store Service independent from HashiCorp Vault backend (we could then more easily swap it with MongoDB for instance).
 
-### Included/Required:
+### Included/Required
 
 - Add a new `KeyValueStoreProtocol` to the hexkit library that can be used to access an arbitrary key-value store.
 - Implement providers for MongoDB, HashiCorp Vault and Redis, and an in-memory provider for testing.
 - The providers should support only strings as keys but allow bytes, strings, `JsonObject`s (as defined in hexkit) or Pydantic models as value types.
 - Integration tests for all supported providers.
 
-### Optional:
+### Optional
 
 - Make sure the Redis provider also supports Upstash.
 - Add providers for other backends such as Memcached, Zookeeper and S3.
 - Support namespaces.
 
-### Not included:
+### Not included
 
 - Support for arbitrary Python types as value objects (e.g. using pickle).
 

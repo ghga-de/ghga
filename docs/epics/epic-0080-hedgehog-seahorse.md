@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic has two different, but related goals:
 
@@ -26,7 +26,7 @@ In short, a (partial) rewrite of the existing functionality might be more benefi
 
 Details on which parts exactly should be changed are described below.
 
-### Included/Required:
+### Included/Required
 
 - Upgrading the codebase to only support Python >=3.10, as 3.9 will be deprecated soon
 - Structure code more clearly into shared functionality and path/command specific code
@@ -54,13 +54,13 @@ The current implementation uses the appropriate caching headers, but additionall
 A local bound on the cache lifetime will likely still be needed, but should be more dynamic. This part might need some more investigation.
 - Investigate if the `RetryHandler` could be implemented in an easier way.
 
-### Optional:
+### Optional
 
 - Requiring a lower bound of Python >=3.11, so the code can take advantage of [task groups](https://docs.python.org/3/library/asyncio-task.html#task-groups) for the actual async transfer code, which would make it easier to reason about what's happening and make setup/teardown a bit easier to handle
 - Find a better way to support a range of Python versions long term.
 The repository template based system currently tends to needlessly break stuff sometimes, making it necessary to work around it every once in a while and opting out of the update mechanism for the affected files
 
-## User Journeys:
+## User Journeys
 
 The journeys for the download path stay the same, only the underlying implementation changes.
 
@@ -84,7 +84,7 @@ For each file, the following happens:
    2. The connector performs a DELETE request to the corresponding UCS endpoint, which then either deletes the file, if the upload has already been completed, or cancels the ongoing multipart upload, deleting all file parts which have been submitted so far.
    3. The UCS returns a response communicating that the deletion was successful.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### General issues
 
@@ -101,7 +101,7 @@ For each file, the following happens:
 
 In the current implementation, the different concerns that are involved in the download process are entangled in the following way:
 
-#### `cli.py`:
+#### `cli.py`
 
 - Calls the WellKnownValue service
 - Calls the WorkPackage service
@@ -134,7 +134,7 @@ This would replace the current, tedious process of tracing different, interdepen
 
 A similar structure as described for the download could also be adopted for the upload process, as there will be similar components governing the lifecycle of file uploads.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

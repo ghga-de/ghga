@@ -65,7 +65,7 @@ by the data stewards (e.g., reason for rejecting a request, internal notes, tick
     with context information (e.g., name and email of the requester, request text,
     ID and title of the requested dataset, name of the corresponding DAC).
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

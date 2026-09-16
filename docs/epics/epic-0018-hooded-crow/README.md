@@ -2,7 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/TgA5D
 
@@ -83,23 +83,23 @@ Following implementation goals for the *Encryption Key Store* shall be achieved 
 > 2. The GHGA secret key and the file encryption/decryption key identified by the provided secret ID are retrieved.
 > 3. A personalized envelope is constructed based on those three keys and returned to the download controller.
 
-## User Journeys that are not part of this Epic:
+## User Journeys that are not part of this Epic
 
 Defining message formats for events at the boundaries of the *Interrogation Room* will be part of a follow-up epic.
 Adjusting and integrating existing services will also be handled in that same epic and not in *Hooded Crow*.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 [Encryption Key Store REST API](./api_definitions/rest/encryption_key_store.yml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0018-hooded-crow/api_definitions/rest/encryption_key_store.yml)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 Some tasks at the boundaries need to be dealt with directly during implementation of this epic.
 Specific details on user public key storage and retrieval should go here, as well as secret ID storage and retrieval based on file ID.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

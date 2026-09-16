@@ -9,20 +9,20 @@ Epic planning and implementation follow the
 
 \<Please replace all appearances of `<...>`.\>
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 Principal topics and components that shall be part of this exploration.
 Moreover, lists the questions that shall be answered.
 
 - \<Provide a list here.\>
 
-## Not part of this Exploration:
+## Not part of this Exploration
 
 All aspects that shall be ignored during the exploration:
 
 - \<Provide a list here.\>
 
-## Material and Resources:
+## Material and Resources
 
 Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to:
 
@@ -36,11 +36,11 @@ This epic covers the following user journeys:
 
 ![\<Example Image\>](./images/data_upload.jpg)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 - \<List further implementation details here. (Anything that might be relevant for defining and executing tasks.)\>
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: \<Insert a number.\>
 

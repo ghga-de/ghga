@@ -7,14 +7,14 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic is for the implementation of the database versioning concept used to
 transition data for a given database when a relevant schema change or systematic content
 update occurs. Database versioning also provides a way to detect whether the current
 database instance is the expected version or not.
 
-### Included/Required:
+### Included/Required
 
 - Initial implementation on single service:
   - Add database version
@@ -25,7 +25,7 @@ database instance is the expected version or not.
   - Refinements and abstraction of common logic if applicable
 - Apply database versioning to remaining services
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### General Migration Logic
 
@@ -183,7 +183,7 @@ should be both logged and stored in the database along with a timestamp so we ca
 identify performance issues early on. It makes sense to track the duration along with
 database size so we can have a good estimate of how long upcoming migrations will take.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

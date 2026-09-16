@@ -2,11 +2,11 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope:
+## Scope
 
 This epic covers integrating missing functionality to communicate with the work package service and process work package access and work order tokens in the GHGA Connector.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### API Calls
 
@@ -26,7 +26,7 @@ This token is encrypted and needs to be decrypted before use and needs to be pro
 A work order token needs to be retrieved each time a new pre-signed URL is generated or a Crypt4GH envelope is requested.
 The retrieved token is a JSON web token (JWT) and has to be sent in the request header (Authorization header using the Bearer schema, i.e. `Authorization: Bearer <token>`) to the respective DCS endpoints, i.e. `/objects/{object_id}` and `/objects/{object_id}/envelopes/{public_key}` where it needs to be validated to authorize the corresponding request.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

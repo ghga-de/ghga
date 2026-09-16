@@ -7,11 +7,11 @@
 This epic aims to enhance existing functionality for all services that interact with S3 compatible object storage.
 Currently, only communication with one configured object storage node is supported, but this should be extended to support multiple locations per service.
 
-### Outline:
+### Outline
 
 The proposed changes will touch the following services: Upload Controller (UCS), Interrogation Room (IRS), Internal File Registry (IFRS), Download Controller (DCS) and the event schema repository.
 
-#### Common Service Changes:
+#### Common Service Changes
 
 The following configuration changes for object storage are proposed:
 Moving from separate `access_key_id`, `secret_access_key` and `endpoint_url` for one storage configuration, a `s3_object_storages` object will now hold the configuration for all available locations.
@@ -42,11 +42,11 @@ It is assumed that files are never moved or copied across object storage nodes, 
 
 The proposed changes do not include redundancy across object storage nodes.
 
-### Not Included:
+### Not Included
 
 Changes to the logic selecting which object storage node is chosen will not be addressed in this epic.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1-1.5
 

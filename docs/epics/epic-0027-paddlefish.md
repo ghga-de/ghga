@@ -4,14 +4,14 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 This epic covers two features to be implemented in the ghga-connector:
 
 1. Crypt4GH compliant encryption of files to be uploaded
 2. Parallelization of file part uploads/downloads
 
-## Implementation Details:
+## Implementation Details
 
 ### Encryption
 
@@ -40,7 +40,7 @@ In addition, replacing the fully synchronous requests library with one supportin
 
 The subsequent implementation task is fully dependent on the results of the exploration. While the details are not described here, it is a part of the epic and should transform the acquired knowledge into corresponding code changes.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1-2
 

@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The outbox pattern must be applied to our microservices in order to back up Kafka events,
 but not every event needs to be saved in the database. Rather, we can apply the outbox
@@ -23,7 +23,7 @@ to services beyond the primary owning service, but that is outside the scope of 
 epic, which is concerned only with the implementation of the outbox subscriber as a
 backup mechanism for Kafka events.
 
-### Included/Required:
+### Included/Required
 
 - Implementation of the outbox pattern in the following:
   - Download Controller Service
@@ -35,7 +35,7 @@ backup mechanism for Kafka events.
 - Any modifications to other services required for the purpose of achieving idempotence
 - Testing
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 The following services need the outbox *publisher* implemented for the listed events:
 
@@ -62,40 +62,40 @@ The following services need the outbox *subscriber* implemented for the listed e
 
 The outbox pattern implementation results in changes to service configuration parameters as follows:
 
-#### Download Controller:
+#### Download Controller
 
 Added `unstaged_download_collection` without default value  
 Removed `unstaged_download_event_type`  
 Removed `files_to_delete_type`
 
-#### File Ingest:
+#### File Ingest
 
 Added `db_connection_str` and `db_name`  
 Added `file_validations_collection` with default value `file-validations`  
 Removed `publisher_type`  
 Renamed `publisher_topic` -> `file_upload_validation_success_topic`
 
-#### Internal File Registry:
+#### Internal File Registry
 
 Removed `files_to_delete_type`, `files_to_register_type`, `files_to_stage_type`
 
-#### Interrogation Room:
+#### Interrogation Room
 
 Removed `upload_received_event_type`
 
-#### Purge Controller:
+#### Purge Controller
 
 Added `db_connection_str` and `db_name`  
 Added `file_deletions_collection` with default value `file-deletions`  
 Removed `files_to_delete_type`
 
-#### Upload Controller:
+#### Upload Controller
 
 Added `file_upload_received_collection` without default value  
 Renamed `upload_received_event_topic` -> `file_upload_received_topic`  
 Removed `upload_received_event_type`, `files_to_delete_type`
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

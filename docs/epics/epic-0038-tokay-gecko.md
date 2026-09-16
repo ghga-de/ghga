@@ -6,16 +6,16 @@
 
 This epic aims to fill in the missing parts in inter-service communication along the preliminary upload/ingress path provided for 1.0.
 
-### Outline:
+### Outline
 
-#### Metldata Service:
+#### Metldata Service
 
 - Implement publisher for deletion and population events
 - Needs to track current artifact resources in own DB and compute change sets for incoming artifacts
 - Needs to upsert new/changed artifact resources
 - Transforms embedded dataset resource information into form accepted by WPS for outgoing event
 
-#### MASS:
+#### MASS
 
 - Add event subscriber for deletion and population events
 - Add functionality to populate entities
@@ -23,7 +23,7 @@ This epic aims to fill in the missing parts in inter-service communication along
 - embedded_dataset artifact as input in form of MASS models.Resource
 - Kafka Key Name: dataset_embedded_{id}
 
-#### WPS:
+#### WPS
 
 - Receive event conforming to MetadataDatasetOverview from Metldata Service
 - Adjust event subscriber config for population events (if needed)
@@ -68,7 +68,7 @@ sequenceDiagram
 
 Kafka topic has to be the same for deletion and creation (where applicable) to guarantee order for events with same key - use type to distinguish.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

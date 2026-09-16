@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 Implement a special event publisher that incorporates a DAO to automatically
 store *stateless* events in the database. The functionality will be similar to
@@ -23,19 +23,19 @@ between the two categories both conceptually and in code.
 The new class will be called `PersistentKafkaPublisher` and reside within the
 `mongokafka` subpackage.
 
-### Included/Required:
+### Included/Required
 
 - New `PersistentKafkaPublisher` in `hexkit`
 - Add event types to stateless config classes in `ghga-event-schema` that lack one
 - Rollout to services that use the outbox functionality for non-outbox events
 
-### Optional:
+### Optional
 
 - Incorporate stored event deletion and expose via CLI commands
   - What are the criteria used? Timestamp? Is it configurable or supplied via CLI?
   - Should we mirror log compaction in our database or not, and if so, how?
 
-## API Definitions:
+## API Definitions
 
 The `PersistentKafkaPublisher` will subclass `EventPublisherProtocol` just like the
 `KafkaEventPublisher`, so it will expose the same `publish` function. In addition,
@@ -56,7 +56,7 @@ class PersistentKafkaPublisher(EventPublisherProtocol):
       ...
 ```
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Background - Different Event Categories
 
@@ -170,7 +170,7 @@ The services above already expose a CLI command that enables republishing events
 from the database which were stored there via the outbox pattern. These entrypoints
 will be updated to use the `PersistentKafkaPublisher` instead.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

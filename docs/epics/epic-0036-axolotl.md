@@ -4,18 +4,18 @@
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic implements mocks for all Metadata Repository Service and Metadata Search Service API calls consumed by the Data Portal UI.
 
-### Included/Required:
+### Included/Required
 
 The epic includes and requires:
 
 - the addition of data objects to be mocked based on the current metadata model and currently used metadata objects in the deployed version
 - that there is at least one data object for each edge case (e.g. at least one object with/without an EGA Accession ID (vs. a GHGA Accession ID), a DAC form, a linked study), e.g. by modifying one template object
 
-### Not included:
+### Not included
 
 This epic does not include:
 
@@ -36,7 +36,7 @@ Browsing data:
 
 Please note, filtering and specifying keywords will not change the displayed items since the response from the metadata repository service is mocked and static. This should also be documented in the readme.
 
-## API Definitions:
+## API Definitions
 
 ### Metadata Search Service
 
@@ -78,13 +78,13 @@ Requesting the summary of the entire dataset of metadata objects:
 
 The response body is a `metadataSummaryModel`.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 [The GHGA Metadata Model schema is large, and better documented in its own page](https://ghga-de.github.io/ghga-metadata-schema/docs/).
 
 All API calls for the Metadata Search and Repository services are already implemented, and the mocks should theoretically be easily integrated once the mock data is created.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2 or 3.
 

@@ -4,11 +4,11 @@
 
 ## The Scope
 
-### Summary:
+### Summary
 
 The aim of this epic is to add new features and improve existing features of the Data portal UI's interaction with the Metadata Repository Service.
 
-### Included/Required:
+### Included/Required
 
 - Visualisation of the metadata schema in the Data portal
 - Download, validate and submission of spreadsheet via Data portal
@@ -17,7 +17,7 @@ The aim of this epic is to add new features and improve existing features of the
 - Extend Metadata Repository Service API to include endpoints used by data portal for
   Dataset summary and Metadata summary.
 
-### Not included:
+### Not included
 
 - user authentication & authorization
 - restricted/encrypted metadata
@@ -86,24 +86,24 @@ Data portal requests MetadataSummary for the Home view from the Metadata Service
 
 Metadata Service responds with the MetadataSummary JSON (1.1)
 
-## User Journeys that are not part of this Epic:
+## User Journeys that are not part of this Epic
 
 - Submitter wants to delete a Submission
 - Submitter wants to update a submission that has already been marked 'complete'
 - Submitter wants to update a submission that has already been released for public consumption
 - Submitter wants to deprecate a submission and replace it with a newer submission
 
-## API Definitions:
+## API Definitions
 
 The definitions are hosted here:
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 The RESTful service APIs are described using OpenAPI:
 
 MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0012-african-bush-elephant/api_definitions/rest/metadata_repository.yaml)
 
-## Technical planning:
+## Technical planning
 
 Number of sprints required: 2
 

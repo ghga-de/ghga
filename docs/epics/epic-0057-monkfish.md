@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The [Archive Test Bed](https://github.com/ghga-de/archive-test-bed) needs a way to
 manage the state of various infrastructure technologies such as MongoDB, Apache Kafka,
@@ -33,7 +33,7 @@ Despite this, there should be a way to restrict which databases and collections 
 accessed with this service through configuration, and a simple API key (set in config)
 that can be used to authenticate requests.
 
-### Included/Required:
+### Included/Required
 
 > [!NOTE]
 > The first release of the State Management Service (SMS) will focus on the functionality
@@ -91,7 +91,7 @@ This kind of branch isolation is not currently used for S3 or the Vault.
 
 All requests will be authenticated with the configured API Key.
 
-### Not included:
+### Not included
 
 Object schema validation for MongoDB would be complex to add because the models can come from a
 variety of sources (`ghga-event-schemas`, service-specific models, etc.), and keeping
@@ -101,7 +101,7 @@ incur a cost outweighing the benefits provided by the service.
 Similarly, access control lists like the one described for MongoDB will not be
 included for the other technologies.
 
-## API Definitions:
+## API Definitions
 
 The following REST endpoints will be created for manipulating MongoDB.  
 The endpoints for Apache Kafka, S3, and the Vault will be similar, and they will
@@ -141,7 +141,7 @@ be included in an update to this document in the near future.
     - `403 Forbidden`: Authenticated, but config prevents operation
     on the specified collection.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

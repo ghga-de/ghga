@@ -4,12 +4,12 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Scope:
+## Scope
 
 We want to implement the Work Package Service outlined in
 https://docs.ghga-dev.de/main/architecture_concepts/ac001_file_validation_and_encryption.html#client-configuration-and-authorization
 
-## Implementation Details:
+## Implementation Details
 
 ### REST API
 
@@ -163,7 +163,7 @@ As part of this epic, a simple form for creating work packages should be added t
 - Add a button to copy this to the clipboard
 - *Possible extension (not in this epic)*: Show how long the access token is valid
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

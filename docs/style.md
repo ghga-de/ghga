@@ -20,6 +20,9 @@ titles follow the [conventions](conventions.md#names-branches-prs-commits), deci
   "seamless", "leverage", "it's worth noting").
 - **Link instead of restating.** A rule lives in one place — an ADR, the conventions,
   this file — and everything else points to it.
+- **Headings carry no trailing punctuation.** A heading is a label, not a sentence. A
+  colon belongs on the paragraph or bold lead-in that introduces a list, not on the
+  heading above it.
 - **Comments explain why, not history.** State why the code is the way it is, where the
   code does not show it. Incidents, dates and "this used to be X" belong in the commit
   message.

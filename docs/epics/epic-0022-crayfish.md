@@ -4,7 +4,7 @@
 
 **Attention: Please do not put any confidential content here.**
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 - ~~Strategy for auto generation of the spreadsheet template from the schema~~
 - ~~Strategy for achieving adaptability of the schema to different use cases~~
@@ -21,7 +21,7 @@
     - CQRS and storage of metadata in an event history
     - separation of write and read representations of metadata
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

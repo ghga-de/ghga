@@ -7,13 +7,13 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic is concerned with the implementation of a basic dead letter queue service,
 which will provide the means to assess, process, and retry Kafka events that resulted
 in errors during their initial processing.
 
-### Included/Required:
+### Included/Required
 
 - Implementation of the DLQ service (including its test suite)
 - `hexkit`: Add exception information to DLQ event headers
@@ -22,13 +22,13 @@ in errors during their initial processing.
 - `hexkit`: DLQ-specific protocol to pass timestamp and headers to service translator.
 - Enabling the DLQ in existing services
 
-### Not included:
+### Not included
 
 - A web-based user interface
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 When interacting with DLQ topics via the API, only the service abbreviation and the
 plain topic name are required.
@@ -69,7 +69,7 @@ plain topic name are required.
 
 All endpoints should require an internal auth token.
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 **Outbound from DLQ Service**:  
 The outbound events published to retry topics will look exactly like other Kafka events
@@ -130,9 +130,9 @@ from the original DLQ event to re-use upon publishing to the retry queue.
 }
 ```
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
-### Definitions:
+### Definitions
 
 - *Requeue/Republish an event*: In the context of the DLQ service, this means to publish
   the next Kafka event from a given DLQ topic to the corresponding retry topic.
@@ -174,14 +174,14 @@ Under the initial implementation, all events will go into a single collection.
 MongoDB's `aggregate` functionality will be used (as in `mass`) to pull back the
 correct events for a given `service` and `topic`, sorted by timestamp.
 
-### Event Ordering:
+### Event Ordering
 
 Dead letter queues inherently present a potential threat to system-wide event ordering.
 However, ordering events by keys, the idempotent design of our services, and
 sorting events by timestamp (oldest first) prevents sequence problems
 as long as events are designed to use the correct keys and topics in the first place.
 
-### Event identification:
+### Event identification
 
 Right now, events can be identified through a combination of correlation ID + event
 type and topic. It would be easier if there were a single field to associate a given
@@ -224,7 +224,7 @@ Instead, the DLQ service includes a special header with the original topic ("use
 If the translator encounters no errors, the event ID is not used (except for debug
 logging that might take place in `hexkit`).
 
-### Event processing:
+### Event processing
 
 When we resolve the next event in a given DLQ topic, it can go one of two ways:
 
@@ -247,14 +247,14 @@ republishing the event to a retry topic.
 This [Java DLQ implementation](https://medium.com/nerd-for-tech/-to-re-queue-apache-kafka-dlq-messages-95941525ca77)
 uses such headers (toward the bottom).
 
-### Previewing Events:
+### Previewing Events
 
 Events will be aggregated by the requested service and type, then sorted by timestamp,
 before finally applying any pagination (if applicable) using the `skip` and `limit`
 parameters. The returned events will include the `dlq_info` and `dlq_id` fields, the
 latter of which must be referenced for event resolution.
 
-### Discarding Events:
+### Discarding Events
 
 Events can be discarded by calling the `DELETE` endpoint and supplying the `dlq_id`.
 The `DELETE` endpoint is unique in that it disregards event order. Because the
@@ -264,7 +264,7 @@ their DLQ ID also ensures idempotence. If the event has already been deleted, no
 needs to be done. Finally, this approach means that the `service` and `topic`
 parameters required for the `GET` and `POST` endpoints are not required.
 
-### Tests:
+### Tests
 
 At the very least, the DLQ service tests should cover the following:
 
@@ -278,19 +278,19 @@ At the very least, the DLQ service tests should cover the following:
 - Test that events are deleted from the DB upon discard or processing
 - Test that events are retrieved from the DB in chronological order
 
-### Usage:
+### Usage
 
 - Startup:
   - `dlqs run-rest`: Start up the REST API
   - `dlqs consume-events`: Run the event consumer
 - Preview & resolve events: Done via HTTP API calls.
 
-### Scaling:
+### Scaling
 
 The DLQ Service should not be scaled, because the manual intervention required will
 be the limiting factor rather than infrastructure.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

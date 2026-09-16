@@ -9,21 +9,21 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 Reimplement the metadata model, currently implemented in LinkML, using schemapack.
 This should be used to onboard the metadata team and illustrate the use of schemapack for our purposes.
 Thereafter, the metadata team should be enabled to drive the metadata model further independently.
 
-### Included/Required:
+### Included/Required
 
 I. Re-implement the entire LinkML-based model in schemapack  
 II. Autogeneration of mermaid-based ER diagrams from a schemapack definition  
 III. Transpile schemapack-based models to a spreadsheet representation
 
-## Implementation Details:
+## Implementation Details
 
-### I. Schemapack-based re-implementation of the Metadata Model:
+### I. Schemapack-based re-implementation of the Metadata Model
 
 - The schemapack version 0.2.0 should be used.
 - following algorithm might streamline the migration:
@@ -57,7 +57,7 @@ III. Transpile schemapack-based models to a spreadsheet representation
       might be used but have to be transformed to datapack.
   12. Refactor the directory structure to adapt to the new implementation
 
-### II. Autogeneration of mermaid-based ER diagrams from a schemapack definition:
+### II. Autogeneration of mermaid-based ER diagrams from a schemapack definition
 
 - To be implemented into the schemapack library with a dedicated CLI command
 - The mermaid language is used as output (visualization must be performed
@@ -169,7 +169,7 @@ III. Transpile schemapack-based models to a spreadsheet representation
   - Refactor the transpiler to read the information on i) the data types (e.g., list, str, int), ii) the value restriction (unrestricted, controlled vocabulary, value from another class) from a hidden sheet in the XLS file. This information will be presented in table form with boolean values.
   - Refactor the transpiler to read the second hidden sheet where the indices of the header row, start row, and start column are provided; and a third hidden sheet where the version of the transpilation protocol is encoded.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

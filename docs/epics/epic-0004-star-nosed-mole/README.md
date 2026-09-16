@@ -2,7 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-## Scope:
+## Scope
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/fAFzCQ
 
@@ -10,21 +10,21 @@ A scope definition can be found here: https://wiki.verbis.dkfz.de/x/fAFzCQ
 
 This epic covers the following user journeys:
 
-### Data Upload:
+### Data Upload
 
 ![Data Upload](./images/multipart_data_upload.jpg)
 
 A Data Submitter specifies the file ID, the URL to the Upload Controller API, and the file path on the local file system using the CLI interface of the client (1.0). Internally, the CLI client translates the user-defined data into a request to the Upload Controller API to obtain an upload id (1.1). The client sends a request to the Upload Controller for each individual part of the uploaded file and receives a presigned post for each individual part (1.2). The client reads multiple parts from the source file and uploads them as a stream using the pre-signed post (1.3). Once the upload has been completed the client sends a confirmation to the Upload Controller API (1.4).
 
-### Data Download:
+### Data Download
 
 ![Data Download](./images/data_download.jpg)
 
 A Data Requester specifies the file ID, the URL to the DRS3 API, and the anticipated destination on the local file system using the CLI interface of the client (1.0). Internally, the CLI client translates the user-defined data into a request to the DRS3 API in order to get a pre-signed download URL (1.1). Typically, the requested file is not already in the outbox. Thus the API instructs the CLI client to retry the request after a specified time again. The client waits the specified time and then repeats the request. This is repeated until the DRS3 API responds with the desired pre signed URL (1.2). The client fetches the file's bytes using the pre signed URL (1.3) and saves them to the local file system (1.4).
 
-## CLI:
+## CLI
 
-### Upload CLI:
+### Upload CLI
 
 ```shell
 ghga-cli upload-by-id \
@@ -33,7 +33,7 @@ ghga-cli upload-by-id \
     --file_path <file_path>
 ```
 
-### Download CLI:
+### Download CLI
 
 ```shell
 ghga-cli download-by-id \
@@ -42,11 +42,11 @@ ghga-cli download-by-id \
     --output_dir <output_dir>
 ```
 
-## UCS:
+## UCS
 
 The following Updates are performed in the Upload Controller Service:
 
-### Database:
+### Database
 
 A new table "multipart_uploads" is added, containing the following columns:
 
@@ -110,11 +110,11 @@ stateDiagram-v2
     }
 ```
 
-### API Definition:
+### API Definition
 
 [OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0004-star-nosed-mole/api_definitions/rest/ucs.yaml)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 - [Typer](https://typer.tiangolo.com/) can be used to implement the CLI interface.
 - Ideally, avoid piping file bytes through python directly as this will slow down the upload/download significantly. Wrappers around C-based tools such as [pycurl](http://pycurl.io/docs/latest/) should be preferred.
@@ -129,7 +129,7 @@ stateDiagram-v2
 
 Benchmarking has been cut and will be moved to a later epic.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

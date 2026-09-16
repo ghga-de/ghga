@@ -7,25 +7,25 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The goal of this epic is to implement all the features from the current React-based GHGA Data Portal in Angular, using the baseline application that has been built in the [Hippopotamus](./epic-0060-hippopotamus.md) as the starting point.
 
-### Included/Required:
+### Included/Required
 
 - Full implementation of all features of the React-based GHGA Data Portal
 - Unit tests and end-to-end tests (against the mock backend) for these features
 
-### Optional:
+### Optional
 
 - Some features or change requests proposed for the existing GHGA Data Portal
 - Full test coverage
 
-### Not included:
+### Not included
 
 - Automated end-to-end tests against the real backend
 
-## Details:
+## Details
 
 This section outlines a checklist of all features to be implemented, divided into several steps. A pre-release should be published upon the completion of each step. Final releases should begin with version 2 to distinguish them from the legacy frontend, which uses version numbers in the version 1 range.
 
@@ -123,7 +123,7 @@ If everything looks good, the frontend can be replaced in production.
 
 Afterwards, automated end-to-end tests against the real backend (using the testing environment) should be created and integrated into the existing Archive Test Bed (which so far does not cover the frontend). We could reuse parts of the end-to-end tests from the frontend repository, translating them from JavaScript to Python and adapting them to the data used in the Archive Test Bed. This will allow us to reduce the repeated manual testing before releasing new frontend versions in the future.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 3
 

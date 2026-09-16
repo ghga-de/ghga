@@ -2,11 +2,11 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/YgFzCQ
 
-### Adaptation to latest versions of GA4GH AAI and passport standards:
+### Adaptation to latest versions of GA4GH AAI and passport standards
 
 - Synchronize with the GA4GH DURI workstream.
 - Learn about the latest changes to the GA4GH AAI and passport standards (v1.2), and possible future developments (v2).
@@ -16,19 +16,19 @@ A scope definition can be found here: https://wiki.verbis.dkfz.de/x/YgFzCQ
   - embedded passport token
   - work order token
 
-### Usage of LS AAI as passport broker:
+### Usage of LS AAI as passport broker
 
 - Synchronize with ELIXIR.
 - Evaluate whether the distribution of GA4GH visa via LS AAI as a passport broker is feasible, check legal and technical aspects of this.
 - Evaluate possible alternative solutions for sending passports to LS AAI, e.g. via EGA.
 - Evaluate alternative solution where GHGA operates its own passport broker, using LS Login as IdP only.
 
-### Handling of passport and visa expiry and revocation:
+### Handling of passport and visa expiry and revocation
 
 - Suggest solutions for the authentication of long-running tasks (e.g. download, upload, data processing, etc.), and check legal requirements regarding expiration.
 - Develop a visa/auth revocation strategy, and check legal requirements for this.
 
-## Material and Resources:
+## Material and Resources
 
 - [GA4GH Passports and the Authorization and Authentication Infrastructure](https://www.ga4gh.org/news/ga4gh-passports-and-the-authorization-and-authentication-infrastructure/)
 - [GA4GH AAI background](https://ga4gh.github.io/data-security/1.2-draft-main/aai-introduction)
@@ -115,7 +115,7 @@ Any relevant notifications to the Data Steward or the nominated user are taken c
 
 The process of the formation of a dataset and an associated DAC and the negotiation between the user (and potential co-applicants) who apply for access to a specific dataset and the DAC involve the deposition of certain GA4GH passport visa, as described above under "Creation and Distribution of GA4GH Passport Visas".
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 3
 

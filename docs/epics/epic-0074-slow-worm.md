@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The aim of this epic is to stop serializing UUIDs and datetime objects as strings in
 `hexkit` and instead allow `pymongo` to serialize them to BSON directly, as decided in
@@ -17,7 +17,7 @@ The `hexkit` changes for this epic should be released with the
 [Eurasian Blackbird](./epic-0075-eurasian-blackbird.md) `hexkit`
 changes.
 
-### Included/Required:
+### Included/Required
 
 - Update `hexkit` to remove string serialization for UUIDs and datetimes, as well as
   add support for BSON UUID and Date types in MongoDB providers.
@@ -29,14 +29,14 @@ changes.
     - Replace string UUIDs and Datetimes in tests and service code
     - Write migrations for all services that store UUIDs and Datetimes as strings
 
-### Deployment Note:
+### Deployment Note
 
 The `NS`'s `notifications` collection should be dropped once deployment is
 complete (see below).
 
-## API Definitions:
+## API Definitions
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 Models Containing String Datetimes or UUIDs in `ghga-event-schemas`:
 
@@ -54,7 +54,7 @@ Models Containing String Datetimes or UUIDs in `ghga-event-schemas`:
 - AccessRequestDetails
 - UserIvaState
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Hexkit
 
@@ -84,7 +84,7 @@ Changes needed:
   For example, we can wrap client access in a context manager to close clients once
   we're finished with them. The work for replacing `motor` will have its own PR.
 
-### Database Migrations:
+### Database Migrations
 
 We need to author migrations for any services storing str-based UUID or Datetime fields.
 This not only includes models defined in `ghga-event-schemas` or the services
@@ -111,7 +111,7 @@ List of services that require migrations:
 Other services don't need migrations, but do require being updated to the newest
 version of `hexkit`.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

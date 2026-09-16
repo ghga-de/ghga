@@ -4,12 +4,12 @@
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic aims to create a new service that provides an authoritative source of truth for file information.
 File information includes (for now) file size and checksums.
 
-### Included/Required:
+### Included/Required
 
 The Dataset Information Service needs to listen to events produced in the file service backend reporting successful file uploads and dataset registration information.
 Corresponding deletion events also need to be handled
@@ -23,15 +23,15 @@ Analogous functionality also needs to be implemented for upsertion and deletion 
 File information should be provided through one simple REST endpoint returning all relevant information for a given file accession.
 Analogously, information for all files in a dataset identified by a dataset accession should be returned by another REST endpoint.
 
-### Not Included:
+### Not Included
 
 Return of internal only file metadata, i.e. encrypted part sizes as MD5 and SHA256 hashes and encrypted part size.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
-#### File Information:
+#### File Information
 
 - GET `/file_information/{file_id}`: Get storage location alias, file size and sha256 for the unencrypted file content
 
@@ -48,7 +48,7 @@ This should return a payload including the unencrypted file size in bytes, the S
 }
 ```
 
-#### Dataset Information:
+#### Dataset Information
 
 - GET `/dataset_information/{dataset_id}`: Get file size, storage location alias and sha256 for the unencrypted file content for all files in the given dataset
 
@@ -81,9 +81,9 @@ This should return a list of objects with each element containing the `file_id/a
 
 For files with no data available in the DB a smaller object containing only the accession is returned instead.
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
-#### File Information:
+#### File Information
 
 Incoming population event schema: [FileInternallyRegistered](https://github.com/ghga-de/ghga-event-schemas/blob/faf00f361facc4195f2b9e9a0a69ec9645464bc3/src/ghga_event_schemas/pydantic_.py#L270-L273)
 
@@ -92,7 +92,7 @@ These represent publicly accessible metadata that should be exposed by the servi
 
 Incoming deletion event schema: [FileDeletionRequested](https://github.com/ghga-de/ghga-event-schemas/blob/faf00f361facc4195f2b9e9a0a69ec9645464bc3/src/ghga_event_schemas/pydantic_.py#L372-L381)
 
-#### Dataset Information:
+#### Dataset Information
 
 Incoming population/change event: [MetadataDatasetOverview](https://github.com/ghga-de/ghga-event-schemas/blob/54467290f2b61f2826de13a9aa78181ac38a08b8/src/ghga_event_schemas/pydantic_.py#L75-L89)
 
@@ -100,7 +100,7 @@ From this event the `accession` (of the dataset) and `files` fields need to be e
 
 Incoming deletion event schema: [MetadataDatasetID](https://github.com/ghga-de/ghga-event-schemas/blob/54467290f2b61f2826de13a9aa78181ac38a08b8/src/ghga_event_schemas/pydantic_.py#L51-L54)
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 Dataset information can exist in one of five states:
 
@@ -122,7 +122,7 @@ If the reason why data is not available is of no interest and if all dataset reg
 2) The dataset information endpoint returns either a payload or 404.
 Within the payload, the fields of each file information object either are populated with the actual data or only contain the accession to signal that the data for the corresponding file is not yet available or has been deleted.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

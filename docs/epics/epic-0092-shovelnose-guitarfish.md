@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 When a file doesn't pass DHFS's re-encryption and integrity checks ("interrogation"), DHFS submits a failure report to FIS. FIS marks the file as failed and notifies UCS, which deletes the object from the inbox bucket in S3, sets the FileUpload to 'failed', and propagates that state to the rest of the system. This is a naive approach to interrogation failures. The uploaded bytes have already passed a checksum and size comparison before the file reaches the DHFS, and DHFS already retries transient errors on its own, so what actually lands in 'failed' is usually the result of a systematic fault on our end: a wrong data hub key, a crypt4gh or deploy bug, a bad secret. Forcing the submitter to re-upload the file from scratch is an expensive remedy for that, because once we fix the fault the bytes in the inbox are still perfectly good and only need to be interrogated again. When the file really is flawed, the next attempt simply fails again and we can take it from there. Moreover, much of the file upload path then ignores "failed" files (RDUB quota calculations and archival prerequisite checks skip them entirely). At the macro level, this epic introduces three changes to this process:
 
@@ -15,7 +15,7 @@ When a file doesn't pass DHFS's re-encryption and integrity checks ("interrogati
 2. Data Stewards are able to trigger a "retry" - setting the file state back to "inbox".
 3. UCS stops ignoring failed files. They count toward box quotas and block box archival, for example.
 
-### Included/Required:
+### Included/Required
 
 - Add endpoints to RS and UCS to enable Data Stewards to requeue files that fail interrogation.
 - Update UCS so failed files:
@@ -23,13 +23,13 @@ When a file doesn't pass DHFS's re-encryption and integrity checks ("interrogati
   - Are returned in FileUpload lists by default
   - Block box archival
 
-### Optional:
+### Optional
 
 - Update Data Portal to expose new file "requeue" feature to Data Stewards. This can also be done as a separate epic or ticket.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 New endpoints:
 
@@ -75,7 +75,7 @@ Existing endpoints whose behavior changes:
 
 No new events are introduced. The requeue is propagated by the existing FileUpload outbox event, because it is an ordinary update to the FileUpload document.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Current behavior
 
@@ -199,7 +199,7 @@ Currently, the Data Portal's mapping view drops them and the Connector treats a 
 - Existing UCS tests around `process_interrogation_failure` need to be updated to assert the S3 object is not deleted.
 - Add an end-to-end testbed test case: upload, force an interrogation failure, requeue, and confirm the file gets all the way to 'archived' without a re-upload.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

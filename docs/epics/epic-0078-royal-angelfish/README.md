@@ -7,13 +7,13 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 Add modules to the GHGA data portal so that data stewards can perform the most essential tasks regarding the management of registered users and data access grants.
 
 The UI should be similar to the already existing Access Request and IVA manager modules.
 
-### Included/Required:
+### Included/Required
 
 - User management page for data stewards in the frontend:
   - overview of all existing users with full name, email, roles and status
@@ -34,7 +34,7 @@ The UI should be similar to the already existing Access Request and IVA manager 
 - Adaptation of the existing access request and IVA management pages
   so that the managers link to each other and work consistently
 
-### Not included:
+### Not included
 
 - Functions that require refined role concept and audit logging (see extensions below)
 
@@ -58,17 +58,17 @@ The existing UI of the access request and IVA manager should be adapted to match
 
 The backend API does not yet provide the necessary information for the frontend to provide the specified functions. The following endpoints need to be added:
 
-### Access Request Service:
+### Access Request Service
 
 - `GET /access-grants` - similar to existing `GET /access-requests` endpoint
 - `DELETE /rpc/access-grants/{id}` - revoke an access grant
 
-### Claims Repository:
+### Claims Repository
 
 - `GET /download-access/grants` - retrieve download access grants with optional query parameters for user ID, dataset ID, and validity period
 - `DELETE /download-access/grants/{id}` - revoke a download access grant
 
-### Endpoint Specifications:
+### Endpoint Specifications
 
 The `GET` endpoints should return a list of all matching download access grants with:
 
@@ -82,7 +82,7 @@ The `DELETE` endpoints should *not* actually delete the corresponding claim, but
 
 The endpoints of the Access Request Service must require authorization as data steward. The endpoints of the Claims Repository are only internal and therefore do not need authorization. We should make the Claims Repository API more restrictive in the future (zero trust principle), but not as part of this epic.
 
-### User Registry:
+### User Registry
 
 The User Registry already has an endpoint `PATCH /users/{id}` to deactivate and activate users and an endpoint `DELETE /users/{id}` to delete registered users.
 
@@ -106,7 +106,7 @@ After we have refined the role concept to allow other elevated roles such as adm
   - allow already denied access requests, or
   - duplicate existing grants to cover additional datasets.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 3
 

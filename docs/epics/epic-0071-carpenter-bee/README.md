@@ -131,7 +131,7 @@ def expand_loops(precursors: list[WorkflowPrecursor]) -> list[WorkflowStepBase]:
 
 An example that aims to replace the current workflow specification ([ghga.py](https://github.com/ghga-de/metldata/blob/2.1.2/src/metldata/builtin_workflows/ghga_archive.py)) and configuration ([metadata_config.yaml](https://github.com/ghga-de/metadata-config/blob/2.0.0%2B6/configuration/metadata_config.yaml)) is provided [here](./example_workflow.yaml) as part of the epic spec.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: ?
 

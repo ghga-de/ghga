@@ -7,7 +7,7 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic aims to improve upon the current implementation of retry logic for HTTP requests in CLI tools and to provide a generic solution that can be employed in any service or CLI tool.
 
@@ -18,7 +18,7 @@ To move the responsibility away from the caller and make the retry functionality
 Adding more functionality on top of existing transports can be achieved by wrapping them and delegating the call to actually perform the request up through the wrapping layers.
 This way correctly responding to HTTP 429 rate limiting responses and caching can be combined with more general retry logic.
 
-### Included/Required:
+### Included/Required
 
 #### Custom (Async)HTTPTransport
 
@@ -56,7 +56,7 @@ The instances returned by the factory are the respective lowest level Transport,
 Those can be plugged into the `httpx.AsyncClient` of the caller during instantiation.
 One crucial point that this factory has to provide is getting generic Transport configuration to the correct Transport, as only the configuration of the innermost wrapped Transport is applied.
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### Responding to Rate Limiting
 
@@ -89,7 +89,7 @@ A default implementation is provided logging internal state for the current retr
 An initial implementation could be tested in the recent S3 part size benchmarking repo, while the completed implementation should be placed in a repository from which it can easily be imported into different parts in the code base, so ghga-service-commons is most likely the appropriate place.
 Then, as a first step and use case, this implementation could be used both in the datasteward kit and the connector.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

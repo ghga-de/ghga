@@ -7,23 +7,23 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The Upload Controller Service (UCS) currently has verification and auth mechanisms at the start and end of the upload lifecycle through Work Order Tokens (WOTs) and checksum verification, but the window between those two points needs more control. For example, with the current implementation, a caller with a valid WOT can declare any number of arbitrarily large files, abandon multipart uploads indefinitely, and spam the presigned URL endpoint. This epic addresses those problems by adding a layered set of guardrails to UCS and supporting infrastructure.
 
-### Included/Required:
+### Included/Required
 
 - **Upload Box size limits:** Data stewards will specify a maximum size in bytes when creating a new Research Data Upload Box. The box size will determine how many bytes may be uploaded across all files in their *unencrypted* state in the box. Because submitters must declare their total data size during contract negotiation with data stewards, a per-box aggregate cap is always enforceable — this is domain knowledge not currently codified anywhere in the backend. When a submitter requests to create a new FileUpload, look at in-progress (`state="init"`) uploads for the FileUploadBox and reject the request if the assigned box limit would be exceeded. When considering file sizes, it is the `decrypted_size` that counts, rather than the `encrypted_size`.
 - **Concurrent uploads cap per box:** Similar to the box limit, this would count the number of in-progress uploads and reject any requests to create new FileUploads if a configured limit would be crossed. Note that while box size limits are specific to the box, the concurrent uploads per box cap applies uniformly to all boxes. This concurrent upload cap would prevent the style of abuse where thousands of uploads are opened simultaneously, but it does not prevent the scenario where many very small uploads are created and completed in rapid succession. Note that as it's currently implemented, the GHGA Connector only uploads files in sequence anyway, meaning this limit won't be hit unless the Connector is modified.
 - **Stale upload TTL with automated abort:** Track activity for each upload via a KV store entry (key = `file_id`, value = timestamp of last activity), set on `FileUpload` creation and refreshed on every presigned URL issuance. This can be performed as a [FastAPI BackgroundTask](https://fastapi.tiangolo.com/reference/background/) so the response isn't blocked. Implement a periodic cleanup job that aborts S3 multipart uploads and marks `FileUpload` records as `cancelled` for those whose KV store entry has expired. Make this functionality accessible through a new entrypoint command. In case of confusion, the reason for this TTL check is to catch orphaned or abandoned multipart uploads and abort them. There is a TTL or expiry parameter assigned to the presigned upload URLs, but the URL lifespan should be considered shorter than the multipart upload lifespan. After all, a new URL has to be issued for each file part. Therefore, we can't use the URL TTL as a reference for this kind of cleanup operation.
 
-### Optional:
+### Optional
 
 - **Rate limiting on presigned URL issuance:** Apply a per-file-upload token bucket to the `GET .../parts/{part_no}` endpoint to cap the rate at which the user can request presigned URLs for a given multipart upload (which is 1:1 with `FileUpload`). The token bucket can be held in-memory or backed by `hexkit`'s KV store / MongoDB provider.
 - **Verify part sizes retrospectively:** Call the S3 list_parts function for the previous part (`n-1`) when a URL is requested. If the part size exceeds the expected part size by some allowable buffer, UCS aborts the upload immediately. UCS then responds to the HTTP request with an error indicating the upload has been aborted (`state="cancelled"`). The GHGA Connector won't make subsequent requests and will display an appropriate message to the user.
   - This requires a modification to hexkit and adds up to one call for every presigned URL request. This would address the scenario where presigned URLs are used to upload large data quantities for every part, in excess of the actual data amount. Without this, the fallback is to reject the upload at completion time or clean up the stagnant multipart upload if the user intentionally abandons it.
 
-### Not included:
+### Not included
 
 - **Frontend or Data Portal changes.**
 
@@ -31,9 +31,9 @@ The Upload Controller Service (UCS) currently has verification and auth mechanis
 
 No new user-facing flows are introduced. All changes should be transparent to submitters using the official version of the GHGA Connector. Requests that violate the new limits receive explicit error responses with descriptive messages.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 No new endpoints will be added. The following existing endpoints will gain new validation behavior and may return new error responses:
 
@@ -49,11 +49,11 @@ No new endpoints will be added. The following existing endpoints will gain new v
 - *(optional)* Will return `429 Too Many Requests` (`PartUrlRateLimitError`) if the per-file token bucket is exhausted. In this case, the `retry-after` header should be used.
 - *(optional)* Will call `S3ClientPort.list_parts()` for part `n-1` when `part_no > 1`; if the previous part's size exceeds the expected part size, will abort the multipart upload, mark the `FileUpload` as `cancelled`, and return an upload-cancelled error to the caller
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 The library version of `FileUploadBox` and `ResearchDataUploadBox` in `ghga-event-schemas` must be updated with the new `max_total_bytes` field. Otherwise, no new event schemas will be required and no changes to the library version of the `FileUpload` model will be needed. Upload activity will be tracked in the KV store (see below), not in the outbox-published document.
 
-### Configuration:
+### Configuration
 
 The following new config fields will be added to UCS config. All will have safe defaults:
 
@@ -70,7 +70,7 @@ part_url_refill_interval_ms: int = 0           # 0 = no rate limiting
 max_url_buildup: int = 10                      # Token bucket initial/max tokens
 ```
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 ### UCS and RS — New upload validation
 
@@ -86,7 +86,7 @@ The following new error classes will be defined on `UploadControllerPort`:
 - `BoxSizeLimitExceededError`: maps to 507 in HTTP error translation layer
 - `TooManyConcurrentUploadsError`: maps to 429 in HTTP error translation layer
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Add `max_total_bytes` to `FileUploadBox` and `ResearchDataUploadBox` schemas in `ghga-event-schemas`.
 - [ ] Update RS with the new schema and modify tests/ensure new field is passed to UCS
@@ -129,7 +129,7 @@ For each configured `inbox` bucket (i.e. each data hub), do the following:
 - Extend the list with any upload IDs that don't correspond to any `FileUpload.object_id` from the first DB fetch.
 - Abort all the uploads in the list.
 
-#### Work to be performed:
+#### Work to be performed
 
 - [ ] Add `multipart_upload_ttl_hours` and `cleanup_interval_minutes` to `Config`
 - [ ] Update `UploadController.initiate_file_upload()` to write the activity entry on `FileUpload` creation
@@ -147,7 +147,7 @@ A new error class will be defined: `PartUrlRateLimitError`, translated in the HT
 
 `hexkit`'s `KeyValueStoreProtocol` (with the MongoDB provider) will be used to persist token bucket state keyed by `file_id`. `KeyValueStoreProtocol` will already be a required UCS dependency (added for the stale upload TTL feature), so no additional wiring will be needed. Token bucket state will survive restarts and will be correctly shared across all UCS replicas.
 
-#### Work to be performed (optional):
+#### Work to be performed (optional)
 
 - [ ] Add `part_url_refill_interval_ms` and `max_url_buildup` to `Config`
 - [ ] Add `PartUrlRateLimitError` to `UploadControllerPort`
@@ -168,7 +168,7 @@ If opted for, a retrospective size check will be added in `UploadController.get_
 
 This will add at most one additional S3 API call per presigned URL request (skipped for the first part). The fallback of detecting the oversize at completion time is already implemented, but would leave uploaded parts from abandoned uploads in S3 until the cleanup job runs.
 
-#### Work to be performed if implemented:
+#### Work to be performed if implemented
 
 - [ ] Add `list_parts()` to `hexkit`'s `ObjectStorageProtocol` and S3 provider, and then use it in the UCS's `S3ClientPort`
 - [ ] Implement retrospective size check in `UploadController.get_part_upload_url()` for `part_no > 1`
@@ -179,7 +179,7 @@ This will add at most one additional S3 API call per presigned URL request (skip
   - first-part request (no list_parts call)
   - tolerance for transient `list_parts` failure
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1-2
 

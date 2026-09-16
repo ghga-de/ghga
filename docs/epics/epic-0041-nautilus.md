@@ -9,18 +9,18 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic aims to explore and implement some of the refactoring priorities that are simple to implement
 but give especially high benefits.
 
-### Included/Required:
+### Included/Required
 
 - replace dependency injection framework
 - make devcontainer environment more lightweight
 - streamline CI and local workflows
 
-## Additional Details:
+## Additional Details
 
 ### Replace Dependency Injection Framework
 
@@ -85,7 +85,7 @@ address different requirements of libraries vs. service or CI vs. local executio
 
 The solution will be prototyped in the DCS repository and distributed through applicable measure.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

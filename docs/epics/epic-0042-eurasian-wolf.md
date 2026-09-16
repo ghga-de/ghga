@@ -9,12 +9,12 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 The aim of this epic is to implement a proof of concept for a specification that separates schema validation and schema linkage
 as prototyped [here](https://github.com/ghga-de/metadata_schema_explorations).
 
-### Included/Required:
+### Included/Required
 
 - basic validation of:
   - content schemas
@@ -29,9 +29,9 @@ as prototyped [here](https://github.com/ghga-de/metadata_schema_explorations).
   - integration of individual resources
 - performance documentation but not optimization
 
-## Additional Details:
+## Additional Details
 
-### Validation:
+### Validation
 
 Content validation will be done using JSON schemas as demonstrated
 [here](https://github.com/ghga-de/metadata_schema_explorations/blob/main/schema/schemapack.yaml#L7).
@@ -51,7 +51,7 @@ are ignored by the POC.
 Support for validating both rooted (as shown [here](https://github.com/ghga-de/metadata_schema_explorations/blob/main/data/desintegrated.yaml#L42-L44))
 and non-rooted documents will be implemented.
 
-### Isolation and Integration of Resources:
+### Isolation and Integration of Resources
 
 Tooling for creating multiple rooted documents, which focus on an individual resource,
 from a non-rooted document will be implemented.
@@ -63,7 +63,7 @@ providing a so-called embedding profile to control which references are included
 The reverse transformation from an integrated to a non-integrated document is not
 part of this POC.
 
-### Re-implementation of a Simple Metldata Workflow:
+### Re-implementation of a Simple Metldata Workflow
 
 Only the transformations for reference inference and slot deletion will be required for
 this POC.
@@ -77,13 +77,13 @@ to single resources (i.e. rooted documents after isolation). Moreover, integrati
 can be seen as a third operation category. However, integrations always mark the end
 of a transformation workflow.
 
-### Performance Documentation:
+### Performance Documentation
 
 Simple performance metrics such as execution time will be recorded to assess the
 general feasibility of the approach. No performance optimization should be performed.
 However, performance might be a criterion for selecting dependencies for this POC.
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 2
 

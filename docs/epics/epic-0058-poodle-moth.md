@@ -5,7 +5,7 @@
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
 
-## Principal Components of Exploration:
+## Principal Components of Exploration
 
 We currently store data in MongoDB with a process that converts more complex data types,
 such as datetimes, paths, and UUID objects, to their string representations.
@@ -32,20 +32,20 @@ Results to be produced:
 
 - \<Provide a list here.\>
 
-## Not part of this Exploration:
+## Not part of this Exploration
 
 All aspects that shall be ignored during the exploration:
 
 - Final implementation of the changes deemed necessary
 
-## Material and Resources:
+## Material and Resources
 
 Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to:
 
 - [MongoDB Documentation](https://www.mongodb.com/resources/basics/json-and-bson)
 - [BSON Documentation](https://bsonspec.org/)
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 1
 

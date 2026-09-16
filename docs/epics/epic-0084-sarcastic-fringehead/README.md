@@ -7,18 +7,18 @@ Epic planning and implementation follow the
 
 ## Scope
 
-### Outline:
+### Outline
 
 This epic includes all work required to bring the remaining file services into line with the new file upload concept. The first portion of work for the file services was executed under [Lynx Boreal](../epic-0076-lynx-boreal/README.md), and there was also a subsequent portion of work for the GHGA Connector which was carried out according to [Hedgehog Seahorse](../epic-0080-hedgehog-seahorse.md). When this epic is finished, all *backend* modifications required for the new upload concept to be realized will be complete. Frontend changes are *not* included in this epic, however, so more work will be required to bring the Data Portal up to speed.
 As for the work to be completed within this epic, the services affected include the File Ingest Service (FIS), Encryption Key Store Service (EKSS), Internal File Registry Service (IFRS), the Well-Known Value Service (WKVS), the Upload Controller Service (UCS), the ghga-event-schemas library, and a new service called the Data Hub File Service (DHFS). Additionally, if it is discovered during implementation that further changes need to be made to other services *beyond what is described in this epic*, then tickets will be added ad-hoc and associated with this epic.
 
 In Lynx Boreal, the UCS was rewritten, the Upload Orchestration Service (UOS) was implemented for the first time, the Claims Repository Service (CRS) was updated to manage permissions for Research Data Upload Boxes, and the Work Package Service (WPS) was updated to manage upload-type work packages. Taken together, these changes create the operational framework for remote file upload, but only to the point of initial ingest. In order to fully realize our file upload concept, we still need to decrypt the uploaded file, verify the integrity via checksum comparison, re-encrypt the file with a new file secret (securely stored in the Encryption Key Store Service, or EKSS), and move the file to a permanent storage bucket registered with the IFRS in what we call "archival".
 
-### Included/Required:
+### Included/Required
 
 All work described in the Additional Implementation Details section below is required.
 
-### Not included:
+### Not included
 
 - Data Portal updates or any upcoming metadata-related services. This is purely for file upload.
 - Add email notifications for important events related to archival. This could include, for example, a notification conveying that all files in a Research Data Upload Box have been successfully archived, or that there was a problem with file XYZ during interrogation. To prevent scope creep, this should *probably* be done in another epic, but we should keep that potential requirement in mind during development.
@@ -28,9 +28,9 @@ All work described in the Additional Implementation Details section below is req
 
 All user journeys are already detailed in Lynx Boreal. The operations added in this epic will occur automatically without further action required on the part of either the user or GHGA personnel.
 
-## API Definitions:
+## API Definitions
 
-### RESTful/Synchronous:
+### RESTful/Synchronous
 
 [UCS HTTP API](#ucs-http-api)  
 [UOS HTTP API](#uos-http-api)  
@@ -38,7 +38,7 @@ All user journeys are already detailed in Lynx Boreal. The operations added in t
 [EKSS HTTP API](#ekss-http-api)  
 [FIS HTTP API](#fis-http-api)  
 
-### Payload Schemas for Events:
+### Payload Schemas for Events
 
 #### ResearchDataUploadBox
 
@@ -227,11 +227,11 @@ class FileAccessionMap(BaseModel):
     mapping: dict[UUID4, str]  # this could instead be a list of tuples or similar object
 ```
 
-## Additional Implementation Details:
+## Additional Implementation Details
 
 > For a comprehensive overview, please see the [Service Diagrams](#service-diagrams) section below.
 
-### GHGA-Event-Schemas:
+### GHGA-Event-Schemas
 
 - Set the `ResearchDataUploadBoxState` schema to match what is defined above
 - Set the `FileUploadState` schema to match what is defined above
@@ -249,7 +249,7 @@ class FileAccessionMap(BaseModel):
 
 > Note: `FileAccessionMapping` (not `FileAccessionMap`) is the class name in the library for individual file-to-accession mappings. The corresponding config class is `FileAccessionMappingEventsConfig`. Services should use these names when referencing this schema. The `FileAccessionMap` name used elsewhere in this spec refers to the concept; the actual library class name is `FileAccessionMapping`.
 
-### UCS:
+### UCS
 
 The UCS takes on an expanded role from what was defined in Lynx Boreal. Previously, the UCS was only concerned with getting files into the `inbox` bucket, and after that it didn't care what happened. However, further consideration has resulted in the viewpoint that the UCS is actually the source of truth for files all the way up until they are copied into permanent storage. Intermediate steps that occur in other services provide subsequent information to the UCS regarding the `FileUpload`, but those services do not assume ownership of the essential file information. Not only that, but the relationship between `FileUpload` IDs and accession numbers should and will be managed by the UCS during the interim phase while official accession management is still under development. The UCS operates two instances - an HTTP API and an event consumer.
 
@@ -337,7 +337,7 @@ The UCS needs the following config changes:
 
 ---
 
-### UOS:
+### UOS
 
 The UOS remains mostly unchanged from its initial implementation in Lynx Boreal, except for gaining a new, temporary responsibility to send **accession maps** to the IFRS upon box archival. UOS will be considered the owner of accession maps. Through a new HTTP API endpoint, the UOS will take in objects that map file IDs from `FileUpload` objects to an accession number. This is temporary because it fills in a functional gap in the overall system that still has to be planned out. In the future, this endpoint will be removed (or at least no longer used). The UOS operates both an HTTP API instance and an event consumer instance.
 
@@ -388,7 +388,7 @@ The UOS gets updates to the following existing endpoints:
 
 ---
 
-### WKVS:
+### WKVS
 
 - Provides the Data Hub Crypt4GH public keys via public HTTP API
 
@@ -408,7 +408,7 @@ The WKVS would get the following new endpoint:
 
 ---
 
-### GHGA Connector:
+### GHGA Connector
 
 The Connector performs initial file encryption and upload from the user's machine. In order to properly encrypt the file for a specific Data Hub, the Connector needs to contact the WKVS to obtain the appropriate Crypt4GH public key based on the storage alias assigned to the `ResearchDataUploadBox`/`FileUploadBox` created by the Data Steward.
 
@@ -427,7 +427,7 @@ Per-part encryption process needs to be updated to the following:
 
 ---
 
-### EKSS:
+### EKSS
 
 The EKSS is responsible for interfacing with Vault to deposit and retrieve secrets. Before the introduction of this epic, there were *two* services that directly communicated with Vault: EKSS and FIS. The changes proposed here would make EKSS the sole service with Vault access.
 
@@ -450,7 +450,7 @@ The `POST /secrets` endpoint will be updated to work as described here:
 
 ---
 
-### FIS:
+### FIS
 
 The FIS straddles the border between the file services group and everything else, similar to the role played by the UOS. In the past, the FIS acted as a way to ingest file upload metadata and tell other services when a manually validated ("interrogated") file was ready for permanent storage. This had to be done as a temporary solution until the remote file upload and automatic file interrogation was implemented, which is the work proposed in this epic.
 
@@ -558,7 +558,7 @@ Finally, FIS data migration should be moved to the init container style. Instead
 
 ---
 
-### DHFS:
+### DHFS
 
 The DHFS is a new service that is operated by the Data Hubs for the purpose of performing file validation and re-encryption, and to keep file ingest in general as a federated operation. The DHFS operates two instances: an `interrogate` instance, which performs the interrogation work and runs in a continuous polling loop; and a `cleanup` instance, which runs on demand (or on a schedule via an external orchestrator) and deletes files from the `interrogation` bucket once they've been copied to permanent storage. One crucial thing to note here is that the DHFS is not connected to an event stream, and so has no direct knowledge of the information conveyed by the events in GHGA Central's event stream. The DHFS primarily interacts with the GHGA Central API (operated by the FIS) in order to get that information, which is limited to only what the DHFS needs to operate.
 
@@ -640,7 +640,7 @@ The DHFS needs the following configuration:
 
 ---
 
-### IFRS:
+### IFRS
 
 The role of the IFRS is to shepherd files into archival, by copying them from a Hub's `interrogation` bucket into the `permanent` bucket located at the same Data Hub. This only occurs once the Data Hub in question has completed the interrogation process, as detailed in the [DHFS section](#dhfs) above. This is the last step for a file in the Upload Path. Unlike the FIS and DHFS, the IFRS operates only as an event consumer. The other responsibility of the IFRS is to listen for inbound `FileAccessionMapping` events.
 
@@ -717,7 +717,7 @@ IFRS data migration should be moved to the init container style. Instead of exec
 
 ---
 
-### DINS:
+### DINS
 
 The Dataset Information Service (DINS) is only relevant here because it consumes `FileInternallyRegistered` events, stores that info in its database, and provides the information to the public via HTTP API. DINS needs to be updated to use the new `FileInternallyRegistered` event schema. The data in the database already uses different field names, so no migration should be necessary. However, the code verbiage should be updated because it currently uses `file_id` to refer to a file accession. So instances of `file_id` should be changed to `accession`.
 
@@ -727,7 +727,7 @@ The Dataset Information Service (DINS) is only relevant here because it consumes
 
 ---
 
-### DCS:
+### DCS
 
 The DCS subscribes to `FileInternallyRegistered` events from the IFRS to learn about which files are available for download from GHGA. The changes in that event schema, which are described in the [schema definition](#fileinternallyregistered) above, necessitate database migrations and code updates in the DCS.
 
@@ -762,9 +762,9 @@ Another note about the DCS migrations is that they should be moved to the init c
 - Move migrations to own CLI command so they can be run as an init container
   - Work with DevOps to get this configured in k8s
 
-## Diagrams:
+## Diagrams
 
-### Service Diagrams:
+### Service Diagrams
 
 #### Service Map
 
@@ -916,7 +916,7 @@ stateDiagram-v2
     end note
 ```
 
-## Human Resource/Time Estimation:
+## Human Resource/Time Estimation
 
 Number of sprints required: 4
 
