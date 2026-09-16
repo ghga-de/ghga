@@ -21,12 +21,14 @@ Model an API once, with the URL it is served at and the endpoints it answers:
 class MockedThingsApi(MockedApi):
     base_url = "http://things.test/api"
 
-    # answers out of the mock's own state, so it is bound like a method via decorator
+    # The `endpoint` decorator registers methods as endpoint functions for a
+    #  given path and method, enabling access to shared state on the MockedApi
     @endpoint("GET", "/things/{thing_id}")
     def on_get_thing(self, request, *, thing_id: UUID) -> httpx2.Response:
         return httpx2.Response(200, json=self.things[thing_id])
 
-    # answers the same way every time, so it takes no `self`
+    # `endpoint` can also be called like a regular function for simpler
+    #  endpoints, e.g. where access to state isn't needed or a lambda suffices
     on_delete_thing = endpoint("DELETE", "/things/{thing_id}", respond(204))
 ```
 A `{variable}` reaches the handler as the parameter of that name, cast to whatever that
@@ -100,6 +102,12 @@ PATH_CONVERTERS = {
 _PARAMETER = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([a-zA-Z_][a-zA-Z0-9_]*))?\}")
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 VARIADIC_KINDS = (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD)
+POSITIONAL_KINDS = (Parameter.POSITIONAL_ONLY, Parameter.POSITIONAL_OR_KEYWORD)
+# Accept the same set of boolean values as Pydantic
+_BOOLEANS = {
+    **dict.fromkeys(("1", "on", "t", "true", "y", "yes"), True),
+    **dict.fromkeys(("0", "off", "f", "false", "n", "no"), False),
+}
 
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
 
@@ -127,10 +135,19 @@ class _InSequence:
     def __call__(
         self, request: httpx2.Request, **path_variables: str
     ) -> httpx2.Response | Awaitable[httpx2.Response]:
-        """Answer with the next handler in line, refusing once they are used up."""
+        """Answer with the next handler in line, refusing once they are used up.
+
+        This wrapper collects the path variables as strings, so they are cast here for
+        the handler in line. A request that fails that does not use the handler up.
+        """
         if not self._remaining:
             raise MockSetupError(f"Unexpected additional request to {request.url}")
-        return self._remaining.pop(0)(request, **path_variables)
+        handler = self._remaining[0]
+        bound_path_variables = _bind_and_cast_path_vars(
+            handler, path_variables, request
+        )
+        self._remaining.pop(0)
+        return handler(request, **bound_path_variables)
 
 
 class Endpoint:
@@ -166,6 +183,11 @@ class Endpoint:
 
     def __set_name__(self, owner: type, name: str) -> None:
         """Take the attribute name the class body binds this endpoint to."""
+        if self.name and self.name != name:
+            raise MockSetupError(
+                "Mock endpoint registered under different names. First registered"
+                + f" with {self.name}, but subsequent assignment uses {name}."
+            )
         self.name = name
 
     # The overloads let a test read the handler, and `MockedApi` read the endpoint.
@@ -192,6 +214,16 @@ class Endpoint:
         obj._handlers[self.name] = handler
         obj._configured_at[self.name] = len(obj.calls[self.name])
 
+    def __eq__(self, other: object) -> bool:
+        """Endpoints are equal when they serve the same method and path."""
+        if not isinstance(other, Endpoint):
+            return NotImplemented
+        return (self.method, self.path) == (other.method, other.path)
+
+    def __hash__(self) -> int:
+        """Hash the method and path, which `__eq__` compares, so the two agree."""
+        return hash((self.method, self.path))
+
 
 class MockedApi:
     """A mock of one HTTP API, answering the calls a service makes to it.
@@ -213,6 +245,7 @@ class MockedApi:
         self._base = httpx2.URL(self.base_url)
         self._base_path = self._base.path.rstrip("/")
         self._endpoints = _declared_endpoints(type(self))
+        self._ensure_unique_routes()
 
         self.requests: list[httpx2.Request] = []
         self.unmatched: list[httpx2.Request] = []
@@ -220,6 +253,21 @@ class MockedApi:
         self._handlers: dict[str, ResponseHandler] = {}
         self._configured_at: dict[str, int] = {}
         self.reset()
+
+    def _ensure_unique_routes(self) -> None:
+        """Reject two endpoints serving the same method and path.
+
+        Only the first of them would ever match, so the other could never be called.
+        """
+        names_by_endpoint: dict[Endpoint, str] = {}
+        for name, declared in self._endpoints.items():
+            if declared in names_by_endpoint:
+                raise MockSetupError(
+                    f"{type(self).__name__} serves {declared.method} {declared.path}"
+                    f" as both {names_by_endpoint[declared]!r} and {name!r}, so only"
+                    " the first would ever be called. Remove one of them."
+                )
+            names_by_endpoint[declared] = name
 
     def _answer(self, request: httpx2.Request, path: str) -> httpx2.Response:
         """Answer a request made by a synchronous client."""
@@ -529,14 +577,29 @@ def _bind_and_cast_path_vars(
 ) -> dict[str, Any]:
     """Cast the path variables to the types `handler` declares for them.
 
-    Two failures, two audiences: a variable the handler cannot take is a `MockSetupError`
-    because the test wired up the wrong handler; a value that will not cast is a 422
-    because that is what the real API would answer.
+    Two failures, two audiences: a variable the handler cannot take, or a parameter no
+    variable fills, is a `MockSetupError` because the test wired up the wrong handler; a
+    value that will not cast is a 422 because that is what the real API would answer.
     """
-    named, collects_the_rest = _wanted(handler)
+    named, positional_only, required, collects_the_rest = _wanted(handler)
+
+    unfilled = required - path_variables.keys()
+    if unfilled:
+        unfilled_names = ", ".join(repr(name) for name in sorted(unfilled))
+        raise MockSetupError(
+            f"The handler answering {request.url} needs {unfilled_names}, which the"
+            " endpoint's path does not declare. Declare it in the path, or give it a"
+            " default."
+        )
 
     bound_path_variables: dict[str, Any] = {}
     for name, value in path_variables.items():
+        if name in positional_only:
+            raise MockSetupError(
+                f"The handler answering {request.url} takes {name!r} positionally only,"
+                " but path variables are passed by name. Move it after the `/` in the"
+                " handler's signature."
+            )
         if name not in named:
             if not collects_the_rest:
                 raise MockSetupError(
@@ -551,8 +614,9 @@ def _bind_and_cast_path_vars(
         if wanted_type is str:
             bound_path_variables[name] = value
             continue
+        convert = _boolean if wanted_type is bool else wanted_type
         try:
-            bound_path_variables[name] = wanted_type(value)
+            bound_path_variables[name] = convert(value)
         except (ValueError, TypeError) as error:
             raise HttpException(
                 status_code=422,
@@ -571,11 +635,23 @@ def _bind_and_cast_path_vars(
     return bound_path_variables
 
 
-def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], bool]:
-    """Returns the path variables `handler` names with their types, and whether it takes the rest.
+def _boolean(value: str) -> bool:
+    """Read a URL segment as a boolean, raising `ValueError` like the other casts do."""
+    try:
+        return _BOOLEANS[value.lower()]
+    except KeyError:
+        raise ValueError(f"{value!r} is not a boolean") from None
 
-    An unannotated parameter stays the string the URL carried. `request` is passed
-    positionally, so it is not one of the variables to bind.
+
+def _wanted(
+    handler: ResponseHandler,
+) -> tuple[dict[str, Any], set[str], set[str], bool]:
+    """Returns the parameters `handler` names with their types, and how it takes them.
+
+    Of the named parameters, the first set holds those it takes only positionally, which
+    a path variable cannot fill, and the second those without a default, which one must.
+    The flag says whether it collects the rest. An unannotated parameter stays the
+    string the URL carried. The parameter taking the request is not one of the named.
     """
     parameters = signature(handler).parameters
     is_plain = isfunction(handler) or ismethod(handler)
@@ -586,15 +662,22 @@ def _wanted(handler: ResponseHandler) -> tuple[dict[str, Any], bool]:
     except Exception:
         hints = {}
 
+    # the request is passed to the first parameter positionally, whatever it is called
+    first = next(iter(parameters.values()), None)
+    request_slot = first.name if first and first.kind in POSITIONAL_KINDS else "request"
     named = {
         name: hints.get(name, str)
         for name, parameter in parameters.items()
-        if name != "request" and parameter.kind not in VARIADIC_KINDS
+        if name != request_slot and parameter.kind not in VARIADIC_KINDS
+    }
+    positional_only = {
+        name for name in named if parameters[name].kind is Parameter.POSITIONAL_ONLY
     }
     collects_the_rest = any(
         parameter.kind is Parameter.VAR_KEYWORD for parameter in parameters.values()
     )
-    return named, collects_the_rest
+    required = {name for name in named if parameters[name].default is Parameter.empty}
+    return named, positional_only, required, collects_the_rest
 
 
 def _unconfigured(declared: Endpoint) -> ResponseHandler:
@@ -626,10 +709,10 @@ def _canonical_loopback(url: httpx2.URL) -> httpx2.URL:
 def _declared_endpoints(mock_class: type) -> dict[str, Endpoint]:
     """Collect the endpoints a mock class declares, a subclass overriding its bases."""
     endpoints: dict[str, Endpoint] = {}
-    for base in reversed(mock_class.__mro__):
+    for base in mock_class.__mro__:
         for name, attribute in vars(base).items():
             if isinstance(attribute, Endpoint):
-                endpoints[name] = attribute
+                endpoints.setdefault(name, attribute)
     return endpoints
 
 
@@ -686,13 +769,17 @@ def fail_with(error: Exception) -> ResponseHandler:
 
     def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
         """Raise instead of answering."""
-        raise error
+        raise error.with_traceback(None)
 
     return handler
 
 
 def in_sequence(*handlers: ResponseHandler) -> ResponseHandler:
     """Build a handler answering consecutive requests with `handlers`, then failing."""
+    if not handlers:
+        raise MockSetupError(
+            "in_sequence() needs at least one handler. It would refuse every request."
+        )
     return _InSequence(handlers)
 
 
@@ -721,20 +808,24 @@ def respond(
 ) -> ResponseHandler:
     """Build a handler that always answers the same way.
 
-    `json=None` is a JSON `null`; without `json` the body is `content`, or nothing.
+    `json=None` is a JSON `null`; without `json` the body is `content`, or nothing. The
+    body and headers are copied now, so changing them later cannot change the answer.
     """
+    # deepcopy would turn the sentinel into a new object that no longer means no body
+    body = json if json is NO_BODY else deepcopy(json)
+    headers = None if headers is None else dict(headers)
 
     def handler(request: httpx2.Request, **path_variables: str) -> httpx2.Response:
         """Answer with the stored response."""
-        if json is NO_BODY:
+        if body is NO_BODY:
             return httpx2.Response(status_code, content=content, headers=headers)
-        if json is None:
+        if body is None:
             # httpx2 would read `json=None` as no body, so encode `null` by hand
             return httpx2.Response(
                 status_code,
                 content=b"null",
                 headers={"content-type": "application/json", **(headers or {})},
             )
-        return httpx2.Response(status_code, json=json, headers=headers)
+        return httpx2.Response(status_code, json=body, headers=headers)
 
     return handler
