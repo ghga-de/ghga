@@ -50,7 +50,7 @@ devcontainer with the whole toolchain: open it in VS Code and run
 `just sync`.
 
 The usual tasks, run from the repository root (see
-[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+[ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the
 full recipe list):
 
 ```bash
