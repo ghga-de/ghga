@@ -403,7 +403,7 @@ class MockedApi:
         """Get a transport serving this mock alone.
 
         `MockedApis(...).as_transport()` is the way to serve several at once, or to
-        pass an `inner` transport for what `allow_network` lets out.
+        pass a `live_transport` for what `allow_network` lets out.
         """
         return MockedApis(self, allow_network=allow_network).as_transport()
 
@@ -490,16 +490,16 @@ class MockedApis:
         api, path = route
         return await api._answer_async(request, path)
 
-    def as_transport(self, inner: Any = None) -> MockedApiTransport:
+    def as_transport(self, live_transport: Any = None) -> MockedApiTransport:
         """Return a transport serving these mocks, for a Client or an AsyncClient.
 
         Use it where the code under test takes a transport, so only the clients built
         with it are mocked. `install()` is for the code that gives no such opening.
 
-        A request no mock serves and `allow_network` permits goes to `inner`, which also
-        makes this stackable as the innermost layer of a transport stack.
+        A request no mock serves and `allow_network` permits goes to `live_transport`,
+        which also makes this stackable as the innermost layer of a transport stack.
         """
-        return MockedApiTransport(self, inner)
+        return MockedApiTransport(self, live_transport)
 
     def install(self) -> None:
         """Intercept every `httpx2` call until `uninstall` is called.
@@ -598,18 +598,18 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
     rather than having to narrow to the sync or the async half.
     """
 
-    def __init__(self, mocks: MockedApis, inner: Any = None) -> None:
-        """Answer from `mocks`, passing anything they do not serve to `inner`."""
+    def __init__(self, mocks: MockedApis, live_transport: Any = None) -> None:
+        """Answer from `mocks`, sending what they do not serve to `live_transport`."""
         self._mocks = mocks
-        self._inner = inner
+        self._live_transport = live_transport
 
     def _refuse(self, request: httpx2.Request) -> httpx2.Response:
         """Explain that a permitted request has nowhere to go from here."""
         raise MockSetupError(
             f"{request.url} is not served by any of these mocks, and `allow_network`"
             " lets it out - but this transport has nothing to send it with. Pass the"
-            " transport to send it with as `as_transport(inner=...)`, or tighten"
-            " `allow_network` so the call is refused where it is made."
+            " transport to send it with as `as_transport(live_transport=...)`, or"
+            " tighten `allow_network` so the call is refused where it is made."
         )
 
     def handle_request(self, request: httpx2.Request) -> httpx2.Response:
@@ -617,8 +617,8 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
         return self._mocks._answered(
             request,
             lambda: (
-                self._inner.handle_request(request)
-                if self._inner is not None
+                self._live_transport.handle_request(request)
+                if self._live_transport is not None
                 else self._refuse(request)
             ),
         )
@@ -629,21 +629,21 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
 
         async def unmocked() -> httpx2.Response:
             """Send the request on, if there is anything to send it with."""
-            if self._inner is None:
+            if self._live_transport is None:
                 return self._refuse(request)
-            return await self._inner.handle_async_request(request)
+            return await self._live_transport.handle_async_request(request)
 
         return await self._mocks._answered_async(request, unmocked)
 
     def close(self) -> None:
         """Close the transport underneath, which this one was handed to close."""
-        if self._inner is not None:
-            self._inner.close()
+        if self._live_transport is not None:
+            self._live_transport.close()
 
     async def aclose(self) -> None:
         """Close the transport underneath, the way an asynchronous client asks."""
-        if self._inner is not None:
-            await self._inner.aclose()
+        if self._live_transport is not None:
+            await self._live_transport.aclose()
 
 
 def _compiled(path: str) -> re.Pattern[str]:
