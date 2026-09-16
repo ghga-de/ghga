@@ -21,7 +21,7 @@ import pytest
 
 from ghga_service_commons.api.mock_api import (
     MockedApi,
-    MockedApis,
+    MockedNetwork,
     MockSetupError,
     NotMockedError,
     endpoint,
@@ -303,14 +303,20 @@ def test_network_at_lets_loopback_out_however_it_is_spelled(
 ):
     """Test that `network_at` matches a loopback call whichever alias either side uses."""
     monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", _fake_network)
-    with MockedApis(allow_network=network_at(allowed_host)), httpx2.Client() as client:
+    with (
+        MockedNetwork(allow_network=network_at(allowed_host)),
+        httpx2.Client() as client,
+    ):
         assert client.get(requested_url).text == "network"
 
 
 def test_network_at_ignores_the_case_of_hosts(monkeypatch: pytest.MonkeyPatch):
     """Test that `network_at` compares hosts the way URLs do, and still refuses others."""
     monkeypatch.setattr(httpx2.HTTPTransport, "handle_request", _fake_network)
-    with MockedApis(allow_network=network_at("Things.TEST")), httpx2.Client() as client:
+    with (
+        MockedNetwork(allow_network=network_at("Things.TEST")),
+        httpx2.Client() as client,
+    ):
         assert client.get("http://things.test/").text == "network"
         with pytest.raises(NotMockedError):
             client.get("http://other.test/")
@@ -323,7 +329,7 @@ def test_network_at_rejects_what_is_not_a_host():
 
 
 def test_mocked_apis_come_off_in_reverse_order(monkeypatch: pytest.MonkeyPatch):
-    """Test that uninstalling a `MockedApis` fails while a later one is installed.
+    """Test that uninstalling a `MockedNetwork` fails while a later one is installed.
 
     The `MockSetupError` asks for reverse order. Following it, later one first,
     restores httpx2's original transport methods.
@@ -336,7 +342,7 @@ def test_mocked_apis_come_off_in_reverse_order(monkeypatch: pytest.MonkeyPatch):
         httpx2.AsyncHTTPTransport, "handle_async_request", network_async
     )
 
-    first, second = MockedApis(), MockedApis()
+    first, second = MockedNetwork(), MockedNetwork()
     first.install()
     second.install()
     with pytest.raises(MockSetupError, match=r"reverse order"):
@@ -362,7 +368,7 @@ def test_live_transport_serving_both_kinds_serves_sync_clients():
     live_transport = httpx2.MockTransport(
         lambda request: httpx2.Response(200, text="network")
     )
-    transport = MockedApis(MockedWildcardApi()).as_transport(
+    transport = MockedNetwork(MockedWildcardApi()).as_transport(
         live_transport=live_transport
     )
     with httpx2.Client(transport=transport) as client:
@@ -375,7 +381,7 @@ def test_async_live_transport_is_refused_for_sync_clients():
     Even a mocked call raises it, and closing the client on the way out does not
     replace it.
     """
-    transport = MockedApis(MockedWildcardApi()).as_transport(
+    transport = MockedNetwork(MockedWildcardApi()).as_transport(
         live_transport=httpx2.AsyncHTTPTransport()
     )
     with (
@@ -392,7 +398,7 @@ async def test_sync_live_transport_is_refused_for_async_clients():
     Even a mocked call raises it, and closing the client on the way out does not
     replace it.
     """
-    transport = MockedApis(MockedWildcardApi()).as_transport(
+    transport = MockedNetwork(MockedWildcardApi()).as_transport(
         live_transport=httpx2.HTTPTransport()
     )
     with pytest.raises(TypeError, match=r"An asynchronous client cannot use HTTP"):

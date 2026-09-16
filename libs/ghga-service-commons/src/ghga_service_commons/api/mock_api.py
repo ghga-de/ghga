@@ -40,10 +40,10 @@ one, and only the clients built with it are mocked:
 ```
 prepare_thing(config, base_transport=things.as_transport())
 ```
-Where it does not, a `MockedApis` block intercepts `httpx2` itself, reaching even a
+Where it does not, a `MockedNetwork` block intercepts `httpx2` itself, reaching even a
 client the test never sees:
 ```
-with MockedApis(things, widgets):
+with MockedNetwork(things, widgets):
     ...
 ```
 A request that doesn't match any defined endpoints is refused unless `allow_network`
@@ -75,7 +75,7 @@ __all__ = [
     "MockSetupError",
     "MockedApi",
     "MockedApiTransport",
-    "MockedApis",
+    "MockedNetwork",
     "NetworkPolicy",
     "NotMockedError",
     "ResponseHandler",
@@ -116,7 +116,7 @@ _BOOLEANS = {
 
 ResponseHandler = Callable[..., "httpx2.Response | Awaitable[httpx2.Response]"]
 
-# A policy gets the URL as `MockedApis` routes it: lowercase, loopback as 127.0.0.1.
+# A policy gets the URL as `MockedNetwork` routes it: lowercase, loopback as 127.0.0.1.
 NetworkPolicy = Callable[[httpx2.URL], bool]
 
 
@@ -402,13 +402,13 @@ class MockedApi:
     ) -> MockedApiTransport:
         """Get a transport serving this mock alone.
 
-        `MockedApis(...).as_transport()` is the way to serve several at once, or to
+        `MockedNetwork(...).as_transport()` is the way to serve several at once, or to
         pass a `live_transport` for what `allow_network` lets out.
         """
-        return MockedApis(self, allow_network=allow_network).as_transport()
+        return MockedNetwork(self, allow_network=allow_network).as_transport()
 
 
-class MockedApis:
+class MockedNetwork:
     """Wraps a collection of `MockedApi`s and deals with routing requests to the correct one."""
 
     def __init__(
@@ -434,11 +434,11 @@ class MockedApis:
             self.apis, key=lambda api: len(api.base_url), reverse=True
         )
 
-    def __enter__(self) -> MockedApis:
+    def __enter__(self) -> MockedNetwork:
         """Install the mocks when used as context manager.
 
         State is NOT cleared on entry. Call counts, `unmatched` and any handler the
-        test assigned all survive into the next block, so reusing one `MockedApis`
+        test assigned all survive into the next block, so reusing one `MockedNetwork`
         across tests carries the earlier test's record with it. Call `reset()`
         yourself, or build a fresh set per test - resetting here would wipe handlers
         a test deliberately configured before entering.
@@ -507,7 +507,7 @@ class MockedApis:
         This replaces two methods on httpx2's transport classes for the whole
         process. Unhandled errors have the potential to leave the patch in place
         if `uninstall()` is not called somewhere along the line. This can disrupt
-        subsequent tests. For this reason, prefer to use `with MockedApis(...)`,
+        subsequent tests. For this reason, prefer to use `with MockedNetwork(...)`,
         which pairs them for you.
         """
         if self._installed:
@@ -549,8 +549,8 @@ class MockedApis:
         if installed_now != self._installed:
             raise MockSetupError(
                 "These mocks cannot be taken off yet: httpx2 was patched again after"
-                " they were installed, most likely by another `MockedApis` that is"
-                " still installed. Uninstall each `MockedApis` in reverse order, the"
+                " they were installed, most likely by another `MockedNetwork` that is"
+                " still installed. Uninstall each `MockedNetwork` in reverse order, the"
                 " one installed last first."
             )
         network, network_async = self._replaced
@@ -600,7 +600,7 @@ class MockedApiTransport(httpx2.BaseTransport, httpx2.AsyncBaseTransport):
 
     def __init__(
         self,
-        mocks: MockedApis,
+        mocks: MockedNetwork,
         live_transport: httpx2.BaseTransport | httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         """Answer from `mocks`, sending what they do not serve to `live_transport`."""
@@ -830,7 +830,7 @@ def _canonical_loopback(url: httpx2.URL) -> httpx2.URL:
 
 
 def _canonical_host(host: str) -> str:
-    """Spell a host the way `MockedApis` spells the URL it hands a network policy."""
+    """Spell a host the way `MockedNetwork` spells the URL it hands a network policy."""
     try:
         url = httpx2.URL(scheme="http", host=host)
     except httpx2.InvalidURL as error:
