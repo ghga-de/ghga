@@ -472,7 +472,14 @@ class MockedApis:
         return await api._answer_async(request, path)
 
     def install(self) -> None:
-        """Intercept every `httpx2` call until `uninstall` is called."""
+        """Intercept every `httpx2` call until `uninstall` is called.
+
+        This replaces two methods on httpx2's transport classes for the whole
+        process. Unhandled errors have the potential to leave the patch in place
+        if `uninstall()` is not called somewhere along the line. This can disrupt
+        subsequent tests. For this reason, prefer to use Prefer `with MockedApis(...)`,
+        which pairs them for you.
+        """
         if self._installed:
             raise MockSetupError(
                 "These mocks are already installed. Installing them again would lose"
