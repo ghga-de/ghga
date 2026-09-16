@@ -1194,9 +1194,9 @@ async def test_store_accession_map_filters_cancelled_and_failed(
 ):
     """Test which files are filtered out when validating the accession map.
 
-    Cancelled files and files that failed before reaching the inbox are ignored, but
-    files that failed interrogation (i.e. that do have a `decrypted_sha256`) still
-    require a mapping, since they are expected to be resolved rather than dropped.
+    Cancelled and failed files are ignored, but files in the 'failed_interrogation'
+    state still require a mapping, since they are expected to be resolved rather than
+    dropped.
     """
     box_id = populated_boxes[0]
 
@@ -1238,7 +1238,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
             bucket_id="inbox",
             object_id=uuid4(),
             alias="test2",
-            # No checksum -> the upload never made it to the inbox
+            decrypted_sha256="checksum2",  # pre-change interrogation failure
             decrypted_size=1000,
             encrypted_size=1100,
             part_size=100,
@@ -1266,12 +1266,11 @@ async def test_store_accession_map_filters_cancelled_and_failed(
             bucket_id="inbox",
             object_id=uuid4(),
             alias="test4",
-            # Reached the inbox, then failed interrogation -> still needs a mapping
             decrypted_sha256="checksum4",
             decrypted_size=1000,
             encrypted_size=1100,
             part_size=100,
-            state="failed",
+            state="failed_interrogation",  # This still needs a mapping
             state_updated=now_utc_ms_prec(),
         ),
     ]
@@ -1291,8 +1290,8 @@ async def test_store_accession_map_filters_cancelled_and_failed(
         study_id=TEST_STUDY_ID, accessions=set(mapping)
     )
 
-    # This should succeed: the cancelled file and the failed upload are ignored, and
-    #  every remaining file (including the interrogation failure) is mapped
+    # This should succeed: the cancelled and 'failed' files are ignored, and every
+    #  remaining file (including the 'failed_interrogation' one) is mapped
     await rig.rdub_manager.store_accession_map(
         box_id=box_id,
         box_version=0,
@@ -1686,7 +1685,7 @@ async def test_archive_box_missing_accessions(
     [
         ("init", None, True),  # still uploading to the inbox
         ("inbox", "checksum9", True),  # uploaded, not interrogated yet
-        ("failed", "checksum9", False),  # reached the inbox, failed interrogation
+        ("failed_interrogation", "checksum9", False),  # failed interrogation
     ],
 )
 async def test_archive_box_unsettled_files(
@@ -1740,6 +1739,8 @@ async def test_archive_box_unsettled_files(
             state=state,
             state_updated=now_utc_ms_prec(),
         ),
+        # A 'legacy' interrogation failure stays "failed" and is treated as such
+        _make_file_upload(uuid4(), i=8).model_copy(update={"state": "failed"}),
     ]
 
     await rig.file_accession_dao.insert(
@@ -2419,15 +2420,29 @@ async def test_requeue_single_file_upload_box_not_found(
             RDUBManager.FileUploadNotFoundError,
         ),
         (
+            FileBoxClientPort.FileUploadStateError(
+                "Cannot requeue FileUpload because it isn't in the"
+                + " 'failed_interrogation' state."
+            ),
+            RDUBManager.FileUploadStateError,
+        ),
+        (
             FileBoxClientPort.RequeueError(
-                "Cannot requeue FileUpload because it did not fail interrogation."
+                "Cannot requeue FileUpload because its uploaded object is no longer"
+                + " in the inbox."
             ),
             RDUBManager.RequeueError,
         ),
         (FileBoxClientPort.FUBStateError("archived"), RDUBManager.BoxStateError),
         (FileBoxClientPort.OperationError("test"), FileBoxClientPort.OperationError),
     ],
-    ids=["FileUploadNotFoundError", "RequeueError", "FUBStateError", "OperationError"],
+    ids=[
+        "FileUploadNotFoundError",
+        "FileUploadStateError",
+        "RequeueError",
+        "FUBStateError",
+        "OperationError",
+    ],
 )
 async def test_requeue_single_file_upload_fbc_error_translation(
     rig: JointRig,
@@ -2440,6 +2455,7 @@ async def test_requeue_single_file_upload_fbc_error_translation(
 
     Expected error translation:
     - FileUploadNotFoundError -> FileUploadNotFoundError
+    - FileUploadStateError -> FileUploadStateError (the client's reason is preserved)
     - RequeueError -> RequeueError (the client's reason is preserved)
     - FUBStateError -> BoxStateError (the box states are out of sync)
     - OperationError -> OperationError (not translated, propagates as is)
@@ -2456,7 +2472,10 @@ async def test_requeue_single_file_upload_fbc_error_translation(
         )
 
     # The reason a file can't be requeued is passed on so the API can relay it
-    if isinstance(client_error, FileBoxClientPort.RequeueError):
+    if isinstance(
+        client_error,
+        (FileBoxClientPort.FileUploadStateError, FileBoxClientPort.RequeueError),
+    ):
         assert str(exc_info.value) == str(client_error)
 
     # Only an archived box makes the file box service refuse outright

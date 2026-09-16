@@ -27,6 +27,7 @@ from rs.constants import (
     EXC_ID_BOX_TITLE_EXISTS,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
+    EXC_ID_FILE_UPLOAD_STATE_ERROR,
     EXC_ID_GRANT_NOT_FOUND,
     EXC_ID_INCOMPLETE_OR_FAILED,
     EXC_ID_INTERNAL_ERROR,
@@ -45,6 +46,7 @@ __all__ = [
     "HttpBoxTitleExistsError",
     "HttpBoxVersionError",
     "HttpFileUploadNotFoundError",
+    "HttpFileUploadStateError",
     "HttpGrantNotFoundError",
     "HttpIncompleteOrFailedError",
     "HttpInternalError",
@@ -235,8 +237,29 @@ class HttpFileUploadNotFoundError(HttpCustomExceptionBase):
         )
 
 
-class HttpRequeueError(HttpCustomExceptionBase):
+class HttpFileUploadStateError(HttpCustomExceptionBase):
     """Thrown when a FileUpload is not in a state that allows a requeue."""
+
+    exception_id = EXC_ID_FILE_UPLOAD_STATE_ERROR
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        file_id: UUID4
+
+    def __init__(self, *, file_id: UUID4, reason: str, status_code: int = 409):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description=reason,
+            data={"file_id": str(file_id)},
+        )
+
+
+class HttpRequeueError(HttpCustomExceptionBase):
+    """Thrown when a FileUpload can't be requeued because its uploaded object is no
+    longer in the inbox.
+    """
 
     exception_id = EXC_ID_REQUEUE_ERROR
 
@@ -245,13 +268,8 @@ class HttpRequeueError(HttpCustomExceptionBase):
 
         file_id: UUID4
 
-    def __init__(self, *, file_id: UUID4, reason: str, status_code: int = 409):
-        """Construct message and init the exception.
-
-        `reason` describes why the requeue operation was blocked for this file,
-        which can be either that the file never successfully uploaded in the
-        first place, or that its S3 object no longer exists.
-        """
+    def __init__(self, *, file_id: UUID4, reason: str, status_code: int = 500):
+        """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
             description=reason,

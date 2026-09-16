@@ -35,6 +35,23 @@
       <th mat-header-cell *matHeaderCellDef mat-sort-header>Accession</th>
       <td mat-cell *matCellDef="let file">{{ file.accession ?? '—' }}</td>
     </ng-container>
+    <ng-container matColumnDef="requeue">
+      <th mat-header-cell *matHeaderCellDef class="w-16"></th>
+      <td mat-cell *matCellDef="let file">
+        @if (requeuable()(file)) {
+          <button
+            mat-icon-button
+            (click)="requeueFile.emit(file)"
+            [attr.aria-label]="'Retry re-encryption of ' + file.alias"
+            [attr.data-umami-event]="requeueEventLabel() || null"
+            matTooltip="Retry re-encryption"
+            class="text-primary"
+          >
+            <mat-icon fontIcon="replay"></mat-icon>
+          </button>
+        }
+      </td>
+    </ng-container>
     <ng-container matColumnDef="delete">
       <th mat-header-cell *matHeaderCellDef class="w-16"></th>
       <td mat-cell *matCellDef="let file">

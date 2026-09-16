@@ -42,8 +42,8 @@ components:
           title: Requeued
           type: array
         skipped:
-          description: The IDs of the file uploads that were ineligible for a requeue,
-            e.g. because the uploaded object is no longer in the inbox
+          description: The IDs of the file uploads that couldn't be requeued due to
+            an error
           items:
             format: uuid4
             type: string
@@ -215,6 +215,7 @@ components:
           - failed
           - cancelled
           - interrogated
+          - failed_interrogation
           - awaiting_archival
           - archived
           title: State
@@ -1115,11 +1116,10 @@ paths:
     post:
       description: Set every file upload in the box that failed interrogation back
         to the inbox state so that they are interrogated again. Requires the Data
-        Steward role. Files that cannot be requeued, e.g. because their uploaded object
-        is no longer in the inbox, are reported in the `skipped` list instead of failing
-        the whole request. Files that failed during the upload itself are left alone
-        and have to be uploaded again. This operation is not permitted on archived
-        boxes.
+        Steward role. Files that couldn't be requeued due to an error are reported
+        in the `skipped` list instead of failing the whole request. Files that failed
+        during the upload itself are left alone and have to be uploaded again. This
+        operation is not permitted on archived boxes.
       operationId: requeue_all_box_uploads_upload_boxes__box_id__requeue_post
       parameters:
       - in: path
@@ -1313,15 +1313,17 @@ paths:
         '404':
           description: Upload box or file upload not found.
         '409':
-          description: The file is still being uploaded, has not been interrogated
-            yet, has been successfully interrogated, was never uploaded successfully,
-            OR the box has been archived already.
+          description: The file isn't in the 'failed_interrogation' state, or the
+            box has been archived already.
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '500':
+          description: The file's uploaded object is no longer in the inbox, or another
+            error occurred.
       security:
       - HTTPBearer: []
       summary: Requeue a failed file upload

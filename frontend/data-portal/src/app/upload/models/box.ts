@@ -69,6 +69,14 @@ export interface BoxRetrievalResults {
   boxes: ResearchDataUploadBox[];
 }
 
+/** Result of requeueing all failed file uploads of a box, as returned by the RS */
+export interface BoxRequeueResult {
+  /** IDs of the file uploads that were set back to the inbox state */
+  requeued: string[];
+  /** IDs of the file uploads that could not be requeued due to an error */
+  skipped: string[];
+}
+
 /** A virtual filter value that excludes boxes in a specific state (e.g. 'not_archived') */
 export type UploadBoxVirtualFilter = `not_${UploadBoxState}`;
 

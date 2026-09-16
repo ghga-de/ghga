@@ -122,8 +122,8 @@ class FileUploadCreationRequest(BaseModel):
         default=False,
         description=(
             "If True and a FileUpload for this alias already exists in an active state"
-            " (init or inbox), cancel and replace it atomically. Has no effect on"
-            " already-failed or already-cancelled uploads."
+            " (init, inbox, or failed_interrogation), cancel and replace it."
+            " Has no effect on already-failed or already-cancelled uploads."
             " Uploads in interrogated, awaiting_archival, or archived state cannot be"
             " overwritten."
         ),
@@ -251,11 +251,13 @@ class DeleteFileWorkOrder(BaseWorkOrderToken[Literal["delete"]], _FileUploadToke
 class RequeueFailedFileWorkOrder(
     BaseWorkOrderToken[Literal["requeue"]], _FileUploadToken
 ):
-    """WOT schema authorizing a Data Steward to requeue a failed FileUpload"""
+    """WOT schema authorizing a Data Steward to requeue a 'failed_interrogation' FileUpload"""
 
 
 class RequeueAllFailedWorkOrder(BaseWorkOrderToken[Literal["requeue_box"]]):
-    """WOT schema authorizing a Data Steward to requeue all failed FileUploads in a box."""
+    """WOT schema authorizing a Data Steward to requeue all 'failed_interrogation'
+    FileUploads in a box.
+    """
 
     box_id: UUID4
 
@@ -272,13 +274,16 @@ class DeleteFileBoxWorkOrder(BaseWorkOrderToken[Literal["delete_box"]]):
 
 
 class RequeueAllFailedResponse(BaseModel):
-    """Response body for a box-wide requeue of failed FileUploads."""
+    """Response body for a box-wide requeue of 'failed_interrogation' FileUploads."""
 
     requeued: list[UUID4] = Field(
         ..., description="The IDs of the FileUploads that were set back to 'inbox'"
     )
     skipped: list[UUID4] = Field(
-        ..., description="The FileUploads that were ineligible for a requeue"
+        ...,
+        description=(
+            "The IDs of the FileUploads that couldn't be requeued due to an error"
+        ),
     )
     model_config = ConfigDict(title="Requeue All Failed Response")
 

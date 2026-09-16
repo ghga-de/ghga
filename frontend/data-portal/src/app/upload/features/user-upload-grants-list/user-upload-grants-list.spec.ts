@@ -315,6 +315,44 @@ describe('UserUploadGrantsListComponent', () => {
       );
     });
 
+    it('should name failed re-encryptions when they block the submission', async () => {
+      const failedConflict = new HttpErrorResponse({
+        status: 409,
+        error: {
+          exception_id: 'incompleteOrFailed',
+          data: { incomplete_uploads: [], need_attention: ['file-4'] },
+        },
+      });
+      uploadBoxService.lockUploadBox
+        .mockReturnValueOnce(throwError(() => failedConflict))
+        .mockReturnValueOnce(of(undefined));
+      mockConfirmationService.confirm
+        .mockImplementationOnce(({ callback }) => callback(true))
+        .mockImplementationOnce(({ callback }) => callback(true));
+      fixture.detectChanges();
+
+      screen.getByRole('button', { name: /submit this upload box/i }).click();
+      await fixture.whenStable();
+
+      expect(mockConfirmationService.confirm).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          title: 'Unresolved files detected!',
+          message:
+            'Submission failed because 1 file failed re-encryption. ' +
+            'A Data Steward will have to resolve the failed files before the box ' +
+            'can be archived. Do you want to submit anyway?',
+          confirmText: 'Submit anyway',
+        }),
+      );
+      expect(uploadBoxService.lockUploadBox).toHaveBeenNthCalledWith(
+        2,
+        'box-001',
+        1,
+        true,
+      );
+    });
+
     it('should leave the box open when force submission is declined', async () => {
       uploadBoxService.lockUploadBox.mockReturnValue(
         throwError(() => conflict(['file-2'])),

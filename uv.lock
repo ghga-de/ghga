@@ -1371,7 +1371,7 @@ requires-dist = [
 
 [[package]]
 name = "ghga-event-schemas"
-version = "13.0.0"
+version = "13.1.0"
 source = { editable = "libs/ghga-event-schemas" }
 dependencies = [
     { name = "ghga-service-commons" },

@@ -175,6 +175,7 @@ components:
           - failed
           - cancelled
           - interrogated
+          - failed_interrogation
           - awaiting_archival
           - archived
           title: State
@@ -255,9 +256,9 @@ components:
         overwrite:
           default: false
           description: If True and a FileUpload for this alias already exists in an
-            active state (init or inbox), cancel and replace it atomically. Has no
-            effect on already-failed or already-cancelled uploads. Uploads in interrogated,
-            awaiting_archival, or archived state cannot be overwritten.
+            active state (init, inbox, or failed_interrogation), cancel and replace
+            it. Has no effect on already-failed or already-cancelled uploads. Uploads
+            in interrogated, awaiting_archival, or archived state cannot be overwritten.
           title: Overwrite
           type: boolean
         part_size:
@@ -827,7 +828,8 @@ components:
       title: HttpUploadSizeMismatchErrorData
       type: object
     RequeueAllFailedResponse:
-      description: Response body for a box-wide requeue of failed FileUploads.
+      description: Response body for a box-wide requeue of 'failed_interrogation'
+        FileUploads.
       properties:
         requeued:
           description: The IDs of the FileUploads that were set back to 'inbox'
@@ -837,7 +839,8 @@ components:
           title: Requeued
           type: array
         skipped:
-          description: The FileUploads that were ineligible for a requeue
+          description: The IDs of the FileUploads that couldn't be requeued due to
+            an error
           items:
             format: uuid4
             type: string
@@ -1490,12 +1493,14 @@ paths:
       - UploadControllerService
   /rpc/boxes/{box_id}/requeue:
     post:
-      description: 'Set every failed FileUpload in the box back to the ''inbox'' state.
+      description: 'Set every ''failed_interrogation'' FileUpload in the box back
+        to ''inbox''.
 
 
-        Files whose object has already been deleted from S3 are reported in the `skipped`
+        Files that couldn''t be requeued due to an error are reported in the `skipped`
+        list
 
-        list instead of failing the whole operation.
+        instead of failing the whole operation.
 
         Requires a `RequeueAllFailedWorkOrder` token.'
       operationId: requeueAllFailedFileUploads
@@ -1543,14 +1548,16 @@ paths:
       - UploadControllerService
   /rpc/boxes/{box_id}/uploads/{file_id}/requeue:
     post:
-      description: 'Set a failed FileUpload back to the ''inbox'' state so it is interrogated
-        again.
+      description: 'Set a ''failed_interrogation'' FileUpload back to ''inbox'' to
+        interrogate it again.
 
 
         The object is still in the inbox bucket, so no re-upload is needed.
 
         Returns 409 if the box is archived or the FileUpload''s state precludes a
         requeue.
+
+        Returns 500 with `requeueError` if the object is missing from the inbox bucket.
 
         Requires a `RequeueFailedFileWorkOrder` token.'
       operationId: requeueFileUpload
@@ -1576,24 +1583,35 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpRequeueError'
+                $ref: '#/components/schemas/HttpFileUploadNotFoundError'
           description: 'Exceptions by ID:
 
-            - requeueError: The FileUpload is not in a state that allows requeuing.'
+            - fileUploadNotFound: The FileUpload could not be found.'
         '409':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HttpRequeueError'
+                $ref: '#/components/schemas/HttpFileUploadStateError'
           description: 'Exceptions by ID:
 
-            - requeueError: The FileUpload is not in a state that allows requeuing.'
+            - fileUploadStateError: The action is incompatible with the FileUpload''s
+            current state.'
         '422':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HttpRequeueError'
+          description: 'Exceptions by ID:
+
+            - requeueError: The FileUpload is in the ''failed_interrogation'' state,
+            but its object is unexpectedly missing from the inbox bucket. The file
+            must be uploaded again.'
       security:
       - HTTPBearer: []
       summary: Requeue a FileUpload that failed interrogation

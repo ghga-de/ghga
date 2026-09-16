@@ -714,7 +714,7 @@ async def test_file_interrogation_report_happy(joint_fixture: JointFixture):
 async def test_failed_interrogation_file_overwrite_protection(
     joint_fixture: JointFixture, overwrite: bool
 ):
-    """Make sure that failed-interrogation files require the `overwrite` flag
+    """Make sure that failed_interrogation files require the `overwrite` flag
     in order to be replaced during upload init.
     """
     controller = joint_fixture.upload_controller
@@ -859,13 +859,12 @@ async def test_failed_interrogation_object_survives_cleanup(
     )
     await joint_fixture.event_subscriber.run(forever=False)
 
-    # Verify that the FileUpload was updated to 'failed'
+    # Verify that the FileUpload was updated to 'failed_interrogation'
     failed_file = file_upload_collection.find_one(
         {"_id": file_id, "__metadata__.deleted": False}
     )
     assert failed_file is not None
-    assert failed_file["state"] == "failed"
-    assert failed_file["decrypted_sha256"]
+    assert failed_file["state"] == "failed_interrogation"
     assert await s3_storage.does_object_exist(
         bucket_id=inbox_bucket_id, object_id=object_id
     )

@@ -1252,4 +1252,70 @@ describe('UploadBoxService with the HTTP cache in place', () => {
     httpMock.expectOne(USER_GRANTS_URL).flush([]);
     await Promise.resolve();
   });
+
+  it('should move a requeued file back to the inbox state locally', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    service.loadAllFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const failedFile = {
+      id: 'file-1',
+      state: 'failed_interrogation',
+      state_updated: '2025-01-01T00:00:00Z',
+    } as unknown as FileUploadWithAccession;
+    const otherFile = { id: 'file-2', state: 'failed_interrogation' };
+    const page = { items: [failedFile, otherFile], total_count: 2 };
+    for (const req of httpMock.match((req) => req.url === UPLOADS_URL)) {
+      req.flush(page);
+    }
+    await new Promise((resolve) => setTimeout(resolve));
+
+    service.requeueFileUpload(BOX.id, failedFile).subscribe();
+    const requeueReq = httpMock.expectOne(`${UPLOADS_URL}/file-1/requeue`);
+    expect(requeueReq.request.method).toBe('POST');
+    expect(requeueReq.request.body).toBeNull();
+    requeueReq.flush(null, { status: 204, statusText: 'No Content' });
+    await Promise.resolve();
+    testBed.tick();
+
+    // The file lists are updated in place instead of being fetched again.
+    httpMock.expectNone((req) => req.url === UPLOADS_URL);
+    for (const files of [service.boxFiles(), service.allBoxFiles()]) {
+      expect(files[0].state).toBe('inbox');
+      expect(files[0].state_updated).not.toBe(failedFile.state_updated);
+      expect(files[1]).toEqual(otherFile);
+    }
+  });
+
+  it('should move the files of a box-wide requeue back to the inbox state locally', async () => {
+    await flushUserGrants();
+
+    service.loadFileUploadsForBox(BOX.id);
+    testBed.tick();
+    const files = [
+      { id: 'file-1', state: 'failed_interrogation' },
+      { id: 'file-2', state: 'failed_interrogation' },
+    ];
+    httpMock
+      .expectOne((req) => req.url === UPLOADS_URL)
+      .flush({ items: files, total_count: 2 });
+    await Promise.resolve();
+
+    let result: { requeued: string[]; skipped: string[] } | undefined;
+    service.requeueAllFileUploads(BOX.id).subscribe((value) => (result = value));
+    const requeueReq = httpMock.expectOne(`${BOX_URL}/requeue`);
+    expect(requeueReq.request.method).toBe('POST');
+    expect(requeueReq.request.body).toBeNull();
+    requeueReq.flush({ requeued: ['file-1'], skipped: ['file-2'] });
+    await Promise.resolve();
+    testBed.tick();
+
+    httpMock.expectNone((req) => req.url === UPLOADS_URL);
+    expect(result).toEqual({ requeued: ['file-1'], skipped: ['file-2'] });
+    expect(service.boxFiles().map((f) => f.state)).toEqual([
+      'inbox',
+      'failed_interrogation',
+    ]);
+  });
 });

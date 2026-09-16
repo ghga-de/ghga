@@ -434,8 +434,7 @@ class BoxRequeueResult(BaseModel):
     skipped: list[UUID4] = Field(
         ...,
         description=(
-            "The IDs of the file uploads that were ineligible for a requeue, e.g."
-            + " because the uploaded object is no longer in the inbox"
+            "The IDs of the file uploads that couldn't be requeued due to an error"
         ),
     )
 

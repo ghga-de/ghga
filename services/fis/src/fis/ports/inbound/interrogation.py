@@ -76,9 +76,9 @@ class InterrogationHandlerPort(ABC):
 
         If the report relays a failure, publish an InterrogationFailure event.
 
-        In both cases, set `interrogated=True`, `state="interrogated"`, and
-        `state_updated=now()` for the `FileUnderInterrogation` event. In the case of
-        interrogation failure, also set `can_remove=True`.
+        In both cases, set `interrogated=True` and `state_updated` for the
+        `FileUnderInterrogation`. On success, set `state="interrogated"`. On failure,
+        set `state="failed_interrogation"` and `can_remove=True`.
 
         Raises:
         - FileNotFoundError if there's no file with the ID specified in the report.
@@ -97,10 +97,11 @@ class InterrogationHandlerPort(ABC):
 
         We don't track files that are only in the 'init' state, we only track them once
         they reach 'inbox'. The transition from 'inbox' to 'interrogated' or from 'inbox'
-        to 'failed' is performed by the FIS in `.handle_interrogation_report()`. The
-        state 'awaiting_archival' is not of interest of the FIS and has no functional
-        difference from 'interrogated' from the perspective of the FIS. Therefore, the
-        only states of interest in this method are 'cancelled', 'failed', and 'archived'.
+        to 'failed_interrogation' is performed by the FIS in
+        `.handle_interrogation_report()`. The state 'awaiting_archival' is not of
+        interest of the FIS and has no functional difference from 'interrogated' from
+        the perspective of the FIS. Therefore, the only states of interest in this
+        method are 'cancelled', 'failed', and 'archived'.
         """
 
     @abstractmethod

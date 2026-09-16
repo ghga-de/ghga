@@ -29,6 +29,7 @@ from rs.constants import (
     EXC_ID_BOX_STATE_ERROR,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
+    EXC_ID_FILE_UPLOAD_STATE_ERROR,
     EXC_ID_INCOMPLETE_OR_FAILED,
     EXC_ID_REQUEUE_ERROR,
 )
@@ -1717,15 +1718,28 @@ async def test_requeue_single_file_upload_error_translation(
         assert response.json()["exception_id"] == EXC_ID_FILE_UPLOAD_NOT_FOUND
         assert response.json()["data"]["file_id"] == str(test_file_id)
 
+        # handle file upload state error from core - the reason is relayed to the client
+        registry.reset_mock()
+        state_error = RDUBManagerPort.FileUploadStateError(
+            f"Cannot requeue FileUpload {test_file_id} because it isn't in the"
+            + " 'failed_interrogation' state."
+        )
+        registry.rdub_manager.requeue_single_file_upload.side_effect = state_error
+        response = await rest_client.post(url, headers=ds_auth_headers)
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == EXC_ID_FILE_UPLOAD_STATE_ERROR
+        assert response.json()["data"]["file_id"] == str(test_file_id)
+        assert response.json()["description"] == str(state_error)
+
         # handle requeue error from core - the reason is relayed to the client
         registry.reset_mock()
         requeue_error = RDUBManagerPort.RequeueError(
-            f"Cannot requeue FileUpload {test_file_id} because it did not fail"
-            + " interrogation."
+            f"Cannot requeue FileUpload {test_file_id} because its uploaded object"
+            + " is no longer in the inbox."
         )
         registry.rdub_manager.requeue_single_file_upload.side_effect = requeue_error
         response = await rest_client.post(url, headers=ds_auth_headers)
-        assert response.status_code == 409
+        assert response.status_code == 500
         assert response.json()["exception_id"] == EXC_ID_REQUEUE_ERROR
         assert response.json()["data"]["file_id"] == str(test_file_id)
         assert response.json()["description"] == str(requeue_error)

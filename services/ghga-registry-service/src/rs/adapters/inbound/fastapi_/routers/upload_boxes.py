@@ -33,6 +33,7 @@ from rs.adapters.inbound.fastapi_.http_exceptions import (
     HttpBoxTitleExistsError,
     HttpBoxVersionError,
     HttpFileUploadNotFoundError,
+    HttpFileUploadStateError,
     HttpIncompleteOrFailedError,
     HttpInternalError,
     HttpNotAuthorizedError,
@@ -149,9 +150,14 @@ async def delete_file_upload(
         404: {"description": "Upload box or file upload not found."},
         409: {
             "description": (
-                "The file is still being uploaded, has not been interrogated yet, has"
-                + " been successfully interrogated, was never uploaded successfully, OR"
-                + " the box has been archived already."
+                "The file isn't in the 'failed_interrogation' state, or the box has"
+                + " been archived already."
+            )
+        },
+        500: {
+            "description": (
+                "The file's uploaded object is no longer in the inbox, or another error"
+                + " occurred."
             )
         },
     },
@@ -174,6 +180,8 @@ async def requeue_single_file_upload(
         raise HttpBoxStateError(state=err.state, operation="requeued") from err
     except RDUBManagerPort.FileUploadNotFoundError as err:
         raise HttpFileUploadNotFoundError(file_id=file_id) from err
+    except RDUBManagerPort.FileUploadStateError as err:
+        raise HttpFileUploadStateError(file_id=file_id, reason=str(err)) from err
     except RDUBManagerPort.RequeueError as err:
         raise HttpRequeueError(file_id=file_id, reason=str(err)) from err
     except Exception as err:
@@ -186,10 +194,10 @@ async def requeue_single_file_upload(
     summary="Requeue all failed file uploads in an upload box",
     description="Set every file upload in the box that failed interrogation back to the"
     + " inbox state so that they are interrogated again. Requires the Data Steward"
-    + " role. Files that cannot be requeued, e.g. because their uploaded object is no"
-    + " longer in the inbox, are reported in the `skipped` list instead of failing the"
-    + " whole request. Files that failed during the upload itself are left alone and"
-    + " have to be uploaded again. This operation is not permitted on archived boxes.",
+    + " role. Files that couldn't be requeued due to an error are reported in the"
+    + " `skipped` list instead of failing the whole request. Files that failed during"
+    + " the upload itself are left alone and have to be uploaded again. This operation"
+    + " is not permitted on archived boxes.",
     response_model=BoxRequeueResult,
     responses={
         200: {
