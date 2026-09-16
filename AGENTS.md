@@ -25,8 +25,12 @@ do not carry.
 
 ## Tech stack
 
-- Python 3.12+, one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single
-  `uv.lock`, internal libraries consumed from source (HEAD is always integrated)
+- Python 3.13 in the workspace (`.python-version`), but each member sets its own floor:
+  3.11 for the PyPI-lane libraries and tools, 3.13 for the services. The published-combo
+  gate tests a lane member on every version from 3.11 to 3.14 its `requires-python`
+  allows
+- One `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`,
+  internal libraries consumed from source (HEAD is always integrated)
 - Services: FastAPI + Pydantic on `hexkit` (ports-and-adapters; Kafka, MongoDB, S3
   providers); most run as a rest + consumer pair
 - Lint/format: `ruff` · typecheck: `mypy` · unit tests: `pytest`, each configured
