@@ -1,13 +1,14 @@
 # Storing Data as strings vs BSON in MongoDB (Poodle Moth)
+
 **Epic Type:** Exploratory Epic
 
-Epic planning and implementation follows the
+Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 We currently store data in MongoDB with a process that converts more complex data types,
-such as datetimes, paths, and UUID objects, as their string representations.
+such as datetimes, paths, and UUID objects, to their string representations.
 More precisely, we perform `<model>.model_dump_json()` on the given pydantic model
 before insertion. When the data is retrieved from the database, pydantic is able to
 reconstruct the original model, e.g. a stringified UUID is converted to an actual UUID.
@@ -25,6 +26,7 @@ filter mapping values are passed without being stringified, contrary to the valu
 inserted or updated resources.
 
 Results to be produced:
+
 - ADR
 - Implementation Epic & tasks (including migration tasks), only if BSON format is elected
 
@@ -42,7 +44,6 @@ Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and
 
 - [MongoDB Documentation](https://www.mongodb.com/resources/basics/json-and-bson)
 - [BSON Documentation](https://bsonspec.org/)
-
 
 ## Human Resource/Time Estimation:
 

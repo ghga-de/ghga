@@ -25,6 +25,7 @@ accepting that **this approach involves some code redundancy and there is potent
 ### Context
 
 **Definitions**
+
 - ***Migration***: the modification of existing DB documents to make them compatible
 with the current corresponding Pydantic model.
 - ***Migration script***: some code that performs a migration to one or more
@@ -48,6 +49,7 @@ errors due to outdated or incompatible documents.
 
 **Requirements**
 The solution should be easy to maintain, simple to implement, and convenient.
+
 - **Easy to maintain**: The solution should not burden developers or require frequent
 changes outside of the changes required when a schema update occurs.
 - **Simple to implement**: We must implement the solution multiple times due to the
@@ -65,6 +67,7 @@ any outdated documents are updated before any business logic is performed.
 ### Consequences
 
 **Advantages**:
+
 - The relevant Pydantic model(s) can be referenced in the migration code.
 - The migration logic can be reviewed in the same PR that contains the schema change(s).
 - The migration logic is kept with the service for which it's immediately relevant.

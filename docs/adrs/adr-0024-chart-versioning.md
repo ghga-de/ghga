@@ -34,10 +34,11 @@ With a growing number of services, this leads to a version landscape that is mor
 ### Decision
 
 We propose to implement a custom solution that takes into account our Chart architecture (library chart) and application architecture (microservices):
-1. Use only one Chart version for all Charts belonging to one application^1.
-2. Bump Chart version analog to version change for case (i) and (ii).
 
-^1 The definition of application is another topic. Since we have only one currently, this could be straight forward.
+1. Use only one Chart version for all Charts belonging to one application^1.
+2. Bump Chart version analogous to version change for case (i) and (ii).
+
+^1 The definition of application is another topic. Since we have only one currently, this could be straightforward.
 
 ### Consequences
 
@@ -46,7 +47,7 @@ It reduces the number of coexisting versions, hence reducing the complexity.
 Additionally only one version needs to be updated in the downstream applications (CD pipeline).
 Also, by using a *super* version the inter-service dependency and superordinate application is highlighted.
 
-On the other hand, we lose fine grain control of Chart versions.
+On the other hand, we lose fine-grained control of Chart versions.
 We will update all Charts for every change in the application version, which produces plenty of releases.
 
 ### Alternatives

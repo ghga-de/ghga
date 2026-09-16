@@ -190,7 +190,7 @@ Used to create an upload token:
 
 Used to get the full names of the storage locations:
 
-`GET /values/storage_labels`
+- `GET /values/storage_labels`
 
 ## Additional Implementation Details
 

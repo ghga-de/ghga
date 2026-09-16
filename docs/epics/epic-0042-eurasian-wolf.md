@@ -1,4 +1,5 @@
 # Custom Specification Separating Schema Validation and Schema Linkage (Eurasian Wolf)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
@@ -7,12 +8,14 @@ Epic planning and implementation follow the
 **Attention: Please do not put any confidential content here.**
 
 ## Scope
+
 ### Outline:
+
 The aim of this epic is to implement a proof of concept for a specification that separates schema validation and schema linkage
 as prototyped [here](https://github.com/ghga-de/metadata_schema_explorations).
 
-
 ### Included/Required:
+
 - basic validation of:
   - content schemas
   - uniqueness of ID
@@ -25,8 +28,6 @@ as prototyped [here](https://github.com/ghga-de/metadata_schema_explorations).
   - isolation of individual resources
   - integration of individual resources
 - performance documentation but not optimization
-
-
 
 ## Additional Details:
 
@@ -49,7 +50,6 @@ are ignored by the POC.
 
 Support for validating both rooted (as shown [here](https://github.com/ghga-de/metadata_schema_explorations/blob/main/data/desintegrated.yaml#L42-L44))
 and non-rooted documents will be implemented.
-
 
 ### Isolation and Integration of Resources:
 
@@ -82,7 +82,6 @@ of a transformation workflow.
 Simple performance metrics such as execution time will be recorded to assess the
 general feasibility of the approach. No performance optimization should be performed.
 However, performance might be a criterion for selecting dependencies for this POC.
-
 
 ## Human Resource/Time Estimation:
 

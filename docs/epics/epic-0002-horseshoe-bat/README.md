@@ -1,4 +1,5 @@
 # Metadata Submission via REST API (Horseshoe Bat)
+
 **Epic Type:** Implementation Epic
 
 ## The Scope
@@ -30,14 +31,11 @@ and is available for download (has a DRS URI)
 - user authentication & authorization
 - restricted/encrypted metadata
 
-
 ## User Journeys
 
 This epic covers the following user journeys:
 
-
 ![](miro_user_journeys.jpeg)
-
 
 ### 1.0 Data Submitter submits their metadata spreadsheet to the Metadata Transpiler Service
 
@@ -53,11 +51,10 @@ Data Submitter (1.2)
 - If the validation fails, then the Data Submitter is notified (1.2) along
 with the validation errors
 
-
 ### 2.0 Data Submitter submits a Study as part of a Submission
 
 The Data Submitter submits the Submission object to the Metadata Repository Service (MRS)
-as a HTTP POST request.
+as an HTTP POST request.
 
 The MRS validates the incoming Submission object, and all of the associated entities.
 
@@ -68,9 +65,8 @@ Upon a successful write operation, the Submission object (which includes a Submi
 returned to the Data Submitter for reference. If the validation fails then the data submitter
 is notified of a failure (2.2).
 
-**Note:** A Submission can have one of the following status: `in progress` and `completed`.
+**Note:** A Submission can have one of the following statuses: `in progress` and `completed`.
 At this stage, the Submission is considered as 'in progress'.
-
 
 ### 3.0 Data Submitter wants to update a Submission
 
@@ -84,30 +80,29 @@ The Data Submitter prepares the updated Submission object (by repeating steps in
 i.e. if the Data Submitter needs to update just one Sample that is part of a Study, then
 the Data Submitter should still prepare the entire Submission object.
 
-The updated Submission object is then sent to the MRS as a HTTP POST request.
+The updated Submission object is then sent to the MRS as an HTTP POST request.
 
 The MRS again validates the incoming Submission object, and all of its associated entities.
 
 Upon successful validation, the MRS looks up the existing Submission (3.1) using
 the Submission ID and:
+
 - If the Submission object is marked as 'submitted' then this update operation will fail and the
 Data Submitter will be notified of failure
 - If the Submission object is not marked as 'submitted' then the MRS updates the Submission object
 in the database and the Data Submitter will be provided with the updated Submission object as a response (3.2)
-
 
 **How does the update operation work?**
 
 Since the updated Submission object is the entire Submission, all entities created in 2.1 will be
 deleted and the new entities will be created.
 
-
 ### 4.0 Data Submitter/Data Steward wants to update status of their submission to 'submitted' (i.e. complete)
 
 Once the Data Submitter (or a Data Steward) is comfortable with the accuracy of their submission,
 they can explicitly mark a Submission as complete.
 
-To do so, the Data Submitter/Data Steward sends a HTTP POST request to the MRS with the Submission
+To do so, the Data Submitter/Data Steward sends an HTTP POST request to the MRS with the Submission
 ID that is to be marked as complete.
 
 The MRS looks up the existing Submission (4.1) using the provided Submission ID and marks
@@ -124,20 +119,16 @@ because ULC requires the accession (not the internal unique ID) for upload
 Upon successful completion, the MRS provides the same Submission ID back to the Data
 Submitter/Data Steward (4.3).
 
-
 **Note:** At this stage, the Submission is considered as complete. No further updates possible
 (within the scope of functionality provided by this milestone).
-
 
 ### 5.0 Submitter uploads all the files that are part of this submission via the Upload Controller
 
 Now the Data Submitter submits all the files, using file accessions, that are part of the Submission
 via the Upload Controller.
 
-
 The individual steps for this process are detailed in
 [1 - Red-lipped Batfish - Basic File IO Service](https://wiki.verbis.dkfz.de/display/GHGA/1+-+Red-lipped+Batfish+-+Basic+File+IO+Service).
-
 
 ### 6.0 Create a new Dataset from one or more files
 
@@ -156,7 +147,7 @@ endpoint of the MRS with the required metadata to create a new DAC (6.0).
 
 The MRS then creates a DAC entity with the provided metadata (6.1).
 
-Upon successful creation of a DAC, the MRS responds with the a DAC Accession (6.2).
+Upon successful creation of a DAC, the MRS responds with a DAC Accession (6.2).
 
 This DAC Accession is required for the creation of a DAP.
 
@@ -174,28 +165,26 @@ This DAP Accession is required for the creation of a Dataset.
 
 #### Creation of a Dataset
 
-To do so, the Data Submitter/Data Steward sends a HTTP POST request to the `/datasets` endpoint
+To do so, the Data Submitter/Data Steward sends an HTTP POST request to the `/datasets` endpoint
 of the MRS with a list of File Accessions, and a Data Access Policy Accession that applies
 to the Dataset (and thus applies to files that are part of this Dataset) (6.6).
 
-The MRS ensures that the Files and the DAP exists. Then it creates a
+The MRS ensures that the Files and the DAP exist. Then it creates a
 new Dataset object with the files, collates all the linked metadata at the Dataset level,
 and attaches the given DAP to the Dataset (6.7).
 
 Upon successful completion, the MRS provides the Dataset Accession to the Data
 Submitter/Data Steward (6.8).
 
-
 ### 7.0 Data Steward marks a Dataset as released
 
 A Dataset is not publicly available until its status is changed to `released`.
 
-To do so, a Data Steward sends a HTTP PATCH request to the MRS with a Dataset ID
+To do so, a Data Steward sends an HTTP PATCH request to the MRS with a Dataset ID
 and `status: released`.
 
 The MRS looks up the corresponding Dataset and changes its status from `unreleased`
 to `released` (7.1). This ensures that the Dataset is now released for public consumption.
-
 
 ## User Journeys that are not part of this Epic:
 
@@ -204,25 +193,21 @@ to `released` (7.1). This ensures that the Dataset is now released for public co
 - Submitter wants to update a submission that has already been released for public consumption
 - Submitter wants to deprecate a submission and replace it with a newer submission
 
-
 ## API Definitions:
 
 The definitions are hosted here:
 
-
 ### RESTful/Synchronous:
 
-The RESTful service API are described using OpenAPI:
+The RESTful service APIs are described using OpenAPI:
 
 MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0002-horseshoe-bat/api_definitions/rest/metadata_repository.yaml)
-
 
 ### Payload Schemas for Asynchronous Topics:
 
 The payloads for asynchronous topics are described using JSON schemas:
 
 - new_study_created: [JSON Schema](../epic-0001-red-lipped-batfish/api_definitions/message_topics/new_study_created.json)
-
 
 ## Technical planning:
 

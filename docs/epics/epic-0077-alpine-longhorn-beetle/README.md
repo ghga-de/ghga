@@ -31,7 +31,8 @@ The reverse transpiler service shall consume JSON data of the following form:
 - each array element is mapped to a *row* in the respective sheet
 
 Example:
-```
+
+```json
 {
   "individuals": [
     {
@@ -46,6 +47,7 @@ Example:
   "samples": [...]
 }
 ```
+
 would result in
 
 ![example sheet](./example_sheet.png)
@@ -57,13 +59,14 @@ The service shall be implemented as follows:
 - For other data types (list, object), the data is JSON serialized first and the cell type is set to text
 
 The API of the service shall reflect the [metldata query API](https://data.ghga.de/api/metldata/docs), i.e. the paths shall follow the pattern
-```
+
+```text
 /artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}
 ```
 
 The service configuration shall allow renaming the sheets according to a map. It may look similar to the following example:
 
-```
+```yaml
 - source_topic: some_topic
   artifact_name: some_name
   class_name: some_class

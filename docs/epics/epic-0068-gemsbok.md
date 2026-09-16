@@ -1,12 +1,14 @@
 # Persistent Kafka Publisher (Gemsbok)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
+
 ### Outline:
+
 Implement a special event publisher that incorporates a DAO to automatically
 store *stateless* events in the database. The functionality will be similar to
 that of the `MongoKafkaDaoPublisher`, but where the `MongoKafkaDaoPublisher` is
@@ -22,17 +24,19 @@ The new class will be called `PersistentKafkaPublisher` and reside within the
 `mongokafka` subpackage.
 
 ### Included/Required:
+
 - New `PersistentKafkaPublisher` in `hexkit`
 - Add event types to stateless config classes in `ghga-event-schema` that lack one
 - Rollout to services that use the outbox functionality for non-outbox events
 
 ### Optional:
+
 - Incorporate stored event deletion and expose via CLI commands
   - What are the criteria used? Timestamp? Is it configurable or supplied via CLI?
   - Should we mirror log compaction in our database or not, and if so, how?
 
-
 ## API Definitions:
+
 The `PersistentKafkaPublisher` will subclass `EventPublisherProtocol` just like the
 `KafkaEventPublisher`, so it will expose the same `publish` function. In addition,
 it will feature both a `publish_pending` and `republish` function. Those
@@ -52,11 +56,11 @@ class PersistentKafkaPublisher(EventPublisherProtocol):
       ...
 ```
 
-
 ## Additional Implementation Details:
 
 ### Background - Different Event Categories
-We currently publish two categories of events ("categories" is used to avoid confusion 
+
+We currently publish two categories of events ("categories" is used to avoid confusion
 with the event `type`):
 
 1. "Normal"/"non-outbox"-category Events
@@ -65,7 +69,7 @@ with the event `type`):
    - They are inherently concerned with *action* and are therefore *stateless*.
    - These events are not currently stored in the database and there is no easy way
      to retrigger them if Kafka data is lost.
-   - This event category predates the outbox category is considered our default
+   - This event category predates the outbox category and is considered our default
 2. "Outbox"-category Events
    - E.g. user info published by the `UMS`.
    - These events share the latest state of domain object info with the goal of
@@ -85,8 +89,8 @@ These should instead be called *stateless* and *stateful*, respectively.
 We've recently come to understand that we also need to be able to
 re-publish *stateless* events, which means we need to save them in the database.
 
-
 ### Why Not Recycle MongoKafkaDaoPublisher
+
 A question, perhaps obvious, is *"Why not just use the `MongoKafkaDaoPublisher`?*
 *Surely it can be adapted out of the box!"*  
 While it is *technically* possible, it would require defining a DAO publisher factory
@@ -111,14 +115,15 @@ called, then publish the event to Kafka, and finally update the database documen
 to set the `published` flag to True.
 
 ### Event in the Database
-The `PersistentKafkaPublisher` class will have a `construct` method that takes a 
+
+The `PersistentKafkaPublisher` class will have a `construct` method that takes a
 `collection_name` parameter to determine where to put the events. The
 default value will append the string `PersistedEvents` to the
 configured `service_name`, e.g. `dcsPersistedEvents` in the case of the DCS.
 
 The events will be stored in the database with the following schema:
 
-```
+```text
 id_ (UUID) - ID generated at publish time to serve as a PK in the database
 topic (str)
 type_ (str)
@@ -132,9 +137,11 @@ published (bool) - Tracks publish status
 ```
 
 ### Prioritized Rollout
+
 The first places to use the `PersistentKafkaPublisher` are the places where the
 outbox pattern is used with *stateless* events in order to keep a persistent
 copy of those events. This includes:
+
 - UCS: "File Upload Received"
 - IRS: "File Upload Validation Success"
 - FIS: "File Upload Validation Success"
@@ -145,6 +152,7 @@ Since the services have used the outbox pattern to persist events in the databas
 the events will be stored in collections already. However, these collections will
 have different names and different content structure than what will be produced
 by the `PersistentKafkaPublisher`. Options to resolve:
+
 1. Forget the old events and drop the old collection
 2. Copy the prototype framework from IFRS or DCS and write a migration script for it
 3. Same as #2, but wait for the migration framework to be in `hexkit`
@@ -157,10 +165,10 @@ deploy all at once, especially considering that the 3 sprint window should suffi
 to execute all upgrades alongside existing tasks.
 
 ### Republish/Publish Pending CLI command
+
 The services above already expose a CLI command that enables republishing events
 from the database which were stored there via the outbox pattern. These entrypoints
 will be updated to use the `PersistentKafkaPublisher` instead.
-
 
 ## Human Resource/Time Estimation:
 

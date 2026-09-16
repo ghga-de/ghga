@@ -1,12 +1,14 @@
-# Kakfa Dead Letter Queues (Sphynx Cat)
+# Kafka Dead Letter Queues (Sphynx Cat)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
+
 ### Outline:
+
 The goal of this epic is to both define and implement a mechanism to deal with Kafka
 events that result in unhandled exceptions when consumed. Such errors can be caused
 by an array of things, and may or may not be a problem with the event payload itself.
@@ -14,12 +16,12 @@ Events that fail cannot always be outright discarded, so there is a need for a w
 set the events aside (disengage them from the request flow) and allow for investigation.
 After looking into why the event failed and performing any required intervention, the
 events can be either discarded or reintroduced into the request flow as the situation
-warrants. 
+warrants.
 
 Currently, we have no elegant way to handle this kind of situation aside from immediately
 diagnosing and patching the application code. As an example, there was a situation in the
-Archive Test Bed where the `nos` consumed an event that required it to look up a non-
-existent record in the database and crashed. Ideally, this would not prevent the service
+Archive Test Bed where the `nos` consumed an event that required it to look up a
+non-existent record in the database and crashed. Ideally, this would not prevent the service
 from functioning. Instead, the error would be logged and the problematic event would be
 dealt with in a way that allows us to examine the problem and later retry the event.
 
@@ -32,22 +34,21 @@ Kafka Connect. We are not using Kafka Connect and use AIOKafka's python producer
 consumers with our own library instead, meaning we can't take advantage of Kafka Connect
 without considerable work.
 
-> [!Note]
+> [!NOTE]
 > It's important to note that using a dead letter queue *does not* remove the need for
-manual intervention. It merely provides the means to perform diagnostics and corrective
-action while allowing the service to continue processing events in the background.
-
+> manual intervention. It merely provides the means to perform diagnostics and corrective
+> action while allowing the service to continue processing events in the background.
 
 ### Included/Required:
+
 - ADR Proposal
 - Implementation of DLQ Providers in `hexkit`
 - Implementation of DLQ logic in services
 - Internal Documentation: Async Interservice Communication Architecture Concept
 
-
 ### Not included:
-- Setup of a dedicated DLQ monitor or dashboard service (more on this below)
 
+- Setup of a dedicated DLQ monitor or dashboard service (more on this below)
 
 ## Additional Implementation Details:
 
@@ -72,19 +73,19 @@ topic name and proceeds with the normal request flow.
 ### Implementation of DLQ in `hexkit`
 
 **`KafkaEventSubscriber`**  
-This is the main Kafka subscriber provider in `hexkit`. 
+This is the main Kafka subscriber provider in `hexkit`.
 Upon catching an unhandled error during event consumption, it does the following:
+
 1. Retries handling the event until the configured number of retries is exhausted (using
 exponential backoff).
    - This reduces the likelihood of transient errors populating the DLQ.
 2. Publishes the event to the configured DLQ topic, if DLQ functionality is configured.
    - The original topic is preserved in the headers of the Kafka event, and extracted
    when the event is consumed from the configured retry topic.
-4. Commits the topic offsets to avoid infinitely reprocessing the failed event.
-5. Upon consuming an event from the configured retry topic, extracts/removes the
+3. Commits the topic offsets to avoid infinitely reprocessing the failed event.
+4. Upon consuming an event from the configured retry topic, extracts/removes the
 original topic from the headers and proceeds with processing as if it were any other
 event.
-
 
 **`KafkaDLQSubscriber`**  
 This is a specialized provider that will, upon instruction, consume one event from the
@@ -97,10 +98,10 @@ This class is potentially not required if requeueing is done through a 3rd party
 like Kafka UI. However, if requeueing is done through either the different services or
 an in-house dedicated DLQ service, then this type of consumer will be helpful.
 
-
 **`KafkaConfig`**  
 The configuration will have several new values that can be omitted if the DLQ
 functionality is not desired:
+
 - `kafka_dlq_topic`: Name of the topic for events when they initially fail
 (default=`""`).
 - `kafka_retry_topic`: Name of the topic for failed events that are to be requeued
@@ -109,12 +110,12 @@ functionality is not desired:
 - `kafka_enable_dlq`: Whether or not to use the DLQ (default=`False`).
 - `kafka_retry_backoff`: The number of seconds to wait between "immediate" retries. This value is doubled with each subsequent retry (default=`0`).
 
-## Other: 
+## Other:
 
 ### Potential Problems:
 
 > [!NOTE]
-> The following list is by no means exhaustive: 
+> The following list is by no means exhaustive:
 
 **#1.** *Kafka data is lost after publishing to the DLQ (the DLQ data is lost).*
 
@@ -162,7 +163,6 @@ some copy/paste action, which doesn't scale. If Kafka UI is used in conjunction 
 service-level resolution (i.e. discarding/requeueing), then we need to do some work to
 keep Kafka UI in sync with the service level consumers. This requires more digging and
 discussion; maybe there is a simple solution.
-
 
 ## Human Resource/Time Estimation:
 

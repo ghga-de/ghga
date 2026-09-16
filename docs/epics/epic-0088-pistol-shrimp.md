@@ -1,25 +1,30 @@
 # UCS Upload Permission Guardrails (Pistol Shrimp)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
+
 ### Outline:
+
 The Upload Controller Service (UCS) currently has verification and auth mechanisms at the start and end of the upload lifecycle through Work Order Tokens (WOTs) and checksum verification, but the window between those two points needs more control. For example, with the current implementation, a caller with a valid WOT can declare any number of arbitrarily large files, abandon multipart uploads indefinitely, and spam the presigned URL endpoint. This epic addresses those problems by adding a layered set of guardrails to UCS and supporting infrastructure.
 
-
 ### Included/Required:
+
 - **Upload Box size limits:** Data stewards will specify a maximum size in bytes when creating a new Research Data Upload Box. The box size will determine how many bytes may be uploaded across all files in their *unencrypted* state in the box. Because submitters must declare their total data size during contract negotiation with data stewards, a per-box aggregate cap is always enforceable — this is domain knowledge not currently codified anywhere in the backend. When a submitter requests to create a new FileUpload, look at in-progress (`state="init"`) uploads for the FileUploadBox and reject the request if the assigned box limit would be exceeded. When considering file sizes, it is the `decrypted_size` that counts, rather than the `encrypted_size`.
 - **Concurrent uploads cap per box:** Similar to the box limit, this would count the number of in-progress uploads and reject any requests to create new FileUploads if a configured limit would be crossed. Note that while box size limits are specific to the box, the concurrent uploads per box cap applies uniformly to all boxes. This concurrent upload cap would prevent the style of abuse where thousands of uploads are opened simultaneously, but it does not prevent the scenario where many very small uploads are created and completed in rapid succession. Note that as it's currently implemented, the GHGA Connector only uploads files in sequence anyway, meaning this limit won't be hit unless the Connector is modified.
 - **Stale upload TTL with automated abort:** Track activity for each upload via a KV store entry (key = `file_id`, value = timestamp of last activity), set on `FileUpload` creation and refreshed on every presigned URL issuance. This can be performed as a [FastAPI BackgroundTask](https://fastapi.tiangolo.com/reference/background/) so the response isn't blocked. Implement a periodic cleanup job that aborts S3 multipart uploads and marks `FileUpload` records as `cancelled` for those whose KV store entry has expired. Make this functionality accessible through a new entrypoint command. In case of confusion, the reason for this TTL check is to catch orphaned or abandoned multipart uploads and abort them. There is a TTL or expiry parameter assigned to the presigned upload URLs, but the URL lifespan should be considered shorter than the multipart upload lifespan. After all, a new URL has to be issued for each file part. Therefore, we can't use the URL TTL as a reference for this kind of cleanup operation.
 
 ### Optional:
+
 - **Rate limiting on presigned URL issuance:** Apply a per-file-upload token bucket to the `GET .../parts/{part_no}` endpoint to cap the rate at which the user can request presigned URLs for a given multipart upload (which is 1:1 with `FileUpload`). The token bucket can be held in-memory or backed by `hexkit`'s KV store / MongoDB provider.
 - **Verify part sizes retrospectively:** Call the S3 list_parts function for the previous part (`n-1`) when a URL is requested. If the part size exceeds the expected part size by some allowable buffer, UCS aborts the upload immediately. UCS then responds to the HTTP request with an error indicating the upload has been aborted (`state="cancelled"`). The GHGA Connector won't make subsequent requests and will display an appropriate message to the user.
   - This requires a modification to hexkit and adds up to one call for every presigned URL request. This would address the scenario where presigned URLs are used to upload large data quantities for every part, in excess of the actual data amount. Without this, the fallback is to reject the upload at completion time or clean up the stagnant multipart upload if the user intentionally abandons it.
 
 ### Not included:
+
 - **Frontend or Data Portal changes.**
 
 ## User Journeys
@@ -33,11 +38,13 @@ No new user-facing flows are introduced. All changes should be transparent to su
 No new endpoints will be added. The following existing endpoints will gain new validation behavior and may return new error responses:
 
 **`POST /boxes/{box_id}/uploads`** -> Initiate a multipart upload for a new `FileUpload`:
+
 - Will return `400 Bad Request` (`PartCountLimitExceededError`) if the computed part count exceeds the S3 hard limit of 10,000 parts.
 - Will return `507 Insufficient Storage` (`BoxSizeLimitExceededError`) if adding this file's `decrypted_size` to the aggregate `decrypted_size` of all in-progress (`state="init"`) uploads for the box would exceed the box's assigned cap.
 - Will return `429 Too Many Requests` (`TooManyConcurrentUploadsError`) if the number of in-progress uploads for the box is already at the configured limit.
 
 **`GET /boxes/{box_id}/uploads/{file_id}/parts/{part_no}`** -> Get a presigned URL for a part:
+
 - Will update the FileUpload's last-activity timestamp on every successful response
 - *(optional)* Will return `429 Too Many Requests` (`PartUrlRateLimitError`) if the per-file token bucket is exhausted. In this case, the `retry-after` header should be used.
 - *(optional)* Will call `S3ClientPort.list_parts()` for part `n-1` when `part_no > 1`; if the previous part's size exceeds the expected part size, will abort the multipart upload, mark the `FileUpload` as `cancelled`, and return an upload-cancelled error to the caller
@@ -74,11 +81,13 @@ In `UploadController.initiate_file_upload()` (`core/controller.py`), after the b
 3. **Concurrent upload cap:** Will count the `state="init"` FileUploads already fetched for the box aggregate check. If the count is already at `config.max_concurrent_uploads_per_box` (when > 0), will raise `TooManyConcurrentUploadsError`.
 
 The following new error classes will be defined on `UploadControllerPort`:
+
 - `PartCountLimitExceededError`: maps to 400 in HTTP error translation layer
 - `BoxSizeLimitExceededError`: maps to 507 in HTTP error translation layer
 - `TooManyConcurrentUploadsError`: maps to 429 in HTTP error translation layer
 
 #### Work to be performed:
+
 - [ ] Add `max_total_bytes` to `FileUploadBox` and `ResearchDataUploadBox` schemas in `ghga-event-schemas`.
 - [ ] Update RS with the new schema and modify tests/ensure new field is passed to UCS
 - [ ] Add `max_concurrent_uploads_per_box` to `Config`
@@ -104,6 +113,7 @@ During URL issuance, activity timestamps should exist for each request. In the c
 #### Cleanup job
 
 A new entrypoint function `run_cleanup_job()` will be added to `main.py` (alongside the existing `run_rest_api()` and `run_event_consumer()` entrypoints). This function will run a loop that:
+
 1. Sleeps for `config.cleanup_interval_minutes` minutes.
 2. Calls `UploadController.cleanup_stale_uploads()`.
 3. Repeats.
@@ -111,6 +121,7 @@ A new entrypoint function `run_cleanup_job()` will be added to `main.py` (alongs
 _Alternatively, this can be run as a one-off job scheduled as a cron job._
 
 For each configured `inbox` bucket (i.e. each data hub), do the following:
+
 - Fetch all `state="init"` FileUploads from the DB.
 - Build a list of upload IDs for FileUploads whose last activity timestamp is older than the configured cutoff.
 - Extend the list with any uploads where an activity timestamp is missing but `FileUpload.initiated` is older than the configured cutoff (no parts complete, presumed stale).
@@ -119,6 +130,7 @@ For each configured `inbox` bucket (i.e. each data hub), do the following:
 - Abort all the uploads in the list.
 
 #### Work to be performed:
+
 - [ ] Add `multipart_upload_ttl_hours` and `cleanup_interval_minutes` to `Config`
 - [ ] Update `UploadController.initiate_file_upload()` to write the activity entry on `FileUpload` creation
 - [ ] Update `UploadController.get_part_upload_url()` to refresh the activity entry on each call
@@ -136,6 +148,7 @@ A new error class will be defined: `PartUrlRateLimitError`, translated in the HT
 `hexkit`'s `KeyValueStoreProtocol` (with the MongoDB provider) will be used to persist token bucket state keyed by `file_id`. `KeyValueStoreProtocol` will already be a required UCS dependency (added for the stale upload TTL feature), so no additional wiring will be needed. Token bucket state will survive restarts and will be correctly shared across all UCS replicas.
 
 #### Work to be performed (optional):
+
 - [ ] Add `part_url_refill_interval_ms` and `max_url_buildup` to `Config`
 - [ ] Add `PartUrlRateLimitError` to `UploadControllerPort`
 - [ ] Implement token bucket logic in `KeyValueStoreProtocol` with per-`file_id` keying
@@ -149,13 +162,14 @@ A new error class will be defined: `PartUrlRateLimitError`, translated in the HT
 
 > **Prerequisite:** This feature requires `hexkit`'s `ObjectStorageProtocol` to expose a `list_parts()` method.
 
-One weakness of enabling S3 multipart uploads through the use of presigned URLs is that there's not a lot of support for preventing abuse of those URLs. The chief concern is that a user uploads too much data for each part than expected or agreed upon. S3's presigned POST feature lets the server specify headers like `Content-Length-Range` among other things, which would perfectly solve this problem *except* that multipart uploads [only work with presigned PUTs](https://advancedweb.hu/differences-between-put-and-post-s3-signed-urls/), which don't grant the option to specify any such headers. This problem of URL abuse can be addressed in one of two ways: do nothing - rely on periodic cleanup of stale multipart uploads and accept that a user could upload the max amount of data allowed by S3 and let it sit there temporarily; examine uploaded parts throughout the upload process and shut it down if abuse is detected. Another option might be to try to hack together a solution that forces presigned URLs with content length headers, but I'm not sure that this is possible.
+One weakness of enabling S3 multipart uploads through the use of presigned URLs is that there's not a lot of support for preventing abuse of those URLs. The chief concern is that a user uploads more data for each part than expected or agreed upon. S3's presigned POST feature lets the server specify headers like `Content-Length-Range` among other things, which would perfectly solve this problem *except* that multipart uploads [only work with presigned PUTs](https://advancedweb.hu/differences-between-put-and-post-s3-signed-urls/), which don't grant the option to specify any such headers. This problem of URL abuse can be addressed in one of two ways: do nothing - rely on periodic cleanup of stale multipart uploads and accept that a user could upload the max amount of data allowed by S3 and let it sit there temporarily; examine uploaded parts throughout the upload process and shut it down if abuse is detected. Another option might be to try to hack together a solution that forces presigned URLs with content length headers, but I'm not sure that this is possible.
 
 If opted for, a retrospective size check will be added in `UploadController.get_part_upload_url()` before the S3 presign call. When `part_no > 1`, `S3ClientPort.list_parts()` will be called to retrieve the metadata for part `n-1`. If the returned part size exceeds `FileUpload.part_size`, the multipart upload will be immediately aborted via `S3ClientPort.abort_multipart_upload()`, the `FileUpload` will be marked `cancelled`, and an upload-cancelled error will be raised with the user receiving a 400 Bad Request status code. Subsequent requests for this upload will also fail with the cancelled-state error via the normal state check.
 
 This will add at most one additional S3 API call per presigned URL request (skipped for the first part). The fallback of detecting the oversize at completion time is already implemented, but would leave uploaded parts from abandoned uploads in S3 until the cleanup job runs.
 
 #### Work to be performed if implemented:
+
 - [ ] Add `list_parts()` to `hexkit`'s `ObjectStorageProtocol` and S3 provider, and then use it in the UCS's `S3ClientPort`
 - [ ] Implement retrospective size check in `UploadController.get_part_upload_url()` for `part_no > 1`
 - [ ] Abort multipart upload and mark `FileUpload` as `cancelled` on oversized part detection
@@ -164,7 +178,6 @@ This will add at most one additional S3 API call per presigned URL request (skip
   - part exceeding expected size (abort + cancel + error returned)
   - first-part request (no list_parts call)
   - tolerance for transient `list_parts` failure
-
 
 ## Human Resource/Time Estimation:
 

@@ -1,9 +1,10 @@
 # Prototyping Encryption & Decryption Workflow (Cuban Crow)
+
 **Epic Type:** Exploratory Epic
 
-This Epic aims to provide a script for prototyping all actions done by the future interrogation room and encrypted key store service layed out in the architecture concept for file validation and encryption (file upload as well as file download).
+This Epic aims to provide a script for prototyping all actions done by the future interrogation room and encrypted key store service laid out in the architecture concept for file validation and encryption (file upload as well as file download).
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 The prototyping script will consist of two parts, upload and download. They should be run in sequence.
 
@@ -13,9 +14,9 @@ The prototyping script will consist of two parts, upload and download. They shou
 
 - read first file part
 - request (call function) decryption secret from encrypted key store (first file part attached)
-- receive file encryption secret, secret ID and content offest from encrypted key store
+- receive file encryption secret, secret ID and content offset from encrypted key store
 - read file from disk part by part
-    - compute checksum of individual encrypted file part, store in list 
+    - compute checksum of individual encrypted file part, store in list
     - decrypt file part
     - feed file part into checksum algorithm
 - compare checksum of decrypted object with provided checksum
@@ -29,7 +30,7 @@ The prototyping script will consist of two parts, upload and download. They shou
 - decrypt envelope
 - generate ID for encryption secret
 - determine offset of the content
-- return file encryption secret, secret ID and content offest to interrogation room
+- return file encryption secret, secret ID and content offset to interrogation room
 
 ### Download:
 
@@ -47,7 +48,7 @@ In download, we currently do not use the interrogation room service.
 
 ### Optional functions
 
-- Implement multiple users (at least two), where the script can be run with either user beeing the uploader and/or downloader.
+- Implement multiple users (at least two), where the script can be run with either user being the uploader and/or downloader.
 - Implement multiple files which can be tested, provide all combinations of users and files as crypt4gh-encrypted files.
 - Prepare functioning envelopes for all combinations of users and files to compare them with the produced envelopes at the end of the script.
 
@@ -61,8 +62,8 @@ In download, we currently do not use the interrogation room service.
 This Epic aims to only produce functions that will be executed within the interrogation room or the encrypted key store.
 Communication between these services will only be simulated via function calls.
 Communication with other services will be hardcoded.
-Files that should be on object storage will be read from disc.
-Public and private keys needed for encryption will either be hardcoded or read from disc.
+Files that should be on object storage will be read from disk.
+Public and private keys needed for encryption will either be hardcoded or read from disk.
 
 ## Human Resource/Time Estimation:
 

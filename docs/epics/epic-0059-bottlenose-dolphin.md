@@ -2,7 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 As outlined in [ADR002](../adrs/adr-0002-angular-as-frontend-framework.md), we decided to migrate our existing GHGA data portal from React to Angular.
 
@@ -23,7 +23,7 @@ The following questions need to be investigated and answered in this context:
   - How can we enforce the code style and other best practices regarding code quality (linting, using pre-commit)?
   - Are there linter rules for the Angular coding style guide?
   - How should the directory structure of the repository look like?
-  - How and to what extend do we document the new codebase?
+  - How and to what extent do we document the new codebase?
   - Are there any standards or tools that we should use for the documentation (JSDoc, Storybook)?
   - How do we enforce that e.g. all classes and methods are annotated with some minimal documentation?
   - Can we use some kind of automated documentation?
@@ -45,7 +45,7 @@ The following questions need to be investigated and answered in this context:
 - State management and other tooling:
   - Shall we use a dedicated state management solution (like NgRx, Akita, Elf or NgxZustand)? Or start with a [NGRX signal store](https://ngrx.io/guide/signals/signal-store) or simple custom services to manage state?
   - Should we primarily use [RxJS](https://rxjs.dev/) or [Signals](https://angular.dev/guide/signals)?
-  - Should we build the app with our without [ZoneJs](https://angular.dev/guide/experimental/zoneless)?
+  - Should we build the app with or without [ZoneJs](https://angular.dev/guide/experimental/zoneless)?
   - Shall we make use of a caching library for HTTP requests like [NgHttpCaching](https://github.com/nigrosimone/ng-http-caching) or [cashew](https://github.com/ngneat/cashew)?
   - Are there any client libraries or development tools that we should make use of?
 
@@ -76,7 +76,7 @@ The following questions need to be investigated and answered in this context:
 
 - Migration:
   - How many developer resources should we put into the re-writing? How quickly do we want to finish this?
-  - How do we deal with new feature request before the migration is finished?
+  - How do we deal with new feature requests before the migration is finished?
   - Which features should be implemented first?
 
 For every major decision, an ADR should be created as part of this exploration.
@@ -98,11 +98,13 @@ All aspects that shall be ignored during the exploration:
 Here are some of the resources that should be consulted:
 
 Angular:
+
 - [Angular documentation](https://angular.dev)
 - [Angular Signals: Complete Guide](https://blog.angular-university.io/angular-signals/)
 - [Angular without ZoneJS (Zoneless)](https://angular.dev/guide/experimental/zoneless)
 
 Micro frontends and monorepos:
+
 - [Intro to Nx](https://nx.dev/getting-started/intro)
 - [Restructuring to a Vertical Slice Architecture](https://www.youtube.com/watch?v=cVVMbuKmNes) (webinar, 2021)
 - [Micro-Frontends with Module Federation: Beyond the Basics](https://www.youtube.com/watch?v=8peHqzO7oqE) (talk, 2021)
@@ -111,9 +113,11 @@ Micro frontends and monorepos:
 - [Angular micro frontends — a modern approach to complex app development](https://angular.love/angular-micro-frontends-a-modern-approach-to-complex-app-development/) (article, 2024)
 
 Authentication:
+
 - [New RFC: OAuth 2.x for Browser-based Apps](https://www.youtube.com/live/mORR3hpMaJQ) (interview, 2024)
 
 Design systems:
+
 - [Implementierung mit Angular Material & Google’s Material 3](https://www.youtube.com/watch?v=h7zW9FCvU0A) (webinar 2024, part 1/3)
 - [The big Angular UI library comparison](https://dev.to/kinginit/the-big-angular-ui-library-comparison-4ifp) (article, 2024)
 

@@ -1,4 +1,5 @@
 # Upload refactoring and cleanup (Red-necked Wallaby)
+
 **Epic Type:** Implementation Epic
 
 ## Scope
@@ -14,7 +15,7 @@ All three major tasks are independent of each other and can be done in parallel.
 
 - Keep the existing ingest and file upload commands, but rename them and mark them as legacy/deprecated (e.g. legacy-files upload/legacy-files batch-upload)
 
-- Add new upload commands to that are based on the existing ones, but have one slight difference: The output metadata contains the secret ID instead of the actual file encryption/decryption secret. This means the following changes are necessary
+- Add new upload commands that are based on the existing ones, but have one slight difference: The output metadata contains the secret ID instead of the actual file encryption/decryption secret. This means the following changes are necessary
     - Before writing the output metadata file, the file secret is stored and a secret ID returned by calling the new `POST /federated/ingest_secret` endpoint
     - If the secret deposition fails, the uploaded file needs to be cleaned up, i.e. deleted after retry logic is exhausted
 

@@ -1,11 +1,14 @@
 # Upload Service Intermediary Revision (Lynx Boreal)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html).
 
 ## Scope
+
 ### Outline:
+
 The goal of this epic is to overhaul the Upload Controller Service (UCS) as part of the
 new [File Upload concept](https://ghga.pages.hzdr.de/internal.ghga.de/feature_archconcept-file-upload/developer/architecture_concepts/ac007_file_upload/).
 While this concept includes references to future services like the Study Repository Service,
@@ -15,6 +18,7 @@ architectural concept is realized, the appropriate adaptations will follow in a 
 epic.
 
 ### Included/Required:
+
 - Implement new Upload Orchestrator Service as described below
 - Revamp existing UCS logic
 - Adapt WPS for "upload" work packages and tokens
@@ -22,6 +26,7 @@ epic.
 - Add new schemas to `ghga-event-schemas`
 
 ### Not included:
+
 - Archive test bed integration
 - Subsequent FIS or IFRS updates for the upload path
   - One exception is that we will implement a rough sketch for handling FileUploadReports published by FIS. This functionality is to be concretely defined in an upcoming epic, but we at least know that the UCS will consume these reports to update the state of the corresponding FileUploads and delete the objects from the S3 inbox bucket.
@@ -31,6 +36,7 @@ epic.
 ### Upload Controller Service (UCS)
 
 The UCS is responsible for three things:
+
 1. Cataloging individual files for a given file bundle without knowing
 anything about studies or other business concepts.
 2. Facilitating the actual upload of said files by:
@@ -54,9 +60,9 @@ There is a 1:many relationship between `FileUploadBox` and `FileUpload`.
 
 When a user shall be enabled to upload Research Data to GHGA, a Data Steward creates a new `ResearchDataUploadBox` which internally maps to the creation of a `FileUploadBox`. Then the
 user can create a work package for the new `FileUploadBox` and use the `ghga-connector` to upload
- Research Data. See the description of the UOS and the **User Journeys** for more detailed information.
+Research Data. See the description of the UOS and the **User Journeys** for more detailed information.
 
-Both `FileUploadBox` and `FileUpload` changes are emitted as outbox events. The UCS consumes `FileUploadReport` events, which are regular events (likely persisted by the publisher) that it uses to update the `state` field on corresponding `FileUpload` objects and remove archived files from the inbox. `FileUploadBox` events are consumed by the UOS in oder to update the file count and total size of the corresponding `ResearchDataUploadBoxes`, while the `FileUploads` are consumed by other file services.
+Both `FileUploadBox` and `FileUpload` changes are emitted as outbox events. The UCS consumes `FileUploadReport` events, which are regular events (likely persisted by the publisher) that it uses to update the `state` field on corresponding `FileUpload` objects and remove archived files from the inbox. `FileUploadBox` events are consumed by the UOS in order to update the file count and total size of the corresponding `ResearchDataUploadBoxes`, while the `FileUploads` are consumed by other file services.
 
 The UCS has a REST API, but requests only come from two places: `ghga-connector` and the
 UOS. All endpoints are secured by Work Order Tokens (WOTs) signed by either the UOS (see
@@ -66,7 +72,6 @@ In this arrangement, the UCS avoids coupling with the auth service or business l
 and the service as a whole remains fairly lightweight.
 
 For more information on WOTs or API definitions, see below.
-
 
 ### Upload Orchestration Service (UOS)
 
@@ -84,10 +89,10 @@ The other responsibility of the UOS is to relieve the UCS from handling browsing
 When anyone wants to view existing `ResearchDataUploadBoxes`, they talk to the UOS, not the UCS.
 This is a happy arrangement because viewing this content inherently involves auth:
 users should only be able to see a `ResearchDataUploadBox` if they actually have access to it.
-Also, the users can be provided with the richer information that is only available in the  `ResearchDataUploadBox`.
+Also, the users can be provided with the richer information that is only available in the `ResearchDataUploadBox`.
 
 How the UOS sits in relation to the UCS:  
-When a Data Steward intends to enable a Research Data upload, they log on to the Data Portal and 
+When a Data Steward intends to enable a Research Data upload, they log on to the Data Portal and
 create a new object, called a `ResearchDataUploadBox`. The Data Steward will
 enter at least a title and description so they can later identify the box.
 The Data Portal will make a call to the UOS with the inputted information.
@@ -108,10 +113,12 @@ specific action. This epic introduces changes and augmentations to GHGA's WOTs, 
 can find more information in the **Auth** section below.
 
 ### Work Package Service
+
 The WPS is hardcoded to raise an error when creating a work package if the work type
 is anything other than "download". The logic is all download-centric, so the WPS needs
 to be updated to accommodate "upload" work packages. To this end, these are the main
 points to address:
+
 1. Update `WorkPackageRepository` logic to handle CRUD-ing "upload" work packages
    - Add `get_upload_box()` and `get_upload_boxes` functions that mirror
       `get_dataset()` and `get_datasets()`
@@ -128,14 +135,15 @@ points to address:
 6. Provide a way to distribute WOTs, either by modifying the
    `/work-packages/{work_package_id}/files/{file_id}/work-order-tokens` endpoint or
    replacing it with one or more endpoints that allow passing the type and
-   additional token content'
+   additional token content
 7. Provide an endpoint to return the list of existing boxes for a user.
 8. Restructure existing work package models to accommodate upload-type work packages
    - How this is accomplished is not important for this epic
 9. Decide if upload and download work packages will share the same collection
-9. Define a database migration for the existing work package data if needed
+10. Define a database migration for the existing work package data if needed
 
 ### Claims Repository
+
 1. Extend the access API (not the claims API, which is not active at the moment) to also
 support upload grants. The new endpoints here will be used by the UOS and the WPS for
 granting and verifying access.
@@ -151,13 +159,16 @@ type: `GHGA_UPLOAD = "https://www.ghga.de/GA4GH/VisaTypes/Upload/v1.0"`
 value: `https://ghga.de/uploads/{box_id}`
 
 We will have to extend the utilities surrounding visa handling to accommodate this
-new visa type in the core `claims` module because all the logic there is download-
-centric.
+new visa type in the core `claims` module because all the logic there is
+download-centric.
 
 ### Auth
+
 #### Tokens
+
 The UCS secures its endpoints through WOT authentication. While the Download Controller
 Service requires just one flavor of WOT to operate, the UCS requires more:
+
 | Token                          | Issuer | Who                  | Action Authorized                                |
 |--------------------------------|--------|----------------------|--------------------------------------------------|
 | `CreateFileBoxWorkOrder` | UOS    | Data Stewards        | Create a new `FileUploadBox`                     |
@@ -173,7 +184,9 @@ carry information necessary for the given action, such as `file_id` or `box_id` 
 addition to the work type.
 
 #### For Enabling User Access to a New Upload Procedure
+
 Before general users (not Data Stewards) can upload files, three things must happen:
+
 1. A Data Steward must create the `ResearchDataUploadBox`/`FileUploadBox` via the Data Portal.
    - The UOS signs a `CreateFileBoxWorkOrder` token and contacts the UCS.
 2. A Data Steward must grant the user a claim enabling them to use the `ResearchDataUploadBox`.
@@ -184,26 +197,28 @@ Access Token (WPAT). Only one WPAT is needed for the entire series of files unde
 circumstances.
 
 #### For File Upload
+
 The user then supplies the WPAT to the `ghga-connector` to upload files.
 The `ghga-connector` obtains Work Order Tokens (WOTs) automatically by providing the
 WPAT to the WPS, and then makes at least three calls for each file:
+
 1. A POST request to the UCS to create the `FileUpload`.
    - This requires a `CreateFileWorkOrder` token from the WPS.
-   - The user supplies the file `alias` in this request. 
+   - The user supplies the file `alias` in this request.
    - The user receives the `file_id` of the newly created `FileUpload`
 2. A GET request to the UCS to obtain a file part upload URL. This call is repeated for
 each file part.
    - This requires an `UploadFileWorkOrder` token from the WPS.
    - The user supplies the `file_id` to get the above token.
    - The token is only valid for a file with the matching `file_id`.
-1. A final PATCH request to the UCS to complete the file upload.
+3. A final PATCH request to the UCS to complete the file upload.
    - This uses a `CloseFileWorkOrder` token.
-2. *Optional*: The user desires to delete a file:
+4. *Optional*: The user desires to delete a file:
    - The user obtains a `DeleteFileWorkOrder` token from the WPS
    - The user performs a DELETE request via the `ghga-connector`.
 
-
 #### For Altering an Existing `ResearchDataUploadBox`
+
 - Modifying the details of an existing `ResearchDataUploadBox`, such as the title or description
   requires the user to have the Data Steward role.
 - Changing the state of a `ResearchDataUploadBox` from `OPEN` to `LOCKED` requires the user to
@@ -212,17 +227,19 @@ each file part.
 - When a `ResearchDataUploadBox` is set to `LOCKED` or `CLOSED`, the UOS signs a
   `ChangeFileBoxWorkOrder` of type "lock" and tells the UCS to lock the
   associated `FileUploadBox`.
-- Claims and work packages for closed `ResearchDataUploadBoxes` remain valid in the CRS 
+- Claims and work packages for closed `ResearchDataUploadBoxes` remain valid in the CRS
   - The UCS and UOS are responsible for screening requests based on the state of a given
     `ResearchDataUploadBox`, `FileUploadBox`, or `FileUpload`, as applicable.
 
 #### For Viewing/Accessing `ResearchDataUploadBoxes`
+
 Data Stewards can see all `ResearchDataUploadBoxes`, while other users can only see what belongs
 to them. The UOS checks the auth context for the Data Steward role to distinguish between
 the two categories of users. In the case of a regular user, the UOS additionally
 consults the CRS to obtain a list of `ResearchDataUploadBox` IDs that the user may access.
 
 #### In summary
+
 - UOS:
   - Inspects auth context details to discern between Data Stewards and regular users
   - Communicates with the CRS to create or consult claims
@@ -238,8 +255,6 @@ consults the CRS to obtain a list of `ResearchDataUploadBox` IDs that the user m
 For more information on the HTTP API, see the endpoint definitions below.
 
 ## User Journeys
-
-
 
 ### `ResearchDataUploadBox` Creation
 
@@ -259,13 +274,15 @@ verifies the Data Steward's access, then makes a request to the CRS. The CRS cre
 claim for the user for the given `ResearchDataUploadBox` and IVA. The IVA is important because
 if the user has not completed the IVA verification process, they cannot receive upload
 access. Given that the IVA is valid, the CRS and UOS return a successful response. The
-Data Steward can then inform the user that they make proceed with work package creation
+Data Steward can then inform the user that they may proceed with work package creation
 and file upload.
 
 ### `ResearchDataUploadBox` Retrieval
+
 ![Retrieve Research Data Upload Box](./images/retrieve_boxes.png)
 
 In the case of a Data Steward:  
+
 1. A Data Steward uses the Data Portal to make a `GET` request to the UOS.
 2. The UOS sees that the request comes from a user with the Data Steward role and
    returns any/all `ResearchDataUploadBoxes`, according to any filtering and pagination applicable.
@@ -277,13 +294,13 @@ In the case of a regular user getting multiple boxes:
 
 1. The user uses the Data Portal to view a list of `ResearchDataUploadBoxes` available to them, either in the Work Package Manager or in a yet to be designed section (e.g. to lock the box). This request can include filtering criteria.
 2. The Data Portal makes a `GET` request to the UOS or WPS (see note above), along with any filtering criteria.
-3. The service sees that the request from a user that is NOT a Data Steward.
+3. The service sees that the request comes from a user that is NOT a Data Steward.
 4. The service sends a request to the CRS to see which `ResearchDataUploadBoxes` the user may access, along with any filtering criteria.
 5. The CRS returns a dict of IDs of accessible boxes mapped to expiration dates.
 6. The service returns any/all `ResearchDataUploadBoxes`, according to any filtering and pagination applicable. The WPS returns a list of `ResearchDataUploadBox` models with the expiration date added to it. The UOS returns a pagination-friendly dict that includes the total results count and the actual returnable boxes as limited by any pagination. If skip/limit are not specified, all possible boxes will be returned, and in that case the number returned and the total results count will be equal.
 
 In the case of a regular user getting a single box:
-> Note that Data Stewards' requests are never routed to the CRS in this journey. 
+> Note that Data Stewards' requests are never routed to the CRS in this journey.
 
 1. The request comes in from the Data Portal (regardless of why or where) to the UOS, specifying a single box ID.
 2. The UOS makes a request to the CRS to see if the user has access.
@@ -291,12 +308,13 @@ In the case of a regular user getting a single box:
 4. If the user has access, the UOS returns the box information to the Data Portal.
 
 ### `ResearchDataUploadBox` Info Update
+
 > Requires that the user journey "`ResearchDataUploadBox` Creation" has been completed.
 
 ![Update Research Data Upload Box](./images/update_rdub.png)
 
 The Data Steward calls the `PATCH /boxes/{box_id}` endpoint on the UOS API
-from a page on the Data Portal. The request body should contain the updated 
+from a page on the Data Portal. The request body should contain the updated
 `ResearchDataUploadBox` or, alternatively, indicate which fields to change and how. This could
 be a change to the title or description, for example.
 The UOS verifies their Data Steward role is in the auth context and validates the
@@ -306,7 +324,8 @@ The UOS will also emit an audit log event with the ID of the user who made the c
 as well as the timestamp.
 
 ### Work Package Creation
-> The user journey "`ResearchDataUploadBox` Creation` must have been completed.
+
+> The user journey "`ResearchDataUploadBox` Creation" must have been completed.
 
 ![Create Work Package](./images/create_work_package.png)
 
@@ -316,6 +335,7 @@ creates the work package, and returns the Work Package Access Token (WPAT) to th
 The user can then use this WPAT with the `ghga-connector` to upload files.
 
 ### File Upload Init
+
 > Requires that the user journey "Work Package Creation" has been completed.
 
 ![File Upload Init](./images/initiate_file_upload.png)
@@ -333,10 +353,11 @@ information. The WOT carries the box ID and file alias.
    - The UCS initiates a multipart upload for the file.
    - The UCS publishes upsertion events for both the `FileUpload` and `FileUploadBox`
      objects, and returns an HTTP response to the Connector indicating that the file
-     upload was successfully initiated. 
+     upload was successfully initiated.
      - The response contains the UCS-generated file id (UUID4) of the new file upload.
 
 ### File Upload
+
 > Requires that the user journey "File Upload Init" has been completed.
 
 ![File Upload](./images/upload_a_file.png)
@@ -372,6 +393,7 @@ file, and decrements the file count. The UCS then emits an outbox event for the
 Finally, the UCS returns an HTTP response to the user indicating the deletion was successful.
 
 ### `ResearchDataUploadBox` State Change
+
 > Requires that the user journey "File Upload" has been completed.
 
 ![Update a Research Data Upload Box](./images/update_rdub.png)
@@ -387,12 +409,12 @@ upsertion, and sends a successful response to the UOS. The UOS updates the
 `ResearchDataUploadBox` state to `LOCKED`.
 
 Users are only allowed to make the initial change from `OPEN` to `LOCKED`. Only Data
-Stewards may move an `ResearchDataUploadBox` from `LOCKED` to `CLOSED`, `LOCKED` to `OPEN`, or
+Stewards may move a `ResearchDataUploadBox` from `LOCKED` to `CLOSED`, `LOCKED` to `OPEN`, or
 from `CLOSED` to `OPEN`. These other state changes follow a similar path to the one
 described above. In the case of a Data Steward, the UOS does not make the CRS call.
 
-
 ### List File Uploads for a Box
+
 > Requires that the user journey "`ResearchDataUploadBox` Creation" has been completed.
 
 ![List File Uploads](./images/list_file_uploads.png)
@@ -400,6 +422,7 @@ described above. In the case of a Data Steward, the UOS does not make the CRS ca
 The user uses the Data Portal to request a list of completed files associated with a given ResearchDataUploadBox. The Data Portal makes a request to the UOS. The UOS makes a request to the CRS in order to verify the user's access. If the user is not authorized to access the box, they will see a 403 error. If the user is authorized to see the box, however, then the UOS signs a `ViewFileBoxWorkOrder` token and calls the UCS's `GET /boxes/{box_id}/uploads` endpoint. The UCS compiles a list of **completed** file uploads and returns their IDs. The UOS then returns this list to the Data Portal.
 
 ### Grant File Upload Access
+
 > Requires that the user journey "`ResearchDataUploadBox` Creation" has been completed.
 
 ![Grant Upload Access](./images/granting_upload_access.png)
@@ -407,6 +430,7 @@ The user uses the Data Portal to request a list of completed files associated wi
 A Data Steward uses the Data Portal to make a request to grant upload access to a user for a given research data upload box ID. The Data Portal sends a request to the UOS, which verifies that the Data Steward has the requisite role. Then, the UOS verifies that the box exists. If the box exists, the UOS makes a call to the CRS's `POST /upload-access/users/{user_id}/ivas/{iva_id}/boxes/{box_id}` endpoint to create a new upload claim with the given information. If this operation is successful, the CRS returns a 201 response and the UOS creates an AuditRecord in its database and emits it as a Kafka event.
 
 ### Revoking Upload Access
+
 > Requires that the user journey "Grant File Upload Access" has been completed.
 
 ![Revoke Upload Access](./images/revoke_upload_access.png)
@@ -414,6 +438,7 @@ A Data Steward uses the Data Portal to make a request to grant upload access to 
 A Data Steward uses the Data Portal to make a request to revoke a given upload access grant by ID. The Data Portal sends a request to the UOS, which verifies that the Data Steward has the requisite role. UOS makes a call to the CRS's `DELETE /upload-access/grants/{grant_id}` endpoint to delete the claim if it exists.
 
 ### List Upload Access Grants
+
 > Requires that the user journey "Grant File Upload Access" has been completed.
 
 ![List Upload Access](./images/list_upload_access.png)
@@ -425,6 +450,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
 ### RESTful/Synchronous:
 
 #### Upload Controller Service:
+
 - `POST /boxes`: Create a new `FileUploadBox`
   - Requires `CreateUploadWorkOrder` token and only allowed for Data Stewards via the UOS.
   - Request body should contain the S3 storage alias to use for uploads tied to the box
@@ -454,6 +480,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
   - Path args and token must agree on box ID and file ID
 
 #### Upload Orchestration Service:
+
 - `GET /boxes`: Retrieve all boxes allowed based on claims or user role
 - `GET /boxes/{box_id}`: Retrieve a `ResearchDataUploadBox` by ID
 - `POST /boxes`: Create a new `ResearchDataUploadBox`
@@ -491,6 +518,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
   - Signs a `ViewFileBoxWorkOrder` token and calls matching UCS endpoint
 
 #### Work Package Service:
+
 - `GET /users/{user_id}/boxes`: List all `ResearchDataUploadBox` IDs available to the user based on upload access grants in the CRS
 - `POST /work-packages/{work_package_id}/boxes/{box_id}/work-order-tokens`: Create a WOT for uploading files
   - Requires a Work Package Access Token, so the user must have already created a Work Package
@@ -499,6 +527,7 @@ A Data Steward uses the Data Portal to see the complete or partial list of exist
   - The box ID is the ID of a `ResearchDataUploadBox`, and the WPS exchanges that for the ID of the associated `FileUploadBox` in its database when making the WOT.
 
 #### Claims Repository Service:
+
 - CRS Authentication for upload endpoints should match existing download counterparts
 - `GET /upload-access/grants`: lists existing upload access grants
 - `GET /upload-access/users/{user_id}/boxes`: lists which `ResearchDataUploadBoxes` a user can access
@@ -529,7 +558,7 @@ class FileUpload(BaseModel):
     size: int
 
 class ResearchDataUploadBoxState(StrEnum):
-    """The allowed states for an ResearchDataUploadBox instance"""
+    """The allowed states for a ResearchDataUploadBox instance"""
 
     OPEN = "open"
     LOCKED = "locked"
@@ -563,10 +592,10 @@ class AuditRecord(BaseModel):
   entity_id: str | None = None
 ```
 
-
 ## Additional Implementation Details:
 
 ### WOT Modifications in WPS
+
 The WPS needs to be able to authorize work in a compartmentalized fashion.
 Instead of adapting the existing WOT schema to work for multiple services,
 there should be specific schemas dedicated to a given action (work order).
@@ -612,14 +641,16 @@ ViewFileBoxWorkOrder:
     box_id: UUID4
 ```
 
-
 ### Download Controller WOT Dependency
+
 The Download Controller Service (DCS) uses WOTs to authenticate download URL requests.
 It maintains a model in a core module that defines the WOT structure. Depending on the
 exact changes to the WOT model in the WPS, the DCS may or may not have to be updated too.
 
 ### Testing
+
 Tests need to cover at least the following items (not exhaustive):
+
 - Standard endpoint authentication battery
 - Happy path for each endpoint
 - Core error translation for HTTP API for each endpoint
@@ -630,7 +661,6 @@ Tests need to cover at least the following items (not exhaustive):
 - UCS rejects http requests for locked `FileUploadBoxes` even with a valid WOT
   - Exception being to re-open the `FileUploadBox`
 - UOS rejects requests for locked `ResearchDataUploadBoxes`, except to move state to `OPEN` or `CLOSED`
-
 
 ## Human Resource/Time Estimation:
 

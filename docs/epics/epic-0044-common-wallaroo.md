@@ -2,13 +2,14 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
-In order to start refactoring our frontend, we need to make a final decision regarding the frontend framework, design system and  component library that we will use to build the next version of the data portal and potentially also the follow-up products.
+In order to start refactoring our frontend, we need to make a final decision regarding the frontend framework, design system and component library that we will use to build the next version of the data portal and potentially also the follow-up products.
 
 We are limiting the scope to the three most popular frameworks: React (Next.js), Angular, and Vue (Nuxt) that we have already used or evaluated in the Red Kangaroo Epic.
 
 This evaluation can be split into the following tasks:
+
 - Create a list of criteria for the frontend framework that are relevant for us (like: various core features, maturity, stability, popularity, future support, flexibility, completeness, static typing, documentation, testing, licensing, additional features like SSR).
 - Define weights for these criteria.
 - Evaluate the three frameworks given these criteria, using the insights gained in the Red Kangaroo epic, and finalize the decision for the frontend framework.

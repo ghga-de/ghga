@@ -9,21 +9,21 @@ Epic planning and implementation follow the
 
 ### Outline:
 
-This epic aims to ameliorate some issues that currently arise when communicating with the RESTful APIs on the download path. 
+This epic aims to ameliorate some issues that currently arise when communicating with the RESTful APIs on the download path.
 These changes target the GHGA Connector, the Download Controller, Work Package and Claims Repository services.
-The goal is to effectively reduce the amount of requests that are made by introducing response caching where reasonable and simplifying/improving the connector code. 
+The goal is to effectively reduce the amount of requests that are made by introducing response caching where reasonable and simplifying/improving the connector code.
 
 ### Included/Required:
 
 #### General Caching Strategy:
 
-For all services that return responses that should be cached, a consistent caching strategy should be employed. 
-This might include some research into best practices, figuring out which headers need to be sent along in responses and requests and which additional reponse status codes need to be produced and handled.
+For all services that return responses that should be cached, a consistent caching strategy should be employed.
+This might include some research into best practices, figuring out which headers need to be sent along in responses and requests and which additional response status codes need to be produced and handled.
 Sometimes there are alternative ways to achieve the same result with different implications, i.e. returning an `Expires` or `Cache-Control: max-age` header.
 
 A prime candidate for a caching library for httpx is [Hishel](https://hishel.com/), but alternatives should be investigated if needed.
-The recommended way to cache responses using `Hishel` is to use one of the two `Transport`s it provides, which can be easily injected into already exisisting `httpx` clients.
-Additionally, the question where the cached data is stored needs to be answered. 
+The recommended way to cache responses using `Hishel` is to use one of the two `Transport`s it provides, which can be easily injected into already existing `httpx` clients.
+Additionally, the question where the cached data is stored needs to be answered.
 Can we simply use a local file based cache, can we get by with using an in memory cache or do we need something more involved?
 
 #### Claims Repository:
@@ -50,14 +50,16 @@ The image below shows the relevant parts of the current interaction chain where 
 
 ![Simplified chain of requests started by GHGA Connector](simplified_download_call_chain.png)
 
-In the current current implementation of the connecter, this cascade of calls is triggered on several occasions:
+In the current implementation of the connector, this cascade of calls is triggered on several occasions:
+
 - Initially, for all file IDs retrieved from the work package, the DCS is called to check if a file is already staged and if not, to stage it. This happens for all file IDs in sequence before even attempting to download a file.
 - Before starting a file download, another call to the DCS is made to obtain the file size.
 - One further call is made to fetch a Crypt4GH envelope for the file that is to be downloaded
 - During the download of the actual file, for every file part a call is made to obtain a new presigned S3 URL
 
-Each one of these calls to the DCS requires a preceeding call to the Work Package service at the moment.
+Each one of these calls to the DCS requires a preceding call to the Work Package service at the moment.
 Two different and independent expiry times are involved:
+
 - The work order token has to be used in the call to the DCS before it expires
 - The presigned S3 URL has to be used to initiate a part download before it expires
 

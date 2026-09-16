@@ -1,4 +1,5 @@
 # Prepare for Federated Object Storage (Agile Wallaby)
+
 **Epic Type:** Implementation Epic
 
 ## Scope
@@ -16,7 +17,7 @@ The following configuration changes for object storage are proposed:
 Moving from separate `access_key_id`, `secret_access_key` and `endpoint_url` for one storage configuration, a `s3_object_storages` object will now hold the configuration for all available locations.
 Each location is identified by a label and the nested dict holds both the bucket name that shall be accessed as well as the credentials and endpoint URL for the specified bucket at the given location.
 
-```
+```yaml
 s3_object_storages:
     DKFZ:
         bucket: ghga_permanent

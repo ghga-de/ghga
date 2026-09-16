@@ -1,8 +1,8 @@
 ---
 status: accepted
 date: 2026-09-15
-tags: [docs, process]
 amended: 2026-09-16
+tags: [docs, process]
 related: [ADR-0036, ADR-0040]
 ---
 

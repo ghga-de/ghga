@@ -1,9 +1,11 @@
 # Integration of all File Services - Upload Stream (Thick Billed Raven)
+
 **Epic Type:** Implementation Epic
 
 The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](../epic-0019-pied-raven/README.md). This includes updating dependency versions in all services as well as ironing out possible differences in API usage and event processing to include the complete file upload path.
 
 ## Scope:
+
 A scope definition can be found here: https://wiki.verbis.dkfz.de/pages/viewpage.action?pageId=220790885
 
 ## User Journeys
@@ -30,6 +32,7 @@ The new OpenAPI doc can be found here:
     - ghga-chassis-lib
     - hexkit
     - ghga-event-schemas (Version 0.7.4 changed handling of datetimes)
+
 ### GHGA Connector
 
 - The user now has to input a public key file for uploading a file. There could be a default setting.
@@ -56,8 +59,7 @@ The new OpenAPI doc can be found here:
         - is there an entry for the file in the IFRS DB?
         - is there an entry for the file in the DCS DB?
         - does the unencrypted checksum in the IFRS DB match the real checksum?
-        - with the secrect id from the IFRS DB, check if the secret exists in vault and if it matches.
-
+        - with the secret id from the IFRS DB, check if the secret exists in vault and if it matches.
 
 ## Human Resource/Time Estimation:
 

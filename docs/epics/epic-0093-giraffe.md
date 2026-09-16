@@ -1,4 +1,5 @@
 # Early Data Lifecycle Rollout (Giraffe)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
@@ -248,6 +249,7 @@ model — the mapping tool simply calls it once per archived box it is working a
 **RS — changed**
 
 **`PATCH /upload-boxes/{box_id}`** -> Update box state:
+
 - The `locked -> archived` transition will no longer require every file to carry an accession.
   Archival will only require that no files are in `init` or `inbox` state at the UCS level.
 
@@ -349,6 +351,7 @@ it needs the predecessor's submitted metadata and not just its accession string,
 lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff already reads.
 
 #### Work to be performed:
+
 - [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the config fields
       above
 - [ ] Restructure `AccessionStore` into per-year buckets plus a flat legacy list
@@ -410,6 +413,7 @@ governance collection, mirroring the ancestry collection above; governance only 
 precomputing costs no freshness. `POST /file-governance/query` serves that collection to RS.
 
 #### Work to be performed:
+
 - [ ] Persist the declared replacement on the submission record, enforcing that each study is
       replaced by at most one successor
 - [ ] Add the ancestry collection and its loader write path
@@ -471,6 +475,7 @@ anywhere. Merging removes any single lineage to validate against, which is why t
 offline into these warnings.
 
 #### Work to be performed:
+
 - [ ] Reject multi-study submissions at `submit`, naming the studies found
 - [ ] Enforce alias uniqueness across all entities within the study, with a clear error
 - [ ] Read prior studies, their declared replacements and their metadata from the submission store
@@ -527,7 +532,6 @@ file is mapped. `GET /studies/{study_id}/file-ids` is accession-first, so a file
 never appears — that endpoint surfaces the opposite population, accessions still awaiting a file. A
 steward will use the file admin panel to view the information:
 
-
 | field | source |
 |---|---|
 | GHGA accession(s) — plural | `FileAccession` rows for that `file_id` |
@@ -561,6 +565,7 @@ metldata records and propagates it. `superseded_by_id` is left unset in this rol
 under "Not included".
 
 #### Work to be performed:
+
 - [ ] Add `POST /studies/{study_id}/file-ids`, taking one accession map for the whole study across
       archived boxes, including the "already maps to studies X, Y" report
 - [ ] Remove `POST /upload-boxes/{box_id}/file-ids` once the new endpoint is in place
@@ -602,6 +607,7 @@ DINS must therefore:
    a `file_id` to a single accession via `find_one` and deletes only that one.
 
 #### Work to be performed:
+
 - [ ] Stop deleting the per-file record after a successful merge
 - [ ] Merge the retained record into every later accession bound to the same `file_id`
 - [ ] Make `delete_file_information` clear every accession bound to the file, not just the first
@@ -624,6 +630,7 @@ They remain reachable by direct URL through the artifacts API, which is the only
 them once they leave the index.
 
 #### Work to be performed:
+
 - [ ] Confirm by integration test that a declared replacement removes the predecessor's datasets
       from search while leaving them retrievable by URL
 
@@ -651,6 +658,7 @@ them once they leave the index.
   mapping pass needs, so filtering by mapped/unmapped and by box matters more than presentation.
 
 #### Work to be performed:
+
 - [ ] Resolve and render the "updated version available" hint on `dataset/:id` and `study/:id`
 - [ ] Rework `upload-box-mapping/` and its services from box-centric to study-centric
 - [ ] Remove the submit-map-then-archive coupling; make archival an independent action
@@ -670,6 +678,7 @@ Feature files referencing the two studies and needing review: `202_upload_comple
 `320_search_datasets.feature`, `350_combined_browsing.feature`, `502_data_portal_uploads.feature`.
 
 #### Work to be performed:
+
 - [ ] Split the example metadata into two single-study submissions
 - [ ] Update the affected feature files and their step implementations
 - [ ] Add a scenario covering a superseded study: absent from search, reachable by URL, hint shown
@@ -693,7 +702,6 @@ Feature files referencing the two studies and needing review: `202_upload_comple
 - **Superseded artifacts stay resolvable by URL after leaving search** — the loader hides them from
   the index without deleting the artifacts.
 - **Re-load and re-declare are idempotent** — consumers already tolerate missing targets.
-
 
 ## Human Resource/Time Estimation:
 

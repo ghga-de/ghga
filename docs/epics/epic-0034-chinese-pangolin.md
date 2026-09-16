@@ -1,18 +1,20 @@
 # File Deletion and Outbox Cache Strategy (Chinese Pangolin)
+
 **Epic Type:** Implementation Epic
 
 ## Scope
+
 ### Outline:
 
 This Epic adds a new service, which provides a deletion endpoint for files.
-Calling this enpoint internally publishes an event.
+Calling this endpoint internally publishes an event.
 All services subscribing to this event will then delete the corresponding file and information pertaining to it from their databases and from the S3 buckets they have write access to.
 
 ### Included/Required:
 
 This Epic includes:
 
-- The creation of a new service, the **Purge Controller Service (PCS)**, which provides a RESTfull HTTP DELETE enpoint /files/{file_id}.
+- The creation of a new service, the **Purge Controller Service (PCS)**, which provides a RESTful HTTP DELETE endpoint /files/{file_id}.
 - Upon receiving the deletion request and validation of the access token it publishes an event
 - The following services subscribe to the new event and do the following after consuming:
     - IFRS: Deletes the file from permanent storage (IRS would be better, but IRS does not have the connection between outward-facing file_id and S3 file name)
@@ -21,14 +23,14 @@ This Epic includes:
     - DCS: Send API Call to EKSS to delete the secret
     - DCS: Delete file from outbox
     - Both services: Publish confirmation event afterwards
-- The EKSS provides a new RESTful HTTP DELETE endpoint /sercets/{secret_id} that deletes the corresponding secret from vault.
+- The EKSS provides a new RESTful HTTP DELETE endpoint /secrets/{secret_id} that deletes the corresponding secret from vault.
 
 These parts of the epic are described in detail below.
 
 ### Optional: Caching Strategy for DCS/Outbox
 
 - Add a "last_accessed" field for each entry in the DCS files database
-- Each time a file is sucessfully accessed via a download request, update its "last_accessed" field
+- Each time a file is successfully accessed via a download request, update its "last_accessed" field
 - Provide a script that scans the "last_accessed" field of all files currently present in the Outbox. If the timedelta since the last access is above a certain (to be determined) threshold, delete the respective file from the Outbox.
 
 ### Not included:
@@ -62,14 +64,16 @@ The EKSS will get a corresponding endpoint to delete a file secret.
 ### Payload Schemas for Events:
 
 A deletion event schema will be defined in the ghga-event-schemas repository.
-The event schema will detail contain:
+The event schema will contain:
+
 - file_id (outward-facing id of that file)
 The exact field names and constraints will be provided in the ghga-event-schemas repository, which is considered the source of truth.
 
 This event will be used to announce a file deletion by the PCS.
 
-A deletion event confimation schema will be defined in the ghga-event-schemas repository.
+A deletion event confirmation schema will be defined in the ghga-event-schemas repository.
 The event schema will contain:
+
 - file_id (outward-facing id of that file)
 The exact field names and constraints will be provided in the ghga-event-schemas repository, which is considered the source of truth.
 

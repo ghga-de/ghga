@@ -399,7 +399,7 @@ def _epic_header(base: pathlib.Path, epic: Epic) -> list[str]:
             f"{epic.name}: first heading must be '# Description (Code Name)'"
         )
     else:
-        epic.title, epic.code_name = match.group(1), match.group(2).strip().title()
+        epic.title, epic.code_name = match.group(1), match.group(2).strip()
     kind = next((m for line in lines if (m := EPIC_TYPE.match(line))), None)
     if not kind:
         problems.append(f"{epic.name}: no '**Epic Type:** ...' line")

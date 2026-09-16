@@ -1,12 +1,14 @@
 # Kafka Event IDs (Eurasian Blackbird)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
+
 ### Outline:
+
 The aim of this epic is to provide Kafka event identification for deduplication by
 canonizing a UUID4 header for all events (`event_id`). The `NOS`, `NS`, and `DLQS` will
 receive updates targeting this change after updating `hexkit`.
@@ -15,15 +17,18 @@ Changes for `hexkit` should be included in the same release as the changes from 
 [Slow Worm](./epic-0074-slow-worm.md) epic.
 
 ### Motivation:
+
 Currently, idempotence is only achievable
 by consumers when they store some portion of an event, directly or indirectly,
 in the database. Thus, the method of implementing idempotence is different for each
 context. That's not a problem until it is.
 
 Consumer idempotence has to handle two cases:
+
 1. Kafka event replay - seeing the exact same Kafka event again, as when consumer offsets are reset due to a group ID change or some other occurrence.
 2. Event republish - which creates Kafka events that are technically new but carry
 the same payload or are spiritually identical to a past event.
+
 - Republishing can include "outbox" events and "persistent" events
 - "Outbox" events are stateful and carry the last known state of an object, so they
   carry minimal concern with regard to idempotency.
@@ -37,6 +42,7 @@ one of those upstream services, the `NOS` will issue *new* Notification events, 
 the `NS` will send new emails. We could store the event as a whole, or store its hash
 (like in the `NS`), or store a deduplication key based on certain values, but they
 have problems:
+
 - *Whole event*: waste of space
 - *Hash of event*: opaque, unable to modify if we need a migration
 - *Semantic Dedupe Key*: heterogeneous format, possibility to clash
@@ -51,19 +57,21 @@ event in a deduplication store, the event will go to the DLQ and we can just giv
 another ID.
 
 ### Included/Required:
+
 Hexkit:
+
 - Protocols:
   - Event Pub: no change
   - Event Sub: expose `event_id` header to translators (similar to "type_")
 - Providers:
-  - Event Sub: 
+  - Event Sub:
     - Extract `event_id` header, convert to UUID4, and pass to translator.
       - This should *replace* the `event_id` used by the DLQ.
     - Move the `service` info to its own header in the DLQ case.
   - Event Pub:
     - Generate UUID4 to use as `event_id` if no value is provided as an argument.
   - Persistent Pub:
-    - Generate the `event_id` explicitly instead of relying on the underlying provider 
+    - Generate the `event_id` explicitly instead of relying on the underlying provider
       to generate it automatically. That way, we know the value and can store it.
     - Ensure `event_id` is stored and successfully reused during republish.
       - Generate and store `event_id` if it doesn't exist during republish.
@@ -72,7 +80,7 @@ Hexkit:
       or similar (should not produce any side effects).
   - DAO Pub (outbox):
     - Here, `event_id` should only be stored, not reused during republish. The stored
-      value should reflect the ID of the event created the last time the DTO was 
+      value should reflect the ID of the event created the last time the DTO was
       published to Kafka, to be used for traceability only.
       - Every time outbox events are republished, they'll have a *new* `event_id`.
       - The outbox events are intended to be stored by consumers, so idempotence
@@ -81,26 +89,28 @@ Hexkit:
         events.
 
 NOS:
+
 - Grab new version of `hexkit`.
 - Store the event ID for all non-outbox events the NOS consumes.
 - Check for the ID's presence before processing the event.
 
 NS:
+
 - Grab new version of `hexkit`.
 - Store the event ID for all Notification events consumed.
 - Check for ID's presence before acting on the Notification event.
 
 DLQ Service:
+
 - Grab new version of `hexkit`.
 - Update `stored_event_from_raw_event()` to operate with new header structure.
 - Migrate stored events in DB by generating new UUIDs.
 
-
 ### Optional:
-- Configure retention and cleanup policy for `notifications` topic, set matching 
+
+- Configure retention and cleanup policy for `notifications` topic, set matching
   duration for a TTL index on the NS's event ID collection.
 - Log the `event_id` from inside `KafkaEventPublisher` when publishing an event.
-
 
 ## API Definitions:
 
@@ -134,7 +144,6 @@ async def _consume_validated(
 ...
 ```
 
-
 ### Event Header Overview:
 
 To summarize, most events' headers will only change by gaining an `event_id` field.
@@ -161,7 +170,6 @@ provides value, however, and will be preserved in its own field.
     }
 }
 ```
-
 
 ## Human Resource/Time Estimation:
 

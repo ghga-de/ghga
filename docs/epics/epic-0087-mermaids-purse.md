@@ -84,15 +84,16 @@ Schemapack's serialization of `DataPack` objects (which use frozen dicts interna
 This section does not include any changes to `duplicate_class` itself, which continues to function as it currently does. It only clarifies how the presence of `globallyUniqueIds` in the schema affects the validation of workflow outputs that use `duplicate_class`.
 
 The `duplicate_class` transformation shall be retained in the transformation registry; the `globallyUniqueIds` constraint does not conflict with its presence. There are two scenarios to consider:
+
 1. The final output schema does not have `globallyUniqueIds` set. The `duplicate_class` transformation works as it currently does, with no issues.
 2. The final output schema has `globallyUniqueIds: true`. If a workflow duplicates a class and later deletes it, the final output contains no ID collision. Transient ID collisions introduced by `duplicate_class` within a workflow are permitted — the `globallyUniqueIds` constraint is enforced only on the final workflow output, not on intermediate steps.
 
 The second scenario is consistent with the existing metldata behaviour: when the no-intermediate-validation flag is set, model compatibility is not enforced after every step — only at the workflow boundaries. The `globallyUniqueIds` uniqueness constraint follows the same rule: it is enforced only at **workflow output validation** (the final step), not during intermediate steps. If the output schema of a workflow still has `globallyUniqueIds: true` and the output datapack contains duplicate IDs across classes, the post-workflow validation raises an error at that point.
 
 Two test cases should be added to ensure:
+
 1. When no-intermediate-validation flag is set, a workflow that uses `duplicate_class` and produces a final schema with `globallyUniqueIds: true` does not raise an error given that the output datapack has no ID collisions across classes.
 2. When intermediate validation is enabled, the same workflow raises an error at the step where `duplicate_class` is applied, since the intermediate schema at that point contains duplicate IDs across classes.
-
 
 ##### 2.2. `set_id_uniqueness_scope` transformation
 
@@ -107,18 +108,17 @@ To bridge this constraint change between input and output schemas, the `set_id_u
     globally_unique_ids: bool
 ```
 
-
 No additional validation logic is required: the post-transformation step validates the output automatically.
 
 ##### 2.3. `add_class` Transformation
 
+The need for the `add_class` transformation comes from the new design of the metadata schema, which removed administrative metadata from the current schema. The classes removed are:
 
-The need for the `add_class` transformation comes from the new design of the metadata schema, which removed administrative metadata from the current schema. The classes removed are: 
-1. `Study`, 
-2. `Publication`, 
-3. `Dataset`, 
-4. `DataAccessPolicy`, and 
-5. `DataAccessCommittee`. 
+1. `Study`,
+2. `Publication`,
+3. `Dataset`,
+4. `DataAccessPolicy`, and
+5. `DataAccessCommittee`.
 
 This also results in removing the `dataset` property from the EMIM file classes.
 
@@ -165,10 +165,10 @@ For the class declared in `config.class_name`, the transformation inserts the re
 - **Relations** — for every entry in `config.relations`, the property named by `target_resources` is read from the incoming PAM record, removed from content. Its values are matched with the target resources of the `targetClass`. The matching values are written as targetResources under `relations.<relation_property_name>`.
 - **Resource ID** — taken from the PAM record under the name given by `config.id_property_name` and used as the key under `resources.<class_name>`.
 
-
 ##### 2.5. Aggregate Stats Workflow: Adding Back PAM Classes via `add_class`
 
 The classes that will be added back to the EMIM via the aggregate stats workflow are:
+
 1. `Study`,
 2. `Publication`,
 3. `Dataset`.
@@ -200,7 +200,7 @@ This couples model derivation and data transformation in one loop. The em-transf
 **Solution: Refactor `WorkflowHandler` and introduce `WorkflowRunner`**
 
 1. `WorkflowHandler`:
-   
+
 `WorkflowHandler` is restructured so that model derivation and data transformation become two distinct phases:
 
 - **`__init__`**: walks the workflow once, builds a `WorkflowStepHandler` and derives the output schema for each step via `TransformationHandler`, and stores the `TransformationHandler` instances internally. The final output schema is exposed as an attribute.
@@ -213,7 +213,6 @@ This couples model derivation and data transformation in one loop. The em-transf
 - Accepts `workflow` and `input_model` as keyword arguments at construction; registry-aware.
 - **`__init__`**: eagerly derives all intermediate schemas; exposes the final schema via the read-only `.model` property.
 - **`run_workflow(data, annotation)`**: applies data transformations using the cached `TransformationHandler` instances; may be called once per datapack without re-deriving schemas.
-
 
 3. `validate_workflow()`:
 
@@ -229,19 +228,15 @@ The following are the stable public exports from `metldata.__init__`:
 | `WorkflowRunner`    | class    | High-level workflow execution; `.model` + `.run_workflow()` |
 | `validate_workflow` | function | Validates a workflow against the built-in registry          |
 
-
-
 ##### 2.7. Aggregate Stats Workflow Integration Test
 
 An end-to-end integration test shall be added to metldata, exercising all new capabilities together: a `globallyUniqueIds` schema, `add_class`, correct error behaviour for `duplicate_class` when intermediate validation is enabled, and `WorkflowRunner` running model derivation and data transformation independently.
 
 The test uses a representative aggregate stats workflow and verifies that the `globallyUniqueIds` constraint is enforced on the output: validation rejects datapacks with duplicate IDs across classes.
 
-
 ##### 2.8. Performance Benchmark of the Aggregate Stats Workflow
 
 A performance benchmark shall be run against the full EMIM -> aggregate stats workflow using the Epignostix dataset as a representative input. Profiling is done via `cProfile`. The goal is to establish a baseline transformation time before production deployment. Results are attached to the epic. Any step that accounts for a disproportionate share of total time is flagged for investigation.
-
 
 #### 3. em-transformation-service: Adopt `WorkflowRunner`
 
@@ -250,7 +245,6 @@ The em-transformation-service currently drives workflow execution by manually it
 - **`model_derivation.py`**: replace the manual step loop with `WorkflowRunner(workflow=..., input_model=input_schema)`; read the output schema via `runner.model`.
 - **`aem_pack_registry._apply_workflow_to_data`**: replace the manual step loop with `runner.run_workflow(data=data, annotation=annotation)`.
 - After the change: the service no longer imports `TransformationHandler`, manages intermediate schema state, or resolves transformation names from the registry directly. A `WorkflowRunner` instance is constructed once per route at config-validation time and reused for all data transformations on that route.
-
 
 #### 4. `jsonsubschema` Enum Bug Fix
 
@@ -291,13 +285,11 @@ Since upstream maintainers are unresponsive, the solution is to **fork `jsonsubs
 3. When an `AnnotatedEMPack` arrives, the service calls `runner.run_workflow(data=data, annotation=annotation)` to produce the derived datapack — without managing `TransformationHandler` instances or intermediate schema state.
 4. The resulting datapack is validated against the pre-derived output schema and published.
 
-
 ### Not Included
 
 - `delete_relation` transformation — not required for the current aggregate workflow.
 - `jsonsubschema` upgrade to support JSON Schema draft 2019-09 or later.
 - The changes to the ghga-metadata-schema.
-
 
 ## Human Resource/Time Estimation
 

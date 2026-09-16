@@ -1,4 +1,5 @@
 # Preliminary Experimental Metadata (EM) Transformation Service (Question Mark Chrysalis)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
@@ -8,10 +9,9 @@ Epic planning and implementation follow the
 
 ### Outline:
 
-The goal of this epic is to implement a service for the transformation of Experimental Metadata (EM) from one representation/model to another. 
+The goal of this epic is to implement a service for the transformation of Experimental Metadata (EM) from one representation/model to another.
 This service shall provide functionality around the configurable workflow concept from the `metldata` library to enable these transformations.
 To this goal, it needs to keep track of the transformation workflows, original and derived data/schema and workflow routes in its database.
-
 
 ### Terminology
 
@@ -19,7 +19,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. It follows SchemaPack format. Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
 
-`Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal. 
+`Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal.
 
 `EMPack`: Experimental metadata in datapack format. It follows a relational data schema corresponding to one of the EMIMs.
 
@@ -44,6 +44,7 @@ To this goal, it needs to keep track of the transformation workflows, original a
 - purpose: describes how models are represented in the service.
 
 data structure:
+
 ```python
 from pydantic import BaseModel
 
@@ -60,6 +61,7 @@ class Model(RawModel):
    order: int
 
 ```
+
 - RawModel.name: Unique identifier / human-readable name of the model.
 - RawModel.description: Human-readable description.
 - RawModel.is_ingress: Boolean, true for EMIMs.
@@ -71,13 +73,14 @@ class Model(RawModel):
 
 `RawModel` is used when deserializing the configuration from YAML files, as it does not include the `order` field that is derived after configuration validation. `RawModel` must include a validator to ensure that EMIMs (is_ingress = true) always have a `schema` defined. And the `schema` is None for non-EMIMs when deserializing the configuration.
 
-`Model` is used for the DAO. Since the models are stored in the database only after the config is validated, the `Model` class dictates that `order` and `schema` are not null. 
+`Model` is used for the DAO. Since the models are stored in the database only after the config is validated, the `Model` class dictates that `order` and `schema` are not null.
 
 #### `Workflow`
 
 - Purpose: holds a metldata-compatible workflow definition used to transform schema/data.
 
 data structure:
+
 ```python
 
 from pydantic import BaseModel
@@ -91,7 +94,6 @@ class Workflow(BaseModel):
 - name: Unique identifier / human-readable name for the workflow. Indicates the purpose of the workflow for easier debugging and understanding of the operations.
 - description: Optional longer description of the workflow.
 - workflow: Workflow definition in metldata format.
-
 
 #### `Route`
 
@@ -110,13 +112,12 @@ class Route(BaseModel):
 ```
 
 - name: Unique identifier / human-readable name for the workflow route. Follows the format of `{input_model_name}:{workflow_name}:{output_model_name}`.
-  
+
   The model must include a validator to ensure name consistency. Only one representation of the name should be provided in the transformation configuration. The validator automatically derives any missing parts: if only the composite name is given, it extracts the individual names; if only the individual names are provided, it constructs the composite name.
 
 - input_model_name: Name of the input model accepted by the route.
 - output_model_name: Name of the output model produced by the route.
 - workflow_name: Name of the workflow to apply on the route.
-
 
 #### `RawConfig`
 
@@ -154,12 +155,12 @@ class AnnotatedEMPack(BaseModel):
    data: DataPack
    annotation: dict
 ```
+
 - id: Unique identifier for the AnnotatedEMPack.
 - model_name: Unique name of the model the EMPack conforms to
 - original_id: ID of the original incoming EMPack it was derived from. None if it is an original EMPack
 - data: EMPack conforming to the model identified by `model_name`
-- annotation: Object with information from other models held by the service 
-
+- annotation: Object with information from other models held by the service
 
 #### Database Layer
 
@@ -177,7 +178,7 @@ The transformations are configured through the models, workflows and routes.
 
 Routes define how to transform an input model into an output model by specifying the workflow to apply and the expected output model.
 
-Routes also define a graph where models are nodes and routes are directed edges. The source nodes of this graph are the EMIMs. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two models in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG). 
+Routes also define a graph where models are nodes and routes are directed edges. The source nodes of this graph are the EMIMs. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two models in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG).
 
 We enforce this stronger unique-path property because "diamond" shapes indicate unnecessary redundancy that should be avoided, and because it eliminates any ambiguity in how data are transformed.
 
@@ -189,7 +190,7 @@ When manually triggered—or when the configuration changes—the service derive
 
 1. Validate the transformation configuration:
 
-   1. Verify that all workflows and EMIMs (i.e., models with is_ingest = true) referenced by the routes exist in the configuration.
+   1. Verify that all workflows and EMIMs (i.e., models with is_ingress = true) referenced by the routes exist in the configuration.
    2. Ensure that EMIMs do not appear as the output models of any routes.
    3. Validate schemas using the SchemaPack library and workflows using the metldata library.
    4. Confirm that the graph meets the unique-path requirement and is therefore acyclic.
@@ -207,7 +208,6 @@ When manually triggered—or when the configuration changes—the service derive
 
 3. Store the validated configuration with the derived schemas and ordering in the database.
 
-
 The validation (including the model derivation) should be protected by a global lock that would prevent other instances of the service from running the validation and model derivation in parallel, and would also stop the processing of AnnotatedEMPack transformations while the lock is active.
 
 #### Distributed Config Update using a Lock Document
@@ -220,6 +220,7 @@ If a lock document already exists, this will fail which means that either 1) exa
 The remaining services for which writing the lock document failed, will wait and poll until the lock gets released and continue with loading the current service config from the database afterwards.
 
 If a service instance has passed the startup phase, there are two further places where it has to check for an existing lock to ascertain that it is working with the latest information and performs the least possible amount of work that's no longer relevant:
+
 1) Before fetching a new AEMPack to process
 2) Before sending a derived AEMPack to the outbox publisher
 
@@ -288,7 +289,8 @@ async def wait_for_lock_release(db, poll_interval=5, timeout=120):
       await asyncio.sleep(poll_interval)
    raise TimeoutError(f"Lock was not released within the configured timeout of {timeout}s.")
 ```
-This should include a timeout to handle cases where the process takes much longer than anticipated and it's likely, that something unexpected happened during the startup procedure.
+
+This should include a timeout to handle cases where the process takes much longer than anticipated and it's likely that something unexpected happened during the startup procedure.
 The timeout should be set long enough to allow the DB to automatically remove a stale lock document.
 According to the MongoDB documentation, TTL index cleanup is only performed once every 60s and might be further delayed by the current load on the database.
 Thus the minimum to handle the worst case should be 60s + configured expiry (in seconds) + another few seconds to account for load.
@@ -351,7 +353,7 @@ flowchart TD
     style Q fill:#4a9eff,color:#fff
     style P fill:#f5a623,color:#fff
     style D fill:#7ed321,color:#fff
-    style NRI fill:#e3541f,color#fff
+    style NRI fill:#e3541f,color:#fff
     style NR fill:#d0021b,color:#fff
     style START fill:#333,color:#333
 ```
@@ -359,7 +361,6 @@ flowchart TD
 ##### Poll Loop: Priority-Based Claim Logic
 
 Each service instance runs an infinite loop that attempts to claim work in a strict priority order: crash recovery first, then fresh items, then items flagged for reprocessing.
-
 
 ```mermaid
 flowchart TD
@@ -389,7 +390,6 @@ When they differ, the service adopts the new configuration and performs:
 
 1. Re-derivation of all transformed schemas (as described in "Model Derivation")
 2. Re-transformation of all original AnnotatedEMPacks (as described in "Service Consumer Transforms An Original AnnotatedEMPack")
-
 
 ### Not included (but possible future extensions):
 

@@ -1,9 +1,10 @@
-# Exploration and conception for the metadata service refactoring (crayfish)
+# Exploration and conception for the metadata service refactoring (Crayfish)
+
 **Epic Type:** Exploratory Epic
 
 **Attention: Please do not put any confidential content here.**
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 - ~~Strategy for auto generation of the spreadsheet template from the schema~~
 - ~~Strategy for achieving adaptability of the schema to different use cases~~

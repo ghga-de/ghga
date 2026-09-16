@@ -35,6 +35,7 @@ library and are experiencing the following problems:
 - at the time of the decision, the library was developed almost entirely by a single maintainer, so the bus factor was a risk for us when depending on it long term
 
 The ideal solution should:
+
 1. be easy to learn, transparent (not-magic), and idiomatic to Python programmers
 2. be easy to debug
 3. be well maintained

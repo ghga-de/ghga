@@ -17,6 +17,7 @@ See the `README` file in this directory for all details.
 The documentation should contain the full title and type of the epic, its scope, implementation details and a time estimation.
 
 There are two template directories:
+
 - `epic-template-exploratory` for exploratory epics
 - `epic-template-implementation` for implementation epics
 

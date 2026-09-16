@@ -1,9 +1,9 @@
-# Metldata Transformation Finalzation (Common Furniture Beetle)
+# Metldata Transformation Finalization (Common Furniture Beetle)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
-
 
 ## Scope
 
@@ -24,7 +24,7 @@ source_class_name: SomeClass # Must exist
 target_class_name: SomeOtherClass # Must NOT exist
 ```
 
-ID, relations and content will be identical in the new class. All object will be duplicated.
+ID, relations and content will be identical in the new class. All objects will be duplicated.
 
 #### Delete Class
 
@@ -69,7 +69,7 @@ relation_path: "SomeClass(some_relation)>OtherClass"
 
 The transformations implemented as a part of Dhole epic `count_content_values`, `count_references`, `sum_operation`, `delete_content_subschema`, `copy_content` and `add_content_properties` will be replaced by the `transform_content` transformation. Thus, they will not be subject to refactoring.
 
-Any existing content schema transformation involving a passive path element will be represented with two transformations; one for resolving the the path and adding the relation (with `infer_relations`), the other one transforming the content (with `transform_content`). If not needed, the temporary relation may be deleted in subsequent workflow steps.
+Any existing content schema transformation involving a passive path element will be represented with two transformations; one for resolving the path and adding the relation (with `infer_relations`), the other one transforming the content (with `transform_content`). If not needed, the temporary relation may be deleted in subsequent workflow steps.
 
 ## Human Resource/Time Estimation:
 

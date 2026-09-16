@@ -1,4 +1,5 @@
 # Metadata Submission via Data Portal UI (African Bush Elephant)
+
 **Epic Type:** Implementation Epic
 
 ## The Scope
@@ -63,9 +64,9 @@ The Transpiler service responds to the Data portal (2.4) with either success and
 
 After successful download of the Metadata JSON by the user, the user may submit the Metadata JSON to the data portal (1.0).
 
-The Data portal posts the Metadata JSON to the Metdata repository as a new Study submission object (1.1).
+The Data portal posts the Metadata JSON to the Metadata repository as a new Study submission object (1.1).
 
-The Metadata repository service responds (1.2) with either success along with an updated Metadata JSON that contains the submission IDs or validation errors, in which case the user goes back to 1.0 abd attempts to submit the JSON again after fixing relevant submission errors.
+The Metadata repository service responds (1.2) with either success along with an updated Metadata JSON that contains the submission IDs or validation errors, in which case the user goes back to 1.0 and attempts to submit the JSON again after fixing relevant submission errors.
 
 After the successful submission, the user would like to mark the submission as complete (2.0) in the Data portal.
 
@@ -98,7 +99,7 @@ The definitions are hosted here:
 
 ### RESTful/Synchronous:
 
-The RESTful service API are described using OpenAPI:
+The RESTful service APIs are described using OpenAPI:
 
 MRS: [OpenAPI YAML](api_definitions/rest/metadata_repository.yaml) [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0012-african-bush-elephant/api_definitions/rest/metadata_repository.yaml)
 

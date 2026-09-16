@@ -5,7 +5,6 @@
 Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
-
 ## Scope
 
 ### Outline:
@@ -31,7 +30,6 @@ We can use this to implement external session storage in the Auth Service using 
 ### Not included:
 
 - Support for arbitrary Python types as value objects (e.g. using pickle).
-
 
 ## API Definitions
 
@@ -72,7 +70,6 @@ class KeyValueStoreProtocol(Protocol, Generic[V]):
         return (await self.get(key)) is not None
 ```
 
-
 ## Implementation Details
 
 The providers should be implemented in one module per backend. Each module can have different providers for different value types, or the value type could be passed as a parameter in the constructor. Internally, they need to implement codecs to transform the desired value type into a value type that is supported by the backend.
@@ -80,7 +77,6 @@ The providers should be implemented in one module per backend. Each module can h
 When supporting Pydantic models as values, the provider needs enough information to reconstruct the correct model class when reading back values. Therefore, model-based stores should be configured with the Pydantic model type (e.g. passed into the constructor). Encoding can use Pydantic's `model_dump_json()` method (and decoding the corresponding `model_validate_json()`).
 
 Namespaces could be supported by adding a namespace prefix to every key. One key-value store instance should handle one namespace only, which should be provided in the constructor.
-
 
 ## Human Resource/Time Estimation
 

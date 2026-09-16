@@ -24,13 +24,13 @@ accepting that **using cookies adds another mechanism on top of the already used
 
 ### Context
 
-Users need to login to the GHGA data portal (a single-page application) in order to request access, and to upload or download research data.
+Users need to log in to the GHGA data portal (a single-page application) in order to request access, and to upload or download research data.
 The actual upload or download is done using a CLI client outside of the data portal, using special tokens that are created in the data portal. Specifying the datasets and files (once access permissions have been granted) and creating CLI tokens does not take much time.
 Therefore, we do not have the immediate need to support long-running user sessions.
 However, in future stages of the project, this will probably change.
 Also, it can be irritating if user sessions based on a token with fixed expiration time suddenly end, even though the user is still active in the system.
 Keeping a proper user session that extends itself automatically or semi-automatically while the user is active is a more desired behavior.
-This can be achieved by either using stateful cookie-based sessions or by using stateless  token-based sessions with additional measures like refresh tokens.
+This can be achieved by either using stateful cookie-based sessions or by using stateless token-based sessions with additional measures like refresh tokens.
 
 In our architecture, the user authentication currently happens in an "auth adapter" component connected with the API gateway. Thereby, only an incoming OIDC access token is validated and converted to an internal access token. This token has a fixed timeout (by default the one used by LS Login as OIDC provider), after which the user needs to log in again. At the time of this decision, 2FA was not yet implemented, but was planned to be integrated - see our white paper on "Two-Factor Authentication and Identity Verification Enablement" regarding the underlying concept.
 

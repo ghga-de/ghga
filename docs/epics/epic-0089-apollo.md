@@ -510,7 +510,7 @@ The response also returns the computed fields. The user related fields should on
 - Response Body: `dict[str, UUID]`
 - Returns: 200 or error code (particularly, 403 or 404)
 
-The response returns the mapping from all file accessions of the study with th given ID to their corresponding file IDs, which can be null if the file is still unmapped.
+The response returns the mapping from all file accessions of the study with the given ID to their corresponding file IDs, which can be null if the file is still unmapped.
 
 ##### `PATCH /studies/{id}`
 
@@ -973,7 +973,7 @@ Data stewards have access to all boxes, while regular users may only access boxe
   - `state: UploadBoxState`
 - Returns: 204 or error code
 
-This endpoint is used to update the modifiable details for a RDUB, including the description, title, and state. When modifying the state, users are only allowed to move the state from OPEN to LOCKED, and all other changes are restricted to data stewards.
+This endpoint is used to update the modifiable details for an RDUB, including the description, title, and state. When modifying the state, users are only allowed to move the state from OPEN to LOCKED, and all other changes are restricted to data stewards.
 
 Once archived, the box may no longer be modified, and files in the box will be moved to permanent storage. If any files in the box have yet to be re-encrypted, if the box is still open, or if there are any files that lack an accession number, archival is denied.
 

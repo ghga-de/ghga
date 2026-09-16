@@ -1,15 +1,16 @@
 # Monorepo Setup for Multiple Microservices (Ethiopian Wolf)
+
 **Epic Type:** Exploratory Epic
 
-Epic planning and implementation follows the
+Epic planning and implementation follow the
 [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
 
 **Attention: Please do not put any confidential content here.**
 
-## Principle Components of Exploration:
+## Principal Components of Exploration:
 
 This epic aims at the establishment of a monorepo template that can be used to host
-multiple microservices. Specifically, it shall satisfy the requirements imposed by 
+multiple microservices. Specifically, it shall satisfy the requirements imposed by
 our file-service setup and a microservice-based version of metldata.
 
 Specifically, the following questions shall be answered:
@@ -50,7 +51,6 @@ Specifically, the following questions shall be answered:
 - Is frontend part of a monorepo? I.e. vertical slice architecture?
     - In that case, how to manage authentication?
 
-
 ## Material and Resources:
 
 Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to:
@@ -72,13 +72,12 @@ Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and
       of multiple repos into one monorepo
     - https://medium.com/lgtm/migrating-to-the-monorepo-582106142654
 - a [vscode-specific monorepo guide](https://github.com/microsoft/vscode-python/wiki/Mono-Repo-Set%E2%80%90up-Guide)
-- an generally informative [website on monorepo tooling](https://monorepo.tools/)
+- a generally informative [website on monorepo tooling](https://monorepo.tools/)
 - general articles:
     - https://medium.com/opendoor-labs/our-python-monorepo-d34028f2b6fa
     - https://medium.com/pinterest-engineering/building-a-python-monorepo-for-fast-reliable-development-be763781f67
     - https://medium.com/@davidsmithtech/dry-and-efficient-python-mono-repos-with-code-example-bc7ee8292e9d
     - https://betterprogramming.pub/the-pros-and-cons-monorepos-explained-f86c998392e1
-
 
 ## Additional Implementation Details:
 
@@ -86,10 +85,9 @@ Moving the existing file services into a monorepo might serve as a good proof of
 concept as these services are fully evolved and understood.
 
 Coming up with a strategy for life cycle management (versioning, releasing, branching)
-has highest priority and should service a long-lasting solution. The other aspects are
-less critical and might change in the future with preliminary solution being
-acceptable. 
-
+has highest priority and should serve a long-lasting solution. The other aspects are
+less critical and might change in the future with a preliminary solution being
+acceptable.
 
 ## Human Resource/Time Estimation:
 

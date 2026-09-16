@@ -34,17 +34,17 @@ This section outlines a checklist of all features to be implemented, divided int
 The following parts are already contained in the baseline application that has been created in the [Hippopotamus](./epic-0060-hippopotamus.md) epic.
 
 - Homepage
-	- Global Stats
+  - Global Stats
 - Header and Footer
 - Dataset browser (partial)
 - Auth Service
 - Error message handling
 - User Login:
-	- Login/Logout buttons
-	- OIDC callback URL
-	- User registration
-	- 2FA setup
-	- 2FA confirmation
+  - Login/Logout buttons
+  - OIDC callback URL
+  - User registration
+  - 2FA setup
+  - 2FA confirmation
 - Metadata service
 - Metadata search service (partial)
 
@@ -56,58 +56,58 @@ In this epic, we first implement functions from the GHGA Catalog.
 
 - [ ] Metadata search service (complete)
 - [ ] Dataset browser (complete)
-	- [ ] Result list (loading indicator, tests)
-	- [ ] Dataset summaries
-	- [ ] Filter (facets)
-	- [ ] Search
- - [ ] Single dataset view
-	 - [ ] Summary
-	 - [ ] Study
-	 - [ ] Publications
-	 - [ ] Dataset access policy
+  - [ ] Result list (loading indicator, tests)
+  - [ ] Dataset summaries
+  - [ ] Filter (facets)
+  - [ ] Search
+  - [ ] Single dataset view
+    - [ ] Summary
+    - [ ] Study
+    - [ ] Publications
+    - [ ] Dataset access policy
 - [ ] Access Request Service
 - [ ] Access request
-	 - [ ] Button to request access
-	 - [ ] Access request form
+  - [ ] Button to request access
+  - [ ] Access request form
 
-## Step 2: Access Requests
+### Step 2: Access Requests
 
 We implement the functionality of the account page in the next step:
 
 - [ ] IVA service
 - [ ] Account (user profile) page
-	- [ ] Email address
-	- [ ] Contact addresses (IVAs)
-		- [ ] Create
-		- [ ] Request verification
-		- [ ] Confirm verification code
-		- [ ] Delete
-	- [ ] Accessible datasets
-	- [ ] Pending access requests
+  - [ ] Email address
+  - [ ] Contact addresses (IVAs)
+    - [ ] Create
+    - [ ] Request verification
+    - [ ] Confirm verification code
+    - [ ] Delete
+  - [ ] Accessible datasets
+  - [ ] Pending access requests
 
-## Step 3: Download
+### Step 3: Download
 
 We complete the user facing functionality by implementing the function to create a work package:
 
 - [ ] Work packages
-    - [ ] Work package service
-	- [ ] Creation form
-	- [ ] Token generation
+  - [ ] Work package service
+  - [ ] Creation form
+  - [ ] Token generation
 
-## Step 4: Data steward tools
+### Step 4: Data steward tools
 
 Finally, we add the tooling for the data stewards:
 
 - [ ] Access request manager
-	- [ ] List
-	- [ ] Filter
-	- [ ] Detail
+  - [ ] List
+  - [ ] Filter
+  - [ ] Detail
 - [ ] IVA manager
-	- [ ] List
-	- [ ] Filter
-	- [ ] (Re)create code
-	- [ ] Invalidation
-	- [ ] Confirm transmission
+  - [ ] List
+  - [ ] Filter
+  - [ ] (Re)create code
+  - [ ] Invalidation
+  - [ ] Confirm transmission
 
 ### Polish and improve test coverage
 

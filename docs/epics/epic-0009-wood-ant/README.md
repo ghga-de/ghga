@@ -2,7 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principle Components of Exploration
+## Principal Components of Exploration
 
 A scope definition can be found here: https://wiki.verbis.dkfz.de/x/cQFzCQ
 

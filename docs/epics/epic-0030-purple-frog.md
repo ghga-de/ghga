@@ -1,4 +1,5 @@
 # Integration of Connector (CLI) with the Work Package Service (Purple Frog)
+
 **Epic Type:** Implementation Epic
 
 ## Scope:
@@ -12,7 +13,6 @@ This epic covers integrating missing functionality to communicate with the work 
 Two additional API calls to the work package service (WPS) need to be implemented, one to retrieve package information and one to retrieve work order tokens.
 The first call replaces an existing function that currently gets its information from the config/environment variables.
 API specs for the work package service endpoints can be found here: https://github.com/ghga-de/work-package-service/blob/main/openapi.yaml
-
 
 ### Work Package Access Token processing
 

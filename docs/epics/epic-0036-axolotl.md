@@ -1,17 +1,24 @@
 # Biomedical Metadata Mocking (Axolotl)
+
 **Epic Type:** Implementation Epic
 
 ## Scope
+
 ### Outline:
+
 This epic implements mocks for all Metadata Repository Service and Metadata Search Service API calls consumed by the Data Portal UI.
 
 ### Included/Required:
+
 The epic includes and requires:
+
 - the addition of data objects to be mocked based on the current metadata model and currently used metadata objects in the deployed version
 - that there is at least one data object for each edge case (e.g. at least one object with/without an EGA Accession ID (vs. a GHGA Accession ID), a DAC form, a linked study), e.g. by modifying one template object
 
 ### Not included:
+
 This epic does not include:
+
 - the addition of 'realistic' data; the data will be used to test what is necessary to test the display of all features available on the data portal, thus additional fields that are not used will not be included.
 
 ## User Journeys
@@ -19,6 +26,7 @@ This epic does not include:
 This epic covers the following user journeys:
 
 Browsing data:
+
 - The user views the summary of the entire dataset of metadata objects
 - The user views the summary of a single metadata object
 - The user views the details of a single metadata object, including list of files, experiments, and samples
@@ -53,7 +61,7 @@ Requesting the details of a dataset:
 - `embedded`: if true, the API call returns the dataset object with all children (e.g. files, studies, experiments) fully embedded within the dataset object (i.e. the file name, type, size, etc. vs. the UUID of the file object).
 - no request body
 
-The reponse body is either a `datasetModel` or a `datasetEmbeddedModel`.
+The response body is either a `datasetModel` or a `datasetEmbeddedModel`.
 
 Requesting the summary of a dataset:
 
@@ -61,14 +69,14 @@ Requesting the summary of a dataset:
 - `datasetId`: the internal (UUID) of the dataset in question
 - no request body
 
-The reponse body is a `datasetDetailsSummaryModel`. 
+The response body is a `datasetDetailsSummaryModel`.
 
 Requesting the summary of the entire dataset of metadata objects:
 
 - `GET /metadata_summary/`
 - no request body
 
-The reponse body is a `metadataSummaryModel`. 
+The response body is a `metadataSummaryModel`.
 
 ## Additional Implementation Details:
 

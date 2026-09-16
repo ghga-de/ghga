@@ -8,7 +8,7 @@ tags: [frontend, docs]
 
 ## Summary
 
-In the context of **establishing a documentation for the Angular codebase**
+In the context of **establishing documentation for the Angular codebase**
 
 facing **a need for easy-to-follow rules, no hassle in development and the ability to understand the codebase quickly for new developers**
 
@@ -35,6 +35,7 @@ TypeDoc is a framework that is frequently used for API documentation, offering a
 After these considerations, documentation.js and Compodoc are left as competitors. At the time of writing, the documentation.js repository showed no commits for about two years. Since the JS and TS language standards evolve quickly, we preferred a tool with a more recent release history for our documentation pipeline.
 
 Compodoc offers multiple main advantages:
+
 - Compodoc is developed for Angular, so the documentation understands concepts like Angular components, services, pipes etc.
 - It creates a graphic visualization of Angular components (that is compatible with standalone components) that allows new developers to understand how the component tree is structured quickly.
 - It builds a website to quickly read and search the docs.

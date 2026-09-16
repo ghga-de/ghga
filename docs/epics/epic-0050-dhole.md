@@ -1,4 +1,5 @@
 # Rewriting existing metldata transformations (Dhole)
+
 **Epic Type:** Implementation Epic
 
 Epic planning and implementation follow the
@@ -7,11 +8,13 @@ Epic planning and implementation follow the
 **Attention: Please do not put any confidential content here.**
 
 ## Scope
+
 ### Outline:
+
 The aim is to rewrite all existing metldata transformations to use schemapack.
 
-
 ### Included/Required:
+
 - add possibility to use custom embedding profile to configure the denormalization
   in schemapack
 - migrating the already schemapack-based transformations to spec version 0.2.0
@@ -24,12 +27,12 @@ The aim is to rewrite all existing metldata transformations to use schemapack.
 - re-evaluate and potentially refactor the following transformations:
   - aggregate
 
-
 ### Not included:
-- Reimplementation of the custom_ebeddings transformation is not required since it will already
-  covered by builtin functionality of schemapack
+
+- Reimplementation of the custom_embeddings transformation is not required since it will already
+  be covered by builtin functionality of schemapack
 - Reimplementation of the add_accessions transformation is postponed since it might be
-  moved handled by the submission store and not be implemented as transformation.
+  handled by the submission store and not be implemented as transformation.
 - A full reimplementation of the GHGA transformation workflow (this depends on other changes to
   be in place first and would make this epic dependent on other lines of work).
 - The normalize_model transformation is not needed anymore
@@ -40,11 +43,12 @@ The aim is to rewrite all existing metldata transformations to use schemapack.
 
 This helps to control which relations (and relations of relations) will be embedded and
 which won't. It can even be used to deal with circular dependencies that would otherwise
-lead to an exception when denomalizing.
+lead to an exception when denormalizing.
 
 Here is an example:
 
 Given the following rooted schemapack:
+
 ```yaml
 schemapack: 0.2.0
 description: A schema used to describe relationships between team members.
@@ -52,10 +56,10 @@ classes:
   Person:
     id:
       propertyName: name
-    content: ../../content_schemas/AnyObject.schema.json` # Any object allowed
+    content: ../../content_schemas/AnyObject.schema.json # Any object allowed
     relations:
       teammates:
-        targetClass: Person # refering to itself
+        targetClass: Person # referring to itself
         mandatory:
           origin: false
           target: false
@@ -63,7 +67,7 @@ classes:
           origin: true
           target: true
       manager:
-        targetClass: Person # refering to itself
+        targetClass: Person # referring to itself
         mandatory:
           origin: false
           target: false
@@ -75,6 +79,7 @@ classes:
 ```
 
 There is the following datapack:
+
 ```yaml
 datapack: 0.2.0
 resources:
@@ -130,6 +135,7 @@ manager: true # do embed the managers and all the nested relations that the mana
 ```
 
 The outcome would be the following denormalized data:
+
 ```yaml
 name: Alice
 teammates:
@@ -155,6 +161,7 @@ manager:
 ```
 
 ### Immutability of Datapack and Schemapack Objects:
+
 Currently, the pydantic models for interacting with DataPack and SchemaPack
 definitions are not fully frozen, yet, however in the future they will be.
 Thus, while re-implementing the transformations, modifications to a
@@ -164,14 +171,17 @@ the `model_copy(update={...})` method). This is also true for the already
 migrated transformation.
 
 ### Refactor merge_slots transformation:
+
 The original merge_slots transformation should be replaced by two new transformations:
 
 A. For merging content properties:
+
 - nested properties (of nested JSON objects) must be supported
 - If the source properties are not of the same type and the `assume_same_type` argument
   (see config example below) is set to `false`, a union type is created (AnyOf).
 - The new property is always a list even if the source properties were not multivalued.
 - a config example might look like this:
+
   ```yaml
   merge_content_properties:
     ClassA:
@@ -181,7 +191,7 @@ A. For merging content properties:
           - old_property_a
           - old_property_b
         deduplicate: true # the default, all values are kept even if they occur
-                          # multiple times accross the source properties
+                          # multiple times across the source properties
         assume_same_type: true # the default, raises an exception if the source
                                # properties do not have the same type
       old_property_c.new_property_y:
@@ -209,9 +219,11 @@ A. For merging content properties:
   ```
 
 B. For merging relation properties:
+
 - the source properties must have the same targetClass
 - a config example might look like this:
-```yaml
+
+  ```yaml
   merge_relation_properties:
     ClassA:
       # merged relation properties that shall be created in ClassA:
@@ -219,12 +231,12 @@ B. For merging relation properties:
         source_properties:
           - old_property_a
           - old_property_b
-        # There are no option `deduplicate` because relation properties may never
+        # There is no option `deduplicate` because relation properties may never
         # contain duplicate values.
         # Moreover, there is no option `assume_same_type` since currently schemapack
         # does not support unions of multiple target classes for a relation. Thus
         # the source relations must all point to the same target class.
-        # Nesting is also not supported in relations, so not special treatment of
+        # Nesting is also not supported in relations, so no special treatment of
         # dots is required.
       new_property_y:
         # another merged property
@@ -293,16 +305,18 @@ Example config:
   source_relation_path: "Dataset(samples)>Sample"
 ```
 
-####  Transformation 3: Count content values
+#### Transformation 3: Count content values
 
 * The transformation shall count the values encountered at a specified property in the content of an object.
 * The transformation shall validate that at least one of the traversed references is multi-valued by its cardinality or one of the traversed content elements is an array.
-* The path to the source content property is specified in two stages: (1) a relation path string specifies the path to the class that holds the content; (2) a content path specifies the path to the property source property within the content.
+* The path to the source content property is specified in two stages: (1) a relation path string specifies the path to the class that holds the content; (2) a content path specifies the path to the source property within the content.
 * A new content property with the name `target_content.property_name` will be added to the schema by the transformation and will have the following schema
+
   ```yaml
   type: object
   additionalProperties: true
   ```
+
   where each observed value will be mapped to an integer value representing the
   number of times it was observed
 

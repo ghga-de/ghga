@@ -11,7 +11,6 @@ This epic covers two features to be implemented in the ghga-connector:
 1. Crypt4GH compliant encryption of files to be uploaded
 2. Parallelization of file part uploads/downloads
 
-
 ## Implementation Details:
 
 ### Encryption
@@ -22,19 +21,20 @@ As the connector already expects a user public key, the private key should belon
 
 Once the work package service is finished, this will change slightly.
 Following changes, which are not part of this epic, need to be made then:
+
 - Obtain GHGA and user public key from external source (work package service or possibly API call for GHGA key)
 - Verify the provided keypair matches the announced public key
 
 The implementation should check if a provided file is already Crypt4GH encrypted and reject such files for now.
 Such a check should interrogate the magic bytes in the file header and additionally verify that the file name ending is correct.
-For non-rejected files, encryption should produce a Cypt4GH compliant temporary on disk file that is subsequently uploaded.
+For non-rejected files, encryption should produce a Crypt4GH compliant temporary on disk file that is subsequently uploaded.
 
 A possible issue might arise with the Crypt4GH private key being unreadable by the connector due to strict permissions.
 For now, this should raise an exception instructing the user to provide a readable file.
 
 ### File Part Parallelization
 
-File transfer operations should benefit of parallelization over the parts of each file. In an inital exploration step, the possbilities of how to achieve this goal schould be investigated.
+File transfer operations should benefit from parallelization over the parts of each file. In an initial exploration step, the possibilities of how to achieve this goal should be investigated.
 Possible mechanisms for scheduling and managing parallel up-/download tasks include multiprocessing and async queues.
 In addition, replacing the fully synchronous requests library with one supporting asynchronous operations like httpx or aiohttp might yield further performance improvements.
 
