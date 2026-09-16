@@ -87,7 +87,7 @@ The decision itself:
   its own; `docs/` the rules themselves, read when a task touches them; and
   `.agents/skills/` the steps of a recurring task, read when invoked. A rule lives in
   one of them, and the others link it. `AGENTS.md` is written for agents first and a
-  README for humans first, which sets the register of each — not who is bound by it. The
+  README for humans first, which sets how each is written — not who is bound by it. The
   rules in an `AGENTS.md` are the team's, and an agent changes them by proposing a diff
   like any other.
 - **Placement follows the loading cost.** A passage belongs in the root file only if it
