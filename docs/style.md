@@ -20,6 +20,8 @@ titles follow the [conventions](conventions.md#names-branches-prs-commits), deci
   "seamless", "leverage", "it's worth noting"). One word, one meaning: *register* reads
   as a registry, not as a way of writing, so use the everyday word or say what you mean.
   The word count is not the test: if you have to read your own sentence twice, split it.
+- **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the
+  same page"). Name the literal action instead.
 - **Link instead of restating.** A rule lives in one place — an ADR, the conventions,
   this file — and everything else points to it.
 - **Headings carry no trailing punctuation.** A heading is a label, not a sentence: a
