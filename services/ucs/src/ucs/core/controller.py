@@ -900,7 +900,7 @@ class UploadController(UploadControllerPort):
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
         # Make sure box exists and is unlocked (unless overridden)
-        box = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
+        _ = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
 
         # Retrieve the FileUpload data
         try:
@@ -928,7 +928,7 @@ class UploadController(UploadControllerPort):
         with contextlib.suppress(ResourceNotFoundError):
             await self._upload_activity_dao.delete(file_id)
 
-        await self._update_box_stats(box_id=box_id, version=box.version)
+        await self._update_box_stats(box_id=box_id)
         log.info("File %s deleted from box %s", file_id, box_id)
 
     async def remove_file_upload_box(
