@@ -255,7 +255,9 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
             raise ResourceAlreadyExistsError(id_=dto.id)
         self.last_upsert = self._requests[dto.id] = dto
 
-    async def update(self, dto: AccessRequest) -> None:
+    async def update(
+        self, dto: AccessRequest, *, matching_criteria: dict[str, Any] | None = None
+    ) -> None:
         """Update an existing resource."""
         self.last_upsert = self._requests[dto.id] = dto
 
