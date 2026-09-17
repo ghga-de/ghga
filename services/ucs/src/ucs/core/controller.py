@@ -17,6 +17,7 @@
 
 import contextlib
 import logging
+from asyncio import sleep
 from datetime import timedelta
 from math import ceil
 from typing import Any
@@ -58,6 +59,10 @@ from ucs.ports.outbound.dao import (
 from ucs.ports.outbound.storage import S3ClientPort
 
 log = logging.getLogger(__name__)
+
+# Time to wait before retrying DB update after encountering race condition
+_RC_SPACING = 0.5
+_RC_MAX_TRIES = 3
 
 
 class UploadController(UploadControllerPort):
@@ -1046,7 +1051,7 @@ class UploadController(UploadControllerPort):
                     await self._upload_activity_dao.delete(file_upload.id)
                 await self._file_upload_dao.delete(file_upload.id)
 
-    async def _update_box_stats(self, *, box_id: UUID4, version: int) -> None:
+    async def _update_box_stats(self, *, box_id: UUID4) -> None:
         """Update FileUploadBox stats (file count & size) in an idempotent manner,
         counting only files that are finished uploading.
 
@@ -1055,23 +1060,55 @@ class UploadController(UploadControllerPort):
 
         This helps mitigate potential state inconsistency arising from a hard crash.
 
+        Potential race conditions are mitigated by a basic retry mechanism that waits
+        a brief interval before re-fetching the box and re-calculating the stats, then
+        attempting the update again.
+
         Raises:
         - `BoxNotFoundError` if the box no longer exists.
         - `BoxVersionError` if the box version has changed since it was fetched.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
-        box = await self._get_box(
-            box_id=box_id, require_unlocked=False, version=version
-        )
+        for _ in range(_RC_MAX_TRIES):
+            box = await self._get_box(box_id=box_id, require_unlocked=False)
+            file_count, total_size = await self._calc_box_stats(box_id=box_id)
 
-        file_count, total_size = await self._calc_box_stats(box_id=box_id)
+            # Since every update triggers an event, only update if data differs
+            if file_count == box.file_count and total_size == box.size:
+                return
 
-        # Since every update triggers an event, only update if data differs
-        if file_count != box.file_count or total_size != box.size:
-            box.version += 1
-            box.file_count = file_count
-            box.size = total_size
-            await self._file_upload_box_dao.update(box)
+            updated_box = box.model_copy(
+                update={
+                    "version": box.version + 1,
+                    "file_count": file_count,
+                    "size": total_size,
+                }
+            )
+
+            # Try to update the box stats and break loop if successful
+            try:
+                await self._file_upload_box_dao.update(
+                    updated_box,
+                    matching_criteria={
+                        "version": box.version,
+                        "file_count": box.file_count,
+                        "size": box.size,
+                    },
+                )
+                return
+            except NoHitsFoundError:
+                log.debug(
+                    "Detected race condition while updating stats for box %s.",
+                    box_id,
+                )
+                await sleep(_RC_SPACING)
+                continue
+        else:
+            log.error(
+                f"Failed all {_RC_MAX_TRIES} tries to update stats for box {box_id}."
+            )
+            raise self.BoxStatsCalcError(box_id=box_id)
 
     async def _calc_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
         """Compute a box's (file_count, total_decrypted_size) via the aggregator,
