@@ -247,9 +247,9 @@ class FindResult(AsyncIterator[Dto]):
 
 
 class _RaceConditionAttempt:
-    """A single try yielded by `_race_condition_retries`.
+    """A single try yielded by `race_condition_retries`.
 
-    Used as a context manager: suppresses a `NoHitsFoundError` raised in its block and
+    Used as a context manager: suppresses a `AtomicUpdateError` raised in its block and
     records whether the block finished without one.
     """
 
@@ -268,28 +268,30 @@ class _RaceConditionAttempt:
         if exc_type is None:
             self.succeeded = True
             return False
-        return issubclass(exc_type, NoHitsFoundError)
+        return issubclass(exc_type, AtomicUpdateError)
 
 
-async def race_condition_retries(
+async def race_condition_retries(  # noqa: PLR0913
     *,
-    max_tries: int,
     description: str,
     error_on_failure: BaseException,
     logger: Logger | None = None,
+    max_tries: int = 3,
     interval: float = 0.5,
+    jitter: float = 0.3,
 ) -> AsyncIterator[_RaceConditionAttempt]:
     """Yield attempts for an action that can lose a race condition.
 
     Wrap the action in `with attempt:` for each yielded attempt. Retries it up to
     `max_tries` times, waiting `interval` seconds (plus jitter) after each
-    `NoHitsFoundError`. That error means the `matching_criteria` of a DAO update no
+    `AtomicUpdateError`. That error means the `matching_criteria` of a DAO update no
     longer matched because another write came first. A `return` inside the block
     ends the retries.
 
     ```python
     async for attempt in race_condition_retries(
-        description="update stats for box <box_id>", error_on_failure=error
+        description="update stats for box <box_id>",
+        error_on_failure=error,
     ):
         with attempt:
             ...
@@ -302,17 +304,18 @@ async def race_condition_retries(
         error_on_failure: The error to raise once all tries have failed.
 
     Raises:
-    - `error_on_failure` if the action still raises `NoHitsFoundError` on the last try.
+    - `error_on_failure` if the action still raises `AtomicUpdateError` on the last try.
     """
     description = description.strip(" .")
-    for _ in range(max_tries):
+    for attempt_number in range(1, 1 + max(1, max_tries)):
         attempt = _RaceConditionAttempt()
         yield attempt
         if attempt.succeeded:
             return
         if logger:
             logger.debug("Detected race condition while trying to %s.", description)
-        await sleep(interval + uniform(0.1, 0.3))  # noqa: S311
+        if attempt_number < max_tries:
+            await sleep(max(0, interval) + uniform(0, max(jitter, 0)))  # noqa: S311
 
     if logger:
         logger.error(
