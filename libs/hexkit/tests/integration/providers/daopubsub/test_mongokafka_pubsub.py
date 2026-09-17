@@ -34,6 +34,8 @@ from hexkit.correlation import (
     set_new_correlation_id,
 )
 from hexkit.protocols.dao import (
+    InvalidFindMappingError,
+    NoHitsFoundError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -1006,6 +1008,68 @@ async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
 
         with pytest.raises(UniqueConstraintViolationError):
             await dao.upsert(dto5)
+
+
+async def test_update_matching_criteria(mongo_kafka: MongoKafkaFixture):
+    """Test that `update` with `matching_criteria` only replaces and publishes a
+    resource that exists, is not deleted, and matches the criteria.
+    """
+    kafka = mongo_kafka.kafka
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+        )
+
+        example = ExampleDto(field_b=1)
+        example_update = example.model_copy(update={"field_b": 2})
+
+        # Non-existing resource should raise ResourceNotFoundError
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.update(example_update, matching_criteria={"field_b": 1})
+
+        await dao.insert(example)
+
+        # Criteria mismatch should raise NotHitsFoundError
+        # Bogus fields for matching_criteria should raise InvalidFindMappingError
+        # and in either of the above cases, no events should be published
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(NoHitsFoundError):
+                await dao.update(example_update, matching_criteria={"field_b": 3})
+            with pytest.raises(InvalidFindMappingError):
+                await dao.update(example_update, matching_criteria={"not_a_field": 1})
+        assert await dao.get_by_id(example.id) == example
+
+        # Criteria match, including the ID field and an MQL operator
+        async with kafka.expect_events(
+            events=[
+                ExpectedEvent(
+                    payload=example_update.model_dump(),
+                    type_=CHANGE_EVENT_TYPE,
+                    key=str(example.id),
+                )
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.update(
+                example_update,
+                matching_criteria={"id": example.id, "field_b": {"$lt": 2}},
+            )
+
+        # Verify that the document was updated
+        assert await dao.get_by_id(example.id) == example_update
+
+        # Deleted resource should behave the same as the non-existing resource case above
+        await dao.delete(example.id)
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.update(example, matching_criteria={"field_b": 2})
 
 
 async def test_find_all_total_count_excludes_soft_deleted(

@@ -97,6 +97,53 @@ async def test_update():
     assert dao.latest.count == 2
 
 
+@pytest.mark.parametrize("handle_mql", [True, False])
+async def test_update_matching_criteria(handle_mql: bool):
+    """Test the `update()` method with `matching_criteria`"""
+    dao = new_mock_dao_class(
+        dto_model=InventoryItem, id_field="title", handle_mql=handle_mql
+    )()
+    item = InventoryItem(title="Nudelholz", count=1)
+
+    # A non-existent item still raises a ResourceNotFoundError
+    with pytest.raises(ResourceNotFoundError):
+        await dao.update(item, matching_criteria={"count": 1})
+
+    await dao.insert(item)
+
+    # A resource that doesn't match the criteria is left unchanged
+    with pytest.raises(NoHitsFoundError):
+        await dao.update(
+            item.model_copy(update={"count": 2}), matching_criteria={"count": 5}
+        )
+    assert dao.latest.count == 1
+
+    # Criteria may name the ID field
+    await dao.update(
+        item.model_copy(update={"count": 2}),
+        matching_criteria={"title": "Nudelholz", "count": 1},
+    )
+    assert dao.latest.count == 2
+
+
+async def test_update_matching_criteria_mql():
+    """Test that `update()` resolves MQL operators in `matching_criteria`"""
+    dao = DaoClass()
+    item = InventoryItem(title="Nudelholz", count=1)
+    await dao.insert(item)
+
+    with pytest.raises(NoHitsFoundError):
+        await dao.update(
+            item.model_copy(update={"count": 2}),
+            matching_criteria={"count": {"$gt": 1}},
+        )
+
+    await dao.update(
+        item.model_copy(update={"count": 2}), matching_criteria={"count": {"$lte": 1}}
+    )
+    assert dao.latest.count == 2
+
+
 async def test_upsert():
     """Test the `upsert()` method"""
     dao = DaoClass()
