@@ -40,10 +40,10 @@ from pymongo.errors import DuplicateKeyError
 from hexkit.correlation import get_correlation_id, set_correlation_id
 from hexkit.custom_types import ID, JsonObject
 from hexkit.protocols.dao import (
+    AtomicUpdateError,
     Dao,
     Dto,
     FindResult,
-    NoHitsFoundError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
 )
@@ -289,7 +289,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
-            NoHitsFoundError:
+            AtomicUpdateError:
                 when the resource exists but doesn't match `matching_criteria`
             InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:
@@ -333,7 +333,9 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                         existing_filter, limit=1
                     )
                 if exists:
-                    raise NoHitsFoundError(mapping=doc_filter)
+                    raise AtomicUpdateError(
+                        id_=document["_id"], matching_criteria=matching_criteria
+                    )
             raise ResourceNotFoundError(id_=document["_id"])
 
         if self._autopublish:

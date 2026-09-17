@@ -32,6 +32,7 @@ from hexkit.custom_types import ID
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
 
 __all__ = [
+    "AtomicUpdateError",
     "Dao",
     "DaoFactoryProtocol",
     "FindError",
@@ -88,6 +89,19 @@ class UniqueConstraintViolationError(DaoError):
     def __init__(self, *, unique_fields: dict[str, Any]):
         message = (
             f"A resource with the unique field value(s) {unique_fields} already exists."
+        )
+        super().__init__(message)
+
+
+class AtomicUpdateError(DaoError):
+    """Raised when an update with `matching_criteria` found the resource, but its
+    current values didn't match the criteria.
+    """
+
+    def __init__(self, *, id_: ID, matching_criteria: Mapping[str, Any]):
+        message = (
+            f'The resource with the id "{id_}" does not match the criteria'
+            f" {matching_criteria} for an atomic update."
         )
         super().__init__(message)
 
@@ -228,7 +242,7 @@ class Dao(typing.Protocol[Dto]):
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
-            NoHitsFoundError:
+            AtomicUpdateError:
                 when the resource exists but doesn't match `matching_criteria`
             InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:

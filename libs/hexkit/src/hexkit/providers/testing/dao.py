@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    AtomicUpdateError,
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
@@ -531,7 +532,7 @@ class BaseInMemDao(Generic[DTO]):
         """Update a resource.
 
         Raises a ResourceNotFoundError if no resource with a matching ID is found, and
-        a NoHitsFoundError if the resource doesn't match `matching_criteria`.
+        an AtomicUpdateError if the resource doesn't match `matching_criteria`.
         """
         dto_id = getattr(dto, self._id_field)
         if dto_id not in self.resources:
@@ -543,10 +544,7 @@ class BaseInMemDao(Generic[DTO]):
             )
             predicates = build_predicates(criteria) if self._handle_mql else []
             if not self._resource_matches(self.resources[dto_id], criteria, predicates):
-                # Remove _id if included so error doesn't have both <id field> and _id
-                mapping = {self._id_field: dto_id, **matching_criteria}
-                _ = mapping.pop("_id", None)
-                raise NoHitsFoundError(mapping=mapping)
+                raise AtomicUpdateError(id_=dto_id, matching_criteria=matching_criteria)
 
         self.resources[dto_id] = self._serialize(dto)
 
