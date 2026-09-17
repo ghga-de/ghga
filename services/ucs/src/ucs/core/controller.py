@@ -716,10 +716,6 @@ class UploadController(UploadControllerPort):
         - `ChecksumMismatchError` if the checksums don't match.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count.
         """
-        # Get the FileUploadBox instance (box can be locked because users can lock
-        #  it proactively before all uploads have finished)
-        box = await self._get_box(box_id=box_id, require_unlocked=False)
-        box_version = box.version
         extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}  # just 4 logging
 
         # Get the FileUpload from the DB
@@ -793,7 +789,7 @@ class UploadController(UploadControllerPort):
             )
 
         # Update the FileUploadBox with new size and file count
-        await self._update_box_stats(box_id=box_id, version=box_version)
+        await self._update_box_stats(box_id=box_id)
         log.info("DB data updated for upload completion of file %s", file_id)
 
     async def requeue_single_file_upload(
