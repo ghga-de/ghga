@@ -709,12 +709,12 @@ class UploadController(UploadControllerPort):
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `UploadSizeMismatchError` if the object size doesn't match the declared encrypted_size.
         - `ChecksumMismatchError` if the checksums don't match.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}  # just 4 logging
 
@@ -891,13 +891,13 @@ class UploadController(UploadControllerPort):
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if `require_unlocked` is True and the box isn't open.
-        - `BoxVersionError` if the box version changed before stats could be updated.
         - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         # Make sure box exists and is unlocked (unless overridden)
         _ = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
@@ -1062,7 +1062,6 @@ class UploadController(UploadControllerPort):
 
         Raises:
         - `BoxNotFoundError` if the box no longer exists.
-        - `BoxVersionError` if the box version has changed since it was fetched.
         - `BoxStatsCalcError` if there's a problem calculating box size and file count,
           or if the database can't be updated due to a race condition.
         """
@@ -1190,7 +1189,8 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `IncompleteOrFailedError` if force=False and there are files still uploading
           or that failed interrogation.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
