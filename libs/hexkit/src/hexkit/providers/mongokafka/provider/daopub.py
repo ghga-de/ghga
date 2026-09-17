@@ -50,8 +50,11 @@ from hexkit.protocols.dao import (
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.providers.akafka import KafkaEventPublisher
-from hexkit.providers.akafka.provider.daosub import CHANGE_EVENT_TYPE, DELETE_EVENT_TYPE
 from hexkit.providers.akafka.provider.eventpub import KafkaProducerCompatible
+from hexkit.providers.akafka.provider.eventsub import (
+    CHANGE_EVENT_TYPE,
+    DELETE_EVENT_TYPE,
+)
 from hexkit.providers.mongodb.provider import (
     ConfiguredMongoClient,
     MongoDbDao,
