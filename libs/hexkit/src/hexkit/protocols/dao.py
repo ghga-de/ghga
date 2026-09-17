@@ -209,17 +209,28 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
-    async def update(self, dto: Dto) -> None:
+    async def update(
+        self, dto: Dto, *, matching_criteria: dict[str, Any] | None = None
+    ) -> None:
         """Update an existing resource.
+
+        If `matching_criteria` is supplied, the resource is only updated if its current
+        values match them. The check and the update happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
+            matching_criteria:
+                A mapping of field names to the values the existing resource must have.
+                It does not need to contain the ID field, since that is implied.
 
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
+            NoHitsFoundError:
+                when the resource exists but doesn't match `matching_criteria`
+            InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.

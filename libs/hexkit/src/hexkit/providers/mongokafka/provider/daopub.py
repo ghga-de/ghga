@@ -43,6 +43,7 @@ from hexkit.protocols.dao import (
     Dao,
     Dto,
     FindResult,
+    NoHitsFoundError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
 )
@@ -266,17 +267,28 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         with assert_not_deleted():
             return await self._dao.get_by_id(id_)
 
-    async def update(self, dto: Dto) -> None:
+    async def update(
+        self, dto: Dto, *, matching_criteria: dict[str, Any] | None = None
+    ) -> None:
         """Update an existing resource.
+
+        If `matching_criteria` is supplied, the resource is only updated if its current
+        values match them. The check and the update happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
+            matching_criteria:
+                A mapping of field names to the values the existing resource must have.
+                It does not need to contain the ID field, since that is implied.
 
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
+            NoHitsFoundError:
+                when the resource exists but doesn't match `matching_criteria`
+            InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -284,23 +296,41 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         correlation_id = get_correlation_id()
         document = self._dao._dto_to_document(dto)
         document.setdefault("__metadata__", {})["correlation_id"] = correlation_id
+        existing_filter: dict[str, Any] = {
+            "_id": document["_id"],
+            "$or": [
+                {"__metadata__": {"$exists": False}},
+                {"__metadata__.deleted": False},
+            ],
+        }
+        doc_filter = existing_filter
+
+        # If matching_criteria is supplied, validate it and add it to the doc_filter
+        if matching_criteria:
+            validate_find_mapping(matching_criteria, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_mapping(
+                matching_criteria, self._id_field
+            )
+            # A separate $and clause keeps an $or in the criteria from replacing the
+            # $or that excludes deleted documents
+            doc_filter = {"$and": [existing_filter, criteria]}
+
         with translate_pymongo_errors():
             try:
-                result = await self._collection.replace_one(
-                    {
-                        "_id": document["_id"],
-                        "$or": [
-                            {"__metadata__": {"$exists": False}},
-                            {"__metadata__.deleted": False},
-                        ],
-                    },
-                    document,
-                )
+                result = await self._collection.replace_one(doc_filter, document)
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue", {})  # type: ignore
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
 
         if result.matched_count == 0:
+            if matching_criteria:
+                # Only for choosing the error; the update itself already failed
+                with translate_pymongo_errors():
+                    exists = await self._collection.count_documents(
+                        existing_filter, limit=1
+                    )
+                if exists:
+                    raise NoHitsFoundError(mapping=doc_filter)
             raise ResourceNotFoundError(id_=document["_id"])
 
         if self._autopublish:

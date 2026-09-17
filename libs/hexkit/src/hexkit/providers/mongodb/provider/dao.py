@@ -233,32 +233,60 @@ class MongoDbDao(Generic[Dto]):
 
         return self._document_to_dto(document)
 
-    async def update(self, dto: Dto) -> None:
+    async def update(
+        self, dto: Dto, *, matching_criteria: dict[str, Any] | None = None
+    ) -> None:
         """Update an existing resource.
+
+        This operation replaces the target document instead of only
+        updating the modified fields. If `matching_criteria` is supplied, the document
+        is only replaced if its current values match them. The check and the update
+        happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
+            matching_criteria:
+                A mapping of field names to the values the existing resource must have.
+                It does not need to contain the ID field, since that is implied.
 
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
+            NoHitsFoundError:
+                when the resource exists but doesn't match `matching_criteria`
+            InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
         document = self._dto_to_document(dto)
+        doc_filter: dict[str, Any] = {"_id": document["_id"]}
+
+        if matching_criteria:
+            validate_find_mapping(matching_criteria, dto_model=self._dto_model)
+            doc_filter.update(
+                replace_id_field_in_find_mapping(matching_criteria, self._id_field)
+            )
+
         with translate_pymongo_errors():
             try:
-                result = await self._collection.replace_one(
-                    {"_id": document["_id"]}, document
-                )
+                result = await self._collection.replace_one(doc_filter, document)
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue", {})  # type: ignore
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
 
         if result.matched_count == 0:
+            if matching_criteria:
+                # See if the document w/ that ID doesn't exist at all or if it was just
+                #  the extra criteria that didn't match anything
+                with translate_pymongo_errors():
+                    exists = await self._collection.count_documents(
+                        {"_id": document["_id"]}, limit=1
+                    )
+                if exists:
+                    raise NoHitsFoundError(mapping=doc_filter)
             raise ResourceNotFoundError(id_=document["_id"])
 
         # (trusting MongoDB that matching on the _id field can only yield one or

@@ -525,14 +525,29 @@ class BaseInMemDao(Generic[DTO]):
             raise ResourceAlreadyExistsError(id_=dto_id)
         self.resources[dto_id] = self._serialize(dto)
 
-    async def update(self, dto: DTO) -> None:
+    async def update(
+        self, dto: DTO, *, matching_criteria: dict[str, Any] | None = None
+    ) -> None:
         """Update a resource.
 
-        Raises a ResourceNotFoundError if no resource with a matching ID is found.
+        Raises a ResourceNotFoundError if no resource with a matching ID is found, and
+        a NoHitsFoundError if the resource doesn't match `matching_criteria`.
         """
         dto_id = getattr(dto, self._id_field)
         if dto_id not in self.resources:
-            raise ResourceNotFoundError(id_=getattr(dto, self._id_field))
+            raise ResourceNotFoundError(id_=dto_id)
+
+        if matching_criteria:
+            criteria = replace_id_field_in_find_mapping(
+                matching_criteria, self._id_field
+            )
+            predicates = build_predicates(criteria) if self._handle_mql else []
+            if not self._resource_matches(self.resources[dto_id], criteria, predicates):
+                # Remove _id if included so error doesn't have both <id field> and _id
+                mapping = {self._id_field: dto_id, **matching_criteria}
+                _ = mapping.pop("_id", None)
+                raise NoHitsFoundError(mapping=mapping)
+
         self.resources[dto_id] = self._serialize(dto)
 
     async def delete(self, id_: ID) -> None:
