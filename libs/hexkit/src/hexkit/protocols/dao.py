@@ -201,12 +201,13 @@ class FindResult(AsyncIterator[Dto]):
 class _RaceConditionAttempt:
     """A single try yielded by `race_condition_retries`.
 
-    Used as a context manager: suppresses a `AtomicUpdateError` raised in its block and
-    records whether the block finished without one.
+    Used as a context manager: suppresses an `AtomicUpdateError` raised in its block,
+    keeps it in `error`, and records whether the block finished without one.
     """
 
     def __init__(self) -> None:
         self.succeeded = False
+        self.error: AtomicUpdateError | None = None
 
     def __enter__(self) -> None:
         pass
@@ -220,7 +221,10 @@ class _RaceConditionAttempt:
         if exc_type is None:
             self.succeeded = True
             return False
-        return issubclass(exc_type, AtomicUpdateError)
+        if isinstance(exc_value, AtomicUpdateError):
+            self.error = exc_value
+            return True
+        return False
 
 
 async def race_condition_retries(  # noqa: PLR0913
@@ -254,28 +258,40 @@ async def race_condition_retries(  # noqa: PLR0913
             What the action does, phrased to follow "to", e.g.
             "update stats for box <box_id>". Used in log messages.
         error_on_failure: The error to raise once all tries have failed.
+        logger:
+            Logs a debug message for each conflict and an error once all tries have
+            failed. Nothing is logged if omitted.
+        max_tries: How many times to try the action. Values below 1 count as 1.
+        interval: Seconds to wait between tries. Negative values count as 0.
+        jitter:
+            Upper bound, in seconds, of a random delay added to each wait, so callers
+            that conflicted don't retry at the same moment. Negative values count as 0.
 
     Raises:
     - `error_on_failure` if the action still raises `AtomicUpdateError` on the last try.
+      It is chained from that last `AtomicUpdateError`.
     """
     description = description.strip(" .")
-    for attempt_number in range(1, 1 + max(1, max_tries)):
+    tries = max(1, max_tries)
+    last_error: AtomicUpdateError | None = None
+    for attempt_number in range(1, tries + 1):
         attempt = _RaceConditionAttempt()
         yield attempt
         if attempt.succeeded:
             return
+        last_error = attempt.error
         if logger:
             logger.debug("Detected race condition while trying to %s.", description)
-        if attempt_number < max_tries:
+        if attempt_number < tries:
             await sleep(max(0, interval) + uniform(0, max(jitter, 0)))  # noqa: S311
 
     if logger:
         logger.error(
             "Failed %s times to %s due to persistent race conditions.",
-            max_tries,
+            tries,
             description,
         )
-    raise error_on_failure
+    raise error_on_failure from last_error
 
 
 class Dao(typing.Protocol[Dto]):
