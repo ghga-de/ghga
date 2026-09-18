@@ -115,7 +115,7 @@ class FindError(DaoError):
     """Base for all error related to DAO find operations."""
 
 
-class InvalidFindMappingError(FindError):
+class InvalidMappingError(FindError):
     """Raised when an invalid mapping was passed provided to find."""
 
 
@@ -345,7 +345,7 @@ class Dao(typing.Protocol[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidFindMappingError: when `precondition` doesn't pass validation
+            InvalidMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.

@@ -288,7 +288,7 @@ reference:
       - protocols.dao.ResourceAlreadyExistsError
       - protocols.dao.UniqueConstraintViolationError
       - protocols.dao.FindError
-      - protocols.dao.InvalidFindMappingError
+      - protocols.dao.InvalidMappingError
       - protocols.dao.MultipleHitsFoundError
       - protocols.dao.NoHitsFoundError
       - protocols.dao.DbTimeoutError

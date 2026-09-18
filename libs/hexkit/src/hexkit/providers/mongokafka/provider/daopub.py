@@ -291,7 +291,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidFindMappingError: when `precondition` doesn't pass validation
+            InvalidMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
