@@ -30,7 +30,6 @@ from pymongo.errors import DuplicateKeyError
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     Dao,
     DaoFactoryProtocol,
     Dto,
@@ -39,6 +38,7 @@ from hexkit.protocols.dao import (
     InvalidFindMappingError,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -255,7 +255,7 @@ class MongoDbDao(Generic[Dto]):
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
-            AtomicUpdateError:
+            PreconditionFailedError:
                 when the resource exists but doesn't match `matching_criteria`
             InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:
@@ -287,7 +287,7 @@ class MongoDbDao(Generic[Dto]):
                         {"_id": document["_id"]}, limit=1
                     )
                 if exists:
-                    raise AtomicUpdateError(
+                    raise PreconditionFailedError(
                         id_=document["_id"], matching_criteria=matching_criteria
                     )
             raise ResourceNotFoundError(id_=document["_id"])

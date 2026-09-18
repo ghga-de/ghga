@@ -21,8 +21,8 @@ import pytest
 from pydantic import BaseModel
 
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceNotFoundError,
 )
 from hexkit.providers.testing import MockDAOEmptyError, new_mock_dao_class
@@ -116,7 +116,7 @@ async def test_update_matching_criteria(handle_mql: bool):
     await dao.insert(item)
 
     # A resource that doesn't match the criteria is left unchanged
-    with pytest.raises(AtomicUpdateError):
+    with pytest.raises(PreconditionFailedError):
         await dao.update(
             item.model_copy(update={"count": 2}), matching_criteria={"count": 5}
         )
@@ -136,7 +136,7 @@ async def test_update_matching_criteria_mql():
     item = InventoryItem(title="Nudelholz", count=1)
     await dao.insert(item)
 
-    with pytest.raises(AtomicUpdateError):
+    with pytest.raises(PreconditionFailedError):
         await dao.update(
             item.model_copy(update={"count": 2}),
             matching_criteria={"count": {"$gt": 1}},

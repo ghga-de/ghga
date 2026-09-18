@@ -34,8 +34,8 @@ from hexkit.correlation import (
     set_new_correlation_id,
 )
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     InvalidFindMappingError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -1040,7 +1040,7 @@ async def test_update_matching_criteria(mongo_kafka: MongoKafkaFixture):
         # Bogus fields for matching_criteria should raise InvalidFindMappingError
         # and in either of the above cases, no events should be published
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
-            with pytest.raises(AtomicUpdateError):
+            with pytest.raises(PreconditionFailedError):
                 await dao.update(example_update, matching_criteria={"field_b": 3})
             with pytest.raises(InvalidFindMappingError):
                 await dao.update(example_update, matching_criteria={"not_a_field": 1})

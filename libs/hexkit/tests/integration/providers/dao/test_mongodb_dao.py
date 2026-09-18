@@ -25,12 +25,12 @@ import pytest
 from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
 
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     Dao,
     DaoError,
     InvalidFindMappingError,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -304,8 +304,8 @@ async def test_dao_update_matching_criteria(mongodb: MongoDbFixture):
     await dao.insert(other_resource)
 
     # The following doc's ID *is* in the DB, but the criteria filter it out
-    #  which means we should see AtomicUpdateError instead of ResourceNotFound
-    with pytest.raises(AtomicUpdateError):
+    #  which means we should see PreconditionFailedError instead of ResourceNotFound
+    with pytest.raises(PreconditionFailedError):
         await dao.update(resource_update, matching_criteria={"field_b": 3})
 
     # A conflicting ID in the criteria is rejected by MongoDB

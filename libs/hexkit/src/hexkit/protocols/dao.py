@@ -32,12 +32,12 @@ from hexkit.custom_types import ID
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
 
 __all__ = [
-    "AtomicUpdateError",
     "Dao",
     "DaoFactoryProtocol",
     "FindError",
     "FindResult",
     "MultipleHitsFoundError",
+    "PreconditionFailedError",
     "ResourceAlreadyExistsError",
     "ResourceNotFoundError",
     "UUID4Field",
@@ -93,7 +93,7 @@ class UniqueConstraintViolationError(DaoError):
         super().__init__(message)
 
 
-class AtomicUpdateError(DaoError):
+class PreconditionFailedError(DaoError):
     """Raised when an update with `matching_criteria` found the resource, but its
     current values didn't match the criteria.
     """
@@ -242,7 +242,7 @@ class Dao(typing.Protocol[Dto]):
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
-            AtomicUpdateError:
+            PreconditionFailedError:
                 when the resource exists but doesn't match `matching_criteria`
             InvalidFindMappingError: when `matching_criteria` doesn't pass validation
             UniqueConstraintViolationError:
