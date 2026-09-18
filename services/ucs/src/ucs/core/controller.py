@@ -967,10 +967,16 @@ class UploadController(UploadControllerPort):
 
         # Lock the box so no new uploads can be initiated while sweeping
         if box.state == "open":
-            box.version += 1
-            box.state = "locked"
-            await self._file_upload_box_dao.update(box)
-            log.info("Locked FileUploadBox %s before deleting files.", box_id)
+            updated_box = box.model_copy(
+                update={"version": box.version + 1, "state": "locked"}
+            )
+            try:
+                await self._file_upload_box_dao.update(
+                    updated_box, precondition={"version": box.version}
+                )
+                log.info("Locked FileUploadBox %s before deleting files.", box_id)
+            except PreconditionFailedError as err:
+                raise self.BoxVersionError(box_id=box_id) from err
 
         # Before deleting anything, make sure there aren't any FileUploads in an
         #  unexpected state. Raising an error here leaves the box in the locked state,
