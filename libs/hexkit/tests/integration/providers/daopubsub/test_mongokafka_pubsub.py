@@ -34,8 +34,8 @@ from hexkit.correlation import (
     set_new_correlation_id,
 )
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     InvalidFindMappingError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -1010,8 +1010,8 @@ async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
             await dao.upsert(dto5)
 
 
-async def test_update_matching_criteria(mongo_kafka: MongoKafkaFixture):
-    """Test that `update` with `matching_criteria` only replaces and publishes a
+async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
+    """Test that `update` with `precondition` only replaces and publishes a
     resource that exists, is not deleted, and matches the criteria.
     """
     kafka = mongo_kafka.kafka
@@ -1032,18 +1032,18 @@ async def test_update_matching_criteria(mongo_kafka: MongoKafkaFixture):
         # Non-existing resource should raise ResourceNotFoundError
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
             with pytest.raises(ResourceNotFoundError):
-                await dao.update(example_update, matching_criteria={"field_b": 1})
+                await dao.update(example_update, precondition={"field_b": 1})
 
         await dao.insert(example)
 
         # Criteria mismatch should raise NotHitsFoundError
-        # Bogus fields for matching_criteria should raise InvalidFindMappingError
+        # Bogus fields for precondition should raise InvalidFindMappingError
         # and in either of the above cases, no events should be published
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
-            with pytest.raises(AtomicUpdateError):
-                await dao.update(example_update, matching_criteria={"field_b": 3})
+            with pytest.raises(PreconditionFailedError):
+                await dao.update(example_update, precondition={"field_b": 3})
             with pytest.raises(InvalidFindMappingError):
-                await dao.update(example_update, matching_criteria={"not_a_field": 1})
+                await dao.update(example_update, precondition={"not_a_field": 1})
         assert await dao.get_by_id(example.id) == example
 
         # Criteria match, including the ID field and an MQL operator
@@ -1059,7 +1059,7 @@ async def test_update_matching_criteria(mongo_kafka: MongoKafkaFixture):
         ):
             await dao.update(
                 example_update,
-                matching_criteria={"id": example.id, "field_b": {"$lt": 2}},
+                precondition={"id": example.id, "field_b": {"$lt": 2}},
             )
 
         # Verify that the document was updated
@@ -1069,7 +1069,7 @@ async def test_update_matching_criteria(mongo_kafka: MongoKafkaFixture):
         await dao.delete(example.id)
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
             with pytest.raises(ResourceNotFoundError):
-                await dao.update(example, matching_criteria={"field_b": 2})
+                await dao.update(example, precondition={"field_b": 2})
 
 
 async def test_find_all_total_count_excludes_soft_deleted(

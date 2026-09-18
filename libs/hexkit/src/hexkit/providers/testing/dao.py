@@ -26,10 +26,10 @@ from pydantic import BaseModel
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
 )
@@ -527,24 +527,22 @@ class BaseInMemDao(Generic[DTO]):
         self.resources[dto_id] = self._serialize(dto)
 
     async def update(
-        self, dto: DTO, *, matching_criteria: dict[str, Any] | None = None
+        self, dto: DTO, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update a resource.
 
         Raises a ResourceNotFoundError if no resource with a matching ID is found, and
-        an AtomicUpdateError if the resource doesn't match `matching_criteria`.
+        an PreconditionFailedError if the resource doesn't match `precondition`.
         """
         dto_id = getattr(dto, self._id_field)
         if dto_id not in self.resources:
             raise ResourceNotFoundError(id_=dto_id)
 
-        if matching_criteria:
-            criteria = replace_id_field_in_find_mapping(
-                matching_criteria, self._id_field
-            )
+        if precondition:
+            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
             predicates = build_predicates(criteria) if self._handle_mql else []
             if not self._resource_matches(self.resources[dto_id], criteria, predicates):
-                raise AtomicUpdateError(id_=dto_id, matching_criteria=matching_criteria)
+                raise PreconditionFailedError(id_=dto_id, precondition=precondition)
 
         self.resources[dto_id] = self._serialize(dto)
 

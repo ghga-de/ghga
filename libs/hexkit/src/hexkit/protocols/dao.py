@@ -36,12 +36,12 @@ from hexkit.custom_types import ID
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
 
 __all__ = [
-    "AtomicUpdateError",
     "Dao",
     "DaoFactoryProtocol",
     "FindError",
     "FindResult",
     "MultipleHitsFoundError",
+    "PreconditionFailedError",
     "ResourceAlreadyExistsError",
     "ResourceNotFoundError",
     "UUID4Field",
@@ -98,15 +98,15 @@ class UniqueConstraintViolationError(DaoError):
         super().__init__(message)
 
 
-class AtomicUpdateError(DaoError):
-    """Raised when an update with `matching_criteria` found the resource, but its
+class PreconditionFailedError(DaoError):
+    """Raised when an update with `precondition` found the resource, but its
     current values didn't match the criteria.
     """
 
-    def __init__(self, *, id_: ID, matching_criteria: Mapping[str, Any]):
+    def __init__(self, *, id_: ID, precondition: Mapping[str, Any]):
         message = (
             f'The resource with the id "{id_}" does not match the criteria'
-            f" {matching_criteria} for an atomic update."
+            f" {precondition} for an atomic update."
         )
         super().__init__(message)
 
@@ -325,27 +325,27 @@ class Dao(typing.Protocol[Dto]):
         ...
 
     async def update(
-        self, dto: Dto, *, matching_criteria: dict[str, Any] | None = None
+        self, dto: Dto, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource.
 
-        If `matching_criteria` is supplied, the resource is only updated if its current
+        If `precondition` is supplied, the resource is only updated if its current
         values match them. The check and the update happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
-            matching_criteria:
+            precondition:
                 A mapping of field names to the values the existing resource must have.
                 It does not need to contain the ID field, since that is implied.
 
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
-            AtomicUpdateError:
-                when the resource exists but doesn't match `matching_criteria`
-            InvalidFindMappingError: when `matching_criteria` doesn't pass validation
+            PreconditionFailedError:
+                when the resource exists but doesn't match `precondition`
+            InvalidFindMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.

@@ -25,12 +25,12 @@ import pytest
 from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
 
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     Dao,
     DaoError,
     InvalidFindMappingError,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -282,8 +282,8 @@ async def test_dao_update_not_found(mongodb: MongoDbFixture):
         await dao.update(resource)
 
 
-async def test_dao_update_matching_criteria(mongodb: MongoDbFixture):
-    """Tests that `update` with `matching_criteria` only replaces a resource matching
+async def test_dao_update_precondition(mongodb: MongoDbFixture):
+    """Tests that `update` with `precondition` only replaces a resource matching
     the criteria, which may name the ID field.
     """
     dao = await mongodb.dao_factory.get_dao(
@@ -296,30 +296,28 @@ async def test_dao_update_matching_criteria(mongodb: MongoDbFixture):
     resource_update = resource.model_copy(update={"field_b": 2})
     other_resource = ExampleDto(field_b=1)
 
-    # matching_criteria + no doc with that ID = ResourceNotFoundError
+    # precondition + no doc with that ID = ResourceNotFoundError
     with pytest.raises(ResourceNotFoundError):
-        await dao.update(resource_update, matching_criteria={"field_b": 1})
+        await dao.update(resource_update, precondition={"field_b": 1})
 
     await dao.insert(resource)
     await dao.insert(other_resource)
 
     # The following doc's ID *is* in the DB, but the criteria filter it out
-    #  which means we should see AtomicUpdateError instead of ResourceNotFound
-    with pytest.raises(AtomicUpdateError):
-        await dao.update(resource_update, matching_criteria={"field_b": 3})
+    #  which means we should see PreconditionFailedError instead of ResourceNotFound
+    with pytest.raises(PreconditionFailedError):
+        await dao.update(resource_update, precondition={"field_b": 3})
 
     # A conflicting ID in the criteria is rejected by MongoDB
     with pytest.raises(DaoError):
-        await dao.update(resource_update, matching_criteria={"id": other_resource.id})
+        await dao.update(resource_update, precondition={"id": other_resource.id})
     with pytest.raises(InvalidFindMappingError):
-        await dao.update(resource_update, matching_criteria={"non_existing_field": 1})
+        await dao.update(resource_update, precondition={"non_existing_field": 1})
     assert await dao.get_by_id(resource.id) == resource
     assert await dao.get_by_id(other_resource.id) == other_resource
 
-    # Verify that matching_criteria can be used
-    await dao.update(
-        resource_update, matching_criteria={"id": resource.id, "field_b": 1}
-    )
+    # Verify that precondition can be used
+    await dao.update(resource_update, precondition={"id": resource.id, "field_b": 1})
     assert await dao.get_by_id(resource.id) == resource_update
 
 

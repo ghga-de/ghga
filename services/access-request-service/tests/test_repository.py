@@ -256,7 +256,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self.last_upsert = self._requests[dto.id] = dto
 
     async def update(
-        self, dto: AccessRequest, *, matching_criteria: dict[str, Any] | None = None
+        self, dto: AccessRequest, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource."""
         self.last_upsert = self._requests[dto.id] = dto
