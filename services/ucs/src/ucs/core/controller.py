@@ -1199,10 +1199,13 @@ class UploadController(UploadControllerPort):
         - `BoxStatsCalcError` if there's a problem calculating box size and file count,
           or if the database can't be updated due to a race condition.
         """
+        # Do initial version check to avoid expensive file inspection if request
+        #  is outdated from the get-go
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
         )
 
+        # Return early if nothing to do
         if box.state != "open":
             # This goes for archived boxes too
             log.info("Box with ID %s is already locked.", box_id)
@@ -1227,30 +1230,41 @@ class UploadController(UploadControllerPort):
 
             # If there are incomplete/failed files and force is set to false, raise an error
             if incomplete_uploads or need_attention:
-                error = self.IncompleteOrFailedError(
+                incomplete_error = self.IncompleteOrFailedError(
                     box_id=box_id,
                     incomplete_uploads=incomplete_uploads,
                     need_attention=need_attention,
                 )
                 log.info(
-                    error,
+                    incomplete_error,
                     extra={
                         "box_id": box_id,
                         "incomplete_uploads": str(incomplete_uploads),
                         "need_attention": str(need_attention),
                     },
                 )
-                raise error
+                raise incomplete_error
 
-        # Recompute stats
+        # Recompute the stats, which repairs any drift left by a crash or by a stats
+        #  update that gave up, before the box is locked and its stats are published
         file_count, total_size = await self._calc_box_stats(box_id=box_id)
-
-        box.version += 1
-        box.state = "locked"
-        box.file_count = file_count
-        box.size = total_size
-        await self._file_upload_box_dao.update(box)
-        log.info("Locked box with ID %s.", box_id)
+        updated_box = box.model_copy(
+            update={
+                "version": box.version + 1,
+                "state": "locked",
+                "file_count": file_count,
+                "size": total_size,
+            }
+        )
+        try:
+            await self._file_upload_box_dao.update(
+                updated_box, precondition={"version": box.version}
+            )
+            log.info("Locked box with ID %s.", box_id)
+        except PreconditionFailedError as err:
+            box_version_error = self.BoxVersionError(box_id=box_id)
+            log.info(box_version_error)
+            raise box_version_error from err
 
     async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Unlock an existing FileUploadBox.
