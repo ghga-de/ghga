@@ -60,10 +60,6 @@ from ucs.ports.outbound.storage import S3ClientPort
 
 log = logging.getLogger(__name__)
 
-# Time to wait before retrying DB update after encountering race condition
-_RC_SPACING = 0.5
-_RC_MAX_TRIES = 3
-
 
 class UploadController(UploadControllerPort):
     """A class for managing file uploads"""
@@ -1089,7 +1085,7 @@ class UploadController(UploadControllerPort):
                 # Try to update the box stats
                 await self._file_upload_box_dao.update(
                     updated_box,
-                    matching_criteria={
+                    precondition={
                         "version": box.version,
                         "file_count": box.file_count,
                         "size": box.size,
