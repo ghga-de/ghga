@@ -731,9 +731,12 @@ class UploadController(UploadControllerPort):
             log.info(error, extra=extra)
             raise error
 
-        # Exit early if the FileUpload is complete (already in the inbox or archived)
+        # Exit early if the FileUpload is complete (already in the inbox or archived).
+        #  The stats are still updated because a previous call may have completed the
+        #  upload but failed to update them.
         if file_upload.state != "init":
             log.info("FileUpload with ID %s already complete.", file_id)
+            await self._update_box_stats(box_id=box_id)
             return
 
         try:
