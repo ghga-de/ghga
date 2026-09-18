@@ -111,6 +111,9 @@ def affected(files: list[str]) -> tuple[bool, list[str]]:
         for leaf in LEAF_TARGETS:
             if f == leaf or f.startswith(leaf + "/"):
                 hit.add(leaf)
+    # a target root also holds files of its own (libs/AGENTS.md, libs/README.md), and
+    # the prefix match above reads those as member directories
+    hit &= set(all_targets())
     return False, sorted(with_dependents(hit))
 
 

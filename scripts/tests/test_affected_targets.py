@@ -60,3 +60,15 @@ def test_resolvable_base_still_reports_targets():
     assert result.returncode == 0
     payload = json.loads(result.stdout)
     assert payload == {"all": False, "targets": []}
+
+
+def test_a_file_in_a_target_root_is_not_a_target():
+    """`libs/AGENTS.md` is a file in `libs/`, not a member directory called AGENTS.md."""
+    sys.path.insert(0, str(SCRIPT.parent))
+    import affected_targets
+
+    is_all, targets = affected_targets.affected(
+        ["libs/AGENTS.md", "libs/CLAUDE.md", "services/AGENTS.md"]
+    )
+    assert not is_all
+    assert targets == []

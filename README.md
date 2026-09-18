@@ -170,6 +170,8 @@ and the release workflow always build one image per member. It exists because it
 ## Where to read
 
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
+- **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)**
+  — how metadata and files flow across the platform.
 - **[docs/adrs/](docs/adrs/)** — the decisions (and why); the
   [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.

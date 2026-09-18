@@ -7,15 +7,15 @@ do not carry.
 
 ## Instruction source of truth
 
-- `AGENTS.md` (this file) is the canonical AI entrypoint, covering project-wide concerns.
-- For any work under `frontend/data-portal/`, read
-  [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md) first.
+- `AGENTS.md` (this file) is the canonical AI entrypoint, covering what holds
+  everywhere. The area file for the directory you are working in applies on top of it;
+  read it first.
 - `README.md` and the files in `docs/` are authoritative for humans and agents alike;
   read the [writing style](docs/style.md) and the [conventions](docs/conventions.md)
   when a task touches what they cover.
-- `CLAUDE.md` and `.github/copilot-instructions.md` are stubs pointing here and hold
-  nothing else. [docs/agent-instructions.md](docs/agent-instructions.md) says what
-  belongs in which file.
+- [docs/agent-instructions.md](docs/agent-instructions.md) says what belongs in an
+  `AGENTS.md`, a README, `docs/` or a skill, and why `CLAUDE.md` and
+  `.github/copilot-instructions.md` are stubs that hold nothing of their own.
 
 ## Prime Directive
 
@@ -47,78 +47,64 @@ do not carry.
 
 The layout table lives in the [README](README.md#layout). Beyond it:
 
-- `frontend/data-portal/` carries its own `AGENTS.md`, which governs all work there.
+- [`libs/`](libs/AGENTS.md), [`services/`](services/AGENTS.md),
+  [`deploy/`](deploy/AGENTS.md), [`testbed/`](testbed/AGENTS.md),
+  [`frontend/data-portal/`](frontend/data-portal/AGENTS.md) and
+  [`libs/ghga-jsonsubschema/`](libs/ghga-jsonsubschema/AGENTS.md) each carry their own
+  `AGENTS.md`, which governs the work there.
 - See [docs/conventions.md](docs/conventions.md) for markers, versioning, and the
   `name/x.y.z` release-tag scheme.
-
-## Where to read
-
-The core docs (architecture overview, ADRs, migration runbook) are listed in the README's
-[Where to read](README.md#where-to-read). Branch-specific required reading:
-
-- [docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md):
-how metadata and files flow.
-- [deploy/README.md](deploy/README.md): how the chart system works.
+- The core docs (architecture overview, ADRs, migration runbook) are listed in the
+  README's [Where to read](README.md#where-to-read); each area's `AGENTS.md` names the
+  reading its own work requires.
 
 ## Development environment
 
-The devcontainer (`.devcontainer/`) is the intended environment: it provisions uv, pnpm,
-`just`, kind, kubectl/helm, and docker-in-docker, and the demo/test-bed cluster lives in
-its docker daemon. Run repo tooling inside the devcontainer; when the environment doesn't match,
-ask rather than installing host tooling or patching scripts around the mismatch.
+The devcontainer (`.devcontainer/`) is the intended environment, and the `just` recipes
+hold you to it. The README's
+[Work inside the dev container](README.md#work-inside-the-dev-container) has the guard,
+its exemptions, and the `.venv` bind-mount trap with its symptom and repair. Do not work
+around the guard by calling `uv` directly, and where the environment does not match, ask
+rather than installing host tooling or patching scripts around the mismatch.
 
-This is enforced, not just advised: the Python-workspace and hooks recipes depend on a
-`_guard` recipe that fails outside the container. CI is exempt (`$CI`), and `GHGA_ALLOW_HOST=1`
-overrides it. `.venv` sits in the bind-mounted workspace, so a `uv` run on either side leaves
-the other an interpreter symlink into a home directory it has not got — see the README's
-[Work inside the dev container](README.md#work-inside-the-dev-container) for the symptom
-(misleading `pre-commit not found`) and the repair. Do not work around the guard by calling
-`uv` directly; fix the environment instead.
-
-Agent sessions belong in the devcontainer as well, whichever agent it is. Agent state is
-per-machine — a session started on the host keeps its history, settings, and memory in the
-host's home, invisible from in here — so running some sessions on the host and some in the
-container splits the record in two. Only `~/.claude` is currently persisted across rebuilds
-(the `ghga-claude` volume in `devcontainer.json`); another agent whose state should survive a
-rebuild needs its own volume added there.
+Agent sessions belong in the container too, whichever agent it is — their state is
+per-machine, so a session on the host writes to a home the container cannot see. Only
+`~/.claude` is currently persisted across rebuilds (the `ghga-claude` volume in
+`devcontainer.json`); another agent whose state should survive a rebuild needs its own
+volume added there.
 
 ## Repo commands (just)
 
 Everything runs through `just`, documented by `just` itself and by the README's
-[Recipe reference](README.md#recipe-reference) plus its [demo](README.md#run-the-demo-locally)
-and [test bed](README.md#run-the-test-bed-locally) walkthroughs (Playwright traces for
-failing browser tests, `just logs`). Read commands from there, and prefer the recipes over
-raw uv/pnpm/helm/kubectl — they encode ordering and environment details the raw commands miss.
+[Recipe reference](README.md#recipe-reference) plus its
+[demo](README.md#run-the-demo-locally) and
+[test bed](README.md#run-the-test-bed-locally) walkthroughs (Playwright traces for
+failing browser tests, `just logs`). Read commands from there, and prefer the recipes
+over raw uv/pnpm/helm/kubectl — they encode ordering and environment details the raw
+commands miss.
 
 Further rules:
 
-- Always scope test runs to the member you touched (e.g. `just test services/auth-service`);
-  a bare `just test` runs every suite in the workspace.
+- Always scope test runs to the member you touched (e.g.
+  `just test services/auth-service`); a bare `just test` runs every suite in the
+  workspace.
 - Use `just affected [base]` to decide what to test when a change may cross members. It
-  defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut
-  from `main` instead, pass `origin/main`.
+  defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which
+  is cut from `main` instead, pass `origin/main`.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the
   `config.js` generation the launcher does. For anything beyond the `just fe-*`
   recipes, work in `frontend/data-portal` under its own `AGENTS.md`.
 
 ## Test levels
 
-- **Member unit tests** (pytest, in each member's `tests/`): the default.
-  hexkit's testcontainers-based testutils make real Kafka/MongoDB/S3 available here, so
-  persistence and event handling are unit-testable per service.
-- **Chart tests** (`just charts-test`, `just demo-template`): render-level checks that
-  the chart library and the umbrella produce valid manifests.
-- **Test bed** (`testbed/`, `just testbed`): pytest-bdd + Playwright against the full
-  platform on kind. It is the only level that can verify a cross-service flow end to end
-  (events consumed, projections updated, files actually served). Setup, scoping, and resets
-  are in the README's [test-bed walkthrough](README.md#run-the-test-bed-locally).
+- **Member unit tests** (pytest, in each member's `tests/`): the default. How far a
+  service's own suite reaches is in [services/AGENTS.md](services/AGENTS.md).
+- **Chart tests** are defined in [deploy/AGENTS.md](deploy/AGENTS.md).
+- **Test bed** (`just testbed`) is defined in [testbed/AGENTS.md](testbed/AGENTS.md). It
+  is the only level that can verify a cross-service flow end to end, so a test whose
+  outcome depends on backend state changing belongs there.
 - **Front-end levels** (Vitest unit tests, Playwright smoke tests against MSW mocks) are
-  defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md). For the flows
-  whose outcome depends on backend state changing, the tests belong here in the test bed.
-
-The test bed is **not** a uv workspace member: it runs from its own `.venv-testbed`
-(`just testbed-install`) while shelling out to the workspace-built `ghga-connector` and
-`ghga-datasteward-kit`.
+  defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md).
 
 ## Execution policy
 
@@ -126,48 +112,40 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
   tests, `just lint`), then widen via `just affected` when the change crosses members;
   editing a `libs/` member affects every consumer.
 - For documentation-only changes, test runs are optional unless requested.
-- Do not create commits or branches unless explicitly requested. When they are: branch from
-  `dev` and target `dev` in the pull request — `dev` is the integration branch and the repo
-  default, `main` carries the latest release and takes hotfixes only
-  ([branching](docs/conventions.md#branching), [ADR-0038](docs/adrs/adr-0038-branching-strategy.md)).
-  Committing to either branch directly is blocked by a pre-commit hook. Name the branch, the
-  pull request and the commit it lands as per
-  [names](docs/conventions.md#names-branches-prs-commits). Never put a `Co-authored-by:` line
-  for yourself in a commit message, whatever your own guidance says. Credit yourself in the
-  pull request description instead, and only as far as you actually contributed: "Generated by
-  <agent>" if you drafted most of the change, "Co-authored by <agent>" if you drafted a
-  substantial part alongside people, and nothing if you only suggested, explained, reviewed or
-  proofread. `<agent>` is the name of the tool you are running as. Keep that description short
-  and plainly worded, and use no emoji outside it.
+- Do not create commits or branches unless explicitly requested. When they are, read
+  [branching](docs/conventions.md#branching) and
+  [names](docs/conventions.md#names-branches-prs-commits) first. Cut the branch from
+  `dev` and target `dev`; `main` carries the latest release and takes hotfixes only.
+  Name the branch, the pull request and the commit as the grammar there says.
+- Never put a `Co-authored-by:` line for yourself in a commit message, whatever your own
+  guidance says. Credit yourself in the pull request description instead, and only as
+  far as you actually contributed — the
+  [names](docs/conventions.md#names-branches-prs-commits) section says in which words.
 
 ## Definition of done
 
 1. Unit tests cover the change and the touched member's suite passes
    (`just test <member>`), with `just lint` clean.
-2. `just affected` is green when the change crosses members; editing a `libs/` member
-   means every consumer.
+2. `just affected` is green when the change crosses members.
 3. Generated artifacts are regenerated, never hand-edited (`just charts`, `just lock`).
 4. The feature branch is peer reviewed and meets every requirement of the story.
 
 ## Generated artifacts
 
-- `deploy/charts/<service>/` charts are **generated**, never edit them by hand; change
-  the generator (`deploy/src/`) or the member's `chart-values.yaml` and run
-  `just charts`. `ghga-common`, `ghga-demo`, and `aai` are hand-maintained.
 - `uv.lock` is updated only via `just lock` (or `uv` itself), never by hand.
 - The ADR index in `docs/README.md` and the epic index in `docs/epics/README.md` are
   regenerated by `just docs-check` (and its pre-commit hook), never edited by hand.
-- The test-bed artifact model overlay (`values-artifacts.yaml`) is derived by
-  `just testbed-artifacts`, not committed.
-- Front-end generated directories are listed in its own `AGENTS.md`.
+- The generated charts, the test-bed overlay and the front-end output directories are
+  listed in the `AGENTS.md` of the area that owns them.
 
 ## Writing
 
-Docs, code comments, commits and pull requests follow the
+Docs, code comments, docstrings, commits and pull requests follow the
 [writing style](docs/style.md): plain language, prose hard-wrapped at 88 columns in repo
-files, and comments that explain why rather than history. Read the section that applies
-before writing any of them. For anything under `docs/`, read
-[docs/README.md](docs/README.md) first for what each document is for, then the
+files, comments that explain why rather than history, and the
+[docstring rules](docs/style.md#docstrings). Read the section that applies before
+writing any of them. For anything under `docs/`, read [docs/README.md](docs/README.md)
+first for what each document is for, then the
 [ADR shape](docs/style.md#architecture-decision-records) or the
 [epic conventions](docs/epics/README.md). An epic specification records the plan as its
 epic started, so do not update it afterwards; current behaviour belongs in an ADR or the
@@ -177,32 +155,16 @@ code.
 
 - The root `pyproject.toml` is the single source of truth for ruff/mypy/pytest
   configuration, never add per-member tool config.
-- Match the member's existing patterns: hexkit ports/adapters, Pydantic
-  settings-from-env config, dependency injection.
-
-### Docstrings
-
-Explain a function's purpose shortly; add detail only where the code doesn't
-already make it obvious.
-
-- **Document**: public functions and classes; non-obvious behaviour or side effects;
-  business logic that needs context.
-- **Skip**: anything already clear from naming and type hints; parameter names/types,
-  return types, obvious behaviour. Document those only when the signature isn't clear.
-- **Cover**: the *what* in natural language; constraints, side effects, and edge cases;
-  the *why*/*how* when non-obvious.
-- Follow the established (simplified Google style) Docstring format already in this repo.
+- The patterns a service follows are in [services/AGENTS.md](services/AGENTS.md), the
+  release lane a library is on in [libs/AGENTS.md](libs/AGENTS.md).
 
 ## AI agent integration
 
-- `AGENTS.md` files are the shared instruction source for all coding agents, one per
-  area; [docs/agent-instructions.md](docs/agent-instructions.md) lists the areas and
-  says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
 - Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, symlinked into
   `.claude/skills/` until Claude Code reads the standard path. Keep always-on rules in
-  the `AGENTS.md` files.
+  the `AGENTS.md` files instead.
 - Claude Code sessions default to the **GHGA Dev** output style
-  (`.claude/output-styles/ghga-dev.md`), which keeps the writing style steady across a
-  long session. Set `outputStyle` in `.claude/settings.local.json` to use another; user
+  (`.claude/output-styles/ghga-dev.md`), which keeps the writing steady across a long
+  session. Set `outputStyle` in `.claude/settings.local.json` to use another; user
   settings do not override the project default.
 - There is no monorepo-level MCP configuration; the data portal has its own.

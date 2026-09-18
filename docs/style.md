@@ -1,8 +1,8 @@
 # Writing style for coding agents
 
-The rules coding agents follow when they write docs, comments, commits and pull requests
-in this repo. It does not cover user-facing text, such as data portal content, user
-documentation or notification emails, which may follow a different style.
+The rules coding agents follow when they write docs, comments, docstrings, commits and
+pull requests in this repo. It does not cover user-facing text, such as data portal
+content, user documentation or notification emails, which may follow a different style.
 It covers only what is settled so far. Commit messages, branch names and pull request
 titles follow the [conventions](conventions.md#names-branches-prs-commits), decided in
 [ADR-0038](adrs/adr-0038-branching-strategy.md).
@@ -79,6 +79,18 @@ so one number covers code and docs.
 
 Wrap the text you write or rewrite. Do not reflow untouched paragraphs to fix their
 width by hand: it buries the real change in the diff.
+
+## Docstrings
+
+Explain a function's purpose shortly; add detail only where the code doesn't already
+make it obvious. Follow the simplified Google style already in this repo.
+
+- **Document**: public functions and classes; non-obvious behaviour or side effects;
+  business logic that needs context.
+- **Skip**: anything already clear from naming and type hints; parameter names/types,
+  return types, obvious behaviour. Document those only when the signature isn't clear.
+- **Cover**: the *what* in natural language; constraints, side effects, and edge cases;
+  the *why*/*how* when non-obvious.
 
 ## Architecture decision records
 
