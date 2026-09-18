@@ -17,6 +17,7 @@
 """Testing the DAO protocol module."""
 
 import logging
+import warnings
 from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Any
@@ -26,12 +27,15 @@ from pydantic import UUID4, BaseModel
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 
 from hexkit.protocols.dao import (
+    MAPPING_DEPRECATION_MESSAGE,
     Dao,
     DaoError,
     DaoFactoryProtocol,
     DbTimeoutError,
     Dto,
     IndexBase,
+    MultipleHitsFoundError,
+    NoHitsFoundError,
     PreconditionFailedError,
     ResourceNotFoundError,
     UUID4Field,
@@ -42,6 +46,7 @@ from hexkit.providers.mongodb import (
     MongoDbDaoFactory,
     translate_pymongo_errors,
 )
+from hexkit.providers.testing import new_mock_dao_class
 
 pytestmark = pytest.mark.asyncio()
 
@@ -310,3 +315,55 @@ async def test_race_condition_retries_other_errors():
                 raise ResourceNotFoundError(id_="test")
 
     assert tries == 1
+
+
+# TODO: Remove `mapping` when moving hexkit to v11.0.0
+class MappingDto(BaseModel):
+    """A model for exercising the `mapping` deprecation."""
+
+    id: UUID4 = UUID4Field()
+    count: int = 0
+
+
+# TODO: Remove `mapping` when moving hexkit to v11.0.0
+@pytest.mark.parametrize("method", ["find_one", "find_all"])
+async def test_mapping_is_deprecated_alias_for_filter(method: str):
+    """Test that find methods accept `mapping` but warn, and that `filter_` is quiet."""
+    dao = new_mock_dao_class(dto_model=MappingDto, id_field="id")()
+    item = MappingDto(count=1)
+    await dao.insert(item)
+
+    async def call(**kwargs) -> list[MappingDto]:
+        if method == "find_one":
+            return [await dao.find_one(**kwargs)]
+        return [dto async for dto in dao.find_all(**kwargs)]
+
+    with pytest.deprecated_call(match=MAPPING_DEPRECATION_MESSAGE):
+        assert await call(mapping={"count": 1}) == [item]
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert await call(filter_={"count": 1}) == [item]
+
+    with pytest.raises(TypeError, match="not both"):
+        await call(filter_={"count": 1}, mapping={"count": 1})
+
+    with pytest.raises(TypeError, match="filter_"):
+        await call()
+
+
+# TODO: Remove `mapping` when moving hexkit to v11.0.0
+@pytest.mark.parametrize("error", [NoHitsFoundError, MultipleHitsFoundError])
+async def test_find_errors_accept_deprecated_mapping(
+    error: type[NoHitsFoundError] | type[MultipleHitsFoundError],
+):
+    """Test that the find errors accept `mapping` but warn, and render `filter_`."""
+    with pytest.deprecated_call(match=MAPPING_DEPRECATION_MESSAGE):
+        from_mapping = error(mapping={"count": "1"})
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        from_filter = error(filter_={"count": "1"})
+
+    assert str(from_mapping) == str(from_filter)
+    assert "{'count': '1'}" in str(from_filter)

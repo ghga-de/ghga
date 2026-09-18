@@ -21,6 +21,7 @@ import pytest
 from pydantic import BaseModel
 
 from hexkit.protocols.dao import (
+    InvalidMappingError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceNotFoundError,
@@ -113,7 +114,14 @@ async def test_update_precondition(handle_mql: bool):
     with pytest.raises(ResourceNotFoundError):
         await dao.update(item, precondition={"count": 1})
 
+    # An unknown field is rejected before the existence check, as in the real provider
+    with pytest.raises(InvalidMappingError):
+        await dao.update(item, precondition={"no_such_field": 1})
+
     await dao.insert(item)
+
+    with pytest.raises(InvalidMappingError):
+        await dao.update(item, precondition={"no_such_field": 1})
 
     # A resource that doesn't match the criteria is left unchanged
     with pytest.raises(PreconditionFailedError):
@@ -175,6 +183,17 @@ async def test_find_one():
     result = await dao.find_one(mapping={"title": "Lawnmower"})
     assert result is not item
     assert result.model_dump() == item.model_dump()
+
+
+async def test_find_invalid_mapping():
+    """Test that `find_one()` and `find_all()` reject fields not in the model"""
+    dao = DaoClass()
+
+    for mapping in ({"no_such_field": 1}, {"": 1}):
+        with pytest.raises(InvalidMappingError):
+            await dao.find_one(mapping=mapping)
+        with pytest.raises(InvalidMappingError):
+            _ = dao.find_all(mapping=mapping)
 
 
 async def test_find_all():

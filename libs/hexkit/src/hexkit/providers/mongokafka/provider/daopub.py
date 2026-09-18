@@ -46,6 +46,7 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
+    resolve_filter,
 )
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.protocols.eventpub import EventPublisherProtocol
@@ -374,26 +375,34 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if self._autopublish:
             await self._publish_delete(id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Dto:
-        """Find the resource that matches the specified mapping.
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
+    async def find_one(
+        self,
+        *,
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
+    ) -> Dto:
+        """Find the resource that matches the specified filter.
 
         It is expected that at most one resource matches the constraints.
         An exception is raised if no or multiple hits are found.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
+            mapping:
+                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
-            was found that matches the given mapping.
+            was found that matches the given filter.
 
         Raises:
             NoHitsFoundError:
@@ -401,29 +410,34 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        hits = self.find_all(mapping=mapping)
-        return await get_single_hit(hits=hits, mapping=mapping)
+        filter_ = resolve_filter(filter_, mapping)
+        hits = self.find_all(filter_=filter_)
+        return await get_single_hit(hits=hits, mapping=filter_)
 
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Dto]:
-        """Find all resources that match the specified mapping.
+        """Find all resources that match the specified filter.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
+            mapping:
+                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -443,24 +457,25 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             A FindResult that is async-iterable and also provides total_count().
 
         Raises:
-            InvalidMappingError: If `mapping` doesn't pass validation.
+            InvalidMappingError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
         """
+        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(mapping, dto_model=self._dto_model)
-        mapping = replace_id_field_in_find_mapping(mapping, self._id_field)
+        validate_find_mapping(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
 
         # Ensure we don't retrieve deleted docs. Documents lacking outbox metadata are
         # treated as valid (matching update/delete), and the $and wrapper avoids
-        # clobbering any caller-supplied $or in the mapping.
-        mapping_without_deleted = {
+        # clobbering any caller-supplied $or in the filter.
+        filter_without_deleted = {
             "$and": [
-                dict(mapping),
+                dict(filter_),
                 {
                     "$or": [
                         {"__metadata__": {"$exists": False}},
@@ -483,7 +498,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         async def _total_count() -> int:
             with translate_pymongo_errors():
-                return await collection.count_documents(filter=mapping_without_deleted)
+                return await collection.count_documents(filter=filter_without_deleted)
 
         if limit == 0:
 
@@ -497,7 +512,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         async def _iter() -> AsyncIterator[Dto]:
             with translate_pymongo_errors():
-                cursor = collection.find(filter=mapping_without_deleted)
+                cursor = collection.find(filter=filter_without_deleted)
                 if sort:
                     cursor = cursor.sort(mongodb_sort)
                 cursor = cursor.skip(skip)

@@ -32,11 +32,13 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    resolve_filter,
 )
 from hexkit.providers.mongodb.provider import (
     document_to_dto,
     dto_to_document,
     replace_id_field_in_find_mapping,
+    validate_find_mapping,
 )
 
 __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
@@ -384,6 +386,7 @@ class MQLError(RuntimeError):
 class BaseInMemDao(Generic[DTO]):
     """DAO with proper typing and in-memory storage for use in testing"""
 
+    _dto_model: type[DTO]
     _id_field: str
     _handle_mql: bool
     _serialize: Callable
@@ -418,18 +421,30 @@ class BaseInMemDao(Generic[DTO]):
             return self._deserialize(self.resources[id_])
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> DTO:
-        """Find the resource that matches the specified mapping.
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
+    async def find_one(
+        self,
+        *,
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
+    ) -> DTO:
+        """Find the resource that matches the specified filter.
+
+        Args:
+            filter_: A mapping of field names to the values to select on.
+            mapping: Deprecated alias for `filter_`.
 
         Raises:
+            InvalidMappingError: If `filter_` doesn't pass validation.
             NoHitsFoundError: If no matching resource is found.
             MultipleHitsFoundError: If more than one matching resource is found.
         """
-        hits = self.find_all(mapping=mapping)
+        filter_ = resolve_filter(filter_, mapping)
+        hits = self.find_all(filter_=filter_)
         try:
             dto = await hits.__anext__()
         except StopAsyncIteration as error:
-            raise NoHitsFoundError(mapping=mapping) from error
+            raise NoHitsFoundError(filter_=filter_) from error
 
         try:
             _ = await hits.__anext__()
@@ -437,7 +452,7 @@ class BaseInMemDao(Generic[DTO]):
             # This is expected:
             return dto
 
-        raise MultipleHitsFoundError(mapping=mapping)
+        raise MultipleHitsFoundError(filter_=filter_)
 
     def _resource_matches(
         self,
@@ -453,31 +468,41 @@ class BaseInMemDao(Generic[DTO]):
                 return False
         return True
 
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> "FindResult[DTO]":
-        """Find all resources that match the specified mapping."""
+        """Find all resources that match the specified filter.
+
+        Args:
+            filter_: A mapping of field names to the values to select on.
+            mapping: Deprecated alias for `filter_`.
+
+        Raises:
+            ValueError: If `skip` or `limit` is negative.
+            InvalidMappingError: If `filter_` doesn't pass validation.
+        """
+        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        if "" in mapping:
-            raise KeyError("Query mappings can't contain empty-string keys")
-
-        _mapping = replace_id_field_in_find_mapping(mapping, self._id_field)
-        predicates = build_predicates(_mapping) if self._handle_mql else []
+        validate_find_mapping(filter_, dto_model=self._dto_model)
+        _filter = replace_id_field_in_find_mapping(filter_, self._id_field)
+        predicates = build_predicates(_filter) if self._handle_mql else []
 
         matching = [
             resource
             for resource in self.resources.values()
-            if self._resource_matches(resource, mapping, predicates)
+            if self._resource_matches(resource, filter_, predicates)
         ]
 
         # Interpret the sorting specification and sort our resources accordingly
@@ -531,10 +556,17 @@ class BaseInMemDao(Generic[DTO]):
     ) -> None:
         """Update a resource.
 
-        Raises a ResourceNotFoundError if no resource with a matching ID is found, and
-        an PreconditionFailedError if the resource doesn't match `precondition`.
+        Raises an InvalidMappingError if `precondition` doesn't pass validation, a
+        ResourceNotFoundError if no resource with a matching ID is found, and a
+        PreconditionFailedError if the resource doesn't match `precondition`.
         """
         dto_id = getattr(dto, self._id_field)
+
+        # Validated before the existence check, so an invalid mapping produces the same
+        # error here as it does in the MongoDB provider
+        if precondition:
+            validate_find_mapping(precondition, dto_model=self._dto_model)
+
         if dto_id not in self.resources:
             raise ResourceNotFoundError(id_=dto_id)
 
@@ -575,6 +607,7 @@ def new_mock_dao_class(
     class MockDao(BaseInMemDao[DTO]):
         """Mock dao that stores data in memory"""
 
+        _dto_model: type[DTO] = dto_model
         _id_field: str = id_field
         _handle_mql: bool = handle_mql
 
