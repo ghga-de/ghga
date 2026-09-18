@@ -1279,10 +1279,18 @@ class UploadController(UploadControllerPort):
         )
 
         if box.state == "locked":
-            box.version += 1
-            box.state = "open"
-            await self._file_upload_box_dao.update(box)
-            log.info("Unlocked box with ID %s", box_id)
+            try:
+                updated_box = box.model_copy(
+                    update={"version": box.version + 1, "state": "open"}
+                )
+                await self._file_upload_box_dao.update(
+                    updated_box, precondition={"version": box.version}
+                )
+                log.info("Unlocked box with ID %s", box_id)
+            except PreconditionFailedError as err:
+                box_version_error = self.BoxVersionError(box_id=box_id)
+                log.info(box_version_error)
+                raise box_version_error from err
         elif box.state == "archived":
             log.info("Can't unlock box %s because it's already archived.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
