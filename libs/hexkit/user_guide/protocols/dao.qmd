@@ -114,7 +114,7 @@ The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers seven operat
 | --------- | ----------- | ------ |
 | `insert(dto)` | Create a new resource. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
 | `get_by_id(id_)` | Fetch a resource by its ID. | `ResourceNotFoundError` |
-| `update(dto)` | Replace an existing resource. | `ResourceNotFoundError`, `UniqueConstraintViolationError` |
+| `update(dto, precondition=...)` | Replace an existing resource, optionally only if it still matches `precondition`. | `ResourceNotFoundError`, `UniqueConstraintViolationError`, `PreconditionFailedError`, `InvalidMappingError` |
 | `upsert(dto)` | Update the resource if it exists, insert it otherwise. | `UniqueConstraintViolationError` |
 | `delete(id_)` | Remove a resource by its ID. | `ResourceNotFoundError` |
 | `find_one(mapping=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidMappingError` |
@@ -124,6 +124,15 @@ The write operations are deliberately strict about existence. `insert` refuses t
 overwrite, `update` refuses to create, and both signal violations with exceptions
 rather than silent no-ops. That makes accidental data loss loud instead of quiet. When
 "create or replace" is genuinely what you want, say so explicitly by calling `upsert`.
+
+`update` also guards against lost updates. Pass `precondition` as a mapping of field
+names to the values the stored resource must still have, and the provider checks and
+writes atomically, raising `PreconditionFailedError` if another writer got there first.
+The ID field is implied, so leave it out:
+
+```python
+await book_dao.update(extended, precondition={"pages": 448})
+```
 
 A typical session with a DAO looks like this:
 
@@ -224,6 +233,8 @@ catches any database-related failure. The full hierarchy:
   - `ResourceAlreadyExistsError`: the ID is already taken (`insert`)
   - `UniqueConstraintViolationError`: a write would break a unique index on a field
     other than the ID
+  - `PreconditionFailedError`: the resource exists but does not match the
+    `precondition` passed to `update`
   - `FindError`: base for find-related errors
     - `InvalidMappingError`: a mapping key is not a field of the DTO model
     - `NoHitsFoundError`: `find_one` found nothing

@@ -42,6 +42,7 @@ from hexkit.protocols.dao import (
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
+    resolve_filter,
 )
 from hexkit.providers.mongodb.config import MongoDbConfig
 from hexkit.providers.mongodb.provider.client import ConfiguredMongoClient
@@ -107,7 +108,7 @@ async def get_single_hit(
     try:
         dto = await hits.__anext__()
     except StopAsyncIteration as error:
-        raise NoHitsFoundError(mapping=mapping) from error
+        raise NoHitsFoundError(filter_=mapping) from error
 
     try:
         _ = await hits.__anext__()
@@ -115,7 +116,7 @@ async def get_single_hit(
         # This is expected:
         return dto
 
-    raise MultipleHitsFoundError(mapping=mapping)
+    raise MultipleHitsFoundError(filter_=mapping)
 
 
 FieldName: TypeAlias = str
@@ -263,13 +264,15 @@ class MongoDbDao(Generic[Dto]):
                 field other than the ID field.
         """
         document = self._dto_to_document(dto)
-        doc_filter: dict[str, Any] = {"_id": document["_id"]}
+        id_filter: dict[str, Any] = {"_id": document["_id"]}
+        doc_filter: dict[str, Any] = id_filter
 
         if precondition:
             validate_find_mapping(precondition, dto_model=self._dto_model)
-            doc_filter.update(
-                replace_id_field_in_find_mapping(precondition, self._id_field)
-            )
+            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            # A separate $and clause keeps an ID in the criteria from replacing the
+            # one on the supplied dto instance
+            doc_filter = {"$and": [id_filter, criteria]}
 
         with translate_pymongo_errors():
             try:
@@ -283,9 +286,7 @@ class MongoDbDao(Generic[Dto]):
                 # See if the document w/ that ID doesn't exist at all or if it was just
                 #  the extra criteria that didn't match anything
                 with translate_pymongo_errors():
-                    exists = await self._collection.count_documents(
-                        {"_id": document["_id"]}, limit=1
-                    )
+                    exists = await self._collection.count_documents(id_filter, limit=1)
                 if exists:
                     raise PreconditionFailedError(
                         id_=document["_id"], precondition=precondition
@@ -313,26 +314,34 @@ class MongoDbDao(Generic[Dto]):
         # (trusting MongoDB that matching on the _id field can only yield one or
         # zero matches)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Dto:
-        """Find the resource that matches the specified mapping.
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
+    async def find_one(
+        self,
+        *,
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
+    ) -> Dto:
+        """Find the resource that matches the specified filter.
 
         It is expected that at most one resource matches the constraints.
         An exception is raised if no or multiple hits are found.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
+            mapping:
+                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
-            was found that matches the given mapping.
+            was found that matches the given filter.
 
         Raises:
             NoHitsFoundError:
@@ -340,29 +349,34 @@ class MongoDbDao(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        hits = self.find_all(mapping=mapping)
-        return await get_single_hit(hits=hits, mapping=mapping)
+        filter_ = resolve_filter(filter_, mapping)
+        hits = self.find_all(filter_=filter_)
+        return await get_single_hit(hits=hits, mapping=filter_)
 
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Dto]:
-        """Find all resources that match the specified mapping.
+        """Find all resources that match the specified filter.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
+            mapping:
+                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -381,6 +395,7 @@ class MongoDbDao(Generic[Dto]):
         Returns:
             A FindResult that is async-iterable and also provides total_count().
         """
+        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
 
         if skip < 0:
@@ -388,8 +403,8 @@ class MongoDbDao(Generic[Dto]):
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(mapping, dto_model=self._dto_model)
-        mapping = replace_id_field_in_find_mapping(mapping, self._id_field)
+        validate_find_mapping(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
 
         # Convert generic sort spec to MongoDB-specific sort spec
         mongodb_sort: list[tuple[str, int]] = []
@@ -404,7 +419,7 @@ class MongoDbDao(Generic[Dto]):
 
         async def _total_count() -> int:
             with translate_pymongo_errors():
-                return await collection.count_documents(filter=mapping)
+                return await collection.count_documents(filter=filter_)
 
         if limit == 0:
 
@@ -418,7 +433,7 @@ class MongoDbDao(Generic[Dto]):
 
         async def _iter() -> AsyncIterator[Dto]:
             with translate_pymongo_errors():
-                cursor = collection.find(filter=mapping)
+                cursor = collection.find(filter=filter_)
                 if sort:
                     cursor = cursor.sort(mongodb_sort)
                 cursor = cursor.skip(skip)
