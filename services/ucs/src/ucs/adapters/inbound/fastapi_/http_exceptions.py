@@ -457,6 +457,28 @@ class HttpPaginationError(HttpCustomExceptionBase):
         )
 
 
+class HttpBoxStatsUnavailableError(HttpCustomExceptionBase):
+    """Thrown when the FileUploadBox stats could not be updated.
+
+    The requested action itself succeeded, so the client should repeat the request.
+    """
+
+    exception_id = "boxStatsUnavailable"
+
+    class DataModel(BaseModel):
+        """Model for exception data"""
+
+        box_id: UUID4
+
+    def __init__(self, *, box_id: UUID4, status_code: int = 503):
+        """Construct message and init the exception."""
+        super().__init__(
+            status_code=status_code,
+            description="The box stats could not be updated. Please retry.",
+            data={"box_id": str(box_id)},
+        )
+
+
 class HttpInternalError(HttpCustomExceptionBase):
     """Thrown for otherwise unhandled exceptions"""
 
