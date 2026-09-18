@@ -263,13 +263,15 @@ class MongoDbDao(Generic[Dto]):
                 field other than the ID field.
         """
         document = self._dto_to_document(dto)
-        doc_filter: dict[str, Any] = {"_id": document["_id"]}
+        id_filter: dict[str, Any] = {"_id": document["_id"]}
+        doc_filter: dict[str, Any] = id_filter
 
         if precondition:
             validate_find_mapping(precondition, dto_model=self._dto_model)
-            doc_filter.update(
-                replace_id_field_in_find_mapping(precondition, self._id_field)
-            )
+            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            # A separate $and clause keeps an ID in the criteria from replacing the
+            # one on the supplied dto instance
+            doc_filter = {"$and": [id_filter, criteria]}
 
         with translate_pymongo_errors():
             try:
@@ -283,9 +285,7 @@ class MongoDbDao(Generic[Dto]):
                 # See if the document w/ that ID doesn't exist at all or if it was just
                 #  the extra criteria that didn't match anything
                 with translate_pymongo_errors():
-                    exists = await self._collection.count_documents(
-                        {"_id": document["_id"]}, limit=1
-                    )
+                    exists = await self._collection.count_documents(id_filter, limit=1)
                 if exists:
                     raise PreconditionFailedError(
                         id_=document["_id"], precondition=precondition
