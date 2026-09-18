@@ -101,6 +101,16 @@ Claude Code reads `.claude/skills/` only, so each skill gets a symlink,
 supports. The symlink is the stub for skills, the same trick as `CLAUDE.md`, and it goes
 when Claude Code reads the standard path.
 
+The links are relative and committed: git stores a symlink as its target path, so a
+clone gets working links without a setup step. Generating them instead, from a recipe or
+a container hook, would leave the skills missing for everyone who has not run it.
+
+A Windows checkout without `core.symlinks` gets text files instead, and the skills go
+quiet there. That is why [ADR-0042](adrs/adr-0042-agent-instruction-files.md) rejects a
+`CLAUDE.md` symlink and accepts these ones: the devcontainer is the intended
+environment, and a skill that fails to load costs one procedure, where a `CLAUDE.md`
+that fails to load costs every rule at once.
+
 `AGENTS.md` names the directory and says no more about it: the tools list the skills
 they find, and an index in prose would only duplicate them and go stale. The line is
 there so an agent without skill support knows the directory holds procedures it can read

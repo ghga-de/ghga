@@ -120,7 +120,8 @@ The decision itself:
 
 - **Symlink `CLAUDE.md` to `AGENTS.md`.** Anthropic documents it, but it hides the
   indirection in a file listing, and Windows checkouts and some editors do not follow
-  it.
+  it. The skills are symlinked all the same: one that fails to load costs a procedure,
+  not the whole instruction set.
 - **An `AGENTS.md` per workspace member.** 35 files that would mostly repeat each other
   and drift one by one; the rules that differ are per area.
 - **Tool-specific content in tool-specific files.** The same rule in two places, and the
