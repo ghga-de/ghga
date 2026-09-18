@@ -1206,37 +1206,38 @@ class UploadController(UploadControllerPort):
             return
 
         # Look for ongoing uploads and files that failed interrogation
-        blocking_files_cursor = self._file_upload_dao.find_all(
-            mapping={
-                "box_id": box_id,
-                "state": {"$in": ["init", "failed_interrogation"]},
-            },
-            sort=["alias"],
-        )
-        incomplete_uploads = []
-        need_attention = []
-        async for file in blocking_files_cursor:
-            if file.state == "init":
-                incomplete_uploads.append((file.id, file.alias))  # already sorted
-            else:
-                need_attention.append((file.id, file.alias))
-
-        # If there are incomplete/failed files and force is set to false, raise an error
-        if (incomplete_uploads or need_attention) and not force:
-            error = self.IncompleteOrFailedError(
-                box_id=box_id,
-                incomplete_uploads=incomplete_uploads,
-                need_attention=need_attention,
-            )
-            log.info(
-                error,
-                extra={
+        if not force:
+            blocking_files_cursor = self._file_upload_dao.find_all(
+                mapping={
                     "box_id": box_id,
-                    "incomplete_uploads": str(incomplete_uploads),
-                    "need_attention": str(need_attention),
+                    "state": {"$in": ["init", "failed_interrogation"]},
                 },
+                sort=["alias"],
             )
-            raise error
+            incomplete_uploads = []
+            need_attention = []
+            async for file in blocking_files_cursor:
+                if file.state == "init":
+                    incomplete_uploads.append((file.id, file.alias))  # already sorted
+                else:
+                    need_attention.append((file.id, file.alias))
+
+            # If there are incomplete/failed files and force is set to false, raise an error
+            if incomplete_uploads or need_attention:
+                error = self.IncompleteOrFailedError(
+                    box_id=box_id,
+                    incomplete_uploads=incomplete_uploads,
+                    need_attention=need_attention,
+                )
+                log.info(
+                    error,
+                    extra={
+                        "box_id": box_id,
+                        "incomplete_uploads": str(incomplete_uploads),
+                        "need_attention": str(need_attention),
+                    },
+                )
+                raise error
 
         # Recompute stats
         file_count, total_size = await self._calc_box_stats(box_id=box_id)
