@@ -10,23 +10,29 @@ do not carry.
 - `AGENTS.md` (this file) is the canonical AI entrypoint, covering project-wide concerns.
 - For any work under `frontend/data-portal/`, read
   [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md) first.
-- `README.md` and the files in `docs/` are authoritative for humans and agents alike.
-- Keep tool-specific entry files (`CLAUDE.md`, `.github/copilot-instructions.md`) short
-  and linking back here; do not duplicate AI guidance across files.
+- `README.md` and the files in `docs/` are authoritative for humans and agents alike;
+  read the [writing style](docs/style.md) and the [conventions](docs/conventions.md)
+  when a task touches what they cover.
+- `CLAUDE.md` and `.github/copilot-instructions.md` are stubs pointing here and hold
+  nothing else. [docs/agent-instructions.md](docs/agent-instructions.md) says what
+  belongs in which file.
 
 ## Prime Directive
 
 - You are an expert in Python microservice development (event-driven, hexagonal
   architecture), Kubernetes/Helm delivery integration, and Angular in `frontend/`.
-- Prefer small, safe, reviewable diffs.
+- Prefer small, safe, reviewable diffs, and explain non-obvious refactors.
 - Preserve existing architecture and patterns unless otherwise asked; check the
   [ADRs](docs/adrs/) records before proposing a structural change.
 - Optimize for correctness, maintainability, and testability over cleverness.
 
 ## Tech stack
 
-- Python 3.12+, one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single
-  `uv.lock`, internal libraries consumed from source (HEAD is always integrated)
+- Python 3.13 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`,
+  `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always
+  integrated). Members set their own `requires-python` floor — 3.11 on the PyPI lane,
+  3.13 for the services — and the combo gate tests a PyPI-lane member on every version
+  from 3.11 to 3.14 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
 - Services: FastAPI + Pydantic on `hexkit` (ports-and-adapters; Kafka, MongoDB, S3
   providers); most run as a rest + consumer pair
 - Lint/format: `ruff` · typecheck: `mypy` · unit tests: `pytest`, each configured
@@ -157,10 +163,15 @@ The test bed is **not** a uv workspace member: it runs from its own `.venv-testb
 
 ## Writing
 
-Docs, code comments, commits and pull requests follow the writing style in
-[docs/style.md](docs/style.md): plain language, prose hard-wrapped at 88 columns in repo
-files, comments that explain why rather than history, and the ADR template. Read the
-relevant section before writing any of them.
+Docs, code comments, commits and pull requests follow the
+[writing style](docs/style.md): plain language, prose hard-wrapped at 88 columns in repo
+files, and comments that explain why rather than history. Read the section that applies
+before writing any of them. For anything under `docs/`, read
+[docs/README.md](docs/README.md) first for what each document is for, then the
+[ADR shape](docs/style.md#architecture-decision-records) or the
+[epic conventions](docs/epics/README.md). An epic specification records the plan as its
+epic started, so do not update it afterwards; current behaviour belongs in an ADR or the
+code.
 
 ## Python best practices
 
@@ -182,13 +193,16 @@ already make it obvious.
   the *why*/*how* when non-obvious.
 - Follow the established (simplified Google style) Docstring format already in this repo.
 
-
 ## AI agent integration
 
-- `AGENTS.md` files are the shared instruction source for all coding agents: this one for
-  the monorepo, the nested one for the data portal.
-- Project skills live in `.claude/skills/` directories (the data portal ships an
-  `angular-developer` skill); prefer them for reusable task procedures, and keep
-  always-on rules in the `AGENTS.md` files.
-- The data portal's `CLAUDE.md` documents its MCP setup (`angular-cli`, `context7`);
-  there is no monorepo-level MCP configuration.
+- `AGENTS.md` files are the shared instruction source for all coding agents, one per
+  area; [docs/agent-instructions.md](docs/agent-instructions.md) lists the areas and
+  says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
+- Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, symlinked into
+  `.claude/skills/` until Claude Code reads the standard path. Keep always-on rules in
+  the `AGENTS.md` files.
+- Claude Code sessions default to the **GHGA Dev** output style
+  (`.claude/output-styles/ghga-dev.md`), which keeps the writing style steady across a
+  long session. Set `outputStyle` in `.claude/settings.local.json` to use another; user
+  settings do not override the project default.
+- There is no monorepo-level MCP configuration; the data portal has its own.
