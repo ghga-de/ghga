@@ -24,7 +24,7 @@ classifiers = [
 ]
 name = "hexkit"
 # 9.0.2 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
-version = "9.0.3"
+version = "10.0.0"
 description = "A Toolkit for Building Microservices using the Hexagonal Architecture"
 dependencies = [
     "opentelemetry-api >=1.44, <2",

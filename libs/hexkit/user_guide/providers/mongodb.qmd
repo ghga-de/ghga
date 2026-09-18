@@ -178,7 +178,7 @@ async for book in book_dao.find_all(mapping={"author": "Martin Fowler"}):
 ```
 
 Mapping keys are validated against the DTO model, and unknown field names raise an
-`InvalidFindMappingError`. Two MongoDB-specific extensions pass through this
+`InvalidMappingError`. Two MongoDB-specific extensions pass through this
 validation:
 
 - **Dot notation** reaches into nested documents. Only the top-level field is
@@ -279,7 +279,7 @@ import from pymongo:
 | `get_by_id`, `update`, or `delete` on a missing ID | `ResourceNotFoundError` |
 | `insert` with an already existing ID | `ResourceAlreadyExistsError` |
 | Write breaking a unique index over non-ID fields | `UniqueConstraintViolationError` |
-| Find mapping with unknown field names | `InvalidFindMappingError` |
+| Find mapping with unknown field names | `InvalidMappingError` |
 | `find_one` matching zero / more than one document | `NoHitsFoundError` / `MultipleHitsFoundError` |
 | Operation exceeding the configured `mongo_timeout` | `DbTimeoutError` |
 | Any other driver-level failure | `DaoError` |
