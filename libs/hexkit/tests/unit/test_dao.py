@@ -26,13 +26,13 @@ from pydantic import UUID4, BaseModel
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 
 from hexkit.protocols.dao import (
-    AtomicUpdateError,
     Dao,
     DaoError,
     DaoFactoryProtocol,
     DbTimeoutError,
     Dto,
     IndexBase,
+    PreconditionFailedError,
     ResourceNotFoundError,
     UUID4Field,
     race_condition_retries,
@@ -210,8 +210,8 @@ class ConflictingUpdate:
             with attempt:
                 self.tries += 1
                 if self.tries <= self.conflicts:
-                    raise AtomicUpdateError(
-                        id_="test", matching_criteria={"try": self.tries}
+                    raise PreconditionFailedError(
+                        id_="test", precondition={"try": self.tries}
                     )
 
 
@@ -248,7 +248,7 @@ async def test_race_condition_retries_exhausted(
     sleeps: list[float], caplog: pytest.LogCaptureFixture
 ):
     """Test that `error_on_failure` is raised after the last try, chained from the
-    `AtomicUpdateError`, without waiting after that try.
+    `PreconditionFailedError`, without waiting after that try.
     """
     logger_name = "hexkit.tests.race_condition_retries"
     caplog.set_level(logging.DEBUG, logger=logger_name)
@@ -259,7 +259,7 @@ async def test_race_condition_retries_exhausted(
 
     assert update.tries == 3
     assert len(sleeps) == 2
-    assert isinstance(exc_info.value.__cause__, AtomicUpdateError)
+    assert isinstance(exc_info.value.__cause__, PreconditionFailedError)
     assert [record.levelname for record in caplog.records] == [
         "DEBUG",
         "DEBUG",
@@ -298,7 +298,7 @@ async def test_race_condition_retries_return_ends_retries():
 
 
 async def test_race_condition_retries_other_errors():
-    """Test that errors other than `AtomicUpdateError` are raised without a retry."""
+    """Test that errors other than `PreconditionFailedError` are raised without a retry."""
     tries = 0
 
     with pytest.raises(ResourceNotFoundError):

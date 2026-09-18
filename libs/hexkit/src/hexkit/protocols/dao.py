@@ -201,13 +201,13 @@ class FindResult(AsyncIterator[Dto]):
 class _RaceConditionAttempt:
     """A single try yielded by `race_condition_retries`.
 
-    Used as a context manager: suppresses an `AtomicUpdateError` raised in its block,
+    Used as a context manager: suppresses an `PreconditionFailedError` raised in its block,
     keeps it in `error`, and records whether the block finished without one.
     """
 
     def __init__(self) -> None:
         self.succeeded = False
-        self.error: AtomicUpdateError | None = None
+        self.error: PreconditionFailedError | None = None
 
     def __enter__(self) -> None:
         pass
@@ -221,7 +221,7 @@ class _RaceConditionAttempt:
         if exc_type is None:
             self.succeeded = True
             return False
-        if isinstance(exc_value, AtomicUpdateError):
+        if isinstance(exc_value, PreconditionFailedError):
             self.error = exc_value
             return True
         return False
@@ -240,7 +240,7 @@ async def race_condition_retries(  # noqa: PLR0913
 
     Wrap the action in `with attempt:` for each yielded attempt. Retries it up to
     `max_tries` times, waiting `interval` seconds (plus jitter) after each
-    `AtomicUpdateError`. That error means the `matching_criteria` of a DAO update no
+    `PreconditionFailedError`. That error means the `precondition` of a DAO update no
     longer matched because another write came first. A `return` inside the block
     ends the retries.
 
@@ -268,12 +268,12 @@ async def race_condition_retries(  # noqa: PLR0913
             that conflicted don't retry at the same moment. Negative values count as 0.
 
     Raises:
-    - `error_on_failure` if the action still raises `AtomicUpdateError` on the last try.
-      It is chained from that last `AtomicUpdateError`.
+    - `error_on_failure` if the action still raises `PreconditionFailedError` on the last try.
+      It is chained from that last `PreconditionFailedError`.
     """
     description = description.strip(" .")
     tries = max(1, max_tries)
-    last_error: AtomicUpdateError | None = None
+    last_error: PreconditionFailedError | None = None
     for attempt_number in range(1, tries + 1):
         attempt = _RaceConditionAttempt()
         yield attempt
