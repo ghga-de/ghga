@@ -45,7 +45,10 @@ from ars.ports.outbound.daos import (
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.custom_types import ID
-from hexkit.protocols.dao import ResourceAlreadyExistsError
+from hexkit.protocols.dao import (
+    PreconditionFailedError,
+    ResourceAlreadyExistsError,
+)
 from hexkit.utils import now_utc_ms_prec
 
 from .fixtures.datasets import DATASET
@@ -259,6 +262,16 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self, dto: AccessRequest, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource."""
+        try:
+            stored = self._requests[dto.id]
+        except KeyError as error:
+            raise ResourceNotFoundError(id_=dto.id) from error
+
+        if precondition and any(
+            getattr(stored, key) != value for key, value in precondition.items()
+        ):
+            raise PreconditionFailedError(id_=dto.id, precondition=precondition)
+
         self.last_upsert = self._requests[dto.id] = dto
 
 
@@ -380,6 +393,32 @@ repository = AccessRequestRepository(
     dataset_dao=dataset_dao,
     access_grants=access_grants,
 )
+
+
+async def test_dao_dummy_honours_precondition():
+    """Test the dummy DAO's `update`.
+
+    No repository method passes a precondition yet, so this pins the dummy's
+    behaviour for when one does.
+    """
+    request = ACCESS_REQUESTS[0]
+    assert request.status == AccessRequestStatus.ALLOWED
+    changed = request.model_copy(update={"request_text": "Changed"})
+
+    with pytest.raises(PreconditionFailedError):
+        await access_request_dao.update(
+            changed, precondition={"status": AccessRequestStatus.DENIED}
+        )
+    assert await access_request_dao.get_by_id(request.id) == request
+
+    await access_request_dao.update(
+        changed, precondition={"status": AccessRequestStatus.ALLOWED}
+    )
+    assert await access_request_dao.get_by_id(request.id) == changed
+
+    unknown = changed.model_copy(update={"id": UUID(int=0)})
+    with pytest.raises(ResourceNotFoundError):
+        await access_request_dao.update(unknown)
 
 
 async def test_can_create_request():
