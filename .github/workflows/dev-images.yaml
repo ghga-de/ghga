@@ -64,7 +64,7 @@ jobs:
             context: .
             build-args: VARIANT=mono
           - image: data-portal
-            dockerfile: frontend/data-portal/Dockerfile.dhi
+            dockerfile: frontend/data-portal/Dockerfile
             context: frontend/data-portal
             build-args: ""
     env:

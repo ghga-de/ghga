@@ -460,7 +460,8 @@ demo-template:
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.
 # Python members use the shared Dockerfile (entrypoint = package name, ADR-0033);
-# members shipping their own Dockerfile.dhi (frontend) build with it in-place.
+# members shipping their own Dockerfile (the frontend) build with it in-place --
+# a package.json rather than a pyproject.toml is what tells the two apart.
 # Tags use the release registry scheme with tag 'local' so the charts' generated
 # image references resolve with only a tag override (values-local.yaml).
 # `tag` and trailing docker-build flags are overridable so CI reuses these recipes
@@ -471,9 +472,9 @@ demo-template:
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ -f "{{target}}/Dockerfile.dhi" ]; then
+    if [ -f "{{target}}/package.json" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
+        docker build -f "{{target}}/Dockerfile" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
         docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .

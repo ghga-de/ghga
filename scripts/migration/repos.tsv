@@ -1,7 +1,7 @@
 # GHGA monorepo import manifest
 # Source of truth for the history-preserving import + one-way sync.
 # Columns (TAB-separated): kind  source_repo  subpath  dest_path  branch
-#   kind        one of: lib | service | tool | frontend | testbed
+#   kind        one of: lib | service | tool | testbed
 #   source_repo repo name under github.com/ghga-de (and dir name in .legacy_repos/)
 #   subpath     "." for whole repo, or a subdir for repos imported partially (as
 #               file-services-backend was, before its rows were retired)

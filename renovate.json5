@@ -24,7 +24,7 @@ runs the lists below lag reality — a PR merged or closed since the last run is
 listed as open here. The [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) \
 docs explain what the checkboxes do.\n\nRenovate's scope in this repository is \
 deliberately narrow: the DHI base-image tags in `docker/Dockerfile` and \
-`frontend/data-portal/Dockerfile.dhi`, and the digest-pinned Chainguard MinIO images in \
+`frontend/data-portal/Dockerfile`, and the digest-pinned Chainguard MinIO images in \
 `deploy/charts/ghga-demo/values.yaml`. The application dependency lockfiles (`uv.lock`, \
 `pnpm-lock.yaml`) are handled by the daily `security-scan.yaml` workflow instead, and \
 Dependabot alerts along with them. See `renovate.json5` for the full configuration.\n\n\
@@ -86,8 +86,8 @@ when you look at this issue.",
     },
     {
       customType: "regex",
-      description: "dhi.io/node base image tag (frontend/data-portal/Dockerfile.dhi)",
-      managerFilePatterns: ["/^frontend/data-portal/Dockerfile\\.dhi$/"],
+      description: "dhi.io/node base image tag (frontend/data-portal/Dockerfile)",
+      managerFilePatterns: ["/^frontend/data-portal/Dockerfile$/"],
       matchStrings: [
         "# renovate: track=node-base\\s+ARG NODE_BASE=(?<currentValue>[\\w.-]+)",
       ],

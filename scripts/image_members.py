@@ -8,7 +8,7 @@ Single source of truth for the release image matrix
 - services/*: image by default; opt out via [tool.ghga] release = "pypi"/"none"
   or image = false
 - tools/* and libs/*: image only with an explicit [tool.ghga] image marker
-- frontend/*: image when a package.json + Dockerfile.dhi pair is present;
+- frontend/*: image when a package.json + Dockerfile pair is present;
   the image name comes from package.json
 
 Convention (ADR-0033): an image member's console script is named exactly like
@@ -53,7 +53,7 @@ def _python_members():
 def _frontend_members():
     for p in sorted((ROOT / "frontend").iterdir()):
         manifest = p / "package.json"
-        dockerfile = p / "Dockerfile.dhi"
+        dockerfile = p / "Dockerfile"
         if not (manifest.is_file() and dockerfile.is_file()):
             continue
         data = json.loads(manifest.read_text())
