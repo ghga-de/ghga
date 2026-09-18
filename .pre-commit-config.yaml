@@ -108,7 +108,9 @@ repos:
       - id: docs-set
         name: ADR, epic and instruction-file sets
         language: system
-        files: ^(docs/(adrs/|epics/|README\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|\.github/copilot-instructions\.md$|\.cursorrules$)
+        # the orphan paths the check polices are part of the shape, so a commit that
+        # adds one has to run the hook that rejects it
+        files: ^(docs/(adrs/|epics/|README\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|\.github/(copilot-instructions\.md$|instructions/)|(.*/)?\.(copilot|cursor/rules)/|(.*/)?\.(cursorrules|clinerules|windsurfrules|aider\.conf\.yml)$|scripts/docs_check\.py$)
         pass_filenames: false
         require_serial: true
         entry: uv run python scripts/docs_check.py

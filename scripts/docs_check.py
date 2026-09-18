@@ -506,6 +506,23 @@ def _tracked(root: pathlib.Path) -> list[str]:
     return [p for p in result.stdout.split("\0") if p]
 
 
+def _beside(area: str, name: str) -> str:
+    """Join a PurePosixPath.parent with a file name; the repo root's parent is `.`."""
+    return name if area == "." else f"{area}/{name}"
+
+
+def _stub_text(root: pathlib.Path, rel: str) -> str | None:
+    """Return the stub's text, or None when git tracks it but the tree has it not.
+
+    A half-applied rebase or a `git rm --cached` leaves that gap, and aborting the whole
+    run on it would hide every other problem behind a traceback.
+    """
+    try:
+        return (root / rel).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
 def _stub_problems(rel: str, text: str, wants_import: bool) -> list[str]:
     """Report content a pointer stub carries beyond the import, a heading and a sentence."""
     lines = [line for line in text.splitlines() if line.strip()]
@@ -547,20 +564,21 @@ def check_instruction_files(root: pathlib.Path) -> list[str]:
         str(pathlib.PurePosixPath(p).parent) for p in tracked if p.endswith("CLAUDE.md")
     }
     problems = [
-        f"{area}/AGENTS.md: no CLAUDE.md stub beside it".lstrip("./")
+        f"{_beside(area, 'AGENTS.md')}: no CLAUDE.md stub beside it"
         for area in sorted(areas - stubs)
     ]
     problems += [
-        f"{area}/CLAUDE.md: no AGENTS.md beside it".lstrip("./")
+        f"{_beside(area, 'CLAUDE.md')}: no AGENTS.md beside it"
         for area in sorted(stubs - areas)
     ]
 
     for rel in sorted(p for p in tracked if p.endswith("CLAUDE.md")):
-        problems += _stub_problems(rel, (root / rel).read_text(encoding="utf-8"), True)
+        if (text := _stub_text(root, rel)) is not None:
+            problems += _stub_problems(rel, text, True)
     if "." in areas:
         if COPILOT_STUB in tracked:
-            text = (root / COPILOT_STUB).read_text(encoding="utf-8")
-            problems += _stub_problems(COPILOT_STUB, text, False)
+            if (text := _stub_text(root, COPILOT_STUB)) is not None:
+                problems += _stub_problems(COPILOT_STUB, text, False)
         else:
             problems.append(
                 f"{COPILOT_STUB}: missing; Copilot has no pointer to AGENTS.md"

@@ -421,3 +421,22 @@ def test_skill_outside_the_standard_path(agents):
     assert _instruction_problems(agents) == [
         "libs/.claude/skills/qa/SKILL.md: a skill belongs under .agents/skills/<name>/"
     ]
+
+
+def test_a_dotted_area_keeps_its_leading_dot(agents):
+    """`.github/AGENTS.md` is reported at its real path, not as `github/AGENTS.md`."""
+    (agents / ".github/AGENTS.md").write_text("# Agent Instructions for .github\n")
+    assert _instruction_problems(agents) == [
+        ".github/AGENTS.md: no CLAUDE.md stub beside it"
+    ]
+
+
+def test_a_tracked_stub_missing_from_the_tree_is_skipped(agents):
+    """A half-applied rebase must not bury every other problem under a traceback."""
+    (agents / "services").mkdir()
+    (agents / "services/CLAUDE.md").write_text(STUB)
+    _stage(agents)
+    (agents / "libs/CLAUDE.md").unlink()
+    assert docs_check.check_instruction_files(agents) == [
+        "services/CLAUDE.md: no AGENTS.md beside it"
+    ]
