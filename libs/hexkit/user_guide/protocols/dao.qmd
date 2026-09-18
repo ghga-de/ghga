@@ -117,8 +117,8 @@ The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers seven operat
 | `update(dto)` | Replace an existing resource. | `ResourceNotFoundError`, `UniqueConstraintViolationError` |
 | `upsert(dto)` | Update the resource if it exists, insert it otherwise. | `UniqueConstraintViolationError` |
 | `delete(id_)` | Remove a resource by its ID. | `ResourceNotFoundError` |
-| `find_one(mapping=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidFindMappingError` |
-| `find_all(mapping=...)` | Iterate over all resources matching a filter. | `InvalidFindMappingError`, `ValueError` |
+| `find_one(mapping=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidMappingError` |
+| `find_all(mapping=...)` | Iterate over all resources matching a filter. | `InvalidMappingError`, `ValueError` |
 
 The write operations are deliberately strict about existence. `insert` refuses to
 overwrite, `update` refuses to create, and both signal violations with exceptions
@@ -166,7 +166,7 @@ all_books = await book_dao.find_all(mapping={}).to_list()
 `find_all` when zero or many hits are acceptable.
 
 Mapping keys are validated against the DTO model, so a typo in a field name raises
-`InvalidFindMappingError` instead of silently matching nothing. Pass mapping values
+`InvalidMappingError` instead of silently matching nothing. Pass mapping values
 using the same Python types as the corresponding model fields: a `UUID` for a UUID
 field, a `datetime` for a datetime field, and so on. Whether richer values (nested
 structures, or query operators expressed as dictionaries) are supported is up to the
@@ -225,7 +225,7 @@ catches any database-related failure. The full hierarchy:
   - `UniqueConstraintViolationError`: a write would break a unique index on a field
     other than the ID
   - `FindError`: base for find-related errors
-    - `InvalidFindMappingError`: a mapping key is not a field of the DTO model
+    - `InvalidMappingError`: a mapping key is not a field of the DTO model
     - `NoHitsFoundError`: `find_one` found nothing
     - `MultipleHitsFoundError`: `find_one` found more than one match
   - `DbTimeoutError`: a database operation timed out

@@ -27,7 +27,7 @@ from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
 from hexkit.protocols.dao import (
     Dao,
     DaoError,
-    InvalidFindMappingError,
+    InvalidMappingError,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
@@ -311,7 +311,7 @@ async def test_dao_update_precondition(mongodb: MongoDbFixture):
     # A conflicting ID in the criteria is rejected by MongoDB
     with pytest.raises(DaoError):
         await dao.update(resource_update, precondition={"id": other_resource.id})
-    with pytest.raises(InvalidFindMappingError):
+    with pytest.raises(InvalidMappingError):
         await dao.update(resource_update, precondition={"non_existing_field": 1})
     assert await dao.get_by_id(resource.id) == resource
     assert await dao.get_by_id(other_resource.id) == other_resource
@@ -358,10 +358,10 @@ async def test_dao_find_invalid_mapping(mongodb: MongoDbFixture):
     )
     mapping = {"non_existing_field": 28}
 
-    with pytest.raises(InvalidFindMappingError):
+    with pytest.raises(InvalidMappingError):
         await dao.find_one(mapping=mapping)
 
-    with pytest.raises(InvalidFindMappingError):
+    with pytest.raises(InvalidMappingError):
         _ = dao.find_all(mapping=mapping)
 
 
