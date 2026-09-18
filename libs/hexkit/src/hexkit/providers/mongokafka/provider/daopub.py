@@ -271,18 +271,18 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             return await self._dao.get_by_id(id_)
 
     async def update(
-        self, dto: Dto, *, matching_criteria: dict[str, Any] | None = None
+        self, dto: Dto, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource.
 
-        If `matching_criteria` is supplied, the resource is only updated if its current
+        If `precondition` is supplied, the resource is only updated if its current
         values match them. The check and the update happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
-            matching_criteria:
+            precondition:
                 A mapping of field names to the values the existing resource must have.
                 It does not need to contain the ID field, since that is implied.
 
@@ -290,8 +290,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
-                when the resource exists but doesn't match `matching_criteria`
-            InvalidFindMappingError: when `matching_criteria` doesn't pass validation
+                when the resource exists but doesn't match `precondition`
+            InvalidFindMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -308,12 +308,10 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         }
         doc_filter = existing_filter
 
-        # If matching_criteria is supplied, validate it and add it to the doc_filter
-        if matching_criteria:
-            validate_find_mapping(matching_criteria, dto_model=self._dto_model)
-            criteria = replace_id_field_in_find_mapping(
-                matching_criteria, self._id_field
-            )
+        # If precondition is supplied, validate it and add it to the doc_filter
+        if precondition:
+            validate_find_mapping(precondition, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
             # A separate $and clause keeps an $or in the criteria from replacing the
             # $or that excludes deleted documents
             doc_filter = {"$and": [existing_filter, criteria]}
@@ -326,7 +324,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
 
         if result.matched_count == 0:
-            if matching_criteria:
+            if precondition:
                 # Only for choosing the error; the update itself already failed
                 with translate_pymongo_errors():
                     exists = await self._collection.count_documents(
@@ -334,7 +332,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                     )
                 if exists:
                     raise PreconditionFailedError(
-                        id_=document["_id"], matching_criteria=matching_criteria
+                        id_=document["_id"], precondition=precondition
                     )
             raise ResourceNotFoundError(id_=document["_id"])
 

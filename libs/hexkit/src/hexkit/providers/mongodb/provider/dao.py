@@ -235,12 +235,12 @@ class MongoDbDao(Generic[Dto]):
         return self._document_to_dto(document)
 
     async def update(
-        self, dto: Dto, *, matching_criteria: dict[str, Any] | None = None
+        self, dto: Dto, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource.
 
         This operation replaces the target document instead of only
-        updating the modified fields. If `matching_criteria` is supplied, the document
+        updating the modified fields. If `precondition` is supplied, the document
         is only replaced if its current values match them. The check and the update
         happen atomically.
 
@@ -248,7 +248,7 @@ class MongoDbDao(Generic[Dto]):
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
-            matching_criteria:
+            precondition:
                 A mapping of field names to the values the existing resource must have.
                 It does not need to contain the ID field, since that is implied.
 
@@ -256,8 +256,8 @@ class MongoDbDao(Generic[Dto]):
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
-                when the resource exists but doesn't match `matching_criteria`
-            InvalidFindMappingError: when `matching_criteria` doesn't pass validation
+                when the resource exists but doesn't match `precondition`
+            InvalidFindMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -265,10 +265,10 @@ class MongoDbDao(Generic[Dto]):
         document = self._dto_to_document(dto)
         doc_filter: dict[str, Any] = {"_id": document["_id"]}
 
-        if matching_criteria:
-            validate_find_mapping(matching_criteria, dto_model=self._dto_model)
+        if precondition:
+            validate_find_mapping(precondition, dto_model=self._dto_model)
             doc_filter.update(
-                replace_id_field_in_find_mapping(matching_criteria, self._id_field)
+                replace_id_field_in_find_mapping(precondition, self._id_field)
             )
 
         with translate_pymongo_errors():
@@ -279,7 +279,7 @@ class MongoDbDao(Generic[Dto]):
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
 
         if result.matched_count == 0:
-            if matching_criteria:
+            if precondition:
                 # See if the document w/ that ID doesn't exist at all or if it was just
                 #  the extra criteria that didn't match anything
                 with translate_pymongo_errors():
@@ -288,7 +288,7 @@ class MongoDbDao(Generic[Dto]):
                     )
                 if exists:
                     raise PreconditionFailedError(
-                        id_=document["_id"], matching_criteria=matching_criteria
+                        id_=document["_id"], precondition=precondition
                     )
             raise ResourceNotFoundError(id_=document["_id"])
 

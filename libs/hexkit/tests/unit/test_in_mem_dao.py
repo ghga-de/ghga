@@ -102,8 +102,8 @@ async def test_update():
 
 
 @pytest.mark.parametrize("handle_mql", [True, False])
-async def test_update_matching_criteria(handle_mql: bool):
-    """Test the `update()` method with `matching_criteria`"""
+async def test_update_precondition(handle_mql: bool):
+    """Test the `update()` method with `precondition`"""
     dao = new_mock_dao_class(
         dto_model=InventoryItem, id_field="title", handle_mql=handle_mql
     )()
@@ -111,27 +111,27 @@ async def test_update_matching_criteria(handle_mql: bool):
 
     # A non-existent item still raises a ResourceNotFoundError
     with pytest.raises(ResourceNotFoundError):
-        await dao.update(item, matching_criteria={"count": 1})
+        await dao.update(item, precondition={"count": 1})
 
     await dao.insert(item)
 
     # A resource that doesn't match the criteria is left unchanged
     with pytest.raises(PreconditionFailedError):
         await dao.update(
-            item.model_copy(update={"count": 2}), matching_criteria={"count": 5}
+            item.model_copy(update={"count": 2}), precondition={"count": 5}
         )
     assert dao.latest.count == 1
 
     # Criteria may name the ID field
     await dao.update(
         item.model_copy(update={"count": 2}),
-        matching_criteria={"title": "Nudelholz", "count": 1},
+        precondition={"title": "Nudelholz", "count": 1},
     )
     assert dao.latest.count == 2
 
 
-async def test_update_matching_criteria_mql():
-    """Test that `update()` resolves MQL operators in `matching_criteria`"""
+async def test_update_precondition_mql():
+    """Test that `update()` resolves MQL operators in `precondition`"""
     dao = DaoClass()
     item = InventoryItem(title="Nudelholz", count=1)
     await dao.insert(item)
@@ -139,11 +139,11 @@ async def test_update_matching_criteria_mql():
     with pytest.raises(PreconditionFailedError):
         await dao.update(
             item.model_copy(update={"count": 2}),
-            matching_criteria={"count": {"$gt": 1}},
+            precondition={"count": {"$gt": 1}},
         )
 
     await dao.update(
-        item.model_copy(update={"count": 2}), matching_criteria={"count": {"$lte": 1}}
+        item.model_copy(update={"count": 2}), precondition={"count": {"$lte": 1}}
     )
     assert dao.latest.count == 2
 
