@@ -37,6 +37,7 @@ from hexkit.providers.mongodb.provider import (
     document_to_dto,
     dto_to_document,
     replace_id_field_in_find_mapping,
+    validate_find_mapping,
 )
 
 __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
@@ -384,6 +385,7 @@ class MQLError(RuntimeError):
 class BaseInMemDao(Generic[DTO]):
     """DAO with proper typing and in-memory storage for use in testing"""
 
+    _dto_model: type[DTO]
     _id_field: str
     _handle_mql: bool
     _serialize: Callable
@@ -422,6 +424,7 @@ class BaseInMemDao(Generic[DTO]):
         """Find the resource that matches the specified mapping.
 
         Raises:
+            InvalidMappingError: If `mapping` doesn't pass validation.
             NoHitsFoundError: If no matching resource is found.
             MultipleHitsFoundError: If more than one matching resource is found.
         """
@@ -461,16 +464,19 @@ class BaseInMemDao(Generic[DTO]):
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> "FindResult[DTO]":
-        """Find all resources that match the specified mapping."""
+        """Find all resources that match the specified mapping.
+
+        Raises:
+            ValueError: If `skip` or `limit` is negative.
+            InvalidMappingError: If `mapping` doesn't pass validation.
+        """
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        if "" in mapping:
-            raise KeyError("Query mappings can't contain empty-string keys")
-
+        validate_find_mapping(mapping, dto_model=self._dto_model)
         _mapping = replace_id_field_in_find_mapping(mapping, self._id_field)
         predicates = build_predicates(_mapping) if self._handle_mql else []
 
@@ -531,10 +537,17 @@ class BaseInMemDao(Generic[DTO]):
     ) -> None:
         """Update a resource.
 
-        Raises a ResourceNotFoundError if no resource with a matching ID is found, and
-        an PreconditionFailedError if the resource doesn't match `precondition`.
+        Raises an InvalidMappingError if `precondition` doesn't pass validation, a
+        ResourceNotFoundError if no resource with a matching ID is found, and a
+        PreconditionFailedError if the resource doesn't match `precondition`.
         """
         dto_id = getattr(dto, self._id_field)
+
+        # Validated before the existence check, so an invalid mapping produces the same
+        # error here as it does in the MongoDB provider
+        if precondition:
+            validate_find_mapping(precondition, dto_model=self._dto_model)
+
         if dto_id not in self.resources:
             raise ResourceNotFoundError(id_=dto_id)
 
@@ -575,6 +588,7 @@ def new_mock_dao_class(
     class MockDao(BaseInMemDao[DTO]):
         """Mock dao that stores data in memory"""
 
+        _dto_model: type[DTO] = dto_model
         _id_field: str = id_field
         _handle_mql: bool = handle_mql
 
