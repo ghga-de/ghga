@@ -24,16 +24,28 @@ titles follow the [conventions](conventions.md#names-branches-prs-commits), deci
   same page"). Name the literal action instead.
 - **Every prohibition names the alternative.** "Don't X" leaves the reader guessing;
   say what to do instead.
+- **Active voice, and imperative mood for anything to be done.** "The service validates
+  the token", not "the token is validated"; "add the index before the migration runs",
+  not "the index should be added". Name who acts, or tell the reader what to do.
 - **Link instead of restating.** A rule lives in one place — an ADR, the conventions,
   this file — and everything else points to it.
-- **Headings carry no trailing punctuation.** A heading is a label, not a sentence: a
-  colon belongs on the paragraph or bold lead-in introducing a list, not on the heading.
 - **Comments explain why, not history.** State why the code is the way it is, where the
   code does not show it. Incidents, dates and "this used to be X" belong in the commit
   message.
 - **Pull request descriptions** are a few short paragraphs on what changed, why, and
   what to look at; no headings for a small change. Detail that does not fit goes in the
   commit body.
+
+## Markdown
+
+Docs are rendered on GitHub and read in an editor, so they are GitHub Flavored Markdown.
+
+- **One `#` heading, the title.** Sections are `##` and subsections `###`. The level
+  shows where the section sits, not how large its heading should look.
+- **Headings carry no trailing punctuation.** A heading is a label, not a sentence: a
+  colon belongs on the paragraph or bold lead-in introducing a list, not on the heading.
+- **Bullets for what the reader acts on** — steps, requirements, options — and prose for
+  the reasoning around them. A paragraph holding three parallel items is a list.
 
 ## Length
 

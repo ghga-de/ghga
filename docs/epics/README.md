@@ -31,6 +31,7 @@ The audience is GHGA developers. Follow the [writing style](../style.md) and the
 - Specify the APIs and data schemas the epic adds or changes, and the migration path for anything that breaks.
 - Be explicit about assumptions and constraints, and explain a scope decision where it is not obvious.
 - Add a Mermaid diagram where it shows something prose does not.
+- Name the outputs the epic is meant to produce — a document, a prototype, a repository — and link the ones that already exist when it is planned.
 - Link related epics with relative links, and the [ADRs](../adrs/) an epic follows from or leads to. The services, libraries and tools an epic describes live in `services/`, `libs/`, `tools/` and `frontend/`; the delivery side in `deploy/` and `testbed/`.
 
 ## The Saga so far
