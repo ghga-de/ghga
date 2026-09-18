@@ -67,6 +67,9 @@ its exemptions, and the `.venv` bind-mount trap with its symptom and repair. Do 
 around the guard by calling `uv` directly, and where the environment does not match, ask
 rather than installing host tooling or patching scripts around the mismatch.
 
+The container puts `rg`, `fd`, `jq`, `bat`, `shellcheck` and `shfmt` on `PATH`; prefer
+`rg` and `fd` over `grep` and `find` for searching the workspace.
+
 Agent sessions belong in the container too, whichever agent it is — their state is
 per-machine, so a session on the host writes to a home the container cannot see. Only
 `~/.claude` is currently persisted across rebuilds (the `ghga-claude` volume in

@@ -8,7 +8,9 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 - `AGENTS.md` may reference additional project documentation (for example `README.md` and files in `docs/`) that is also authoritative and intended for both human developers and agents.
 - `CLAUDE.md` beside this file is a stub pointing here and holds nothing else; Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
 - Avoid duplicating AI-specific guidance across files to prevent instruction drift; prefer linking from `AGENTS.md`.
-- [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
+- [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill. Keep always-on rules here and move longer task procedures into skills, which live in `.agents/skills/<name>/SKILL.md` and are symlinked into `.claude/skills/` until Claude Code reads the standard path.
+- Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code finds it through the `CLAUDE.md` stub beside it.
+- The dev container's CLI tools and the repo-wide rules are in the root [AGENTS.md](../../AGENTS.md).
 
 ## Prime Directive
 
@@ -50,7 +52,7 @@ Playwright tests, so this is also what bounds what those tests can prove — see
   computed fields) duplicates work that already exists in the services, and the copy
   inevitably drifts from the real implementation. Tests then pass against a fiction
   and give a false sense of security. Real end-to-end coverage against actual backend
-  is done in the archive test bed.
+  is done in the [test bed](../../testbed/AGENTS.md).
 - Add fixtures to `src/mocks/data.ts` and map them to endpoints in
   `src/mocks/responses.ts`. `createHandlersForResponses` in `src/mocks/handlers.ts` is
   the only handler generator; keep it generic.
@@ -83,14 +85,14 @@ Follows directly from the mocking philosophy above; see
   They stop at the network boundary, since the MSW mocks serve them too, but they boot
   the real app in a real browser with the real services and interceptors. Use them for
   assembly and wiring, not for behaviour. Keep them few and cheap.
-- **Archive test bed** (separate repository): real backend and database, and the only
+- **Test bed** (`testbed/` in this monorepo): real backend and database, and the only
   level that can verify a flow whose outcome depends on the backend changing state.
 
 The practical consequence: do **not** try to cover a "change something, then see the
 change reflected" flow with a Playwright test here. The mocks answer identically before
 and after the mutation, so such a test could only assert that a request was made — which
 a unit test already does more precisely and far more cheaply. Leave those flows to the
-archive test bed, which is more expensive to run.
+test bed, which is more expensive to run.
 
 ## Repo commands (pnpm)
 
@@ -123,36 +125,9 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 - Docs: `pnpm run docs` (use `run`; pnpm has a built-in `docs` command that would otherwise shadow the script)
 - README table of contents: `pnpm toc` (updates the region between `<!-- toc -->` and `<!-- tocstop -->`)
 
-## Dev container CLI tools
-
-The following tools are pre-installed in the dev container and available on `PATH`:
-
-- `rg` (ripgrep): fast recursive text search; prefer over `grep` for workspace searches
-- `fd`: fast file finder; prefer over `find` for file discovery
-- `jq`: JSON querying and transformation (useful for inspecting `package.json`, `pnpm-lock.yaml`, etc.)
-- `bat`: syntax-highlighted file viewer; drop-in alternative to `cat`
-- `shellcheck`: shell script linter
-- `shfmt`: shell script formatter
-
 ## Visual inspection
 
-The dev server runs at **http://localhost:8080** (not the Angular default 4200).
-The dev server must already be running (`just fe-dev`) before attempting visual inspection.
-
-VS Code's integrated browser gives agents full page interaction (read content, take screenshots, click, type, etc.) via built-in browser tools. There are two modes:
-
-**Agent-opened pages** (isolated session — no cookies or login state):
-
-- Use the `open_browser_page` tool with `http://localhost:8080`.
-- Suitable for pages that don't require authentication.
-
-**User-shared pages** (uses your existing browser session, including login state):
-
-- The user must open the page in VS Code's integrated browser and click **"Share with Agent"** in the browser toolbar.
-- Required for authenticated views (e.g. account page, upload grants list).
-- `workbench.browser.enableChatTools` is already enabled in `.vscode/settings.json` — no setup needed.
-
-For layout/visual tasks on authenticated pages, always ask the user to open the relevant page in VS Code's integrated browser and click **"Share with Agent"** before attempting to inspect or screenshot it.
+The dev server runs at **http://localhost:8080** (not the Angular default 4200) and must already be running (`just fe-dev`). [Visual Inspection for Agents](docs/visual-inspection.md) has the two browser modes and when the user has to share the page.
 
 ## MCP tools
 
@@ -168,14 +143,6 @@ Claude Code and Copilot read different MCP config files, so this directory carri
 
 - `.mcp.json` (key `mcpServers`) is Claude Code's config; `.vscode/mcp.json` (key `servers`) is Copilot's. They are kept separate on purpose — do not try to reconcile them into one.
 - `.mcp.json` lists only `angular-cli`. `context7` is omitted there because Claude Code already has Context7 via the claude.ai-hosted connector, so the npx server would be redundant. (Copilot has no such connector, so `.vscode/mcp.json` lists both.)
-
-## AI agent integration
-
-- `AGENTS.md` is the shared instruction source for all coding agents in this repository.
-- GitHub Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`, and its MCP servers in `.vscode/mcp.json`.
-- Claude Code consumes project guidance from `CLAUDE.md`; keep `CLAUDE.md` importing `AGENTS.md` so Claude reads the same shared rules.
-- Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, symlinked into `.claude/skills/` until Claude Code reads the standard path.
-- Keep always-on rules in `AGENTS.md`; move longer task procedures into skills so they only load when relevant.
 
 ## Execution policy
 
@@ -201,70 +168,11 @@ Claude Code and Copilot read different MCP config files, so this directory carri
  */
 ```
 
-## TypeScript Best Practices
+## TypeScript and Angular style
 
-- Use strict type checking
-- Prefer type inference when the type is obvious
-- Avoid the `any` type; use `unknown` when type is uncertain
-- Use `undefined` for optional values and parameters and missing results or config settings, and `null` for explicit empty values, form and backend data and for resetting state.
-- In case of doubt, prefer `undefined` over `null`, avoid allowing both unless really required.
-
-## Documentation
-
-- All functions, methods, and classes require JSDoc comments (enforced via eslint-plugin-jsdoc)
-- JSDoc must include `@param` for all parameters and `@returns` for non-void return types
-- JSDoc must include a description line for the function/method/class
-- Keep JSDoc comments concise and meaningful - avoid redundancy with code that is self-explanatory
-- Empty constructors are exempt from JSDoc requirements
-- Arrow function expressions do not require JSDoc by linting rules, but should still include JSDoc when the function is not self-explanatory and needs deeper explanation
-
-Further project-specific development guidance:
+TypeScript, JSDoc, Angular, component, state, template and service conventions are in
+[TypeScript and Angular Best Practices](docs/typescript-angular.md). Read it before
+writing code. Further project-specific guidance:
 
 - [Accessibility and Semantics Best Practices](docs/a11y-semantics.md)
 - [Responsiveness Best Practices](docs/responsiveness.md)
-
-## Angular Best Practices
-
-- Always use standalone components over NgModules.
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
-- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly. `OnPush` is the default in Angular v22+.
-- Use signals for state management.
-- Implement lazy loading for feature routes.
-- Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead.
-- Use `NgOptimizedImage` for all static images.
-  - `NgOptimizedImage` does not work for inline base64 images.
-- Do NOT invent Angular APIs or CLI behaviors. When uncertain, call `search_documentation` and cite Angular guidance in the response.
-
-## Components
-
-- Keep components small and focused on a single responsibility
-- Use `input()` and `output()` functions instead of decorators
-- Use `computed()` for derived state
-- Prefer inline templates for small components
-- Prefer Signal Forms (`@angular/forms/signals`) for new forms; when not using them, prefer reactive forms over template-driven forms
-- Do NOT use `ngClass`, use `class` bindings instead
-- Do NOT use `ngStyle`, use `style` bindings instead
-
-## State Management
-
-- Use signals for local component state
-- Use `computed()` for derived state
-- Keep state transformations pure and predictable
-- Do NOT use `mutate` on signals, use `update` or `set` instead
-
-## Templates
-
-- Keep templates simple and avoid complex logic
-- Do NOT call functions or methods in template bindings (including interpolation, `@if`/`@for` conditions, and inputs); bind to a signal or a `computed()` instead.
-  - Why: template expressions are re-evaluated on every change detection cycle, so a function call re-runs each time regardless of whether its inputs changed. This is wasteful, scales poorly (worse inside `@for`), and gets more pronounced under zoneless change detection. Signals and `computed()` are memoized: they recompute only when a dependency actually changes, and they let change detection update only what changed.
-  - Exceptions: pure pipes (also memoized) are fine, and event handlers (e.g. `(click)="doThing()"`) are calls in response to user actions, not evaluated during change detection, so they are fine too.
-- Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
-- Use the async pipe to handle observables
-- Do not assume globals like (`new Date()`) are available
-
-## Services
-
-- Design services around a single responsibility
-- Prefer the `@Service` decorator for new singleton services in Angular v22+
-- When not using `@Service`, use the `providedIn: 'root'` option for singleton services
-- Use the `inject()` function instead of constructor injection
