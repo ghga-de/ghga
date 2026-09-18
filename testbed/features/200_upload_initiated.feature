@@ -63,6 +63,18 @@ Feature: 200 Upload Initiated
     And the expected item count in response is "2"
     And the extra data upload box is no longer listed
 
+  Scenario: Data Steward retrieves data upload boxes by page
+
+    When "Data Steward" retrieves the "last" data upload boxes
+    Then the response status code is "200"
+    And the expected item count in response is "1"
+    And the "secondary" upload box is returned
+
+    When "Data Steward" retrieves the "next" data upload boxes
+    Then the response status code is "200"
+    And the expected item count in response is "1"
+    And the "primary" upload box is returned
+
   Scenario: Finishing the initiation of upload process
 
     Then set the state to "upload boxes created and user access granted"
