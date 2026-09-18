@@ -21,9 +21,13 @@ with the database.
 import typing
 import warnings
 from abc import ABC, abstractmethod
+from asyncio import sleep
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
 from contextlib import AbstractAsyncContextManager
 from functools import partial
+from logging import Logger
+from random import uniform
+from types import TracebackType
 from typing import Any, Generic, TypeVar
 from uuid import uuid4
 
@@ -43,6 +47,7 @@ __all__ = [
     "ResourceNotFoundError",
     "UUID4Field",
     "UniqueConstraintViolationError",
+    "race_condition_retries",
 ]
 
 
@@ -239,6 +244,102 @@ class FindResult(AsyncIterator[Dto]):
         an empty list.
         """
         return [item async for item in self]
+
+
+class _RaceConditionAttempt:
+    """A single try yielded by `race_condition_retries`.
+
+    Used as a context manager: suppresses an `PreconditionFailedError` raised in its block,
+    keeps it in `error`, and records whether the block finished without one.
+    """
+
+    def __init__(self) -> None:
+        self.succeeded = False
+        self.error: PreconditionFailedError | None = None
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool:
+        if exc_type is None:
+            self.succeeded = True
+            return False
+        if isinstance(exc_value, PreconditionFailedError):
+            self.error = exc_value
+            return True
+        return False
+
+
+async def race_condition_retries(  # noqa: PLR0913
+    *,
+    description: str,
+    error_on_failure: BaseException,
+    logger: Logger | None = None,
+    max_tries: int = 3,
+    interval: float = 0.5,
+    jitter: float = 0.3,
+) -> AsyncIterator[_RaceConditionAttempt]:
+    """Yield attempts for an action that can lose a race condition.
+
+    Wrap the action in `with attempt:` for each yielded attempt. Retries it up to
+    `max_tries` times, waiting `interval` seconds (plus jitter) after each
+    `PreconditionFailedError`. That error means the `precondition` of a DAO update no
+    longer matched because another write came first. A `return` inside the block
+    ends the retries.
+
+    ```python
+    async for attempt in race_condition_retries(
+        description="update stats for box <box_id>",
+        error_on_failure=error,
+    ):
+        with attempt:
+            ...
+    ```
+
+    Args:
+        description:
+            What the action does, phrased to follow "to", e.g.
+            "update stats for box <box_id>". Used in log messages.
+        error_on_failure: The error to raise once all tries have failed.
+        logger:
+            Logs a debug message for each conflict and an error once all tries have
+            failed. Nothing is logged if omitted.
+        max_tries: How many times to try the action. Values below 1 count as 1.
+        interval: Seconds to wait between tries. Negative values count as 0.
+        jitter:
+            Upper bound, in seconds, of a random delay added to each wait, so callers
+            that conflicted don't retry at the same moment. Negative values count as 0.
+
+    Raises:
+    - `error_on_failure` if the action still raises `PreconditionFailedError` on the last try.
+      It is chained from that last `PreconditionFailedError`.
+    """
+    description = description.strip(" .")
+    tries = max(1, max_tries)
+    last_error: PreconditionFailedError | None = None
+    for attempt_number in range(1, tries + 1):
+        attempt = _RaceConditionAttempt()
+        yield attempt
+        if attempt.succeeded:
+            return
+        last_error = attempt.error
+        if logger:
+            logger.debug("Detected race condition while trying to %s.", description)
+        if attempt_number < tries:
+            await sleep(max(0, interval) + uniform(0, max(jitter, 0)))  # noqa: S311
+
+    if logger:
+        logger.error(
+            "Failed %s times to %s due to persistent race conditions.",
+            tries,
+            description,
+        )
+    raise error_on_failure from last_error
 
 
 class Dao(typing.Protocol[Dto]):
