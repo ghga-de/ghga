@@ -34,6 +34,7 @@ from hexkit.protocols.dao import (
     DaoError,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     UniqueConstraintViolationError,
     race_condition_retries,
 )
@@ -1152,16 +1153,26 @@ class UploadController(UploadControllerPort):
         )
 
         if max_size < box.size:
-            error = self.BoxMaxSizeTooLowError(
+            size_too_low_error = self.BoxMaxSizeTooLowError(
                 box_id=box_id, max_size=max_size, current_size=box.size
             )
-            log.info(error, extra={"box_id": box_id, "max_size": max_size})
-            raise error
+            log.info(size_too_low_error, extra={"box_id": box_id, "max_size": max_size})
+            raise size_too_low_error
 
-        box.version += 1
-        box.max_size = max_size
-        await self._file_upload_box_dao.update(box)
-        log.info("Updated max_size for box %s to %s.", box_id, max_size)
+        updated_box = box.model_copy(
+            update={"version": box.version + 1, "max_size": max_size}
+        )
+
+        # Attempt the update
+        try:
+            await self._file_upload_box_dao.update(
+                updated_box, precondition={"version": box.version}
+            )
+            log.info("Updated max_size for box %s to %s.", box_id, max_size)
+        except PreconditionFailedError as err:
+            box_version_error = self.BoxVersionError(box_id=box_id)
+            log.info(box_version_error, extra={"box_id": box_id, "max_size": max_size})
+            raise box_version_error from err
 
     async def lock_file_upload_box(
         self, *, box_id: UUID4, version: int, force: bool = False
