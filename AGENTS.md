@@ -170,4 +170,6 @@ code.
   (`.claude/output-styles/ghga-dev.md`), which keeps the writing steady across a long
   session. Set `outputStyle` in `.claude/settings.local.json` to use another; user
   settings do not override the project default.
-- There is no monorepo-level MCP configuration; the data portal has its own.
+- There is no monorepo-level MCP configuration; the data portal has its own, and Claude
+  Code reads a `.mcp.json` only from the directory the session starts in, so that one
+  reaches a session started in `frontend/data-portal` and no other.

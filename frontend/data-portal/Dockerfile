@@ -1,19 +1,24 @@
-# Multi-stage Dockerfile for building a production image for the data portal
+# Multi-stage Dockerfile for building a hardened image for the data portal
 
-# BASE: a base image with updated packages
+# Define the non-dev base-image
 # Node is held at the LTS line, see docs/dependencies.md
-FROM node:24-alpine AS base
-RUN apk upgrade --no-cache --available
+# renovate: track=node-base
+ARG NODE_BASE=24.21.0-alpine3.24
+ARG BASE=dhi.io/node:${NODE_BASE}
 
 # BUILDER: a container to build the service dist directory
-FROM base AS builder
+#
+# Pinned to --platform=$BUILDPLATFORM: everything this stage hands to RUNNER (the
+# Angular bundle, package.json.run, the js-yaml copy) is architecture-independent,
+# so it is built once natively rather than once per target platform under QEMU.
+# Drop the pin only if this stage starts producing arch-specific output.
+# hadolint ignore=DL3006
+FROM --platform=$BUILDPLATFORM ${BASE}-sfw-ent-dev AS builder
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 # install pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@12.4.1 --activate
-# install static web server (curl/jq/sudo/which are build-only, intentionally unpinned)
 # hadolint ignore=DL3018
-RUN apk add --no-cache curl jq sudo which \
- && curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sh
+RUN apk add --no-cache jq
 # build the service
 WORKDIR /service
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -23,22 +28,38 @@ RUN pnpm build
 # prepare runtime artifacts: base package.json with just name and version,
 # js-yaml (symlinks resolved) for runtime, and a group-writable config.js
 # (writable at runtime under any UID)
-RUN jq '{name, version, type}' package.json > ./package.json.run \
+# PLATFORM_VERSION, when given, overrides the package.json version so the
+# app reports the platform release it was built for (inert when unset)
+ARG PLATFORM_VERSION=""
+RUN jq --arg v "${PLATFORM_VERSION}" \
+      '{name, version: (if $v == "" then .version else $v end), type}' \
+      package.json > ./package.json.run \
  && mkdir -p /tmp/runtime-deps \
  && cp -rL node_modules/js-yaml /tmp/runtime-deps/ \
  && touch ./dist/data-portal/browser/config.js \
  && chmod g+w ./dist/data-portal/browser ./dist/data-portal/browser/config.js
 
+# SWS: static-web-server's pre-compiled binary, unlike BUILDER's output above, is
+# architecture-specific and gets copied into RUNNER (which builds per target platform)
+# - so this stage must NOT be pinned to $BUILDPLATFORM, it needs to match RUNNER's own
+# target arch.
+# hadolint ignore=DL3006
+FROM ${BASE}-sfw-ent-dev AS sws
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
+# curl/sudo/which are build-only, intentionally unpinned
+# hadolint ignore=DL3018
+RUN apk add --no-cache curl sudo which && mkdir -p /usr/local/bin \
+ && curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sed "s/cp -ax/cp -a/g" | sed 's/_clibtype="gnu"/_clibtype="musl"/' | sh
+
 # RUNNER: a container to run the service
-FROM base AS runner
+# hadolint ignore=DL3006
+FROM ${BASE} AS runner
 ARG UID=1000
 WORKDIR /app
-# remove npm and corepack to trim the image and avoid outdated dependencies
-RUN rm -rf /usr/local/lib/node_modules /root/.cache /root/.npm
 # install dist directory and run script
 COPY --chown=${UID}:0 --from=builder /service/dist/data-portal/browser ./dist
 # install static web server
-COPY --from=builder /usr/local/bin/static-web-server /usr/local/bin/static-web-server
+COPY --from=sws /usr/local/bin/static-web-server /usr/local/bin/static-web-server
 # copy the base package.json with name and version
 COPY --chown=${UID}:0 --from=builder /service/package.json.run ./package.json
 # install run script

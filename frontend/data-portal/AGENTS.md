@@ -131,7 +131,7 @@ The dev server runs at **http://localhost:8080** (not the Angular default 4200) 
 
 ## MCP tools
 
-- MCP servers `angular-cli` and `context7` are available in this workspace.
+- MCP servers `angular-cli` and `context7` are available in this workspace (for Claude Code, only in a session started in this directory — see below).
 - Prefer `angular-cli` for Angular-specific tasks: project/workspace discovery, Angular best practices, Angular documentation and examples, and Angular-focused migrations.
 - Consult `angular-cli` before making assumptions about Angular APIs, templates, or CLI behavior.
 - For `find_examples`, prefer `workspacePath` first for version-aligned results; if it returns no matches, rerun without `workspacePath` as a generic fallback.
@@ -142,6 +142,7 @@ The dev server runs at **http://localhost:8080** (not the Angular default 4200) 
 Claude Code and Copilot read different MCP config files, so this directory carries both:
 
 - `.mcp.json` (key `mcpServers`) is Claude Code's config; `.vscode/mcp.json` (key `servers`) is Copilot's. They are kept separate on purpose — do not try to reconcile them into one.
+- The two are not read alike. Copilot picks up the nested `.vscode/mcp.json` whichever folder the window is opened on, but Claude Code reads `.mcp.json` only from the directory the session starts in — so `angular-cli` reaches a session started here, and not one started at the repo root. That is deliberate: the server is of no use to backend work and the repo root carries no MCP configuration, so start Claude Code in this directory (the "frontend · data-portal" folder of `ghga.code-workspace`) when you want it.
 - `.mcp.json` lists only `angular-cli`. `context7` is omitted there because Claude Code already has Context7 via the claude.ai-hosted connector, so the npx server would be redundant. (Copilot has no such connector, so `.vscode/mcp.json` lists both.)
 
 ## Execution policy

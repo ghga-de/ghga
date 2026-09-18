@@ -42,9 +42,6 @@ drop_paths_for_kind() {
         lock .github .template .pyproject_generation .readme_generation scripts \
         .pre-commit-config.yaml Dockerfile Dockerfile.dhi .devcontainer .dockerignore \
         uv.lock .vscode ;;
-    frontend)
-      # Keep the bespoke frontend Dockerfile/build; only drop per-repo CI + devcontainer.
-      printf '%s\n' .github .devcontainer ;;
     testbed)
       # Keep features/steps/fixtures + pytest config; drop compose/CI/lock/devcontainer.
       printf '%s\n' .github .devcontainer lock Dockerfile Dockerfile.dhi ;;

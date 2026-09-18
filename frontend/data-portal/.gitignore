@@ -7,8 +7,7 @@
 # Node
 /node_modules
 .pnpm-store
-npm-debug.log
-yarn-error.log
+*.log
 
 # Runtime config
 public/config.js
@@ -53,8 +52,6 @@ documentation
 .sass-cache/
 /connect.lock
 /coverage
-/libpeerconnection.log
-testem.log
 /typings
 
 # Key stores
