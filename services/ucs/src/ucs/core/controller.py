@@ -1380,10 +1380,18 @@ class UploadController(UploadControllerPort):
             await self._file_upload_dao.update(file)
 
         # Update the box last
-        box.version += 1
-        box.state = "archived"
-        await self._file_upload_box_dao.update(box)
-        log.info("Archived box with ID %s", box_id)
+        updated_box = box.model_copy(
+            update={"version": box.version + 1, "state": "archived"}
+        )
+        try:
+            await self._file_upload_box_dao.update(
+                updated_box, precondition={"version": box.version + 1}
+            )
+            log.info("Archived box with ID %s.", box_id)
+        except PreconditionFailedError as err:
+            box_version_error = self.BoxVersionError(box_id=box_id)
+            log.info(box_version_error)
+            raise box_version_error from err
 
     async def get_box_file_info(
         self,
