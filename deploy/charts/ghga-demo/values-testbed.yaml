@@ -24,8 +24,6 @@ test-oidc-provider:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     # the issuer the testbed's sub-derivation and the auth stack expect
     issuer: https://test-aai.ghga.dev

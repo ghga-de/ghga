@@ -1,15 +1,14 @@
-# All your requirements go here. Please adapt as needed:
+# What the suite needs on top of the workspace. ghga-connector, ghga-datasteward-kit
+# and everything under them are NOT listed here: `just testbed-install` installs them
+# editable from uv.lock and resolves this file together with that export, so their
+# versions always come from the workspace, and a pin here that disagrees fails loudly.
 
-ghga-connector==3.0.1
-ghga-datasteward-kit==5.4.1
-metldata >=4.2,<5
-
-ghga-event-schemas>=13,<14
-ghga-service-commons[auth,crypt]>=7,<8
-hexkit[all]>=8,<9
+# Workspace libraries the suite imports itself: name only, for the extras the tools do
+# not request; the version is the one in uv.lock
+ghga-event-schemas
+ghga-service-commons[auth,crypt]
+hexkit[all]
 openpyxl >= 3.1,<4
-
-crypt4gh>=1.8,<2
 
 # pytest-bdd currently does not work properly with pytest >= 8
 # therefore we need to pin pytest to an older version until this is fixed
@@ -20,7 +19,6 @@ pytest-bdd>=8.1,<9
 pytest-cov>=7,<8
 pyotp>=2.9,<3
 
-click>=8.2,<9
 typer>=0.26
 httpx>=0.28,<0.29
 
