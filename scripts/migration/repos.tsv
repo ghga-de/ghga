@@ -106,7 +106,20 @@
 #                             services/reverse-transpiler-service additionally carries
 #                             monorepo-only work never upstreamed: a writable /tmp for
 #                             spreadsheet serialization (431690a2, chart values only).
-# Fourteen archived tips are deliberately NOT merged — each is an archival/deprecation notice
+#   ghga-arcticfreeze      -> libs/ghga-arcticfreeze          c391587 "python version from 3.10" 2026-08-20, 1.0.0
+#                             The later upstream commits 754fa9c "workflows updated", c92670a
+#                             "template update" and their merge 7186ffc (#2) all 2026-08-20, touch
+#                             only dropped boilerplate (.github/, lock/, .template/,
+#                             .pyproject_generation/, the per-repo pre-commit config). The member
+#                             here reads 1.1.2: the PyPI lane (#83) raised the floor to Python 3.11
+#                             and repointed the project URLs to the monorepo, released as 1.1.1.
+#                             NB: PyPI also carries the pre-rename dist `arcticfreeze` 0.1.1 — same
+#                             import package, so the two cannot share a venv.
+#   ghga-jsonsubschema     -> libs/ghga-jsonsubschema         b7a7cda "relax the required python version (#16)" 2026-08-20, 0.1.2
+#                             All PRs were merged; feature/improve-package-quality-gsi-2374 is a
+#                             stale leftover of #15 (squash-merged), superseded by #16, never in
+#                             scope. The member here reads 0.2.0 after the same PyPI-lane changes.
+# Sixteen archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
@@ -115,14 +128,16 @@
 # docs site with redirects to the monorepo (#253)", notification-service 00ca3db1,
 # notification-orchestration-service 285dc85f, dataset-information-service 5afbde4,
 # well-known-value-service 282b4be (all four "Add deprecation note"), auth-km-jobs
-# f27562b "Add retirement note (#22)", dlq-service 4646433 "Add deprecation note (#21)"
-# and reverse-transpiler-service b428f91 "Add deprecation note (#11)". Those last eight
-# are the only tips that would NOT have filtered to empty: hexkit's is mostly redirect
-# tooling on paths the import drops (.github/, scripts/, .template/, .gitignore), the
-# next four touch nothing else but .readme_generation/ and .template/, auth-km-jobs' and
-# dlq-service's touch nothing but the README, and reverse-transpiler-service's bundles a
-# template refresh whose kept-path parts the monorepo has already replaced centrally (the
-# per-repo [tool.ruff] tables and the per-member .gitignore, dropped in 9ddc8284) — yet
+# f27562b "Add retirement note (#22)", dlq-service 4646433 "Add deprecation note (#21)",
+# reverse-transpiler-service b428f91 "Add deprecation note (#11)", ghga-arcticfreeze
+# b8d3b65 "Add archival note (#3)" and ghga-jsonsubschema c7dae8c "Add archival note
+# (#17)". Those last ten are the only tips that would NOT have filtered to empty: hexkit's
+# is mostly redirect tooling on paths the import drops (.github/, scripts/, .template/,
+# .gitignore), the next four touch nothing else but .readme_generation/ and .template/,
+# auth-km-jobs', dlq-service's and ghga-arcticfreeze's touch nothing but the README,
+# ghga-jsonsubschema's nothing else but the dropped uv.lock, and reverse-transpiler-service's
+# bundles a template refresh whose kept-path parts the monorepo has already replaced centrally
+# (the per-repo [tool.ruff] tables and the per-member .gitignore, dropped in 9ddc8284) — yet
 # each also adds a "this repo has moved" banner to the README, which is kept: an
 # upstream-only notice, wrong to carry here, where that README is the package's own.
 # adrs is archived too but never had a row: it was copied once, flattened, into
@@ -132,13 +147,6 @@
 lib	ghga-service-commons	.	libs/ghga-service-commons	main
 lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main
-# GHGA fork of IBM/jsonsubschema (dist `ghga-jsonsubschema`, import name `jsonsubschema`),
-# consumed by libs/schemapack's `schema-comparison` extra. uv-native, not template-derived.
-lib	ghga-jsonsubschema	.	libs/ghga-jsonsubschema	main
-# Deep-freeze helpers (dist `ghga-arcticfreeze` since 1.0.0, import name `arcticfreeze`).
-# NB: PyPI also carries the pre-rename dist `arcticfreeze` 0.1.1 — same import package,
-# so the two cannot share a venv. libs/schemapack was repointed to `ghga-arcticfreeze` here.
-lib	ghga-arcticfreeze	.	libs/ghga-arcticfreeze	main
 #
 # Standalone services
 service	state-management-service	.	services/state-management-service	main

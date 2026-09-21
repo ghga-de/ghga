@@ -1507,7 +1507,7 @@ requires-dist = [
 
 [[package]]
 name = "ghga-jsonsubschema"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "libs/ghga-jsonsubschema" }
 dependencies = [
     { name = "greenery" },
