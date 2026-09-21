@@ -58,11 +58,13 @@ python -m jsonsubschema s2.json s1.json
 ```python
 from jsonsubschema import is_subschema
 
-def main():
-    s1 = {'type': "integer"}
-    s2 = {'type': ["integer", "string"]}
 
-    print(f'LHS <: RHS {is_subschema(s1, s2)}')
+def main():
+    s1 = {"type": "integer"}
+    s2 = {"type": ["integer", "string"]}
+
+    print(f"LHS <: RHS {is_subschema(s1, s2)}")
+
 
 if __name__ == "__main__":
     main()

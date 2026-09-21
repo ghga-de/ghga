@@ -67,11 +67,6 @@ exclude = [
     # imported epic docs are historical artifacts; their ```python fences are not all
     # real Python, and ruff >= 0.16 would otherwise format code blocks in markdown
     "docs/epics",
-    # same ruff >= 0.16 markdown behaviour: this README's ```python fence is upstream
-    # content that ghga-de/ghga-jsonsubschema keeps unformatted. Reformatting it here
-    # would diverge a file the one-way sync re-delivers (ADR-0025). Drop this once that
-    # repo no longer syncs from mainline.
-    "libs/ghga-jsonsubschema/README.md",
 ]
 
 [tool.ruff.lint]
