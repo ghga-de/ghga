@@ -429,5 +429,6 @@ def check_box_archived(storage_name: str, fixtures: JointFixture):
         time.sleep(INGEST_INTERVAL)
         slept += INGEST_INTERVAL
     raise AssertionError(
-        f"Upload box for {storage_name} storage did not reach 'Archived' state after"
+        f"Upload box for {storage_name} storage did not reach 'Archived' state"
+        f" after {INGEST_TIMEOUT} seconds"
     )
