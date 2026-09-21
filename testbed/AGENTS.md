@@ -6,11 +6,9 @@ How we work on the integration test bed. The repo-wide rules are in the root
 [docs/agent-instructions.md](../docs/agent-instructions.md) says what belongs in which
 file.
 
-The local [README](README.md) came with the import and still describes the standalone
-repo: its Quick Start, its `pytest` invocations and its `tb.yaml` do not apply here, and
-`just testbed` points `TB_CONFIG_YAML` at `tb.kind.yaml` instead. Read it for the test
-structure, the black-box and white-box modes, and the configuration keys; take the
-commands from the root README.
+The local [README](README.md) covers the test structure, the black-box and white-box
+modes, and the configuration keys; take the commands from the root README. The
+standalone `archive-test-bed` repo it came from is archived, so changes land here only.
 
 ## Not a workspace member
 

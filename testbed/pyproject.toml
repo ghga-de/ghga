@@ -18,4 +18,4 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/archive-test-bed"
+Repository = "https://github.com/ghga-de/ghga"
