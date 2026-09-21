@@ -197,8 +197,8 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
       `epic-docs`, `adrs`, `file-services-backend` (all six of its services at once),
       `hexkit`, `notification-service`, `notification-orchestration-service`,
       `dataset-information-service`, `well-known-value-service`, `auth-km-jobs`,
-      `dlq-service`, `reverse-transpiler-service`, `ghga-arcticfreeze` and
-      `ghga-jsonsubschema` are archived and their rows removed
+      `dlq-service`, `reverse-transpiler-service`, `ghga-arcticfreeze`,
+      `ghga-jsonsubschema` and `archive-test-bed` are archived and their rows removed
       from `repos.tsv` — see the "Retired" block there for the last commit merged from
       each. Verify a repo is fully synced (§6) before dropping its row.
       `hexkit` additionally published a documentation site, so its archived Pages site was
@@ -207,7 +207,8 @@ own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
       keeps serving Pages but cannot run Actions, so that deploy could not be redone.
 - [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
       `schemapack` still install the expected versions from PyPI.
-- [ ] Decommission the docker-compose test bed.
+- [x] Decommission the docker-compose test bed. **Done (2026-09):** `archive-test-bed` is
+      archived; the suite runs from `testbed/` against kind (`just testbed`).
 
 ## Notes & caveats
 - `git filter-repo` **rewrites SHAs**; old commit-message PR refs (`#NNN`) become dangling. The
