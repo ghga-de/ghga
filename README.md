@@ -13,9 +13,10 @@ One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `
 alongside the Angular `data-portal`, with Helm charts and a Kubernetes integration test bed as
 build products.
 
-> **Status: cutover in progress.** The source repos are imported, and CI and both release
-> lanes run from here. What remains is the mainline wind-down — see the
-> [docs index](docs/README.md) and the runbook.
+> **Status: cutover essentially done.** The source repos are imported and archived, and
+> CI and both release lanes run from here. The few leftovers, chiefly importing the
+> schemapack line of `metldata`, `ghga-transpiler` and `em-transformation-service`, are
+> listed in the [runbook §7](docs/migration/runbook.md#7-cutover-checklist).
 
 ## Layout
 

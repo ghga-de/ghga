@@ -179,17 +179,34 @@ Anything else is unsynced work: sync it (or port it) before archiving. Then diff
 cross-check — the remaining differences should only be the dropped boilerplate and the monorepo's
 own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 
-## 7. Cutover checklist (when the sandbox proves out)
+## 7. Cutover checklist
 
-- [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas.
-- [ ] Freeze mainline repos (announce; protect branches / make read-only).
+The cutover is essentially done: development happens here, both release lanes publish
+from here, and the source repos are archived. This section is the one place that lists
+what remains:
+
+- **The schemapack line.** `metldata` 5.x (its `schemapack` branch), `ghga-transpiler`
+  3.x (its `main`) and `em-transformation-service` still live in their own repos. The
+  monorepo carries `metldata` 4.x and `ghga-transpiler` 2.x instead, the versions that
+  build without schemapack. All three come in, history-preserving, once mainline has
+  switched from LinkML to schemapack; then those repos are archived like the others.
+- **Retiring the leftover repos.** `charts` (still serving `ghga-de.github.io/charts`)
+  and `microservice-repository-template` are superseded but not yet archived.
+- **The open items below**, and those listed in
+  [releases.md](../releases.md#open-at-cutover).
+
+- [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas. Left
+      only for the schemapack line.
+- [ ] Freeze mainline repos (announce; protect branches / make read-only). Left only for
+      the repos not yet archived.
 - [x] Wire the CD targets, add the required secrets, enable the release workflow's tag trigger
       and write permissions. **Done (2026-09):** images and charts to Docker Hub, wheels to
       PyPI after a TestPyPI rehearsal (trusted publishing on both indexes)
       ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image
       series (no version regressions).
-- [ ] Move the repo to `github.com/ghga-de/<monorepo>`; set CODEOWNERS per path.
+- [x] Move the repo to `github.com/ghga-de/ghga`.
+- [ ] Set CODEOWNERS per path.
 - [ ] Archive the old repos (keep read-only for history/provenance); update external docs that
       point at per-repo locations. **Started ahead of the full cutover (2026-09):**
       `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`,

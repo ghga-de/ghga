@@ -4,11 +4,11 @@ Design and migration records for the consolidation of GHGA's ~28 maintained repo
 into one polyglot monorepo (Python `uv` workspace + Angular front end) that builds Helm
 charts and runs its integration tests on Kubernetes.
 
-> Status: **executed; cutover in progress.** The import is done — 20 services, 7 libraries,
-> 5 tools and the Angular front end are in the tree — CI and both release lanes run from
-> here, and the platform lane has cut `ghga/15.3.1-rc.*`. What remains is the mainline-side
-> wind-down in the [runbook §7](migration/runbook.md) checklist. The ADRs record the decisions
-> as they stand; git keeps how they got there.
+> Status: **executed; cutover essentially done.** The import is done — 20 services, 7
+> libraries, 5 tools and the Angular front end are in the tree — CI and both release
+> lanes run from here, and the platform lane has cut `ghga/15.3.1-rc.*`. The leftovers
+> are listed in the [runbook §7](migration/runbook.md#7-cutover-checklist). The ADRs
+> record the decisions as they stand; git keeps how they got there.
 
 ## Start here
 - **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout,
@@ -95,8 +95,8 @@ ADR's frontmatter by `just docs-check`; do not edit it by hand.
 | **3. Harmonise** | `[tool.uv.sources]` wiring, single `uv.lock` (skew reconciled), one toolchain, shared Dockerfile, lib matrix | runbook §3, ADR-0026 |
 | **4. Charts & test bed** | Adopt `ghga-common` + generator; `ghga-demo` umbrella (Envoy Gateway edge + lightweight infra + AAI); testbed = the same install on kind | runbook §4, ADR-0031/0032/0028/0029 |
 | **5. CI/CD** | **Done.** Both stages live: the affected-target component gate (`ci.yaml`, incl. reverse-dep closure + front end) and the kind integration gate (`integration.yaml`). Publish targets decided — Docker Hub for images and charts, PyPI for the library lane; a tag push builds, publishing a platform release is a deliberate dispatch | runbook §5, ADR-0027/0028/0037 |
-| **6. Sync** | Periodic one-way sync from mainline keeps the gap small. Quiet since 2026-07-22; the tooling is now mostly used to import further repos | runbook §6, `sync-from-mainline.sh` |
-| **7. Cutover** | **In progress.** Repo lives at `ghga-de/ghga`, the PyPI lane publishes, and the platform lane has cut `ghga/15.3.1-rc.*`. Still open: freezing and archiving the mainline repos, and the version-reconciliation and external-consumer checks in the checklist | runbook §7 |
+| **6. Sync** | Periodic one-way sync from mainline kept the gap small until each repo was archived. Now used only to import the schemapack line | runbook §6, `sync-from-mainline.sh` |
+| **7. Cutover** | **Essentially done.** Repo lives at `ghga-de/ghga`, the PyPI lane publishes, the platform lane has cut `ghga/15.3.1-rc.*`, and the source repos are archived. The leftovers are listed in runbook §7 | runbook §7 |
 
 ## Open items (tracked, non-blocking)
 See [architecture/overview.md §6](architecture/overview.md). Notably: confirming the Envoy
