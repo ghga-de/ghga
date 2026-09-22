@@ -91,8 +91,8 @@ minio:
   # is still fine: renovate.json5's allowedVersions pins the tag to "latest", so a bump
   # here only ever moves the digest, and every such bump runs through the testbed like
   # any other change before it merges.
-  image: cgr.dev/chainguard/minio:latest@sha256:21b9e1bccf46098dee2e928952bf5fd4690a5ec30a3b86a1e728f1bb0ceaed0e
-  mcImage: cgr.dev/chainguard/minio-client:latest@sha256:669458caf7adc7ad0d4255b40348f16d72db87ab034a3b9cd503568ec6dab171
+  image: cgr.dev/chainguard/minio:latest@sha256:22bf0ad174612a0106dfbbb95818f307525dd32c5a6ec119ecd7273815abe456
+  mcImage: cgr.dev/chainguard/minio-client:latest@sha256:ff313058c290a4519b86db9362386d18214583b86ea35f6891038e1061dc3e12
   rootUser: demo-access-key
   rootPassword: demo-secret-key
   # The S3 API is published on a node port, which kind maps to the host's 9000
