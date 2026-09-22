@@ -158,11 +158,12 @@ A tag that already has a release is left alone.
   them as `name/x.y.z`.
 
 The draft lists the pull requests since the previous release of the same name, grouped
-by commit type. For the platform, those are the ones that touched `services/`,
-`frontend/`, `deploy/` or `uv.lock`; for a library or tool, those that changed its
-shipped files. The platform's draft also names each library and tool that changed, with
-its version and a link to its release; a release tagged after the draft is not linked
-yet. The summary headings above the lists are left for you to fill in:
+by commit type; a first release lists those since the first `ghga/` tag. For the
+platform, those are the ones that touched `services/`, `frontend/`, `deploy/` or
+`uv.lock`; for a library or tool, those that changed its shipped files. The platform's
+draft also names each library and tool that changed, with its version and a link to its
+release; a release tagged after the draft is not linked yet. The summary headings above
+the lists are left for you to fill in:
 
 1. Open the draft under the repository's releases.
 2. Under New features, Changes and Bug fixes, write a few short sentences each for

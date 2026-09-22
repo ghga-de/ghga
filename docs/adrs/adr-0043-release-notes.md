@@ -58,7 +58,11 @@ We keep release notes as GitHub releases, one for each platform release and one 
 each release of a library or tool. There are no changelog files in the repository. A
 release lists the pull requests since the previous release of the same name that
 touched its files. A final release compares with the previous final release, so it
-covers the whole cycle; a candidate compares with the previous tag, candidate or not.
+covers the whole cycle; a candidate compares with the previous tag, candidate or not. A
+first release, such as the first `hexkit/` tag or the first final `ghga/` tag, compares
+with the first platform tag before it, `ghga/15.3.1-rc.1`. Comparing with nothing
+would list the history imported from the old repositories, whose pull request numbers
+lead to the wrong pull requests here.
 
 - **Platform:** a `ghga/` tag lists the pull requests that touched the services, the
   front end, the charts in `deploy/` or `uv.lock`. The lock file counts because a
@@ -106,8 +110,8 @@ Only the platform's final releases are marked as the repository's latest release
   the wrong group, and a vague description stays vague in the notes.
 - A pull request merged with a merge commit, such as a hotfix or a Renovate update, is
   listed once under its title, with its type taken from the branch name.
-- The first monorepo release of a member has no earlier tag to compare with, so its
-  notes list no pull requests. `--previous` gives the script a starting point by hand.
+- The first release of each member lists the pull requests since the first release
+  candidate, not those merged into the monorepo before it.
 - The releases page mixes platform and member releases; GitHub's search filters it by
   name.
 

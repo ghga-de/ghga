@@ -128,9 +128,25 @@ def test_candidate_compares_with_the_previous_candidate(repo):
     assert release_notes.previous_tag("ghga/1.1.0-rc.2") == "ghga/1.1.0-rc.1"
 
 
-def test_first_release_has_nothing_to_compare_with(repo):
+def test_first_platform_release_has_nothing_to_compare_with(repo):
     assert release_notes.previous_tag("ghga/1.0.0") is None
-    assert release_notes.previous_tag("other/1.0.0") is None
+
+
+def test_first_member_release_compares_with_the_first_platform_tag(repo):
+    """Not with nothing: that would list the history imported from the old repos."""
+    _git(repo, "tag", "other/1.0.0", "ghga/1.1.0")
+    assert release_notes.previous_tag("other/1.0.0") == "ghga/1.0.0"
+
+
+def test_first_final_platform_release_compares_with_the_first_candidate(repo):
+    _git(repo, "tag", "--delete", "ghga/1.0.0")
+    assert release_notes.previous_tag("ghga/1.1.0") == "ghga/1.1.0-rc.1"
+
+
+def test_no_platform_tag_before_a_first_release(repo):
+    """A platform tag at the same commit or later is no starting point."""
+    _git(repo, "tag", "early/1.0.0", "ghga/1.0.0")
+    assert release_notes.previous_tag("early/1.0.0") is None
 
 
 def test_history_lists_every_pull_request_once(repo):
@@ -262,11 +278,15 @@ def test_render_without_previous_release_offers_every_summary():
 
 @pytest.fixture
 def companions(repo, monkeypatch):
-    """Three companions: `demo` changed, `idle` did not, `fresh` was never released."""
+    """Three companions: `demo` changed, `idle` did not, `fresh` was never released.
+
+    `fresh` shares its files with `demo`, so it has changes since the first platform
+    tag, which its first release compares with.
+    """
     monkeypatch.setattr(
         release_notes,
         "COMPANIONS",
-        {"demo": "libs/demo", "idle": "libs/idle", "fresh": "libs/fresh"},
+        {"demo": "libs/demo", "idle": "libs/idle", "fresh": "libs/demo"},
     )
     monkeypatch.setattr(
         release_notes, "shipped_prefixes", lambda path: (f"{path}/src/",)
@@ -284,7 +304,7 @@ def test_companions_are_tagged_and_released_with_the_platform(companions):
         ("fresh/1.1.0", True),
     ]
     assert "- Add a thing (#1)" in releases[0][1]
-    assert "No earlier `fresh/` release" in releases[1][1]
+    assert "- **demo:** Add a thing (#1)" in releases[1][1]
     assert _git(companions, "rev-parse", "demo/1.1.0^{commit}") == _git(
         companions, "rev-parse", "ghga/1.1.0^{commit}"
     )

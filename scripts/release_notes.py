@@ -24,7 +24,8 @@ are released with the platform, so drafting a platform release also tags each co
 with the platform version and drafts its release, unless nothing it ships has changed.
 
 The previous release is the highest tag of the same name below this one. A final
-release compares with the previous final release, a candidate with any earlier tag.
+release compares with the previous final release, a candidate with any earlier tag. A
+first release compares with the first platform tag before it.
 
 Usage (`uv run --script`, so the PEP 723 block above resolves):
     uv run --script scripts/release_notes.py ghga/15.4.0
@@ -173,19 +174,44 @@ def previous_tag(tag: str) -> str | None:
 
     Returns:
         The highest tag of the same name below `tag`, skipping release candidates
-        unless `tag` is one itself; None when there is no earlier tag.
+        unless `tag` is one itself. Without one, the first platform tag before `tag`,
+        so that a first release lists what was merged since the monorepo's first
+        release rather than the history imported from the old repositories. None when
+        there is neither.
     """
     name, _, text = tag.rpartition("/")
     current = Version(text)
     earlier = {}
-    for other in _git("tag", "--list", f"{name}/*").split():
-        version = _parse_version(other.removeprefix(f"{name}/"))
-        if version is None or version >= current:
+    for version, other in _tags(name):
+        if version >= current:
             continue
         if version.is_prerelease and not current.is_prerelease:
             continue
         earlier[version] = other
-    return earlier[max(earlier)] if earlier else None
+    if earlier:
+        return earlier[max(earlier)]
+    return next((other for _, other in _tags(PLATFORM) if _precedes(other, tag)), None)
+
+
+def _tags(name: str) -> list[tuple[Version, str]]:
+    """Lists the tags `name/<version>`, lowest version first."""
+    tags = []
+    for other in _git("tag", "--list", f"{name}/*").split():
+        version = _parse_version(other.removeprefix(f"{name}/"))
+        if version is not None:
+            tags.append((version, other))
+    return sorted(tags)
+
+
+def _precedes(ref: str, tag: str) -> bool:
+    """Tells whether `ref` is in the history of `tag`, at an earlier commit."""
+    if _git("rev-parse", f"{ref}^{{commit}}") == _git("rev-parse", f"{tag}^{{commit}}"):
+        return False
+    try:
+        _git("merge-base", "--is-ancestor", ref, tag)
+    except subprocess.CalledProcessError:
+        return False
+    return True
 
 
 def _branch_kind(branch: str) -> str:
