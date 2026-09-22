@@ -145,7 +145,8 @@ combination is the one that ships. It runs after the drift gate, which it depend
 
 ## Open at cutover
 
-Tracked in the [runbook](migration/runbook.md) cutover checklist: platform-lane member
+Listed with the other cutover leftovers in the
+[runbook §7](migration/runbook.md#7-cutover-checklist): platform-lane member
 versions are to be fixed at `0.0.0`, with stamping supplying the real one;
 `ghga-datasteward-kit` pins `requires-python` to the workspace baseline; and
 `auth-km-jobs` moves to `services/`.

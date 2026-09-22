@@ -222,8 +222,9 @@ how the charts are generated and tested.
 
 ## 4. Sandbox phase & migration
 
-The monorepo is developed **separately from mainline (`ghga-de`) for a while**
-([ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md)):
+The monorepo was developed **separately from mainline (`ghga-de`) until cutover**
+([ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md)); what remains of the cutover
+is listed in the [runbook §7](../migration/runbook.md#7-cutover-checklist):
 
 - Hosted at **`github.com/ghga-de/ghga`** (a new repo, separate from the per-component repos).
   Publish targets are decided and both lanes are live — images and charts to Docker Hub,

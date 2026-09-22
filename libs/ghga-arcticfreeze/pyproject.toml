@@ -19,22 +19,19 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "ghga-arcticfreeze"
 version = "1.1.2"
 description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
+license = "Apache-2.0"
 maintainers = [
     { name = "The GHGA Authors", email = "contact@ghga.de" },
 ]
 dependencies = [
     "immutabledict >= 4.3.1, <5",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.optional-dependencies]
 pydantic = [

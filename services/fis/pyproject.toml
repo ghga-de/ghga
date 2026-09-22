@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "fis"
 version = "12.1.0"
 description = "File Ingest Service - A service to liaise between Central File Services and Data Hubs for file inspection."
+license = "Apache-2.0"
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
@@ -26,18 +27,13 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 
-
-[project.license]
-text = "Apache 2.0"
-
 [project.urls]
-Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/fis"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 fis = "fis.__main__:run"

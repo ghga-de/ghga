@@ -1,5 +1,7 @@
 [![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-arcticfreeze.svg)](https://pypi.org/project/ghga-arcticfreeze/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-arcticfreeze.svg)](https://pypi.org/project/ghga-arcticfreeze/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # arcticfreeze
 

@@ -6,16 +6,15 @@ build-backend = "setuptools.build_meta"
 version = "0.2.1"
 name = "auth-km-jobs"
 description = "GHGA Auth Key Management Jobs - refreshes signing keys and re-encrypts secrets used by GHGA; runs as a Kubernetes Job, either regularly or on demand."
+license = "Apache-2.0"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.13"
-license = {text = "Apache-2.0"}
 authors = [
   {name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de"}
 ]
 classifiers = [
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3.13",
-  "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
   "typer>=0.21",
@@ -28,6 +27,9 @@ dependencies = [
   "hvac~=2.4.0",
   "crypt4gh~=1.7",
 ]
+
+[project.urls]
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.optional-dependencies]
 dev = [

@@ -22,13 +22,13 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "ghga-jsonsubschema"
 version = "0.2.1"
 description = "A tool to check whether a JSON schema is subset/subschema of another JSON schema."
+license = "Apache-2.0"
 dependencies = [
     "greenery>=4.2,<5",
     "jsonref>=1.1,<2",
@@ -45,9 +45,6 @@ dev = [
     "pytest>=9",
     "ruff>=0.15",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

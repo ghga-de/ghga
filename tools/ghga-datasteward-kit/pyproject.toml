@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "ghga_datasteward_kit"
 version = "5.4.2"
 description = "GHGA Data Steward Kit - A utils package for GHGA data stewards."
+license = "Apache-2.0"
 dependencies = [
     "crypt4gh >=1.8.6, <2",
     "hexkit[s3] >=9.0.0",
@@ -30,9 +30,6 @@ dependencies = [
     "metldata >=4.2.1, <5",
     "ghga-service-commons[transports,crypt] >=8.0.0, <9",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

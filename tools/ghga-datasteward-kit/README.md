@@ -1,14 +1,31 @@
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+
 # GHGA Data Steward Kit
 
 Utilities for data stewards interacting with GHGA infrastructure.
 
-## Installation:
+## Installation
 
-This package can be installed using pip:
+The kit is not published to PyPI; the last release there is 5.4.3. It ships with the
+platform release instead, and you run it from a checkout of a release tag, so that
+`uv.lock` at the tag pins the service and library versions it was tested with. You need
+`git` and [uv](https://docs.astral.sh/uv/getting-started/installation/); uv fetches the
+matching Python itself.
+
+Pick a `ghga/X.Y.Z` tag from the
+[releases](https://github.com/ghga-de/ghga/releases), then clone it and run the kit from
+the checkout:
 
 ```
-pip install ghga-datasteward-kit
+git clone --depth 1 --branch ghga/X.Y.Z https://github.com/ghga-de/ghga.git
+cd ghga
+uv run --locked ghga-datasteward-kit --help
 ```
+
+With `--locked`, uv refuses to run rather than resolve versions other than the pinned
+ones. The first run creates the environment in `.venv`, and later runs reuse it. To move
+to another release, clone that tag afresh.
 
 ## Step by Step Guide
 

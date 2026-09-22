@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/dlq-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/dlq-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/dlq-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/dlq-service?branch=main)
-
 # DLQ Service
 
 DLQ Service - a service to manage the dead letter queue for Kafka events

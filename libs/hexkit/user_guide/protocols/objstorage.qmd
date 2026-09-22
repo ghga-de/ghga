@@ -348,7 +348,7 @@ fixtures that spin up a disposable, LocalStack-backed object storage, so integra
 tests exercise the real protocol semantics without external infrastructure.
 
 For extensive, runnable usage examples, the
-[object storage integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/providers/objstorage/test_s3_objstorage.py)
+[object storage integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/objstorage/test_s3_objstorage.py)
 in the hexkit repository are a good complement to this guide.
 
 ## Implementing a Custom Provider
@@ -370,7 +370,7 @@ rules keep a custom provider well-behaved:
    S3 provider does for tenant-prefixed bucket names.
 
 The
-[S3 implementation](https://github.com/ghga-de/hexkit/blob/main/src/hexkit/providers/s3/provider/objstorage.py)
+[S3 implementation](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/src/hexkit/providers/s3/provider/objstorage.py)
 serves as the reference. To check a new provider for protocol compliance, the
 `typical_workflow` helper from the
 [S3 test utils](../providers/s3.qmd#s3-object-storage-test-utils) runs a complete
@@ -378,4 +378,4 @@ create-upload-copy-download-delete scenario against any `ObjectStorageProtocol`
 implementation.
 
 If you build a provider for a widely used storage backend, please consider
-[contributing it to hexkit](https://github.com/ghga-de/hexkit).
+[contributing it to hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit).

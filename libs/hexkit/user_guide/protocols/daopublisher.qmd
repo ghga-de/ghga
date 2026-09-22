@@ -149,7 +149,7 @@ deletions survive for republishing. The provider chapter documents these
 mechanics, along with a complete usage example.
 
 For runnable examples, see the
-[mongokafka integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/providers/daopubsub/test_mongokafka_pubsub.py)
+[mongokafka integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/daopubsub/test_mongokafka_pubsub.py)
 in the hexkit repository.
 
 ## Implementing a Custom Provider
@@ -170,4 +170,4 @@ unchanged, plus two specific to publishing:
    what makes it an outbox rather than plain publishing.
 
 If you build a provider for a widely used backend combination, please consider
-[contributing it to hexkit](https://github.com/ghga-de/hexkit).
+[contributing it to hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit).

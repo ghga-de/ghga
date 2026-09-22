@@ -18,7 +18,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Environment :: Console",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Utilities",
@@ -28,6 +27,7 @@ name = "ghga_validator"
 # 1.2.1 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
 version = "1.2.3"
 description = "GHGA Validator - A Python library and command line utility to validate metadata"
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.9.0",
     "pydantic >=2, <3",
@@ -35,9 +35,6 @@ dependencies = [
     "linkml-runtime>=1.8",
     "linkml-validator>=0.4.5",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

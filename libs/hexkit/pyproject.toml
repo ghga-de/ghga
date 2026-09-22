@@ -18,7 +18,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
@@ -26,15 +25,13 @@ name = "hexkit"
 # 9.0.2 is spent on TestPyPI: a pypi-publish.yaml rehearsal uploaded it there.
 version = "9.0.3"
 description = "A Toolkit for Building Microservices using the Hexagonal Architecture"
+license = "Apache-2.0"
 dependencies = [
     "opentelemetry-api >=1.44, <2",
     "pydantic >=2.12, <3",
     "pydantic_settings >=2.12, <3",
     "PyYAML >=6, <7",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.optional-dependencies]
 akafka = [

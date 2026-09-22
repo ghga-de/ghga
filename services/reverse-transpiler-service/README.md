@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/reverse-transpiler-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/reverse-transpiler-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/reverse-transpiler-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/reverse-transpiler-service?branch=main)
-
 # Reverse Transpiler Service
 
 Reverse Transpiler Service - A service running a REST API that serves accessioned metadata files by study ID
@@ -412,7 +409,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/state-management-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/state-management-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/state-management-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/state-management-service?branch=main)
-
 # State Management Service
 
 State Management Service - Provides a REST API for basic infrastructure technology state management.
