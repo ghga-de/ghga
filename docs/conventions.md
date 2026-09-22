@@ -162,6 +162,10 @@ How a release runs end to end is in [releases.md](releases.md).
   Images publish to `docker.io/ghga/<member>` and charts as OCI artifacts under
   `ghga/<chart>-chart` — a tag push builds both; publishing them is a deliberate dispatch
   ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
+- The platform and each library and tool get a generated draft GitHub release per
+  release, listing their pull requests by commit type. The summaries above the list are
+  filled in by hand in the draft, which is then published
+  ([ADR-0043](adrs/adr-0043-release-notes.md)).
 
 ## Toolchain
 

@@ -84,6 +84,27 @@ def _packaged_roots(member_path: str) -> list[str]:
     )
 
 
+def shipped_prefixes(member_path: str) -> tuple[str, ...]:
+    """Lists the path prefixes of what a member ships to consumers.
+
+    That is its packaged roots and the root files in `METADATA_FILES`. The release notes
+    use the same prefixes, so a library's notes list exactly the changes this check
+    demands a version bump for.
+
+    Args:
+        member_path: The member's folder relative to the repo root, e.g. `libs/hexkit`.
+
+    Returns:
+        Prefixes to match changed file paths against, e.g. `("libs/hexkit/src/", …)`,
+        empty when the packaged roots cannot be established.
+    """
+    packaged = _packaged_roots(member_path)
+    if not packaged:
+        return ()
+    shipped = tuple(f"{pathlib.PurePosixPath(member_path, root)}/" for root in packaged)
+    return shipped + tuple(f"{member_path}/{name}" for name in METADATA_FILES)
+
+
 def _same_toml(base: str, file: str) -> bool:
     """Tells whether a TOML file parses to the same data at `base` as in the working tree.
 
@@ -133,8 +154,8 @@ def changed_members(files: list[str], base: str | None = None) -> list[str]:
             one as "ships nothing" would let it drift forever while this check stayed
             green — the failure the check exists to prevent.
     """
-    roots = {member.path: _packaged_roots(member.path) for member in pypi_members()}
-    unknown = sorted(path for path, found in roots.items() if not found)
+    prefixes = {member.path: shipped_prefixes(member.path) for member in pypi_members()}
+    unknown = sorted(path for path, found in prefixes.items() if not found)
     if unknown:
         sys.exit(
             "error: cannot establish what these members ship, so drift in them would go"
@@ -148,13 +169,11 @@ def changed_members(files: list[str], base: str | None = None) -> list[str]:
             if not (f.endswith("/pyproject.toml") and _same_toml(base, f))
         ]
 
-    changed = set()
-    for path, packaged in roots.items():
-        shipped = tuple(f"{pathlib.PurePosixPath(path, root)}/" for root in packaged)
-        metadata = tuple(f"{path}/{name}" for name in METADATA_FILES)
-        if any(f.startswith(metadata) or f.startswith(shipped) for f in files):
-            changed.add(path)
-    return sorted(changed)
+    return sorted(
+        path
+        for path, shipped in prefixes.items()
+        if any(f.startswith(shipped) for f in files)
+    )
 
 
 def readme_link_problems(member_path: str) -> list[str]:

@@ -84,6 +84,7 @@ ADR's frontmatter by `just docs-check`; do not edit it by hand.
 | [0040](adrs/adr-0040-adr-frontmatter.md) | YAML frontmatter for ADRs | accepted | docs, process |
 | [0041](adrs/adr-0041-docs-linting.md) | A pre-commit check for ADRs and epics | accepted | docs, process |
 | [0042](adrs/adr-0042-agent-instruction-files.md) | Layered AGENTS.md for coding agents | accepted | docs, process |
+| [0043](adrs/adr-0043-release-notes.md) | Release notes as drafted GitHub releases | proposed | release, process |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)
