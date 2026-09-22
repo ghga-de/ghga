@@ -147,6 +147,22 @@
 #                             no decryptor module and no passphrase argument, reworked request
 #                             error handling), which made it 4.0.0; it reads 4.0.1 after the PyPI
 #                             lane (#83), released as 4.0.0.
+#   state-management-service -> services/state-management-service
+#                             620500c "Replace Debian Dockerfile with DHI and bump version to
+#                             5.0.0 (#28)" 2026-05-22, 5.0.0. The one upstream commit with no
+#                             counterpart here, #9 "Update lock files for starlette vuln"
+#                             2024-10-30, touches only dropped boilerplate (lock/, the per-repo
+#                             pre-commit config). All PRs were merged; more-endpoints-patch is a
+#                             leftover of #19, merged into #18 and squash-merged with it, and
+#                             feature/backport_dhi a 4.3.2 backport with no PR, superseded by
+#                             #28's 5.0.0 DHI swap. Neither was ever in scope for the sync.
+#   test-oidc-provider     -> services/test-oidc-provider     312d7b2 "Add ID token and CORS header
+#                             defaults (#15)" 2025-05-12, 2.2.0. Every upstream commit has a
+#                             counterpart here, and main was its only branch. All PRs were
+#                             merged except #9 "Add log message to openid config endpoint",
+#                             closed UNMERGED. services/test-oidc-provider additionally carries
+#                             monorepo-only work never upstreamed: forwarding the full path where
+#                             it builds its own URLs (ce48aa23, chart values only).
 # Nineteen archived tips are deliberately NOT merged — each is an archival/deprecation
 # notice that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal
 # 0249482, access-request-service 1f2069d1, work-package-service 4b933c0,
@@ -180,14 +196,9 @@ lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main
 #
 # Standalone services
-service	state-management-service	.	services/state-management-service	main
 service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
 # ghga-transpiler: the integrated/compatible line is v2 (2.x, no schemapack dep), NOT main (3.x).
 tool	ghga-transpiler	.	tools/ghga-transpiler	v2
 tool	ghga-validator	.	tools/ghga-validator	main
-#
-# Test-only service: the OIDC provider the integration suite and the portal's UI
-# tests authenticate against (deployed by the testbed profile, never in prod)
-service	test-oidc-provider	.	services/test-oidc-provider	main
