@@ -35,7 +35,7 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/access-request-service"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 ars = "ars.__main__:cli"

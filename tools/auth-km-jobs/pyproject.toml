@@ -29,6 +29,9 @@ dependencies = [
   "crypt4gh~=1.7",
 ]
 
+[project.urls]
+Repository = "https://github.com/ghga-de/ghga"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=9,<10",

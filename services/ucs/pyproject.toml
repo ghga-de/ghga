@@ -33,7 +33,7 @@ classifiers = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/ucs"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 ucs = "ucs.__main__:cli"

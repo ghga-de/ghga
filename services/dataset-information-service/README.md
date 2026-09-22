@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/dataset-information-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/dataset-information-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/dataset-information-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/dataset-information-service?branch=main)
-
 # Dataset Information Service
 
 Dataset Information Service - Providing public metadata about files registered with the Internal File Registry
@@ -415,7 +412,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

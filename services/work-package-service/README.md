@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/work-package-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/work-package-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/work-package-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/work-package-service?branch=main)
-
 # Work Package Service
 
 Work Package Service - a service for authorizing downloads of dataset files and uploads of research data.
@@ -525,7 +522,7 @@ An OpenAPI specification for this service can be found [here](./openapi.yaml).
 ## Architecture and Design:
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

@@ -118,7 +118,7 @@ components:
           title: Scopes Supported
           type: array
         service_documentation:
-          default: https://github.com/ghga-de/test-oidc-provider
+          default: https://github.com/ghga-de/ghga/tree/main/services/test-oidc-provider
           description: URL of a page with information that developers might need to
             know when using the OP
           format: uri

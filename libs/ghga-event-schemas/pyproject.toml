@@ -34,7 +34,7 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-event-schemas"
+Repository = "https://github.com/ghga-de/ghga"
 
 [tool.setuptools.packages.find]
 where = [

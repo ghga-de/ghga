@@ -34,7 +34,7 @@ dependencies = [
 text = "Apache 2.0"
 
 [project.urls]
-Repository = "https://github.com/ghga-de/notification-orchestration-service"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 nos = "nos.__main__:run"

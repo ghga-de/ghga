@@ -1,3 +1,12 @@
+[![ci](https://github.com/ghga-de/ghga/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/ci.yaml?query=branch%3Adev)
+[![integration](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml?query=branch%3Adev)
+[![security-scan](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml/badge.svg)](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml)
+[![docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ghga-de.github.io/ghga/)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+
 # GHGA Monorepo
 
 One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `uv` workspace)

@@ -351,5 +351,5 @@ Migrations are regular code and deserve tests. The
 database: populate collections with documents in the old format, run the
 migration via a `MigrationManager`, and assert on the resulting documents. The
 framework's own
-[integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/migrations/test_mongodb_migrations.py)
+[integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/migrations/test_mongodb_migrations.py)
 demonstrate this pattern extensively and double as runnable usage examples.

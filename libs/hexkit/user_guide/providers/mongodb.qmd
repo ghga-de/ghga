@@ -322,7 +322,7 @@ subset of the query operators. See also the [MongoDB Test Utils](#mongodb-test-u
 section below.
 
 The provider's own
-[integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/providers/dao/test_mongodb_dao.py)
+[integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py)
 double as an extensive collection of runnable usage examples.
 
 ## MongoDB Migration Tools
