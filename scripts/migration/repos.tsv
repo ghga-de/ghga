@@ -126,7 +126,15 @@
 #                             were deleted before archiving. Its GitHub Pages site (service
 #                             versions read from the compose file) was disabled too: the kind
 #                             setup replaced that compose file here, so it could not be rebuilt.
-# Seventeen archived tips are deliberately NOT merged — each is an archival/deprecation notice
+#   ghga-service-commons   -> libs/ghga-service-commons       0f67ae4 "Switch to httpx2 (#83)" 2026-07-28, 8.0.0
+#                             The six upstream commits with no counterpart here touch only
+#                             dropped boilerplate: five .github/ or .devcontainer/ edits
+#                             (2023-2024) and abf2ece "bump patch version" 2026-05-12
+#                             (.pyproject_generation/). fix/proxy-no-proxy-and-ca-bundle is a
+#                             leftover of #80 (squash-merged), update_deps_for_starlette_vuln a
+#                             stale 5.0.0 dependency bump with no PR; neither was in scope. The
+#                             member here reads 8.1.1 after the PyPI lane (#83), released as 8.1.0.
+# Eighteen archived tips are deliberately NOT merged — each is an archival/deprecation notice
 # that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal 0249482,
 # access-request-service 1f2069d1, work-package-service 4b933c0, ghga-datasteward-kit
 # f474eef (which also makes the PyPI console script print a final-release banner — wanted
@@ -137,13 +145,14 @@
 # well-known-value-service 282b4be (all four "Add deprecation note"), auth-km-jobs
 # f27562b "Add retirement note (#22)", dlq-service 4646433 "Add deprecation note (#21)",
 # reverse-transpiler-service b428f91 "Add deprecation note (#11)", ghga-arcticfreeze
-# b8d3b65 "Add archival note (#3)", ghga-jsonsubschema c7dae8c "Add archival note (#17)"
-# and archive-test-bed df4d323 "Add archival note (#169)". Those last eleven are the only
-# tips that would NOT have filtered to empty: hexkit's is mostly redirect tooling on paths
-# the import drops (.github/, scripts/, .template/, .gitignore), the next four touch nothing
-# else but .readme_generation/ and .template/, auth-km-jobs', dlq-service's,
-# ghga-arcticfreeze's and archive-test-bed's touch nothing but the README,
-# ghga-jsonsubschema's nothing else but the dropped uv.lock, and reverse-transpiler-service's
+# b8d3b65 "Add archival note (#3)", ghga-jsonsubschema c7dae8c "Add archival note (#17)",
+# archive-test-bed df4d323 "Add archival note (#169)" and ghga-service-commons 7e434b8
+# "Add note about archival (#84)". Those last twelve are the only tips that would NOT have
+# filtered to empty: hexkit's is mostly redirect tooling on paths the import drops (.github/,
+# scripts/, .template/, .gitignore), the next four touch nothing else but .readme_generation/
+# and .template/, auth-km-jobs', dlq-service's, ghga-arcticfreeze's, archive-test-bed's and
+# ghga-service-commons' touch nothing but the README, ghga-jsonsubschema's nothing else but
+# the dropped uv.lock, and reverse-transpiler-service's
 # bundles a template refresh whose kept-path parts the monorepo has already replaced centrally
 # (the per-repo [tool.ruff] tables and the per-member .gitignore, dropped in 9ddc8284) — yet
 # each also adds a "this repo has moved" banner to the README, which is kept: an
@@ -152,7 +161,6 @@
 # docs/adrs as ADR-0001 to ADR-0024 (docs/adrs/adrNNN_name.md -> docs/adrs/0NNN-name.md).
 #
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
-lib	ghga-service-commons	.	libs/ghga-service-commons	main
 lib	schemapack	.	libs/schemapack	main
 lib	metldata	.	libs/metldata	main
 #
