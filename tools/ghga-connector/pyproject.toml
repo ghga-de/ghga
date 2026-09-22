@@ -18,7 +18,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Environment :: Console",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Utilities",
@@ -27,6 +26,7 @@ classifiers = [
 name = "ghga_connector"
 version = "4.0.1"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
+license = "Apache-2.0"
 dependencies = [
     "typer~=0.19",
     "crypt4gh>=1.8.6, <2",
@@ -37,9 +37,6 @@ dependencies = [
     "async-lru >= 2.1.0, <3",
     "prompt_toolkit>=3.0, <4",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

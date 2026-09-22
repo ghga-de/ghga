@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,15 +22,13 @@ classifiers = [
 name = "rs"
 version = "5.0.3"
 description = "GHGA Registry Service - a service for ingesting and archiving metadata from data submitters."
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.26",
     "ghga-service-commons[api,auth,http] >= 8.0",
     "ghga-event-schemas ~= 13.0",
     "hexkit[akafka,mongodb,opentelemetry] >= 9.0",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

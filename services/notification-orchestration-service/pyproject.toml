@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,15 +22,13 @@ classifiers = [
 name = "nos"
 version = "9.0.1"
 description = "The Notification Orchestration Service controls the creation of notification events."
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.24",
     "ghga-event-schemas ~= 12.0",
     "hexkit[akafka,mongodb] >= 9.0",
     "pydantic[email]>=2, <3",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

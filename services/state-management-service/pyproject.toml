@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,15 +22,13 @@ classifiers = [
 name = "sms"
 version = "5.0.0"
 description = "State Management Service - Provides a REST API for basic infrastructure technology state management."
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.25",
     "ghga-service-commons[api] >= 7.0",
     "hexkit[mongodb,s3,akafka] >= 8.1",
     "hvac>=2",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

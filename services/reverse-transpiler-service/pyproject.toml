@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "rts"
 version = "3.0.1"
 description = "Reverse Transpiler Service - A service running a REST API that serves accessioned metadata files by study ID"
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.19",
     "ghga-service-commons[api] >= 7",
@@ -30,9 +30,6 @@ dependencies = [
     "hexkit[akafka,mongodb] >= 8",
     "openpyxl >= 3.1.5",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

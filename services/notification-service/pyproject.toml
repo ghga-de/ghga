@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "ns"
 version = "7.0.1"
 description = "The Notification Service (NS) handles notification kafka events."
+license = "Apache-2.0"
 dependencies = [
     "typer>=0.19",
     "ghga-event-schemas~=11.0",
@@ -30,9 +30,6 @@ dependencies = [
     "hexkit[akafka,mongodb]>=9",
     "httpx2>=2.9.1, <3",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "auth-service"
 version = "10.0.2"
 description = "Authentication adapter and services used for the GHGA data portal"
+license = "Apache-2.0"
 dependencies = [
     "ghga-event-schemas~=13.0.0",
     "ghga-service-commons[api,auth]>=8,<9",
@@ -31,9 +31,6 @@ dependencies = [
     "pyotp>=2.9,<3",
     "phonenumbers>=9,<10",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

@@ -6,6 +6,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![License](https://img.shields.io/github/license/ghga-de/ghga)](LICENSE)
 
 # GHGA Monorepo
 
@@ -235,3 +236,11 @@ See [docs/conventions.md](docs/conventions.md) — workspace layout, the `[tool.
 markers, naming, the [branching model](docs/conventions.md#branching) (cut from `dev`, merge
 into `dev`; `main` is the latest release), and the per-component release-tag scheme
 (`name/x.y.z`).
+
+## License
+
+Everything in this repository is licensed under the [Apache License 2.0](LICENSE). Each
+member also carries its own copy of the license, which ships with its wheel or image. Two
+members contain work by others, whose copyright notices are kept in their own license
+files: [`libs/ghga-jsonsubschema`](libs/ghga-jsonsubschema/LICENSE.txt), a fork of IBM's
+`jsonsubschema`, and [`libs/ghga-arcticfreeze`](libs/ghga-arcticfreeze/LICENSE).

@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,14 +22,12 @@ classifiers = [
 name = "dlqs"
 version = "4.1.1"
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.19",
     "ghga-service-commons[api] >= 8.0",
     "hexkit[akafka,mongodb] >= 9.0",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"

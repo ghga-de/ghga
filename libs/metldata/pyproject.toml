@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "metldata"
 version = "4.2.1"
 description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
+license = "Apache-2.0"
 dependencies = [
     "hexkit[akafka,mongodb] >= 9.0, < 10",
     "ghga-service-commons[api,auth] >= 8.0, < 9",
@@ -35,9 +35,6 @@ dependencies = [
     "cryptography >= 48",
     "pydantic >= 2.13",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
