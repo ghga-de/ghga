@@ -2,9 +2,6 @@
 
 Workspace members that are primarily command-line tools or Kubernetes jobs.
 
-Planned members (after import): `ghga-connector`, `ghga-datasteward-kit`, `ghga-transpiler`,
-`ghga-validator`, `auth-km-jobs`.
-
 - `ghga-connector` and `ghga-datasteward-kit` are **external** CLIs (published to PyPI) **and**
   integration-test actors — they exercise the deployed system in the test bed
   ([ADR-0025](../docs/adrs/adr-0025-consolidate-into-monorepo.md)).
