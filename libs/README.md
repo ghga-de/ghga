@@ -3,9 +3,6 @@
 Workspace members that other members import **from source** (one `uv.lock`, one resolved
 version repo-wide — see [ADR-0026](../docs/adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 
-Planned members (after import): `hexkit`, `ghga-service-commons`, `ghga-event-schemas`,
-`schemapack`, `metldata`.
-
 - Consumers depend on these via `[tool.uv.sources] <lib> = { workspace = true }`.
 - Libraries keep **broad** Python/version ranges in their own `pyproject.toml` for external
   PyPI users; a standalone per-Python **matrix** validates the published combination.
