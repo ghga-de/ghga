@@ -28,7 +28,7 @@ dependencies = [
     # caps relaxed monorepo-locally: upstream is dormant (2025) while the workspace
     # moved to commons 8 / hexkit 9 (httpx2 wave); verified by this member's tests
     "ghga-service-commons[api,auth] >= 7, < 9",
-    "hexkit >= 8, < 10",
+    "hexkit >= 8, < 11",
     "python-multipart >= 0.0.20",
 ]
 

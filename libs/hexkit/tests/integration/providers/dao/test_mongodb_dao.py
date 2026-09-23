@@ -26,9 +26,10 @@ from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
 
 from hexkit.protocols.dao import (
     Dao,
-    InvalidFindMappingError,
+    InvalidMappingError,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -280,6 +281,44 @@ async def test_dao_update_not_found(mongodb: MongoDbFixture):
         await dao.update(resource)
 
 
+async def test_dao_update_precondition(mongodb: MongoDbFixture):
+    """Tests that `update` with `precondition` only replaces a resource matching
+    the criteria, which may name the ID field.
+    """
+    dao = await mongodb.dao_factory.get_dao(
+        name="example",
+        dto_model=ExampleDto,
+        id_field="id",
+    )
+
+    resource = ExampleDto(field_b=1)
+    resource_update = resource.model_copy(update={"field_b": 2})
+    other_resource = ExampleDto(field_b=1)
+
+    # precondition + no doc with that ID = ResourceNotFoundError
+    with pytest.raises(ResourceNotFoundError):
+        await dao.update(resource_update, precondition={"field_b": 1})
+
+    await dao.insert(resource)
+    await dao.insert(other_resource)
+
+    # The following doc's ID *is* in the DB, but the criteria filter it out
+    #  which means we should see PreconditionFailedError instead of ResourceNotFound
+    with pytest.raises(PreconditionFailedError):
+        await dao.update(resource_update, precondition={"field_b": 3})
+
+    with pytest.raises(PreconditionFailedError):
+        await dao.update(resource_update, precondition={"id": other_resource.id})
+    with pytest.raises(InvalidMappingError):
+        await dao.update(resource_update, precondition={"non_existing_field": 1})
+    assert await dao.get_by_id(resource.id) == resource
+    assert await dao.get_by_id(other_resource.id) == other_resource
+
+    # Verify that precondition can be used
+    await dao.update(resource_update, precondition={"id": resource.id, "field_b": 1})
+    assert await dao.get_by_id(resource.id) == resource_update
+
+
 async def test_dao_delete_happy(mongodb: MongoDbFixture):
     """Tests deleting an existing resource via its ID."""
     dao = await mongodb.dao_factory.get_dao(
@@ -317,10 +356,10 @@ async def test_dao_find_invalid_mapping(mongodb: MongoDbFixture):
     )
     mapping = {"non_existing_field": 28}
 
-    with pytest.raises(InvalidFindMappingError):
+    with pytest.raises(InvalidMappingError):
         await dao.find_one(mapping=mapping)
 
-    with pytest.raises(InvalidFindMappingError):
+    with pytest.raises(InvalidMappingError):
         _ = dao.find_all(mapping=mapping)
 
 

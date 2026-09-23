@@ -164,7 +164,7 @@ book_dao = await dao_factory.get_dao(name="books", dto_model=Book, id_field="id"
 
 await book_dao.insert(Book(id="9780134757599", title="Refactoring", author="Fowler"))
 book = await book_dao.get_by_id("9780134757599")
-async for hit in book_dao.find_all(mapping={"author": "Fowler"}):
+async for hit in book_dao.find_all(filter_={"author": "Fowler"}):
     print(hit.title)
 ```
 

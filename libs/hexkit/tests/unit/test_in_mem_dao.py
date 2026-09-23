@@ -20,7 +20,12 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
+from hexkit.protocols.dao import (
+    InvalidMappingError,
+    NoHitsFoundError,
+    PreconditionFailedError,
+    ResourceNotFoundError,
+)
 from hexkit.providers.testing import MockDAOEmptyError, new_mock_dao_class
 from hexkit.providers.testing.dao import (
     ComparisonPredicate,
@@ -97,6 +102,60 @@ async def test_update():
     assert dao.latest.count == 2
 
 
+@pytest.mark.parametrize("handle_mql", [True, False])
+async def test_update_precondition(handle_mql: bool):
+    """Test the `update()` method with `precondition`"""
+    dao = new_mock_dao_class(
+        dto_model=InventoryItem, id_field="title", handle_mql=handle_mql
+    )()
+    item = InventoryItem(title="Nudelholz", count=1)
+
+    # A non-existent item still raises a ResourceNotFoundError
+    with pytest.raises(ResourceNotFoundError):
+        await dao.update(item, precondition={"count": 1})
+
+    # An unknown field is rejected before the existence check, as in the real provider
+    with pytest.raises(InvalidMappingError):
+        await dao.update(item, precondition={"no_such_field": 1})
+
+    await dao.insert(item)
+
+    with pytest.raises(InvalidMappingError):
+        await dao.update(item, precondition={"no_such_field": 1})
+
+    # A resource that doesn't match the criteria is left unchanged
+    with pytest.raises(PreconditionFailedError):
+        await dao.update(
+            item.model_copy(update={"count": 2}), precondition={"count": 5}
+        )
+    assert dao.latest.count == 1
+
+    # Criteria may name the ID field
+    await dao.update(
+        item.model_copy(update={"count": 2}),
+        precondition={"title": "Nudelholz", "count": 1},
+    )
+    assert dao.latest.count == 2
+
+
+async def test_update_precondition_mql():
+    """Test that `update()` resolves MQL operators in `precondition`"""
+    dao = DaoClass()
+    item = InventoryItem(title="Nudelholz", count=1)
+    await dao.insert(item)
+
+    with pytest.raises(PreconditionFailedError):
+        await dao.update(
+            item.model_copy(update={"count": 2}),
+            precondition={"count": {"$gt": 1}},
+        )
+
+    await dao.update(
+        item.model_copy(update={"count": 2}), precondition={"count": {"$lte": 1}}
+    )
+    assert dao.latest.count == 2
+
+
 async def test_upsert():
     """Test the `upsert()` method"""
     dao = DaoClass()
@@ -124,6 +183,17 @@ async def test_find_one():
     result = await dao.find_one(mapping={"title": "Lawnmower"})
     assert result is not item
     assert result.model_dump() == item.model_dump()
+
+
+async def test_find_invalid_mapping():
+    """Test that `find_one()` and `find_all()` reject fields not in the model"""
+    dao = DaoClass()
+
+    for mapping in ({"no_such_field": 1}, {"": 1}):
+        with pytest.raises(InvalidMappingError):
+            await dao.find_one(mapping=mapping)
+        with pytest.raises(InvalidMappingError):
+            _ = dao.find_all(mapping=mapping)
 
 
 async def test_find_all():
