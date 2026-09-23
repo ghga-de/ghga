@@ -69,3 +69,5 @@ hexkit = { workspace = true }
 # (submission/artifact APIs) — opt in to the platform image matrix (ADR-0033).
 release = "platform"
 image = true
+# The library has release notes of its own; its chart belongs to the platform (ADR-0043).
+notes = true

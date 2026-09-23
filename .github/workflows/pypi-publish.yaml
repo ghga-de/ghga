@@ -252,3 +252,36 @@ jobs:
             echo "- published \`$package\` $version" >> "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
           done
+
+  # -------- tag and draft a release for every member uploaded -----------------------------
+  #
+  # The notes are drafted, never published (ADR-0043), and a tag that already has a release
+  # is left alone. A sweep's tag names no member, so each member it uploaded gets its own
+  # `name/x.y.z` tag first: its next release needs a previous tag to compare with. A tag
+  # pushed with the workflow token starts no workflow, so this does not re-run the release.
+  draft-releases:
+    needs: [plan, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # to push the tags and create the draft releases
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the notes compare each tag with the previous one
+      - uses: astral-sh/setup-uv@v7
+      - name: Tag the members and draft their releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          set -euo pipefail
+          echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
+            tag=$(echo "$member" | jq -r '.tag')
+            if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
+              git tag "$tag" "$GITHUB_SHA"
+              git push origin "refs/tags/$tag"
+            fi
+            # stdin is the member list; the script must not read from it.
+            uv run --script scripts/release_notes.py "$tag" --draft </dev/null
+          done

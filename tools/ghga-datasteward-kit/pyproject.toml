@@ -68,3 +68,5 @@ metldata = { workspace = true }
 release = "platform"
 image = false
 cli = true
+# Released with the platform, but with release notes of its own (ADR-0043).
+notes = true

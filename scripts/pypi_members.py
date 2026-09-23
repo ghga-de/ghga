@@ -87,9 +87,18 @@ class Member:
             ),
         )
 
+    @property
+    def tag(self) -> str:
+        """The release tag, e.g. `ghga-connector/4.0.1`.
+
+        Spelled with the canonical name, never the declared one: six members declare
+        theirs with underscores, and tags compare as plain strings.
+        """
+        return f"{_canonical(self.package)}/{self.version}"
+
     def as_json(self) -> dict:
         """The member as the workflows consume it. Tuples serialize as JSON arrays."""
-        return asdict(self)
+        return {**asdict(self), "tag": self.tag}
 
 
 @dataclass(frozen=True)
@@ -110,7 +119,7 @@ class IndexedMember(Member):
 
     def as_json(self) -> dict:
         """Adds the index fields, omitting `reason` on a member that has none."""
-        data = asdict(self)
+        data = super().as_json()
         if self.reason is None:
             del data["reason"]
         return data
@@ -425,14 +434,14 @@ def _blocked_message(target: Member, blockers: list[IndexedMember]) -> str:
     ]
     named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
 
-    tags = ", ".join(f"{_canonical(m.package)}/{m.version}" for m in ordered)
+    tags = ", ".join(m.tag for m in ordered)
 
     return (
         f"{target.package}: cannot be released on its own — it depends on"
         f" release candidate(s) {named}. Either push `packages/x.y.z` to release"
         " the whole train dependencies-first, or release each dependency"
         f" individually on its own tag first, in this order: {tags}, then"
-        f" {_canonical(target.package)}/{target.version}."
+        f" {target.tag}."
     )
 
 

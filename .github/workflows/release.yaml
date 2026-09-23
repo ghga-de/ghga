@@ -676,6 +676,34 @@ jobs:
             cat dist/manifest.txt
           fi
 
+  # -------- platform lane: draft the release notes -----------------------------------------
+  #
+  # The notes are drafted, never published (ADR-0043): whoever cuts the release writes the
+  # summaries above the generated list of pull requests, then publishes the draft. A tag
+  # that already has a release is left alone, so a re-run cannot overwrite written text.
+  # The companions, members released with the platform but with notes of their own, are
+  # tagged with the platform version here and drafted too. A tag pushed with the workflow
+  # token starts no workflow, so their tags do not reach `resolve`. PyPI-lane releases
+  # are drafted in pypi-publish.yaml, once their members are uploaded. Only a green build
+  # is drafted: a release whose images or charts failed has nothing to publish yet.
+  draft-release:
+    needs: [resolve, build-images, package-charts]
+    if: ${{ needs.resolve.outputs.lane == 'platform' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # to push the companions' tags and create the draft releases
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0 # the notes compare the tag with the previous one
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ghga/${{ needs.resolve.outputs.version }}
+        run: uv run --script scripts/release_notes.py "$TAG" --draft
+
   # -------- pypi lane: delegated to pypi-publish.yaml -------------------------------------
   #
   # It calls pypi-publish.yaml, which picks the packages and runs the tests. The mode says
@@ -685,7 +713,8 @@ jobs:
     needs: resolve
     if: ${{ needs.resolve.outputs.lane == 'pypi' }}
     permissions:
-      contents: read
+      # To tag the members of a sweep and draft their releases.
+      contents: write
       # For trusted publishing in the called workflow, which cannot hold more than its
       # caller grants.
       id-token: write
