@@ -827,7 +827,13 @@ class UploadController(UploadControllerPort):
             )
 
         # Requeue it
-        await self._requeue_file_upload(file_upload=file_upload)
+        try:
+            await self._requeue_file_upload(file_upload=file_upload)
+        except PreconditionFailedError as err:
+            raise self.FileUploadStateError(
+                file_id=file_upload.id,
+                details="Only 'failed_interrogation' FileUploads can be requeued.",
+            ) from err
 
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
         """Requeue all 'failed_interrogation' FileUploads in the given FileUploadBox.
@@ -856,7 +862,7 @@ class UploadController(UploadControllerPort):
         async for file_upload in potential_uploads:
             try:
                 await self._requeue_file_upload(file_upload=file_upload)
-            except self.S3ObjectMissingError:
+            except (self.S3ObjectMissingError, PreconditionFailedError):
                 skipped.append(file_upload.id)
             else:
                 requeued.append(file_upload.id)
@@ -869,6 +875,10 @@ class UploadController(UploadControllerPort):
 
         Does not modify the original argument and assumes the state has been validated.
         Verifies that the object exists in the inbox.
+
+        Raises:
+        - `PreconditionFailedError` if the FileUpload left the 'failed_interrogation'
+          state after the caller validated it.
         """
         # Make sure the object still exists in the inbox and hasn't been deleted already
         #  Error handling is done inside _get_object_metadata
@@ -879,7 +889,12 @@ class UploadController(UploadControllerPort):
         upload_copy.failure_reason = ""
         upload_copy.state = "inbox"
         upload_copy.state_updated = now_utc_ms_prec()
-        await self._file_upload_dao.update(upload_copy)
+        # The state the caller validated is only guaranteed to still hold if the update
+        # asserts it: every update publishes an event, so a second requeue slipping in
+        # between would interrogate the same file twice.
+        await self._file_upload_dao.update(
+            upload_copy, precondition={"state": "failed_interrogation"}
+        )
 
     async def remove_file_upload(
         self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
