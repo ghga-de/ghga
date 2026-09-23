@@ -1385,7 +1385,7 @@ class UploadController(UploadControllerPort):
         )
         try:
             await self._file_upload_box_dao.update(
-                updated_box, precondition={"version": box.version + 1}
+                updated_box, precondition={"version": box.version}
             )
             log.info("Archived box with ID %s.", box_id)
         except PreconditionFailedError as err:
