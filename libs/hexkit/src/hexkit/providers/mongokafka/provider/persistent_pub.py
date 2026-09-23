@@ -251,7 +251,7 @@ class PersistentKafkaPublisher(EventPublisherProtocol):
         """Publishes all non-published events."""
         with translate_pymongo_errors():
             events = [
-                dto async for dto in self._dao.find_all(mapping={"published": False})
+                dto async for dto in self._dao.find_all(filter_={"published": False})
             ]
 
         events.sort(key=lambda x: x.created)
@@ -267,7 +267,7 @@ class PersistentKafkaPublisher(EventPublisherProtocol):
         already been published or not.
         """
         with translate_pymongo_errors():
-            events = self._dao.find_all(mapping={})
+            events = self._dao.find_all(filter_={})
 
         async for event in events:
             # If there's no event ID, generate a new UUID. It will get stored when the
