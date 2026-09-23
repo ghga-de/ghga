@@ -31,6 +31,7 @@ from rs.constants import (
     EXC_ID_BOX_MAX_SIZE_TOO_LOW,
     EXC_ID_BOX_NOT_FOUND,
     EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_STATS_UNAVAILABLE,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
     EXC_ID_FILE_UPLOAD_STATE_ERROR,
@@ -367,6 +368,27 @@ class FileBoxClient(FileBoxClientPort):
     def _auth_header(self, wot: BaseWorkOrderToken) -> dict[str, str]:
         signed_wot = sign_work_order_token(wot, self._signing_key)
         return {"Authorization": f"Bearer {signed_wot}"}
+
+    def _raise_if_stats_unavailable(
+        self, *, response: httpx2.Response, operation: str, box_id: UUID4
+    ) -> None:
+        """Raise FUBStatsUnavailableError for the owning service's 503 stats error.
+
+        Returns without raising for every other response, so callers can put this in
+        front of their generic error handling.
+        """
+        if response.status_code != 503:
+            return
+        if _extract_exception_id(response) != EXC_ID_BOX_STATS_UNAVAILABLE:
+            return
+        log.warning(
+            "FileUploadBox %s stats are stale after the %s operation, but the operation"
+            + " itself succeeded.",
+            box_id,
+            operation,
+            extra={"box_id": box_id, "response_text": response.text},
+        )
+        raise self.FUBStatsUnavailableError(box_id=box_id)
 
     def _raise_for_409(
         self,
@@ -745,6 +767,7 @@ class FileBoxClient(FileBoxClientPort):
                 operation="resize",
                 box_id=box_id,
             )
+
         log.warning(
             "Error resizing FileUploadBox ID %s in external service.",
             box_id,
@@ -760,6 +783,8 @@ class FileBoxClient(FileBoxClientPort):
 
         Raises:
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the file was deleted but the owning
+                service could not update the box stats.
         """
         wot = DeleteFileUploadWorkOrder(box_id=box_id, file_id=file_id)
         headers = self._auth_header(wot)
@@ -797,6 +822,10 @@ class FileBoxClient(FileBoxClientPort):
                 operation="delete file from",
                 box_id=box_id,
             )
+
+        self._raise_if_stats_unavailable(
+            response=response, operation="delete file from", box_id=box_id
+        )
 
         log.warning(
             "Error deleting FileUpload %s from FileUploadBox %s.",
