@@ -122,6 +122,10 @@ class DLQManagerPort(ABC):
         """
 
     @abstractmethod
+    async def count_dead_letters(self) -> int:
+        """Return the total number of events currently stored in the DLQ."""
+
+    @abstractmethod
     async def preview_events(
         self,
         *,

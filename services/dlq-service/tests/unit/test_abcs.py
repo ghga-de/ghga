@@ -31,6 +31,7 @@ from dlqs.ports.inbound.dlq_manager import DLQManagerPort
             [
                 "store_event",
                 "get_service_topic_summary",
+                "count_dead_letters",
                 "preview_events",
                 "process_event",
                 "discard_event",

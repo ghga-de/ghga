@@ -39,6 +39,11 @@ class Config(ApiConfigBase, LoggingConfig, KafkaConfig, MigrationConfig):
         + "to authenticate calls to this service. Hashes are made with SHA-256.",
         examples=["7ad83b6b9183c91674eec897935bc154ba9ff9704f8be0840e77f476b5062b6e"],
     )
+    metrics_port: int = Field(
+        default=9464,
+        description="Port to expose the Prometheus metrics endpoint on, separate from"
+        + " the REST API port. Only started when `workers` is 1.",
+    )
 
 
 CONFIG = Config()
