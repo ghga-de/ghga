@@ -652,7 +652,7 @@ async def test_create_box_endpoint_error_handling(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpInternalError(),
+            http_exceptions.HttpBoxStatsUnavailableError(box_id=TEST_BOX_ID),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
@@ -972,7 +972,7 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpInternalError(),
+            http_exceptions.HttpBoxStatsUnavailableError(box_id=TEST_BOX_ID),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
@@ -1015,11 +1015,11 @@ async def test_complete_file_upload_endpoint_error_translation(
     assert response.json()["description"] == str(http_error)
 
 
-async def test_box_stats_calc_error_not_re_logged_by_api(
+async def test_box_stats_calc_error_asks_client_to_retry(
     config: ConfigFixture, app_fixture: AppFixture, caplog
 ):
-    """BoxStatsCalcError is already logged by the controller, so the API layer must
-    translate it to a 500 without emitting another error log of its own.
+    """A BoxStatsCalcError becomes a 503. It is already logged by the controller, so
+    the API layer must not emit another error log of its own.
     """
     routes_logger = "ucs.adapters.inbound.fastapi_.routes"
     wps_jwk = config.wps_jwk
@@ -1043,7 +1043,8 @@ async def test_box_stats_calc_error_not_re_logged_by_api(
             json=body,
             headers=token_header,
         )
-    assert response.json()["description"] == str(http_exceptions.HttpInternalError())
+    assert response.status_code == 503
+    assert response.json()["exception_id"] == "boxStatsUnavailable"
     assert not [
         record
         for record in caplog.records
@@ -1080,7 +1081,7 @@ async def test_box_stats_calc_error_not_re_logged_by_api(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpInternalError(),
+            http_exceptions.HttpBoxStatsUnavailableError(box_id=TEST_BOX_ID),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
