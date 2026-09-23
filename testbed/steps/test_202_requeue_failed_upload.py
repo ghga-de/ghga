@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-"""Step definitions for requeueing a file upload that failed interrogation"""
+"""Step definitions for resolving file uploads that failed interrogation"""
 
 import subprocess
 import time
@@ -36,12 +36,14 @@ from .conftest import (
 
 scenarios("../features/202_requeue_failed_upload.feature")
 
-# No file content can produce this checksum, so the interrogation of the file we
-# sabotage always ends in a mismatch and DHFS reports the file as failed.
+# No file content can produce this checksum, so the interrogation of the files we
+# sabotage always ends in a mismatch and DHFS reports them as failed.
 BOGUS_CHECKSUM = "0" * 64
 
-# Where the file under test is remembered across the scenarios of this feature.
-TARGET_STATE = "requeue_target"
+# Where the two files under test are remembered across the scenarios of this feature.
+# The "first" one is resolved by requeueing it, the "second" one by deleting it.
+TARGETS_STATE = "requeue_targets"
+ORDINALS = ("first", "second")
 
 
 def _steward_headers(fixtures: JointFixture) -> dict[str, str]:
@@ -53,19 +55,24 @@ def _steward_headers(fixtures: JointFixture) -> dict[str, str]:
     return fixtures.auth.headers(session=session)
 
 
-def _target(fixtures: JointFixture) -> dict[str, Any]:
-    """Return what we know about the file under test."""
-    target = fixtures.state.get_state(TARGET_STATE)
-    assert target, "No file was picked for the requeue scenarios"
-    return target
+def _targets(fixtures: JointFixture) -> dict[str, dict[str, Any]]:
+    """Return what we know about both files under test."""
+    targets = fixtures.state.get_state(TARGETS_STATE)
+    assert targets, "No files were picked for the requeue scenarios"
+    return targets
 
 
-def _remember(fixtures: JointFixture, **fields: Any) -> dict[str, Any]:
-    """Add what we have just learned about the file under test to the state."""
-    target = fixtures.state.get_state(TARGET_STATE) or {}
-    target.update(fields)
-    fixtures.state.set_state(TARGET_STATE, target)
-    return target
+def _target(fixtures: JointFixture, ordinal: str) -> dict[str, Any]:
+    """Return what we know about one of the files under test."""
+    assert ordinal in ORDINALS, f"Unknown file {ordinal!r}"
+    return _targets(fixtures)[ordinal]
+
+
+def _remember(fixtures: JointFixture, ordinal: str, **fields: Any) -> None:
+    """Add what we have just learned about one file under test to the state."""
+    targets = fixtures.state.get_state(TARGETS_STATE) or {}
+    targets.setdefault(ordinal, {}).update(fields)
+    fixtures.state.set_state(TARGETS_STATE, targets)
 
 
 def _read_stable_box(fixtures: JointFixture, storage_name: str) -> dict[str, Any]:
@@ -94,14 +101,15 @@ def _read_stable_box(fixtures: JointFixture, storage_name: str) -> dict[str, Any
 
 
 def _set_box_state(
-    fixtures: JointFixture, storage_name: str, state: str
-) -> Response | None:
-    """Move the upload box to the given state, or do nothing if it is there already."""
+    fixtures: JointFixture, storage_name: str, state: str, force: bool = False
+) -> Response:
+    """Ask RS to move the upload box to the given state."""
     box = _read_stable_box(fixtures, storage_name)
-    if box["state"] == state:
-        return None
+    assert box["state"] != state, f"The {storage_name} upload box is {state} already"
     url = f"{fixtures.config.rs_url}/upload-boxes/{box['id']}"
-    data = {"version": box["version"], "state": state}
+    data: dict[str, Any] = {"version": box["version"], "state": state}
+    if force:
+        data["force"] = True
     return fixtures.http.patch(url, headers=_steward_headers(fixtures), json=data)
 
 
@@ -135,7 +143,7 @@ def _find_upload(
 
 
 def _wait_for_init_upload(
-    fixtures: JointFixture, alias: str, timeout: float = 120
+    fixtures: JointFixture, alias: str, timeout: float = 180
 ) -> dict[str, Any]:
     """Wait for UCS to have initiated the upload of the given alias and return it.
 
@@ -196,73 +204,27 @@ def _seed_fis_file(fixtures: JointFixture, ucs_document: dict[str, Any]) -> None
     )
 
 
-@given(parse('the data upload box for "{storage_name}" storage is unlocked'))
-def unlock_upload_box(storage_name: str, fixtures: JointFixture):
-    """Move the upload box back to 'open' so a file can be replaced."""
-    response = _set_box_state(fixtures, storage_name, "open")
-    if response is not None:
-        assert response.status_code == 204, f"{response.status_code}: {response.text}"
-
-
-@when(
-    parse(
-        'the largest file of dataset "{dataset_alias}" is deleted from "{storage_name}" storage'
-    )
-)
-def delete_largest_file(
-    dataset_alias: str,
-    storage_name: str,
+def _run_batch_upload(
     fixtures: JointFixture,
-    file_fixture: dict[str, FileBatch],
-):
-    """Delete the biggest file of the dataset so it can be uploaded again.
+    storage_name: str,
+    file_info: list[tuple[str, Path]],
+    sabotage: bool,
+) -> None:
+    """Upload the given files again, optionally sabotaging each one as it starts.
 
-    The biggest file takes the longest to upload, which leaves the widest window
-    for seeding FIS while the upload is still being initiated.
+    The connector runs alongside the test rather than to completion, because the
+    files can only be sabotaged while their uploads are being initiated. Its output
+    goes to a file rather than a pipe, which would deadlock the upload once its
+    buffer filled up.
     """
-    alias, file_path = max(
-        file_fixture[dataset_alias].file_info, key=lambda info: info[1].stat().st_size
-    )
-    upload = _find_upload(fixtures, storage_name, alias)
-    assert upload, f"No file upload listed for alias {alias!r}"
-
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}/uploads/{upload['id']}"
-    response = fixtures.http.delete(url, headers=_steward_headers(fixtures))
-    assert response.status_code == 204, f"{response.status_code}: {response.text}"
-
-    fixtures.state.set_state(
-        TARGET_STATE,
-        {
-            "alias": alias,
-            "file_path": str(file_path),
-            "storage_name": storage_name,
-            "deleted_id": upload["id"],
-        },
-    )
-
-
-@when(
-    parse(
-        'that file is uploaded to "{storage_name}" storage with a corrupted expected checksum'
-    )
-)
-def upload_file_with_corrupted_checksum(storage_name: str, fixtures: JointFixture):
-    """Upload the file again and make FIS expect a checksum it cannot match."""
-    target = _target(fixtures)
-    alias = target["alias"]
     connector = fixtures.connector
     connector.config.file_metadata_dir.mkdir(exist_ok=True)
     upload_token = fixtures.state.get_state(f"upload token for {storage_name}")
     assert upload_token, f"No upload token found for {storage_name}"
 
-    tsv_path = write_upload_tsv(
-        [(alias, Path(target["file_path"]))], connector.config.work_dir
-    )
+    tsv_path = write_upload_tsv(file_info, connector.config.work_dir)
     cmd = ["ghga-connector", "batch-upload", "--tsv", str(tsv_path), "--overwrite"]
-    # The connector writes to a file rather than a pipe: we let it run while seeding
-    # FIS, and a pipe would deadlock the upload once its buffer filled up.
-    log_path = connector.config.work_dir / "corrupted_upload.log"
+    log_path = connector.config.work_dir / "requeue_upload.log"
     with log_path.open("w", encoding="utf-8") as log_file:
         process = subprocess.Popen(  # nosec B607, B603
             cmd,
@@ -278,13 +240,11 @@ def upload_file_with_corrupted_checksum(storage_name: str, fixtures: JointFixtur
             process.stdin.flush()
             process.stdin.close()
 
-            ucs_document = _wait_for_init_upload(fixtures, alias)
-            assert ucs_document["_id"] != target["deleted_id"], (
-                "UCS still reports the deleted upload as being initiated"
-            )
-            _seed_fis_file(fixtures, ucs_document)
+            if sabotage:
+                for alias, _ in file_info:
+                    _seed_fis_file(fixtures, _wait_for_init_upload(fixtures, alias))
 
-            process.wait(timeout=300)
+            process.wait(timeout=600)
         except BaseException:
             process.kill()
             process.wait()
@@ -295,22 +255,104 @@ def upload_file_with_corrupted_checksum(storage_name: str, fixtures: JointFixtur
     assert "Successfully uploaded" in output, f"The connector failed:\n{output}"
 
 
-@then(parse('the file is listed as "{expected_state}" within "{seconds:d}" seconds'))
-def check_file_state(expected_state: str, seconds: int, fixtures: JointFixture):
-    """Wait for RS to list the file under test in the expected state."""
-    target = _target(fixtures)
-    alias = target["alias"]
+@given(parse('the data upload box for "{storage_name}" storage is unlocked'))
+def unlock_upload_box(storage_name: str, fixtures: JointFixture):
+    """Move the upload box back to 'open' so its files can be replaced."""
+    box = _read_stable_box(fixtures, storage_name)
+    if box["state"] == "open":
+        return
+    response = _set_box_state(fixtures, storage_name, "open")
+    assert response.status_code == 204, f"{response.status_code}: {response.text}"
+
+
+@when(
+    parse(
+        'the two largest files of dataset "{dataset_alias}" are deleted from "{storage_name}" storage'
+    )
+)
+def delete_two_largest_files(
+    dataset_alias: str,
+    storage_name: str,
+    fixtures: JointFixture,
+    file_fixture: dict[str, FileBatch],
+):
+    """Delete the two biggest files of the dataset so they can be uploaded again.
+
+    The biggest files take the longest to upload, which leaves the widest window for
+    seeding FIS while each upload is still being initiated.
+    """
+    largest = sorted(
+        file_fixture[dataset_alias].file_info,
+        key=lambda info: info[1].stat().st_size,
+        reverse=True,
+    )[: len(ORDINALS)]
+
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    headers = _steward_headers(fixtures)
+    targets: dict[str, dict[str, Any]] = {}
+    for ordinal, (alias, file_path) in zip(ORDINALS, largest, strict=True):
+        upload = _find_upload(fixtures, storage_name, alias)
+        assert upload, f"No file upload listed for alias {alias!r}"
+        url = (
+            f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}/uploads/{upload['id']}"
+        )
+        response = fixtures.http.delete(url, headers=headers)
+        assert response.status_code == 204, f"{response.status_code}: {response.text}"
+        targets[ordinal] = {
+            "alias": alias,
+            "file_path": str(file_path),
+            "storage_name": storage_name,
+            "deleted_id": upload["id"],
+        }
+
+    fixtures.state.set_state(TARGETS_STATE, targets)
+
+
+@when(
+    parse(
+        'those files are uploaded to "{storage_name}" storage with corrupted checksums'
+    )
+)
+def upload_files_with_corrupted_checksums(storage_name: str, fixtures: JointFixture):
+    """Upload both files again and make FIS expect checksums they cannot match."""
+    targets = _targets(fixtures)
+    file_info = [
+        (targets[ordinal]["alias"], Path(targets[ordinal]["file_path"]))
+        for ordinal in ORDINALS
+    ]
+    _run_batch_upload(fixtures, storage_name, file_info, sabotage=True)
+
+
+@when(parse('the "{ordinal}" file is uploaded to "{storage_name}" storage again'))
+def upload_file_again(ordinal: str, storage_name: str, fixtures: JointFixture):
+    """Upload one of the files again, this time without touching its checksum."""
+    target = _target(fixtures, ordinal)
+    file_info = [(target["alias"], Path(target["file_path"]))]
+    _run_batch_upload(fixtures, storage_name, file_info, sabotage=False)
+
+
+@then(
+    parse(
+        'the "{ordinal}" file is listed as "{expected_state}" within "{seconds:d}" seconds'
+    )
+)
+def check_file_state(
+    ordinal: str, expected_state: str, seconds: int, fixtures: JointFixture
+):
+    """Wait for RS to list the given file in the expected state."""
+    target = _target(fixtures, ordinal)
+    alias, storage_name = target["alias"], target["storage_name"]
     deadline = time.monotonic() + seconds
     upload = None
     while time.monotonic() < deadline:
-        upload = _find_upload(fixtures, target["storage_name"], alias)
+        upload = _find_upload(fixtures, storage_name, alias)
         if upload and upload["state"] == expected_state:
             fields = {"file_id": upload["id"]}
             # The inbox object ID has to be kept: once the file is interrogated,
             # the record points at the object in the interrogation bucket instead.
             if expected_state == "failed_interrogation":
                 fields["inbox_object_id"] = upload["object_id"]
-            _remember(fixtures, **fields)
+            _remember(fixtures, ordinal, **fields)
             return
         time.sleep(2)
     raise AssertionError(
@@ -318,30 +360,30 @@ def check_file_state(expected_state: str, seconds: int, fixtures: JointFixture):
     )
 
 
-@then("the file reports why it failed")
-def check_failure_reason(fixtures: JointFixture):
+@then(parse('the "{ordinal}" file reports why it failed'))
+def check_failure_reason(ordinal: str, fixtures: JointFixture):
     """Assert the file carries the reason the interrogation gave."""
-    target = _target(fixtures)
+    target = _target(fixtures, ordinal)
     upload = _find_upload(fixtures, target["storage_name"], target["alias"])
     assert upload and upload.get("failure_reason"), (
         f"No failure reason on the failed file: {upload}"
     )
 
 
-@then("the file no longer reports why it failed")
-def check_failure_reason_cleared(fixtures: JointFixture):
+@then(parse('the "{ordinal}" file no longer reports why it failed'))
+def check_failure_reason_cleared(ordinal: str, fixtures: JointFixture):
     """Assert the requeue cleared the failure reason, which archival insists on."""
-    target = _target(fixtures)
+    target = _target(fixtures, ordinal)
     upload = _find_upload(fixtures, target["storage_name"], target["alias"])
     assert upload and not upload.get("failure_reason"), (
         f"The failure reason survived the requeue: {upload}"
     )
 
 
-@then("the interrogation report for the file has been discarded")
-def check_report_discarded(fixtures: JointFixture):
+@then(parse('the interrogation report for the "{ordinal}" file has been discarded'))
+def check_report_discarded(ordinal: str, fixtures: JointFixture):
     """Assert FIS dropped the report of the interrogation that failed."""
-    file_id = _target(fixtures)["file_id"]
+    file_id = _target(fixtures, ordinal)["file_id"]
     removed = fixtures.mongo.wait_for_removal(
         db_name=fixtures.config.fis_db_name,
         collection_name=fixtures.config.fis_reports_collection,
@@ -352,15 +394,39 @@ def check_report_discarded(fixtures: JointFixture):
     assert removed, f"FIS still holds an interrogation report for file {file_id}"
 
 
+@then(parse('the "{ordinal}" file is marked as removable in the interrogation service'))
+def check_file_removable(ordinal: str, fixtures: JointFixture):
+    """Assert the deletion reached FIS, which releases the file for cleanup.
+
+    FIS keeps its record of a cancelled file and flips `can_remove`, which is what
+    lets DHFS clean up after it.
+    """
+    file_id = _target(fixtures, ordinal)["file_id"]
+    deadline = time.monotonic() + 60
+    document = None
+    while time.monotonic() < deadline:
+        document = fixtures.mongo.find_document(
+            db_name=fixtures.config.fis_db_name,
+            collection_name=fixtures.config.fis_files_collection,
+            query={"_id": file_id},
+        )
+        if document and document.get("can_remove"):
+            return
+        time.sleep(1)
+    raise AssertionError(f"FIS does not consider file {file_id} removable: {document}")
+
+
 @then(
     parse(
-        'the uploaded object is still in the "{bucket}" bucket of "{storage_name}" storage'
+        'the object of the "{ordinal}" file is still in the "{bucket}" bucket of "{storage_name}" storage'
     )
 )
-def check_object_kept(bucket: str, storage_name: str, fixtures: JointFixture):
+def check_object_kept(
+    ordinal: str, bucket: str, storage_name: str, fixtures: JointFixture
+):
     """Assert the failed file's object was kept, so no second upload is needed."""
     storage_config = fixtures.s3.get_storage_config(storage_name)
-    object_id = _target(fixtures)["inbox_object_id"]
+    object_id = _target(fixtures, ordinal)["inbox_object_id"]
     assert fixtures.s3.does_object_exist(
         storage_alias=storage_config.storage_alias,
         bucket=getattr(storage_config.buckets, bucket),
@@ -370,13 +436,15 @@ def check_object_kept(bucket: str, storage_name: str, fixtures: JointFixture):
 
 @then(
     parse(
-        'the uploaded object is gone from the "{bucket}" bucket of "{storage_name}" storage'
+        'the object of the "{ordinal}" file is gone from the "{bucket}" bucket of "{storage_name}" storage'
     )
 )
-def check_object_removed(bucket: str, storage_name: str, fixtures: JointFixture):
-    """Assert the object was cleaned up once the interrogation passed."""
+def check_object_removed(
+    ordinal: str, bucket: str, storage_name: str, fixtures: JointFixture
+):
+    """Assert the object was cleaned up once the file was resolved."""
     storage_config = fixtures.s3.get_storage_config(storage_name)
-    object_id = _target(fixtures)["inbox_object_id"]
+    object_id = _target(fixtures, ordinal)["inbox_object_id"]
     assert not fixtures.s3.does_object_exist(
         storage_alias=storage_config.storage_alias,
         bucket=getattr(storage_config.buckets, bucket),
@@ -384,16 +452,25 @@ def check_object_removed(bucket: str, storage_name: str, fixtures: JointFixture)
     ), f"{object_id} is still in the {bucket} bucket of {storage_name} storage"
 
 
+@then(parse('the upload box for "{storage_name}" storage holds "{count:d}" files'))
+def check_box_file_count(count: int, storage_name: str, fixtures: JointFixture):
+    """Assert the box statistics followed the deletion."""
+    box = _read_stable_box(fixtures, storage_name)
+    assert box["file_count"] == count, (
+        f"Expected {count} files in the {storage_name} box, got {box['file_count']}"
+    )
+
+
 @when(
-    parse('"{full_name}" requeues the failed file in "{storage_name}" storage'),
+    parse('"{full_name}" requeues the "{ordinal}" file in "{storage_name}" storage'),
     target_fixture="response",
 )
 def requeue_failed_file(
-    full_name: str, storage_name: str, fixtures: JointFixture
+    full_name: str, ordinal: str, storage_name: str, fixtures: JointFixture
 ) -> Response:
-    """Requeue the failed file through RS, as a Data Steward would."""
+    """Requeue a failed file through RS, as a Data Steward would."""
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    file_id = _target(fixtures)["file_id"]
+    file_id = _target(fixtures, ordinal)["file_id"]
     session = fixtures.auth.get_saved_session(
         name=full_name, state_store=fixtures.state
     )
@@ -406,13 +483,64 @@ def requeue_failed_file(
 
 
 @when(
-    parse('"{full_name}" locks the data upload box for "{storage_name}" storage again'),
+    parse('"{full_name}" deletes the "{ordinal}" file from "{storage_name}" storage'),
     target_fixture="response",
 )
-def lock_upload_box_again(
-    full_name: str, storage_name: str, fixtures: JointFixture
+def delete_failed_file(
+    full_name: str, ordinal: str, storage_name: str, fixtures: JointFixture
 ) -> Response:
-    """Lock the upload box again, leaving the journey where this feature found it."""
-    response = _set_box_state(fixtures, storage_name, "locked")
-    assert response is not None, f"The {storage_name} upload box was already locked"
-    return response
+    """Delete a failed file, the other way a Data Steward can resolve one."""
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    file_id = _target(fixtures, ordinal)["file_id"]
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+
+    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}/uploads/{file_id}"
+    return fixtures.http.delete(url, headers=fixtures.auth.headers(session=session))
+
+
+@when(
+    parse('"{full_name}" locks the data upload box for "{storage_name}" storage'),
+    target_fixture="response",
+)
+def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
+    """Lock the upload box, which is refused while a file needs attention."""
+    return _set_box_state(fixtures, storage_name, "locked")
+
+
+@when(
+    parse('"{full_name}" force-locks the data upload box for "{storage_name}" storage'),
+    target_fixture="response",
+)
+def force_lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
+    """Lock the upload box anyway, which is what `force` is for."""
+    return _set_box_state(fixtures, storage_name, "locked", force=True)
+
+
+@when(
+    parse(
+        '"{full_name}" tries to archive the data upload box for "{storage_name}" storage'
+    ),
+    target_fixture="response",
+)
+def try_to_archive_upload_box(
+    full_name: str, storage_name: str, fixtures: JointFixture
+):
+    """Attempt to archive the box while it still holds files that failed."""
+    return _set_box_state(fixtures, storage_name, "archived")
+
+
+@then("the response names both failed files as needing attention")
+def check_files_need_attention(fixtures: JointFixture, response: Response):
+    """Assert the refusal names the files a Data Steward has to resolve.
+
+    RS reads the file states from UCS rather than its own copy, so this is where
+    the two services have to agree on what a blocking file is.
+    """
+    need_attention = response.json()["data"]["need_attention"]
+    expected = {_target(fixtures, ordinal)["file_id"] for ordinal in ORDINALS}
+    assert set(need_attention) == expected, (
+        f"Expected {sorted(expected)} to need attention, got {sorted(need_attention)}"
+    )
