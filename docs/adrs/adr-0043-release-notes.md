@@ -1,6 +1,6 @@
 ---
-status: proposed
-date: 2026-09-22
+status: accepted
+date: 2026-09-23
 tags: [release, process]
 related: [ADR-0027, ADR-0038]
 ---
