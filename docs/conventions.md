@@ -22,6 +22,7 @@ release = "platform"  # release lane: "platform" (lockstep) | "pypi" | "none"
 image = true    # build & push a container image (and generate a Helm chart) on the release tag
 pypi  = true    # publish a wheel to PyPI on the release tag
 cli   = true    # exposes a console entry point
+notes = true    # platform lane only: release notes of its own (ADR-0043)
 
 # optional, when image = true:
 executable = "auth-service"   # console script used as the image ENTRYPOINT
@@ -34,7 +35,7 @@ PyPI lane, `tools/*` to no lane at all
 ([ADR-0033](adrs/adr-0033-capability-markers-and-placement.md)).
 
 Examples: `libs/hexkit` → `{pypi}` and `services/auth-service` → `{platform, image}`, both by
-default; `libs/metldata` → `{platform, image}` (a library that is also deployed);
+default; `libs/metldata` → `{platform, image, notes}` (a library that is also deployed);
 `libs/ghga-event-schemas` → `{none}` (embedded in the images, never published on its own);
 `tools/ghga-connector` and `tools/ghga-transpiler` → `{pypi, cli}` (public CLIs opting in).
 

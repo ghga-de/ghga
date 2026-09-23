@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-06-30
+amended: 2026-09-23
 tags: [build, release]
 related: [ADR-0027]
 ---
@@ -42,6 +43,10 @@ its release lane (`platform`, `pypi` or `none`, see
 [ADR-0027](adr-0027-versioning-and-release-by-tag.md)), and whether it builds an image,
 publishes a wheel or exposes a CLI. The shared Dockerfile, the chart generator, the
 release lanes and affected-target CI read the markers, not the path.
+
+**Amended 2026-09-23:** a platform-lane member can also declare `notes = true`. It is
+then released with the platform, but has release notes of its own rather than counting
+as part of the platform's ([ADR-0043](adr-0043-release-notes.md)).
 
 Directories supply defaults, so a marker is written only where a member deviates:
 `services/` and `frontend/` default to the platform lane with an image, `libs/` to the

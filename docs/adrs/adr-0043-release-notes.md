@@ -73,19 +73,26 @@ lead to the wrong pull requests here.
 - **Libraries and tools:** a `name/x.y.z` tag lists the pull requests that changed what
   the member ships. That is the set the drift gate uses: the packaged roots,
   `pyproject.toml`, the README and the licence.
-- **Companions:** `metldata` and `ghga-datasteward-kit` have no tag of their own. A
-  platform release tags each of them as `name/X.Y.Z` with the platform version, the
-  version stamping gives them in the images, and drafts their release like a library's.
-  A companion with no change since its previous release gets neither. Of `metldata`, the
-  library is the companion, and its chart belongs to the platform.
+- **Companions:** a platform-lane member that declares `notes = true` in `[tool.ghga]`
+  ([ADR-0033](adr-0033-capability-markers-and-placement.md)), now `metldata` and
+  `ghga-datasteward-kit`, has no tag of its own. A platform release tags each of them as
+  `name/X.Y.Z` with the platform version, the version stamping gives them in the images,
+  and drafts their release like a library's. A companion with no change since its
+  previous release gets neither. Of `metldata`, the library is the companion, and its
+  chart belongs to the platform. Every other platform-lane member counts as part of the
+  platform.
 - **Sweeps:** a `packages/` release tags every member it uploaded as `name/x.y.z`, so
   that the next release of each member has a tag to compare with.
 - **No release page:** `ghga-event-schemas` is embedded in the images only, and
   `auth-km-jobs` is a service, counted with the platform.
+- **Tag names:** a tag spells the member with its canonical name, `ghga-connector`,
+  also where the distribution declares `ghga_connector`.
 
 `scripts/release_notes.py` generates the notes, and the release workflows create them
-as a **draft** release. A tag that already has a release is left alone. The notes have
-two parts:
+as a **draft** release once the tag's build is green. A tag that already has a release
+is left alone. So a release starts with pushing its tag, never in the GitHub UI: GitHub
+creates the tag only when the release is published there, and the workflow would then
+find a release it must not touch. The notes have two parts:
 
 1. **Summaries:** New features, Changes and Bug fixes, each a few short sentences in
    plain language, with no pull request numbers and without minor changes or

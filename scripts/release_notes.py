@@ -49,29 +49,15 @@ from packaging.version import InvalidVersion, Version
 
 from affected_targets import _canonical
 from pypi_drift import shipped_prefixes
-from pypi_members import _find_member, pypi_members
+from pypi_members import _find_member, _lane, pypi_members
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 PLATFORM = "ghga"
 
-# What the platform release consists of. The lock file counts because a dependency update
-# changes the images.
-PLATFORM_PREFIXES = (
-    "services/",
-    "frontend/",
-    "deploy/",
-    # A service outside services/ until it moves there.
-    "tools/auth-km-jobs/",
-    "uv.lock",
-)
-
-# Members released with the platform that still get notes of their own, by tag name. Of
-# metldata, the library counts here, while its chart and service belong to the platform.
-COMPANIONS = {
-    "metldata": "libs/metldata",
-    "ghga-datasteward-kit": "tools/ghga-datasteward-kit",
-}
+# What the platform release consists of besides its lane's members in libs/ and tools/.
+# The lock file counts because a dependency update changes the images.
+PLATFORM_ROOTS = ("services/", "frontend/", "deploy/", "uv.lock")
 
 # The commit types of the commit grammar (docs/conventions.md), in the order their
 # pull requests are listed, each with its subheading.
@@ -121,6 +107,18 @@ class Entry:
     pr: int | None
     breaking: bool
     files: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Layout:
+    """How the libraries and tools divide between the releases, as their markers say."""
+
+    # Path prefixes of the platform release.
+    platform: tuple[str, ...]
+    # Tag name to path, for each platform-lane member with notes of its own.
+    companions: dict[str, str]
+    # Tag name to path, for each library and tool that is not part of the platform.
+    components: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -308,6 +306,30 @@ def select(changes: list[Entry], prefixes: tuple[str, ...]) -> list[Entry]:
     return [e for e in changes if any(f.startswith(prefixes) for f in e.files)]
 
 
+def layout() -> Layout:
+    """Reads the `[tool.ghga]` markers of the libraries and tools (ADR-0033).
+
+    A platform-lane member is part of the platform, unless it declares `notes = true`:
+    then it is a companion, released with the platform but with notes of its own. Of
+    metldata, a companion, the library counts there, while its chart is in `deploy/`.
+    """
+    platform, companions, components = list(PLATFORM_ROOTS), {}, {}
+    for root in ("libs", "tools"):
+        for manifest in sorted((ROOT / root).glob("*/pyproject.toml")):
+            path = str(manifest.parent.relative_to(ROOT))
+            data = tomllib.loads(manifest.read_text())
+            markers = data.get("tool", {}).get("ghga", {})
+            name = _canonical(data["project"]["name"])
+            if _lane(root, markers) != "platform":
+                components[name] = path
+            elif markers.get("notes"):
+                companions[name] = path
+                components[name] = path
+            else:
+                platform.append(f"{path}/")
+    return Layout(tuple(platform), companions, components)
+
+
 def release_prefixes(name: str) -> tuple[str, ...]:
     """Finds the files a release of `name` consists of, e.g. `hexkit` or `ghga`.
 
@@ -315,9 +337,10 @@ def release_prefixes(name: str) -> tuple[str, ...]:
         SystemExit: if `name` is neither the platform, a companion nor a PyPI-lane
             member, or what the member ships cannot be established.
     """
+    parts = layout()
     if name == PLATFORM:
-        return PLATFORM_PREFIXES
-    path = COMPANIONS.get(name)
+        return parts.platform
+    path = parts.companions.get(name)
     if path is None:
         member = _find_member(name, pypi_members())
         if member is None:
@@ -338,19 +361,6 @@ def _member_version(ref: str, path: str) -> str | None:
     return tomllib.loads(manifest).get("project", {}).get("version")
 
 
-def _components() -> dict[str, str]:
-    """Maps the tag name of each library and tool to its path; the platform's are left out."""
-    members = {}
-    for root in ("libs", "tools"):
-        for manifest in sorted((ROOT / root).glob("*/pyproject.toml")):
-            path = str(manifest.parent.relative_to(ROOT))
-            if f"{path}/".startswith(PLATFORM_PREFIXES):
-                continue
-            name = tomllib.loads(manifest.read_text())["project"]["name"]
-            members[_canonical(name)] = path
-    return members
-
-
 def component_lines(previous: str, tag: str) -> list[str]:
     """Lists the libraries and tools whose shipped files changed for a platform release.
 
@@ -360,12 +370,13 @@ def component_lines(previous: str, tag: str) -> list[str]:
     changed = _git("diff", "--name-only", previous, tag).split()
     repo = os.environ.get("GITHUB_REPOSITORY", "ghga-de/ghga")
     platform_version = tag.rpartition("/")[2]
+    parts = layout()
     lines = []
-    for name, path in _components().items():
+    for name, path in parts.components.items():
         prefixes = shipped_prefixes(path) or (f"{path}/",)
         if not any(f.startswith(prefixes) for f in changed):
             continue
-        if name in COMPANIONS:
+        if name in parts.companions:
             now, before, note = platform_version, None, ""
         else:
             now = _member_version(tag, path) or "?"
@@ -412,7 +423,7 @@ def companion_releases(platform_tag: str) -> list[tuple[str, str, bool]]:
     """
     version = platform_tag.rpartition("/")[2]
     releases = []
-    for name in COMPANIONS:
+    for name in layout().companions:
         tag = f"{name}/{version}"
         created = not _has_tag(tag)
         if created:
@@ -488,9 +499,9 @@ def draft(tag: str, text: str) -> None:
     if exists:
         print(f"{tag} already has a release, left as it is")
         return
-    name, _, text = tag.rpartition("/")
-    prerelease = Version(text).is_prerelease
-    title = f"GHGA {text}" if name == PLATFORM else f"{name} {text}"
+    name, _, version = tag.rpartition("/")
+    prerelease = Version(version).is_prerelease
+    title = f"GHGA {version}" if name == PLATFORM else f"{name} {version}"
     latest = name == PLATFORM and not prerelease
     command = [
         "gh", "release", "create", tag,

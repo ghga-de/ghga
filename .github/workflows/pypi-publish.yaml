@@ -277,7 +277,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "$MEMBERS" | jq -c '.[]' | while read -r member; do
-            tag="$(echo "$member" | jq -r '.package')/$(echo "$member" | jq -r '.version')"
+            tag=$(echo "$member" | jq -r '.tag')
             if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
               git tag "$tag" "$GITHUB_SHA"
               git push origin "refs/tags/$tag"

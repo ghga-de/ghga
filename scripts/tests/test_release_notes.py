@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import release_notes
-from release_notes import Entry
+from release_notes import Entry, Layout
 
 SHIPPED = ("libs/demo/src/", "libs/demo/pyproject.toml", "libs/demo/README")
 
@@ -46,8 +46,9 @@ def _commit(repo: Path, path: str, message: str, content: str | None = None) -> 
     _git(repo, "commit", "-q", "-m", message)
 
 
-def _pyproject(name: str, version: str) -> str:
-    return f'[project]\nname = "{name}"\nversion = "{version}"\n'
+def _pyproject(name: str, version: str, markers: str = "") -> str:
+    manifest = f'[project]\nname = "{name}"\nversion = "{version}"\n'
+    return manifest + (f"[tool.ghga]\n{markers}\n" if markers else "")
 
 
 @pytest.fixture
@@ -165,7 +166,7 @@ def test_merged_pull_request_takes_title_and_kind_from_the_merge(repo):
 def test_platform_lists_only_services_front_end_and_charts(repo):
     """Libraries and tools are dependencies of the platform, with notes of their own."""
     entries = release_notes.entries("ghga/1.0.0", "ghga/1.1.0")
-    selected = release_notes.select(entries, release_notes.PLATFORM_PREFIXES)
+    selected = release_notes.select(entries, release_notes.layout().platform)
     assert [e.pr for e in selected] == [2, 8]
 
 
@@ -283,10 +284,11 @@ def companions(repo, monkeypatch):
     `fresh` shares its files with `demo`, so it has changes since the first platform
     tag, which its first release compares with.
     """
+    members = {"demo": "libs/demo", "idle": "libs/idle", "fresh": "libs/demo"}
     monkeypatch.setattr(
         release_notes,
-        "COMPANIONS",
-        {"demo": "libs/demo", "idle": "libs/idle", "fresh": "libs/demo"},
+        "layout",
+        lambda: Layout(release_notes.PLATFORM_ROOTS, members, members),
     )
     monkeypatch.setattr(
         release_notes, "shipped_prefixes", lambda path: (f"{path}/src/",)
@@ -324,7 +326,6 @@ def test_existing_companion_tag_is_reused(companions):
 def test_platform_names_the_libraries_and_tools_that_changed(repo, monkeypatch):
     """Their changes are in their own notes; the platform's give version and link."""
     monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
-    monkeypatch.setattr(release_notes, "COMPANIONS", {"steward-kit": "tools/steward"})
     monkeypatch.setattr(
         release_notes,
         "shipped_prefixes",
@@ -333,10 +334,13 @@ def test_platform_names_the_libraries_and_tools_that_changed(repo, monkeypatch):
     for path, name, version in [
         ("libs/idle", "idle", "2.0.0"),
         ("libs/other", "other", "3.0.0"),
-        ("tools/steward", "steward_kit", "0.0.0"),
     ]:
         (repo / path).mkdir(parents=True)
         (repo / path / "pyproject.toml").write_text(_pyproject(name, version))
+    (repo / "tools/steward").mkdir(parents=True)
+    (repo / "tools/steward/pyproject.toml").write_text(
+        _pyproject("steward_kit", "0.0.0", 'release = "platform"\nnotes = true')
+    )
     _commit(repo, "tools/steward/src/kit.py", "chore: add members (#10)")
     _git(repo, "tag", "ghga/1.2.0")
 
@@ -369,3 +373,69 @@ def test_platform_names_the_libraries_and_tools_that_changed(repo, monkeypatch):
     assert text.index("## Libraries and tools") < text.index("## Pull requests")
     assert "fix(demo)" not in text and "No bump yet" not in text
     assert "Service only (#15)" in text
+
+
+def test_layout_follows_the_markers(tmp_path, monkeypatch):
+    """ADR-0033's markers decide; the folder only supplies the default lane."""
+    for path, markers in [
+        ("libs/lib", ""),
+        ("libs/embedded", 'release = "none"'),
+        ("libs/companion_lib", 'release = "platform"\nnotes = true'),
+        ("tools/job", 'release = "platform"'),
+        ("tools/cli", ""),
+    ]:
+        (tmp_path / path).mkdir(parents=True)
+        name = path.rpartition("/")[2]
+        (tmp_path / path / "pyproject.toml").write_text(
+            _pyproject(name, "1.0.0", markers)
+        )
+    monkeypatch.setattr(release_notes, "ROOT", tmp_path)
+
+    parts = release_notes.layout()
+    assert parts.platform == (*release_notes.PLATFORM_ROOTS, "tools/job/")
+    assert parts.companions == {"companion-lib": "libs/companion_lib"}
+    assert sorted(parts.components) == ["cli", "companion-lib", "embedded", "lib"]
+
+
+@pytest.fixture
+def gh(monkeypatch):
+    """Stands in for `gh`, recording each call; no release exists yet."""
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append((command, kwargs.get("input")))
+        return subprocess.CompletedProcess(command, 1 if "view" in command else 0)
+
+    monkeypatch.setattr(release_notes.subprocess, "run", run)
+    return calls
+
+
+def test_draft_sends_the_notes(gh):
+    release_notes.draft("hexkit/8.7.0", "## New features\n")
+    command, notes = gh[-1]
+    assert notes == "## New features\n"
+    assert command[:3] == ["gh", "release", "create"]
+    assert command[command.index("--title") + 1] == "hexkit 8.7.0"
+    assert "--draft" in command
+    assert "--latest=false" in command  # a library never takes the badge
+    assert "--prerelease" not in command
+
+
+def test_draft_marks_only_a_final_platform_release_as_latest(gh):
+    release_notes.draft("ghga/15.4.0", "notes")
+    release_notes.draft("ghga/15.5.0-rc.1", "notes")
+    final, candidate = (command for command, _ in gh if "create" in command)
+    assert final[final.index("--title") + 1] == "GHGA 15.4.0"
+    assert "--latest=true" in final
+    assert "--latest=false" in candidate
+    assert "--prerelease" in candidate
+
+
+def test_draft_leaves_an_existing_release_alone(gh, monkeypatch):
+    def run(command, **kwargs):
+        gh.append((command, kwargs.get("input")))
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(release_notes.subprocess, "run", run)
+    release_notes.draft("ghga/15.4.0", "notes")
+    assert [command[:3] for command, _ in gh] == [["gh", "release", "view"]]

@@ -684,9 +684,10 @@ jobs:
   # The companions, members released with the platform but with notes of their own, are
   # tagged with the platform version here and drafted too. A tag pushed with the workflow
   # token starts no workflow, so their tags do not reach `resolve`. PyPI-lane releases
-  # are drafted in pypi-publish.yaml, once their members are uploaded.
+  # are drafted in pypi-publish.yaml, once their members are uploaded. Only a green build
+  # is drafted: a release whose images or charts failed has nothing to publish yet.
   draft-release:
-    needs: resolve
+    needs: [resolve, build-images, package-charts]
     if: ${{ needs.resolve.outputs.lane == 'platform' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
