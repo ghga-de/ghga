@@ -140,7 +140,7 @@ def check_uploaded_files_in_storage(
             storage_alias=storage_config.storage_alias,
             bucket=bucket_id,
             object_id=object_id,
-        ), f"{object_id} does not exist in the staging bucket"
+        ), f"{object_id} does not exist in the {bucket} bucket"
 
 
 @when(
