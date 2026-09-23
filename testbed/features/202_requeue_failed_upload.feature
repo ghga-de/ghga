@@ -15,6 +15,7 @@ Feature: 202 Requeue Failed Upload
     Then the "first" file is listed as "failed_interrogation" within "300" seconds
     And the "second" file is listed as "failed_interrogation" within "300" seconds
     And the "first" file reports why it failed
+    And FIS holds a failed interrogation report for the "first" file
     And the object of the "first" file is still in the "inbox" bucket of "primary" storage
     And the object of the "second" file is still in the "inbox" bucket of "primary" storage
 

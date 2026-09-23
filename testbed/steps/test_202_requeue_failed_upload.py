@@ -380,9 +380,29 @@ def check_failure_reason_cleared(ordinal: str, fixtures: JointFixture):
     )
 
 
+@then(parse('FIS holds a failed interrogation report for the "{ordinal}" file'))
+def check_failure_report(ordinal: str, fixtures: JointFixture):
+    """Assert FIS stored the report that the requeue has to discard."""
+    file_id = _target(fixtures, ordinal)["file_id"]
+    report = fixtures.mongo.wait_for_document(
+        db_name=fixtures.config.fis_db_name,
+        collection_name=fixtures.config.fis_reports_collection,
+        query={"_id": file_id},
+        timeout=30,
+        interval=0.5,
+    )
+    assert report and report["passed"] is False, (
+        f"FIS holds no failed interrogation report for file {file_id}: {report}"
+    )
+
+
 @then(parse('the interrogation report for the "{ordinal}" file has been discarded'))
 def check_report_discarded(ordinal: str, fixtures: JointFixture):
-    """Assert FIS dropped the report of the interrogation that failed."""
+    """Assert FIS dropped the report of the interrogation that failed.
+
+    Paired with the step that asserts the report was there to begin with, since
+    waiting for a document to disappear passes on one that never existed.
+    """
     file_id = _target(fixtures, ordinal)["file_id"]
     removed = fixtures.mongo.wait_for_removal(
         db_name=fixtures.config.fis_db_name,
@@ -476,9 +496,7 @@ def requeue_failed_file(
     )
     assert session, f"No session found for {full_name}"
 
-    url = (
-        f"{fixtures.config.rs_url}/rpc/upload-boxes/{rdub['id']}/uploads/{file_id}/requeue"
-    )
+    url = f"{fixtures.config.rs_url}/rpc/upload-boxes/{rdub['id']}/uploads/{file_id}/requeue"
     return fixtures.http.post(url, headers=fixtures.auth.headers(session=session))
 
 
