@@ -182,6 +182,7 @@ class Config(BaseSettings):
     fis_url: str = "fis"
     fis_pubkey: str
     fis_db_name: str = "fis"
+    fis_files_collection: str = "files"
     fis_reports_collection: str = "reports"
 
     # metldata
