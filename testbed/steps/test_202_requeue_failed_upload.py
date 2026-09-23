@@ -477,7 +477,7 @@ def requeue_failed_file(
     assert session, f"No session found for {full_name}"
 
     url = (
-        f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}/uploads/{file_id}/requeue"
+        f"{fixtures.config.rs_url}/rpc/upload-boxes/{rdub['id']}/uploads/{file_id}/requeue"
     )
     return fixtures.http.post(url, headers=fixtures.auth.headers(session=session))
 
