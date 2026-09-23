@@ -20,7 +20,7 @@ once a second service needs it.
 """
 
 from asyncio import sleep
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from logging import Logger
 from random import uniform
 from types import TracebackType
@@ -62,7 +62,7 @@ class _RaceConditionAttempt:
 async def race_condition_retries(  # noqa: PLR0913
     *,
     description: str,
-    error_on_failure: BaseException,
+    error_on_failure: Callable[[], BaseException],
     logger: Logger | None = None,
     max_tries: int = 3,
     interval: float = 0.5,
@@ -79,9 +79,9 @@ async def race_condition_retries(  # noqa: PLR0913
     ```python
     async for attempt in race_condition_retries(
         description="update stats for box <box_id>",
-        error_on_failure=error,
+        error_on_failure=lambda: StatsError(box_id),
     ):
-        with attempt:
+        with attempt:  # <-- must use `with attempt:`
             ...
     ```
 
@@ -89,7 +89,9 @@ async def race_condition_retries(  # noqa: PLR0913
         description:
             What the action does, phrased to follow "to", e.g.
             "update stats for box <box_id>". Used in log messages.
-        error_on_failure: The error to raise once all tries have failed.
+        error_on_failure:
+            Builds the error to raise once all tries have failed. Called at most once,
+            after the last try.
         logger:
             Logs a debug message for each conflict and an error once all tries have
             failed. Nothing is logged if omitted.
@@ -100,8 +102,9 @@ async def race_condition_retries(  # noqa: PLR0913
             that conflicted don't retry at the same moment. Negative values count as 0.
 
     Raises:
-    - `error_on_failure` if the action still raises `PreconditionFailedError` on the last try.
-      It is chained from that last `PreconditionFailedError`.
+    - The error built by `error_on_failure` if the action still raises
+      `PreconditionFailedError` on the last try. It is chained from that last
+      `PreconditionFailedError`.
     """
     description = description.strip(" .")
     tries = max(1, max_tries)
@@ -123,4 +126,4 @@ async def race_condition_retries(  # noqa: PLR0913
             tries,
             description,
         )
-    raise error_on_failure from last_error
+    raise error_on_failure() from last_error

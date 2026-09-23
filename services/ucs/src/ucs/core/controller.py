@@ -1073,7 +1073,7 @@ class UploadController(UploadControllerPort):
         """
         async for attempt in race_condition_retries(
             description=f"update stats for box {box_id}",
-            error_on_failure=self.BoxStatsCalcError(box_id=box_id),
+            error_on_failure=lambda: self.BoxStatsCalcError(box_id=box_id),
             logger=log,
         ):
             with attempt:

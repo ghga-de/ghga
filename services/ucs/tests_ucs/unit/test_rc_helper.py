@@ -41,7 +41,7 @@ class ConflictingUpdate:
         """Run the update with `race_condition_retries`."""
         async for attempt in race_condition_retries(
             description="update the resource",
-            error_on_failure=GaveUpError(),
+            error_on_failure=GaveUpError,
             **retry_kwargs,
         ):
             with attempt:
@@ -125,7 +125,7 @@ async def test_race_condition_retries_return_ends_retries():
 
     async def update_if_changed() -> str:
         async for attempt in race_condition_retries(
-            description="update the resource", error_on_failure=GaveUpError()
+            description="update the resource", error_on_failure=GaveUpError
         ):
             with attempt:
                 return "unchanged"
@@ -140,10 +140,32 @@ async def test_race_condition_retries_other_errors():
 
     with pytest.raises(ResourceNotFoundError):
         async for attempt in race_condition_retries(
-            description="update the resource", error_on_failure=GaveUpError()
+            description="update the resource", error_on_failure=GaveUpError
         ):
             with attempt:
                 tries += 1
                 raise ResourceNotFoundError(id_="test")
 
     assert tries == 1
+
+
+async def test_race_condition_retries_new_error_per_failure():
+    """Test that each exhausted run raises its own error, chained from its own conflict."""
+    conflicts: list[PreconditionFailedError] = []
+    errors: list[GaveUpError] = []
+    for _ in range(2):
+        with pytest.raises(GaveUpError) as exc_info:
+            async for attempt in race_condition_retries(
+                description="update the resource",
+                error_on_failure=GaveUpError,
+                max_tries=1,
+            ):
+                with attempt:
+                    conflicts.append(
+                        PreconditionFailedError(id_="test", precondition={})
+                    )
+                    raise conflicts[-1]
+        errors.append(exc_info.value)
+
+    assert errors[0] is not errors[1]
+    assert [error.__cause__ for error in errors] == conflicts
