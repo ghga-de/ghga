@@ -216,10 +216,10 @@ what remains:
       `dataset-information-service`, `well-known-value-service`, `auth-km-jobs`,
       `dlq-service`, `reverse-transpiler-service`, `ghga-arcticfreeze`,
       `ghga-jsonsubschema`, `archive-test-bed`, `ghga-service-commons`,
-      `ghga-connector`, `state-management-service`, `test-oidc-provider`, `schemapack`
-      and `ghga-validator` are archived and their rows removed from `repos.tsv` — see the
-      "Retired" block there for the last commit merged from each. Verify a repo is fully
-      synced (§6) before dropping its row.
+      `ghga-connector`, `state-management-service`, `test-oidc-provider`, `schemapack`,
+      `ghga-validator` and `datahub-file-service` are archived and their rows removed from
+      `repos.tsv` — see the "Retired" block there for the last commit merged from each.
+      Verify a repo is fully synced (§6) before dropping its row.
       `hexkit` additionally published a documentation site, so its archived Pages site was
       replaced with redirects to `ghga-de.github.io/ghga/hexkit`
       ([ADR-0039](../adrs/adr-0039-docs-lane-github-pages.md)) before archiving — an archived repo
