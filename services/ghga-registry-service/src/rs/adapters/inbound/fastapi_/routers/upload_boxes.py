@@ -63,6 +63,10 @@ box_router = APIRouter()
 # statistics per storage and therefore doesn't live under the /upload-boxes prefix
 storage_router = APIRouter()
 
+# Separate router for the requeue commands, which are mounted under /rpc/upload-boxes
+# because a requeue is a command rather than a manipulation of the box resource
+box_rpc_router = APIRouter()
+
 # The fields that file uploads may be sorted by (a leading dash denotes descending
 # order). This includes the accession, which is not a field of the file uploads as
 # provided by the file box service, but is attached to them by this service.
@@ -132,7 +136,7 @@ async def delete_file_upload(
         raise HttpInternalError(message="Failed to delete file upload") from err
 
 
-@box_router.post(
+@box_rpc_router.post(
     "/{box_id}/uploads/{file_id}/requeue",
     summary="Requeue a failed file upload",
     description="Set a file upload that failed interrogation back to the inbox state"
@@ -189,7 +193,7 @@ async def requeue_single_file_upload(
         raise HttpInternalError(message="Failed to requeue file upload") from err
 
 
-@box_router.post(
+@box_rpc_router.post(
     "/{box_id}/requeue",
     summary="Requeue all failed file uploads in an upload box",
     description="Set every file upload in the box that failed interrogation back to the"
