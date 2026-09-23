@@ -184,7 +184,16 @@
 #                             lock changes plus a setuptools pin that linkml >=1.8 no longer
 #                             needs. tools/ghga-validator reads 1.2.3 after the PyPI lane (#83),
 #                             released as 1.2.2.
-# Twenty-one archived tips are deliberately NOT merged — each is an archival/deprecation
+#   datahub-file-service   -> services/datahub-file-service   14b78b5 "Migrate to httpx2 (#26)"
+#                             2026-08-06, 4.0.0. The three upstream commits with no counterpart
+#                             here, #7 and its merge commit and #27 "Unpin alpine version in DHI
+#                             dockerfile", touch only the dropped Dockerfile and Dockerfile.dhi.
+#                             All PRs were merged except #18, a debug log closed UNMERGED;
+#                             mock_fis is a stray branch with no PR, never in scope for the sync.
+#                             services/datahub-file-service additionally carries monorepo-only
+#                             work never upstreamed (3c112857, the performance improvements of
+#                             epic 91), which made it 4.1.0.
+# Twenty-two archived tips are deliberately NOT merged — each is an archival/deprecation
 # notice that belongs only on the retired repo: ghga-event-schemas a974e34, data-portal
 # 0249482, access-request-service 1f2069d1, work-package-service 4b933c0,
 # ghga-datasteward-kit f474eef (which also makes the PyPI console script print a
@@ -198,14 +207,16 @@
 # (#11)", ghga-arcticfreeze b8d3b65 "Add archival note (#3)", ghga-jsonsubschema c7dae8c
 # "Add archival note (#17)", archive-test-bed df4d323 "Add archival note (#169)",
 # ghga-service-commons 7e434b8 "Add note about archival (#84)", ghga-connector c6e672d
-# "Add archival note (#154)", schemapack d851f16 "Add archival note (#62)" and
-# ghga-validator 42a3123 "Add archival note". Those last fifteen are the only tips that
-# would NOT have filtered to empty: hexkit's is mostly redirect tooling on paths the import
-# drops (.github/, scripts/, .template/, .gitignore), the next four, ghga-connector's and
-# ghga-validator's touch nothing else but .readme_generation/ and .template/, schemapack's
-# nothing else but .readme_generation/, lock/, scripts/ and the per-repo pre-commit
-# config, auth-km-jobs', dlq-service's, ghga-arcticfreeze's, archive-test-bed's and
-# ghga-service-commons' touch nothing but the README, ghga-jsonsubschema's nothing else but the dropped uv.lock, and
+# "Add archival note (#154)", schemapack d851f16 "Add archival note (#62)",
+# ghga-validator 42a3123 "Add archival note" and datahub-file-service 749b425 "Add
+# archival note (#28)". Those last sixteen are the only tips that would NOT have filtered
+# to empty: hexkit's is mostly redirect tooling on paths the import drops (.github/,
+# scripts/, .template/, .gitignore), the next four, ghga-connector's, ghga-validator's and
+# datahub-file-service's touch nothing else but .readme_generation/ and .template/,
+# schemapack's nothing else but .readme_generation/, lock/, scripts/ and the per-repo
+# pre-commit config, auth-km-jobs', dlq-service's, ghga-arcticfreeze's, archive-test-bed's
+# and ghga-service-commons' touch nothing but the README, ghga-jsonsubschema's nothing else
+# but the dropped uv.lock, and
 # reverse-transpiler-service's bundles a template refresh whose kept-path parts the
 # monorepo has already replaced centrally (the per-repo [tool.ruff] tables and the
 # per-member .gitignore, dropped in 9ddc8284) — yet each also adds a "this repo has moved"
@@ -216,9 +227,6 @@
 #
 # Libraries (source-coupled, consumed via [tool.uv.sources] workspace = true)
 lib	metldata	.	libs/metldata	main
-#
-# Standalone services
-service	datahub-file-service	.	services/datahub-file-service	main
 #
 # CLIs and jobs
 # ghga-transpiler: the integrated/compatible line is v2 (2.x, no schemapack dep), NOT main (3.x).
