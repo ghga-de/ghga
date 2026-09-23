@@ -46,12 +46,16 @@ TARGETS_STATE = "requeue_targets"
 ORDINALS = ("first", "second")
 
 
-def _steward_headers(fixtures: JointFixture) -> dict[str, str]:
-    """Return the request headers of the logged-in Data Steward."""
+def _headers(fixtures: JointFixture, full_name: str = "Data Steward") -> dict[str, str]:
+    """Return the request headers of the given logged-in user.
+
+    Every step of this feature acts as a Data Steward, which is the default for the
+    reads that no step text names an actor for.
+    """
     session = fixtures.auth.get_saved_session(
-        name="Data Steward", state_store=fixtures.state
+        name=full_name, state_store=fixtures.state
     )
-    assert session, "No Data Steward session found"
+    assert session, f"No session found for {full_name}"
     return fixtures.auth.headers(session=session)
 
 
@@ -75,7 +79,9 @@ def _remember(fixtures: JointFixture, ordinal: str, **fields: Any) -> None:
     fixtures.state.set_state(TARGETS_STATE, targets)
 
 
-def _read_stable_box(fixtures: JointFixture, storage_name: str) -> dict[str, Any]:
+def _read_stable_box(
+    fixtures: JointFixture, storage_name: str, full_name: str = "Data Steward"
+) -> dict[str, Any]:
     """Read the upload box back from RS once its version has stopped advancing.
 
     RS learns about uploads and deletions from events, so a version read right after
@@ -84,7 +90,7 @@ def _read_stable_box(fixtures: JointFixture, storage_name: str) -> dict[str, Any
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
     assert rdub, f"No upload box in state for {storage_name} storage"
     url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}"
-    headers = _steward_headers(fixtures)
+    headers = _headers(fixtures, full_name)
 
     box: dict[str, Any] = {}
     version = None
@@ -101,16 +107,20 @@ def _read_stable_box(fixtures: JointFixture, storage_name: str) -> dict[str, Any
 
 
 def _set_box_state(
-    fixtures: JointFixture, storage_name: str, state: str, force: bool = False
+    fixtures: JointFixture,
+    storage_name: str,
+    state: str,
+    full_name: str = "Data Steward",
+    force: bool = False,
 ) -> Response:
-    """Ask RS to move the upload box to the given state."""
-    box = _read_stable_box(fixtures, storage_name)
+    """Ask RS to move the upload box to the given state, as the given user."""
+    box = _read_stable_box(fixtures, storage_name, full_name)
     assert box["state"] != state, f"The {storage_name} upload box is {state} already"
     url = f"{fixtures.config.rs_url}/upload-boxes/{box['id']}"
     data: dict[str, Any] = {"version": box["version"], "state": state}
     if force:
         data["force"] = True
-    return fixtures.http.patch(url, headers=_steward_headers(fixtures), json=data)
+    return fixtures.http.patch(url, headers=_headers(fixtures, full_name), json=data)
 
 
 def _list_uploads(fixtures: JointFixture, storage_name: str) -> list[dict[str, Any]]:
@@ -119,7 +129,7 @@ def _list_uploads(fixtures: JointFixture, storage_name: str) -> list[dict[str, A
     assert rdub, f"No upload box in state for {storage_name} storage"
     url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}/uploads"
     response = fixtures.http.get(
-        url, headers=_steward_headers(fixtures), params={"limit": 1000}
+        url, headers=_headers(fixtures), params={"limit": 1000}
     )
     assert response.status_code == 200, f"{response.status_code}: {response.text}"
     return response.json()["items"]
@@ -288,7 +298,7 @@ def delete_two_largest_files(
     )[: len(ORDINALS)]
 
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    headers = _steward_headers(fixtures)
+    headers = _headers(fixtures)
     targets: dict[str, dict[str, Any]] = {}
     for ordinal, (alias, file_path) in zip(ORDINALS, largest, strict=True):
         upload = _find_upload(fixtures, storage_name, alias)
@@ -488,16 +498,14 @@ def check_box_file_count(count: int, storage_name: str, fixtures: JointFixture):
 def requeue_failed_file(
     full_name: str, ordinal: str, storage_name: str, fixtures: JointFixture
 ) -> Response:
-    """Requeue a failed file through RS, as a Data Steward would."""
+    """Requeue a failed file through RS, which only a Data Steward may do."""
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
     file_id = _target(fixtures, ordinal)["file_id"]
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
+    url = (
+        f"{fixtures.config.rs_url}/rpc/upload-boxes/{rdub['id']}"
+        f"/uploads/{file_id}/requeue"
     )
-    assert session, f"No session found for {full_name}"
-
-    url = f"{fixtures.config.rs_url}/rpc/upload-boxes/{rdub['id']}/uploads/{file_id}/requeue"
-    return fixtures.http.post(url, headers=fixtures.auth.headers(session=session))
+    return fixtures.http.post(url, headers=_headers(fixtures, full_name))
 
 
 @when(
@@ -510,13 +518,8 @@ def delete_failed_file(
     """Delete a failed file, the other way a Data Steward can resolve one."""
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
     file_id = _target(fixtures, ordinal)["file_id"]
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    assert session, f"No session found for {full_name}"
-
     url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}/uploads/{file_id}"
-    return fixtures.http.delete(url, headers=fixtures.auth.headers(session=session))
+    return fixtures.http.delete(url, headers=_headers(fixtures, full_name))
 
 
 @when(
@@ -525,7 +528,7 @@ def delete_failed_file(
 )
 def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
     """Lock the upload box, which is refused while a file needs attention."""
-    return _set_box_state(fixtures, storage_name, "locked")
+    return _set_box_state(fixtures, storage_name, "locked", full_name)
 
 
 @when(
@@ -534,7 +537,7 @@ def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
 )
 def force_lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
     """Lock the upload box anyway, which is what `force` is for."""
-    return _set_box_state(fixtures, storage_name, "locked", force=True)
+    return _set_box_state(fixtures, storage_name, "locked", full_name, force=True)
 
 
 @when(
@@ -547,7 +550,7 @@ def try_to_archive_upload_box(
     full_name: str, storage_name: str, fixtures: JointFixture
 ):
     """Attempt to archive the box while it still holds files that failed."""
-    return _set_box_state(fixtures, storage_name, "archived")
+    return _set_box_state(fixtures, storage_name, "archived", full_name)
 
 
 @then("the response names both failed files as needing attention")
