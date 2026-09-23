@@ -43,14 +43,19 @@ from hexkit.protocols.dao import (
     Dao,
     Dto,
     FindResult,
+    PreconditionFailedError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
+    resolve_filter,
 )
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.providers.akafka import KafkaEventPublisher
-from hexkit.providers.akafka.provider.daosub import CHANGE_EVENT_TYPE, DELETE_EVENT_TYPE
 from hexkit.providers.akafka.provider.eventpub import KafkaProducerCompatible
+from hexkit.providers.akafka.provider.eventsub import (
+    CHANGE_EVENT_TYPE,
+    DELETE_EVENT_TYPE,
+)
 from hexkit.providers.mongodb.provider import (
     ConfiguredMongoClient,
     MongoDbDao,
@@ -266,17 +271,28 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         with assert_not_deleted():
             return await self._dao.get_by_id(id_)
 
-    async def update(self, dto: Dto) -> None:
+    async def update(
+        self, dto: Dto, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         """Update an existing resource.
+
+        If `precondition` is supplied, the resource is only updated if its current
+        values match them. The check and the update happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
+            precondition:
+                A mapping of field names to the values the existing resource must have.
+                It does not need to contain the ID field, since that is implied.
 
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
+            PreconditionFailedError:
+                when the resource exists but doesn't match `precondition`
+            InvalidMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -284,23 +300,41 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         correlation_id = get_correlation_id()
         document = self._dao._dto_to_document(dto)
         document.setdefault("__metadata__", {})["correlation_id"] = correlation_id
+        existing_filter: dict[str, Any] = {
+            "_id": document["_id"],
+            "$or": [
+                {"__metadata__": {"$exists": False}},
+                {"__metadata__.deleted": False},
+            ],
+        }
+        doc_filter = existing_filter
+
+        # If precondition is supplied, validate it and add it to the doc_filter
+        if precondition:
+            validate_find_mapping(precondition, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            # A separate $and clause keeps an $or in the criteria from replacing the
+            # $or that excludes deleted documents
+            doc_filter = {"$and": [existing_filter, criteria]}
+
         with translate_pymongo_errors():
             try:
-                result = await self._collection.replace_one(
-                    {
-                        "_id": document["_id"],
-                        "$or": [
-                            {"__metadata__": {"$exists": False}},
-                            {"__metadata__.deleted": False},
-                        ],
-                    },
-                    document,
-                )
+                result = await self._collection.replace_one(doc_filter, document)
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue", {})  # type: ignore
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
 
         if result.matched_count == 0:
+            if precondition:
+                # Only for choosing the error; the update itself already failed
+                with translate_pymongo_errors():
+                    exists = await self._collection.count_documents(
+                        existing_filter, limit=1
+                    )
+                if exists:
+                    raise PreconditionFailedError(
+                        id_=document["_id"], precondition=precondition
+                    )
             raise ResourceNotFoundError(id_=document["_id"])
 
         if self._autopublish:
@@ -341,26 +375,34 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if self._autopublish:
             await self._publish_delete(id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Dto:
-        """Find the resource that matches the specified mapping.
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
+    async def find_one(
+        self,
+        *,
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
+    ) -> Dto:
+        """Find the resource that matches the specified filter.
 
         It is expected that at most one resource matches the constraints.
         An exception is raised if no or multiple hits are found.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
+            mapping:
+                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
-            was found that matches the given mapping.
+            was found that matches the given filter.
 
         Raises:
             NoHitsFoundError:
@@ -368,29 +410,34 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        hits = self.find_all(mapping=mapping)
-        return await get_single_hit(hits=hits, mapping=mapping)
+        filter_ = resolve_filter(filter_, mapping)
+        hits = self.find_all(filter_=filter_)
+        return await get_single_hit(hits=hits, mapping=filter_)
 
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Dto]:
-        """Find all resources that match the specified mapping.
+        """Find all resources that match the specified filter.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
+            mapping:
+                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -410,24 +457,25 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             A FindResult that is async-iterable and also provides total_count().
 
         Raises:
-            InvalidMappingError: If `mapping` doesn't pass validation.
+            InvalidMappingError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
         """
+        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(mapping, dto_model=self._dto_model)
-        mapping = replace_id_field_in_find_mapping(mapping, self._id_field)
+        validate_find_mapping(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
 
         # Ensure we don't retrieve deleted docs. Documents lacking outbox metadata are
         # treated as valid (matching update/delete), and the $and wrapper avoids
-        # clobbering any caller-supplied $or in the mapping.
-        mapping_without_deleted = {
+        # clobbering any caller-supplied $or in the filter.
+        filter_without_deleted = {
             "$and": [
-                dict(mapping),
+                dict(filter_),
                 {
                     "$or": [
                         {"__metadata__": {"$exists": False}},
@@ -450,7 +498,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         async def _total_count() -> int:
             with translate_pymongo_errors():
-                return await collection.count_documents(filter=mapping_without_deleted)
+                return await collection.count_documents(filter=filter_without_deleted)
 
         if limit == 0:
 
@@ -464,7 +512,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         async def _iter() -> AsyncIterator[Dto]:
             with translate_pymongo_errors():
-                cursor = collection.find(filter=mapping_without_deleted)
+                cursor = collection.find(filter=filter_without_deleted)
                 if sort:
                     cursor = cursor.sort(mongodb_sort)
                 cursor = cursor.skip(skip)
