@@ -3220,3 +3220,156 @@ async def test_requeue_box_when_archived(rig: JointRig):
 
     with pytest.raises(UploadControllerPort.BoxStateError):
         await rig.controller.requeue_all_box_uploads(box_id=box_id)
+
+
+def _requeue_between_check_and_write(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch, file_id: UUID4, s3_operation: str
+) -> None:
+    """Test that the `precondition` check protects against a race condition
+    from a competing requeue request.
+    """
+    original = getattr(rig.s3_client, s3_operation)
+
+    async def requeue_first(**kwargs):
+        stored = await rig.file_upload_dao.get_by_id(file_id)
+        stored.state = "inbox"
+        stored.state_updated = now_utc_ms_prec()
+        stored.failure_reason = ""
+        await rig.file_upload_dao.update(stored)
+        return await original(**kwargs)
+
+    monkeypatch.setattr(rig.s3_client, s3_operation, requeue_first)
+
+
+async def test_requeue_file_loses_race_to_another_requeue(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a requeue whose file left 'failed_interrogation' after the state check
+    raises a FileUploadStateError instead of overwriting the competing write.
+    """
+    box_id, file_id, _ = await _upload_and_fail(rig, "test_file", "Checksum mismatch")
+    await sleep(MIN_SLEEP)
+    _requeue_between_check_and_write(
+        rig, monkeypatch, file_id, s3_operation="get_object_metadata"
+    )
+
+    with pytest.raises(UploadControllerPort.FileUploadStateError):
+        await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
+
+    # The competing requeue's write is the one that stands
+    after = await rig.file_upload_dao.get_by_id(file_id)
+    assert after.state == "inbox"
+    assert (
+        after.state_updated == rig.file_upload_dao.resources[file_id]["state_updated"]
+    )
+
+
+async def test_requeue_box_skips_file_that_loses_the_race(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a box-wide requeue reports a file that left 'failed_interrogation'
+    mid-run as skipped rather than failing the whole run.
+    """
+    box_id, file_id, _ = await _upload_and_fail(rig, "test_file", "Checksum mismatch")
+    await sleep(MIN_SLEEP)
+    _requeue_between_check_and_write(
+        rig, monkeypatch, file_id, s3_operation="get_object_metadata"
+    )
+
+    result = await rig.controller.requeue_all_box_uploads(box_id=box_id)
+
+    assert result.requeued == []
+    assert result.skipped == [file_id]
+
+
+async def test_interrogation_success_loses_race_to_requeue(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that an interrogation report whose file was requeued after the staleness
+    check is dropped instead of overwriting the requeue.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    in_inbox = await rig.file_upload_dao.get_by_id(file_id)
+    await sleep(MIN_SLEEP)
+    _requeue_between_check_and_write(
+        rig, monkeypatch, file_id, s3_operation="delete_inbox_file"
+    )
+
+    await rig.controller.process_interrogation_success(
+        report=InterrogationSuccess(
+            file_id=file_id,
+            secret_id="test-secret-789",
+            storage_alias="test",
+            bucket_id="interrogation",
+            object_id=uuid4(),
+            interrogated_at=now_utc_ms_prec(),
+            encrypted_parts_md5=["aaa111"],
+            encrypted_parts_sha256=["bbb222"],
+            encrypted_size=in_inbox.encrypted_size,
+        )
+    )
+
+    # The file stays where the competing write left it, with none of the report applied
+    after = await rig.file_upload_dao.get_by_id(file_id)
+    assert after.state == "inbox"
+    assert after.secret_id != "test-secret-789"
+    assert after.state_updated > in_inbox.state_updated
+
+
+async def test_interrogation_failure_loses_race_to_requeue(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a failure report whose file was requeued after the staleness check is
+    dropped instead of overwriting the requeue.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    in_inbox = await rig.file_upload_dao.get_by_id(file_id)
+    await sleep(MIN_SLEEP)
+
+    # This path makes no S3 call between reading the file and writing it, so the
+    # competing write is wrapped around the guarded update itself.
+    original_update = rig.file_upload_dao.update
+    already_raced = False
+
+    async def requeue_first(dto, **kwargs):
+        nonlocal already_raced
+        if not already_raced:
+            already_raced = True
+            stored = await rig.file_upload_dao.get_by_id(file_id)
+            stored.state = "inbox"
+            stored.state_updated = now_utc_ms_prec()
+            await original_update(stored)
+        await original_update(dto, **kwargs)
+
+    monkeypatch.setattr(rig.file_upload_dao, "update", requeue_first)
+
+    await rig.controller.process_interrogation_failure(
+        report=InterrogationFailure(
+            file_id=file_id,
+            storage_alias="test",
+            interrogated_at=now_utc_ms_prec(),
+            reason="Checksum mismatch",
+        )
+    )
+
+    # The file stays where the competing write left it, with no failure recorded
+    after = await rig.file_upload_dao.get_by_id(file_id)
+    assert after.state == "inbox"
+    assert not after.failure_reason
+    assert after.state_updated > in_inbox.state_updated
