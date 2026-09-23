@@ -130,13 +130,17 @@ def check_uploaded_files_in_storage(
     bucket_id = getattr(storage_config.buckets, bucket)
     uploaded_files = _as_list(response.json())
     for file_upload in uploaded_files:
+        # An interrogated file points at the interrogation bucket by now, and UCS
+        # has deleted its inbox object.
+        if bucket == "inbox" and file_upload.get("state") != "inbox":
+            continue
         assert "object_id" in file_upload
         object_id = str(file_upload["object_id"])
         assert fixtures.s3.does_object_exist(
             storage_alias=storage_config.storage_alias,
             bucket=bucket_id,
             object_id=object_id,
-        ), f"{object_id} does not exist in the staging bucket"
+        ), f"{object_id} does not exist in the {bucket} bucket"
 
 
 @when(

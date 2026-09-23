@@ -29,7 +29,7 @@ from .conftest import (
     when,
 )
 
-scenarios("../features/202_upload_completed.feature")
+scenarios("../features/203_upload_completed.feature")
 
 
 def _rs_study_accessions(fixtures: JointFixture, study_accession: str) -> set[str]:

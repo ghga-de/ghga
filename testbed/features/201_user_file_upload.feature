@@ -75,7 +75,9 @@ Feature: 201 User File Upload
 
     When "John Doe" retrieves the list of files uploaded to the box for "<storage>" storage
     Then all files uploaded to "<storage>" are "interrogated"
-    And the uploaded files exist in the "staging" bucket of "<storage>" storage
+
+    When "John Doe" retrieves the list of files uploaded to the box for "<storage>" storage
+    Then the uploaded files exist in the "staging" bucket of "<storage>" storage
 
     Examples:
       | storage   |
