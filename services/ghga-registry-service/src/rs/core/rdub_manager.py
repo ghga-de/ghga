@@ -451,14 +451,15 @@ class RDUBManager(RDUBManagerPort):
     ) -> None:
         """Resize the FileUploadBox, persist the change, and write the audit record.
 
-        Rolls back the local DAO write and re-raises on any client error.
+        The owning service is called first and the local write only happens once it
+        confirms, so a failure there leaves no local state to roll back.
+        `file_upload_box_version` is not set here: the owning service decides it and
+        reports it back through the FileUploadBox outbox event.
 
         Raises:
             BoxVersionError: FUB version is out of date.
             BoxMaxSizeTooLowError: New max_size is smaller than bytes already uploaded.
         """
-        updated_box.file_upload_box_version += 1
-        await self._box_dao.update(updated_box)
         try:
             await self._file_upload_box_client.resize_file_upload_box(
                 box_id=box.file_upload_box_id,
@@ -477,7 +478,6 @@ class RDUBManager(RDUBManagerPort):
                     "file_upload_box_version": box.file_upload_box_version,
                 },
             )
-            await self._box_dao.update(box)
             raise self.BoxVersionError(
                 f"File Upload Box {box.file_upload_box_id} version is out of date."
             ) from version_err
@@ -493,20 +493,10 @@ class RDUBManager(RDUBManagerPort):
                     "max_size": updated_box.max_size,
                 },
             )
-            await self._box_dao.update(box)
             raise self.BoxMaxSizeTooLowError(str(size_err)) from size_err
-        except Exception:
-            log.warning(
-                "Failed to resize FUB %s, rolling back changes for RDUB %s",
-                box.file_upload_box_id,
-                box.id,
-            )
-            await self._box_dao.update(box)
-            raise
-        else:
-            await self._audit_repository.log_box_updated(
-                box=updated_box, user_id=user_id
-            )
+
+        await self._box_dao.update(updated_box)
+        await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def _apply_state_update(
         self,
@@ -516,10 +506,13 @@ class RDUBManager(RDUBManagerPort):
         user_id: UUID,
         force: bool = False,
     ) -> None:
-        """Validate the state transition, persist, dispatch _handle_state_change, and
+        """Validate the state transition, dispatch _handle_state_change, persist, and
         audit.
 
-        Rolls back the local DAO write on failure.
+        The owning service is called first and the local write only happens once it
+        confirms, so a failure there leaves no local state to roll back.
+        `file_upload_box_version` is not set here: the owning service decides it and
+        reports it back through the FileUploadBox outbox event.
 
         Raises:
             StateChangeError: The requested transition is not in
@@ -531,24 +524,12 @@ class RDUBManager(RDUBManagerPort):
             old_state=box.state, new_state=updated_box.state
         )
         updated_box.file_upload_box_state = updated_box.state
-        updated_box.file_upload_box_version += 1
+        await self._handle_state_change(
+            old_box=box, updated_box=updated_box, force=force
+        )
+
         await self._box_dao.update(updated_box)
-        try:
-            await self._handle_state_change(
-                old_box=box, updated_box=updated_box, force=force
-            )
-        except Exception:
-            log.warning(
-                "Failed to update FUB %s, rolling back changes for RDUB %s",
-                box.file_upload_box_id,
-                box.id,
-            )
-            await self._box_dao.update(box)
-            raise
-        else:
-            await self._audit_repository.log_box_updated(
-                box=updated_box, user_id=user_id
-            )
+        await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def grant_upload_access(  # noqa: PLR0913
         self,
@@ -956,6 +937,18 @@ class RDUBManager(RDUBManagerPort):
         try:
             await self._file_upload_box_client.delete_file_upload(
                 box_id=box.file_upload_box_id, file_id=file_id
+            )
+        except FileBoxClientPort.FUBStatsUnavailableError:
+            # The owning service updates the box stats after the deletion, so the file
+            # is gone and this must not be reported as a failure. Retrying would only
+            # get a 404 for a file that no longer exists. The stats reach us later
+            # through the FileUploadBox outbox event.
+            log.warning(
+                "Deleted FileUpload %s from FUB %s, but its stats are stale in the"
+                + " owning service.",
+                file_id,
+                box.file_upload_box_id,
+                extra=extra,
             )
         except FileBoxClientPort.FUBStateError as err:
             # error text is more specific here to differentiate the two errors
