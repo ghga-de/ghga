@@ -1612,7 +1612,7 @@ async def test_get_accession_map(
 
 
 async def test_requeue_single_file_upload_happy(config: Config, ds_auth_headers):
-    """Test that the `POST /{box_id}/uploads/{file_id}/requeue` endpoint works in the happy case.
+    """Test that the `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue` endpoint works in the happy case.
 
     Check the following:
     - The response status code is 204
@@ -1625,7 +1625,7 @@ async def test_requeue_single_file_upload_happy(config: Config, ds_auth_headers)
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
-        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+        url = f"/rpc/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
 
         registry.rdub_manager.requeue_single_file_upload.return_value = None
         response = await rest_client.post(url, headers=ds_auth_headers)
@@ -1642,7 +1642,7 @@ async def test_requeue_single_file_upload_is_ds_only(
     config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
 ):
     """Verify that only Data Stewards can use the
-    `POST /{box_id}/uploads/{file_id}/requeue` endpoint.
+    `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue` endpoint.
     """
     registry = AsyncMock()
     test_file_id = uuid4()
@@ -1650,7 +1650,7 @@ async def test_requeue_single_file_upload_is_ds_only(
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
-        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+        url = f"/rpc/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
         registry.rdub_manager.requeue_single_file_upload.return_value = None
 
         # unauthenticated
@@ -1678,7 +1678,7 @@ async def test_requeue_single_file_upload_error_translation(
     config: Config, ds_auth_headers
 ):
     """Test the core-to-HTTP Response error translation in the
-    `POST /{box_id}/uploads/{file_id}/requeue` endpoint.
+    `POST /rpc/upload-boxes/{box_id}/uploads/{file_id}/requeue` endpoint.
     """
     registry = AsyncMock()
     test_file_id = uuid4()
@@ -1686,7 +1686,7 @@ async def test_requeue_single_file_upload_error_translation(
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
-        url = f"/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
+        url = f"/rpc/upload-boxes/{TEST_BOX_ID}/uploads/{test_file_id}/requeue"
 
         # handle box not found error from core
         registry.rdub_manager.requeue_single_file_upload.side_effect = (
@@ -1757,7 +1757,7 @@ async def test_requeue_single_file_upload_error_translation(
 async def test_requeue_whole_box_uploads_happy(
     config: Config, ds_auth_headers, requeued_count: int, skipped_count: int
 ):
-    """Test that the `POST /{box_id}/requeue` endpoint works in the happy case.
+    """Test that the `POST /rpc/upload-boxes/{box_id}/requeue` endpoint works in the happy case.
 
     Check the following:
     - The response status code is 200
@@ -1774,7 +1774,7 @@ async def test_requeue_whole_box_uploads_happy(
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
-        url = f"/upload-boxes/{TEST_BOX_ID}/requeue"
+        url = f"/rpc/upload-boxes/{TEST_BOX_ID}/requeue"
 
         registry.rdub_manager.requeue_all_box_uploads.return_value = results
         response = await rest_client.post(url, headers=ds_auth_headers)
@@ -1791,14 +1791,14 @@ async def test_requeue_whole_box_uploads_is_ds_only(
     config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
 ):
     """Verify that only Data Stewards can use the
-    `POST /{box_id}/requeue` endpoint.
+    `POST /rpc/upload-boxes/{box_id}/requeue` endpoint.
     """
     registry = AsyncMock()
     async with (
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
-        url = f"/upload-boxes/{TEST_BOX_ID}/requeue"
+        url = f"/rpc/upload-boxes/{TEST_BOX_ID}/requeue"
         registry.rdub_manager.requeue_all_box_uploads.return_value = BoxRequeueResult(
             requeued=[], skipped=[]
         )
@@ -1828,14 +1828,14 @@ async def test_requeue_whole_box_uploads_error_translation(
     config: Config, ds_auth_headers
 ):
     """Test the core-to-HTTP Response error translation in the
-    `POST /{box_id}/requeue` endpoint works in the happy case.
+    `POST /rpc/upload-boxes/{box_id}/requeue` endpoint works in the happy case.
     """
     registry = AsyncMock()
     async with (
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
-        url = f"/upload-boxes/{TEST_BOX_ID}/requeue"
+        url = f"/rpc/upload-boxes/{TEST_BOX_ID}/requeue"
 
         # handle box not found error from core
         registry.rdub_manager.requeue_all_box_uploads.side_effect = (

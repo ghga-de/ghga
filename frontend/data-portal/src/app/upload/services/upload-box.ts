@@ -50,6 +50,9 @@ export class UploadBoxService {
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #rsUrl = this.#config.rsUrl;
   #boxesUrl = `${this.#rsUrl}/upload-boxes`;
+  // Requeues are commands rather than manipulations of the box resource,
+  // so the RS serves them under a separate /rpc prefix
+  #boxesRpcUrl = `${this.#rsUrl}/rpc/upload-boxes`;
   #grantsUrl = `${this.#rsUrl}/upload-grants`;
   #wkvsUrl = this.#config.wkvsUrl;
   #storageLabelsUrl = `${this.#wkvsUrl}/values/storage_labels`;
@@ -934,7 +937,7 @@ export class UploadBoxService {
    * @returns An observable that completes when the file is requeued
    */
   requeueFileUpload(boxId: string, file: FileUploadWithAccession): Observable<void> {
-    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/uploads/${encodeURIComponent(file.id)}/requeue`;
+    const url = `${this.#boxesRpcUrl}/${encodeURIComponent(boxId)}/uploads/${encodeURIComponent(file.id)}/requeue`;
     return this.#http
       .post<void>(url, null)
       .pipe(tap(() => this.#requeueFileUploadsLocally([file.id])));
@@ -947,7 +950,7 @@ export class UploadBoxService {
    * @returns An observable emitting the IDs of the requeued and skipped file uploads
    */
   requeueAllFileUploads(boxId: string): Observable<BoxRequeueResult> {
-    const url = `${this.#boxesUrl}/${encodeURIComponent(boxId)}/requeue`;
+    const url = `${this.#boxesRpcUrl}/${encodeURIComponent(boxId)}/requeue`;
     return this.#http
       .post<BoxRequeueResult>(url, null)
       .pipe(tap(({ requeued }) => this.#requeueFileUploadsLocally(requeued)));

@@ -1080,6 +1080,7 @@ describe('UploadBoxService with the HTTP cache in place', () => {
   const BOX = TEST_BOX_RETRIEVAL_RESULTS.boxes[0];
   const BOX_URL = `http://mock.dev/rs/upload-boxes/${BOX.id}`;
   const UPLOADS_URL = `${BOX_URL}/uploads`;
+  const BOX_RPC_URL = `http://mock.dev/rs/rpc/upload-boxes/${BOX.id}`;
   const USER_GRANTS_URL =
     'http://mock.dev/rs/upload-grants?user_id=doe%40test.dev&valid=true';
 
@@ -1272,7 +1273,7 @@ describe('UploadBoxService with the HTTP cache in place', () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     service.requeueFileUpload(BOX.id, failedFile).subscribe();
-    const requeueReq = httpMock.expectOne(`${UPLOADS_URL}/file-1/requeue`);
+    const requeueReq = httpMock.expectOne(`${BOX_RPC_URL}/uploads/file-1/requeue`);
     expect(requeueReq.request.method).toBe('POST');
     expect(requeueReq.request.body).toBeNull();
     requeueReq.flush(null, { status: 204, statusText: 'No Content' });
@@ -1304,7 +1305,7 @@ describe('UploadBoxService with the HTTP cache in place', () => {
 
     let result: { requeued: string[]; skipped: string[] } | undefined;
     service.requeueAllFileUploads(BOX.id).subscribe((value) => (result = value));
-    const requeueReq = httpMock.expectOne(`${BOX_URL}/requeue`);
+    const requeueReq = httpMock.expectOne(`${BOX_RPC_URL}/requeue`);
     expect(requeueReq.request.method).toBe('POST');
     expect(requeueReq.request.body).toBeNull();
     requeueReq.flush({ requeued: ['file-1'], skipped: ['file-2'] });
