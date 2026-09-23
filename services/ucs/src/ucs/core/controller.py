@@ -1512,7 +1512,22 @@ class UploadController(UploadControllerPort):
                 log.debug(
                     "Marking FileUpload %s as '%s'", file_id, updated_file_upload.state
                 )
-                await self._file_upload_dao.update(updated_file_upload)
+
+                try:
+                    await self._file_upload_dao.update(
+                        updated_file_upload,
+                        precondition={
+                            "state": "inbox",
+                            "state_updated": old_file_upload.state_updated,
+                        },
+                    )
+                except PreconditionFailedError:
+                    log.error(
+                        "FileUpload %s changed while its interrogation report was"
+                        + " being processed. The report was dropped, but its inbox"
+                        + " object has already been removed.",
+                        file_id,
+                    )
             case _:
                 log.info(
                     "FileUpload %s was already marked as '%s', so it's likely"
@@ -1554,11 +1569,26 @@ class UploadController(UploadControllerPort):
                         file_id,
                     )
                     return
+                state_updated_when_read = file_upload.state_updated
                 file_upload.state = "failed_interrogation"
                 file_upload.state_updated = now_utc_ms_prec()
                 file_upload.failure_reason = report.reason
                 log.debug("Marking FileUpload %s as '%s'", file_id, file_upload.state)
-                await self._file_upload_dao.update(file_upload)
+
+                try:
+                    await self._file_upload_dao.update(
+                        file_upload,
+                        precondition={
+                            "state": "inbox",
+                            "state_updated": state_updated_when_read,
+                        },
+                    )
+                except PreconditionFailedError:
+                    log.info(
+                        "Ignoring interrogation failure report for FileUpload %s"
+                        + " because the file changed while it was being processed.",
+                        file_id,
+                    )
             case _:
                 log.info(
                     "FileUpload %s was already marked as '%s', so it's likely"
