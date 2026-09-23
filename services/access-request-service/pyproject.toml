@@ -26,7 +26,7 @@ description = "Access Request Service - a service for managing requests for acce
 dependencies = [
     "ghga-event-schemas~=12.0.0",
     "ghga-service-commons[api,auth]>=8.0,<9",
-    "hexkit[mongodb,akafka]>=9.0,<10",
+    "hexkit[mongodb,akafka]>=9.0,<11",
     "httpx2>=2.9.1,<3",
     "typer>=0.25",
 ]

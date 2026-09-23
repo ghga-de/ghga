@@ -163,22 +163,23 @@ not part of the DAO abstraction.
 
 ### Queries and Filters
 
-The find methods take a `mapping` of field names to expected values, and all entries
-must match (a logical AND). Pass values with the same Python types as on your model:
-a `UUID` for a UUID field, a timezone-aware `datetime` for a datetime field, and so
-on, since matching happens against the natively stored values:
+The find methods take a filter as the `filter_` argument: a mapping from field names to
+expected values, all of which must match (a logical AND). Pass values with the same
+Python types as on your model: a `UUID` for a UUID field, a timezone-aware `datetime`
+for a datetime field, and so on, since matching happens against the natively stored
+values:
 
 ```python
 # Exactly one hit expected (raises NoHitsFoundError / MultipleHitsFoundError):
-book = await book_dao.find_one(mapping={"title": "Refactoring"})
+book = await book_dao.find_one(filter_={"title": "Refactoring"})
 
 # Zero or more hits, consumed by async iteration:
-async for book in book_dao.find_all(mapping={"author": "Martin Fowler"}):
+async for book in book_dao.find_all(filter_={"author": "Martin Fowler"}):
     print(book.title)
 ```
 
-Mapping keys are validated against the DTO model, and unknown field names raise an
-`InvalidFindMappingError`. Two MongoDB-specific extensions pass through this
+Filter keys are validated against the DTO model, and unknown field names raise an
+`InvalidMappingError`. Two MongoDB-specific extensions pass through this
 validation:
 
 - **Dot notation** reaches into nested documents. Only the top-level field is
@@ -189,16 +190,16 @@ validation:
 
 ```python
 # Range query:
-thick_books = book_dao.find_all(mapping={"pages": {"$gt": 300}})
+thick_books = book_dao.find_all(filter_={"pages": {"$gt": 300}})
 
 # Membership test:
 selected = book_dao.find_all(
-    mapping={"author": {"$in": ["Martin Fowler", "Kent Beck"]}}
+    filter_={"author": {"$in": ["Martin Fowler", "Kent Beck"]}}
 )
 
 # Top-level logical operators work too:
 either = book_dao.find_all(
-    mapping={"$or": [{"author": "Kent Beck"}, {"pages": {"$lt": 100}}]}
+    filter_={"$or": [{"author": "Kent Beck"}, {"pages": {"$lt": 100}}]}
 )
 ```
 
@@ -214,7 +215,7 @@ reports the total number of matches:
 
 ```python
 result = book_dao.find_all(
-    mapping={"author": "Martin Fowler"},
+    filter_={"author": "Martin Fowler"},
     skip=20,
     limit=10,
     sort=["title", "-pages"],  # title ascending, then pages descending
@@ -279,7 +280,7 @@ import from pymongo:
 | `get_by_id`, `update`, or `delete` on a missing ID | `ResourceNotFoundError` |
 | `insert` with an already existing ID | `ResourceAlreadyExistsError` |
 | Write breaking a unique index over non-ID fields | `UniqueConstraintViolationError` |
-| Find mapping with unknown field names | `InvalidFindMappingError` |
+| Find mapping with unknown field names | `InvalidMappingError` |
 | `find_one` matching zero / more than one document | `NoHitsFoundError` / `MultipleHitsFoundError` |
 | Operation exceeding the configured `mongo_timeout` | `DbTimeoutError` |
 | Any other driver-level failure | `DaoError` |

@@ -114,16 +114,25 @@ The [`Dao`](../../reference/protocols.dao.Dao.qmd) interface offers seven operat
 | --------- | ----------- | ------ |
 | `insert(dto)` | Create a new resource. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
 | `get_by_id(id_)` | Fetch a resource by its ID. | `ResourceNotFoundError` |
-| `update(dto)` | Replace an existing resource. | `ResourceNotFoundError`, `UniqueConstraintViolationError` |
+| `update(dto, precondition=...)` | Replace an existing resource, optionally only if it still matches `precondition`. | `ResourceNotFoundError`, `UniqueConstraintViolationError`, `PreconditionFailedError`, `InvalidMappingError` |
 | `upsert(dto)` | Update the resource if it exists, insert it otherwise. | `UniqueConstraintViolationError` |
 | `delete(id_)` | Remove a resource by its ID. | `ResourceNotFoundError` |
-| `find_one(mapping=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidFindMappingError` |
-| `find_all(mapping=...)` | Iterate over all resources matching a filter. | `InvalidFindMappingError`, `ValueError` |
+| `find_one(filter_=...)` | Fetch the single resource matching a filter. | `NoHitsFoundError`, `MultipleHitsFoundError`, `InvalidMappingError` |
+| `find_all(filter_=...)` | Iterate over all resources matching a filter. | `InvalidMappingError`, `ValueError` |
 
 The write operations are deliberately strict about existence. `insert` refuses to
 overwrite, `update` refuses to create, and both signal violations with exceptions
 rather than silent no-ops. That makes accidental data loss loud instead of quiet. When
 "create or replace" is genuinely what you want, say so explicitly by calling `upsert`.
+
+`update` also guards against lost updates. Pass `precondition` as a mapping of field
+names to the values the stored resource must still have, and the provider checks and
+writes atomically, raising `PreconditionFailedError` if another writer got there first.
+The ID field is implied, so leave it out:
+
+```python
+await book_dao.update(extended, precondition={"pages": 448})
+```
 
 A typical session with a DAO looks like this:
 
@@ -145,28 +154,29 @@ await book_dao.delete(book.id)
 ## Finding Resources
 
 Beyond lookups by ID, DAOs support searching by field values. Both find methods take a
-`mapping`: a dictionary whose keys are field names of the DTO model and whose values
-are the values a matching resource must have. Multiple entries must all match (a
-logical AND):
+filter as the `filter_` argument: a mapping from field names of the DTO model to the
+values a matching resource must have. Multiple entries must all match (a logical AND).
+The argument used to be called `mapping`, which still works until hexkit v11 but emits
+a `DeprecationWarning`:
 
 ```python
 # Exactly one match expected:
-book = await book_dao.find_one(mapping={"title": "Refactoring"})
+book = await book_dao.find_one(filter_={"title": "Refactoring"})
 
 # Any number of matches:
-async for book in book_dao.find_all(mapping={"author": "Martin Fowler"}):
+async for book in book_dao.find_all(filter_={"author": "Martin Fowler"}):
     print(book.title)
 
-# An empty mapping matches everything:
-all_books = await book_dao.find_all(mapping={}).to_list()
+# An empty filter matches everything:
+all_books = await book_dao.find_all(filter_={}).to_list()
 ```
 
 `find_one` enforces that exactly one resource matches and raises `NoHitsFoundError` or
 `MultipleHitsFoundError` otherwise. Use it when your logic depends on uniqueness; use
 `find_all` when zero or many hits are acceptable.
 
-Mapping keys are validated against the DTO model, so a typo in a field name raises
-`InvalidFindMappingError` instead of silently matching nothing. Pass mapping values
+Filter keys are validated against the DTO model, so a typo in a field name raises
+`InvalidMappingError` instead of silently matching nothing. Pass filter values
 using the same Python types as the corresponding model fields: a `UUID` for a UUID
 field, a `datetime` for a datetime field, and so on. Whether richer values (nested
 structures, or query operators expressed as dictionaries) are supported is up to the
@@ -198,7 +208,7 @@ extra conveniences:
 
 ```python
 result = book_dao.find_all(
-    mapping={"author": "Martin Fowler"},
+    filter_={"author": "Martin Fowler"},
     skip=20, limit=10, sort=["title"],
 )
 
@@ -206,7 +216,7 @@ books = await result.to_list()   # collect everything into a list
 total = await result.total_count()  # matches ignoring skip and limit
 ```
 
-`total_count()` reports how many resources match the mapping in total, deliberately
+`total_count()` reports how many resources match the filter in total, deliberately
 ignoring `skip` and `limit`, which is exactly the number you need to render pagination
 controls. It runs an extra count query on first call and caches the answer. Keep in
 mind that iterating (or calling `to_list()`) consumes the iterator, so collect the
@@ -224,8 +234,11 @@ catches any database-related failure. The full hierarchy:
   - `ResourceAlreadyExistsError`: the ID is already taken (`insert`)
   - `UniqueConstraintViolationError`: a write would break a unique index on a field
     other than the ID
+  - `PreconditionFailedError`: the resource exists but does not match the
+    `precondition` passed to `update`
   - `FindError`: base for find-related errors
-    - `InvalidFindMappingError`: a mapping key is not a field of the DTO model
+    - `InvalidMappingError`: a filter or precondition key is not a field of the DTO
+      model
     - `NoHitsFoundError`: `find_one` found nothing
     - `MultipleHitsFoundError`: `find_one` found more than one match
   - `DbTimeoutError`: a database operation timed out
@@ -320,8 +333,10 @@ from hexkit.protocols.dao import (
     IndexBase,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    resolve_filter,
 )
 
 
@@ -359,10 +374,15 @@ class DictDao(Generic[Dto]):
             raise ResourceAlreadyExistsError(id_=id_)
         self._resources[id_] = dto
 
-    async def update(self, dto: Dto) -> None:
+    async def update(
+        self, dto: Dto, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         id_ = self._id_of(dto)
         if id_ not in self._resources:
             raise ResourceNotFoundError(id_=id_)
+        # A database provider must check and write in one atomic operation
+        if precondition and not self._matches(self._resources[id_], precondition):
+            raise PreconditionFailedError(id_=id_, precondition=precondition)
         self._resources[id_] = dto
 
     async def upsert(self, dto: Dto) -> None:
@@ -373,27 +393,36 @@ class DictDao(Generic[Dto]):
             raise ResourceNotFoundError(id_=id_)
         del self._resources[id_]
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Dto:
-        hits = await self.find_all(mapping=mapping).to_list()
+    @staticmethod
+    def _matches(dto: Dto, filter_: Mapping[str, Any]) -> bool:
+        return all(getattr(dto, field) == value for field, value in filter_.items())
+
+    # `mapping` is the deprecated name of `filter_`, accepted until hexkit v11
+    async def find_one(
+        self,
+        *,
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
+    ) -> Dto:
+        filter_ = resolve_filter(filter_, mapping)
+        hits = await self.find_all(filter_=filter_).to_list()
         if not hits:
-            raise NoHitsFoundError(mapping=mapping)
+            raise NoHitsFoundError(filter_=filter_)
         if len(hits) > 1:
-            raise MultipleHitsFoundError(mapping=mapping)
+            raise MultipleHitsFoundError(filter_=filter_)
         return hits[0]
 
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,  # sorting omitted for brevity
     ) -> FindResult[Dto]:
-        hits = [
-            dto
-            for dto in self._resources.values()
-            if all(getattr(dto, field) == value for field, value in mapping.items())
-        ]
+        filter_ = resolve_filter(filter_, mapping)
+        hits = [dto for dto in self._resources.values() if self._matches(dto, filter_)]
         end = None if limit is None else (skip or 0) + limit
         page = hits[skip or 0 : end]
 
