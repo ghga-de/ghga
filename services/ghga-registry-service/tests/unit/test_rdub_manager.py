@@ -1482,6 +1482,34 @@ async def test_map_accessions_to_file_ids_study_conflict(rig: JointRig):
     assert record.study_id == "GHGA-STUDY-OTHER"
 
 
+async def test_state_change_persists_when_box_stats_are_stale(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a stale-stats report does not undo a state change that went through.
+
+    The owning service applies the state change and only then recomputes the stats, so
+    treating the report as a failure would leave the RDUB open while the FUB is locked.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    rig.file_upload_box_client.lock_file_upload_box = AsyncMock(
+        side_effect=FileBoxClientPort.FUBStatsUnavailableError(box_id=box_id)
+    )
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state="locked",
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    stored = await rig.box_dao.get_by_id(box_id)
+    assert stored.state == "locked"
+    assert stored.file_upload_box_state == "locked"
+
+
 async def test_archive_research_data_upload_box_happy(
     rig: JointRig, populated_boxes: list[UUID]
 ):
@@ -1560,7 +1588,9 @@ async def test_archive_research_data_upload_box_happy(
     assert updated_box.state == "archived"
     assert updated_box.version == 2
     assert updated_box.file_upload_box_state == "archived"
-    assert updated_box.file_upload_box_version == 1
+    # RS does not predict the FUB version; it arrives via the FileUploadBox outbox
+    # event, which `upsert_file_upload_box` applies
+    assert updated_box.file_upload_box_version == 0
     assert updated_box.changed_by == TEST_DS_ID
 
     # Verify file box client was called to archive
