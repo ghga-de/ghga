@@ -1286,6 +1286,8 @@ class UploadController(UploadControllerPort):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is archived and cannot be unlocked.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
@@ -1309,6 +1311,9 @@ class UploadController(UploadControllerPort):
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
         else:
             log.info("Box with ID %s is already unlocked", box_id)
+
+        # In both success cases (unlock and already-unlocked), recompute box stats
+        await self._update_box_stats(box_id=box_id)
 
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive an existing FileUploadBox.
