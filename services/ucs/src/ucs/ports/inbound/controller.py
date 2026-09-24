@@ -514,6 +514,8 @@ class UploadControllerPort(ABC):
         - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
           'failed_interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         ...
 
