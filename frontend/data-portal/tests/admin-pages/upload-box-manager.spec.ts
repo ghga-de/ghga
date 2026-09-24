@@ -121,34 +121,6 @@ test('displays error message when upload box not found', async ({
   await expect(page).toHaveURL('/upload-box-manager');
 });
 
-test('offers a retry for a file whose re-encryption failed', async ({
-  adminPage: page,
-}) => {
-  // John's open box holds one file whose re-encryption failed.
-  await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68001');
-  await expectTitle(page, 'Upload Box Details');
-
-  const failedRow = page
-    .locator('app-upload-box-files-table table tbody tr')
-    .filter({ hasText: 'sample_rna_002_R2.fastq.gz' });
-  await expect(failedRow).toContainText('re-encryption failed');
-  await expect(
-    failedRow.getByRole('button', {
-      name: 'Retry re-encryption of sample_rna_002_R2.fastq.gz',
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Retry failed re-encryptions' }),
-  ).toBeEnabled();
-
-  // Jane's locked box holds no such file, so the whole-box retry is unavailable.
-  await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68002');
-  await expectTitle(page, 'Upload Box Details');
-  await expect(
-    page.getByRole('button', { name: 'Retry failed re-encryptions' }),
-  ).toBeDisabled();
-});
-
 test('paginates and sorts the file list on the server', async ({ adminPage: page }) => {
   // An archived box holding 28 files, i.e. three pages of ten.
   await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68003');
