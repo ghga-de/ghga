@@ -353,13 +353,14 @@ class UploadControllerPort(ABC):
         - `FileUploadStateError` if the FileUpload is in a cancelled, failed, or
           failed_interrogation state.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `ChecksumMismatchError` if the checksums don't match.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3ObjectMissingError` if the completed object can't be found in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         ...
 
@@ -406,13 +407,13 @@ class UploadControllerPort(ABC):
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if `require_unlocked` is True and the box isn't open.
-        - `BoxVersionError` if the box version changed before stats could be updated.
         - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         ...
 
@@ -486,7 +487,8 @@ class UploadControllerPort(ABC):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `IncompleteOrFailedError` if force=False and there are files still uploading
           or that failed interrogation.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         ...
 
@@ -498,6 +500,8 @@ class UploadControllerPort(ABC):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is archived and cannot be unlocked.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         ...
 
@@ -512,6 +516,8 @@ class UploadControllerPort(ABC):
         - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
           'failed_interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         ...
 
