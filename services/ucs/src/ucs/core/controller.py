@@ -1224,6 +1224,8 @@ class UploadController(UploadControllerPort):
         if box.state != "open":
             # This goes for archived boxes too
             log.info("Box with ID %s is already locked.", box_id)
+            # Recompute the stats anyway
+            await self._update_box_stats(box_id=box_id)
             return
 
         # Look for ongoing uploads and files that failed interrogation
@@ -1260,16 +1262,9 @@ class UploadController(UploadControllerPort):
                 )
                 raise incomplete_error
 
-        # Recompute the stats, which repairs any drift left by a crash or by a stats
-        #  update that gave up, before the box is locked and its stats are published
-        file_count, total_size = await self._calc_box_stats(box_id=box_id)
+        # Lock the box first, update stats later.
         updated_box = box.model_copy(
-            update={
-                "version": box.version + 1,
-                "state": "locked",
-                "file_count": file_count,
-                "size": total_size,
-            }
+            update={"version": box.version + 1, "state": "locked"}
         )
         try:
             await self._file_upload_box_dao.update(
@@ -1280,6 +1275,9 @@ class UploadController(UploadControllerPort):
             box_version_error = self.BoxVersionError(box_id=box_id)
             log.info(box_version_error)
             raise box_version_error from err
+
+        # Recompute the stats
+        await self._update_box_stats(box_id=box_id)
 
     async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Unlock an existing FileUploadBox.
