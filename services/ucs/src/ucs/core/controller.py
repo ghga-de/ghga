@@ -1320,6 +1320,8 @@ class UploadController(UploadControllerPort):
         - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
           'failed_interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
@@ -1328,6 +1330,8 @@ class UploadController(UploadControllerPort):
         # Exit early if already archived, or raise error if unlocked
         if box.state == "archived":
             log.info("Box with ID %s is already archived", box_id)
+            # Check/update box stats anyway, just in case something got stuck
+            await self._update_box_stats(box_id=box_id)
             return
         if box.state == "open":
             log.info("Can't unlock box %s because it's still open.", box_id)
@@ -1405,6 +1409,9 @@ class UploadController(UploadControllerPort):
             box_version_error = self.BoxVersionError(box_id=box_id)
             log.info(box_version_error)
             raise box_version_error from err
+
+        # Update box stats since this is the last chance to do so
+        await self._update_box_stats(box_id=box_id)
 
     async def get_box_file_info(
         self,
