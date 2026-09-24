@@ -523,6 +523,8 @@ class FileBoxClient(FileBoxClientPort):
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
         wot = ChangeFileBoxWorkOrder(work_type="lock", box_id=box_id)
         headers = self._auth_header(wot)
@@ -538,6 +540,9 @@ class FileBoxClient(FileBoxClientPort):
                 response=response, body=body, operation="lock", box_id=box_id
             )
         elif response.status_code != 204:
+            self._raise_if_stats_unavailable(
+                response=response, operation="lock", box_id=box_id
+            )
             log.warning(
                 "Error locking FileUploadBox ID %s in external service.",
                 box_id,
@@ -554,6 +559,8 @@ class FileBoxClient(FileBoxClientPort):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
         wot = ChangeFileBoxWorkOrder(work_type="unlock", box_id=box_id)
 
@@ -573,6 +580,9 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
         elif response.status_code != 204:
+            self._raise_if_stats_unavailable(
+                response=response, operation="unlock", box_id=box_id
+            )
             log.warning(
                 "Error unlocking FileUploadBox ID %s in external service.",
                 box_id,
@@ -707,6 +717,8 @@ class FileBoxClient(FileBoxClientPort):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
         wot = ChangeFileBoxWorkOrder(work_type="archive", box_id=box_id)
         headers = self._auth_header(wot)
@@ -727,6 +739,9 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
         elif response.status_code != 204:
+            self._raise_if_stats_unavailable(
+                response=response, operation="archive", box_id=box_id
+            )
             log.warning(
                 "Error archiving FileUploadBox ID %s in external service.",
                 box_id,

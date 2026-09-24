@@ -190,6 +190,8 @@ class FileBoxClientPort(ABC):
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -199,6 +201,8 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -266,6 +270,8 @@ class FileBoxClientPort(ABC):
                 been interrogated yet or files that failed interrogation.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
