@@ -524,9 +524,24 @@ class RDUBManager(RDUBManagerPort):
             old_state=box.state, new_state=updated_box.state
         )
         updated_box.file_upload_box_state = updated_box.state
-        await self._handle_state_change(
-            old_box=box, updated_box=updated_box, force=force
-        )
+        try:
+            await self._handle_state_change(
+                old_box=box, updated_box=updated_box, force=force
+            )
+        except FileBoxClientPort.FUBStatsUnavailableError:
+            # The owning service recomputes the box stats after applying the state
+            # change, so the change itself went through and must be persisted. Only
+            # the stats lag behind, and they reach us via the outbox event.
+            log.warning(
+                "Changed the state of FUB %s for RDUB %s, but its stats are stale in"
+                + " the owning service.",
+                box.file_upload_box_id,
+                box.id,
+                extra={
+                    "box_id": box.id,
+                    "file_upload_box_id": box.file_upload_box_id,
+                },
+            )
 
         await self._box_dao.update(updated_box)
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
