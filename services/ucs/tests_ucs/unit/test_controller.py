@@ -17,7 +17,8 @@
 
 import logging
 from asyncio import sleep
-from contextlib import nullcontext
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from datetime import timedelta
 from unittest.mock import patch
 from uuid import uuid4
@@ -72,6 +73,24 @@ async def _fail_interrogation(*, file_id: UUID4, rig: JointRig):
         )
     )
     return await rig.file_upload_dao.get_by_id(file_id)
+
+
+@contextmanager
+def track_box_stats_updates(rig: JointRig) -> Iterator[list[UUID4]]:
+    """Record the box ID of every `_update_box_stats` call made inside the block.
+
+    The recompute writes nothing when the stats already match, so the call itself has
+    to be observed rather than the box version it leaves behind.
+    """
+    updated_box_ids: list[UUID4] = []
+    update_box_stats = rig.controller._update_box_stats
+
+    async def record_call(*, box_id: UUID4) -> None:
+        updated_box_ids.append(box_id)
+        await update_box_stats(box_id=box_id)
+
+    with patch.object(rig.controller, "_update_box_stats", record_call):
+        yield updated_box_ids
 
 
 async def _complete_file_upload(*, file_upload: FileUpload, rig: JointRig):
@@ -308,7 +327,11 @@ async def test_update_box_max_size_below_committed(rig: JointRig):
 
 
 async def test_lock_file_upload_box(rig: JointRig):
-    """Test locking an unlocked FileUploadBox"""
+    """Test locking an unlocked FileUploadBox.
+
+    Both the lock itself and a repeat lock of an already locked box have to recompute
+    the box stats, the latter so a stat update lost by an earlier crash is repaired.
+    """
     # First create a FileUploadBox (starts open by default)
     file_upload_box_dao = rig.file_upload_box_dao
     box_id = await rig.create_default_box()
@@ -317,15 +340,27 @@ async def test_lock_file_upload_box(rig: JointRig):
     assert file_upload_box_dao.latest.state == "open"
 
     # Now lock the box
-    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
 
-    # Verify the box is now locked
+    # Verify the box is now locked and that its stats were recomputed
     assert file_upload_box_dao.latest.state == "locked"
+    assert updated_box_ids == [box_id]
+
+    # Make sure locking again will still recompute the stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.lock_file_upload_box(box_id=box_id, version=1)
+
+    assert file_upload_box_dao.latest.state == "locked"
+    assert updated_box_ids == [box_id]
 
 
 async def test_completion_recomputes_box_stats_from_truth(rig: JointRig):
     """Test that completing an upload derives box stats from the current FileUpload
     states, correcting any prior drift rather than blindly incrementing.
+
+    A repeat completion returns early without touching the FileUpload, but recomputes
+    all the same, so stats a crashed earlier call never wrote are repaired.
     """
     file_upload_box_dao = rig.file_upload_box_dao
     box_id = await rig.create_default_box()
@@ -337,16 +372,36 @@ async def test_completion_recomputes_box_stats_from_truth(rig: JointRig):
     await file_upload_box_dao.update(drifted_box)
 
     # Complete one file upload so the box has real stats again
-    _, _ = await rig.controller.initiate_file_upload(
+    file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    completed_upload = await _complete_file_upload(
+        file_upload=rig.file_upload_dao.latest, rig=rig
+    )
+    assert completed_upload.state == "inbox"
     assert file_upload_box_dao.latest.file_count == 1
     assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # Modify the box stats (doesn't have to make sense here, just testing)
+    drifted_box = await file_upload_box_dao.get_by_id(box_id)
+    drifted_box.file_count = 5
+    drifted_box.size = 12345
+    await file_upload_box_dao.update(drifted_box)
+
+    # Verify that re-completing the completion op recomputes the box stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await _complete_file_upload(file_upload=completed_upload, rig=rig)
+
+    assert updated_box_ids == [box_id]
+    assert file_upload_box_dao.latest.file_count == 1
+    assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # Finally, verify that the FileUpload is unchanged (mostly a sanity check)
+    assert await rig.file_upload_dao.get_by_id(file_id) == completed_upload
 
 
 async def test_lock_recomputes_box_stats(rig: JointRig):
@@ -379,7 +434,11 @@ async def test_lock_recomputes_box_stats(rig: JointRig):
 
 
 async def test_unlock_file_upload_box(rig: JointRig):
-    """Test unlocking a locked FileUploadBox"""
+    """Test unlocking a locked FileUploadBox.
+
+    Both the unlock itself and a repeat unlock of an already open box have to recompute
+    the box stats, the latter so a stat update lost by an earlier crash is repaired.
+    """
     file_upload_box_dao = rig.file_upload_box_dao
 
     # First create a FileUploadBox
@@ -390,10 +449,19 @@ async def test_unlock_file_upload_box(rig: JointRig):
     assert file_upload_box_dao.latest.state == "locked"
 
     # Now unlock the box (version 1 → 2)
-    await rig.controller.unlock_file_upload_box(box_id=box_id, version=1)
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.unlock_file_upload_box(box_id=box_id, version=1)
 
-    # Verify the box is now unlocked
+    # Verify the box is now unlocked and that its stats were recomputed
     assert file_upload_box_dao.latest.state == "open"
+    assert updated_box_ids == [box_id]
+
+    # Make sure unlocking again will still recompute the stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.unlock_file_upload_box(box_id=box_id, version=2)
+
+    assert file_upload_box_dao.latest.state == "open"
+    assert updated_box_ids == [box_id]
 
 
 async def test_lock_box_version_error(rig: JointRig):
@@ -962,6 +1030,10 @@ async def test_archive_box_ignores_terminal_uploads(
     """Archiving must succeed when the only non-interrogated uploads are in a
     terminal state (cancelled or failed). Those uploads are no longer active and
     don't need attention.
+
+    Both the archival itself and a repeat archival of an already archived box have to
+    recompute the box stats, the latter so a stat update lost by an earlier crash is
+    repaired.
     """
     box_id = await rig.create_default_box()
     await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
@@ -970,8 +1042,18 @@ async def test_archive_box_ignores_terminal_uploads(
     file_upload.box_id = box_id
     await rig.file_upload_dao.insert(file_upload)
 
-    await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+
     assert rig.file_upload_box_dao.latest.state == "archived"
+    assert updated_box_ids == [box_id]
+
+    # Verify archiving again will still recompute the stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=2)
+
+    assert rig.file_upload_box_dao.latest.state == "archived"
+    assert updated_box_ids == [box_id]
 
 
 async def test_complete_file_upload_when_box_missing(rig: JointRig):
