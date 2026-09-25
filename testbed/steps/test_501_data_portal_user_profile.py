@@ -28,7 +28,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import IVA_TYPE_NAMES
+from .utils import IVA_TYPE_NAMES, UI_TIMEOUT
 
 scenarios("../features/501_data_portal_user_profile.feature")
 
@@ -37,8 +37,6 @@ STATE_MSG_MAP = {
     "unverified": "Needs verification",
     "coderequested": "Waiting for verification",
 }
-
-TIMEOUT = 3000
 
 
 @given("all users have only a verified IVA")
@@ -156,7 +154,7 @@ def check_granted_access(fixtures: JointFixture, num: str, active_user: str):
         assert session, "User session not found"
         user_datasets = fixtures.state.get_state("datasets users can access")
         datasets_on_ui = component.locator("a")
-        expect(datasets_on_ui).to_have_count(num_expected, timeout=TIMEOUT)
+        expect(datasets_on_ui).to_have_count(num_expected, timeout=UI_TIMEOUT)
         ui_texts = datasets_on_ui.all_inner_texts()
         for dataset_id in user_datasets.values():
             assert any(dataset_id in text for text in ui_texts), (
@@ -165,7 +163,7 @@ def check_granted_access(fixtures: JointFixture, num: str, active_user: str):
 
         expect(
             component.get_by_role("button").get_by_text("Create Token")
-        ).to_have_count(2, timeout=TIMEOUT)
+        ).to_have_count(2, timeout=UI_TIMEOUT)
 
 
 @then("I have no pending access requests")
@@ -186,16 +184,16 @@ def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
     page = playwright.page
 
     iva_add_button = page.get_by_role("button", name="Add an IVA")
-    expect(iva_add_button).to_be_visible(timeout=TIMEOUT)
+    expect(iva_add_button).to_be_visible(timeout=UI_TIMEOUT)
     iva_add_button.click()
 
     iva_dialog = page.locator("app-new-iva-dialog").first
     expect(iva_dialog).to_contain_text(
-        "Please select one of the following IVA types", timeout=TIMEOUT
+        "Please select one of the following IVA types", timeout=UI_TIMEOUT
     )
 
     radio_group = iva_dialog.locator("mat-button-toggle-group")
-    expect(radio_group).to_be_visible(timeout=TIMEOUT)
+    expect(radio_group).to_be_visible(timeout=UI_TIMEOUT)
     iva_options = iva_dialog.get_by_role("radio").all_inner_texts()
     assert sorted(iva_options) == sorted(["SMS", "In Person"]), (
         f"IVA type options mismatch: {iva_options}"
@@ -204,15 +202,15 @@ def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
     type_button = iva_dialog.get_by_role(
         "radio", name=re.compile(re.escape(iva_type), re.IGNORECASE)
     )
-    expect(type_button.first).to_be_visible(timeout=TIMEOUT)
+    expect(type_button.first).to_be_visible(timeout=UI_TIMEOUT)
     type_button.first.click()
 
     input_box = iva_dialog.locator("input").first
-    expect(input_box).to_be_visible(timeout=TIMEOUT)
+    expect(input_box).to_be_visible(timeout=UI_TIMEOUT)
     input_box.fill(iva_value)
 
     submit_button = iva_dialog.get_by_role("button", name="Submit").first
-    expect(submit_button).to_be_visible(timeout=TIMEOUT)
+    expect(submit_button).to_be_visible(timeout=UI_TIMEOUT)
     submit_button.click()
     page.wait_for_load_state()
 
@@ -222,7 +220,7 @@ def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
     page = playwright.page
     iva_component = page.locator("app-user-iva-list")
     page.wait_for_selector(
-        "app-user-iva-list > .grid", timeout=TIMEOUT
+        "app-user-iva-list > .grid", timeout=UI_TIMEOUT
     )  # Wait for items to be loaded
     all_iva_items = iva_component.locator(".grid")
     filtered_iva_items = all_iva_items.locator(f'.grid:has-text("{iva_type}")')
@@ -235,7 +233,7 @@ def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
     expect(request_button).to_be_visible()
     request_button.click()
 
-    page.wait_for_selector("app-confirm-dialog", timeout=TIMEOUT)
+    page.wait_for_selector("app-confirm-dialog", timeout=UI_TIMEOUT)
     confirm_dialog = page.locator("app-confirm-dialog").first
     expect(confirm_dialog).to_contain_text("Request verification of your address")
     continue_button = page.get_by_role(
@@ -257,7 +255,7 @@ def check_all_ivas_on_portal(fixtures: JointFixture, active_user):
     headers = fixtures.auth.headers(session=session)
     results = fixtures.iva.list_all(headers)
     item_selector = "app-iva-manager-list tbody tr"
-    page.wait_for_selector(item_selector, timeout=TIMEOUT)
+    page.wait_for_selector(item_selector, timeout=UI_TIMEOUT)
     ui_rows = page.locator(item_selector).all_text_contents()
     assert len(results) == len(ui_rows), "IVA count mismatch"
     for iva in results:
@@ -282,11 +280,11 @@ def create_code_for_iva(fixtures: JointFixture, active_user):
     create_code_button.click()
     dialog_selector = "app-code-creation-dialog"
     dialog = page.locator(dialog_selector)
-    expect(dialog).to_contain_text("Verification code created", timeout=TIMEOUT)
+    expect(dialog).to_contain_text("Verification code created", timeout=UI_TIMEOUT)
     code = dialog.locator("table input").input_value()
     fixtures.state.set_state("iva_verification_code", code)
     confirm_button = dialog.get_by_role("button", name="Confirm transmission").first
-    expect(confirm_button).to_be_visible(timeout=TIMEOUT)
+    expect(confirm_button).to_be_visible(timeout=UI_TIMEOUT)
     confirm_button.click()
     page.wait_for_load_state()
 
@@ -302,12 +300,12 @@ def filter_ivas_as_admin(fixtures: JointFixture, num: str, iva_state: str):
     page = fixtures.playwright.page
     form_selector = "app-iva-manager-filter"
     form = page.locator(form_selector)
-    expect(form.locator("mat-form-field")).to_have_count(4, timeout=TIMEOUT)
+    expect(form.locator("mat-form-field")).to_have_count(4, timeout=UI_TIMEOUT)
 
     form.locator("mat-form-field:has-text('All status values')").click()
     page.get_by_role("option", name=re.compile(iva_state, re.IGNORECASE)).first.click()
 
     rows = page.locator("app-iva-manager-list tbody tr")
-    expect(rows).to_have_count(num_expected, timeout=TIMEOUT)
+    expect(rows).to_have_count(num_expected, timeout=UI_TIMEOUT)
     if num_expected:
         assert iva_state in rows.first.inner_text()

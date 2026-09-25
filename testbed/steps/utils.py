@@ -70,6 +70,26 @@ ADMIN_PAGES = {
     "Upload Box Manager": ["upload-box-manager", "Upload Box Manager"],
 }
 
+# The states a file upload passes through on its way to the archive, in order.
+UPLOAD_PROGRESS = ("init", "inbox", "interrogated", "awaiting_archival", "archived")
+
+
+def has_reached(state: str | None, expected_state: str) -> bool:
+    """Tell whether a file upload is in the expected state or has moved past it.
+
+    DHFS picks up new files on its own schedule, so a file expected in the inbox may
+    already be interrogated by the time a check reads it.
+    """
+    assert expected_state in UPLOAD_PROGRESS, f"Unknown state {expected_state!r}"
+    return state in UPLOAD_PROGRESS and UPLOAD_PROGRESS.index(
+        state
+    ) >= UPLOAD_PROGRESS.index(expected_state)
+
+
+# How long a check in the Data Portal waits for the page to show what it expects. Only
+# a failing check waits this long, so one generous value serves every feature.
+UI_TIMEOUT = 5_000  # milliseconds
+
 
 class Notification(BaseModel):
     """A container for email notification data."""

@@ -47,6 +47,7 @@ def login_to_data_portal(
 
 
 @given("the user has logged out of the Data Portal")
+@then("the user has logged out of the Data Portal")
 def logout_from_data_portal(fixtures: JointFixture) -> None:
     """Ensure the current user is logged out of the Data Portal."""
     fixtures.playwright.logout(config=fixtures.config)
