@@ -31,6 +31,7 @@ from hexkit.protocols.dao import (
 )
 from hexkit.utils import now_utc_ms_prec
 from rs.constants import VALID_STATE_TRANSITIONS
+from rs.core._rc_helper import race_condition_retries
 from rs.core.models import (
     PID,
     BoxRequeueResult,
@@ -51,6 +52,11 @@ from rs.ports.outbound.dao import BoxDao
 from rs.ports.outbound.http import AccessClientPort, FileBoxClientPort
 
 log = logging.getLogger(__name__)
+
+# How often to re-read and re-apply an inbound FileUploadBox update whose RDUB was
+# changed by a request in the meantime. Should usually resolve in attempt, but this
+# acts as a reasonable cap.
+MAX_UPSERT_ATTEMPTS = 3
 
 __all__ = ["RDUBManager"]
 
@@ -743,33 +749,61 @@ class RDUBManager(RDUBManagerPort):
         """Handle FileUploadBox update events from file box service.
 
         Updates the corresponding ResearchDataUploadBox with latest file count and size.
-        """
-        try:
-            research_data_upload_box = await self._box_dao.find_one(
-                mapping={"file_upload_box_id": file_upload_box.id}
-            )
-            # Get the fields that matter (ID and storage alias don't change)
-            new = {
-                "file_upload_box_version": file_upload_box.version,
-                "file_upload_box_state": file_upload_box.state,
-                "file_count": file_upload_box.file_count,
-                "size": file_upload_box.size,
-                "max_size": file_upload_box.max_size,
-                "storage_alias": file_upload_box.storage_alias,
-            }
-            updated_model = research_data_upload_box.model_copy(update=new)
 
-            # Conditionally update data
-            if updated_model.model_dump() != research_data_upload_box.model_dump():
+        Other methods can update the same document (e.g. change description), so each
+        attempt is guarded on the version it reads and retried against a fresh copy.
+
+        Raises:
+            BoxUpdateConflictError: If the RDUB kept changing underneath.
+        """
+        async for attempt in race_condition_retries(
+            description=(
+                f"apply the FileUploadBox {file_upload_box.id} update to its RDUB"
+            ),
+            error_on_failure=lambda: self.BoxUpdateConflictError(
+                f"Gave up applying the FileUploadBox {file_upload_box.id} update to"
+                f" its RDUB after {MAX_UPSERT_ATTEMPTS} attempts."
+            ),
+            max_tries=MAX_UPSERT_ATTEMPTS,
+            logger=log,
+        ):
+            with attempt:
+                try:
+                    current = await self._box_dao.find_one(
+                        filter_={"file_upload_box_id": file_upload_box.id}
+                    )
+                except NoHitsFoundError:
+                    # This might happen during initial creation - ignore
+                    log.info(
+                        "Did not find a matching ResearchDataUploadBox for inbound"
+                        + " FileUploadBox with ID %s. Was it just created?",
+                        file_upload_box.id,
+                    )
+                    return
+
+                # Get the fields that matter (ID and storage alias don't change)
+                new_values = {
+                    "file_upload_box_version": file_upload_box.version,
+                    "file_upload_box_state": file_upload_box.state,
+                    "file_count": file_upload_box.file_count,
+                    "size": file_upload_box.size,
+                    "max_size": file_upload_box.max_size,
+                    "storage_alias": file_upload_box.storage_alias,
+                }
+                updated_model = current.model_copy(update=new_values)
+
+                # Conditionally update data
+                if updated_model == current:
+                    return
+
                 updated_model.version += 1
-                await self._box_dao.update(updated_model)
-        except NoHitsFoundError:
-            # This might happen during initial creation - ignore
-            log.info(
-                "Did not find a matching ResearchDataUploadBox for inbound"
-                + " FileUploadBox with ID %s. Was it just created?",
-                file_upload_box.id,
-            )
+                await self._box_dao.update(
+                    updated_model,
+                    precondition={
+                        "version": current.version,
+                        "file_upload_box_version": current.file_upload_box_version,
+                    },
+                )
 
     async def get_research_data_upload_box(
         self, *, box_id: UUID4, auth_context: AuthContext
