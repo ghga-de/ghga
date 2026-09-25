@@ -27,11 +27,9 @@ from .conftest import (
     then,
     when,
 )
-from .utils import IVA_TYPE_NAMES
+from .utils import IVA_TYPE_NAMES, UI_TIMEOUT
 
 scenarios("../features/503_data_portal_access_grants.feature")
-
-TIMEOUT = 3000
 
 UI_APP_CONTEXT = {
     "access requests": {
@@ -67,7 +65,7 @@ def create_access_request(fixtures: JointFixture, alias: str):
     request_button.click()
 
     dialog = page.locator("app-access-request-dialog")
-    expect(dialog).to_contain_text("Request access for dataset", timeout=TIMEOUT)
+    expect(dialog).to_contain_text("Request access for dataset", timeout=UI_TIMEOUT)
     form_field = dialog.locator("mat-form-field:has-text('Details about your request')")
     form_field.locator("textarea").fill(f"Access request for {alias}")
     submit_button = page.get_by_role("button", name="Submit")
@@ -112,7 +110,7 @@ def filter_admin_table_by_dataset(fixtures: JointFixture, app: str, alias: str):
     form_selector = UI_APP_CONTEXT[app]["form_component"]
     form = page.locator(form_selector)
     expect(form.locator("mat-form-field")).to_have_count(
-        UI_APP_CONTEXT[app]["expected_num_of_filters"], timeout=TIMEOUT
+        UI_APP_CONTEXT[app]["expected_num_of_filters"], timeout=UI_TIMEOUT
     )
     form.locator(UI_APP_CONTEXT[app]["dataset_filter"]).locator("input").fill(
         dataset_accession
@@ -125,7 +123,7 @@ def filter_access_requests_all_statuses(fixtures: JointFixture):
     page = fixtures.playwright.page
     form_selector = "app-access-request-manager-filter"
     form = page.locator(form_selector)
-    expect(form.locator("mat-form-field")).to_have_count(10, timeout=TIMEOUT)
+    expect(form.locator("mat-form-field")).to_have_count(10, timeout=UI_TIMEOUT)
 
     form.locator("mat-form-field:has-text('Resolution')").click()
     page.get_by_role(
@@ -140,7 +138,7 @@ def open_filtered_item(fixtures: JointFixture):
     table = page.locator("table")
     expect(table).to_be_visible()
     rows = table.locator("tbody tr")
-    expect(rows).to_have_count(1, timeout=TIMEOUT)  # Check there is only one item
+    expect(rows).to_have_count(1, timeout=UI_TIMEOUT)  # Check there is only one item
     rows.first.click()
     page.wait_for_load_state()
 
@@ -184,13 +182,13 @@ def set_ticket_id(fixtures: JointFixture, ticket_id: str):
     """
     page = fixtures.playwright.page
     field = page.locator("app-access-request-field-edit").filter(has_text="Ticket ID")
-    expect(field).to_be_visible(timeout=TIMEOUT)
+    expect(field).to_be_visible(timeout=UI_TIMEOUT)
     field.locator("mat-chip.edit-button").click()
     field.locator("input").fill(ticket_id)
     save_chip = field.locator("mat-chip.save-edit-button")
     # The save chip stays disabled while the entered value fails validation
     # (the portal only accepts numeric ticket IDs with up to 9 digits)
-    expect(save_chip).not_to_have_class(re.compile("chip-disabled"), timeout=TIMEOUT)
+    expect(save_chip).not_to_have_class(re.compile("chip-disabled"), timeout=UI_TIMEOUT)
     with page.expect_response(
         lambda response: (
             "/access-requests/" in response.url and response.request.method == "PATCH"
@@ -209,7 +207,7 @@ def check_ticket_id_saved(fixtures: JointFixture, ticket_id: str):
     page.reload()
     page.wait_for_load_state()
     field = page.locator("app-access-request-field-edit").filter(has_text="Ticket ID")
-    expect(field).to_contain_text(ticket_id, timeout=TIMEOUT)
+    expect(field).to_contain_text(ticket_id, timeout=UI_TIMEOUT)
 
 
 @then(parse('the status of the access request is "{status}"'))

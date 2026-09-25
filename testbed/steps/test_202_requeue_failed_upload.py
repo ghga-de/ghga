@@ -16,12 +16,15 @@
 
 """Step definitions for resolving file uploads that failed interrogation"""
 
+import re
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from fixtures.file import FileBatch
+from playwright.sync_api import Locator, Page, expect
 
 from .conftest import (
     JointFixture,
@@ -33,6 +36,7 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .utils import UI_TIMEOUT, has_reached
 
 scenarios("../features/202_requeue_failed_upload.feature")
 
@@ -40,10 +44,11 @@ scenarios("../features/202_requeue_failed_upload.feature")
 # sabotage always ends in a mismatch and DHFS reports them as failed.
 BOGUS_CHECKSUM = "0" * 64
 
-# Where the two files under test are remembered across the scenarios of this feature.
-# The "first" one is resolved by requeueing it, the "second" one by deleting it.
+# Where the files under test are remembered across the scenarios of this feature.
+# The "first" one is resolved by requeueing it alone, the "second" one by deleting
+# it and the "third" one by requeueing every failed file of the box.
 TARGETS_STATE = "requeue_targets"
-ORDINALS = ("first", "second")
+ORDINALS = ("first", "second", "third")
 
 
 def _headers(fixtures: JointFixture, full_name: str = "Data Steward") -> dict[str, str]:
@@ -60,7 +65,7 @@ def _headers(fixtures: JointFixture, full_name: str = "Data Steward") -> dict[st
 
 
 def _targets(fixtures: JointFixture) -> dict[str, dict[str, Any]]:
-    """Return what we know about both files under test."""
+    """Return what we know about all files under test."""
     targets = fixtures.state.get_state(TARGETS_STATE)
     assert targets, "No files were picked for the requeue scenarios"
     return targets
@@ -77,6 +82,24 @@ def _remember(fixtures: JointFixture, ordinal: str, **fields: Any) -> None:
     targets = fixtures.state.get_state(TARGETS_STATE) or {}
     targets.setdefault(ordinal, {}).update(fields)
     fixtures.state.set_state(TARGETS_STATE, targets)
+
+
+def _file_row(page: Page, alias: str) -> Locator:
+    """Return the row of the portal's file list that shows the given file."""
+    rows = page.locator("app-upload-box-files-table table tbody tr")
+    return rows.filter(has_text=alias)
+
+
+def _retry_button(page: Page, alias: str) -> Locator:
+    """Return the portal's button that requeues the given file."""
+    return _file_row(page, alias).get_by_role(
+        "button", name=f"Retry re-encryption of {alias}"
+    )
+
+
+def _retry_all_button(page: Page) -> Locator:
+    """Return the portal's button that requeues every failed file of the box."""
+    return page.get_by_role("button", name="Retry failed re-encryptions")
 
 
 def _read_stable_box(
@@ -277,16 +300,16 @@ def unlock_upload_box(storage_name: str, fixtures: JointFixture):
 
 @when(
     parse(
-        'the two largest files of dataset "{dataset_alias}" are deleted from "{storage_name}" storage'
+        'the three largest files of dataset "{dataset_alias}" are deleted from "{storage_name}" storage'
     )
 )
-def delete_two_largest_files(
+def delete_largest_files(
     dataset_alias: str,
     storage_name: str,
     fixtures: JointFixture,
     file_fixture: dict[str, FileBatch],
 ):
-    """Delete the two biggest files of the dataset so they can be uploaded again.
+    """Delete the biggest files of the dataset so they can be uploaded again.
 
     The biggest files take the longest to upload, which leaves the widest window for
     seeding FIS while each upload is still being initiated.
@@ -324,7 +347,7 @@ def delete_two_largest_files(
     )
 )
 def upload_files_with_corrupted_checksums(storage_name: str, fixtures: JointFixture):
-    """Upload both files again and make FIS expect checksums they cannot match."""
+    """Upload the files again and make FIS expect checksums they cannot match."""
     targets = _targets(fixtures)
     file_info = [
         (targets[ordinal]["alias"], Path(targets[ordinal]["file_path"]))
@@ -350,23 +373,59 @@ def check_file_state(
     ordinal: str, expected_state: str, seconds: int, fixtures: JointFixture
 ):
     """Wait for RS to list the given file in the expected state."""
+    upload = _wait_for_file(
+        fixtures,
+        ordinal,
+        lambda state: state == expected_state,
+        expected_state,
+        seconds,
+    )
+    fields = {"file_id": upload["id"]}
+    # The inbox object ID has to be kept: once the file is interrogated,
+    # the record points at the object in the interrogation bucket instead.
+    if expected_state == "failed_interrogation":
+        fields["inbox_object_id"] = upload["object_id"]
+    _remember(fixtures, ordinal, **fields)
+
+
+@then(
+    parse(
+        'the "{ordinal}" file has reached the "{expected_state}" state'
+        ' within "{seconds:d}" seconds'
+    )
+)
+def check_file_progress(
+    ordinal: str, expected_state: str, seconds: int, fixtures: JointFixture
+):
+    """Wait for RS to list the given file in the expected state or past it."""
+    _wait_for_file(
+        fixtures,
+        ordinal,
+        lambda state: has_reached(state, expected_state),
+        f"{expected_state} or later",
+        seconds,
+    )
+
+
+def _wait_for_file(
+    fixtures: JointFixture,
+    ordinal: str,
+    accept: Callable[[str], bool],
+    expected: str,
+    seconds: int,
+) -> dict[str, Any]:
+    """Poll RS until it lists the given file in an accepted state, and return it."""
     target = _target(fixtures, ordinal)
     alias, storage_name = target["alias"], target["storage_name"]
     deadline = time.monotonic() + seconds
     upload = None
     while time.monotonic() < deadline:
         upload = _find_upload(fixtures, storage_name, alias)
-        if upload and upload["state"] == expected_state:
-            fields = {"file_id": upload["id"]}
-            # The inbox object ID has to be kept: once the file is interrogated,
-            # the record points at the object in the interrogation bucket instead.
-            if expected_state == "failed_interrogation":
-                fields["inbox_object_id"] = upload["object_id"]
-            _remember(fixtures, ordinal, **fields)
-            return
+        if upload and accept(upload["state"]):
+            return upload
         time.sleep(2)
     raise AssertionError(
-        f"File {alias!r} is not {expected_state!r} after {seconds} seconds: {upload}"
+        f"File {alias!r} is not {expected!r} after {seconds} seconds: {upload}"
     )
 
 
@@ -411,17 +470,18 @@ def check_report_discarded(ordinal: str, fixtures: JointFixture):
     """Assert FIS dropped the report of the interrogation that failed.
 
     Paired with the step that asserts the report was there to begin with, since
-    waiting for a document to disappear passes on one that never existed.
+    waiting for a document to disappear passes on one that never existed. Only the
+    failed report counts: the retry may already have stored a passing one.
     """
     file_id = _target(fixtures, ordinal)["file_id"]
     removed = fixtures.mongo.wait_for_removal(
         db_name=fixtures.config.fis_db_name,
         collection_name=fixtures.config.fis_reports_collection,
-        query={"_id": file_id},
+        query={"_id": file_id, "passed": False},
         timeout=30,
         interval=0.5,
     )
-    assert removed, f"FIS still holds an interrogation report for file {file_id}"
+    assert removed, f"FIS still holds a failed interrogation report for file {file_id}"
 
 
 @then(parse('the "{ordinal}" file is marked as removable in the interrogation service'))
@@ -498,7 +558,7 @@ def check_box_file_count(count: int, storage_name: str, fixtures: JointFixture):
 def requeue_failed_file(
     full_name: str, ordinal: str, storage_name: str, fixtures: JointFixture
 ) -> Response:
-    """Requeue a failed file through RS, which only a Data Steward may do."""
+    """Ask RS to requeue a file, which only a Data Steward may do."""
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
     file_id = _target(fixtures, ordinal)["file_id"]
     url = (
@@ -506,6 +566,128 @@ def requeue_failed_file(
         f"/uploads/{file_id}/requeue"
     )
     return fixtures.http.post(url, headers=_headers(fixtures, full_name))
+
+
+@when(parse('I open the upload box for "{storage_name}" storage in the portal'))
+def open_box_in_portal(storage_name: str, fixtures: JointFixture):
+    """Open the details page of the upload box in the Upload Box Manager."""
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    assert rdub, f"No upload box in state for {storage_name} storage"
+    page = fixtures.playwright.page
+    url = fixtures.config.data_portal_url.rstrip("/")
+    page.goto(f"{url}/upload-box-manager/{rdub['id']}")
+    expect(page).to_have_title("Upload Box Details | GHGA Data Portal")
+
+
+@then(parse('the "{ordinal}" file is offered a retry in the portal'))
+def check_retry_offered(ordinal: str, fixtures: JointFixture):
+    """Check that a failed file can be requeued from the portal."""
+    page = fixtures.playwright.page
+    alias = _target(fixtures, ordinal)["alias"]
+    expect(_file_row(page, alias)).to_contain_text(
+        "re-encryption failed", timeout=UI_TIMEOUT
+    )
+    expect(_retry_button(page, alias)).to_be_visible()
+
+
+@then("the portal offers to retry all failed re-encryptions")
+def check_retry_all_offered(fixtures: JointFixture):
+    """Check the whole-box retry, shown only once the complete file list has loaded."""
+    expect(_retry_all_button(fixtures.playwright.page)).to_be_visible(
+        timeout=UI_TIMEOUT
+    )
+
+
+@then("the portal no longer offers to retry all failed re-encryptions")
+def check_retry_all_gone(fixtures: JointFixture):
+    """Check the whole-box retry is gone once no file is waiting for a retry."""
+    expect(_retry_all_button(fixtures.playwright.page)).to_have_count(0)
+
+
+@when(parse('I retry the re-encryption of the "{ordinal}" file in the portal'))
+def retry_in_portal(ordinal: str, fixtures: JointFixture):
+    """Requeue a failed file with its retry button and confirm the dialog."""
+    page = fixtures.playwright.page
+    target = _target(fixtures, ordinal)
+    alias = target["alias"]
+    _retry_button(page, alias).click()
+
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text("Retry re-encryption?")
+    expect(dialog).to_contain_text(alias)
+    path = f"/uploads/{target['file_id']}/requeue"
+    with page.expect_response(
+        lambda response: (
+            response.request.method == "POST" and response.url.endswith(path)
+        ),
+        timeout=UI_TIMEOUT,
+    ) as response_info:
+        dialog.get_by_role("button", name="Retry", exact=True).click()
+    response = response_info.value
+    assert response.status == 204, f"{response.status}: {response.text()}"
+
+
+@when(
+    "I retry all failed re-encryptions in the portal",
+    target_fixture="requeue_result",
+)
+def retry_all_in_portal(fixtures: JointFixture) -> dict[str, list[str]]:
+    """Requeue every failed file of the box and return what RS answered."""
+    page = fixtures.playwright.page
+    _retry_all_button(page).click()
+
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text("Retry all failed re-encryptions?")
+    with page.expect_response(
+        lambda response: (
+            response.request.method == "POST"
+            and re.search(r"/rpc/upload-boxes/[^/]+/requeue$", response.url) is not None
+        ),
+        timeout=UI_TIMEOUT,
+    ) as response_info:
+        dialog.get_by_role("button", name="Retry all").click()
+    response = response_info.value
+    assert response.status == 200, f"{response.status}: {response.text()}"
+    return response.json()
+
+
+@then(parse('the portal has requeued only the "{ordinal}" file'))
+def check_requeue_result(
+    ordinal: str, fixtures: JointFixture, requeue_result: dict[str, list[str]]
+):
+    """Check that the whole-box requeue picked exactly the one failed file."""
+    file_id = _target(fixtures, ordinal)["file_id"]
+    assert requeue_result == {"requeued": [file_id], "skipped": []}, requeue_result
+
+
+@then(
+    parse(
+        'the portal reports that the "{ordinal}" file has been queued for re-encryption'
+    )
+)
+def check_requeue_reported(ordinal: str, fixtures: JointFixture):
+    """Check the notification confirming the requeue."""
+    alias = _target(fixtures, ordinal)["alias"]
+    expect(fixtures.playwright.page.locator("app-custom-snack-bar")).to_contain_text(
+        f'The file "{alias}" has been queued for re-encryption.'
+    )
+
+
+@then(parse('the portal reports "{message}"'))
+def check_portal_message(message: str, fixtures: JointFixture):
+    """Check the notification the portal shows."""
+    expect(fixtures.playwright.page.locator("app-custom-snack-bar")).to_contain_text(
+        message
+    )
+
+
+@then(parse('the "{ordinal}" file is shown as "{status}" in the portal'))
+def check_status_in_portal(ordinal: str, status: str, fixtures: JointFixture):
+    """Check the status the portal shows for a file, which no longer needs a retry."""
+    page = fixtures.playwright.page
+    alias = _target(fixtures, ordinal)["alias"]
+    expect(_file_row(page, alias)).to_contain_text(status)
+    expect(_retry_button(page, alias)).to_have_count(0)
 
 
 @when(
@@ -553,7 +735,7 @@ def try_to_archive_upload_box(
     return _set_box_state(fixtures, storage_name, "archived", full_name)
 
 
-@then("the response names both failed files as needing attention")
+@then("the response names all failed files as needing attention")
 def check_files_need_attention(fixtures: JointFixture, response: Response):
     """Assert the refusal names the files a Data Steward has to resolve.
 
