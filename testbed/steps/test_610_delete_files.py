@@ -76,16 +76,12 @@ def check_services_for_deleted_files(fixtures: JointFixture):
     ]
 
     for service in services:
-        documents = fixtures.mongo.wait_for_documents(
+        assert fixtures.mongo.wait_for_removal(
             db_name=service[0],
             collection_name=service[1],
             query={"_id": {"$in": accessions}},
-            number=len(accessions),
             timeout=TIMEOUT,
-        )
-        assert not documents, (
-            f"File metadata still exist in the {service[0]}.{service[1]}: {documents}"
-        )
+        ), f"File metadata still exist in the {service[0]}.{service[1]}"
 
 
 @then("the deleted files do not exist in the storage")

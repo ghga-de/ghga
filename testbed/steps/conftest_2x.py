@@ -28,7 +28,7 @@ from pytest_bdd import (  # noqa: RUF100
     when,
 )
 
-from steps.utils import parse
+from steps.utils import has_reached, parse
 
 
 @when(
@@ -119,6 +119,14 @@ def check_all_files_state(
     assert isinstance(files, list), f"Expected a list of files, got {type(files)}"
 
     storage_config = fixtures.s3.get_storage_config(storage_name)
+
+    if expected_state == "inbox":
+        # DHFS may interrogate a file as soon as it lands, so a later state passes too
+        states = {file.get("alias"): file.get("state") for file in files}
+        assert all(has_reached(state, "inbox") for state in states.values()), (
+            f"Expected every file in {storage_name} storage to be 'inbox' or later,"
+            f" got {states}"
+        )
 
     if expected_state == "interrogated":
         bucket_id = storage_config.buckets.staging

@@ -77,15 +77,17 @@ auth-claims:
         iva_value: "+491710000001"
 
 # DHFS asks FIS for new files every 60 s by default, and each interrogation the
-# suite waits for would mostly wait for that poll. The steps that read a file in
-# the inbox accept a later state too, so a shorter interval cannot race them.
+# suite waits for would mostly wait for that poll. A round with nothing to do is a
+# single request to FIS, so polling every 2 s costs next to nothing. The steps that
+# read a file in the inbox accept a later state too, so a short interval cannot race
+# them.
 dhfs-primary:
   config:
-    min_run_interval_seconds: 10
+    min_run_interval_seconds: 2
 
 dhfs-secondary:
   config:
-    min_run_interval_seconds: 10
+    min_run_interval_seconds: 2
 
 # The suite asserts the exact search options; use the test bed's facet
 # configuration (from the compose environment) rather than the prod one.

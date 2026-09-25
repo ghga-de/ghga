@@ -797,6 +797,17 @@ testbed-reset:
     set -euo pipefail
     K="kubectl --context kind-ghga"
     MPOD=$($K get pods -o name | grep mongodb | head -1)
+    apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
+    # Stop the services before dropping their databases, and wait until their pods are
+    # gone: a pod still running writes new documents into the emptied database, and the
+    # restarted service then finds data but no migration record, re-runs its migrations
+    # over it and crash-loops.
+    replicas=$($K get $apps -o json | jq -r '.items[] | "\(.metadata.name) \(.spec.replicas)"')
+    echo "$apps" | xargs $K scale --replicas=0 > /dev/null
+    for d in $apps; do
+        sel=$($K get "$d" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
+        $K wait --for=delete pod -l "$sel" --timeout=120s > /dev/null
+    done
     # Drop every service database: the suite's clean slate removes the migration
     # bookkeeping, so a service restarting afterwards would re-run migrations over
     # already-migrated data and crash-loop. Starting from empty avoids that.
@@ -805,14 +816,12 @@ testbed-reset:
          .map(d => d.name)
          .filter(n => !["admin","config","local"].includes(n))
          .forEach(n => db.getSiblingDB(n).dropDatabase())' > /dev/null
-    apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
-    echo "$apps" | xargs -r -n1 $K rollout restart > /dev/null
-    # Name what is being waited on, and what failed. Every app deployment restarts at
-    # once above, so the node runs ~2x the pods (rolling updates surge before they
-    # terminate) while each service re-migrates and rejoins its Kafka consumer group —
-    # 240s was not enough on a loaded machine, and a bare `rollout status > /dev/null`
-    # under `set -e` then aborted with kubectl's "timed out waiting for the condition"
-    # and no clue which of the ~19 deployments it meant.
+    echo "$replicas" | while read -r name n; do $K scale deploy "$name" --replicas="$n" > /dev/null; done
+    # Name what is being waited on, and what failed. Every app deployment starts at once
+    # above while each service re-migrates and rejoins its Kafka consumer group — 240s
+    # was not enough on a loaded machine, and a bare `rollout status > /dev/null` under
+    # `set -e` then aborted with kubectl's "timed out waiting for the condition" and no
+    # clue which of the ~19 deployments it meant.
     total=$(echo "$apps" | wc -l | tr -d ' ')
     i=0
     for d in $apps; do
@@ -822,7 +831,6 @@ testbed-reset:
         $K rollout status "$d" --timeout=600s > /dev/null \
           || { echo "error: $name did not become ready within 600s — \`just logs $name\` shows why" >&2; exit 1; }
     done
-    sleep 20
     echo "state reset (databases empty, services re-migrated and re-seeded)"
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
@@ -837,6 +845,14 @@ testbed *args:
     # testbed-install), so the CLIs are the very install the suite also imports.
     export PATH="$PWD/.venv-testbed/bin:$PATH"
     K="kubectl --context kind-ghga"
+    # Fail in seconds, not in 300 s timeouts per scenario, when the platform is broken:
+    # e.g. a crash-looping service, or Vault not letting ekss log in (its readiness
+    # probe does that login).
+    if ! $K wait --for=condition=Available deploy --all --timeout=60s > /dev/null 2>&1; then
+        echo "error: not every deployment is available — \`just logs\` lists them:" >&2
+        $K get deploy --no-headers | awk '{split($2, r, "/")} r[1] != r[2] {print "  " $1 " " $2}' >&2
+        exit 1
+    fi
     secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
     export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
     export TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)

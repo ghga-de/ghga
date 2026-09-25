@@ -37,7 +37,7 @@ scenarios("../features/502_data_portal_uploads.feature")
 UI_BOX_TITLE = "TB UI Upload Box {storage}"
 STORAGE_LABELS = {"primary": "Primary", "secondary": "Secondary"}
 
-INGEST_INTERVAL, INGEST_TIMEOUT = 3, 30  # seconds
+INGEST_INTERVAL, INGEST_TIMEOUT = 1, 30  # seconds
 
 
 def _box_title(storage_name: str) -> str:

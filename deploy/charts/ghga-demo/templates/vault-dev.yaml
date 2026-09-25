@@ -4,6 +4,14 @@ storage via the KV API) — not used for secret injection; demo secrets are plai
 K8s Secrets (ADR-0035). Dev mode keeps everything in memory with a fixed root
 token; SKIP_SETCAP avoids the mlock capability so the pod stays unprivileged
 (kind for restricted Pod Security Admission).
+
+Dev mode forgets everything on a restart, so the container bootstraps ekss itself after
+every start instead of relying on a one-off Job: it applies the setup of the compose test
+bed's init-scripts/vault/setup.sh (AppRole auth — ekss speaks AppRole or Kubernetes auth,
+not token auth —, the ekss role with fixed demo credentials, the secret/<vault.ekssPath>
+KV subtree). Its readiness probe logs in as ekss does, so the pod is Ready only once ekss
+can log in, and `helm --wait` waits for that. One container rather than a sidecar keeps
+the pod small, and a restart cannot leave the setup behind.
 */ -}}
 {{- if .Values.vault.enabled }}
 apiVersion: apps/v1
@@ -30,6 +38,37 @@ spec:
         - name: vault
           image: {{ .Values.vault.image }}
           imagePullPolicy: IfNotPresent
+          {{- if .Values.vault.bootstrapEkss }}
+          command:
+            - sh
+            - -ec
+            - |
+              docker-entrypoint.sh server -dev &
+              vault_pid=$!
+              trap 'kill -TERM $vault_pid; wait $vault_pid; exit 0' TERM INT
+              export VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN="$VAULT_DEV_ROOT_TOKEN_ID"
+              until vault status > /dev/null 2>&1; do sleep 1; done
+              vault auth enable approle
+              vault write auth/approle/role/ekss-role \
+                token_policies="ekss-policy" \
+                token_ttl=1h \
+                token_max_ttl=4h \
+                bind_secret_id=true
+              vault write -f auth/approle/role/ekss-role/role-id \
+                role_id="{{ .Values.vault.ekssRoleId }}"
+              vault write -f auth/approle/role/ekss-role/custom-secret-id \
+                secret_id="{{ .Values.vault.ekssSecretId }}"
+              vault policy write ekss-policy - <<EOF
+              path "secret/data/{{ .Values.vault.ekssPath }}/*" {
+                capabilities = ["read", "create", "delete", "list"]
+              }
+              path "secret/metadata/{{ .Values.vault.ekssPath }}/*" {
+                capabilities = ["read", "create", "delete", "list"]
+              }
+              EOF
+              echo "vault bootstrapped for ekss"
+              wait $vault_pid
+          {{- end }}
           env:
             - name: VAULT_DEV_ROOT_TOKEN_ID
               value: {{ .Values.vault.rootToken | quote }}
@@ -41,9 +80,21 @@ spec:
             - name: http
               containerPort: 8200
           readinessProbe:
+            {{- if .Values.vault.bootstrapEkss }}
+            exec:
+              command:
+                - vault
+                - write
+                - -address=http://127.0.0.1:8200
+                - auth/approle/login
+                - role_id={{ .Values.vault.ekssRoleId }}
+                - secret_id={{ .Values.vault.ekssSecretId }}
+            periodSeconds: 5
+            {{- else }}
             httpGet:
               path: /v1/sys/health
               port: http
+            {{- end }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 100

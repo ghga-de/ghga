@@ -3,6 +3,11 @@ MinIO on Chainguard's minimal image (replaces the gated bitnami subchart). A com
 Job creates the hub buckets with mc, both shell-free — the Job has no wait loop of its
 own, so backoffLimit/restartPolicy below do the retrying until MinIO answers. Ephemeral
 by design; console on :9001 via port-forward.
+
+The Job is a post-install/post-upgrade hook because a Job's pod template is immutable: as
+a plain resource, any change to it (a new mc image) made every later upgrade fail. As a
+hook it is recreated on each upgrade, which also brings back buckets lost with a
+recreated MinIO pod; `--ignore-existing` keeps the rerun harmless.
 */ -}}
 {{- if .Values.minio.enabled }}
 apiVersion: apps/v1
@@ -86,6 +91,9 @@ metadata:
   labels:
     app.kubernetes.io/name: minio-buckets
     app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 10
   template:

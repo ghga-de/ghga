@@ -139,13 +139,9 @@ def delete_dlq_events(
 
 @then("there is no event in the dead letter queue")
 def check_no_dlq_events(fixtures: JointFixture):
-    dlq_events = fixtures.mongo.wait_for_documents(
-        fixtures.config.dlq_db_name,
-        "dlqEvents",
-        {},
-        timeout=5,
-    )
-    assert not dlq_events
+    assert fixtures.mongo.wait_for_removal(
+        fixtures.config.dlq_db_name, "dlqEvents", {}
+    ), "The dead letter queue still holds events"
 
 
 @when(

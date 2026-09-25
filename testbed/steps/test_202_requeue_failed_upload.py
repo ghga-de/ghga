@@ -423,7 +423,7 @@ def _wait_for_file(
         upload = _find_upload(fixtures, storage_name, alias)
         if upload and accept(upload["state"]):
             return upload
-        time.sleep(2)
+        time.sleep(0.5)
     raise AssertionError(
         f"File {alias!r} is not {expected!r} after {seconds} seconds: {upload}"
     )
@@ -502,7 +502,7 @@ def check_file_removable(ordinal: str, fixtures: JointFixture):
         )
         if document and document.get("can_remove"):
             return
-        time.sleep(1)
+        time.sleep(0.5)
     raise AssertionError(f"FIS does not consider file {file_id} removable: {document}")
 
 
