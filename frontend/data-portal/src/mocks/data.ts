@@ -1144,7 +1144,7 @@ export const datasetInformation: DatasetInformation = {
  */
 
 export const uploadBoxes: BoxRetrievalResults = {
-  count: 5,
+  count: 6,
   boxes: [
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
@@ -1214,6 +1214,23 @@ export const uploadBoxes: BoxRetrievalResults = {
       file_count: 2,
       size: 5368709120, // 5 GiB
       storage_alias: 'TUE03',
+      max_size: 5_497_558_138_880, // 5 TiB
+    },
+    {
+      // The only locked box holding a file whose re-encryption failed, so that
+      // the retry offered in a locked box can be tested without disturbing the
+      // mapping tool, which relies on Jane's box staying as it is.
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68006',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68006',
+      version: 3,
+      state: UploadBoxState.locked,
+      title: 'Research Data Upload Box of Jim',
+      description: 'Upload box with a file awaiting a retry of its re-encryption',
+      last_changed: '2025-02-06T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 3,
+      size: 8589934592, // 8 GiB
+      storage_alias: 'HD02',
       max_size: 5_497_558_138_880, // 5 TiB
     },
   ],
@@ -1665,6 +1682,54 @@ export const uploadBox5FileUploads: FileUploadWithAccession[] = [
 ];
 
 /**
+ * RS file uploads for box 6 (locked, 3 files, one of them failed re-encryption)
+ */
+export const uploadBox6FileUploads: FileUploadWithAccession[] = [
+  {
+    id: 'f1e36607a-b53f-49ed-bf3e-a5f2dbc68006',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68006',
+    alias: 'retry_sample_001.fastq.gz',
+    state: 'interrogated',
+    state_updated: '2026-02-06T08:00:00Z',
+    storage_alias: 'HD02',
+    bucket_id: 'inbox-hd02',
+    decrypted_sha256: 'e'.repeat(64),
+    decrypted_size: 4294967296, // 4 GiB
+    encrypted_size: 4295000000,
+    part_size: 16777216,
+    accession: null,
+  },
+  {
+    id: 'f2e36607a-b53f-49ed-bf3e-a5f2dbc68006',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68006',
+    alias: 'retry_sample_002.fastq.gz',
+    state: 'failed_interrogation',
+    state_updated: '2026-02-06T08:30:00Z',
+    storage_alias: 'HD02',
+    bucket_id: 'inbox-hd02',
+    decrypted_sha256: 'f'.repeat(64),
+    decrypted_size: 3221225472, // 3 GiB
+    encrypted_size: 3221270000,
+    part_size: 16777216,
+    accession: null,
+  },
+  {
+    id: 'f3e36607a-b53f-49ed-bf3e-a5f2dbc68006',
+    box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68006',
+    alias: 'retry_sample_003.fastq.gz',
+    state: 'inbox',
+    state_updated: '2026-02-06T09:00:00Z',
+    storage_alias: 'HD02',
+    bucket_id: 'inbox-hd02',
+    decrypted_sha256: null,
+    decrypted_size: 1073741824, // 1 GiB
+    encrypted_size: 1073780000,
+    part_size: 16777216,
+    accession: null,
+  },
+];
+
+/**
  * Build the complete file upload collection of an upload box.
  *
  * The `/upload-boxes/{id}/uploads` endpoint is paginated and sorted by the RS, so
@@ -1696,6 +1761,9 @@ export const uploadBox4Uploads = uploadsCollection(uploadBox4FileUploads);
 
 /** File uploads of box 5 (open, 2 files) */
 export const uploadBox5Uploads = uploadsCollection(uploadBox5FileUploads);
+
+/** File uploads of box 6 (locked, 3 files, one awaiting a retry) */
+export const uploadBox6Uploads = uploadsCollection(uploadBox6FileUploads);
 
 /**
  * WPS API

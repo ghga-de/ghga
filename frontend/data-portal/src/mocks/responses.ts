@@ -27,6 +27,7 @@ import {
   uploadBox3Uploads,
   uploadBox4Uploads,
   uploadBox5Uploads,
+  uploadBox6Uploads,
   uploadBoxes,
   pediatricLeukemiaDatasetDetails,
   pediatricLeukemiaFileIds,
@@ -289,6 +290,8 @@ export const responses: { [endpoint: string]: ResponseValue } = {
     uploadBox4Uploads,
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005/uploads':
     uploadBox5Uploads,
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68006/uploads':
+    uploadBox6Uploads,
   'GET /api/rs/upload-boxes/*/uploads': emptyUploadsCollection,
 
   // Delete a single file upload from a box
@@ -298,11 +301,15 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   // (keep before the box-wide requeue route below, whose wildcard would match it)
   'POST /api/rs/rpc/upload-boxes/*/uploads/*/requeue': 204,
 
-  // Requeue all file uploads of a box whose re-encryption failed. Only John's box
-  // holds such a file, so every other box has nothing to requeue.
-  // (keep the specific box before the wildcard route)
+  // Requeue all file uploads of a box whose re-encryption failed. Only John's open
+  // box and Jim's locked box hold such a file, so every other box has nothing to
+  // requeue. (keep the specific boxes before the wildcard route)
   'POST /api/rs/rpc/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68001/requeue': {
     requeued: ['f5b36607a-b53f-49ed-bf3e-a5f2dbc68001'],
+    skipped: [],
+  },
+  'POST /api/rs/rpc/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68006/requeue': {
+    requeued: ['f2e36607a-b53f-49ed-bf3e-a5f2dbc68006'],
     skipped: [],
   },
   'POST /api/rs/rpc/upload-boxes/*/requeue': { requeued: [], skipped: [] },
@@ -316,6 +323,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68003': uploadBoxes.boxes[2],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004': uploadBoxes.boxes[3],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005': uploadBoxes.boxes[4],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68006': uploadBoxes.boxes[5],
 
   // Unknown upload box (catch-all, must stay after nested routes above)
   'GET /api/rs/upload-boxes/*': 404,
