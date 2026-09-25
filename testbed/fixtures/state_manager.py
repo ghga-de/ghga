@@ -39,9 +39,19 @@ class StateManager:
 
     @staticmethod
     def stringify_query_params(query: Mapping[str, Any]):
-        """Encode URL parameters to pass the state management API safely."""
+        """Encode URL parameters to pass the state management API safely.
+
+        The API parses a parameter as JSON only if it looks like an object and takes
+        anything else as a string, so a bare boolean or number would match nothing.
+        Wrapping it in `$eq` makes it arrive with its type.
+        """
         return {
-            k: json.dumps(v) if isinstance(v, dict) else v for k, v in query.items()
+            k: json.dumps(v)
+            if isinstance(v, dict)
+            else json.dumps({"$eq": v})
+            if isinstance(v, bool | int | float)
+            else v
+            for k, v in query.items()
         }
 
 
