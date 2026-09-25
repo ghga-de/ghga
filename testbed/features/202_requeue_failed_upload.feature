@@ -13,9 +13,9 @@ Feature: 202 Requeue Failed Upload
     Given the data upload box for "primary" storage is unlocked
     When the three largest files of dataset "DS_A" are deleted from "primary" storage
     And those files are uploaded to "primary" storage with corrupted checksums
-    Then the "first" file is listed as "failed_interrogation" within "300" seconds
-    And the "second" file is listed as "failed_interrogation" within "300" seconds
-    And the "third" file is listed as "failed_interrogation" within "300" seconds
+    Then the "first" file is listed as "failed_interrogation" within "60" seconds
+    And the "second" file is listed as "failed_interrogation" within "60" seconds
+    And the "third" file is listed as "failed_interrogation" within "60" seconds
     And the "first" file reports why it failed
     And FIS holds a failed interrogation report for the "first" file
     And FIS holds a failed interrogation report for the "third" file
@@ -58,7 +58,7 @@ Feature: 202 Requeue Failed Upload
 
   Scenario: The requeued file is interrogated without a second upload
 
-    Then the "first" file is listed as "interrogated" within "300" seconds
+    Then the "first" file is listed as "interrogated" within "60" seconds
     And the object of the "first" file is gone from the "inbox" bucket of "primary" storage
 
   Scenario: Data Steward deletes a failed file
@@ -91,8 +91,8 @@ Feature: 202 Requeue Failed Upload
   Scenario: Restoring the box for the rest of the journey
 
     When the "second" file is uploaded to "primary" storage again
-    Then the "second" file is listed as "interrogated" within "300" seconds
-    And the "third" file is listed as "interrogated" within "300" seconds
+    Then the "second" file is listed as "interrogated" within "60" seconds
+    And the "third" file is listed as "interrogated" within "60" seconds
 
     When "Data Steward" locks the data upload box for "primary" storage
     Then the response status code is "204"

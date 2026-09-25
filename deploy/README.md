@@ -65,8 +65,8 @@ assumed — the config block is plain YAML, not templated). A pre-install secret
 (idempotent — keys survive upgrades; the adapter consumes the private half, the registry
 instance the public half), and the demo data steward is seeded via
 `add_as_data_stewards`. MailHog (SMTP sink, UI via port-forward) and Vault dev-mode
-(functional ekss backend, not secret injection; a vault-init Job bootstraps the ekss
-AppRole as in compose) round out the bundled infra. The file + metadata path is wired:
+(functional ekss backend, not secret injection; a sidecar sets up the ekss AppRole as
+in compose, and again whenever Vault restarted) round out the bundled infra. The file + metadata path is wired:
 ekss/dcs/ucs/fis/ifrs/pcs/wps/rs/metldata with compose-derived configs (single MinIO
 stands in for both hub localstacks, buckets provisioned by the chart), prod base paths
 under an /api prefix, ext-authz on every /api/* route, and the full secret matrix

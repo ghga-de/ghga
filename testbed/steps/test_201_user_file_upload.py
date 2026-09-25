@@ -141,10 +141,22 @@ def check_uploaded_files_in_storage(
             else file_upload["bucket_id"]
         )
         object_id = str(file_upload["object_id"])
-        assert fixtures.s3.does_object_exist(
+        if fixtures.s3.does_object_exist(
             storage_alias=storage_config.storage_alias,
             bucket=expected_bucket,
             object_id=object_id,
+        ):
+            continue
+        # DHFS may have interrogated the file since the listing was read
+        current = fixtures.mongo.find_document(
+            db_name=fixtures.config.ucs_db_name,
+            collection_name=fixtures.config.ucs_file_uploads_collection,
+            query={"_id": file_upload["id"]},
+        )
+        assert (
+            expected_bucket == bucket_id
+            and current
+            and has_reached(current.get("state"), "interrogated")
         ), f"{object_id} does not exist in the {expected_bucket} bucket"
 
 
