@@ -69,8 +69,13 @@ def create_access_request(fixtures: JointFixture, alias: str):
     form_field = dialog.locator("mat-form-field:has-text('Details about your request')")
     form_field.locator("textarea").fill(f"Access request for {alias}")
     submit_button = page.get_by_role("button", name="Submit")
-    submit_button.click()
-    time.sleep(2)  # wait for API call to complete, couldn't find a better way
+    with page.expect_response(
+        lambda r: r.url.endswith("/access-requests") and r.request.method == "POST"
+    ) as response_info:
+        submit_button.click()
+    assert response_info.value.ok, (
+        f"Access request failed: {response_info.value.status}"
+    )
 
 
 @then(parse('the table shows {num} "{status}" item for "{full_name}"'))
@@ -241,5 +246,8 @@ def deny_access_requests(fixtures: JointFixture, action: str):
     else:
         raise ValueError(f"Unknown action: {action}")
 
-    confirm_button.click()
-    time.sleep(2)  # wait for API call to complete, couldn't find a better way
+    with page.expect_response(
+        lambda r: "/access-requests/" in r.url and r.request.method == "PATCH"
+    ) as response_info:
+        confirm_button.click()
+    assert response_info.value.ok, f"Processing failed: {response_info.value.status}"

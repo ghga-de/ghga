@@ -831,7 +831,6 @@ testbed-reset:
         $K rollout status "$d" --timeout=600s > /dev/null \
           || { echo "error: $name did not become ready within 600s — \`just logs $name\` shows why" >&2; exit 1; }
     done
-    sleep 20
     echo "state reset (databases empty, services re-migrated and re-seeded)"
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
