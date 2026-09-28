@@ -50,8 +50,10 @@
     // — VS Code's credential helper serves git transport only, and gh does not consult it.
     //
     // Kept read-only by two layers: the token (a zero-scope PAT reads this public repo and
-    // can write nothing) and .claude/settings.json (gh allow/deny rules). Only the token is
-    // enforced by GitHub. Use `gh auth login --with-token`; the browser flow grants write.
+    // can write nothing) and .claude/settings.json, whose rules let Claude Code run gh
+    // reads, ask before gh writes and deny merges, releases and repo deletion. Only the
+    // token is enforced by GitHub: the rules match a command as written and bind Claude
+    // Code alone. Use `gh auth login --with-token`; the browser flow grants write.
     "ghcr.io/devcontainers/features/github-cli:1": {},
     // Quarto renders the docs sites (ADR-0039). great-docs drives it but does not vendor
     // it — it is a standalone binary, not a Python dependency, so the `docs` dependency
