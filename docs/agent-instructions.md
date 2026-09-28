@@ -30,7 +30,7 @@ and the trigger, never a summary that can drift from its source.
 
 ## Areas
 
-An `AGENTS.md` covers an area, not a member — the 35 workspace members share the rules
+An `AGENTS.md` covers an area, not a member — the 32 workspace members share the rules
 of the directory they sit in:
 
 | Area | What its file carries |
