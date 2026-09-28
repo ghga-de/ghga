@@ -1,0 +1,4 @@
+# Review requests only: "Require review from Code Owners" is off, so an owner's approval
+# is not needed to merge.
+
+*    @ghga-de/service-developers
