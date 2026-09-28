@@ -1,4 +1,3 @@
-# Review requests only: "Require review from Code Owners" is off, so an owner's approval
-# is not needed to merge.
-
-*    @ghga-de/service-developers
+# No code owners on purpose. The author of a pull request picks its reviewer, usually
+# one other developer. An owner listed here would be requested on every pull request,
+# and a team entry would notify each of its members every time.
