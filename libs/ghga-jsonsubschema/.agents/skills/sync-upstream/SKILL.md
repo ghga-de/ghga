@@ -1,6 +1,7 @@
 ---
 name: sync-upstream
 description: Compare this fork against IBM/jsonsubschema upstream and port over relevant fixes or check for divergence. Use when asked to sync with upstream, port an upstream commit/PR, or check whether an upstream bug exists here.
+disable-model-invocation: true
 ---
 
 # Syncing with upstream IBM/jsonsubschema
@@ -45,8 +46,7 @@ assuming the upstream name exists.
 - Packaging: `pyproject.toml` + `uv`, `src/` layout, PyPI name
   `ghga-jsonsubschema`.
 - Stricter ruff/mypy configuration; upstream code often needs docstrings,
-  complexity reduction, and naming fixes before it passes `uv run
-  pre-commit run --all-files` here.
+  complexity reduction, and naming fixes before it passes `just hooks-all` here.
 
 ## Porting checklist
 
@@ -55,7 +55,8 @@ assuming the upstream name exists.
    apply cleanly across the rename/layout changes).
 3. Port or write the accompanying tests as pytest functions in the matching
    `tests/test_*.py` file.
-4. Run the full quality gate (see the `qa` skill).
+4. Run the checks `AGENTS.md` names: `just test libs/ghga-jsonsubschema`, `just lint`
+   and `just typecheck`.
 5. If the change alters user-visible behavior, update README.md's
    "Changes made by GHGA" section and mention the upstream commit/PR in the
    commit message.
