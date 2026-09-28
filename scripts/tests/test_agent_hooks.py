@@ -64,6 +64,13 @@ def test_container_is_not_host():
         "UV_PYTHON=3.12 uv venv",
         "echo $(uv --version)",
         "(uv sync)",
+        'bash -c "uv sync"',
+        "sh -c 'uv lock'",
+        "env uv sync",
+        "time uv run pytest",
+        "echo libs/hexkit | xargs uv build",
+        "sudo uv pip install x",
+        "echo uv",  # a false match, accepted because the hook acts only on the host
     ],
 )
 def test_runs_uv(command):
@@ -76,9 +83,8 @@ def test_runs_uv(command):
         "just sync",
         "uvx ruff",
         "ls .venv/uv",
-        "echo uv",
-        "rg -n uv justfile",
         "cat uv.lock",
+        "rg -n uv_ justfile",
     ],
 )
 def test_does_not_run_uv(command):

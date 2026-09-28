@@ -13,9 +13,10 @@ import sys
 
 from host import on_host
 
-# `uv` as a command word: at the start, after a separator or `$(`, and after any
-# leading VAR=value assignments. `uvx` and paths containing "uv" do not match.
-UV_COMMAND = re.compile(r"(?:^|[;&|(`\n]|\$\()\s*(?:\w+=\S*\s+)*uv(?=\s|$)")
+# `uv` as a separate word anywhere, so `bash -c "uv sync"` and `xargs uv` are caught
+# too. That also blocks `echo uv`, which costs little: the hook acts only on the host.
+# `uvx`, `uv.lock` and paths such as `.venv/uv` do not match.
+UV_WORD = re.compile(r"(?:^|[\s;&|(`\"'])uv(?=$|[\s;&|)`\"'])")
 
 MESSAGE = (
     "Blocked: `uv` must not run on the host, where it breaks the dev container's"
@@ -26,8 +27,8 @@ MESSAGE = (
 
 
 def runs_uv(command: str) -> bool:
-    """Whether the shell command runs `uv` as a command."""
-    return UV_COMMAND.search(command) is not None
+    """Whether the shell command contains `uv` as a separate word."""
+    return UV_WORD.search(command) is not None
 
 
 def main() -> int:
