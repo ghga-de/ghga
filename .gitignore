@@ -49,6 +49,8 @@ claude-backup/
 !/.claude/output-styles/
 # leave out every local claude settings
 **/.claude/settings.local.json
+# and the local Copilot settings
+.github/copilot/settings.local.json
 
 # buildx --metadata-file output
 metadata.json
