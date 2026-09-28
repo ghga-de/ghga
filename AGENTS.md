@@ -71,10 +71,11 @@ The container puts `rg`, `fd`, `jq`, `bat`, `shellcheck` and `shfmt` on `PATH`; 
 `rg` and `fd` over `grep` and `find` for searching the workspace.
 
 Agent sessions belong in the container too, whichever agent it is — their state is
-per-machine, so a session on the host writes to a home the container cannot see. Only
-`~/.claude` is currently persisted across rebuilds (the `ghga-claude` volume in
-`devcontainer.json`); another agent whose state should survive a rebuild needs its own
-volume added there.
+per-machine, so a session on the host writes to a home the container cannot see. At the
+start of a session, check for `/.dockerenv`; if it is missing and `CI` and
+`GHGA_ALLOW_HOST` are unset, tell the dev and ask before running repo tooling. Only
+`~/.claude` persists across rebuilds (the `ghga-claude` volume in `devcontainer.json`);
+another agent's state needs its own volume there.
 
 ## Repo commands (just)
 
