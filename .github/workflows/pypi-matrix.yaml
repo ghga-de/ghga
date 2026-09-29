@@ -1,4 +1,4 @@
-# The published-combo matrix (ADR-0002) — the PyPI lane's test gate.
+# The published-combo matrix (ADR-0026) — the PyPI lane's test gate.
 #
 # Tests each lane member: its wheel installed into a bare environment,
 # dependencies resolved from PyPI, on Python versions the workspace

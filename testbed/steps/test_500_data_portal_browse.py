@@ -37,8 +37,6 @@ EXPECTED_STATS = {
     "Files": 14,
 }
 
-TIMEOUT = 3000
-
 
 @then("the global statistics are available")
 def check_global_statistics(playwright: PlaywrightFixture):

@@ -1,5 +1,5 @@
 {{- /*
-Demo SMTP sink (ADR-0006). Same image the compose test bed used; the notification
+Demo SMTP sink (ADR-0028). Same image the compose test bed used; the notification
 service points at smtp://<release>-mailhog:1025, the web UI on :8025 is reachable
 via port-forward (the UI does not support path-prefix serving, so it is not routed
 through the gateway).

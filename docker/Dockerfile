@@ -7,7 +7,7 @@
 #
 # PACKAGE          = the workspace member's distribution name
 # EXECUTABLE       = the member's console script, exposed as the ENTRYPOINT
-# PLATFORM_VERSION = stamped onto the environment (ADR-0004); default marks dev builds
+# PLATFORM_VERSION = stamped onto the environment (ADR-0027); default marks dev builds
 # VARIANT          = single (default, one member per image) | mono (all Python members
 #                    in one venv; demo/CI only, PACKAGE is ignored) — `just demo-images-mono`
 #
@@ -50,7 +50,7 @@ COPY scripts/stamp_platform_version.py /stamp_platform_version.py
 FROM workspace AS venv-single
 ARG PACKAGE
 # Convention: an image member's console script is named like its distribution,
-# so the entrypoint defaults to the package name (see ADR-0014).
+# so the entrypoint defaults to the package name (see ADR-0033).
 ARG EXECUTABLE=${PACKAGE}
 ARG PLATFORM_VERSION=0.0.0+dev
 
@@ -69,7 +69,7 @@ RUN ln -s "/app/.venv/bin/${EXECUTABLE}" /app/entrypoint && test -e /app/entrypo
 # One build instead of ~22 cuts the demo/CI image step from ~15-20 min to ~1 min, and
 # `kind load` from ~2.4 GB to ~0.6 GB. Safe because the workspace already guarantees the
 # members are co-installable — a single uv.lock, resolved exactly as `just sync` does —
-# and their console scripts do not collide (ADR-0014 names each after its distribution).
+# and their console scripts do not collide (ADR-0033 names each after its distribution).
 # NOT a release artifact: production keeps one image per member.
 FROM workspace AS venv-mono
 ARG PLATFORM_VERSION=0.0.0+dev

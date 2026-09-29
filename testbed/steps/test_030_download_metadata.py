@@ -16,6 +16,7 @@
 
 """Step definitions for downloading metadata artifacts with the GHGA Data Steward Kit"""
 
+import time
 from io import BytesIO
 from tempfile import NamedTemporaryFile
 
@@ -38,7 +39,14 @@ def download_metadata(fixtures: JointFixture, dataset_alias: str):
     )
     study_accession = dataset_accessions[dataset_alias]["study_accession"]
     url = f"{fixtures.config.rts_url}/studies/{study_accession}"
-    return fixtures.http.get(url)
+    # RTS builds its store from the events the load publishes, and on a cold start its
+    # consumer may still be joining its group, so 404 means "not yet" for a while.
+    deadline = time.monotonic() + 60
+    while (response := fixtures.http.get(url)).status_code == 404:
+        if time.monotonic() > deadline:
+            break
+        time.sleep(0.5)
+    return response
 
 
 @then(

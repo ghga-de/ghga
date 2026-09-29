@@ -191,6 +191,10 @@ class FileBoxApiMock(_ApiMock):
         self.on_get_file_upload_list = _unconfigured("on_get_file_upload_list")
         self.on_delete_file_upload = _unconfigured("on_delete_file_upload")
         self.on_delete_file_upload_box = _unconfigured("on_delete_file_upload_box")
+        self.on_requeue_single_file_upload = _unconfigured(
+            "on_requeue_single_file_upload"
+        )
+        self.on_requeue_all_box_uploads = _unconfigured("on_requeue_all_box_uploads")
 
         router = self._router
 
@@ -213,6 +217,14 @@ class FileBoxApiMock(_ApiMock):
         @router.delete(self._path("/boxes/{box_id}"))
         def delete_file_upload_box(request: httpx2.Request) -> httpx2.Response:
             return self._handle(request, self.on_delete_file_upload_box)
+
+        @router.post(self._path("/rpc/boxes/{box_id}/uploads/{file_id}/requeue"))
+        def requeue_single_file_upload(request: httpx2.Request) -> httpx2.Response:
+            return self._handle(request, self.on_requeue_single_file_upload)
+
+        @router.post(self._path("/rpc/boxes/{box_id}/requeue"))
+        def requeue_all_box_uploads(request: httpx2.Request) -> httpx2.Response:
+            return self._handle(request, self.on_requeue_all_box_uploads)
 
 
 class _RoutingTransport(httpx2.AsyncBaseTransport):

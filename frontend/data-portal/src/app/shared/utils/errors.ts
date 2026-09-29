@@ -15,7 +15,11 @@ export type MaybeBackendError = {
   status?: number;
   statusText?: string;
   message?: string;
-  error?: { detail?: string | { msg?: string }[] };
+  error?: {
+    detail?: string | { msg?: string }[];
+    exception_id?: string;
+    data?: unknown;
+  };
 };
 
 /**

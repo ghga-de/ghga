@@ -18,7 +18,9 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {},
+    // Held at the LTS line, see docs/dependencies.md; the default "lts" would move on
+    // to 26 on the next rebuild after it becomes LTS, ahead of CI and the images.
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       // Debian 13 dropped the moby-* system packages, and the feature hard-errors rather
@@ -48,10 +50,12 @@
     // — VS Code's credential helper serves git transport only, and gh does not consult it.
     //
     // Kept read-only by two layers: the token (a zero-scope PAT reads this public repo and
-    // can write nothing) and .claude/settings.json (gh allow/deny rules). Only the token is
-    // enforced by GitHub. Use `gh auth login --with-token`; the browser flow grants write.
+    // can write nothing) and .claude/settings.json, whose rules let Claude Code run gh
+    // reads, ask before gh writes and deny merges, releases and repo deletion. Only the
+    // token is enforced by GitHub: the rules match a command as written and bind Claude
+    // Code alone. Use `gh auth login --with-token`; the browser flow grants write.
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    // Quarto renders the docs sites (ADR-0021). great-docs drives it but does not vendor
+    // Quarto renders the docs sites (ADR-0039). great-docs drives it but does not vendor
     // it — it is a standalone binary, not a Python dependency, so the `docs` dependency
     // group cannot supply it and `just docs` would fail on a container without it.
     "ghcr.io/rocker-org/devcontainer-features/quarto-cli:1": {}
@@ -75,6 +79,9 @@
         "ms-playwright.playwright",
         "redhat.vscode-yaml",
         "ms-azuretools.vscode-docker",
+        // This is for the Kubernetes cluster running in the container (kind).
+        // It provides a UI to inspect the cluster, view logs, and run kubectl commands.
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
         "streetsidesoftware.code-spell-checker",
         "github.vscode-pull-request-github"
       ]

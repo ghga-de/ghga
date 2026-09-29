@@ -50,8 +50,8 @@ class BoxStatsAggregatorPort(ABC):
     @abstractmethod
     async def compute_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
         """Return a `(file_count, total_decrypted_size)` tuple aggregated over the
-        FileUploads in the given box that count toward its stats (i.e. files that have
-        finished uploading and are not cancelled or failed).
+        FileUploads in the given box that count toward its stats (i.e. the states in
+        `COUNTED_UPLOAD_STATES`).
         """
 
 

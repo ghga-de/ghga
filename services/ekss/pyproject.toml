@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "ekss"
 version = "5.3.0"
 description = "Encryption Key Store Service - providing crypt4gh file secret extraction, storage and envelope generation"
+license = "Apache-2.0"
 readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
@@ -25,17 +26,13 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 
-[project.license]
-text = "Apache 2.0"
-
 [project.urls]
-Repository = "https://github.com/ghga-de/file-services-backend/tree/main/services/ekss"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 ekss = "ekss.__main__:run"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stamp the platform version onto an installed environment (ADR-0004).
+"""Stamp the platform version onto an installed environment (ADR-0027).
 
 Run INSIDE an image build, with the image's interpreter, AFTER dependency
 installation (`uv sync`) — never against a development venv you care about.

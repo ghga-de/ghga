@@ -171,6 +171,8 @@ to install the dependencies, or `just fe-install` from the repository root to in
 
 You do not normally need either: the dev container provisions both stacks when it is created, installing these dependencies along with the Chromium build that Playwright uses ([`.devcontainer/post-create.sh`](../../.devcontainer/post-create.sh)). Only `pnpm e2e:all` needs the other browsers, which `pnpm exec playwright install firefox webkit` adds.
 
+Some dependencies are deliberately kept behind their latest version (currently Vitest, TypeScript, Node.js and `@types/node`). [Held-back versions](../../docs/dependencies.md#held-back-versions) lists why and when to update; check it before bumping them.
+
 ### Dependency overrides
 
 There are currently **no dependency overrides** in use.
@@ -191,7 +193,7 @@ You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`. You ca
 
 The repository is set up in such a way to only allow linted commits. That means commits are blocked if they cause linter errors (currently, warnings are accepted). This ensures that code quality standards are maintained without building up technical debt that has to be fixed later on.
 
-Since the move into the monorepo the hooks come from the root `.pre-commit-config.yaml` rather than from Husky ([ADR-0018](../../docs/adr/0018-pre-commit-hooks.md)); ESLint and Prettier run over the files you touched, out of this package's own `node_modules`, so they are the same versions `pnpm lint` and `pnpm format:check` use. Install them once per clone with `just hooks` from the repo root — the dev container already does.
+Since the move into the monorepo the hooks come from the root `.pre-commit-config.yaml` rather than from Husky ([ADR-0036](../../docs/adrs/adr-0036-pre-commit-hooks.md)); ESLint and Prettier run over the files you touched, out of this package's own `node_modules`, so they are the same versions `pnpm lint` and `pnpm format:check` use. Install them once per clone with `just hooks` from the repo root — the dev container already does.
 
 To ensure deterministic behavior, the pre-commit hook _does not_ attempt to fix linter errors. Most of the time, you will be fine by simply running `ng lint --fix`, which attempts to automatically fix most of the issues. If we ran that in the hook, however, you would be committing different code than the one you checked. So if you cannot commit your code, run lint fix. If that doesn't resolve all the issues (which you can see by running `ng lint`), resolve those issues and try again. Formatting is not auto-fixed either: run `pnpm format` (or `just fe-format`).
 
@@ -211,7 +213,7 @@ Two levels of automated tests live in this repository, and a third lives elsewhe
 | ------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
 | Unit tests (Vitest)      | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
 | "E2E" tests (Playwright) | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
-| GHGA archive test bed    | the real backend and database, in a separate repository                                    | does this flow actually work end to end?          |
+| GHGA archive test bed    | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
 
 Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring all belong there. The two other levels each add something the level above cannot see, and each costs more to run.
 
@@ -231,7 +233,7 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 
 We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project. See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
-"End-to-end" is admittedly a misnomer here. These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design. What is covered is the frontend from the browser inwards — everything above the network boundary. Comprehensive end-to-end tests for real backend behavior are maintained in the separate GHGA archive test bed repository.
+"End-to-end" is admittedly a misnomer here. These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design. What is covered is the frontend from the browser inwards — everything above the network boundary. Comprehensive end-to-end tests for real backend behavior are maintained in the GHGA archive test bed, in `testbed/` of this monorepo.
 
 Within that boundary, however, these tests are considerably more real than unit tests, and catch a class of problems unit tests structurally cannot:
 

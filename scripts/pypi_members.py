@@ -11,7 +11,7 @@
 """Enumerate the PyPI-lane workspace members and the published-combo test matrix.
 
 Single source of truth for pypi-matrix.yaml and pypi-publish.yaml. Lane membership
-follows ADR-0014.
+follows ADR-0033.
 
 What needs releasing is decided against the *index*: a member is a release candidate
 when the version it declares is above the latest one on PyPI. A version bump is the
@@ -52,7 +52,7 @@ from affected_targets import _canonical, internal_dep_graph
 # The versions the matrix runs on.
 TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 
-# Directory defaults for the release lane (ADR-0014).
+# Directory defaults for the release lane (ADR-0033).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
 
 # A cell only runs tests, so formatting tools excluded
@@ -87,9 +87,18 @@ class Member:
             ),
         )
 
+    @property
+    def tag(self) -> str:
+        """The release tag, e.g. `ghga-connector/4.0.1`.
+
+        Spelled with the canonical name, never the declared one: six members declare
+        theirs with underscores, and tags compare as plain strings.
+        """
+        return f"{_canonical(self.package)}/{self.version}"
+
     def as_json(self) -> dict:
         """The member as the workflows consume it. Tuples serialize as JSON arrays."""
-        return asdict(self)
+        return {**asdict(self), "tag": self.tag}
 
 
 @dataclass(frozen=True)
@@ -110,7 +119,7 @@ class IndexedMember(Member):
 
     def as_json(self) -> dict:
         """Adds the index fields, omitting `reason` on a member that has none."""
-        data = asdict(self)
+        data = super().as_json()
         if self.reason is None:
             del data["reason"]
         return data
@@ -425,14 +434,14 @@ def _blocked_message(target: Member, blockers: list[IndexedMember]) -> str:
     ]
     named = " and ".join(filter(None, [", ".join(described[:-1]), described[-1]]))
 
-    tags = ", ".join(f"{_canonical(m.package)}/{m.version}" for m in ordered)
+    tags = ", ".join(m.tag for m in ordered)
 
     return (
         f"{target.package}: cannot be released on its own — it depends on"
         f" release candidate(s) {named}. Either push `packages/x.y.z` to release"
         " the whole train dependencies-first, or release each dependency"
         f" individually on its own tag first, in this order: {tags}, then"
-        f" {_canonical(target.package)}/{target.version}."
+        f" {target.tag}."
     )
 
 

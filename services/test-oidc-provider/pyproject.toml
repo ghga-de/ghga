@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "test-oidc-provider"
 version = "2.2.0"
 description = "Test OpenID Connect provider"
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.15",
     # caps relaxed monorepo-locally: upstream is dormant (2025) while the workspace
@@ -32,11 +32,8 @@ dependencies = [
     "python-multipart >= 0.0.20",
 ]
 
-[project.license]
-text = "Apache 2.0"
-
 [project.urls]
-Repository = "https://github.com/ghga-de/test-oidc-provider"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 test-oidc-provider = "top.__main__:run"

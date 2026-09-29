@@ -30,6 +30,8 @@ for the full set of configurable values.
 | `config.work_order_signing_key` | The private key for signing work order tokens and other JWTs | `null` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.httpx_standard_timeout_sec` | The timeout duration, in seconds, to use for most HTTP calls. | `60.0` |
+| `config.httpx_long_timeout_sec` | The timeout duration, in seconds, to use for HTTP calls which have the potential to be especially long-running. | `600.0` |
 | `config.study_topic` | Name of the event topic containing study events | `null` |
 | `config.accession_map_topic` | The name of the topic used for file accession map events | `null` |
 | `config.research_data_upload_box_topic` | Name of the event topic containing research data upload box events | `null` |
@@ -94,7 +96,7 @@ for the full set of configurable values.
 | `commonAnnotations` | Annotations merged onto the same set of resources as commonLabels (see there); use service.annotations below for Service/DestinationRule-only annotations | `{}` |
 | `image.registry` | Default image registry; overridden by global.imageRegistry when set | `"docker.io"` |
 | `image.repository` | Image repository path (create_charts.py fills this in per member) | `"ghga/rs"` |
-| `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004) | `""` |
+| `image.tag` | Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0027) | `""` |
 | `image.digest` | Pin the image by digest instead of tag, when set (takes precedence in the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `image.pullPolicy` | imagePullPolicy override; null defaults to Always for a `latest` tag, IfNotPresent otherwise | `null` |
 | `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
@@ -191,7 +193,7 @@ for the full set of configurable values.
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
-| `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0012) routing to this service | `false` |
+| `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |
 | `httpRoute.port` |  | `8080` |
 | `httpRoute.rewritePath` | strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them. | `true` |
 | `httpRoute.rules` | Extra HTTPRoute rules rendered before the generated default rule (deduplicated) | `[]` |

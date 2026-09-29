@@ -1,9 +1,9 @@
-# Docs lane (ADR-0021) — build every documented member and deploy them as ONE GitHub Pages
+# Docs lane (ADR-0039) — build every documented member and deploy them as ONE GitHub Pages
 # site, each under its own subpath: ghga-de.github.io/ghga/<package>/.
 #
 # A member is documented iff it carries a `great-docs.yml`; scripts/docs_members.py is the
 # discovery, and the justfile's `docs` recipe is the build, so what runs here is what runs
-# locally (ADR-0015).
+# locally (ADR-0034).
 #
 # Trigger: pushes to `main`, plus manual dispatch. The site tracks the latest release state,
 # not work-in-progress — the integration branch is deliberately not published, so unreleased
@@ -83,6 +83,8 @@ jobs:
           path: ${{ matrix.member.path }}/great-docs/_site
           retention-days: 1
           if-no-files-found: error
+          # great-docs publishes the agent skills under .well-known/, a dot-directory
+          include-hidden-files: true
 
   deploy:
     needs: [plan, build]
@@ -116,8 +118,9 @@ jobs:
           printf '%s' "$MEMBERS" \
             | uv run --script scripts/assemble_docs_site.py --artifacts artifacts --out site
           find site -maxdepth 1 -name '*.html' | sort
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+          include-hidden-files: true # keeps the .well-known/ directories
       - id: deployment
         uses: actions/deploy-pages@v4

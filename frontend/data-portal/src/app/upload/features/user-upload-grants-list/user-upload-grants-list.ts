@@ -4,7 +4,6 @@
  * @license Apache-2.0
  */
 
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,6 +14,12 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import {
+  describeIncompleteOrFailedConflict,
+  IncompleteOrFailedConflict,
+  incompleteOrFailedConflictTitle,
+  parseIncompleteOrFailedConflict,
+} from '@app/upload/utils/box-conflict';
 import { UserUploadBoxDetailsDialogComponent } from '@app/upload/features/user-upload-box-details-dialog/user-upload-box-details-dialog';
 // eslint-disable-next-line boundaries/dependencies
 import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
@@ -122,10 +127,10 @@ export class UserUploadGrantsListComponent implements OnInit {
 
   /**
    * Submit the upload box (set state to locked). When the backend rejects the
-   * submission with a 409 because some uploads are still incomplete, ask the
-   * user whether to force it and retry once with force=true.
+   * submission with a 409 because some uploads are still incomplete or failed
+   * re-encryption, ask the user whether to force it and retry once with force=true.
    * @param grant - the grant whose upload box should be submitted
-   * @param force - whether to submit despite incomplete uploads
+   * @param force - whether to submit despite incomplete or failed uploads
    */
   #submitBox(grant: GrantWithBoxInfo, force: boolean): void {
     this.submittingBoxId.set(grant.box_id);
@@ -140,11 +145,11 @@ export class UserUploadGrantsListComponent implements OnInit {
         },
         error: (err: unknown) => {
           // Offer the force option only on the first attempt and only when the
-          // conflict is specifically caused by incomplete uploads. A forced
-          // retry that still fails falls through to the generic message.
-          const incompleteUploads = force ? null : this.#incompleteUploads(err);
-          if (incompleteUploads) {
-            this.#confirmForceSubmit(grant, incompleteUploads.length);
+          // conflict is specifically caused by incomplete or failed uploads. A
+          // forced retry that still fails falls through to the generic message.
+          const conflict = force ? null : parseIncompleteOrFailedConflict(err);
+          if (conflict) {
+            this.#confirmForceSubmit(grant, conflict);
           } else {
             this.submittingBoxId.set(null);
             this.#notification.showError(
@@ -156,30 +161,23 @@ export class UserUploadGrantsListComponent implements OnInit {
   }
 
   /**
-   * Extract the incomplete uploads reported by a 409 submission conflict, which
-   * the user may override by forcing the submission.
-   * @param err - the error thrown by the submission request
-   * @returns the incomplete uploads, or null if this is not such a conflict
-   */
-  #incompleteUploads(err: unknown): unknown[] | null {
-    const response = err as HttpErrorResponse;
-    const data: unknown = response?.error?.data;
-    if (response?.status !== 409 || !data || typeof data !== 'object') return null;
-    const uploads = (data as { incomplete_uploads?: unknown }).incomplete_uploads;
-    return Array.isArray(uploads) ? uploads : null;
-  }
-
-  /**
-   * Ask the user whether to submit despite incomplete uploads. On confirmation,
-   * retry the submission with force=true; otherwise leave the box open.
+   * Ask the user whether to submit despite incomplete or failed uploads. On
+   * confirmation, retry the submission with force=true; otherwise leave the box open.
    * @param grant - the grant whose upload box should be submitted
-   * @param count - the number of still-incomplete file uploads
+   * @param conflict - the file uploads that blocked the submission
    */
-  #confirmForceSubmit(grant: GrantWithBoxInfo, count: number): void {
-    const [are, uploads] = count === 1 ? ['is', 'upload'] : ['are', 'uploads'];
+  #confirmForceSubmit(
+    grant: GrantWithBoxInfo,
+    conflict: IncompleteOrFailedConflict,
+  ): void {
+    const reason = describeIncompleteOrFailedConflict(conflict, 'Submission');
+    // Failed files cannot be fixed by the submitter, so say who resolves them.
+    const resolution = conflict.needAttention.length
+      ? ' A Data Steward will have to resolve the failed files before the box can be archived.'
+      : '';
     this.#confirmation.confirm({
-      title: 'Incomplete uploads detected!',
-      message: `Submission failed because there ${are} still ${count} incomplete file ${uploads}. Do you want to submit anyway?`,
+      title: incompleteOrFailedConflictTitle(conflict),
+      message: `${reason}${resolution} Do you want to submit anyway?`,
       confirmText: 'Submit anyway',
       callback: (confirmed) => {
         if (!confirmed) {

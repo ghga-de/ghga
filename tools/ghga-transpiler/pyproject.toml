@@ -18,7 +18,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Environment :: Console",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries",
@@ -26,8 +25,9 @@ classifiers = [
     "Intended Audience :: Science/Research",
 ]
 name = "ghga_transpiler"
-version = "2.5.0"
+version = "2.5.1"
 description = "GHGA-Transpiler - excel to JSON converter"
+license = "Apache-2.0"
 dependencies = [
     "typer >= 0.12",
     "openpyxl >= 3.1.2, == 3.*",
@@ -37,9 +37,6 @@ dependencies = [
     "semver == 3.*",
     "click ~= 8.1.0",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
@@ -72,7 +69,7 @@ source = [
 
 [tool.ghga]
 # Public CLI, no internal dependencies: opts in to the PyPI lane, which tools/* does not
-# get by default (ADR-0014). This is the v2 branch — unlike main (3.x) it has no
+# get by default (ADR-0033). This is the v2 branch — unlike main (3.x) it has no
 # schemapack dependency.
 release = "pypi"
 pypi = true

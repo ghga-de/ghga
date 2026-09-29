@@ -2,42 +2,15 @@
 
 ## Documentation
 
-This repository provides a test bed for running inter service integration tests
+This directory provides a test bed for running inter service integration tests
 for the microservices building the GHGA Archive application, and a couple of such
 tests for the most important user journeys and for testing security aspects.
 
 ## Quick Start
 
-For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
-in combination with Docker Compose.
-
-To use it, you have to have Docker Compose as well as vscode with its "Dev Containers" extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in vscode and run the command
-`Dev Containers: Open Folder in Container` or `Dev Containers: Reopen in Container` from the vscode "Command Palette".
-
-This will give you a full-fledged, pre-configured development environment including:
-- infrastructural dependencies (databases, etc.)
-- all relevant vscode extensions pre-installed
-- pre-configured linting and auto-formatting
-- a pre-configured debugger
-- automatic license-header insertion
-
-If you prefer not to use vscode, you could get a similar setup (without the editor specific features)
-by running the following commands:
-
-```bash
-# Execute in the repo's root dir:
-cd ./.devcontainer
-
-# build and run the environment with docker-compose
-docker-compose up
-
-# attach to the main container:
-# (you can open multiple shell sessions like this)
-docker exec -it devcontainer_app_1 /bin/bash
-```
-
+The test bed runs against the demo platform on a local kind cluster. Set it up and run it
+with the `just` recipes described in the root README's
+[test bed walkthrough](../README.md#run-the-test-bed-locally).
 
 ## Overview
 
@@ -51,9 +24,9 @@ Located in the `features` directory, the **feature files** are numerically prefi
 
 ### Execution
 
-- Use `pytest -v` to run all tests.
-- For specific steps, such as step 240, use `pytest steps/test_240_*`.
-- For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `pytest -m browse and metadata`.
+- Use `just testbed` to run all tests.
+- For specific steps, such as step 240, use `just testbed steps/test_240_*`.
+- For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `just testbed -m browse`.
 
 ### Modes of Operation
 
@@ -65,7 +38,7 @@ Located in the `features` directory, the **feature files** are numerically prefi
 
 The Archive Test Bed can be configured through either **YAML file** or **environment variables**, with environment variables having higher priority.
 
-The testbed itself is configured via `tb.yaml`. The default configuration uses the docker compose environment used by the devcontainer. Alternative configurations can be saved as `tb.*.yaml` and then activated by setting the environment variable `TB_CONFIG_YAML` accordingly.
+The testbed itself is configured via the YAML file named by the environment variable `TB_CONFIG_YAML`. `just testbed` sets it to `tb.kind.yaml`, the configuration for the kind cluster, and supplies the secrets as `TB_*` environment variables read from the cluster. Alternative configurations can be saved as `tb.*.yaml` and activated the same way.
 
 - **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory, with the latter being default for automated black box tests.
 - **Additional Authentication:** The `auth_basic` setting is for passing basic authentication credentials, applicable only in black box testing.
@@ -76,9 +49,7 @@ When running the tests against a Kubernetes cluster, please ensure that names of
 
 - Relevant settings include `auth_basic`, `upload_token`, and `fis_pubkey`. Bucket names (`*_bucket`) and URLs (`*_url`) must also be consistent.
 
-When running tests in a devcontainer with `docker-compose.yml`, **secrets are generated randomly and saved in `.env` files via the `set_env.sh` script**. These files are excluded from the repository.
-
 
 ## License
 
-This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).
+This test bed is free to use and modify according to the [Apache 2.0 License](./LICENSE).

@@ -27,11 +27,9 @@ from .conftest import (
     then,
     when,
 )
-from .utils import IVA_TYPE_NAMES
+from .utils import IVA_TYPE_NAMES, UI_TIMEOUT
 
 scenarios("../features/503_data_portal_access_grants.feature")
-
-TIMEOUT = 3000
 
 UI_APP_CONTEXT = {
     "access requests": {
@@ -67,12 +65,17 @@ def create_access_request(fixtures: JointFixture, alias: str):
     request_button.click()
 
     dialog = page.locator("app-access-request-dialog")
-    expect(dialog).to_contain_text("Request access for dataset", timeout=TIMEOUT)
+    expect(dialog).to_contain_text("Request access for dataset", timeout=UI_TIMEOUT)
     form_field = dialog.locator("mat-form-field:has-text('Details about your request')")
     form_field.locator("textarea").fill(f"Access request for {alias}")
     submit_button = page.get_by_role("button", name="Submit")
-    submit_button.click()
-    time.sleep(2)  # wait for API call to complete, couldn't find a better way
+    with page.expect_response(
+        lambda r: r.url.endswith("/access-requests") and r.request.method == "POST"
+    ) as response_info:
+        submit_button.click()
+    assert response_info.value.ok, (
+        f"Access request failed: {response_info.value.status}"
+    )
 
 
 @then(parse('the table shows {num} "{status}" item for "{full_name}"'))
@@ -112,7 +115,7 @@ def filter_admin_table_by_dataset(fixtures: JointFixture, app: str, alias: str):
     form_selector = UI_APP_CONTEXT[app]["form_component"]
     form = page.locator(form_selector)
     expect(form.locator("mat-form-field")).to_have_count(
-        UI_APP_CONTEXT[app]["expected_num_of_filters"], timeout=TIMEOUT
+        UI_APP_CONTEXT[app]["expected_num_of_filters"], timeout=UI_TIMEOUT
     )
     form.locator(UI_APP_CONTEXT[app]["dataset_filter"]).locator("input").fill(
         dataset_accession
@@ -125,7 +128,7 @@ def filter_access_requests_all_statuses(fixtures: JointFixture):
     page = fixtures.playwright.page
     form_selector = "app-access-request-manager-filter"
     form = page.locator(form_selector)
-    expect(form.locator("mat-form-field")).to_have_count(10, timeout=TIMEOUT)
+    expect(form.locator("mat-form-field")).to_have_count(10, timeout=UI_TIMEOUT)
 
     form.locator("mat-form-field:has-text('Resolution')").click()
     page.get_by_role(
@@ -140,7 +143,7 @@ def open_filtered_item(fixtures: JointFixture):
     table = page.locator("table")
     expect(table).to_be_visible()
     rows = table.locator("tbody tr")
-    expect(rows).to_have_count(1, timeout=TIMEOUT)  # Check there is only one item
+    expect(rows).to_have_count(1, timeout=UI_TIMEOUT)  # Check there is only one item
     rows.first.click()
     page.wait_for_load_state()
 
@@ -175,6 +178,43 @@ def check_access_request_detail_page(
     expect(main).to_contain_text("Notes")
 
 
+@when(parse('I set the ticket ID to "{ticket_id}"'))
+def set_ticket_id(fixtures: JointFixture, ticket_id: str):
+    """Fill and save the ticket ID field on the access request detail page.
+
+    The edit and save controls are icon-only chips without an accessible name,
+    so they are located by their component classes.
+    """
+    page = fixtures.playwright.page
+    field = page.locator("app-access-request-field-edit").filter(has_text="Ticket ID")
+    expect(field).to_be_visible(timeout=UI_TIMEOUT)
+    field.locator("mat-chip.edit-button").click()
+    field.locator("input").fill(ticket_id)
+    save_chip = field.locator("mat-chip.save-edit-button")
+    # The save chip stays disabled while the entered value fails validation
+    # (the portal only accepts numeric ticket IDs with up to 9 digits)
+    expect(save_chip).not_to_have_class(re.compile("chip-disabled"), timeout=UI_TIMEOUT)
+    with page.expect_response(
+        lambda response: (
+            "/access-requests/" in response.url and response.request.method == "PATCH"
+        )
+    ) as response_info:
+        save_chip.click()
+    assert response_info.value.ok, (
+        f"Saving the ticket ID failed: {response_info.value.status}"
+    )
+
+
+@then(parse('the ticket ID "{ticket_id}" is saved'))
+def check_ticket_id_saved(fixtures: JointFixture, ticket_id: str):
+    """Reload the detail page and check that the ticket ID was persisted."""
+    page = fixtures.playwright.page
+    page.reload()
+    page.wait_for_load_state()
+    field = page.locator("app-access-request-field-edit").filter(has_text="Ticket ID")
+    expect(field).to_contain_text(ticket_id, timeout=UI_TIMEOUT)
+
+
 @then(parse('the status of the access request is "{status}"'))
 def check_access_request_status(fixtures: JointFixture, status: str):
     """Check the status of the access request on the detail page."""
@@ -206,5 +246,8 @@ def deny_access_requests(fixtures: JointFixture, action: str):
     else:
         raise ValueError(f"Unknown action: {action}")
 
-    confirm_button.click()
-    time.sleep(2)  # wait for API call to complete, couldn't find a better way
+    with page.expect_response(
+        lambda r: "/access-requests/" in r.url and r.request.method == "PATCH"
+    ) as response_info:
+        confirm_button.click()
+    assert response_info.value.ok, f"Processing failed: {response_info.value.status}"

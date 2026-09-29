@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/notification-orchestration-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/notification-orchestration-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/notification-orchestration-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/notification-orchestration-service?branch=main)
-
 # Notification Orchestration Service
 
 The Notification Orchestration Service controls the creation of notification events.
@@ -379,7 +376,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

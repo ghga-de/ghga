@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/well-known-value-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/well-known-value-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/well-known-value-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/well-known-value-service?branch=main)
-
 # Well Known Value Service
 
 Well-Known-Value-Service - Provides access to common values via API

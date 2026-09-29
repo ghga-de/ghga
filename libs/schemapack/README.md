@@ -1,5 +1,7 @@
 [![PyPI version shields.io](https://img.shields.io/pypi/v/schemapack.svg)](https://pypi.org/project/schemapack/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/schemapack.svg)](https://pypi.org/project/schemapack/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # Schemapack
 
@@ -105,7 +107,7 @@ devcontainer with the whole toolchain: open it in VS Code and run
 `just sync`.
 
 The usual tasks, run from the repository root (see
-[ADR-0015](https://github.com/ghga-de/ghga/blob/main/docs/adr/0015-task-runner.md) for the
+[ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the
 full recipe list):
 
 ```bash

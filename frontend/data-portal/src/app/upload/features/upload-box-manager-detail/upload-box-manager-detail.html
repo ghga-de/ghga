@@ -222,6 +222,10 @@
               [pageSize]="filesPageSize()"
               [sortActive]="filesSortState().column"
               [sortDirection]="filesSortState().direction"
+              [showRequeue]="box.state !== 'archived'"
+              [requeuable]="canRequeueFileFn"
+              requeueEventLabel="Upload Box Manager Detail Requeue File Clicked"
+              (requeueFile)="requeueFile($event)"
               [showDelete]="box.state === 'open'"
               [deletable]="canDeleteFileFn"
               deleteEventLabel="Upload Box Manager Detail Delete File Clicked"
@@ -229,6 +233,19 @@
               (page)="onFilesPage($event)"
               (sortChange)="onFilesSort($event)"
             />
+            @if (box.state !== 'archived' && hasRequeuableFiles()) {
+              <button
+                mat-raised-button
+                color="primary"
+                class="mt-4"
+                (click)="requeueAllFiles()"
+                [disabled]="isRequeueing() || isChangingState()"
+                data-umami-event="Upload Box Manager Detail Requeue All Clicked"
+              >
+                <mat-icon fontIcon="replay"></mat-icon>
+                Retry failed re-encryptions
+              </button>
+            }
           } @else {
             <p class="text-warning mt-2">This upload box is still empty.</p>
           }

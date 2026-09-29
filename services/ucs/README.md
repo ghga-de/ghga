@@ -15,13 +15,13 @@ We recommend using the provided Docker container.
 
 A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/upload-controller-service):
 ```bash
-docker pull ghga/upload-controller-service:15.2.0
+docker pull ghga/upload-controller-service:16.0.0
 ```
 
 Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
 ```bash
 # Execute in the repo's root dir:
-docker build -t ghga/upload-controller-service:15.2.0 .
+docker build -t ghga/upload-controller-service:16.0.0 .
 ```
 
 For production-ready deployment, we recommend using Kubernetes, however,
@@ -29,7 +29,7 @@ for simple use cases, you could execute the service using docker
 on a single server:
 ```bash
 # The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/upload-controller-service:15.2.0 --help
+docker run -p 8080:8080 ghga/upload-controller-service:16.0.0 --help
 ```
 
 If you prefer not to use containers, you may install the service from source:
@@ -749,7 +749,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

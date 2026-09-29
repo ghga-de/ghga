@@ -179,6 +179,7 @@ class ExportableSchemaView(SchemaView):
 
     def export_model(self) -> MetadataModel:
         """Export a MetadataModel."""
-        model_json = dataclasses.asdict(deepcopy(self.schema))
+        # asdict already builds a deep copy and leaves the schema untouched
+        model_json = dataclasses.asdict(self.schema)
 
         return MetadataModel(**model_json)

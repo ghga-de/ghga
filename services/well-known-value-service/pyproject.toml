@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,17 +22,15 @@ classifiers = [
 name = "wkvs"
 version = "3.0.2"
 description = "Well-Known-Value-Service - Provides access to common values via API"
+license = "Apache-2.0"
 dependencies = [
     "ghga-service-commons[api]>=8",
     "hexkit>=9",
     "typer>=0.20",
 ]
 
-[project.license]
-text = "Apache 2.0"
-
 [project.urls]
-Repository = "https://github.com/ghga-de/well-known-value-service"
+Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
 wkvs = "wkvs.__main__:cli"

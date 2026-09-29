@@ -1,4 +1,4 @@
-# CI Stage 2 — the integration gate (runbook §5, ADR-0009).
+# CI Stage 2 — the integration gate (runbook §5, ADR-0028).
 #
 # Installs the same self-reliant ghga-demo umbrella an outside user gets, plus the
 # test-bed profile (state-management service, the test OIDC provider, and the
@@ -20,13 +20,17 @@
 # full fleet is up. Measure, don't assume — the documented specs were wrong.
 name: integration
 
-# A gate: every pull request and every push to main, subject to `changes` below.
+# A gate: every pull request and every push to the long-lived branches (`dev` takes the
+# merge traffic, `main` moves at release time — ADR-0038), subject to `changes` below.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
+# Unlike ci.yaml, `main` and `dev` stay cancellable here too: release.yaml reads CI results by
+# commit and never integration results, so a superseded run costs no release, and letting the
+# next merge cancel a run of about an hour is worth more than a redundant verdict.
 concurrency:
   group: integration-${{ github.ref }}
   cancel-in-progress: true

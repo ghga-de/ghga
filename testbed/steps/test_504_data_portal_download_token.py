@@ -29,10 +29,9 @@ from .conftest import (
     then,
     when,
 )
+from .utils import UI_TIMEOUT
 
 scenarios("../features/504_data_portal_download_token.feature")
-
-TIMEOUT = 3000
 
 
 @given("no download tokens have been created yet")
@@ -70,11 +69,11 @@ def check_available_count(fixtures: JointFixture, num: str):
 
     # only a select box for available datasets
     select_box = page.locator("mat-form-field")
-    expect(select_box).to_have_count(1, timeout=TIMEOUT)
+    expect(select_box).to_have_count(1, timeout=UI_TIMEOUT)
     select_box.first.click()
 
     options = page.get_by_role(role="option")
-    expect(options).to_have_count(num_expected, timeout=TIMEOUT)
+    expect(options).to_have_count(num_expected, timeout=UI_TIMEOUT)
     select_box.press("Escape")  # close the select box for next steps
 
 
@@ -90,9 +89,9 @@ def select_available_dataset(fixtures: JointFixture, dataset_alias: str):
         "button", name=re.compile(dataset["accession"])
     )
     expect(button_for_dataset).to_contain_text(
-        "create token", timeout=TIMEOUT, ignore_case=True
+        "create token", timeout=UI_TIMEOUT, ignore_case=True
     )
-    expect(button_for_dataset).to_be_enabled(timeout=TIMEOUT)
+    expect(button_for_dataset).to_be_enabled(timeout=UI_TIMEOUT)
     button_for_dataset.click()
 
     dialog = page.locator("app-download-work-package-dialog")
@@ -100,7 +99,7 @@ def select_available_dataset(fixtures: JointFixture, dataset_alias: str):
     expect(dialog).to_contain_text(dataset["details"]["description"], ignore_case=True)
 
     form_fields = dialog.locator("mat-form-field")
-    expect(form_fields).to_have_count(2, timeout=TIMEOUT)
+    expect(form_fields).to_have_count(2, timeout=UI_TIMEOUT)
     expect(form_fields.nth(0)).to_contain_text("File IDs", ignore_case=True)
     expect(form_fields.nth(1)).to_contain_text("Crypt4GH key", ignore_case=True)
 
@@ -142,7 +141,7 @@ def create_download_token(fixtures: JointFixture, file_scope: str, dataset_alias
     crypt4gh_field.fill(fixtures.config.user_public_crypt4gh_key)
 
     submit_button = dialog.get_by_role(role="button", name="Generate download token")
-    expect(submit_button).to_be_enabled(timeout=TIMEOUT)
+    expect(submit_button).to_be_enabled(timeout=UI_TIMEOUT)
     submit_button.click()
     page.wait_for_load_state()
 

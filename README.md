@@ -1,13 +1,23 @@
+[![ci](https://github.com/ghga-de/ghga/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/ci.yaml?query=branch%3Adev)
+[![integration](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml?query=branch%3Adev)
+[![security-scan](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml/badge.svg)](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml)
+[![docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ghga-de.github.io/ghga/)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![License](https://img.shields.io/github/license/ghga-de/ghga)](LICENSE)
+
 # GHGA Monorepo
 
 One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `uv` workspace)
 alongside the Angular `data-portal`, with Helm charts and a Kubernetes integration test bed as
 build products.
 
-> **Status: scaffolding.** The source repos have **not** been imported yet. This is the
-> Phase-1 skeleton (workspace + toolchain + structure) plus the planning docs. The
-> history-preserving import, dependency lock, charts, and CI are deliberate next steps —
-> see the runbook.
+> **Status: cutover essentially done.** The source repos are imported and archived, and
+> CI and both release lanes run from here. The few leftovers, chiefly importing the
+> schemapack line of `metldata`, `ghga-transpiler` and `em-transformation-service`, are
+> listed in the [runbook §7](docs/migration/runbook.md#7-cutover-checklist).
 
 ## Layout
 
@@ -18,12 +28,12 @@ build products.
 | [`tools/`](tools/) | CLIs & jobs (ghga-connector, ghga-datasteward-kit, auth-km-jobs, …) |
 | [`frontend/`](frontend/) | The Angular `data-portal` (own `pnpm` workspace) |
 | [`deploy/`](deploy/) | Helm charts (adopted `ghga-common` library + generator, demo umbrella) |
-| [`testbed/`](testbed/) | BDD + Playwright integration suite (runs on kind/minikube) |
+| [`testbed/`](testbed/) | BDD + Playwright integration suite (runs on kind) |
 | [`docker/`](docker/) | Shared Dockerfile(s) |
 | [`scripts/`](scripts/) | Codegen, affected-targets, and migration tooling |
 | [`docs/`](docs/) | Architecture, ADRs, migration runbook |
 
-## Getting started (once members are imported)
+## Getting started
 
 ```bash
 uv sync                 # or: just sync
@@ -31,11 +41,33 @@ just hooks              # install the git hooks (the dev container does this for
 just lint && just test
 ```
 
+### Work inside the dev container
+
+`.devcontainer/` is the intended environment, and `just` now holds you to it: the Python
+workspace and hooks recipes refuse to run on the host. CI is exempt, and `GHGA_ALLOW_HOST=1`
+overrides it for a deliberate bare-host run.
+
+The reason is that `.venv` lives in the workspace and the container bind-mounts the
+workspace from the host, so whichever side ran `uv` last owns it — and leaves the other
+side an interpreter symlink into a home directory that does not exist there.
+
+Nothing reports that plainly, which is the real cost. The usual symptom is the git hooks
+going quiet with `pre-commit not found. Did you forget to activate your virtualenv?`
+Activation is not the problem: `.git/hooks/pre-commit` hardcodes `.venv/bin/python3`, and
+the symlink underneath it has gone stale. Confirm with `readlink -f .venv/bin/python3`
+(empty output means dangling) and repair with `just sync` on the side you are working on —
+reinstalling the hooks is not needed, since the hook's path was right all along.
+
+Coding agents (Claude Code, Copilot, …) belong in the container too. Their state is
+per-machine, so a session started on the host writes its history, settings, and memory into
+the host's home, where the container cannot see it — and work splits across two stores that
+never reconcile.
+
 ## Task runner
 
 Everything runs through [`just`](justfile) — a thin facade over uv / pnpm / helm / kind
-([ADR-0015](docs/adr/0015-task-runner.md)). Run `just` with no arguments to list every
-recipe with its description.
+([ADR-0034](docs/adrs/adr-0034-task-runner.md)). Run `just` with no arguments to list
+every recipe with its description.
 
 ### Run the demo locally
 
@@ -53,9 +85,15 @@ Then open <http://localhost/> — the data portal at `/`, the OIDC issuer at `/g
 `just down` deletes the cluster; the built images survive it, so the next `just up`
 reloads rather than rebuilds.
 
+If `kubectl` or `helm` ever says `context "kind-ghga" does not exist` while the cluster is
+plainly running, run `kind export kubeconfig --name ghga`. A devcontainer rebuild keeps the
+cluster (docker's storage is a named volume) but wipes `~/.kube` (the home directory is
+rebuilt from the image), leaving the node running with nothing pointing at it. `just cluster`
+re-exports the context on every run, so the recipes recover on their own.
+
 #### Logging in as the data steward
 
-The demo seeds one data steward ([ADR-0006](docs/adr/0006-self-contained-demo-lightweight-infra.md)),
+The demo seeds one data steward ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)),
 configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
 
 | | |
@@ -102,7 +140,7 @@ profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev`
 
 The BDD + Playwright integration suite ([`testbed/`](testbed/)) against the same umbrella
 plus the test-bed profile — state-management service, test OIDC provider, and the
-generated metldata artifact model ([ADR-0009](docs/adr/0009-testbed-kind-minikube.md)).
+generated metldata artifact model ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
 
 ```bash
 just sync               # workspace env: the artifact generation needs ghga-datasteward-kit
@@ -115,6 +153,40 @@ just testbed            # run the suite
 Scope a run with `just testbed steps/test_001_health_check.py`, and use
 `just testbed-reset` to return the cluster to a coherent cold start between runs — the
 suite starts from an empty state and its feature files are ordered by numeric prefix.
+
+#### Debugging a failing browser test
+
+The UI tests (`-m frontend`) drive a headless browser, so a failure arrives as a locator
+timeout with no way to see what the page looked like. Setting `TB_TRACE` records a
+[Playwright trace](https://playwright.dev/python/docs/trace-viewer) — a replay of the run
+action by action, with the DOM, network and console at each step:
+
+```bash
+TB_TRACE=1 just testbed -m frontend     # traces kept for failed tests only
+TB_TRACE=all just testbed -m frontend   # traces kept for every browser test
+just testbed-trace                      # list what the run left behind
+just testbed-trace test_500_data_portal_browse  # serve one on :9323
+```
+
+Tracing is off unless `TB_TRACE` is set, and arms only for `@frontend` tests, so ordinary
+runs pay nothing for it. Traces land in `testbed/.traces` (git-ignored, override with
+`TB_TRACE_DIR`) and the directory is emptied at the start of each traced run. Prefer
+`all` when a test fails but its own trace looks innocent: the browser context is shared
+across the whole session, so the culprit is often an earlier test that passed.
+
+#### Watching the services
+
+There is no compose project to browse: every service is a pod inside the single kind node
+container, so Docker-level tooling only ever shows the node.
+
+```bash
+just logs                # what is deployed, and its ready count
+just logs auth-adapter   # follow one service (substring match, `ghga-` prefix optional)
+```
+
+For the click-through equivalent, the Kubernetes extension
+(`ms-kubernetes-tools.vscode-kubernetes-tools`, recommended by the devcontainer) gives a pod
+tree with logs, exec and port-forward against the `kind-ghga` context.
 
 ### Image profiles
 
@@ -138,21 +210,37 @@ and the release workflow always build one image per member. It exists because it
 | area | recipes |
 |---|---|
 | Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
+| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check` |
 | Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
-| Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix` |
-| Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-reset`, `testbed-hosts` |
+| Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix`, `logs [name]` |
+| Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-reset`, `testbed-hosts`, `testbed-trace [file]` |
 | Migration | `import-from-snapshot`, `sync-mainline` |
 
 ## Where to read
 
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/adr/](docs/adr/)** — the decisions (and why), ADR-0001…0020; the
+- **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)**
+  — how metadata and files flow across the platform.
+- **[docs/adrs/](docs/adrs/)** — the decisions (and why); the
   [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
+- **[docs/style.md](docs/style.md)** — writing style for coding agents.
+- **[docs/agent-instructions.md](docs/agent-instructions.md)** — which instruction file
+  holds what, and where the `AGENTS.md` files sit.
 
 ## Conventions
 
 See [docs/conventions.md](docs/conventions.md) — workspace layout, the `[tool.ghga]` capability
-markers, naming, and the per-component release-tag scheme (`name/x.y.z`).
+markers, naming, the [branching model](docs/conventions.md#branching) (cut from `dev`, merge
+into `dev`; `main` is the latest release), and the per-component release-tag scheme
+(`name/x.y.z`).
+
+## License
+
+Everything in this repository is licensed under the [Apache License 2.0](LICENSE). Each
+member also carries its own copy of the license, which ships with its wheel or image. Two
+members contain work by others, whose copyright notices are kept in their own license
+files: [`libs/ghga-jsonsubschema`](libs/ghga-jsonsubschema/LICENSE.txt), a fork of IBM's
+`jsonsubschema`, and [`libs/ghga-arcticfreeze`](libs/ghga-arcticfreeze/LICENSE).

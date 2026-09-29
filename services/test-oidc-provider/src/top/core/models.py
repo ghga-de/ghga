@@ -97,7 +97,9 @@ class OidcConfiguration(BaseModel):
         description="URL of the OP's UserInfo Endpoint",
     )
     service_documentation: AnyHttpUrl = Field(
-        default=AnyHttpUrl("https://github.com/ghga-de/test-oidc-provider"),
+        default=AnyHttpUrl(
+            "https://github.com/ghga-de/ghga/tree/main/services/test-oidc-provider"
+        ),
         description="URL of a page with information"
         " that developers might need to know when using the OP",
     )

@@ -226,5 +226,5 @@ outbox case as well: publish an `upserted` or `deleted` event with
 `publish_event()` (using the resource ID as `key`) and let a
 `KafkaOutboxSubscriber` consume it with `run(forever=False)`. For runnable
 examples, see the
-[outbox subscriber integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/providers/daopubsub/test_akafka_daosub.py)
+[outbox subscriber integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/daopubsub/test_akafka_daosub.py)
 in the hexkit repository.

@@ -19,6 +19,7 @@
 import signal
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from fixtures.auth import Session
@@ -38,6 +39,7 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .utils import has_reached
 
 scenarios("../features/201_user_file_upload.feature")
 
@@ -131,12 +133,31 @@ def check_uploaded_files_in_storage(
     uploaded_files = _as_list(response.json())
     for file_upload in uploaded_files:
         assert "object_id" in file_upload
+        # A file DHFS has already interrogated points at the interrogation bucket,
+        # and UCS has deleted its inbox object, so look where its record says.
+        expected_bucket = (
+            bucket_id
+            if file_upload.get("state") == "inbox"
+            else file_upload["bucket_id"]
+        )
         object_id = str(file_upload["object_id"])
-        assert fixtures.s3.does_object_exist(
+        if fixtures.s3.does_object_exist(
             storage_alias=storage_config.storage_alias,
-            bucket=bucket_id,
+            bucket=expected_bucket,
             object_id=object_id,
-        ), f"{object_id} does not exist in the staging bucket"
+        ):
+            continue
+        # DHFS may have interrogated the file since the listing was read
+        current = fixtures.mongo.find_document(
+            db_name=fixtures.config.ucs_db_name,
+            collection_name=fixtures.config.ucs_file_uploads_collection,
+            query={"_id": file_upload["id"]},
+        )
+        assert (
+            expected_bucket == bucket_id
+            and current
+            and has_reached(current.get("state"), "interrogated")
+        ), f"{object_id} does not exist in the {expected_bucket} bucket"
 
 
 @when(
@@ -245,7 +266,32 @@ def start_and_interrupt_upload(
 def check_uploaded_file_state(
     expected_state: str, fixtures: JointFixture, response: Response
 ):
-    """Assert the most recently uploaded file is listed in the given state.
+    """Assert the most recently uploaded file is listed in the given state."""
+    _select_uploaded_file(
+        fixtures, response, lambda state: state == expected_state, expected_state
+    )
+
+
+@then(parse('the uploaded file has reached the "{expected_state}" state'))
+def check_uploaded_file_progress(
+    expected_state: str, fixtures: JointFixture, response: Response
+):
+    """Assert the most recently uploaded file is in the given state or past it."""
+    _select_uploaded_file(
+        fixtures,
+        response,
+        lambda state: has_reached(state, expected_state),
+        f"{expected_state} or later",
+    )
+
+
+def _select_uploaded_file(
+    fixtures: JointFixture,
+    response: Response,
+    accept: Callable[[str | None], bool],
+    expected: str,
+) -> None:
+    """Find the most recently uploaded file in an accepted state and remember its id.
 
     The file is matched by comparing our stored object_id to the alias of the
     returned upload records.
@@ -256,14 +302,14 @@ def check_uploaded_file_state(
     uploads = _as_list(response.json())
     matching = [upload for upload in uploads if str(upload.get("alias")) == object_id]
     assert matching, f"Uploaded file {object_id!r} not found in uploads: {uploads}"
-    states = {upload.get("state") for upload in matching}
-    assert expected_state in states, (
-        f"Expected uploaded file state {expected_state!r}, got {states}"
+    selected = next(
+        (upload for upload in matching if accept(upload.get("state"))), None
+    )
+    assert selected, (
+        f"Expected uploaded file state {expected!r},"
+        f" got { ({upload.get('state') for upload in matching}) }"
     )
     # Capture the database id of the listed file so deletion can target it by id.
-    selected = next(
-        upload for upload in matching if upload.get("state") == expected_state
-    )
     uploaded[-1]["id"] = selected["id"]
     fixtures.state.set_state("last_uploaded_files", uploaded)
 
@@ -281,6 +327,7 @@ def reupload_interrupted_file(storage_name: str, fixtures: JointFixture):
         file_info=[(interrupted["object_id"], Path(interrupted["file_path"]))],
         fixtures=fixtures,
         upload_token=upload_token,
+        overwrite=True,
     )
     assert "Successfully uploaded" in completed_upload.stdout
 

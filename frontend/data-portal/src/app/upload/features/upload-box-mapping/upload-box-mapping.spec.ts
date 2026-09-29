@@ -438,6 +438,77 @@ describe('UploadBoxMappingComponent', () => {
     );
   });
 
+  it('should name the unsettled files when archival is rejected by a conflict', async () => {
+    await createComponent({
+      studyId: TEST_STUDY.id,
+      mappedField: 'alias',
+      manualMappings: [['meta-1', 'file-1']],
+    });
+    uploadBoxService.submitFileMapping.mockReturnValue(of(undefined));
+    const conflict = Object.assign(new Error('Conflict'), {
+      status: 409,
+      error: {
+        exception_id: 'incompleteOrFailed',
+        data: { incomplete_uploads: [], need_attention: ['file-2'] },
+      },
+    });
+    uploadBoxService.archiveUploadBox.mockReturnValue(throwError(() => conflict));
+    mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
+    mockDialog.open.mockClear();
+
+    component.onConfirmAndArchive();
+
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'Mapping was submitted but archival failed because 1 file failed re-encryption.',
+    );
+  });
+
+  it('should keep files that failed re-encryption in the box files', () => {
+    uploadBoxService.setBoxFileUploads([
+      ...TEST_BOX_FILES,
+      {
+        ...TEST_BOX_FILES[0],
+        id: 'file-4',
+        alias: 'retry.fastq.gz',
+        state: 'failed_interrogation',
+      },
+    ]);
+
+    expect(component.boxFiles().map((file) => file.id)).toContain('file-4');
+  });
+
+  it('should block archival while files are unsettled', async () => {
+    await createComponent({
+      studyId: TEST_STUDY.id,
+      mappedField: 'alias',
+      manualMappings: [],
+    });
+    expect(component.archiveBlockedReason()).toBeNull();
+    expect(component.canConfirmAndArchive()).toBe(true);
+
+    uploadBoxService.setBoxFileUploads([
+      ...TEST_BOX_FILES,
+      {
+        ...TEST_BOX_FILES[0],
+        id: 'file-4',
+        alias: 'uploading.fastq.gz',
+        state: 'inbox',
+      },
+      {
+        ...TEST_BOX_FILES[1],
+        id: 'file-5',
+        alias: 'retry.fastq.gz',
+        state: 'failed_interrogation',
+      },
+    ]);
+
+    expect(component.canConfirmAndArchive()).toBe(false);
+    expect(component.archiveBlockedReason()).toBe(
+      'This box cannot be archived yet because there is still 1 incomplete file upload' +
+        ' and 1 file that failed re-encryption.',
+    );
+  });
+
   it('should reset manual mappings and notify when reset is requested', () => {
     component.manualMappings.set(new Map([['meta-3', 'file-3']]));
 

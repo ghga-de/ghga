@@ -67,7 +67,7 @@ class UploadDaoPublisherFactory(UploadDaoPublisherFactoryPort):
     async def get_file_upload_dao(self) -> DaoPublisher[FileUpload]:
         """Construct an outbox DAO for FileUpload objects.
 
-        The events published **do not** include the field `inbox_upload_completed`.
+        The events published **do not** include the UCS-only `FIELDS_NOT_PUBLISHED`.
         """
         return await self._dao_publisher_factory.get_dao(
             name=FILE_UPLOADS_COLLECTION,

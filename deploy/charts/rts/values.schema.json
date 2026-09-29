@@ -122,7 +122,7 @@
         },
         "tag": {
           "type": "string",
-          "description": "Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0004)",
+          "description": "Image tag; left empty so it falls back to the chart's appVersion == the platform version (ADR-0027)",
           "default": ""
         },
         "digest": {
@@ -1444,7 +1444,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Render an HTTPRoute (Gateway API, ADR-0012) routing to this service",
+          "description": "Render an HTTPRoute (Gateway API, ADR-0032) routing to this service",
           "default": false
         },
         "port": {

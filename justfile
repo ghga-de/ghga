@@ -1,5 +1,5 @@
 # GHGA monorepo task runner — a thin facade over uv / pnpm / helm + the affected script.
-# See docs/adr/0015-task-runner.md. Run `just` to list recipes.
+# See docs/adrs/adr-0034-task-runner.md. Run `just` to list recipes.
 set shell := ["bash", "-uc"]
 
 # Registry root the `image`/`image-mono`/`demo-load` recipes tag/load under. Defaults to
@@ -12,14 +12,57 @@ image_registry := env_var_or_default("IMAGE_REGISTRY", "docker.io/ghga")
 default:
     @just --list
 
+# --- Environment guard ------------------------------------------------------------------
+# `.venv` lives in the workspace, and the dev container bind-mounts the workspace from the
+# host -- so whichever side ran uv last owns it, and the loser gets an interpreter symlink
+# pointing into a home directory that does not exist on its side.
+#
+# Neither half of that reports itself. The generated .git/hooks/pre-commit hardcodes
+# .venv/bin/python3, so when the symlink dangles the hook falls through to a PATH lookup
+# git has not got and says `pre-commit not found. Did you forget to activate your
+# virtualenv?` -- which is not what went wrong, and sends you looking at activation.
+#
+# Order matters: the host check comes first, because `just sync` is the right repair only
+# on the side you actually work on. Telling a host shell to sync would just flip the
+# ownership back and break the container instead.
+#
+# Exempt: CI ($CI), which runs these recipes on a bare runner by design, and anyone who
+# sets GHGA_ALLOW_HOST=1 -- the deliberate bare-host escape hatch (cf. `just docs`).
+[private]
+_guard-host:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if [ -z "${CI:-}" ] && [ -z "${GHGA_ALLOW_HOST:-}" ] && [ ! -f /.dockerenv ]; then
+        echo "error: repo tooling is meant to run inside the dev container (.devcontainer/)." >&2
+        echo "Running it on the host leaves a .venv only the host can use, and the container" >&2
+        echo "(or its git hooks) then fails in ways that do not name this as the cause." >&2
+        echo "Reopen the folder in the container, or set GHGA_ALLOW_HOST=1 to override." >&2
+        exit 1
+    fi
+
+# The dangling-venv half is separate because `just sync` is the repair it prescribes, and a
+# guard that blocked the repair would be a dead end. `uv sync` rebuilds a venv whose
+# interpreter has gone missing, so sync takes the host check alone.
+[private]
+_guard: _guard-host
+    #!/usr/bin/env bash
+    set -uo pipefail
+    if [ -e .venv ] && [ ! -x .venv/bin/python3 ]; then
+        echo "error: .venv/bin/python3 does not resolve to an interpreter that exists here." >&2
+        echo "That is what a uv run from the other side of the bind mount leaves behind." >&2
+        echo "Rebuild the environment where you are working now:" >&2
+        echo "  just sync" >&2
+        exit 1
+    fi
+
 # --- Python workspace -------------------------------------------------------------------
 # Resolve + install all workspace members, their extras, and the shared dev toolchain.
 # --all-extras is needed so member test suites (which use optional deps) can run.
-sync:
+sync: _guard-host
     uv sync --all-packages --all-extras
 
 # Update the single workspace lockfile.
-lock:
+lock: _guard-host
     uv lock
 
 # `uv run` syncs the environment but does not prune it, so a distribution that is no longer
@@ -32,7 +75,7 @@ lock:
 # different fixes here: `--check` reports a stale ENVIRONMENT but passes a stale LOCK
 # straight through, so the lock is checked on its own first.
 # Assert uv.lock and the environment are current, as CI's `uv sync --locked` does.
-sync-check:
+sync-check: _guard
     #!/usr/bin/env bash
     set -uo pipefail
     if ! out=$(uv lock --check 2>&1); then
@@ -50,12 +93,12 @@ sync-check:
     exit 1
 
 # Lint + format check across the workspace.
-lint:
+lint: _guard
     uv run ruff check .
     uv run ruff format --check .
 
 # Auto-fix lint + format.
-fmt:
+fmt: _guard
     uv run ruff format .
     uv run ruff check --fix .
 
@@ -63,27 +106,32 @@ fmt:
 # depends on the path set it is given -- so the unit, not the file, is what gets checked.
 # scripts/typecheck.py is the same runner the pre-commit hook and CI use.
 # Type-check every member (src + tests) and the non-member Python.
-typecheck:
+typecheck: _guard
     uv run python scripts/typecheck.py --all
 
-# --- Git hooks (pre-commit; ADR-0018) ---------------------------------------------------
+# --- Git hooks (pre-commit; ADR-0036) ---------------------------------------------------
 # Once per clone -- the dev container does it for you.
 # Install the git hooks into .git/hooks.
-hooks:
+hooks: _guard
     uv run pre-commit install
 
-# The branch guard is skipped: it exists to stop commits landing on main, not to fail a
-# full-tree sweep.
+# The branch guard is skipped: it exists to stop commits landing on the long-lived branches
+# (`main` and `dev`, ADR-0038), not to fail a full-tree sweep.
 # Run every hook over the whole tree, as CI's `hygiene` job does.
-hooks-all:
+hooks-all: _guard
     SKIP=no-commit-to-branch uv run pre-commit run --all-files
 
 # Only the generic pre-commit-hooks repo carries a `rev`; the ruff / mypy / prettier /
 # eslint hooks take their version from uv.lock and pnpm-lock.yaml, so those are bumped by
 # updating the lockfiles instead.
 # Bump the pinned hook revisions.
-hooks-update:
+hooks-update: _guard
     uv run pre-commit autoupdate
+
+# The same check the docs-set pre-commit hook runs (ADR-0041).
+# Check the ADRs and epics and every reference to them, and regenerate their indexes.
+docs-check: _guard
+    uv run python scripts/docs_check.py
 
 # Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
@@ -102,7 +150,7 @@ hooks-update:
 #   just test services/auth-service/tests/unit   # part of one member's suite
 #
 # Run tests; optionally scope to a tier or a member, e.g. `just test services/auth-service`.
-test target="": sync-check
+test target="": _guard sync-check
     #!/usr/bin/env bash
     set -uo pipefail
     target="{{target}}"
@@ -154,7 +202,9 @@ test target="": sync-check
     exit $exit_status
 
 # Print the workspace targets affected by the working tree vs a base ref.
-affected base="origin/main":
+# Defaults to the integration branch, which is what feature branches are cut from (ADR-0038).
+# On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
+affected base="origin/dev":
     uv run python scripts/affected_targets.py --base {{base}}
 
 # --- PyPI lane --------------------------------------------------------------------------
@@ -180,7 +230,7 @@ published-combo member python="3.12":
     members = json.loads(os.environ['MEMBERS'])
     if not members:
         sys.exit(f'error: {member} is not a PyPI-lane member — check its [tool.ghga]'
-                 ' release marker (ADR-0014)')
+                 ' release marker (ADR-0033)')
     cell = members[0]
     package, declared = cell['package'], cell['requires_python']
     if python not in cell['pythons']:
@@ -242,7 +292,7 @@ published-combo member python="3.12":
     cd "{{member}}"
     "$work/venv/bin/python" -m pytest -q --durations=10
 
-# --- Docs lane (ADR-0021) ---------------------------------------------------------------
+# --- Docs lane (ADR-0039) ---------------------------------------------------------------
 # Build the published documentation. A member is documented iff it carries a
 # `great-docs.yml`; scripts/docs_members.py is the same discovery docs-publish.yaml reads,
 # so a local build cannot drift from the deployed one.
@@ -379,7 +429,7 @@ sync-mainline *args:
 # --- Helm charts --------------------------------------------------------------------------
 # Regenerate the per-service charts from workspace metadata + member chart-values.yaml.
 # Passing no version reuses the committed one: release-charts.yaml publishes whatever is
-# committed, so regenerating must not change it (ADR-0004).
+# committed, so regenerating must not change it (ADR-0027).
 charts version="":
     #!/usr/bin/env bash
     set -euo pipefail
@@ -409,21 +459,22 @@ demo-template:
 
 # --- Docker -----------------------------------------------------------------------------
 # Build a member image locally, e.g. `just image services/auth-service`.
-# Python members use the shared Dockerfile (entrypoint = package name, ADR-0014);
-# members shipping their own Dockerfile.dhi (frontend) build with it in-place.
+# Python members use the shared Dockerfile (entrypoint = package name, ADR-0033);
+# members shipping their own Dockerfile (the frontend) build with it in-place --
+# a package.json rather than a pyproject.toml is what tells the two apart.
 # Tags use the release registry scheme with tag 'local' so the charts' generated
 # image references resolve with only a tag override (values-local.yaml).
 # `tag` and trailing docker-build flags are overridable so CI reuses these recipes
 # instead of duplicating the build commands — e.g. security-scan.yaml runs
 # `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
 # attestations needs a docker-container buildx builder, which these `docker build`
-# recipes cannot provide (see ADR-0019).
+# recipes cannot provide (see ADR-0037).
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ -f "{{target}}/Dockerfile.dhi" ]; then
+    if [ -f "{{target}}/package.json" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile.dhi" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
+        docker build -f "{{target}}/Dockerfile" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
         docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
@@ -555,7 +606,7 @@ docker-prune:
     docker builder prune -f --keep-storage 5GB
     docker image prune -f
 
-# --- Local cluster (kind in the devcontainer's docker; ADR-0009/0017 as amended) --------
+# --- Local cluster (kind in the devcontainer's docker; ADR-0028) ---------------------
 # On hosts whose outer dockerd enforces an nftables FORWARD drop policy (e.g. a Lima
 # docker VM), the nested bridges lose egress after every VM restart — exempt them in
 # the sanctioned DOCKER-USER chain. Idempotent; skipped where iptables-nft is absent.
@@ -584,6 +635,13 @@ cluster:
     just net-fix
     # plain grep, not -q — see the SIGPIPE note in `images-present`
     kind get clusters 2>/dev/null | grep -x ghga > /dev/null || kind create cluster --config deploy/kind-config.yaml --wait 120s
+    # The check above finds the cluster through docker's labels, but every recipe below
+    # reaches it through the kind-ghga context in ~/.kube/config — and the two do not have
+    # the same lifetime here: a devcontainer rebuild keeps docker's storage (a named
+    # volume) and wipes the home directory. The cluster then still exists, creation is
+    # skipped, and the first `--kube-context kind-ghga` fails with "context does not
+    # exist". Re-exporting unconditionally costs nothing and closes that gap.
+    kind export kubeconfig --name ghga > /dev/null
 
 # Build the images first — `just demo-images` (one per member, as released) or
 # `just demo-images-mono` (a single Python image; far faster, demo/CI only). Loading them
@@ -631,7 +689,7 @@ down:
     # the images and the next `just up` reloads them without rebuilding
     echo "cluster deleted — the node's images went with it; \`just up\` reloads them (no rebuild)"
 
-# --- Integration testbed (BDD suite in testbed/; ADR-0009) -------------------------------
+# --- Integration testbed (BDD suite in testbed/; ADR-0028) -------------------------------
 # Generate the metldata artifact model from the testbed's example metadata model
 # (DSKit, ADR-aligned: derived artifact, not committed) as a values overlay.
 testbed-artifacts:
@@ -675,13 +733,50 @@ testbed-up profile="": (demo-load profile)
       --kube-context kind-ghga --wait --timeout 15m
     just wait-ready
 
-# One-time: virtualenv for the testbed suite (own requirements; not a workspace member).
+# The suite imports ghga-datasteward-kit and runs it and ghga-connector as CLIs, so both
+# have to be the workspace source, never a PyPI release: they are exported from uv.lock
+# and installed editable, with the lock's versions of everything under them. The
+# suite's own requirements are resolved in the same step, so a pin there that disagrees
+# with uv.lock fails the install instead of quietly replacing the workspace's version;
+# the suite re-checks the result before its first test (steps/conftest.py).
 # The UI phase drives a real browser, so the matching chromium build comes with it
 # (playwright pins the build to the library version; a system chromium won't do).
+# One-time: virtualenv for the testbed suite (not a workspace member; tools from uv.lock).
 testbed-install:
+    #!/usr/bin/env bash
+    set -euo pipefail
     uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
-    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install -r testbed/requirements.txt
+    # uv exports the workspace paths relative to the root; made absolute so the file
+    # means the same whichever directory the installer resolves them against
+    uv export --frozen --no-hashes --no-dev --no-header \
+      --package ghga-datasteward-kit --package ghga-connector \
+      | sed "s|^-e \./|-e $PWD/|" > .venv-testbed/workspace-tools.txt
+    VIRTUAL_ENV=$PWD/.venv-testbed uv pip install \
+      -r .venv-testbed/workspace-tools.txt -r testbed/requirements.txt
     .venv-testbed/bin/playwright install chromium
+
+# Open a Playwright trace from a traced test-bed run (`TB_TRACE=1 just testbed -m frontend`).
+# With no argument, lists what the last traced run left behind. `show-trace` would
+# otherwise try to launch a GUI chromium, which there is no display for in the
+# devcontainer, so serve the viewer instead and let the editor forward the port.
+testbed-trace file="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${TB_TRACE_DIR:-$PWD/testbed/.traces}"
+    if [ -z "{{file}}" ]; then
+      ls -1 "$dir"/*.zip 2>/dev/null \
+        || { echo "no traces in $dir — record some with \`TB_TRACE=1 just testbed -m frontend\`"; exit 1; }
+      echo
+      echo "open one with: just testbed-trace <name>"
+      exit 0
+    fi
+    # accept a bare test name, a file name or a path
+    trace="{{file}}"
+    [ -f "$trace" ] || trace="$dir/{{file}}"
+    [ -f "$trace" ] || trace="$dir/{{file}}.zip"
+    [ -f "$trace" ] || { echo "error: no such trace: {{file}} (\`just testbed-trace\` lists them)" >&2; exit 1; }
+    echo "serving $trace on http://localhost:9323 (ctrl-c to stop)"
+    .venv-testbed/bin/playwright show-trace --host 0.0.0.0 --port 9323 "$trace"
 
 # Make the in-cluster MinIO name resolve locally: services hand the connector
 # pre-signed S3 URLs built from s3_endpoint_url, and those signatures are bound to
@@ -702,6 +797,17 @@ testbed-reset:
     set -euo pipefail
     K="kubectl --context kind-ghga"
     MPOD=$($K get pods -o name | grep mongodb | head -1)
+    apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
+    # Stop the services before dropping their databases, and wait until their pods are
+    # gone: a pod still running writes new documents into the emptied database, and the
+    # restarted service then finds data but no migration record, re-runs its migrations
+    # over it and crash-loops.
+    replicas=$($K get $apps -o json | jq -r '.items[] | "\(.metadata.name) \(.spec.replicas)"')
+    echo "$apps" | xargs $K scale --replicas=0 > /dev/null
+    for d in $apps; do
+        sel=$($K get "$d" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
+        $K wait --for=delete pod -l "$sel" --timeout=120s > /dev/null
+    done
     # Drop every service database: the suite's clean slate removes the migration
     # bookkeeping, so a service restarting afterwards would re-run migrations over
     # already-migrated data and crash-loop. Starting from empty avoids that.
@@ -710,10 +816,21 @@ testbed-reset:
          .map(d => d.name)
          .filter(n => !["admin","config","local"].includes(n))
          .forEach(n => db.getSiblingDB(n).dropDatabase())' > /dev/null
-    apps=$($K get deploy -o name | grep -vE "envoy|mongodb|kafka|minio|vault|mailhog|lox24|test-oidc|aai")
-    echo "$apps" | xargs -r -n1 $K rollout restart > /dev/null
-    for d in $apps; do $K rollout status "$d" --timeout=240s > /dev/null; done
-    sleep 20
+    echo "$replicas" | while read -r name n; do $K scale deploy "$name" --replicas="$n" > /dev/null; done
+    # Name what is being waited on, and what failed. Every app deployment starts at once
+    # above while each service re-migrates and rejoins its Kafka consumer group — 240s
+    # was not enough on a loaded machine, and a bare `rollout status > /dev/null` under
+    # `set -e` then aborted with kubectl's "timed out waiting for the condition" and no
+    # clue which of the ~19 deployments it meant.
+    total=$(echo "$apps" | wc -l | tr -d ' ')
+    i=0
+    for d in $apps; do
+        i=$((i + 1))
+        name="${d#deployment.apps/}"
+        printf '  [%2d/%s] waiting for %s\n' "$i" "$total" "$name" >&2
+        $K rollout status "$d" --timeout=600s > /dev/null \
+          || { echo "error: $name did not become ready within 600s — \`just logs $name\` shows why" >&2; exit 1; }
+    done
     echo "state reset (databases empty, services re-migrated and re-seeded)"
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
@@ -724,12 +841,18 @@ testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
     # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
-    # on PATH. Both are workspace members (tools/), so the gate has to exercise our
-    # build of them — testbed/requirements.txt also pins released versions from PyPI
-    # into .venv-testbed, and those would silently be tested instead. Locally this was
-    # only ever right by accident: the devcontainer happens to put .venv/bin on PATH.
-    export PATH="$PWD/.venv/bin:$PATH"
+    # on PATH. The testbed venv holds them as editable workspace installs (see
+    # testbed-install), so the CLIs are the very install the suite also imports.
+    export PATH="$PWD/.venv-testbed/bin:$PATH"
     K="kubectl --context kind-ghga"
+    # Fail in seconds, not in 300 s timeouts per scenario, when the platform is broken:
+    # e.g. a crash-looping service, or Vault not letting ekss log in (its readiness
+    # probe does that login).
+    if ! $K wait --for=condition=Available deploy --all --timeout=60s > /dev/null 2>&1; then
+        echo "error: not every deployment is available — \`just logs\` lists them:" >&2
+        $K get deploy --no-headers | awk '{split($2, r, "/")} r[1] != r[2] {print "  " $1 " " $2}' >&2
+        exit 1
+    fi
     secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
     export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
     export TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)
@@ -754,3 +877,23 @@ testbed *args:
     trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
     sleep 2
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
+
+# The name is matched loosely, so the `ghga-` prefix is optional and a substring is enough.
+# `just logs` with no argument lists the deployments and their ready counts.
+# Follow a service's logs, e.g. `just logs auth-adapter` (no argument lists them).
+logs name="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    if [ -z "{{name}}" ]; then
+        $K get deploy -o custom-columns=NAME:.metadata.name,READY:.status.readyReplicas --no-headers \
+          | awk '{sub(/^ghga-/, "", $1); printf "%-28s %s\n", $1, $2}'
+        exit 0
+    fi
+    # `|| true`: a non-matching grep exits 1, and under `set -e` that kills the recipe
+    # before the message below ever prints
+    match=$($K get deploy -o name | grep -- "{{name}}" | head -1 || true)
+    [ -n "$match" ] || { echo "error: no deployment matching '{{name}}' — \`just logs\` lists them" >&2; exit 1; }
+    echo "== $match ==" >&2
+    # --all-containers: several workloads run a sidecar, and the default picks only one
+    $K logs -f --tail=100 --all-containers "$match"

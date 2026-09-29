@@ -11,6 +11,9 @@
   "python.testing.pytestEnabled": false,
   "python.testing.unittestEnabled": false,
 
+  // Copilot finds the root `AGENTS.md` by itself, but the nested ones only with this.
+  "chat.useNestedAgentsMdFiles": true,
+
   "search.exclude": {
     ".legacy_repos/**": true,
     ".migration-work/**": true,

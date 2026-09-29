@@ -21,7 +21,7 @@ from linkml_runtime.linkml_model.meta import SlotDefinition
 from metldata.builtin_transformations.infer_references.reference import (
     InferredReference,
 )
-from metldata.model_utils.essentials import MetadataModel
+from metldata.model_utils.essentials import ExportableSchemaView, MetadataModel
 from metldata.model_utils.manipulate import (
     ModelManipulationError,
     add_slot_if_not_exists,
@@ -43,11 +43,11 @@ def inferred_reference_to_slot(reference: InferredReference) -> SlotDefinition:
     )
 
 
-def add_reference_to_model(
-    *, model: MetadataModel, reference: InferredReference
-) -> MetadataModel:
-    """Get a modified copy of the provided model with the inferred reference being
-    added.
+def add_reference_to_schema_view(
+    *, schema_view: ExportableSchemaView, reference: InferredReference
+) -> ExportableSchemaView:
+    """Get a modified copy of the provided schema view with the inferred reference
+    being added.
 
     Raises:
             MetadataModelTransformationError:
@@ -55,7 +55,6 @@ def add_reference_to_model(
     """
     new_slot = inferred_reference_to_slot(reference)
 
-    schema_view = model.schema_view
     try:
         schema_view = add_slot_if_not_exists(schema_view=schema_view, new_slot=new_slot)
         schema_view = upsert_class_slot(
@@ -67,7 +66,7 @@ def add_reference_to_model(
             + f" model.: {error}"
         ) from error
 
-    return schema_view.export_model()
+    return schema_view
 
 
 def add_references_to_model(
@@ -78,7 +77,11 @@ def add_references_to_model(
             MetadataModelTransformationError:
                 if the transformation of the metadata model fails.
     """
+    # Exporting rebuilds the whole model, so do it once rather than per reference
+    schema_view = model.schema_view
     for reference in references:
-        model = add_reference_to_model(model=model, reference=reference)
+        schema_view = add_reference_to_schema_view(
+            schema_view=schema_view, reference=reference
+        )
 
-    return model
+    return schema_view.export_model()

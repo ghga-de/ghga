@@ -3,7 +3,7 @@
 
 For every workspace member, find dependencies that resolve to *other workspace members*
 (the internal libs/tools) and add `[tool.uv.sources] <name> = { workspace = true }` so they
-are consumed from source — the single-`uv.lock`, always-integrated model (ADR-0002).
+are consumed from source — the single-`uv.lock`, always-integrated model (ADR-0026).
 
 Version specifiers in `[project.dependencies]` are left untouched here; a follow-up step
 relaxes only the specifiers uv reports as incompatible with the workspace HEAD version.

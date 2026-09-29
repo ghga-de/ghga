@@ -18,15 +18,15 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "License :: OSI Approved :: Apache Software License",
     "Environment :: Console",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Utilities",
     "Intended Audience :: Science/Research",
 ]
 name = "ghga_connector"
-version = "4.0.0"
+version = "4.0.1"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
+license = "Apache-2.0"
 dependencies = [
     "typer~=0.19",
     "crypt4gh>=1.8.6, <2",
@@ -37,9 +37,6 @@ dependencies = [
     "async-lru >= 2.1.0, <3",
     "prompt_toolkit>=3.0, <4",
 ]
-
-[project.license]
-text = "Apache 2.0"
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
@@ -93,8 +90,8 @@ legacy_tox_ini = """
 ghga-service-commons = { workspace = true }
 hexkit = { workspace = true }
 
-# Capability markers (ADR-0014): public end-user CLI -> PyPI release lane with
-# the closure-train rule (co-release changed internal deps, exact pins; ADR-0004).
+# Capability markers (ADR-0033): public end-user CLI -> PyPI release lane with
+# the closure-train rule (co-release changed internal deps, exact pins; ADR-0027).
 [tool.ghga]
 release = "pypi"
 pypi = true

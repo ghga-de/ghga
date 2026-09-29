@@ -266,7 +266,7 @@ Two implementations of the DAO protocol ship with hexkit:
   semantics without any database.
 
 For extensive, runnable usage examples, the
-[DAO integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/providers/dao/test_mongodb_dao.py)
+[DAO integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py)
 in the hexkit repository are a good complement to this guide.
 
 ## Outbox Variants
@@ -304,7 +304,7 @@ keep a custom provider well-behaved:
 The following compact but functional example stores resources in plain dictionaries.
 A real provider would talk to a database instead, but the structure stays the same
 (compare with the
-[MongoDB implementation](https://github.com/ghga-de/hexkit/blob/main/src/hexkit/providers/mongodb/provider/dao.py)):
+[MongoDB implementation](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/src/hexkit/providers/mongodb/provider/dao.py)):
 
 ```python
 from collections.abc import AsyncIterator, Collection, Mapping
@@ -442,4 +442,4 @@ await book_dao.insert(Book(title="Refactoring", author="Martin Fowler", pages=44
 ```
 
 If you build a provider for a widely used database, please consider
-[contributing it to hexkit](https://github.com/ghga-de/hexkit).
+[contributing it to hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit).

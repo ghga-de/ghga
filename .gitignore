@@ -30,6 +30,8 @@ frontend/**/dist/
 # Local env / secrets
 .env
 *.local.yaml
+# private notes and plans, at any level — never tracked
+.local/
 
 # pytest --debug output
 pytestdebug.log
@@ -37,13 +39,23 @@ pytestdebug.log
 rendered/
 # local Claude Code state backups — never commit (contains credentials)
 claude-backup/
-# root-level Claude Code state only — nested .claude/ dirs in members are tracked
-/.claude/
+# root-level Claude Code state only — nested .claude/ dirs in members are tracked;
+# the shared parts of the root one are tracked too
+/.claude/*
+!/.claude/settings.json
+!/.claude/skills/
+!/.claude/agents/
+!/.claude/commands/
+!/.claude/output-styles/
 # leave out every local claude settings
 **/.claude/settings.local.json
+# and the local Copilot settings
+.github/copilot/settings.local.json
 
 # buildx --metadata-file output
 metadata.json
 
 # great-docs build output (`just docs`); the trailing slash keeps great-docs.yml tracked
 libs/*/great-docs/
+# Playwright traces from failed test-bed runs (diagnostics only, can be large)
+testbed/.traces/

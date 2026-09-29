@@ -189,7 +189,7 @@ argument to `does_object_exist` raises a `NotImplementedError`, as MD5 content
 checking is not implemented by this provider yet.
 
 The provider's own
-[integration tests](https://github.com/ghga-de/hexkit/blob/main/tests/integration/providers/objstorage/test_s3_objstorage.py)
+[integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/objstorage/test_s3_objstorage.py)
 double as an extensive collection of runnable usage examples; the
 [S3 Object Storage Test Utils](#s3-object-storage-test-utils) section below describes
 the fixtures they build on.

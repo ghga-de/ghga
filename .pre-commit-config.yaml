@@ -1,7 +1,7 @@
-# GHGA monorepo — one pre-commit config for both stacks (ADR-0018).
+# GHGA monorepo — one pre-commit config for both stacks (ADR-0036).
 #
 # Replaces the ~28 byte-identical copies the microservice-repository-template used to sync
-# into the Python repos (ADR-0001) and the husky hook the data-portal carried.
+# into the Python repos (ADR-0025) and the husky hook the data-portal carried.
 #
 # ruff / mypy / prettier / eslint are `repo: local` on purpose: they must be the versions
 # uv.lock and pnpm-lock.yaml pin, i.e. the ones `just lint`, `just typecheck`, `just fe-lint`
@@ -21,7 +21,7 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
-        # docs/epics/ is imported history (ADR-0010): 36 files there end lines with two
+        # docs/epics/ is imported history (ADR-0025): 36 files there end lines with two
         # spaces as a hard break, and ~116 more lines would still churn with the arg above.
         exclude: ^docs/epics/
       - id: end-of-file-fixer
@@ -32,9 +32,11 @@ repos:
         # 379 Go-templated Helm manifests are not YAML; 4 transpiler configs use
         # !!python/object/apply tags that safe_load rejects by design; and one schemapack
         # example is a duplicate-key document on purpose (it is the parse-error fixture).
+        # pnpm 12 writes its lockfile as two documents; pnpm itself validates it.
         exclude: |
           (?x)^(
-              deploy/(charts/[^/]+|src/template|tests/(dummy|template))/templates/.*\.ya?ml
+              frontend/data-portal/pnpm-lock\.yaml
+            | deploy/(charts/[^/]+|src/template|tests/(dummy|template))/templates/.*\.ya?ml
             | tools/ghga-transpiler/(src/ghga_transpiler/configs|tests/fixtures/configs)/.*\.yaml
             | libs/schemapack/examples/datapack/invalid/simple_relations/ParsingError\.duplicate_resource_id\.datapack\.yaml
           )$
@@ -54,8 +56,10 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: no-commit-to-branch
-        # this repo has only `main`; releases are tags, not branches (ADR-0004).
-        args: [--branch, main]
+        # both long-lived branches (ADR-0038): `main` is the latest release, `dev` is the
+        # integration branch. Everything else reaches them by pull request; releases are
+        # tags, not branches (ADR-0027).
+        args: [--branch, main, --branch, dev]
       # NOT taken from the template: pretty-format-json. It rewrites 39 tracked files,
       # among them angular.json and src/mocks/example-metadata.json, which Prettier owns
       # and formats differently. check-json above still guarantees validity.
@@ -95,6 +99,28 @@ repos:
         types: [shell]
         # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
         entry: shellcheck -x -P SCRIPTDIR
+
+      # ---- ADRs, epics and instruction files (ADR-0041, ADR-0042) ---------------------------
+      # The set hook checks both sets, the instruction files and the references across
+      # the tree, since most rules span files; it regenerates the two indexes and fails
+      # when that changed a file. The reference hook checks only the committed files, so
+      # every commit pays little.
+      - id: docs-set
+        name: ADR, epic and instruction-file sets
+        language: system
+        # the orphan paths the check polices are part of the shape, so a commit that
+        # adds one has to run the hook that rejects it
+        files: ^(docs/(adrs/|epics/|README\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|\.github/(copilot-instructions\.md$|instructions/)|(.*/)?\.(copilot|cursor/rules)/|(.*/)?\.(cursorrules|clinerules|windsurfrules|aider\.conf\.yml)$|scripts/docs_check\.py$)
+        pass_filenames: false
+        require_serial: true
+        entry: uv run python scripts/docs_check.py
+
+      - id: docs-refs
+        name: ADR and epic references
+        language: system
+        types: [text]
+        require_serial: true
+        entry: uv run python scripts/docs_check.py --refs
 
       # ---- Front end (data-portal) -----------------------------------------------------
       # Both tools REQUIRE cwd = frontend/data-portal: eslint-plugin-boundaries' settings and

@@ -1,4 +1,4 @@
-# ghga-demo — self-contained profile (ADR-0006). Install as release "ghga":
+# ghga-demo — self-contained profile (ADR-0028). Install as release "ghga":
 #   helm install ghga deploy/charts/ghga-demo
 # Bare clusters have no LoadBalancer: the gateway service defaults to NodePort
 # (set gateway.nodePort, or use port-forward).
@@ -70,6 +70,13 @@ kafka:
   image: apache/kafka:3.9.1
   # fixed KRaft cluster id (any base64-ish 22 chars; fixed so restarts reuse storage)
   clusterId: GhgaDemoKafkaCluster00
+  # The image defaults to `-Xmx1G -Xms1G`, and -Xms COMMITS that gigabyte at start
+  # whatever the load — measured at 862 MiB working set, by far the largest pod on
+  # the node. The demo/testbed topics hold a few hundred tiny events, so the default
+  # is sized for a production broker we are not running. The node has ~7.8 GiB and
+  # also hosts pytest, a headless browser and the connector, so this was roughly
+  # half of the shortfall that starved the UI phase.
+  heapOpts: -Xmx512m -Xms256m
 
 mongodb:
   enabled: true
@@ -77,8 +84,15 @@ mongodb:
 
 minio:
   enabled: true
-  image: minio/minio:latest
-  mcImage: minio/mc:latest
+  # Chainguard's minimal (distroless, no shell) images, pinned to the "latest" tag's
+  # current index digest so arm64 devcontainers still resolve the right manifest.
+  # "latest" is the only tag Chainguard publishes for these images, and it moves onto new
+  # MinIO releases as they build them, not just security patches on one version. Using it
+  # is still fine: renovate.json5's allowedVersions pins the tag to "latest", so a bump
+  # here only ever moves the digest, and every such bump runs through the testbed like
+  # any other change before it merges.
+  image: cgr.dev/chainguard/minio:latest@sha256:22bf0ad174612a0106dfbbb95818f307525dd32c5a6ec119ecd7273815abe456
+  mcImage: cgr.dev/chainguard/minio-client:latest@sha256:ff313058c290a4519b86db9362386d18214583b86ea35f6891038e1061dc3e12
   rootUser: demo-access-key
   rootPassword: demo-secret-key
   # The S3 API is published on a node port, which kind maps to the host's 9000
@@ -138,7 +152,7 @@ aai:
       - name: ghga
     rewriteHost: localhost
 
-# ---- demo secrets (ADR-0006/0016) --------------------------------------------------------
+# ---- demo secrets (ADR-0028/0035) --------------------------------------------------------
 # Pre-install Job generating plain K8s Secrets (internal auth JWK pair + TOTP key);
 # idempotent, keys stay stable across upgrades. The generator runs the auth-km-jobs
 # image; tags are set by the install tooling (locally built images or a release tag).
@@ -169,8 +183,6 @@ auth-adapter:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     provide_apis: ["ext_auth"]
     # Endpoints with their own auth (bearer work-package / work-order / service
@@ -227,8 +239,6 @@ auth-rest:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     # users API only: the access API lives with the claims API on the internal
     # instance, so exactly ONE instance seeds the data steward (two instances
@@ -250,8 +260,6 @@ auth-claims:
   enabled: true
   nameOverride: auth-claims
   envVarsSecret: ghga-auth-keys-pub
-  ports:
-    enabled: true
   config:
     # also consumes dataset/user events: the claims repository revokes access
     # grants when a dataset disappears (the reference deployment runs the
@@ -265,7 +273,7 @@ auth-claims:
     oidc_userinfo_endpoint: http://ghga-aai:8080/ghga/userinfo
     oidc_issuer: http://localhost/ghga
     oidc_client_id: ghga-client
-    # seed data steward (ADR-0006) — log in via the aai with exactly this subject
+    # seed data steward (ADR-0028) — log in via the aai with exactly this subject
     add_as_data_stewards:
       - ext_id: data.steward@ghga.dev
         name: Data Steward
@@ -294,8 +302,6 @@ wkvs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
 
 data-portal:
   enabled: true
@@ -304,8 +310,6 @@ data-portal:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     # browser-facing URLs (the kind config maps the gateway to the host computer's port 80)
     base_url: http://localhost
@@ -322,8 +326,6 @@ data-portal:
 
 ekss:
   enabled: true
-  ports:
-    enabled: true
   config:
     host: 0.0.0.0
     port: 8080
@@ -352,8 +354,6 @@ dcs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -385,8 +385,6 @@ ucs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -415,14 +413,12 @@ fis:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
-    # everything here is built from one commit (lockstep, ADR-0004) and carries
+    # everything here is built from one commit (lockstep, ADR-0027) and carries
     # the dev version stamp, which no ">2.0.0"-style gate accepts; the DHFS
     # compatibility check is meaningful for real data-hub installs, not here
     dhfs_version_constraint: ">=0.0.0"
@@ -459,8 +455,6 @@ pcs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -476,8 +470,6 @@ wps:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -494,8 +486,6 @@ rs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -512,8 +502,6 @@ metldata:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: "1"
     kafka_servers: ["ghga-kafka:9092"]
@@ -533,8 +521,6 @@ rts:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -551,8 +537,6 @@ ars:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -568,8 +552,6 @@ mass:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -584,8 +566,6 @@ dins:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: consumer.1
     kafka_servers: ["ghga-kafka:9092"]
@@ -639,14 +619,12 @@ dlqs:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]
     mongo_dsn: mongodb://ghga-mongodb:27017
 
-# test-bed only (ADR-0008): the testbed profile flips this on (and should add
+# test-bed only (ADR-0030): the testbed profile flips this on (and should add
 # 'sms' to extAuth.targetRoutes)
 sms:
   enabled: false
@@ -657,8 +635,6 @@ sms:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     service_instance_id: rest.1
     kafka_servers: ["ghga-kafka:9092"]

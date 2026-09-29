@@ -1,5 +1,5 @@
 @dataportal @frontend
-Feature: 401 Data Portal User Profile
+Feature: 501 Data Portal User Profile
   As a user, I can view and manage my GHGA account
 
     Background:

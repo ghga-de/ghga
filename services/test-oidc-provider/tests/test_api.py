@@ -87,7 +87,7 @@ async def test_openid_configuration(origin_header: str | None, client: AsyncTest
         "authorization_endpoint": f"{base_url}/authorize",
         "token_endpoint": f"{base_url}/token",
         "userinfo_endpoint": f"{base_url}/userinfo",
-        "service_documentation": "https://github.com/ghga-de/test-oidc-provider",
+        "service_documentation": "https://github.com/ghga-de/ghga/tree/main/services/test-oidc-provider",
     }
 
 

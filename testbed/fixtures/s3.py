@@ -60,7 +60,11 @@ class S3Fixture(StateManager):
         """Check if an object exists in a bucket."""
         url = f"{self.config.sms_url}/objects/{storage_alias}/{bucket}/{object_id}"
         response = self.http.get(url, headers=self.auth_headers)
-        return response.status_code == 200
+        # The answer is the boolean in the body: the state management service reports
+        # a missing object with 200 and `false`, and keeps 404 for an unknown storage
+        # alias or bucket, which is a broken test rather than an absent object.
+        assert response.status_code == 200, f"{response.status_code}: {response.text}"
+        return response.json() is True
 
     def list_objects(self, bucket: str, storage_alias: str) -> list[str]:
         """List all objects in the specified bucket."""

@@ -7,7 +7,7 @@ spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
 # Proxy infrastructure settings: bare clusters (kind/minikube) have no
-# LoadBalancer, so the generated envoy Service defaults to NodePort (ADR-0012).
+# LoadBalancer, so the generated envoy Service defaults to NodePort (ADR-0032).
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:

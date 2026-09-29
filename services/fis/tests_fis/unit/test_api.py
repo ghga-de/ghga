@@ -325,7 +325,7 @@ async def test_post_interrogation_report(
     # Verify file was updated and marked for removal
     updated_file2 = await rig.file_dao.get_by_id(file2.id)
     assert updated_file2.interrogated is True
-    assert updated_file2.state == "failed"
+    assert updated_file2.state == "failed_interrogation"
     assert updated_file2.can_remove is True
 
     # Test file not found returns 404

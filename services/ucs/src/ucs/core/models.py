@@ -95,3 +95,13 @@ class UploadActivity(BaseModel):
 
     file_id: UUID4
     last_activity: UTCDatetime
+
+
+class BoxRequeueResult(BaseModel):
+    """Indicates which files, if any, were requeued or skipped when
+    requesting to requeue all 'failed_interrogation' FileUploads in a FileUploadBox.
+    Skipped files are those that couldn't be requeued due to an error.
+    """
+
+    requeued: list[UUID4]
+    skipped: list[UUID4]

@@ -1,4 +1,4 @@
-# Testbed profile (ADR-0006/0009): layered on top of values-local.yaml —
+# Testbed profile (ADR-0028): layered on top of values-local.yaml —
 #   helm upgrade --install ghga deploy/charts/ghga-demo \
 #     -f values-local.yaml -f values-artifacts.yaml -f values-testbed.yaml
 # Enables the state-management service, deploys the original GHGA test OP
@@ -10,7 +10,7 @@
 aai:
   enabled: false
 
-# testbed-only state manipulation API (ADR-0008)
+# testbed-only state manipulation API (ADR-0030)
 sms:
   enabled: true
 
@@ -24,8 +24,6 @@ test-oidc-provider:
     port: 8080
     parentRefs:
       - name: ghga
-  ports:
-    enabled: true
   config:
     # the issuer the testbed's sub-derivation and the auth stack expect
     issuer: https://test-aai.ghga.dev
@@ -77,6 +75,19 @@ auth-claims:
         # steps keeps only IVAs with that value, so a different one would delete
         # the steward's and leave the portal's profile page empty
         iva_value: "+491710000001"
+
+# DHFS asks FIS for new files every 60 s by default, and each interrogation the
+# suite waits for would mostly wait for that poll. A round with nothing to do is a
+# single request to FIS, so polling every 2 s costs next to nothing. The steps that
+# read a file in the inbox accept a later state too, so a short interval cannot race
+# them.
+dhfs-primary:
+  config:
+    min_run_interval_seconds: 2
+
+dhfs-secondary:
+  config:
+    min_run_interval_seconds: 2
 
 # The suite asserts the exact search options; use the test bed's facet
 # configuration (from the compose environment) rather than the prod one.

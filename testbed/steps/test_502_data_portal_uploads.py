@@ -30,14 +30,14 @@ from .conftest import (
     then,
     when,
 )
+from .utils import UI_TIMEOUT
 
 scenarios("../features/502_data_portal_uploads.feature")
 
-TIMEOUT = 3000
 UI_BOX_TITLE = "TB UI Upload Box {storage}"
 STORAGE_LABELS = {"primary": "Primary", "secondary": "Secondary"}
 
-INGEST_INTERVAL, INGEST_TIMEOUT = 3, 30  # seconds
+INGEST_INTERVAL, INGEST_TIMEOUT = 1, 30  # seconds
 
 
 def _box_title(storage_name: str) -> str:
@@ -63,10 +63,17 @@ def _upload_grant_row(fixtures, box_title):
     "div.border-b" is the most sufficient so far.
     """
     page = fixtures.playwright.page
-    page.wait_for_selector("app-user-upload-grants-list", timeout=TIMEOUT)
+    page.wait_for_selector("app-user-upload-grants-list", timeout=UI_TIMEOUT)
     grants_list = page.locator("app-user-upload-grants-list")
-    expect(grants_list).to_be_visible(timeout=TIMEOUT)
+    expect(grants_list).to_be_visible(timeout=UI_TIMEOUT)
     return grants_list.locator("div.border-b").filter(has_text=box_title)
+
+
+def _files_table(fixtures: JointFixture):
+    """Return the files table shown in the upload box details."""
+    table = fixtures.playwright.page.locator("app-upload-box-files-table table")
+    expect(table).to_be_visible(timeout=UI_TIMEOUT)
+    return table
 
 
 @then("the upload box manager list is displayed")
@@ -75,9 +82,9 @@ def check_manager_list(fixtures: JointFixture):
     page = fixtures.playwright.page
     expect(page).to_have_url(re.compile(r"/upload-box-manager$"))
     main = page.locator("main")
-    expect(main).to_contain_text("Upload Box Manager", timeout=TIMEOUT)
+    expect(main).to_contain_text("Upload Box Manager", timeout=UI_TIMEOUT)
     table = main.locator("table")
-    expect(table).to_be_visible(timeout=TIMEOUT)
+    expect(table).to_be_visible(timeout=UI_TIMEOUT)
     expect(table.get_by_text("Title", exact=True).first).to_be_visible()
     expect(table.get_by_text("State", exact=True).first).to_be_visible()
 
@@ -89,11 +96,11 @@ def create_upload_box(storage_name: str, fixtures: JointFixture):
     title = _box_title(storage_name)
 
     create_button = page.get_by_role("button", name="Create Upload Box")
-    expect(create_button).to_be_visible(timeout=TIMEOUT)
+    expect(create_button).to_be_visible(timeout=UI_TIMEOUT)
     create_button.click()
 
     dialog = page.get_by_role("dialog")
-    expect(dialog).to_contain_text("Create a new Upload Box", timeout=TIMEOUT)
+    expect(dialog).to_contain_text("Create a new Upload Box", timeout=UI_TIMEOUT)
     dialog.get_by_label("Title").fill(title)
     dialog.get_by_label("Description").fill("Created via archive-test-bed UI journey")
     dialog.get_by_role("combobox", name="Storage location").click()
@@ -101,7 +108,7 @@ def create_upload_box(storage_name: str, fixtures: JointFixture):
     dialog.get_by_label("Size limit (in TiB)").fill("1")
 
     ok_button = dialog.get_by_role("button", name="OK")
-    expect(ok_button).to_be_enabled(timeout=TIMEOUT)
+    expect(ok_button).to_be_enabled(timeout=UI_TIMEOUT)
     ok_button.click()
 
 
@@ -111,7 +118,7 @@ def check_box_listed(storage_name: str, fixtures: JointFixture):
     page = fixtures.playwright.page
     title = _box_title(storage_name)
     _filter_manager_by_title(fixtures, title)
-    expect(page.locator("main").get_by_text(title)).to_be_visible(timeout=TIMEOUT)
+    expect(page.locator("main").get_by_text(title)).to_be_visible(timeout=UI_TIMEOUT)
 
 
 @when(parse('I open the details of the "{storage_name}" upload box in the portal'))
@@ -122,7 +129,7 @@ def open_box_details(storage_name: str, fixtures: JointFixture):
     main = page.locator("main")
     _filter_manager_by_title(fixtures, title)
     details_button = main.get_by_role("button", name="View upload box details").first
-    expect(details_button).to_be_visible(timeout=TIMEOUT)
+    expect(details_button).to_be_visible(timeout=UI_TIMEOUT)
     details_button.click()
     expect(page).to_have_url(re.compile(r"/upload-box-manager/.+"))
     expect(main).to_contain_text(title)
@@ -140,7 +147,7 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
     expect(main).to_contain_text(storage_name)
 
     add_grant = page.get_by_role("button", name="Add new upload grant")
-    expect(add_grant).to_be_visible(timeout=TIMEOUT)
+    expect(add_grant).to_be_visible(timeout=UI_TIMEOUT)
     add_grant.click()
     expect(page).to_have_url(re.compile(r"/upload-box-manager/.+/grant/new"))
     expect(main).to_contain_text("New Upload Grant")
@@ -149,19 +156,19 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
 
     # Search for the user, then pick them from the result table
     search_field = main.get_by_label("Search by name, email or external ID")
-    expect(search_field).to_be_visible(timeout=TIMEOUT)
+    expect(search_field).to_be_visible(timeout=UI_TIMEOUT)
     search_field.fill(name)
     user_row = main.get_by_role("button").filter(has_text=name)
-    expect(user_row.first).to_be_visible(timeout=TIMEOUT)
+    expect(user_row.first).to_be_visible(timeout=UI_TIMEOUT)
     user_row.first.click()
 
     # Selecting the user reveals the "Select an IVA" card
     iva_card = page.locator("mat-card").filter(has_text="Select an IVA")
-    expect(iva_card).to_be_visible(timeout=TIMEOUT)
+    expect(iva_card).to_be_visible(timeout=UI_TIMEOUT)
     iva_card.get_by_text(re.compile(r"\bSMS\b")).first.click()
 
     create_grant = page.get_by_role("button", name="Create Upload Grant")
-    expect(create_grant).to_be_visible(timeout=TIMEOUT)
+    expect(create_grant).to_be_visible(timeout=UI_TIMEOUT)
     create_grant.click()
     page.wait_for_load_state()
 
@@ -171,7 +178,7 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
     grants_card = page.locator("mat-card").filter(
         has=page.get_by_role("heading", level=2, name="Upload Grants")
     )
-    expect(grants_card).to_contain_text(name, timeout=TIMEOUT)
+    expect(grants_card).to_contain_text(name, timeout=UI_TIMEOUT)
 
 
 @when(parse('I create an upload token for "{storage_name}" storage'))
@@ -183,7 +190,7 @@ def create_upload_token(storage_name: str, fixtures: JointFixture):
     row.get_by_role("button", name="Create an upload token for this upload box").click()
 
     dialog = page.get_by_role("dialog").first
-    expect(dialog).to_contain_text("Create an Upload Token", timeout=TIMEOUT)
+    expect(dialog).to_contain_text("Create an Upload Token", timeout=UI_TIMEOUT)
     expect(dialog).to_contain_text("Selected upload box:")
     expect(dialog).to_contain_text(box_title)
 
@@ -192,16 +199,16 @@ def create_upload_token(storage_name: str, fixtures: JointFixture):
         .filter(has_text=re.compile("Crypt4GH", re.IGNORECASE))
         .locator("input")
     )
-    expect(key_field).to_be_visible(timeout=TIMEOUT)
+    expect(key_field).to_be_visible(timeout=UI_TIMEOUT)
     key_field.fill(fixtures.config.user_public_crypt4gh_key)
 
     generate_button = dialog.get_by_role("button", name="Generate upload token")
-    expect(generate_button).to_be_enabled(timeout=TIMEOUT)
+    expect(generate_button).to_be_enabled(timeout=UI_TIMEOUT)
     generate_button.click()
     page.wait_for_load_state()
 
     expect(dialog).to_contain_text(
-        "Your upload token has been created", timeout=TIMEOUT
+        "Your upload token has been created", timeout=UI_TIMEOUT
     )
     upload_token = dialog.locator("pre").inner_text().strip()
     id_, token = upload_token.split(":", 1)
@@ -224,13 +231,68 @@ def submit_upload(storage_name: str, fixtures: JointFixture):
     row = _upload_grant_row(fixtures, box_title)
     row.get_by_role("button", name="Submit this upload box as complete").click()
     dialog = page.get_by_role("dialog")
-    expect(dialog).to_contain_text("Submit upload box?", timeout=TIMEOUT)
+    expect(dialog).to_contain_text("Submit upload box?", timeout=UI_TIMEOUT)
     confirm_button = dialog.get_by_role("button", name=re.compile("Submit"))
     confirm_button.click()
     page.wait_for_load_state()
 
     # After submitting, the box is locked and leaves the open-boxes list.
     expect(row).to_have_count(0)
+
+
+@then(
+    parse(
+        'the files uploaded to "{storage_name}" storage are listed in "{direction}" order'
+    )
+)
+def check_files_order(storage_name: str, direction: str, fixtures: JointFixture):
+    """Check the file name column lists the box's files in the given order."""
+    assert direction in ("ascending", "descending"), f"Unknown order: {direction}"
+    files = fixtures.state.get_state(f"rdub_{storage_name}_files")
+    assert files, f"No uploaded files found in state for storage '{storage_name}'"
+    aliases = sorted(
+        (str(file["alias"]) for file in files), reverse=direction == "descending"
+    )
+
+    table = _files_table(fixtures)
+    rows = table.locator("tbody tr")
+    expect(rows).to_have_count(len(files), timeout=UI_TIMEOUT)
+    # The paginator only appears when the box holds more files than fit one page
+    paginator = fixtures.playwright.page.get_by_label("Select page of files")
+    expect(paginator).to_have_count(0)
+    for index, alias in enumerate(aliases):
+        expect(rows.nth(index).locator("td").first).to_have_text(
+            alias, timeout=UI_TIMEOUT
+        )
+
+
+@then(
+    parse(
+        'the files uploaded to "{storage_name}" storage can be sorted '
+        'by file name in "{direction}" order'
+    )
+)
+def sort_files_and_check_order(
+    storage_name: str, direction: str, fixtures: JointFixture
+):
+    """Sort the files table by file name via its column header and check the order.
+
+    The file list starts out in ascending name order (the server default), so a
+    single click on the header requests the descending order.
+    """
+    assert direction == "descending", f"Unsupported sort direction: {direction}"
+    page = fixtures.playwright.page
+    header = _files_table(fixtures).get_by_role("columnheader", name="Filename")
+    expect(header).to_be_visible(timeout=UI_TIMEOUT)
+    # The reordered list must be requested from the server, not sorted locally
+    with page.expect_response(
+        lambda response: "/uploads" in response.url and "sort=-alias" in response.url
+    ) as response_info:
+        header.click()
+    assert response_info.value.ok, (
+        f"Sorting the file list failed: {response_info.value.status}"
+    )
+    check_files_order(storage_name, direction, fixtures)
 
 
 @then(parse('the uploaded files for "{dataset_alias}" are listed in the upload box'))
@@ -242,10 +304,10 @@ def check_uploaded_files_in_box(
     storage_card = page.locator("mat-card").filter(
         has=page.get_by_role("heading", level=2, name="Storage & Files")
     )
-    expect(storage_card).to_be_visible(timeout=TIMEOUT)
+    expect(storage_card).to_be_visible(timeout=UI_TIMEOUT)
     file_batch = file_fixture[dataset_alias]
     for object_id, _path in file_batch.file_info:
-        expect(storage_card).to_contain_text(object_id, timeout=TIMEOUT)
+        expect(storage_card).to_contain_text(object_id, timeout=UI_TIMEOUT)
 
 
 @when(parse('I select the study "{dataset_alias}" in the mapping tool'))
@@ -263,7 +325,7 @@ def select_study_in_mapping_tool(dataset_alias: str, fixtures: JointFixture):
     study_card = page.locator("mat-card").filter(
         has=page.get_by_role("heading", level=2, name="Study")
     )
-    expect(study_card).to_contain_text("Please select the study", timeout=TIMEOUT)
+    expect(study_card).to_contain_text("Please select the study", timeout=UI_TIMEOUT)
     study_card.get_by_role("combobox").first.click()
     page.get_by_role(
         "option", name=re.compile(re.escape(study_accession))
@@ -281,15 +343,21 @@ def check_mapping_complete(dataset_alias: str, fixtures: JointFixture):
         has=page.get_by_role("heading", level=2, name="Upload Box Info")
     )
 
-    expect(info_card).to_contain_text("Locked", timeout=TIMEOUT)
+    expect(info_card).to_contain_text("Locked", timeout=UI_TIMEOUT)
     content_card = page.locator("mat-card-content")
+
+    # The file states advance on the server as ingestion progresses, but the
+    # view does not poll on its own — re-fetch the file list with the refresh
+    # button until all files are re-encrypted.
+    refresh_button = page.get_by_role("button", name="Refresh the upload box details")
+    expect(refresh_button).to_be_visible(timeout=UI_TIMEOUT)
 
     slept: int = 0
     while slept < INGEST_TIMEOUT:
         if content_card.get_by_text("re-encrypted").count() == file_count:
             break
-        page.reload(wait_until="commit")
-        page.wait_for_load_state()
+        with page.expect_response(lambda response: "/uploads" in response.url):
+            refresh_button.click()
         time.sleep(INGEST_INTERVAL)
         slept += INGEST_INTERVAL
     expect(content_card.get_by_text("re-encrypted")).to_have_count(file_count)
@@ -297,11 +365,11 @@ def check_mapping_complete(dataset_alias: str, fixtures: JointFixture):
     mapping_card = page.locator("mat-card").filter(
         has=page.get_by_role("heading", level=2, name="File Mapping")
     )
-    expect(mapping_card).to_be_visible(timeout=TIMEOUT)
+    expect(mapping_card).to_be_visible(timeout=UI_TIMEOUT)
     mapping_card.get_by_text(re.compile(r"\bFile\salias\b")).first.click()
 
     expect(mapping_card).to_contain_text(
-        re.compile(rf"Matches:\s*{file_count}"), timeout=TIMEOUT
+        re.compile(rf"Matches:\s*{file_count}"), timeout=UI_TIMEOUT
     )
 
 
@@ -310,19 +378,19 @@ def confirm_and_archive(fixtures: JointFixture):
     """Confirm the mapping and archive the box (mapping tool -> confirm dialog)."""
     page = fixtures.playwright.page
     confirm_button = page.get_by_role("button", name="Confirm mapping and archive")
-    expect(confirm_button).to_be_enabled(timeout=TIMEOUT)
+    expect(confirm_button).to_be_enabled(timeout=UI_TIMEOUT)
     confirm_button.click()
 
     dialog = page.get_by_role("dialog", name="Confirm Mapping and Archive")
-    expect(dialog).to_be_visible(timeout=TIMEOUT)
+    expect(dialog).to_be_visible(timeout=UI_TIMEOUT)
     checkbox = dialog.get_by_role(
         "checkbox", name="I understand this action cannot be undone"
     )
-    expect(checkbox).to_be_visible(timeout=TIMEOUT)
+    expect(checkbox).to_be_visible(timeout=UI_TIMEOUT)
     checkbox.check()
     expect(checkbox).to_be_checked()
     archive_button = dialog.get_by_role("button", name="Confirm and Archive")
-    expect(archive_button).to_be_enabled(timeout=TIMEOUT)
+    expect(archive_button).to_be_enabled(timeout=UI_TIMEOUT)
 
     # The initiation of the next step aborts the in-flight request before the
     # backend archives the box. We need wait for actual response itself
@@ -344,19 +412,25 @@ def check_box_archived(storage_name: str, fixtures: JointFixture):
     info_card = page.locator("mat-card").filter(
         has=page.get_by_role("heading", level=2, name="Upload Box Info")
     )
-    expect(info_card).to_contain_text("State:", timeout=TIMEOUT)
-    expect(info_card).to_contain_text(storage_name, timeout=TIMEOUT)
+    expect(info_card).to_contain_text("State:", timeout=UI_TIMEOUT)
+    expect(info_card).to_contain_text(storage_name, timeout=UI_TIMEOUT)
 
-    # the state change may not be reflected immediately in the UI,
-    # so we reload until the "Archived" state appears.
+    # The state change may not be reflected immediately in the UI, so we
+    # re-fetch the box with the refresh button until "Archived" appears.
+    refresh_button = page.get_by_role("button", name="Refresh the upload box details")
     slept: int = 0
     while slept < INGEST_TIMEOUT:
         if info_card.get_by_text("Archived").is_visible():
             return
-        page.reload(wait_until="commit")
-        page.wait_for_load_state()
+        with page.expect_response(
+            lambda response: (
+                "/upload-boxes/" in response.url and response.request.method == "GET"
+            )
+        ):
+            refresh_button.click()
         time.sleep(INGEST_INTERVAL)
         slept += INGEST_INTERVAL
     raise AssertionError(
-        f"Upload box for {storage_name} storage did not reach 'Archived' state after"
+        f"Upload box for {storage_name} storage did not reach 'Archived' state"
+        f" after {INGEST_TIMEOUT} seconds"
     )

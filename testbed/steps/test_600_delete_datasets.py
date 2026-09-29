@@ -74,21 +74,16 @@ when("metadata is loaded into the system")(run_the_load_command)
 
 @then("dataset stats in the database are empty")
 def check_dataset_stats_in_metldata_database(config: Config, mongo: MongoFixture):
-    dataset_stats = mongo.wait_for_documents(
-        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}, timeout=5
-    )
-    assert not dataset_stats
+    assert mongo.wait_for_removal(
+        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}
+    ), "Dataset stats still exist"
 
 
 @then("no datasets exist as embedded datasets in the database")
 def check_embedded_datasets_in_metldata_database(config: Config, mongo: MongoFixture):
-    embedded_datasets = mongo.wait_for_documents(
-        config.metldata_db_name,
-        "art_embedded_public_class_EmbeddedDataset",
-        {},
-        timeout=5,
-    )
-    assert not embedded_datasets
+    assert mongo.wait_for_removal(
+        config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
+    ), "Embedded datasets still exist"
 
 
 @then("searching for datasets without keyword returns no datasets")
@@ -100,18 +95,18 @@ def searching_yields_only_minimal_datasets(fixtures: JointFixture):
 
 @then("no datasets are known to the work package service")
 def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
-    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, timeout=5)
-    assert not datasets
+    assert mongo.wait_for_removal(config.wps_db_name, "datasets", {}), (
+        "Datasets are still known to the work package service"
+    )
 
 
 @then("no access grants exist any more in the claims repository")
 def check_access_grants_in_claims_repository(config: Config, mongo: MongoFixture):
-    grants = mongo.wait_for_documents(
+    assert mongo.wait_for_removal(
         config.ums_db_name,
         config.ums_claims_collection,
         {"visa_type": "ControlledAccessGrants"},
-    )
-    assert not grants
+    ), "Access grants still exist in the claims repository"
 
 
 @when(parse('"{full_name}" lists the datasets'), target_fixture="response")

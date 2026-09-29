@@ -1,3 +1,6 @@
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+
 # GHGA Event Schemas
 
 GHGA Event Schemas: A package that collects schemas used for events exchanged between GHGA service.
@@ -172,7 +175,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

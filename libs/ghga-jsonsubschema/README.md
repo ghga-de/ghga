@@ -1,5 +1,7 @@
 [![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # GHGA JSON Subschema
 
@@ -58,11 +60,13 @@ python -m jsonsubschema s2.json s1.json
 ```python
 from jsonsubschema import is_subschema
 
-def main():
-    s1 = {'type': "integer"}
-    s2 = {'type': ["integer", "string"]}
 
-    print(f'LHS <: RHS {is_subschema(s1, s2)}')
+def main():
+    s1 = {"type": "integer"}
+    s2 = {"type": ["integer", "string"]}
+
+    print(f"LHS <: RHS {is_subschema(s1, s2)}")
+
 
 if __name__ == "__main__":
     main()

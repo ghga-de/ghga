@@ -1,4 +1,4 @@
-# Local AAI (ADR-0007). The default profile runs Navikt mock-oauth2-server: tiny,
+# Local AAI (ADR-0029). The default profile runs Navikt mock-oauth2-server: tiny,
 # fully claim-configurable, mints tokens for arbitrary subjects (the test bed's
 # "log in as X"). The issuer id below yields
 #   http://<svc>:<port>/<issuerId>/.well-known/openid-configuration

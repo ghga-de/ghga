@@ -1,6 +1,9 @@
-# AGENTS.md
+# Agent Instructions for ghga-jsonsubschema
 
-Guidance for AI coding agents working in this repository.
+Guidance for coding agents working in this workspace member. The repo-wide rules are in
+the root [AGENTS.md](../../AGENTS.md), and
+[docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in
+which file.
 
 ## What this project is
 
@@ -19,7 +22,7 @@ Compatibility Bugs with JSON Subschema Checking".
 Key facts:
 
 - Package name on PyPI: `ghga-jsonsubschema`; import name: `jsonsubschema`.
-- Requires Python 3.10+; dependency management with `uv` (`uv.lock`).
+- Requires Python 3.11+; it is a member of the monorepo's single `uv` workspace.
 - Only JSON Schema **draft 4** is supported (`config.VALIDATOR`).
 - Recursive `$ref`s, some negated object/array/numeric schemas, the
   `dependencies` keyword, and non-regular regexes are *unsupported* and raise
@@ -39,7 +42,6 @@ src/jsonsubschema/
 ├── _constants.py        # JSON type/keyword constants
 └── _utils.py            # Validation, regex/interval helpers, debug printing
 tests/                   # pytest suite, one file per JSON type/feature area
-.github/workflows/       # lint.yaml (ruff+mypy), test.yaml (pytest on 3.10-3.13), publish.yaml
 ```
 
 Modules prefixed with `_` are internal; everything meant for users is
@@ -62,28 +64,31 @@ updating `__init__.py` and the README.
 
 ## Development workflow
 
+Run everything through `just` from the repo root, inside the dev container — the
+recipes encode ordering and environment details the raw `uv` commands miss:
+
 ```sh
-uv sync --extra dev            # set up environment
-uv run pre-commit install      # install git hooks (once)
-uv run pytest tests/           # run test suite
-uv run pytest --cov tests/     # with coverage
-uv run ruff check .            # lint
-uv run ruff format .           # format
-uv run mypy src tests          # type check (pre-commit passes --no-warn-unused-ignores)
-uv run pre-commit run --all-files   # everything the CI lint job runs
+just test libs/ghga-jsonsubschema   # run this member's test suite
+just lint                           # lint + format check across the workspace
+just fmt                            # auto-fix lint + format
+just typecheck                      # type-check every member (src + tests)
+just hooks                          # install the git hooks (once)
+just hooks-all                      # everything CI's hygiene job runs
 ```
 
-CI runs the test suite on Python 3.10 through 3.13 on every push, so changes
-must work across that range. Direct commits to `main` are blocked by a
-pre-commit hook; work on feature branches.
+The member is on the PyPI lane, so the published-combo gate tests it on every version
+from 3.11 to 3.14 that its `requires-python` allows; changes must work across that
+range. Cut feature branches from `dev` and merge them back into `dev` — a pre-commit
+hook blocks direct commits to `dev` and `main`
+([branching](../../docs/conventions.md#branching)).
 
 ## Coding conventions
 
-- **Formatting/linting**: ruff with an extensive rule set (see
-  `[tool.ruff.lint]` in [pyproject.toml](pyproject.toml)), line length 88,
-  target py313. Run `ruff check` and `ruff format` before committing —
-  pre-commit enforces both. Max McCabe complexity is 10; prefer extracting
-  helpers over adding `noqa` suppressions.
+- **Formatting/linting**: ruff, configured once in the repo root's
+  [pyproject.toml](../../pyproject.toml) — never add a member-local `[tool.ruff]`,
+  which would override it for this subtree. Run `just fmt` before committing;
+  pre-commit enforces it. Max McCabe complexity is 10; prefer extracting helpers
+  over adding `noqa` suppressions.
 - **Docstrings**: pydocstyle PEP 257 convention is enforced for all public
   and private functions/classes in `src/` (tests are exempt from D101–D103).
 - **Use `is_top()` / `is_bot()` to test schema-valued slots in

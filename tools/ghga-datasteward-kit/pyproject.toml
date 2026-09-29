@@ -15,7 +15,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: Apache Software License",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -23,6 +22,7 @@ classifiers = [
 name = "ghga_datasteward_kit"
 version = "5.4.2"
 description = "GHGA Data Steward Kit - A utils package for GHGA data stewards."
+license = "Apache-2.0"
 dependencies = [
     "crypt4gh >=1.8.6, <2",
     "hexkit[s3] >=9.0.0",
@@ -31,11 +31,10 @@ dependencies = [
     "ghga-service-commons[transports,crypt] >=8.0.0, <9",
 ]
 
-[project.license]
-text = "Apache 2.0"
-
 [project.urls]
-Repository = "https://github.com/ghga-de/ghga-datasteward-kit"
+Repository = "https://github.com/ghga-de/ghga"
+"Release Notes" = "https://github.com/ghga-de/ghga/releases"
+"Issue Tracker" = "https://github.com/ghga-de/ghga/issues"
 
 [project.scripts]
 ghga-datasteward-kit = "ghga_datasteward_kit.__main__:run"
@@ -63,9 +62,11 @@ ghga-transpiler = { workspace = true }
 hexkit = { workspace = true }
 metldata = { workspace = true }
 
-# Capability markers (ADR-0014): internal transitional tool -> platform release
-# lane, distributed run-from-repo at the release tag (no image, no PyPI; ADR-0004).
+# Capability markers (ADR-0033): internal transitional tool -> platform release
+# lane, distributed run-from-repo at the release tag (no image, no PyPI; ADR-0027).
 [tool.ghga]
 release = "platform"
 image = false
 cli = true
+# Released with the platform, but with release notes of its own (ADR-0043).
+notes = true

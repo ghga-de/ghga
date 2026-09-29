@@ -1,6 +1,6 @@
-# CLAUDE.md
-
-Project structure, purpose, coding conventions, and workflow guidance for
-this repository live in [AGENTS.md](AGENTS.md) — read it first:
-
 @AGENTS.md
+
+# Claude Code instructions
+
+`AGENTS.md` holds the instructions for every agent. This stub exists because Claude Code
+does not read that file yet.

@@ -28,7 +28,7 @@ from pytest_bdd import (  # noqa: RUF100
     when,
 )
 
-from steps.utils import parse
+from steps.utils import has_reached, parse
 
 
 @when(
@@ -120,6 +120,14 @@ def check_all_files_state(
 
     storage_config = fixtures.s3.get_storage_config(storage_name)
 
+    if expected_state == "inbox":
+        # DHFS may interrogate a file as soon as it lands, so a later state passes too
+        states = {file.get("alias"): file.get("state") for file in files}
+        assert all(has_reached(state, "inbox") for state in states.values()), (
+            f"Expected every file in {storage_name} storage to be 'inbox' or later,"
+            f" got {states}"
+        )
+
     if expected_state == "interrogated":
         bucket_id = storage_config.buckets.staging
         for file in files:
@@ -191,7 +199,10 @@ def write_upload_tsv(file_info: list[tuple[str, Path]], dest_dir: Path) -> Path:
 
 
 def run_batch_upload(
-    file_info: list[tuple[str, Path]], fixtures: JointFixture, upload_token: str
+    file_info: list[tuple[str, Path]],
+    fixtures: JointFixture,
+    upload_token: str,
+    overwrite: bool = False,
 ) -> subprocess.CompletedProcess:
     """Run ghga-connector batch-upload and return the completed process.
 
@@ -201,6 +212,8 @@ def run_batch_upload(
     connector = fixtures.connector
     tsv_path = write_upload_tsv(file_info, connector.config.work_dir)
     cmd = ["ghga-connector", "batch-upload", "--tsv", str(tsv_path), "--debug"]
+    if overwrite:
+        cmd.append("--overwrite")
     completed_upload = subprocess.run(  # nosec B607, B603
         cmd,
         cwd=connector.config.work_dir,

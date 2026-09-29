@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/test-oidc-provider/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/test-oidc-provider/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/test-oidc-provider/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/test-oidc-provider?branch=main)
-
 # Test Oidc Provider
 
 Test OpenID Connect provider
@@ -230,7 +227,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development

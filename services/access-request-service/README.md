@@ -1,6 +1,3 @@
-[![tests](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml/badge.svg)](https://github.com/ghga-de/access-request-service/actions/workflows/tests.yaml)
-[![Coverage Status](https://coveralls.io/repos/github/ghga-de/access-request-service/badge.svg?branch=main)](https://coveralls.io/github/ghga-de/access-request-service?branch=main)
-
 # Access Request Service
 
 Access Request Service - a service for managing requests for access to GHGA datasets.
@@ -462,7 +459,7 @@ the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+[hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
 
 
 ## Development
