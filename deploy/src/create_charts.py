@@ -189,10 +189,7 @@ def config_field_schemas(member: dict) -> tuple[dict, dict]:
     """A member's (field schemas, $defs) from its config_schema.json, if it has one.
 
     Not every member has one (tools/frontend members mostly don't). Where present,
-    these are frozen artifacts carried over from each service's pre-monorepo repo
-    (see .pre-commit-config.yaml's end-of-file-fixer exclusion for config_schema.json)
-    - nothing in this repo regenerates them, so treat this as a best-effort snapshot
-    of each field's type/description, not a live, guaranteed-current source.
+    `just config-docs` generates it from the member's Config class.
 
     $defs is pydantic's own local-ref target for nested models/enums (`$ref:
     "#/$defs/X"`); a field schema copied without it is a dangling reference the
@@ -274,7 +271,7 @@ def _allow_null(prop: dict) -> dict:
     This repo's own chart-values.yaml files use a bare empty/null value as a "not
     yet configured, fill in at deploy time" placeholder - e.g. metldata's and
     ekss's own committed `loader_token_hashes:`/equivalent, empty by design. The
-    frozen, per-service config_schema.json obviously has no notion of that
+    per-service config_schema.json obviously has no notion of that
     convention, so its declared type is often a strict non-nullable one (plain
     `array`, no anyOf). Without this, `helm install`/`upgrade` hard-fails schema
     validation on this repo's *own* committed defaults - confirmed against

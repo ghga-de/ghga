@@ -177,7 +177,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 | area | recipes |
 |---|---|
 | Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
-| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check` |
+| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `config-docs` |
 | Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |

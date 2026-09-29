@@ -25,6 +25,7 @@ dev = [
     "httpx>=0.28.1",
     "tomli_w>=1.2",
     "pyyaml>=6",  # scripts/docs_check.py reads ADR frontmatter
+    "jsonschema2md>=1.7",  # scripts/config_docs.py renders the config parameters
     # per-member test deps recovered from the dropped lock/requirements-dev.in files.
     # testcontainers is needed by hexkit's provider testutils across most suites; make it a
     # first-class dev dep so container tests fail on the Docker daemon (not on import).

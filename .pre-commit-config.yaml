@@ -22,9 +22,6 @@ repos:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
       - id: end-of-file-fixer
-        # 22 generated config_schema.json — the upstream regenerator was not imported, so
-        # they are frozen artifacts; rewriting them only invites conflicts with it.
-        exclude: (^|/)config_schema\.json$
       - id: check-yaml
         # 379 Go-templated Helm manifests are not YAML; 4 transpiler configs use
         # !!python/object/apply tags that safe_load rejects by design; and one schemapack
@@ -128,6 +125,19 @@ repos:
         types: [text]
         require_serial: true
         entry: uv run python scripts/docs_check.py --refs
+
+      # ---- Config docs ------------------------------------------------------------------
+      # Regenerates each member's config schema, example config and README parameter
+      # list, and fails when that changed a file. It runs only for the files it reads or
+      # writes: a base class in a library changes the output too, and the hygiene job's
+      # run over all files catches that.
+      - id: config-docs
+        name: config docs (schema, example, README)
+        language: system
+        files: ^((libs|services|tools)/[^/]+/(src/.*config[^/]*\.py|(dev|example)_config\.yaml|config_schema\.json|README\.md)|scripts/config_docs\.py)$
+        pass_filenames: false
+        require_serial: true
+        entry: uv run python scripts/config_docs.py
 
       # ---- Front end (data-portal) -----------------------------------------------------
       # Both tools REQUIRE cwd = frontend/data-portal: eslint-plugin-boundaries' settings and
