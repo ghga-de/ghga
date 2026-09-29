@@ -101,7 +101,7 @@ export class UserIvaListComponent implements OnInit {
     // Sending an SMS needs the user's explicit consent, given by the confirm button.
     const smsTexts = {
       title: 'Send verification code by SMS',
-      message: `We will send a verification code by SMS to ${iva.value}.
+      message: `We will send a verification code by SMS to your phone number ${iva.value}.
       By clicking "Send SMS", you agree to receive this message.`,
       cancelText: 'Cancel',
       confirmText: 'Send SMS',
