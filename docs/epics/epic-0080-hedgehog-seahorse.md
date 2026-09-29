@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -38,27 +37,30 @@ The existing functionality for the upload is outdated and needs to be replaced w
 This means
 
 - Refactor/rewrite the WorkPackageAccessor to support tokens for the upload path.
-- Rewriting the async task based file download code to also support uploads reusing the same general mechanism. Currently the code is ignorant about the actual function passed in for execution, but there's some coupling to the download around the `TaskHandler` that would make this cumbersome to reuse.
+- Rewriting the async task based file download code to also support uploads reusing the same general mechanism.
+  Currently the code is ignorant about the actual function passed in for execution, but there's some coupling to the download around the `TaskHandler` that would make this cumbersome to reuse.
 - The inplace encryption code present in the current, unused upload code path is a variant of an earlier implementation in the DS-Kit and can be recycled for the current vision of the upload process.
 - Enable upload functionality analogous to what is implemented for the download, i.e. parallelized part upload using work package/work order tokens.
-This should reuse the TaskHandler, if possible.
+  This should reuse the TaskHandler, if possible.
 - Calls to UCS to manage `FileUpload`s and retrieve presigned part upload URLs
 
 #### For the download path
 
 - Decoupling different layers of the download process that are far too tightly intertwined right now, i.e. disentangle WorkPackageAccessor, FileStager and Downloader.
-Those should be injectable components and should not form a more or less implicit hierarchy.
-- Sort out the mixed responsibilities between the class based Downloader and the more or less standalone functions in the `api_calls` module. This goes hand in hand with making the different components properly injectable, as the current implementation has issues here due to how communicating with the WPS is implemented.
+  Those should be injectable components and should not form a more or less implicit hierarchy.
+- Sort out the mixed responsibilities between the class based Downloader and the more or less standalone functions in the `api_calls` module.
+  This goes hand in hand with making the different components properly injectable, as the current implementation has issues here due to how communicating with the WPS is implemented.
 - The initial caching implementation was based on a bit of a misunderstanding after reading the RFC and needs to be revisited to improve upon the existing hotfix.
-The current implementation uses the appropriate caching headers, but additionally relies on a fixed TTL for cache entries.
-A local bound on the cache lifetime will likely still be needed, but should be more dynamic. This part might need some more investigation.
+  The current implementation uses the appropriate caching headers, but additionally relies on a fixed TTL for cache entries.
+  A local bound on the cache lifetime will likely still be needed, but should be more dynamic.
+  This part might need some more investigation.
 - Investigate if the `RetryHandler` could be implemented in an easier way.
 
 ### Optional
 
 - Requiring a lower bound of Python >=3.11, so the code can take advantage of [task groups](https://docs.python.org/3/library/asyncio-task.html#task-groups) for the actual async transfer code, which would make it easier to reason about what's happening and make setup/teardown a bit easier to handle
 - Find a better way to support a range of Python versions long term.
-The repository template based system currently tends to needlessly break stuff sometimes, making it necessary to work around it every once in a while and opting out of the update mechanism for the affected files
+  The repository template based system currently tends to needlessly break stuff sometimes, making it necessary to work around it every once in a while and opting out of the update mechanism for the affected files
 
 ## User Journeys
 
@@ -67,17 +69,25 @@ The journeys for the download path stay the same, only the underlying implementa
 The user journeys for the new upload path are based on the description provided in [Lynx Boreal](./epic-0076-lynx-boreal/README.md):
 
 1. The user initiates the upload process for one or multiple files, providing a `WorkPackageAccessToken` of type upload and their GHGA keypair.
-If multiple files are provided, those are processed in sequence.
-For each file, the following happens:
+   If multiple files are provided, those are processed in sequence.
+   For each file, the following happens:
 
    1. The Connector contacts the WPS and exchanges the WPAT for a CreateFileWorkOrder token.
-   2. The Connector calls the UCS's POST /boxes/{box_id}/uploads/ endpoint. The request body includes the unencrypted checksum, the file alias, and possibly further information. The WOT carries the box ID and file alias.
+   2. The Connector calls the UCS's POST /boxes/{box_id}/uploads/ endpoint.
+      The request body includes the unencrypted checksum, the file alias, and possibly further information.
+      The WOT carries the box ID and file alias.
    3. The UCS ensures the FileUploadBox is currently open and doesn't already have a completed FileUpload for the same file alias.
    4. The UCS initiates a multipart upload for the file and returns an HTTP response to the Connector indicating that the file upload was successfully initiated.
-   The response contains the UCS-generated file id (UUID4) of the new file upload.
+      The response contains the UCS-generated file id (UUID4) of the new file upload.
    5. The file is read in chunks, which are encrypted using the user's private key and the GHGA public key, and assembled into file parts for the multipart upload
-   6. The Connector makes a GET request to the UCS to obtain a file part upload URL. This call is repeated for each file part and, in contrast to the download path, the result cannot be cached, as each URL is specific to the part being uploaded. Files can have thousands of file parts, so the Connector will self-impose rate limits to this UCS endpoint via a small delay between calls. Interaction with this endpoint requires an `UploadFileWorkOrder` token of type "upload" from the WPS. The user supplies the file_id to get the above token. The token is only valid for a file with the matching file_id.
-   7. Once all parts are uploaded, the Connector makes a final request to the UCS endpoint `PATCH /boxes/{box_id}/uploads/{file_id}` to conclude the upload. This requires first obtaining an `UploadFileWorkOrder` token of type "close" from the WPS.
+   6. The Connector makes a GET request to the UCS to obtain a file part upload URL.
+      This call is repeated for each file part and, in contrast to the download path, the result cannot be cached, as each URL is specific to the part being uploaded.
+      Files can have thousands of file parts, so the Connector will self-impose rate limits to this UCS endpoint via a small delay between calls.
+      Interaction with this endpoint requires an `UploadFileWorkOrder` token of type "upload" from the WPS.
+      The user supplies the file_id to get the above token.
+      The token is only valid for a file with the matching file_id.
+   7. Once all parts are uploaded, the Connector makes a final request to the UCS endpoint `PATCH /boxes/{box_id}/uploads/{file_id}` to conclude the upload.
+      This requires first obtaining an `UploadFileWorkOrder` token of type "close" from the WPS.
 
 2. (Optional) The user initiates the deletion of an already uploaded file or a file for which a currently opened multipart upload exists, providing the `WorkPackageAccessToken` and the file id
    1. The connector obtains an `UploadFileWorkOrder` token of type "delete" from the WPS

@@ -19,15 +19,16 @@
 # Examples
 
 ## Stream Calculator
-Here we provide an example service called [stream_calc](./stream_calc/stream_calc/).
-It accepts simple arithmetic problems as incomming event stream and will send out the
-result in another event stream.
 
-### Demo:
-We also provide a [small script](./stream_calc/submit_example_problems.py) that submits a couple of
-example problems and prints out the results obtained by the stream_calc service.
+Here we provide an example service called [stream_calc](./stream_calc/stream_calc/).
+It accepts simple arithmetic problems as incomming event stream and will send out the result in another event stream.
+
+### Demo
+
+We also provide a [small script](./stream_calc/submit_example_problems.py) that submits a couple of example problems and prints out the results obtained by the stream_calc service.
 
 To run the example, please first start the stream_calc service:
+
 ```bash
 # (paths relative to this dirctory of this readme)
 cd ./stream_calc
@@ -35,11 +36,12 @@ python -m stream_calc
 ```
 
 Now open another terminal (ideally side by side to the old one) and run the client script:
+
 ```bash
 # (paths relative to this dirctory of this readme)
 ./stream_calc/submit_example_problems.py
 ```
 
-### Testing:
-The [stream calc test](./stream_calc/sc_tests/) suite demonstrates how to use the
-hexkit utilities to test a relying service.
+### Testing
+
+The [stream calc test](./stream_calc/sc_tests/) suite demonstrates how to use the hexkit utilities to test a relying service.

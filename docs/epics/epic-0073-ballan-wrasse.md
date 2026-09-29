@@ -2,30 +2,21 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
 ### Outline
 
-The goal of this epic is to improve the management of access requests by giving
-data stewards control over the validity period and enriching the data access request with existing information (e.g., the corresponding DAC) and additional data entered
-by the data stewards (e.g., reason for rejecting a request, internal notes, ticket ID).
+The goal of this epic is to improve the management of access requests by giving data stewards control over the validity period and enriching the data access request with existing information (e.g., the corresponding DAC) and additional data entered by the data stewards (e.g., reason for rejecting a request, internal notes, ticket ID).
 
 ### Included/Required
 
-- Data stewards should be able to modify the requested validity period
-  when the request is approved.
-- Data stewards should be able to add a note to the requester
-  (e.g., reason for denial of an access request or modified validity period).
-- Data stewards should be able to add internal notes and the corresponding ticket ID
-  associated with the request in the external help desk system.
-- The data presented to the data steward in the access request manager
-  and sent in the notification to the data steward should be enriched
-  with existing information about the request and the dataset (e.g., DAC).
-- When work packages are created, the validity period of the work package
-  access token should be shown to the user.
+- Data stewards should be able to modify the requested validity period when the request is approved.
+- Data stewards should be able to add a note to the requester (e.g., reason for denial of an access request or modified validity period).
+- Data stewards should be able to add internal notes and the corresponding ticket ID associated with the request in the external help desk system.
+- The data presented to the data steward in the access request manager and sent in the notification to the data steward should be enriched with existing information about the request and the dataset (e.g., DAC).
+- When work packages are created, the validity period of the work package access token should be shown to the user.
 
 ### Not included
 
@@ -36,13 +27,11 @@ by the data stewards (e.g., reason for rejecting a request, internal notes, tick
 - Access Request Service:
   - Allow changing the validity period in the PATCH request.
   - Allow adding/modifying external notes, internal notes, and ticket IDs.
-  - Subscribe to dataset upserts and deletions, store the dataset title and DAC name
-    in the access request, and change the state of deleted requests to "deleted."
+  - Subscribe to dataset upserts and deletions, store the dataset title and DAC name in the access request, and change the state of deleted requests to "deleted."
   - Do not allow POST/PATCH requests for deleted datasets.
   - Provide the corresponding dataset title and DAC along with the request.
 - Metldata:
-  - The `MetadataDatasetOverview` event must be supplemented
-    with the name of the corresponding DAC.
+  - The `MetadataDatasetOverview` event must be supplemented with the name of the corresponding DAC.
 - Work Package Service:
   - Provide the validity period in the dataset list.
   - Provide the default validity period when creating a work package.
@@ -61,9 +50,7 @@ by the data stewards (e.g., reason for rejecting a request, internal notes, tick
     - Show the validity period of the access request after selecting the dataset.
     - Show the validity period of the work package access token after its creation.
 - Notification Orchestration Service:
-  - Enrich the access request-related notifications to data stewards
-    with context information (e.g., name and email of the requester, request text,
-    ID and title of the requested dataset, name of the corresponding DAC).
+  - Enrich the access request-related notifications to data stewards with context information (e.g., name and email of the requester, request text, ID and title of the requested dataset, name of the corresponding DAC).
 
 ## Human Resource/Time Estimation
 

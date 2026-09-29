@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -12,7 +11,8 @@ Epic planning and implementation follow the
 This epic aims to improve upon the current implementation of retry logic for HTTP requests in CLI tools and to provide a generic solution that can be employed in any service or CLI tool.
 
 The current implementation is based on [tenacity](https://tenacity.readthedocs.io/en/latest/) and tacked on top of existing functionality, provided as a wrapper around httpx.AsyncClient calls.
-Tenacity offers an ergonomic decorator, but we can't (easily) use this due to how we dynamically configure the retry parameters. Instead, we configure an (`Async`)`Retrying` object at startup and awkwardly pass it along the call stack.
+Tenacity offers an ergonomic decorator, but we can't (easily) use this due to how we dynamically configure the retry parameters.
+Instead, we configure an (`Async`)`Retrying` object at startup and awkwardly pass it along the call stack.
 
 To move the responsibility away from the caller and make the retry functionality reusable, the current logic can be moved into a custom httpx.(Async)Transport class that can be plugged into an httpx.(Async)Client.
 Adding more functionality on top of existing transports can be achieved by wrapping them and delegating the call to actually perform the request up through the wrapping layers.
@@ -24,8 +24,7 @@ This way correctly responding to HTTP 429 rate limiting responses and caching ca
 
 A transport is an object that resides at the interface of higher level abstractions and the lower level code dealing with the actual details of transporting bytes over the network.
 
-It can easily be plugged into a client, manages the underlying connection (pool), delegates requests and performs basic error handling (see
-[transports in httpx](https://github.com/encode/httpx/blob/master/httpx/_transports/default.py)).
+It can easily be plugged into a client, manages the underlying connection (pool), delegates requests and performs basic error handling (see [transports in httpx](https://github.com/encode/httpx/blob/master/httpx/_transports/default.py)).
 As such, it seems a fitting base class for implementing a custom variant with more involved retry logic, adhering to rate limits.
 
 #### RetryTransport
@@ -49,10 +48,8 @@ To get caching to work correctly, this one has to be on the lowest level of the 
 The description of the different Transports induces a hierarchy and the setup logic, that is required, does not allow for trivial composability.
 In addition, different combinations of Transports are possible, but not all are meaningful for actual usage, e.g. a transport providing caching and rate limiting, but not retry functionality would be ill-suited to deal with flaky connections.
 To hide implementation complexity from the users of the composed transports, a factory shall be implemented alongside the missing Transports inside ghga-service-commons.
-This factory should provide methods to get two transports:
-The first one providing all three mentioned layers, i.e. caching, retry logic and responding to rate limiting, and the second one providing a transport covering only the retry and rate limiting logic, as not all users need a caching layer.
-![Transport Factory](./images/transport_factory.png)
-The instances returned by the factory are the respective lowest level Transport, referenced directly by the arrows from the `TransportFactory` in the image.
+This factory should provide methods to get two transports: The first one providing all three mentioned layers, i.e. caching, retry logic and responding to rate limiting, and the second one providing a transport covering only the retry and rate limiting logic, as not all users need a caching layer.
+![Transport Factory](./images/transport_factory.png) The instances returned by the factory are the respective lowest level Transport, referenced directly by the arrows from the `TransportFactory` in the image.
 Those can be plugged into the `httpx.AsyncClient` of the caller during instantiation.
 One crucial point that this factory has to provide is getting generic Transport configuration to the correct Transport, as only the configuration of the innermost wrapped Transport is applied.
 
@@ -65,15 +62,15 @@ Instead, the logic should not change how connection pools work, but use them as 
 
 There are some requirements and possible (existing) pitfalls to consider during implementation:
 
-1) It is assumed that rate limiting happens on a per connection level
-2) Each connection responds to its own 429 responses by adjusting its request frequency accordingly
-3) As requests are effectively fired in batches (for parallel/concurrent transfer operations), a small amount of jitter should be introduced to space them out a bit more evenly, so they don't hit the remote endpoint at the same time
-4) The logic around jitter could be reused for the 429 response if the `RetryAfter` header is treated as a baseline for all subsequent requests and not just the immediately following one, so something like `asyncio.sleep(max(self.jitter, self.retry_after))` could be applied per connection.
-5) The potential issue in this approach is throttling the request frequency too much and never recovering to a more appropriate rate.
-To combat this, the connection could forget about the `retry_after` after a specified amount of requests and go back to just using the jitter.
-6) There's no easily apparent way to track separate connections/influence handout on the httpx/transport level.
-To guarantee that connections are reused and the limit is respected on a per connection level, the transport would need to keep track of n 1 sized connection pools, instead of one n sized connection pool.
-This idea has to be tested in practice first, to see if there are inherent shortcomings compared to using a normal transport backed by one connection pool
+1. It is assumed that rate limiting happens on a per connection level
+2. Each connection responds to its own 429 responses by adjusting its request frequency accordingly
+3. As requests are effectively fired in batches (for parallel/concurrent transfer operations), a small amount of jitter should be introduced to space them out a bit more evenly, so they don't hit the remote endpoint at the same time
+4. The logic around jitter could be reused for the 429 response if the `RetryAfter` header is treated as a baseline for all subsequent requests and not just the immediately following one, so something like `asyncio.sleep(max(self.jitter, self.retry_after))` could be applied per connection.
+5. The potential issue in this approach is throttling the request frequency too much and never recovering to a more appropriate rate.
+   To combat this, the connection could forget about the `retry_after` after a specified amount of requests and go back to just using the jitter.
+6. There's no easily apparent way to track separate connections/influence handout on the httpx/transport level.
+   To guarantee that connections are reused and the limit is respected on a per connection level, the transport would need to keep track of n 1 sized connection pools, instead of one n sized connection pool.
+   This idea has to be tested in practice first, to see if there are inherent shortcomings compared to using a normal transport backed by one connection pool
 
 This idea has been superseded in the actual implementation.
 Customising connection pools is more involved and would couple the raw `AsyncHttpTransport` wrapped by the lowest layer to the `RatelimitingTransport` at the highest layer, which is not something that should be done without more consideration.

@@ -19,10 +19,8 @@ title: "In-Memory (Testing)"
  limitations under the License.
 -->
 
-In-memory providers implement `KeyValueStoreProtocol` for lightweight test setups
-without external infrastructure dependencies.
+In-memory providers implement `KeyValueStoreProtocol` for lightweight test setups without external infrastructure dependencies.
 
-Available variants are `InMemBytesKeyValueStore`, `InMemStrKeyValueStore`,
-`InMemJsonKeyValueStore`, and `InMemDtoKeyValueStore`.
+Available variants are `InMemBytesKeyValueStore`, `InMemStrKeyValueStore`, `InMemJsonKeyValueStore`, and `InMemDtoKeyValueStore`.
 
 API reference: [hexkit.providers.testing](../../reference/index.qmd#provider-in-memory-testing)
