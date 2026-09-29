@@ -22,7 +22,7 @@ repos:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
       - id: end-of-file-fixer
-        # 23 generated config_schema.json — the upstream regenerator was not imported, so
+        # 22 generated config_schema.json — the upstream regenerator was not imported, so
         # they are frozen artifacts; rewriting them only invites conflicts with it.
         exclude: (^|/)config_schema\.json$
       - id: check-yaml
