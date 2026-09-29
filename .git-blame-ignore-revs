@@ -1,0 +1,6 @@
+# Commits that only reformat, so `git blame` skips them and shows the change before.
+# GitHub reads this file by itself; the dev container sets blame.ignoreRevsFile for git.
+# Full SHAs only; add a line when a commit reformats many files without changing them.
+
+# Lint Markdown with rumdl, one sentence per line (#282)
+8b45e299c7223543f1368ee3d6de66d1d44cbdae
