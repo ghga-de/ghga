@@ -110,7 +110,9 @@ This means that, in addition to the root resource itself, the datapack must only
 
 `rootClass` *(optional)*: Defines the class name of the resource that should act as root.
 
-> [!IMPORTANT] A rooted datapack requires its corresponding schemapack to be rooted as well. If you're validating a rooted datapack against a schema, make sure that its schemapack counterpart is also rooted.
+> [!IMPORTANT]
+> A rooted datapack requires its corresponding schemapack to be rooted as well.
+> If you're validating a rooted datapack against a schema, make sure that its schemapack counterpart is also rooted.
 
 A full rooted datapack example with its schemapack counterpart:
 

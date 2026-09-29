@@ -22,7 +22,8 @@ This is useful for partial extraction, targeted validation, or incremental proce
 
 It creates a rooted datapack that contains only the specified resource and all its dependencies, e.g., the resulting datapack will only contain resources referenced by the root resource as well as the root resource itself.
 
-> [!IMPORTANT] The isolated datapack will not be compatible with the original non-rooted schemapack anymore.
+> [!IMPORTANT]
+> The isolated datapack will not be compatible with the original non-rooted schemapack anymore.
 
 Example
 

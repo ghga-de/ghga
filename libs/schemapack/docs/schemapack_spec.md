@@ -32,7 +32,10 @@ classes:
 
 `rootClass` *(optional)*: Defines the name of a class that should acting as the root of the schemapack.
 
-> [!IMPORTANT] A rooted schemapack requires its corresponding datapack to be rooted as well. If you're validating a rooted datapack agains a schema, make sure that its schemapack counterpart is also rooted. If not specified , i.e. set to None (the default), the datapack must not specify a root resource.
+> [!IMPORTANT]
+> A rooted schemapack requires its corresponding datapack to be rooted as well.
+> If you're validating a rooted datapack agains a schema, make sure that its schemapack counterpart is also rooted.
+> If not specified , i.e. set to None (the default), the datapack must not specify a root resource.
 
 ### Class Definition
 

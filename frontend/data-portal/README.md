@@ -205,9 +205,10 @@ Review such overrides from time to time and remove them once no longer necessary
 > Historical note: overrides for `picomatch`, `ajv`, and `uuid` were previously required because `@compodoc/compodoc@1.x` pulled vulnerable transitive versions.
 > They were removed after upgrading to `@compodoc/compodoc@2`, which resolves those dependencies to patched versions natively.
 
-**Note:** You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`.
-You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
-Configuration of pnpm overrides should be done in `.pnpmfile.cjs` rather than in `package.json`.
+> [!NOTE]
+> You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`.
+> You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
+> Configuration of pnpm overrides should be done in `.pnpmfile.cjs` rather than in `package.json`.
 
 ## Linter, Commits, and Documentation
 
