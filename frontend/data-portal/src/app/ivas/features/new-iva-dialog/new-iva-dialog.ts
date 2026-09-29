@@ -79,7 +79,8 @@ export class NewIvaDialogComponent {
    * Value prompts for the different IVA types
    */
   valuePrompts: { [key in keyof typeof IvaType]: string } = {
-    Phone: 'Please enter your phone number to receive an SMS:',
+    Phone:
+      'Please enter your phone number for receiving verification codes by SMS. We use this number only to verify your identity.',
     InPerson: 'Please enter a meeting location:',
     // the following options should not be selectable any more:
     Fax: '',

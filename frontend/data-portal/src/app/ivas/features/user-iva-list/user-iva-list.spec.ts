@@ -107,6 +107,34 @@ describe('UserIvaListComponent', () => {
     );
   });
 
+  it('should ask for consent before sending an SMS', () => {
+    component.requestVerification(testIva);
+
+    expect(mockConfirmationService.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Send verification code by SMS',
+        message: expect.stringContaining('you agree to receive this message'),
+        confirmText: 'Send SMS',
+      }),
+    );
+    expect(mockConfirmationService.confirm.mock.calls[0][0].message).toContain(
+      '+49123456789',
+    );
+  });
+
+  it('should not ask for SMS consent for other IVA types', () => {
+    component.requestVerification({
+      ...testIva,
+      type: IvaType.InPerson,
+      value: 'Heidelberg',
+    });
+
+    const options = mockConfirmationService.confirm.mock.calls[0][0];
+    expect(options.title).toBe('Request verification of your address');
+    expect(options.message).not.toContain('SMS');
+    expect(options.confirmText).toBeUndefined();
+  });
+
   it('should request verification after user confirmation', () => {
     mockConfirmationService.confirm.mockImplementation(({ callback }) => {
       callback(true);

@@ -46,6 +46,21 @@ describe('ConfirmationService', () => {
     });
   });
 
+  it('should pass the maximum width to the dialog', () => {
+    service.confirm({ message: 'Test Message', maxWidth: '420px' });
+
+    expect(matDialogMock.open).toHaveBeenLastCalledWith(
+      ConfirmDialogComponent,
+      expect.objectContaining({ maxWidth: '420px' }),
+    );
+  });
+
+  it('should keep the default maximum width if none is given', () => {
+    service.confirm({ message: 'Test Message' });
+
+    expect(matDialogMock.open.mock.lastCall![1]).not.toHaveProperty('maxWidth');
+  });
+
   it('should call afterClosed and callback with the correct value', async () => {
     const callbackMock = vitest.fn();
 

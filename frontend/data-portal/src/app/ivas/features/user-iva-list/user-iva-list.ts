@@ -98,11 +98,23 @@ export class UserIvaListComponent implements OnInit {
    * @param iva - the IVA to be verified
    */
   requestVerification(iva: Iva): void {
-    const address = this.#ivaAddress(iva);
-    this.#confirm.confirm({
+    // Sending an SMS needs the user's explicit consent, given by the confirm button.
+    const smsTexts = {
+      title: 'Send verification code by SMS',
+      message: `We will send a verification code by SMS to your phone number ${iva.value}.
+      By clicking "Send SMS", you agree to receive this message.`,
+      cancelText: 'Cancel',
+      confirmText: 'Send SMS',
+      // narrower than the default of 560px, so that the text wraps better
+      maxWidth: 'min(450px, 80vw)',
+    };
+    const otherTexts = {
       title: 'Request verification of your address',
       message: `We will send a verification code to the address selected for
-      verification (${address}), you should receive it shortly.</p>`,
+      verification (${this.#ivaAddress(iva)}), you should receive it shortly.`,
+    };
+    this.#confirm.confirm({
+      ...(iva.type === IvaType.Phone ? smsTexts : otherTexts),
       callback: (confirmed) => {
         if (confirmed) this.#requestVerification(iva);
       },
