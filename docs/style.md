@@ -65,6 +65,7 @@ Lines have no width limit; the editor soft-wraps them.
 - **Applies to** every Markdown file: docs, ADRs, epics, READMEs, `AGENTS.md` files and skills.
   A list item or block quote starts each further sentence on its own line, indented to the item's text.
 - **Keeps its own shape:** tables, headings, code blocks and front matter.
+  So does a row of badges, one per line, between `<!-- rumdl-disable MD013 -->` and `<!-- rumdl-enable MD013 -->`; rumdl would otherwise join it into one line.
 - **Soft-wrapped (one line per paragraph):** text written in a GitHub web form — pull request descriptions, review and issue comments, release notes.
   GitHub renders a hard newline in a comment as a visible line break.
 - **Code comments and docstrings:** wrapped at 88, the ruff `line-length`.
