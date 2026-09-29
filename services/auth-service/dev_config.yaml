@@ -11,6 +11,8 @@ db_name: "dev-db"
 log_level: DEBUG
 
 provide_apis: ["users"]
+# a throwaway public key: the REST routers validate tokens against it
+auth_key: '{"crv":"P-256","kty":"EC","x":"WroSHyGfvqryXoKfCRYiiyBoxuBPou_bh1ooLmB5NEA","y":"QN3CsyHLCeZtapYx4Dhjr6YcadwcTggK_o5e7gD3jTc"}'
 
 service_instance_id: "1"
 kafka_servers: ["kafka:9092"]

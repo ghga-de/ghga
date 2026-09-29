@@ -1,4 +1,4 @@
-"""Tests for config_docs.py: the Markdown it renders and the README splice."""
+"""Tests for service_docs.py: member selection, the Markdown and the README splice."""
 
 import json
 import sys
@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import config_docs
+import service_docs
 
 SCHEMA = {
     "properties": {
@@ -32,7 +32,7 @@ SCHEMA = {
 
 
 def test_flatten_descriptions_joins_lines_everywhere():
-    flat = config_docs.flatten_descriptions(
+    flat = service_docs.flatten_descriptions(
         {"description": "a\n  b\n\nc", "items": [{"description": "d\ne"}]}
     )
     assert flat == {"description": "a b c", "items": [{"description": "d e"}]}
@@ -49,16 +49,16 @@ def test_flatten_descriptions_joins_lines_everywhere():
     ],
 )
 def test_wrap_bare_urls(line, expected):
-    assert config_docs.wrap_bare_urls(line) == expected
+    assert service_docs.wrap_bare_urls(line) == expected
 
 
 def test_wrap_bare_urls_skips_code_blocks():
     text = '```json\n"https://example.org/x"\n```\n'
-    assert config_docs.wrap_bare_urls(text) == text
+    assert service_docs.wrap_bare_urls(text) == text
 
 
 def test_render_parameters():
-    text = config_docs.render_parameters(json.dumps(SCHEMA))
+    text = service_docs.render_parameters(json.dumps(SCHEMA))
     assert text.startswith('- <a id="properties/api_url"></a>')
     assert "Where the API lives. See <https://example.org/docs>." in text
     assert '"https://example.org/api"' in text  # the example block stays verbatim
@@ -67,16 +67,16 @@ def test_render_parameters():
 
 
 def test_render_readme_replaces_between_markers(tmp_path, monkeypatch):
-    monkeypatch.setattr(config_docs, "format_markdown", lambda text, path: text)
+    monkeypatch.setattr(service_docs, "format_markdown", lambda text, path: text)
     readme = tmp_path / "README.md"
     readme.write_text(
         "### Parameters\n\n"
-        f"{config_docs.BEGIN_MARKER}\n\nstale\n\n{config_docs.END_MARKER}\n\n"
+        f"{service_docs.BEGIN_MARKER}\n\nstale\n\n{service_docs.END_MARKER}\n\n"
         "### Usage\n"
     )
-    assert config_docs.render_readme(readme, "- fresh") == (
+    assert service_docs.render_readme(readme, "- fresh") == (
         "### Parameters\n\n"
-        f"{config_docs.BEGIN_MARKER}\n\n- fresh\n\n{config_docs.END_MARKER}\n\n"
+        f"{service_docs.BEGIN_MARKER}\n\n- fresh\n\n{service_docs.END_MARKER}\n\n"
         "### Usage\n"
     )
 
@@ -85,4 +85,35 @@ def test_render_readme_requires_markers(tmp_path):
     readme = tmp_path / "README.md"
     readme.write_text("### Parameters\n")
     with pytest.raises(SystemExit, match="lacks the config-docs markers"):
-        config_docs.render_readme(readme, "- fresh")
+        service_docs.render_readme(readme, "- fresh")
+
+
+@pytest.fixture
+def workspace(tmp_path, monkeypatch):
+    """A workspace with two services that carry a config schema and one that does not."""
+    for member in ("services/a", "services/b", "services/c"):
+        (tmp_path / member).mkdir(parents=True)
+    for member in ("services/a", "services/b"):
+        (tmp_path / member / service_docs.SCHEMA_FILE).write_text("{}")
+    monkeypatch.setattr(service_docs, "ROOT", tmp_path)
+    return tmp_path
+
+
+def test_members_default_to_all(workspace):
+    assert service_docs.members([]) == [
+        workspace / "services/a",
+        workspace / "services/b",
+    ]
+
+
+def test_members_of_the_paths(workspace):
+    paths = ["services/b/src/b/config.py", "services/c/README.md"]
+    assert service_docs.members(paths) == [workspace / "services/b"]
+
+
+def test_members_all_for_a_path_outside_members(workspace):
+    paths = ["services/b/README.md", "scripts/service_docs.py"]
+    assert service_docs.members(paths) == [
+        workspace / "services/a",
+        workspace / "services/b",
+    ]

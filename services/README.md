@@ -57,4 +57,4 @@ In a container these paths are inside the container.
 
 Work in the monorepo's dev container, as described in [Work inside the dev container](../README.md#work-inside-the-dev-container).
 Run a service's tests with `just test services/<directory>`, and the linters with `just lint`.
-After changing a service's settings, run `just config-docs` to regenerate its `config_schema.json`, `example_config.yaml` and the Parameters section of its README.
+After changing a service's settings or its REST API, run `just service-docs` to regenerate its `config_schema.json`, `example_config.yaml`, `openapi.yaml` and the Parameters section of its README.

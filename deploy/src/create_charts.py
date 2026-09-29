@@ -189,7 +189,7 @@ def config_field_schemas(member: dict) -> tuple[dict, dict]:
     """A member's (field schemas, $defs) from its config_schema.json, if it has one.
 
     Not every member has one (tools/frontend members mostly don't). Where present,
-    `just config-docs` generates it from the member's Config class.
+    `just service-docs` generates it from the member's Config class.
 
     $defs is pydantic's own local-ref target for nested models/enums (`$ref:
     "#/$defs/X"`); a field schema copied without it is a dangling reference the

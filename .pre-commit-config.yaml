@@ -126,18 +126,17 @@ repos:
         require_serial: true
         entry: uv run python scripts/docs_check.py --refs
 
-      # ---- Config docs ------------------------------------------------------------------
-      # Regenerates each member's config schema, example config and README parameter
-      # list, and fails when that changed a file. It runs only for the files it reads or
-      # writes: a base class in a library changes the output too, and the hygiene job's
-      # run over all files catches that.
-      - id: config-docs
-        name: config docs (schema, example, README)
+      # ---- Service docs -----------------------------------------------------------------
+      # Regenerates the config schema, example config, README parameter list and OpenAPI
+      # spec of the services whose files changed, and fails when that changed a file.
+      # A change in a library the services build on changes the output too; the hygiene
+      # job's run over all files regenerates every service and catches that.
+      - id: service-docs
+        name: service docs (config, README, OpenAPI)
         language: system
-        files: ^((libs|services|tools)/[^/]+/(src/.*config[^/]*\.py|(dev|example)_config\.yaml|config_schema\.json|README\.md)|scripts/config_docs\.py)$
-        pass_filenames: false
+        files: ^((libs|services|tools)/[^/]+/(src/.*\.py|(dev|example)_config\.yaml|config_schema\.json|openapi\.yaml|README\.md)|scripts/service_docs\.py)$
         require_serial: true
-        entry: uv run python scripts/config_docs.py
+        entry: uv run python scripts/service_docs.py
 
       # ---- Front end (data-portal) -----------------------------------------------------
       # Both tools REQUIRE cwd = frontend/data-portal: eslint-plugin-boundaries' settings and
