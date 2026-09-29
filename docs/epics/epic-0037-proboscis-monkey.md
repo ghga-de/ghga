@@ -19,8 +19,8 @@ The actual token from which the hash is derived and the public key remain with t
 
 The service needs to take care of
 
- 1) firing a `FileUploadValidationSuccess` event to propagate information to the IFRS/DCS databases using existing mechanisms
- 2) communication with the vault to store the encryption/decryption secret using `VaultAdapter` from the encryption key store
+1. firing a `FileUploadValidationSuccess` event to propagate information to the IFRS/DCS databases using existing mechanisms
+2. communication with the vault to store the encryption/decryption secret using `VaultAdapter` from the encryption key store
 
 In addition, the data steward scripts need to be extended to include a script interacting with this endpoint.
 

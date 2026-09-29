@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 **Attention: Please do not put any confidential content here.**
 
@@ -15,35 +14,28 @@ The aim is to rewrite all existing metldata transformations to use schemapack.
 
 ### Included/Required
 
-- add possibility to use custom embedding profile to configure the denormalization
-  in schemapack
-- migrating the already schemapack-based transformations to spec version 0.2.0
-  (see https://github.com/ghga-de/metldata/tree/poc/src/metldata/schemapack_/builtin_transformations):
+- add possibility to use custom embedding profile to configure the denormalization in schemapack
+- migrating the already schemapack-based transformations to spec version 0.2.0 (see <https://github.com/ghga-de/metldata/tree/poc/src/metldata/schemapack_/builtin_transformations>):
   - delete_properties
   - infer_relations
-- re-implement the following LinkML-based transformations to use schemapack
-  (see https://github.com/ghga-de/metldata/tree/poc/src/metldata/builtin_transformations):
+- re-implement the following LinkML-based transformations to use schemapack (see <https://github.com/ghga-de/metldata/tree/poc/src/metldata/builtin_transformations>):
   - merge_slots
 - re-evaluate and potentially refactor the following transformations:
   - aggregate
 
 ### Not included
 
-- Reimplementation of the custom_embeddings transformation is not required since it will already
-  be covered by builtin functionality of schemapack
-- Reimplementation of the add_accessions transformation is postponed since it might be
-  handled by the submission store and not be implemented as transformation.
-- A full reimplementation of the GHGA transformation workflow (this depends on other changes to
-  be in place first and would make this epic dependent on other lines of work).
+- Reimplementation of the custom_embeddings transformation is not required since it will already be covered by builtin functionality of schemapack
+- Reimplementation of the add_accessions transformation is postponed since it might be handled by the submission store and not be implemented as transformation.
+- A full reimplementation of the GHGA transformation workflow (this depends on other changes to be in place first and would make this epic dependent on other lines of work).
 - The normalize_model transformation is not needed anymore
 
 ## Additional Details
 
 ### Embedding Profile to Configure Denormalization
 
-This helps to control which relations (and relations of relations) will be embedded and
-which won't. It can even be used to deal with circular dependencies that would otherwise
-lead to an exception when denormalizing.
+This helps to control which relations (and relations of relations) will be embedded and which won't.
+It can even be used to deal with circular dependencies that would otherwise lead to an exception when denormalizing.
 
 Here is an example:
 
@@ -118,11 +110,9 @@ resources:
 rootResource: Alice
 ```
 
-Running a denormalization without configuration would not work because there are
-circular dependencies between Alice, Bob, and Charlie regarding the teammates relation.
+Running a denormalization without configuration would not work because there are circular dependencies between Alice, Bob, and Charlie regarding the teammates relation.
 
-To resolve that, the following embedding profile can be used to configure the
-denormalization process:
+To resolve that, the following embedding profile can be used to configure the denormalization process:
 
 ```yaml
 teammates:
@@ -162,13 +152,9 @@ manager:
 
 ### Immutability of Datapack and Schemapack Objects
 
-Currently, the pydantic models for interacting with DataPack and SchemaPack
-definitions are not fully frozen, yet, however in the future they will be.
-Thus, while re-implementing the transformations, modifications to a
-DataPack or SchemaPack object should never be done in place but
-using methods that would also work on frozen pydantic models (e.g.
-the `model_copy(update={...})` method). This is also true for the already
-migrated transformation.
+Currently, the pydantic models for interacting with DataPack and SchemaPack definitions are not fully frozen, yet, however in the future they will be.
+Thus, while re-implementing the transformations, modifications to a DataPack or SchemaPack object should never be done in place but using methods that would also work on frozen pydantic models (e.g. the `model_copy(update={...})` method).
+This is also true for the already migrated transformation.
 
 ### Refactor merge_slots transformation
 
@@ -177,8 +163,7 @@ The original merge_slots transformation should be replaced by two new transforma
 A. For merging content properties:
 
 - nested properties (of nested JSON objects) must be supported
-- If the source properties are not of the same type and the `assume_same_type` argument
-  (see config example below) is set to `false`, a union type is created (AnyOf).
+- If the source properties are not of the same type and the `assume_same_type` argument (see config example below) is set to `false`, a union type is created (AnyOf).
 - The new property is always a list even if the source properties were not multivalued.
 - a config example might look like this:
 
@@ -253,15 +238,15 @@ B. For merging relation properties:
 
 ### Refactor aggregate transformation
 
-The former `aggregate` transformation shall be replaced by a mixture of existing
-and to be written transformations. The following new transformations shall be
-implemented:
+The former `aggregate` transformation shall be replaced by a mixture of existing and to be written transformations.
+The following new transformations shall be implemented:
 
 #### Transformation 1: Add Content Property
 
-A transformation that enables the insertion of a subschema into a new property
-of any object within the current content schema of a class, including an initial
-value. The schema will be modified by inserting the subschema at the specified path. The data will be modified by inserting the default value at the specified path. The user may control whether or not the newly added property is added to the parent property's `required` list.
+A transformation that enables the insertion of a subschema into a new property of any object within the current content schema of a class, including an initial value.
+The schema will be modified by inserting the subschema at the specified path.
+The data will be modified by inserting the default value at the specified path.
+The user may control whether or not the newly added property is added to the parent property's `required` list.
 
 ##### Configuration
 
@@ -290,10 +275,12 @@ value. The schema will be modified by inserting the subschema at the specified p
 #### Transformation 2: Count References
 
 > [!IMPORTANT]  
-> The following transformations are expected to add a new property to the schema and data as specified under `target_content`. They shall validate that the path specified under `object_path` is valid, i.e. leads to a property of type `"object"` and that that object does not yet contain a property by the name specified under `property_name`. They shall then add that property with an appropriate subschema as required by the specific transformation.
+> The following transformations are expected to add a new property to the schema and data as specified under `target_content`.
+> They shall validate that the path specified under `object_path` is valid, i.e. leads to a property of type `"object"` and that that object does not yet contain a property by the name specified under `property_name`.
+> They shall then add that property with an appropriate subschema as required by the specific transformation.
 
-* The transformation shall count how many target objects are referenced from each source object given the relation name.
-* The transformation shall validate whether the target is defined with multiplicity and fail otherwise
+- The transformation shall count how many target objects are referenced from each source object given the relation name.
+- The transformation shall validate whether the target is defined with multiplicity and fail otherwise
 
 Example config:
 
@@ -307,18 +294,17 @@ Example config:
 
 #### Transformation 3: Count content values
 
-* The transformation shall count the values encountered at a specified property in the content of an object.
-* The transformation shall validate that at least one of the traversed references is multi-valued by its cardinality or one of the traversed content elements is an array.
-* The path to the source content property is specified in two stages: (1) a relation path string specifies the path to the class that holds the content; (2) a content path specifies the path to the source property within the content.
-* A new content property with the name `target_content.property_name` will be added to the schema by the transformation and will have the following schema
+- The transformation shall count the values encountered at a specified property in the content of an object.
+- The transformation shall validate that at least one of the traversed references is multi-valued by its cardinality or one of the traversed content elements is an array.
+- The path to the source content property is specified in two stages: (1) a relation path string specifies the path to the class that holds the content; (2) a content path specifies the path to the source property within the content.
+- A new content property with the name `target_content.property_name` will be added to the schema by the transformation and will have the following schema
 
   ```yaml
   type: object
   additionalProperties: true
   ```
 
-  where each observed value will be mapped to an integer value representing the
-  number of times it was observed
+  where each observed value will be mapped to an integer value representing the number of times it was observed
 
 ##### Configuration
 
@@ -341,8 +327,8 @@ Example config:
 
 #### Transformation 4: Sum Operation
 
-* Similarly to the previous transformation, this transformation does not count the element occurrences but sums up the values of the yielded elements.
-* The transformation shall validate that the type of the configured source element allows arithmetic operations (number, integer, boolean).
+- Similarly to the previous transformation, this transformation does not count the element occurrences but sums up the values of the yielded elements.
+- The transformation shall validate that the type of the configured source element allows arithmetic operations (number, integer, boolean).
 
 Draft Config:
 
@@ -358,8 +344,8 @@ Draft Config:
 
 #### Transformation 5: Copy
 
-* The transformation shall enable copying the values from one content location (of potentially a referenced class) to another content location.
-* The type of the resulting subschema shall be that of the source subschema.
+- The transformation shall enable copying the values from one content location (of potentially a referenced class) to another content location.
+- The type of the resulting subschema shall be that of the source subschema.
 
 ##### Configuration
 
@@ -385,7 +371,8 @@ Deletes a relation from the model and data.
 
 #### Transformation 7: Delete Content Subschema
 
-As the name suggests, following the conventions used in the aforementioned transformations. The transformation changes the schema and data by removing the specified property from the content schema and data.
+As the name suggests, following the conventions used in the aforementioned transformations.
+The transformation changes the schema and data by removing the specified property from the content schema and data.
 
 ```yaml
 - class_name: ClassName

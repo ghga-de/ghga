@@ -2,14 +2,15 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
 ### Outline
 
-The goal of this epic is to implement workflows in metldata. In contrast to the previously used approach the workflows shall not be implemented in Python but be fully configurable. Just like individual transformations, workflows shall consume and produce a pair of schemapack and datapack.
+The goal of this epic is to implement workflows in metldata.
+In contrast to the previously used approach the workflows shall not be implemented in Python but be fully configurable.
+Just like individual transformations, workflows shall consume and produce a pair of schemapack and datapack.
 
 In this epic, the following shall be implemented:
 
@@ -30,9 +31,13 @@ The workflow shall be specified as indicated by the following examples:
     {} # ...
 ```
 
-Originally the data transformation was described in two layers: A _workflow_ comprising _workflow steps_ which correspond to a single transformation, hard coded in Python with a release cycle bound to that of metldata. And a corresponding configuration file configuring each workflow step with the config schema being defined by the transformation executed in the workflow step.
+Originally the data transformation was described in two layers: A _workflow_ comprising _workflow steps_ which correspond to a single transformation, hard coded in Python with a release cycle bound to that of metldata.
+And a corresponding configuration file configuring each workflow step with the config schema being defined by the transformation executed in the workflow step.
 
-To retain more flexibility the transformations were previously implemented such that they could perform multiple operations of the same type at once, avoiding too frequent changes to the hard coded workflow. With a configurable workflow this can now be relaxed since additional workflow steps can now be added without any development cost. Any "for each" logic shall therefore be removed from the transformations. For example, the previous "delete relation" transformation used to have a config
+To retain more flexibility the transformations were previously implemented such that they could perform multiple operations of the same type at once, avoiding too frequent changes to the hard coded workflow.
+With a configurable workflow this can now be relaxed since additional workflow steps can now be added without any development cost.
+Any "for each" logic shall therefore be removed from the transformations.
+For example, the previous "delete relation" transformation used to have a config
 
 ```yaml
 ClassOne: [slot_a, slot_b]
@@ -40,7 +45,8 @@ ClassTwo: [slot_k]
 ClassThree: [slot_x, slot_y]
 ```
 
-allowing for multiple slots in multiple classes to be deleted. Following the logic of this workflow language, this would become
+allowing for multiple slots in multiple classes to be deleted.
+Following the logic of this workflow language, this would become
 
 ```yaml
 - name: delete_relation
@@ -54,7 +60,7 @@ allowing for multiple slots in multiple classes to be deleted. Following the log
 # ... followed by three more invocations of the delete_relation transformation
 ```
 
-To generically solve the frequent use case of executing the same operation on multiple targets, the specification shall allow for simple loops, similarly to the Ansible language as described [here](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_loops.html#using-loops):
+To generically solve the frequent use case of executing the same operation on multiple targets, the specification shall allow for simple loops, similarly to the Ansible language as described in its [loops guide](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_loops.html#using-loops):
 
 ```yaml
 - name: delete_relation
@@ -86,7 +92,9 @@ The processing of workflows shall be implemented in two stages:
 
 #### Expansion of loops
 
-Initially, the loop specifications shall be used to expand every workflow step precursor into (potentially) multiple workflow steps. Templating the loop logic can be achieved using a minimal data model for the initial deserialization of the YAML file, followed by YAML or JSON serialization, templating and re-deserialization into the actual operation models. The initial pre-templating model may be specified as the following hypothetical model hierarchy
+Initially, the loop specifications shall be used to expand every workflow step precursor into (potentially) multiple workflow steps.
+Templating the loop logic can be achieved using a minimal data model for the initial deserialization of the YAML file, followed by YAML or JSON serialization, templating and re-deserialization into the actual operation models.
+The initial pre-templating model may be specified as the following hypothetical model hierarchy
 
 ```Python
 class WorkflowStepBase:
@@ -129,7 +137,7 @@ def expand_loops(precursors: list[WorkflowPrecursor]) -> list[WorkflowStepBase]:
 
 ### Example
 
-An example that aims to replace the current workflow specification ([ghga.py](https://github.com/ghga-de/metldata/blob/2.1.2/src/metldata/builtin_workflows/ghga_archive.py)) and configuration ([metadata_config.yaml](https://github.com/ghga-de/metadata-config/blob/2.0.0%2B6/configuration/metadata_config.yaml)) is provided [here](./example_workflow.yaml) as part of the epic spec.
+An example that aims to replace the current workflow specification ([ghga.py](https://github.com/ghga-de/metldata/blob/2.1.2/src/metldata/builtin_workflows/ghga_archive.py)) and configuration ([metadata_config.yaml](https://github.com/ghga-de/metadata-config/blob/2.0.0%2B6/configuration/metadata_config.yaml)) is provided in [example_workflow.yaml](./example_workflow.yaml) as part of the epic spec.
 
 ## Human Resource/Time Estimation
 

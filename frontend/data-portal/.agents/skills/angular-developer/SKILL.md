@@ -27,7 +27,8 @@ Use this skill when working on Angular code in this repository.
 - Use standalone components; do not add `standalone: true`.
 - Do not set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly; it is the default.
 - Prefer signals, `computed()`, `input()`, and `output()`.
-- Prefer Signal Forms for new forms. If not using Signal Forms, prefer reactive forms.
+- Prefer Signal Forms for new forms.
+  If not using Signal Forms, prefer reactive forms.
 - Use the `host` property instead of `@HostBinding` or `@HostListener`.
 - Use native control flow like `@if`, `@for`, and `@switch`.
 - Do not use `ngClass`; prefer `class` bindings.

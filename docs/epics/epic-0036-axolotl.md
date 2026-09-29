@@ -34,7 +34,8 @@ Browsing data:
 - The user filters datasets by keyword
 - The user filters datasets by filter facets
 
-Please note, filtering and specifying keywords will not change the displayed items since the response from the metadata repository service is mocked and static. This should also be documented in the readme.
+Please note, filtering and specifying keywords will not change the displayed items since the response from the metadata repository service is mocked and static.
+This should also be documented in the readme.
 
 ## API Definitions
 
@@ -44,7 +45,8 @@ Searching through our dataset of metadata objects:
 
 - `POST /rpc/search/?document_type={documentType}&return_facets=true&skip={skip}&limit={limit}`
 - `documentType`: the type of metadata objects we wish to search for [(see docs)](https://ghga-de.github.io/ghga-metadata-schema/docs/type/), only need to support "Dataset"
-- `skip`: the offset from 0 from which we wish to start our search (and retrieve results). Used for pagination.
+- `skip`: the offset from 0 from which we wish to start our search (and retrieve results).
+  Used for pagination.
 - `limit`: the amount of search results we wish to be returned.
 - request body:
   - `query`: a keyword to filter the results by; to not filter by keyword, `query` should be set to `"*"`

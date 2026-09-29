@@ -2,21 +2,23 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
 ### Outline
 
-The goal of this epic is to enable Data Portal users to download the full non-personal metadata for a *study*. The download shall be supported in JSON and XLSX format.
+The goal of this epic is to enable Data Portal users to download the full non-personal metadata for a *study*.
+The download shall be supported in JSON and XLSX format.
 
 ### Included/Required
 
 - Add metldata configuration to enable publishing entire artifacts, as specified in a list.
 - Update the builtin_workflows to save the output of add_accessions as an artifact, `added_accessions`.
-- Modify the load subpackage of metldata to publish the configured artifacts in their entirety (i.e. not breaking them down into resources). The artifacts should be stored, deleted, and shared in the outbox fashion, just as EmbeddedDatasets already are.
-- Implement a new service that consumes the `added_accessions` events and produces and persists XLSX representations thereof. The service shall enable downloading these XLSX files through an HTTP API on the basis of the study IDs.
+- Modify the load subpackage of metldata to publish the configured artifacts in their entirety (i.e. not breaking them down into resources).
+  The artifacts should be stored, deleted, and shared in the outbox fashion, just as EmbeddedDatasets already are.
+- Implement a new service that consumes the `added_accessions` events and produces and persists XLSX representations thereof.
+  The service shall enable downloading these XLSX files through an HTTP API on the basis of the study IDs.
 - Modify the Data Portal to include a metadata download button on the "Study" tab of the detailed dataset view that links to the aforementioned HTTP API endpoint.
 
 ### Implementation Detail
@@ -64,7 +66,8 @@ The API of the service shall reflect the [metldata query API](https://data.ghga.
 /artifacts/{artifact_name}/classes/{class_name}/resources/{resource_id}
 ```
 
-The service configuration shall allow renaming the sheets according to a map. It may look similar to the following example:
+The service configuration shall allow renaming the sheets according to a map.
+It may look similar to the following example:
 
 ```yaml
 - source_topic: some_topic

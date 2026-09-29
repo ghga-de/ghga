@@ -2,11 +2,12 @@
 
 **Epic Type:** Implementation Epic
 
-The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](../epic-0019-pied-raven/README.md). This includes updating dependency versions in all services as well as ironing out possible differences in API usage and event processing to include the complete file upload path.
+The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](../epic-0019-pied-raven/README.md).
+This includes updating dependency versions in all services as well as ironing out possible differences in API usage and event processing to include the complete file upload path.
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/pages/viewpage.action?pageId=220790885
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/pages/viewpage.action?pageId=220790885>
 
 ## User Journeys
 
@@ -20,8 +21,7 @@ Integrate all File Services (UCS, IFRS, DCS) as well as the GHGA Connector into 
 
 The GHGA-Connector now sends the public key used in decrypting the crypt4gh header in the **POST** */uploads* API call.
 
-The new OpenAPI doc can be found here:
-[OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0023-thick-billed-raven/api_definitions/rest/ucs.yaml)
+The new OpenAPI doc can be found here: [OpenAPI YAML](./api_definitions/rest/ucs.yaml) - [Swagger UI](https://editor.swagger.io/?url=https://raw.githubusercontent.com/ghga-de/ghga/dev/docs/epics/epic-0023-thick-billed-raven/api_definitions/rest/ucs.yaml)
 
 ## Additional Implementation Details
 
@@ -29,13 +29,14 @@ The new OpenAPI doc can be found here:
 
 - Update & cleanup dockerfiles to use only slim containers
 - Update dependencies to the current version
-    - ghga-chassis-lib
-    - hexkit
-    - ghga-event-schemas (Version 0.7.4 changed handling of datetimes)
+  - ghga-chassis-lib
+  - hexkit
+  - ghga-event-schemas (Version 0.7.4 changed handling of datetimes)
 
 ### GHGA Connector
 
-- The user now has to input a public key file for uploading a file. There could be a default setting.
+- The user now has to input a public key file for uploading a file.
+  There could be a default setting.
 - The **POST** */uploads* call transmits this public key
 
 ### UCS

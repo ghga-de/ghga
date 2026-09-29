@@ -21,9 +21,6 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
-        # docs/epics/ is imported history (ADR-0025): 36 files there end lines with two
-        # spaces as a hard break, and ~116 more lines would still churn with the arg above.
-        exclude: ^docs/epics/
       - id: end-of-file-fixer
         # 23 generated config_schema.json — the upstream regenerator was not imported, so
         # they are frozen artifacts; rewriting them only invites conflicts with it.
@@ -99,6 +96,16 @@ repos:
         types: [shell]
         # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
         entry: shellcheck -x -P SCRIPTDIR
+
+      # ---- Markdown (ADR-0044) ---------------------------------------------------------
+      # Fixes what it can, one sentence per line among it; pre-commit then fails on the
+      # changed files, as with ruff. [tool.rumdl] exclude applies to named files too.
+      - id: rumdl
+        name: rumdl (Markdown)
+        language: system
+        files: \.(md|qmd)$
+        require_serial: true
+        entry: uv run rumdl check --fix
 
       # ---- ADRs, epics and instruction files (ADR-0041, ADR-0042) ---------------------------
       # The set hook checks both sets, the instruction files and the references across

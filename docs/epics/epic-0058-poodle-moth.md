@@ -2,34 +2,26 @@
 
 **Epic Type:** Exploratory Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
 
 ## Principal Components of Exploration
 
-We currently store data in MongoDB with a process that converts more complex data types,
-such as datetimes, paths, and UUID objects, to their string representations.
-More precisely, we perform `<model>.model_dump_json()` on the given pydantic model
-before insertion. When the data is retrieved from the database, pydantic is able to
-reconstruct the original model, e.g. a stringified UUID is converted to an actual UUID.
+We currently store data in MongoDB with a process that converts more complex data types, such as datetimes, paths, and UUID objects, to their string representations.
+More precisely, we perform `<model>.model_dump_json()` on the given pydantic model before insertion.
+When the data is retrieved from the database, pydantic is able to reconstruct the original model, e.g. a stringified UUID is converted to an actual UUID.
 
-The above process is straightforward and uniform in its application, but introduces
-drawbacks in the form of query complexity and reduced efficiency. MongoDB stores data
-internally in a format called BSON (Binary JSON), which features support for many types
-of data, like datetimes and UUIDs. Instead of storing the string representations of
-such types, we could be storing them in, and querying with, their native format.
+The above process is straightforward and uniform in its application, but introduces drawbacks in the form of query complexity and reduced efficiency.
+MongoDB stores data internally in a format called BSON (Binary JSON), which features support for many types of data, like datetimes and UUIDs.
+Instead of storing the string representations of such types, we could be storing them in, and querying with, their native format.
 
-This epic will explore the tradeoffs between storing data as we do now (string format)
-and migrating to BSON-supported formats. If we decide against storing data as BSON, we
-need to decide whether we want to make the API a bit more consistent. Currently, the
-filter mapping values are passed without being stringified, contrary to the values of
-inserted or updated resources.
+This epic will explore the tradeoffs between storing data as we do now (string format) and migrating to BSON-supported formats.
+If we decide against storing data as BSON, we need to decide whether we want to make the API a bit more consistent.
+Currently, the filter mapping values are passed without being stringified, contrary to the values of inserted or updated resources.
 
 Results to be produced:
 
 - ADR
 - Implementation Epic & tasks (including migration tasks), only if BSON format is elected
-
 - \<Provide a list here.\>
 
 ## Not part of this Exploration

@@ -4,7 +4,7 @@
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/TgA5D
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/TgA5D>
 
 ## User Journeys
 

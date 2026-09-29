@@ -1,43 +1,32 @@
 # GHGA Monorepo — Design & Migration Docs
 
-Design and migration records for the consolidation of GHGA's ~28 maintained repositories
-into one polyglot monorepo (Python `uv` workspace + Angular front end) that builds Helm
-charts and runs its integration tests on Kubernetes.
+Design and migration records for the consolidation of GHGA's ~28 maintained repositories into one polyglot monorepo (Python `uv` workspace + Angular front end) that builds Helm charts and runs its integration tests on Kubernetes.
 
-> Status: **executed; cutover essentially done.** The import is done — 20 services, 7
-> libraries, 5 tools and the Angular front end are in the tree — CI and both release
-> lanes run from here, and the platform lane has cut `ghga/15.3.1-rc.*`. The leftovers
-> are listed in the [runbook §7](migration/runbook.md#7-cutover-checklist). The ADRs
-> record the decisions as they stand; git keeps how they got there.
+> Status: **executed; cutover essentially done.**
+> The import is done — 20 services, 7 libraries, 5 tools and the Angular front end are in the tree — CI and both release lanes run from here, and the platform lane has cut `ghga/15.3.1-rc.*`.
+> The leftovers are listed in the [runbook §7](migration/runbook.md#7-cutover-checklist).
+> The ADRs record the decisions as they stand; git keeps how they got there.
 
 ## Start here
-- **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout,
-  uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
-- **[architecture/metadata-and-file-journeys.md](architecture/metadata-and-file-journeys.md)** —
-  current-state reference for how metadata and files flow (submission, accessions, upload,
-  file mapping, serving). Read before touching those paths.
-- **[migration/runbook.md](migration/runbook.md)** — phased, executable migration with a cutover
-  checklist.
-- **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the
-  [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
-- **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes,
-  their tags, version stamping, the PyPI upload plan and the publish targets.
-- **[agent-instructions.md](agent-instructions.md)** — where guidance for coding agents
-  lives: the `AGENTS.md` files, their stubs, the READMEs and the skills, and what belongs
-  in each ([ADR-0042](adrs/adr-0042-agent-instruction-files.md)).
-- **[dependencies.md](dependencies.md)** — how dependencies are updated, and which are
-  deliberately kept behind their latest version, why, and the signal to update.
+
+- **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout, uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
+- **[architecture/metadata-and-file-journeys.md](architecture/metadata-and-file-journeys.md)** — current-state reference for how metadata and files flow (submission, accessions, upload, file mapping, serving).
+  Read before touching those paths.
+- **[migration/runbook.md](migration/runbook.md)** — phased, executable migration with a cutover checklist.
+- **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
+- **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes, their tags, version stamping, the PyPI upload plan and the publish targets.
+- **[agent-instructions.md](agent-instructions.md)** — where guidance for coding agents lives: the `AGENTS.md` files, their stubs, the READMEs and the skills, and what belongs in each ([ADR-0042](adrs/adr-0042-agent-instruction-files.md)).
+- **[dependencies.md](dependencies.md)** — how dependencies are updated, and which are deliberately kept behind their latest version, why, and the signal to update.
 
 ## Epics
-- **[epics/](epics/README.md)** — technical specifications for GHGA development epics, written
-  before each epic starts. Imported history-preserving from `ghga-de/epic-docs`
-  ([ADR-0025](adrs/adr-0025-consolidate-into-monorepo.md)); authoring conventions and the two
-  templates (exploratory / implementation) live alongside them.
+
+- **[epics/](epics/README.md)** — technical specifications for GHGA development epics, written before each epic starts.
+  Imported history-preserving from `ghga-de/epic-docs` ([ADR-0025](adrs/adr-0025-consolidate-into-monorepo.md)); authoring conventions and the two templates (exploratory / implementation) live alongside them.
 
 ## Decisions (ADRs)
-Write new ADRs from the [template](adrs/adr-template.md), following the
-[writing style](style.md#architecture-decision-records). The table is generated from each
-ADR's frontmatter by `just docs-check`; do not edit it by hand.
+
+Write new ADRs from the [template](adrs/adr-template.md), following the [writing style](style.md#architecture-decision-records).
+The table is generated from each ADR's frontmatter by `just docs-check`; do not edit it by hand.
 
 <!-- adr-index:start -->
 | # | Title | Status | Tags |
@@ -85,6 +74,7 @@ ADR's frontmatter by `just docs-check`; do not edit it by hand.
 | [0041](adrs/adr-0041-docs-linting.md) | A pre-commit check for ADRs and epics | accepted | docs, process |
 | [0042](adrs/adr-0042-agent-instruction-files.md) | Layered AGENTS.md for coding agents | accepted | docs, process |
 | [0043](adrs/adr-0043-release-notes.md) | Release notes as drafted GitHub releases | accepted | release, process |
+| [0044](adrs/adr-0044-sentence-per-line-markdown.md) | One sentence per line in Markdown, checked by rumdl | accepted | docs, process |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)
@@ -100,9 +90,8 @@ ADR's frontmatter by `just docs-check`; do not edit it by hand.
 | **7. Cutover** | **Essentially done.** Repo lives at `ghga-de/ghga`, the PyPI lane publishes, the platform lane has cut `ghga/15.3.1-rc.*`, and the source repos are archived. The leftovers are listed in runbook §7 | runbook §7 |
 
 ## Open items (tracked, non-blocking)
-See [architecture/overview.md §6](architecture/overview.md). Notably: confirming the Envoy
-Gateway `SecurityPolicy.extAuth` ↔ prod `envoyExtAuthzHttp` header mapping; whether to
-maintain an optional full-Istio umbrella profile; demo observability target.
 
-> The earlier edge/boundary/secrets/placement/task-runner open items are now resolved
-> (ADR-0031–0035).
+See [architecture/overview.md §6](architecture/overview.md).
+Notably: confirming the Envoy Gateway `SecurityPolicy.extAuth` ↔ prod `envoyExtAuthzHttp` header mapping; whether to maintain an optional full-Istio umbrella profile; demo observability target.
+
+> The earlier edge/boundary/secrets/placement/task-runner open items are now resolved (ADR-0031–0035).

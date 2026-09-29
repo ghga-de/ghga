@@ -1,6 +1,7 @@
 # Datapack Specification
 
-This document defines the structure and required fields of a `datapack.yaml` file, which represents structured data conforming to a given schemapack. Each datapack consists of:
+This document defines the structure and required fields of a `datapack.yaml` file, which represents structured data conforming to a given schemapack.
+Each datapack consists of:
 
 * A datapack version identifier,
 
@@ -8,21 +9,22 @@ This document defines the structure and required fields of a `datapack.yaml` fil
 
 * Optional rootResource and rootClass fields to restrict the datapack to a subgraph of interest.
 
+## Keywords
 
-### Keywords:
-
-`datapack`:  Specifies the version of the datapack specification being used.
+`datapack`: Specifies the version of the datapack specification being used.
 
 Example:
+
 ```yaml
 
 datapack: 3.0.0
 ```
 
-`resources`:A nested dictionary containing resources per class name and resource ID. Each class defined in the schemapack must be present even if no resources are defined for it in this datapack.
-
+`resources`:A nested dictionary containing resources per class name and resource ID.
+Each class defined in the schemapack must be present even if no resources are defined for it in this datapack.
 
 Example:
+
 ```yaml
 
 datapack: 3.0.0
@@ -46,14 +48,16 @@ resources:
         description: This is an example resource.
     ```
 
-* `relations`: A dictionary containing the relations of the resource to other resources. Each key is the name of a relation mapped to their datapack relation definitions. Each value contains the target class and target resource(s) of the relation.
+* `relations`: A dictionary containing the relations of the resource to other resources.
+  Each key is the name of a relation mapped to their datapack relation definitions.
+  Each value contains the target class and target resource(s) of the relation.
 
   Relation definition must follow the following structure:
 
-    * `targetClass`:  The name of the referenced class.
+  * `targetClass`: The name of the referenced class.
 
-    * `targetResources`: The ID(s) of target resources of the targetClass. Based on the schemapack relation definition, this field can have the following values:
-
+  * `targetResources`: The ID(s) of target resources of the targetClass.
+    Based on the schemapack relation definition, this field can have the following values:
 
     |                             | **mandatory.target = True** | **mandatory.target = False**        |
     | --------------------------- | --------------------------- | ----------------------------------- |
@@ -71,7 +75,6 @@ resources:
                 - sample1 # <- resource ID of the target resource
                 - sample2 # <- resource ID of another target resource
     ```
-
 
 A full datapack example:
 
@@ -102,13 +105,14 @@ resources:
                 description: This is the first sample.
 ```
 
-
-`rootResource` *(optional)*: Defines the id of the resource of the class defined in `className` that should act as root. This means that, in addition to the root resource itself, the datapack must only contain resources that are direct or transitive dependencies of the root resource.
+`rootResource` *(optional)*: Defines the id of the resource of the class defined in `className` that should act as root.
+This means that, in addition to the root resource itself, the datapack must only contain resources that are direct or transitive dependencies of the root resource.
 
 `rootClass` *(optional)*: Defines the class name of the resource that should act as root.
 
-> [!IMPORTANT] A rooted datapack requires its corresponding schemapack to be rooted as well. If you're validating a rooted datapack against a schema, make sure that its schemapack counterpart is also rooted.
-
+> [!IMPORTANT]
+> A rooted datapack requires its corresponding schemapack to be rooted as well.
+> If you're validating a rooted datapack against a schema, make sure that its schemapack counterpart is also rooted.
 
 A full rooted datapack example with its schemapack counterpart:
 

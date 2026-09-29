@@ -2,7 +2,8 @@
 
 ## 1. Introduction
 
-**jsonsubschema** is an open-source Python library designed to identify **data compatibility bugs** by analyzing JSON schemas. Unlike standard validators that check if a specific JSON document matches a schema, `jsonsubschema` performs a static analysis of the relationship between two schemas themselves.
+**jsonsubschema** is an open-source Python library designed to identify **data compatibility bugs** by analyzing JSON schemas.
+Unlike standard validators that check if a specific JSON document matches a schema, `jsonsubschema` performs a static analysis of the relationship between two schemas themselves.
 
 This allows developers to detect potential issues—such as breaking API changes or incompatible data pipeline steps—before any actual data is processed.
 
@@ -18,7 +19,8 @@ The tool provides three possible outputs for a check:
 
 ## 3. The 3-Step Processing Pipeline
 
-JSON Schema is highly flexible; two schemas can look completely different but describe the exact same set of documents. To handle this, `jsonsubschema` uses a three-stage pipeline:
+JSON Schema is highly flexible; two schemas can look completely different but describe the exact same set of documents.
+To handle this, `jsonsubschema` uses a three-stage pipeline:
 
 ### Step 1: Canonicalization
 
@@ -48,8 +50,10 @@ The final step extracts **type-homogeneous fragments** (parts of the schema desc
 
 The tool is particularly effective for:
 
-* **API Evolution & Backward Compatibility:** In versioned APIs (e.g., using semantic versioning), you can verify that a new schema version is a super-schema of the old one. If not, you have a **breaking change** that requires a major version bump.
-* **Machine Learning (ML) Pipelines:** Static type-checking for ML operators. You can verify if the output schema of one operator is a subschema of the input schema required by the next operator, preventing crashes after hours of computation.
+* **API Evolution & Backward Compatibility:** In versioned APIs (e.g., using semantic versioning), you can verify that a new schema version is a super-schema of the old one.
+  If not, you have a **breaking change** that requires a major version bump.
+* **Machine Learning (ML) Pipelines:** Static type-checking for ML operators.
+  You can verify if the output schema of one operator is a subschema of the input schema required by the next operator, preventing crashes after hours of computation.
 
 ## 5. Performance and Reliability
 

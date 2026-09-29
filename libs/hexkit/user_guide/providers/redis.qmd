@@ -19,10 +19,8 @@ title: "Redis"
  limitations under the License.
 -->
 
-Redis providers implement `KeyValueStoreProtocol` for low-latency key-value
-access.
+Redis providers implement `KeyValueStoreProtocol` for low-latency key-value access.
 
-Available variants are `RedisBytesKeyValueStore`, `RedisStrKeyValueStore`,
-`RedisJsonKeyValueStore`, and `RedisDtoKeyValueStore`.
+Available variants are `RedisBytesKeyValueStore`, `RedisStrKeyValueStore`, `RedisJsonKeyValueStore`, and `RedisDtoKeyValueStore`.
 
 API reference: [hexkit.providers.redis](../../reference/index.qmd#provider-redis)

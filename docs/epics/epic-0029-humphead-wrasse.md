@@ -28,16 +28,16 @@ The event schema will detail all the information needed to send a notification v
 - tertiary (bcc'd) recipient email addresses (optional)
 - subject line (required)
 - name of the recipient (required)
-- plaintext email body (required)
-The exact field names and constraints will be provided in the ghga-event-schemas repository, which is considered the source of truth.
-This information will be used to create an email with a consistent format.
+- plaintext email body (required) The exact field names and constraints will be provided in the ghga-event-schemas repository, which is considered the source of truth.
+  This information will be used to create an email with a consistent format.
 
 ### Notification Service
 
 This is a microservice dedicated to consuming Notification events from the "notifications" topic in kafka.
 Other types of notification events will not be handled by this service at this time, but the service could be expanded in the future if needed.
 In order to utilize the notification service to send emails, publishers will need to publish an event to the "notifications" topic using the "notification" event type, with a payload conforming to the schema defined by Notification in the ghga-event-schemas repository.
-Emails will be sent via SMTP, and email contents will be injected into configurable templates. The parameters required to successfully configure the service are as follows:
+Emails will be sent via SMTP, and email contents will be injected into configurable templates.
+The parameters required to successfully configure the service are as follows:
 
 - smtp_host: The Host portion of the connection string for the server
 - smtp_port: The port to use
@@ -47,9 +47,11 @@ Emails will be sent via SMTP, and email contents will be injected into configura
 - plaintext_email_template: The email template to use for the plaintext email version.
 - html_email_template: The email template to use for the HTML email version.
   - BOTH the html and plaintext template should use template variables with the same name as the event keys:
-    - Variables are formed in the template like $variable_name. Consider the following:
+    - Variables are formed in the template like $variable_name.
+      Consider the following:
       - $recipient_name: The name of the recipient (e.g. "Dear $recipient_name,...")
-      - $plaintext_body: The body text of the email, located between the greeting and signature. Nothing here will be further substituted, so don't include any variables within this section.
+      - $plaintext_body: The body text of the email, located between the greeting and signature.
+        Nothing here will be further substituted, so don't include any variables within this section.
     - If the template variables are not named correctly, the email will not be generated correctly.
 
 ## Human Resource/Time Estimation

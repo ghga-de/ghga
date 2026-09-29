@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -24,11 +23,13 @@ source_class_name: SomeClass # Must exist
 target_class_name: SomeOtherClass # Must NOT exist
 ```
 
-ID, relations and content will be identical in the new class. All objects will be duplicated.
+ID, relations and content will be identical in the new class.
+All objects will be duplicated.
 
 #### Delete Class
 
-This transformation shall delete a class from the schema. All objects of this class type in the data shall also be removed, including all references in all classes that are of the type of the deleted class.
+This transformation shall delete a class from the schema.
+All objects of this class type in the data shall also be removed, including all references in all classes that are of the type of the deleted class.
 
 Example Config:
 
@@ -38,7 +39,9 @@ class_name: ClassNameToDelete
 
 #### Transform Content
 
-The transform content transformation shall enable the universal modification of content schemas and content data based on the current state. The schema transformation shall be expressed in form of a new schema spec. The data transformation shall be expressed in form of a Jinja template using the current data in form of a denormalized object named `original` with an arbitrary embedding profile.
+The transform content transformation shall enable the universal modification of content schemas and content data based on the current state.
+The schema transformation shall be expressed in form of a new schema spec.
+The data transformation shall be expressed in form of a Jinja template using the current data in form of a denormalized object named `original` with an arbitrary embedding profile.
 
 Example config:
 
@@ -50,16 +53,17 @@ data_template: | # The Jinja Template for the new data
   title: "{{ original.title }}"
   dac_email: "{{ original.data_access_policy.data_access_committee.email }}"
   description: "{{ original.description }}"
-  sex_dist: 
+  sex_dist:
     {% for sex, matches in original.individuals | groupby("sex") %}
-      value: "{{ sex }}" 
+      value: "{{ sex }}"
       count: {{ matches | length }}
     {% endfor %}
 ```
 
 #### Refactoring of existing transformations
 
-Given the new workflow specification concept outlined in the [Carpenter Bee Epic Spec](./epic-0071-carpenter-bee/README.md) existing transformations shall be refactored such that they only perform one unit of action at a time. For example, the `infer_references` transformation shall be configured as follows:
+Given the new workflow specification concept outlined in the [Carpenter Bee Epic Spec](./epic-0071-carpenter-bee/README.md) existing transformations shall be refactored such that they only perform one unit of action at a time.
+For example, the `infer_references` transformation shall be configured as follows:
 
 ```yaml
 class_name: SomeClass
@@ -67,9 +71,11 @@ relation_name: some_new_relation
 relation_path: "SomeClass(some_relation)>OtherClass"
 ```
 
-The transformations implemented as a part of Dhole epic `count_content_values`, `count_references`, `sum_operation`, `delete_content_subschema`, `copy_content` and `add_content_properties` will be replaced by the `transform_content` transformation. Thus, they will not be subject to refactoring.
+The transformations implemented as a part of Dhole epic `count_content_values`, `count_references`, `sum_operation`, `delete_content_subschema`, `copy_content` and `add_content_properties` will be replaced by the `transform_content` transformation.
+Thus, they will not be subject to refactoring.
 
-Any existing content schema transformation involving a passive path element will be represented with two transformations; one for resolving the path and adding the relation (with `infer_relations`), the other one transforming the content (with `transform_content`). If not needed, the temporary relation may be deleted in subsequent workflow steps.
+Any existing content schema transformation involving a passive path element will be represented with two transformations; one for resolving the path and adding the relation (with `infer_relations`), the other one transforming the content (with `transform_content`).
+If not needed, the temporary relation may be deleted in subsequent workflow steps.
 
 ## Human Resource/Time Estimation
 

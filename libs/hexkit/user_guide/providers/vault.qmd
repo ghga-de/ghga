@@ -19,10 +19,8 @@ title: "Vault"
  limitations under the License.
 -->
 
-Vault providers implement `KeyValueStoreProtocol` on top of Vault KV v2 and are
-suited for secrets and other sensitive values.
+Vault providers implement `KeyValueStoreProtocol` on top of Vault KV v2 and are suited for secrets and other sensitive values.
 
-Available variants are `VaultBytesKeyValueStore`, `VaultStrKeyValueStore`,
-`VaultJsonKeyValueStore`, and `VaultDtoKeyValueStore`.
+Available variants are `VaultBytesKeyValueStore`, `VaultStrKeyValueStore`, `VaultJsonKeyValueStore`, and `VaultDtoKeyValueStore`.
 
 API reference: [hexkit.providers.vault](../../reference/index.qmd#provider-hashicorp-vault)

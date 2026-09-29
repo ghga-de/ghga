@@ -34,11 +34,13 @@ For now, this should raise an exception instructing the user to provide a readab
 
 ### File Part Parallelization
 
-File transfer operations should benefit from parallelization over the parts of each file. In an initial exploration step, the possibilities of how to achieve this goal should be investigated.
+File transfer operations should benefit from parallelization over the parts of each file.
+In an initial exploration step, the possibilities of how to achieve this goal should be investigated.
 Possible mechanisms for scheduling and managing parallel up-/download tasks include multiprocessing and async queues.
 In addition, replacing the fully synchronous requests library with one supporting asynchronous operations like httpx or aiohttp might yield further performance improvements.
 
-The subsequent implementation task is fully dependent on the results of the exploration. While the details are not described here, it is a part of the epic and should transform the acquired knowledge into corresponding code changes.
+The subsequent implementation task is fully dependent on the results of the exploration.
+While the details are not described here, it is a part of the epic and should transform the acquired knowledge into corresponding code changes.
 
 ## Human Resource/Time Estimation
 

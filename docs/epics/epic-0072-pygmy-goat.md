@@ -2,22 +2,19 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
 ### Outline
 
-`Hexkit` currently has very little documentation regarding its use, terminology,
-or architectural concepts. Some of this knowledge *is* documented in an unconsolidated
-fashion, with files spread across Confluence, Google Docs, and the internal docs
-site. However, developers or even hypothetical third parties working with or
-contributing to `hexkit` do not currently have access to the comprehensive and
-consolidated documentation that the library warrants. This epic will remedy that.
+`Hexkit` currently has very little documentation regarding its use, terminology, or architectural concepts.
+Some of this knowledge *is* documented in an unconsolidated fashion, with files spread across Confluence, Google Docs, and the internal docs site.
+However, developers or even hypothetical third parties working with or contributing to `hexkit` do not currently have access to the comprehensive and consolidated documentation that the library warrants.
+This epic will remedy that.
 The aggregated documentation will be written in Markdown and processed using MkDocs.
-Optionally, we can publish it using GitHub Pages. This approach ensures accessibility
-for both internal developers and third parties.
+Optionally, we can publish it using GitHub Pages.
+This approach ensures accessibility for both internal developers and third parties.
 
 ### Included/Required
 

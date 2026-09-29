@@ -2,11 +2,12 @@
 
 **Epic Type:** Implementation Epic
 
-The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](./epic-0019-pied-raven/README.md). This epic builds on [*23 - Thick-Billed Raven*](./epic-0023-thick-billed-raven/README.md) and aims to bring the Testbed to completion by including the complete file download path and changes required to make everything work according to the arch-concept.
+The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](./epic-0019-pied-raven/README.md).
+This epic builds on [*23 - Thick-Billed Raven*](./epic-0023-thick-billed-raven/README.md) and aims to bring the Testbed to completion by including the complete file download path and changes required to make everything work according to the arch-concept.
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/MIBSDQ
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/MIBSDQ>
 
 ## User Journeys
 
@@ -18,7 +19,8 @@ Produce a script to test the download path in the testbed and adapt the DCS and 
 
 ### Re-Encryption
 
-Add a new S3 bucket called "staging", with IRS write and IFRS read permissions. The IRS re-encrypts all files during checksum validation and the re-encrypted file is moved to the staging bucket.
+Add a new S3 bucket called "staging", with IRS write and IFRS read permissions.
+The IRS re-encrypts all files during checksum validation and the re-encrypted file is moved to the staging bucket.
 
 ## Additional Implementation Details
 
@@ -33,12 +35,14 @@ Add a new S3 bucket called "staging", with IRS write and IFRS read permissions. 
 
 ### EKSS
 
-- When the IRS sends the first part, the EKSS now creates a new secret (using os.urandom(32) as per crypt4gh), and stores the new, instead of the old secret in vault. Both secrets are then sent back along with the ID generated for the new secret
+- When the IRS sends the first part, the EKSS now creates a new secret (using os.urandom(32) as per crypt4gh), and stores the new, instead of the old secret in vault.
+  Both secrets are then sent back along with the ID generated for the new secret
 
 ### IRS
 
 - During Interrogation: Re-Encrypt with the new key obtained from the EKSS, send file to staging bucket.
-- Create Checksums for re-encrypted file instead of the original encrypted file. Part checksums now start directly from the encrypted file, as there is no header present.
+- Create Checksums for re-encrypted file instead of the original encrypted file.
+  Part checksums now start directly from the encrypted file, as there is no header present.
 
 ### Testbed
 

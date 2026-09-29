@@ -4,7 +4,7 @@
 
 ## Principal Components of Exploration
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/cQFzCQ
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/cQFzCQ>
 
 ### Examine requirements for relying parties (RPs)
 
@@ -42,15 +42,21 @@ This epic covers the aspect of using LS Login as identity provider in the follow
 
 ![Client-Service Interaction with API Gateway-mediated Auth](./images/user_journey_1.jpg)
 
-A user accesses the GHGA data portal and explicitly logs in or navigates to a page that requires authentication. The data portal will redirect the user to LS Login, starting an OIDC Authorization code flow. As a result, the client will get an access token which is stored securely in the client.
+A user accesses the GHGA data portal and explicitly logs in or navigates to a page that requires authentication.
+The data portal will redirect the user to LS Login, starting an OIDC Authorization code flow.
+As a result, the client will get an access token which is stored securely in the client.
 
 (2.0) Whenever the user now contacts a service that needs authorization (in this example Service X), the client sends the access token in the request header.
 
-(2.1) The request first hits the API Gateway. Before forwarding the request to the targeted service, the API Gateway sends the access token to the Auth Adapter, which can be a standalone service or just a small Python function injected into the gateway.
+(2.1) The request first hits the API Gateway.
+Before forwarding the request to the targeted service, the API Gateway sends the access token to the Auth Adapter, which can be a standalone service or just a small Python function injected into the gateway.
 
-(2.2) The Auth Adapter uses the access token to contact the LS Login user info endpoint to obtain any further information needed for identifying and authorizing the user. This would ideally be a GA4GH passport claim, as explored in the "carpenter ant" epic.
+(2.2) The Auth Adapter uses the access token to contact the LS Login user info endpoint to obtain any further information needed for identifying and authorizing the user.
+This would ideally be a GA4GH passport claim, as explored in the "carpenter ant" epic.
 
-(2.3) The API Gateway attaches the user information to the body of the user's original request and forwards this modified request to the targeted service. The service interprets the authorization information autonomously to evaluate whether the user is allowed to carry out the requested action or retrieve the requested data. The response of the service travels back to the user's client via the API Gateway.
+(2.3) The API Gateway attaches the user information to the body of the user's original request and forwards this modified request to the targeted service.
+The service interprets the authorization information autonomously to evaluate whether the user is allowed to carry out the requested action or retrieve the requested data.
+The response of the service travels back to the user's client via the API Gateway.
 
 (2.4) If the targeted service has to contact other services as part of the request (both synchronously and asynchronously), it should forward the access token as well as the passport claim to the downstream services.
 

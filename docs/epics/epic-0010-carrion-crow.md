@@ -4,7 +4,7 @@
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/YQH9Cg
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/YQH9Cg>
 
 ## Components of Exploration
 
@@ -12,7 +12,8 @@ This epic covers principle technologies that might be used in the context of fil
 
 ### Select Test Files
 
-For the whole epic, select 4 distinct test files. They shall have the sizes:
+For the whole epic, select 4 distinct test files.
+They shall have the sizes:
 
 - Small file: Between 10 and 100 MiB
 - Medium file: Between 1 and 10 GiB
@@ -21,7 +22,8 @@ For the whole epic, select 4 distinct test files. They shall have the sizes:
 
 ### Crypt4GH
 
-Benchmark the python and rust implementation of crypt4GH in the de.NBI cloud, using all four file sizes. Benchmark criteria are:
+Benchmark the python and rust implementation of crypt4GH in the de.NBI cloud, using all four file sizes.
+Benchmark criteria are:
 
 - How long does it take for each implementation/file size?
 - Encryption speed (bytes per second)?
@@ -33,7 +35,8 @@ Answer the following questions:
 
 - Find out how to separate the encrypted content from the envelope, so the encrypted content can be reused.
 - Does crypt4GH already come with checksum validation?
-- Does the encrypting party need to provide its own public key and does this need to be checked by the receiving/decrypting party? (Reference the crypt4GH concept and concrete implementation.)
+- Does the encrypting party need to provide its own public key and does this need to be checked by the receiving/decrypting party?
+  (Reference the crypt4GH concept and concrete implementation.)
 
 ### Checksum validation
 
@@ -45,7 +48,9 @@ Compare the following widely used checksum algorithms - they are the ones also u
 - SHA-1
 - SHA-256
 
-List advantages and disadvantages of each algorithm. Benchmark in the de.NBI cloud how long checksum calculations for the same file take with each algorithm. Use all four file sizes.
+List advantages and disadvantages of each algorithm.
+Benchmark in the de.NBI cloud how long checksum calculations for the same file take with each algorithm.
+Use all four file sizes.
 
 Find out which of these checksum algorithms are also supported by the Ceph and IBM COS S3 API.
 
@@ -61,14 +66,13 @@ Volume/Hardware Level encryption has been omitted from this epic and moved to a 
 
 ### Realistic Sample files
 
-Take samples from the Genome in a bottle (GIAB) project: https://ftp-trace.ncbi.nih.gov/ReferenceSamples/giab/data/
-Another source for publicly available genome files would be the 1000 Genomes project: http://ftp.1000genomes.ebi.ac.uk/
+Take samples from the Genome in a bottle (GIAB) project: <https://ftp-trace.ncbi.nih.gov/ReferenceSamples/giab/data/> Another source for publicly available genome files would be the 1000 Genomes project: <http://ftp.1000genomes.ebi.ac.uk/>
 
 ### crypt4GH
 
-- crypt4GH Documentation: http://samtools.github.io/hts-specs/crypt4gh.pdf
-- crypt4GH python utility: https://crypt4gh.readthedocs.io/en/latest/
-- crypt4GH rust utility: https://docs.rs/crypt4gh/latest/crypt4gh/
+- crypt4GH Documentation: <http://samtools.github.io/hts-specs/crypt4gh.pdf>
+- crypt4GH python utility: <https://crypt4gh.readthedocs.io/en/latest/>
+- crypt4GH rust utility: <https://docs.rs/crypt4gh/latest/crypt4gh/>
 
 ## Human Resource/Time Estimation
 

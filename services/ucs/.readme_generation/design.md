@@ -3,5 +3,4 @@ Mention anything that deviates from the standard triple hexagonal architecture a
 the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
-It uses protocol/provider pairs and dependency injection mechanisms provided by the
-[hexkit](https://github.com/ghga-de/hexkit) library.
+It uses protocol/provider pairs and dependency injection mechanisms provided by the [hexkit](https://github.com/ghga-de/hexkit) library.

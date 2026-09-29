@@ -24,13 +24,18 @@ accepting that **we may need to change some already established names to achieve
 
 ### Context
 
-We are currently using MongoDB for service databases and Apache Kafka for event streaming. For the integration of microservices, it is crucial that MongoDB database and collection names, as well as Apache Kafka topic and event type names, are configured correctly and consistently. Unfortunately, the names for these objects used in local and remote deployments, as well in the default and example configurations, were not consistent. Due to this inconsistency, it was often unclear whether composite names should be spelled in camelCase, kebab-case, or snake_case, leading to errors when the same object was spelled differently in two different service configurations. Therefore, we sought a consistent way to spell these names.
+We are currently using MongoDB for service databases and Apache Kafka for event streaming.
+For the integration of microservices, it is crucial that MongoDB database and collection names, as well as Apache Kafka topic and event type names, are configured correctly and consistently.
+Unfortunately, the names for these objects used in local and remote deployments, as well in the default and example configurations, were not consistent.
+Due to this inconsistency, it was often unclear whether composite names should be spelled in camelCase, kebab-case, or snake_case, leading to errors when the same object was spelled differently in two different service configurations.
+Therefore, we sought a consistent way to spell these names.
 
 ### Decision
 
 **General Rules:**
 
-- Stick to ASCII letters and digits. Start names with a letter.
+- Stick to ASCII letters and digits.
+  Start names with a letter.
 - Use uppercase letters only where camelCase names are used as outlined below.
 - Do not use blanks or special characters except underscores, hyphens and dots in some cases as outlined below.
 
@@ -38,7 +43,8 @@ We are currently using MongoDB for service databases and Apache Kafka for event 
 
 - Service databases should use the lowercase short form of the service name as the database name (e.g., "auth" for the authentication service or "wps" for the work package service).
 - Do not append a "DB" suffix since it is redundant and the default databases don't use it either.
-- Do not use dots in database names. Prefixes for test branches should be separated using a hyphen.
+- Do not use dots in database names.
+  Prefixes for test branches should be separated using a hyphen.
 
 **MongoDB Collection Names:**
 
@@ -65,13 +71,15 @@ We currently do not reflect versioning in these names but may need to include ve
 
 ### Consequences
 
-Adopting a naming convention will simplify service integration by providing a standardized way of spelling the different types of objects, thus avoiding mismatches. However, initially, we may need to rename a few items to achieve consistency.
+Adopting a naming convention will simplify service integration by providing a standardized way of spelling the different types of objects, thus avoiding mismatches.
+However, initially, we may need to rename a few items to achieve consistency.
 
 ### Alternatives
 
 The guidelines listed above follow the recommendations found in the MongoDB and Kafka documentation and on StackOverflow.
 
-Some alternative naming conventions are suggested on the Internet, such as using a "DB" suffix for database names or using PascalCase or camelCase for event types. We tend to avoid redundant suffixes, and prefer snake_case for event types, since they are already established in our code base and go well with the Python language used to implement the backend services.
+Some alternative naming conventions are suggested on the Internet, such as using a "DB" suffix for database names or using PascalCase or camelCase for event types.
+We tend to avoid redundant suffixes, and prefer snake_case for event types, since they are already established in our code base and go well with the Python language used to implement the backend services.
 
 ### Links
 

@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -17,11 +16,13 @@ The following operational concepts shall be documented:
 
 1. Internal Transport Encryption Concept
 
-   Explains the general framework and technologies used in the context of transport encryption between internal components. Enumerates all pairs of components (or component types) and documents if and if so how the traffic in between is encrypted (e.g. service-service, service-kafka, service-mongodb, ingress-service, kafka-kafka, etc.)
+   Explains the general framework and technologies used in the context of transport encryption between internal components.
+   Enumerates all pairs of components (or component types) and documents if and if so how the traffic in between is encrypted (e.g. service-service, service-kafka, service-mongodb, ingress-service, kafka-kafka, etc.)
 
 1. Vault Configuration and Operation Concept
 
-   Explains how we operate the production Vault instance. Clarifies responsibility boundaries between units ODCF and GHGA.
+   Explains how we operate the production Vault instance.
+   Clarifies responsibility boundaries between units ODCF and GHGA.
 
 1. Kubernetes Configuration and Operation Concept
 
@@ -35,9 +36,9 @@ The following SOPs shall be documented:
 
    Step-by-step instructions starting from an empty OpenStack project with sufficient resources and access to the ODCF / deNBI Cloud Kubermatic System:
 
-   * Installation of Kubernetes
-   * Configuration of Kubernetes (authentication according to concept)
-   * Installation of foundational services
+   - Installation of Kubernetes
+   - Configuration of Kubernetes (authentication according to concept)
+   - Installation of foundational services
 
 1. Secure Personal Handling of Secrets
 
@@ -45,7 +46,8 @@ The following SOPs shall be documented:
 
 #### Secrets Registry
 
-In addition, a secrets registry shall be designed and integrated into the internal documentation, clarifying key aspects for every secret that is being generated in the aforementioned processes. Information may include:
+In addition, a secrets registry shall be designed and integrated into the internal documentation, clarifying key aspects for every secret that is being generated in the aforementioned processes.
+Information may include:
 
 - ID
 - Description

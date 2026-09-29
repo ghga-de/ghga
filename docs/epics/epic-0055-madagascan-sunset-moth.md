@@ -44,7 +44,8 @@ The proposed value name is `storage_aliases` and this endpoint should return a m
 
 ## Additional Implementation Details
 
-The Datasteward Kit/File Ingest Service interaction for both non-secret ingest endpoints is changed slightly, by only including the storage alias in the payload sent and received. Theoretically this results in an additional overhead of calling the WKVS for each payload received, but as aliases should not be removed, results can simply be cached in memory and only re-requested when an alias is not found in the local cache.
+The Datasteward Kit/File Ingest Service interaction for both non-secret ingest endpoints is changed slightly, by only including the storage alias in the payload sent and received.
+Theoretically this results in an additional overhead of calling the WKVS for each payload received, but as aliases should not be removed, results can simply be cached in memory and only re-requested when an alias is not found in the local cache.
 
 ## Human Resource/Time Estimation
 

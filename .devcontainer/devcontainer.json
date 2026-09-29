@@ -83,6 +83,8 @@
         // It provides a UI to inspect the cluster, view logs, and run kubectl commands.
         "ms-kubernetes-tools.vscode-kubernetes-tools",
         "streetsidesoftware.code-spell-checker",
+        // rumdl, the Markdown linter `just lint` runs (ADR-0044)
+        "rvben.rumdl",
         "github.vscode-pull-request-github"
       ]
     }

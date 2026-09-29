@@ -1,8 +1,7 @@
 
 # GHGA Auth Key Management Jobs
 
-This repo contains the script that manages JWT signing keys used by GHGA,
-and can also re-encrypt all user TOTP tokens stored in the auth database.
+This repo contains the script that manages JWT signing keys used by GHGA, and can also re-encrypt all user TOTP tokens stored in the auth database.
 This script can be executed as a Kubernetes Job, either regularly or on demand.
 
 ## Keys managed by this script
@@ -11,7 +10,8 @@ The following keys are created or refreshed:
 
 ### GHGA authentication key pair
 
-**Private** and **public** key to sign internally used authentication tokens. The service `auth-adapter` uses the private part of the key pair to sign, other GHGA microservices verify the token with the respective public part.
+**Private** and **public** key to sign internally used authentication tokens.
+The service `auth-adapter` uses the private part of the key pair to sign, other GHGA microservices verify the token with the respective public part.
 
 ### External OIDC public key set
 
@@ -19,11 +19,18 @@ Public key set fetched from OICD provider, it is used to verify the signature of
 
 ### GHGA work package tokens
 
-**Private** and **public** key to sign internally used work package tokens. The service `work-package` uses the private part of the key pair to sign, other GHGA microservices (for example `download-controller`) verify the token with the respective public part.
+**Private** and **public** key to sign internally used work package tokens.
+The service `work-package` uses the private part of the key pair to sign, other GHGA microservices (for example `download-controller`) verify the token with the respective public part.
 
 ## TOTP tokens re-encrypted by this script
 
-The GHGA auth service stores encrypted TOTP tokens in the user token collection in the Mongo database. The symmetric encryption key is stored in the vault and passed to the auth service as a configuration parameter. The script can generate a new symmetric key, re-encrypt all tokens with this key, and update the Vault with the new key. If an error happens during re-encryption, the tokens are rolled back. During the re-encryption process, the collection is locked for writing. No new TOTP tokens can be created in that time. Therefore, it's recommended to run the script not too frequently and not in the busy hours.
+The GHGA auth service stores encrypted TOTP tokens in the user token collection in the Mongo database.
+The symmetric encryption key is stored in the vault and passed to the auth service as a configuration parameter.
+The script can generate a new symmetric key, re-encrypt all tokens with this key, and update the Vault with the new key.
+If an error happens during re-encryption, the tokens are rolled back.
+During the re-encryption process, the collection is locked for writing.
+No new TOTP tokens can be created in that time.
+Therefore, it's recommended to run the script not too frequently and not in the busy hours.
 
 ## Subcommands
 
@@ -40,7 +47,7 @@ The following subcommands can be executed using `auth-km-jobs <command name>`:
 
 The following environment variables are evaluated:
 
-#### `AUTH_KM_JOBS_VAULT_ADDR`
+### `AUTH_KM_JOBS_VAULT_ADDR`
 
 *Optional*, default value: `http://localhost:8200`
 
@@ -160,13 +167,13 @@ OIDC discovery URL.
 
 MongoDB connection string for the auth service database.
 
-#### `AUTH_KM_DB_NAME`:
+#### `AUTH_KM_DB_NAME`
 
 *Optional*, default_value: `auth-service`
 
 The name of the auth service database.
 
-#### `AUTH_KM_USER_TOKENS:COLLECTION`:
+#### `AUTH_KM_USER_TOKENS:COLLECTION`
 
 *Optional*, default_value: `user_tokens`
 

@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -17,15 +16,19 @@ To this goal, it needs to keep track of the transformation workflows, original a
 
 `Experimental Metadata (EM)`: Data describing the experimental process of generating the Research Data archived in GHGA.
 
-`Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources. It follows SchemaPack format. Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
+`Experimental Metadata Ingress Models (EMIM)`: Schemas that define the structure and format of experimental metadata as it enters the GHGA system from external sources.
+It follows SchemaPack format.
+Currently, GHGA supports only a single data ingress model for experimental metadata, which is the [ghga-metadata-schema](https://github.com/ghga-de/ghga-metadata-schema), but this epic is part of the effort to lift that restriction.
 
 `Universal Discovery Model`: A common target representation to which all the EMs are transformed, serving as a basis for data queries and data display via the GHGA Data Portal.
 
-`EMPack`: Experimental metadata in datapack format. It follows a relational data schema corresponding to one of the EMIMs.
+`EMPack`: Experimental metadata in datapack format.
+It follows a relational data schema corresponding to one of the EMIMs.
 
 `AnnotatedEMPack`: A datapack enriched with additional information such as accessions that help integrate the EMPack into the archive.
 
-`Workflow`: Instructions on how to produce a certain datapack/schemapack representation from another datapack/schemapack. The workflows are defined by the `metldata` library on which the transformation service will be built.
+`Workflow`: Instructions on how to produce a certain datapack/schemapack representation from another datapack/schemapack.
+The workflows are defined by the `metldata` library on which the transformation service will be built.
 
 `Route`: Information on which specific workflow is used to produce datapack compliant with the output model when presented with datapack compliant with the input model.
 
@@ -54,7 +57,7 @@ class RawModel(BaseModel):
    is_ingress: bool
    version: str | None
    schema: SchemaPack | None
-   publish: bool 
+   publish: bool
 
 class Model(RawModel):
    schema: SchemaPack
@@ -71,9 +74,12 @@ class Model(RawModel):
 - Model.order: Order in a topological ordering of the schemas in the transformation graph
 - Model.schema: Schema in SchemaPack format, always defined after derivation.
 
-`RawModel` is used when deserializing the configuration from YAML files, as it does not include the `order` field that is derived after configuration validation. `RawModel` must include a validator to ensure that EMIMs (is_ingress = true) always have a `schema` defined. And the `schema` is None for non-EMIMs when deserializing the configuration.
+`RawModel` is used when deserializing the configuration from YAML files, as it does not include the `order` field that is derived after configuration validation.
+`RawModel` must include a validator to ensure that EMIMs (is_ingress = true) always have a `schema` defined.
+And the `schema` is None for non-EMIMs when deserializing the configuration.
 
-`Model` is used for the DAO. Since the models are stored in the database only after the config is validated, the `Model` class dictates that `order` and `schema` are not null.
+`Model` is used for the DAO.
+Since the models are stored in the database only after the config is validated, the `Model` class dictates that `order` and `schema` are not null.
 
 #### `Workflow`
 
@@ -91,7 +97,8 @@ class Workflow(BaseModel):
    workflow: metldata.workflow.base.Workflow
 ```
 
-- name: Unique identifier / human-readable name for the workflow. Indicates the purpose of the workflow for easier debugging and understanding of the operations.
+- name: Unique identifier / human-readable name for the workflow.
+  Indicates the purpose of the workflow for easier debugging and understanding of the operations.
 - description: Optional longer description of the workflow.
 - workflow: Workflow definition in metldata format.
 
@@ -111,10 +118,12 @@ class Route(BaseModel):
    workflow_name: str
 ```
 
-- name: Unique identifier / human-readable name for the workflow route. Follows the format of `{input_model_name}:{workflow_name}:{output_model_name}`.
+- name: Unique identifier / human-readable name for the workflow route.
+  Follows the format of `{input_model_name}:{workflow_name}:{output_model_name}`.
 
-  The model must include a validator to ensure name consistency. Only one representation of the name should be provided in the transformation configuration. The validator automatically derives any missing parts: if only the composite name is given, it extracts the individual names; if only the individual names are provided, it constructs the composite name.
-
+  The model must include a validator to ensure name consistency.
+  Only one representation of the name should be provided in the transformation configuration.
+  The validator automatically derives any missing parts: if only the composite name is given, it extracts the individual names; if only the individual names are provided, it constructs the composite name.
 - input_model_name: Name of the input model accepted by the route.
 - output_model_name: Name of the output model produced by the route.
 - workflow_name: Name of the workflow to apply on the route.
@@ -158,7 +167,8 @@ class AnnotatedEMPack(BaseModel):
 
 - id: Unique identifier for the AnnotatedEMPack.
 - model_name: Unique name of the model the EMPack conforms to
-- original_id: ID of the original incoming EMPack it was derived from. None if it is an original EMPack
+- original_id: ID of the original incoming EMPack it was derived from.
+  None if it is an original EMPack
 - data: EMPack conforming to the model identified by `model_name`
 - annotation: Object with information from other models held by the service
 
@@ -166,11 +176,16 @@ class AnnotatedEMPack(BaseModel):
 
 The em-transformation-service interacts with a database containing the core entities described above.
 
-On startup, the service reads all Models, Workflows and Routes from a config YAML and from the database. These objects should be kept completely in memory and they are only written back to the database if they are in a consistent, validated state with all necessary information (derived schemas, ordering) already computed.
+On startup, the service reads all Models, Workflows and Routes from a config YAML and from the database.
+These objects should be kept completely in memory and they are only written back to the database if they are in a consistent, validated state with all necessary information (derived schemas, ordering) already computed.
 
-If the content of the config YAML file corresponds to what is stored in the database, the service continues to use the known-valid and pre-computed config from the database. If there are any changes in the YAML config, it will be validated, and the missing information (derived schemas, ordering) re-computed. If there are any errors, the YAML config will be rejected, otherwise stored in the database as new configuration.
+If the content of the config YAML file corresponds to what is stored in the database, the service continues to use the known-valid and pre-computed config from the database.
+If there are any changes in the YAML config, it will be validated, and the missing information (derived schemas, ordering) re-computed.
+If there are any errors, the YAML config will be rejected, otherwise stored in the database as new configuration.
 
-AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs. Only published data is stored persistently (using an outbox DAO). Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original piece of data, as explained in a later section.
+AnnotatedEMPacks are populated from incoming events (from the GHGA Study Repository) and transformation outputs.
+Only published data is stored persistently (using an outbox DAO).
+Intermediate transformed data is kept in memory as long as they are needed for running a full transformation graph corresponding to a single original piece of data, as explained in a later section.
 
 #### Transformation Configuration
 
@@ -178,7 +193,10 @@ The transformations are configured through the models, workflows and routes.
 
 Routes define how to transform an input model into an output model by specifying the workflow to apply and the expected output model.
 
-Routes also define a graph where models are nodes and routes are directed edges. The source nodes of this graph are the EMIMs. The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two models in the graph. This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG).
+Routes also define a graph where models are nodes and routes are directed edges.
+The source nodes of this graph are the EMIMs.
+The graph must not contain any "diamonds", i.e. there must be at most one directed path between any two models in the graph.
+This also implies that the graph does not contain any cycles, i.e. is a directed acyclic graph (DAG).
 
 We enforce this stronger unique-path property because "diamond" shapes indicate unnecessary redundancy that should be avoided, and because it eliminates any ambiguity in how data are transformed.
 
@@ -201,7 +219,8 @@ When manually triggered—or when the configuration changes—the service derive
       2. Re-load the previous valid configuration from the database.
       3. If there is no configuration stored in the database yet, stop the service
 
-2. Traverse the transformation graph starting from the EMIMs, following the topological order. For each route:
+2. Traverse the transformation graph starting from the EMIMs, following the topological order.
+   For each route:
    1. Use metldata to run the workflow identified by `workflow_name` on the input model’s schema referenced by `input_model_name` and compute the derived schema.
    2. Update the output model’s schema accordingly.
    3. If any errors or conflicts occur, abort the operation and report them.
@@ -221,8 +240,8 @@ The remaining services for which writing the lock document failed, will wait and
 
 If a service instance has passed the startup phase, there are two further places where it has to check for an existing lock to ascertain that it is working with the latest information and performs the least possible amount of work that's no longer relevant:
 
-1) Before fetching a new AEMPack to process
-2) Before sending a derived AEMPack to the outbox publisher
+1. Before fetching a new AEMPack to process
+2. Before sending a derived AEMPack to the outbox publisher
 
 The second check will need to retrieve some additional information based on its input datapack after the lock has been released, checking if the source datapack has been flagged as dirty in the meantime and subsequently discard the derived datapack if that's the case.
 
@@ -246,7 +265,8 @@ Updating/recreating the index will be handled by lower level PyMongo abstraction
 
 ##### Lock Collection
 
-A `config_lock` collection holds a single document while the lock is active. If the holder dies without releasing, the **TTL index** on `acquired_at` automatically deletes the stale lock document after the configured expiration time, allowing another instance to proceed.
+A `config_lock` collection holds a single document while the lock is active.
+If the holder dies without releasing, the **TTL index** on `acquired_at` automatically deletes the stale lock document after the configured expiration time, allowing another instance to proceed.
 
 ```python
 await db["config_lock"].create_index("acquired_at", expireAfterSeconds=<expiration time in seconds>)
@@ -308,20 +328,28 @@ if await db["config_lock"].find_one({"_id": "config_update_lock"}):
 
 The transformation operation is triggered when the service receives either an “original AnnotatedEMPack upsert” event or a “re-transform AnnotatedEMPack” event.
 
-1. Build the dirty map: Query the AnnotatedEMPacks collection for all data where `original_id` matches the incoming original data's ID. Extract each data's ID and model name, then create a mapping from model names to data IDs. This "dirty map" tracks data that need to be either re-created or deleted.
+1. Build the dirty map: Query the AnnotatedEMPacks collection for all data where `original_id` matches the incoming original data's ID.
+   Extract each data's ID and model name, then create a mapping from model names to data IDs.
+   This "dirty map" tracks data that need to be either re-created or deleted.
 
-2. Initialize the transformed map: Create a mapping from model names to data. This map will accumulate all data generated during this transformation operation. Initialize it with a single entry: the original model name mapped to the incoming original data.
+2. Initialize the transformed map: Create a mapping from model names to data.
+   This map will accumulate all data generated during this transformation operation.
+   Initialize it with a single entry: the original model name mapped to the incoming original data.
 
 3. Traverse the transformation graph: Starting from the EMIM and following the topological order, perform the following for each model:
-   1. Get the route that has the current model as its input. Due to the unique-path property, exactly one route must exist; raise an error otherwise.
-   2. Retrieve the data from the transformed map using the route’s input model. This is the “input data” for this step. It should always exist at this point if the topological order was computed correctly, and we can raise an error at this point if this is not the case.
+   1. Get the route that has the current model as its input.
+      Due to the unique-path property, exactly one route must exist; raise an error otherwise.
+   2. Retrieve the data from the transformed map using the route’s input model.
+      This is the “input data” for this step.
+      It should always exist at this point if the topological order was computed correctly, and we can raise an error at this point if this is not the case.
    3. Compute the transformed data using the input data and the route's workflow.
    4. If the current model exists in the dirty map, remove it from there and update the transformed map with the newly transformed data.
    5. Otherwise, add the transformed data to the “transformed map” with a newly generated id, setting its `model_name` to the current model name, and its original_id field to the original data id.
 
 4. Apply database updates: Upsert all transformed data that should be published, and delete any remaining data listed in the dirty map.
 
-This approach avoids deleting "dirty" data during recreation, preventing resources from temporarily disappearing mid-transformation. It also keeps intermediate data in memory, reducing unnecessary database operations.
+This approach avoids deleting "dirty" data during recreation, preventing resources from temporarily disappearing mid-transformation.
+It also keeps intermediate data in memory, reducing unnecessary database operations.
 
 #### DB-Based Queue: Polling, Processing Loop & State Management
 
@@ -384,7 +412,10 @@ This operation is triggered when a change to the configuration YAML file is dete
 
 The service detects configuration changes by comparing the configuration in the database with the configuration stored in the config YAML.
 
-When comparing the configuration, the objects should be compared recursively for equality. This is done automatically in Python when the config is deserialized as a dict or Pydantic object. However, care must be taken to not compare fields that do not exist in the raw configuration (order and derived schemas). We could implement a custom equality method to properly compare Models with RawModels in that regard.
+When comparing the configuration, the objects should be compared recursively for equality.
+This is done automatically in Python when the config is deserialized as a dict or Pydantic object.
+However, care must be taken to not compare fields that do not exist in the raw configuration (order and derived schemas).
+We could implement a custom equality method to properly compare Models with RawModels in that regard.
 
 When they differ, the service adopts the new configuration and performs:
 

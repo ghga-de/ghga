@@ -1,10 +1,9 @@
 # ghga-common
 
-Shared library chart providing common templates, helpers, and default values used by
-every GHGA service chart.
+Shared library chart providing common templates, helpers, and default values used by every GHGA service chart.
 
-This is a Helm **library** chart — it has no templates of its own and cannot be
-`helm install`ed directly. Add it as a dependency in another chart's `Chart.yaml`:
+This is a Helm **library** chart — it has no templates of its own and cannot be `helm install`ed directly.
+Add it as a dependency in another chart's `Chart.yaml`:
 
 ```yaml
 dependencies:

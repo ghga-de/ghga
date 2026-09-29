@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -18,21 +17,17 @@ The UI should be similar to the already existing Access Request and IVA manager 
 - User management page for data stewards in the frontend:
   - overview of all existing users with full name, email, roles and status
   - filters for all relevant fields (similarly to the Access Request Manager)
-  - detail view that also shows their registration date, last status change, LS ID,
-    IVAs, existing access grants and requests
+  - detail view that also shows their registration date, last status change, LS ID, IVAs, existing access grants and requests
   - It should be possible to deactivate and re-activate users (changing the status)
   - It should be possible to fully delete registered users
 - Access grant management page for data stewards in the frontend:
   - list all existing access grants for datasets
   - filters for all relevant fields (particularly, dataset and user)
-  - detail view that also shows creation date, validity period,
-    potential revocation date as well as corresponding IVA and its state
-  - also show corresponding access requests with details like creation date,
-    request text, resolution date, ticket ID, DAC
+  - detail view that also shows creation date, validity period, potential revocation date as well as corresponding IVA and its state
+  - also show corresponding access requests with details like creation date, request text, resolution date, ticket ID, DAC
   - revoke an existing access grant
 - Necessary extensions to backend services to support the above pages
-- Adaptation of the existing access request and IVA management pages
-  so that the managers link to each other and work consistently
+- Adaptation of the existing access request and IVA management pages so that the managers link to each other and work consistently
 
 ### Not included
 
@@ -56,7 +51,8 @@ The existing UI of the access request and IVA manager should be adapted to match
 
 ## API Definitions
 
-The backend API does not yet provide the necessary information for the frontend to provide the specified functions. The following endpoints need to be added:
+The backend API does not yet provide the necessary information for the frontend to provide the specified functions.
+The following endpoints need to be added:
 
 ### Access Request Service
 
@@ -80,7 +76,9 @@ Claims with a revocation date set should not appear in the list of access grants
 
 The `DELETE` endpoints should *not* actually delete the corresponding claim, but instead set its revocation date.
 
-The endpoints of the Access Request Service must require authorization as data steward. The endpoints of the Claims Repository are only internal and therefore do not need authorization. We should make the Claims Repository API more restrictive in the future (zero trust principle), but not as part of this epic.
+The endpoints of the Access Request Service must require authorization as data steward.
+The endpoints of the Claims Repository are only internal and therefore do not need authorization.
+We should make the Claims Repository API more restrictive in the future (zero trust principle), but not as part of this epic.
 
 ### User Registry
 

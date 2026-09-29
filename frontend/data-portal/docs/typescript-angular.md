@@ -1,7 +1,7 @@
 # TypeScript and Angular Best Practices
 
-How we write TypeScript and Angular in the data portal. These are style rules, read
-when writing code, rather than the working rules in [AGENTS.md](../AGENTS.md).
+How we write TypeScript and Angular in the data portal.
+These are style rules, read when writing code, rather than the working rules in [AGENTS.md](../AGENTS.md).
 
 ## TypeScript Best Practices
 
@@ -23,14 +23,18 @@ when writing code, rather than the working rules in [AGENTS.md](../AGENTS.md).
 ## Angular Best Practices
 
 - Always use standalone components over NgModules.
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
-- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly. `OnPush` is the default in Angular v22+.
+- Must NOT set `standalone: true` inside Angular decorators.
+  It's the default in Angular v20+.
+- Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly.
+  `OnPush` is the default in Angular v22+.
 - Use signals for state management.
 - Implement lazy loading for feature routes.
-- Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead.
+- Do NOT use the `@HostBinding` and `@HostListener` decorators.
+  Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead.
 - Use `NgOptimizedImage` for all static images.
   - `NgOptimizedImage` does not work for inline base64 images.
-- Do NOT invent Angular APIs or CLI behaviors. When uncertain, call `search_documentation` and cite Angular guidance in the response.
+- Do NOT invent Angular APIs or CLI behaviors.
+  When uncertain, call `search_documentation` and cite Angular guidance in the response.
 
 ## Components
 
@@ -53,7 +57,9 @@ when writing code, rather than the working rules in [AGENTS.md](../AGENTS.md).
 
 - Keep templates simple and avoid complex logic
 - Do NOT call functions or methods in template bindings (including interpolation, `@if`/`@for` conditions, and inputs); bind to a signal or a `computed()` instead.
-  - Why: template expressions are re-evaluated on every change detection cycle, so a function call re-runs each time regardless of whether its inputs changed. This is wasteful, scales poorly (worse inside `@for`), and gets more pronounced under zoneless change detection. Signals and `computed()` are memoized: they recompute only when a dependency actually changes, and they let change detection update only what changed.
+  - Why: template expressions are re-evaluated on every change detection cycle, so a function call re-runs each time regardless of whether its inputs changed.
+    This is wasteful, scales poorly (worse inside `@for`), and gets more pronounced under zoneless change detection.
+    Signals and `computed()` are memoized: they recompute only when a dependency actually changes, and they let change detection update only what changed.
   - Exceptions: pure pipes (also memoized) are fine, and event handlers (e.g. `(click)="doThing()"`) are calls in response to user actions, not evaluated during change detection, so they are fine too.
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables

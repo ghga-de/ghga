@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -23,13 +22,14 @@ This will allow services to perform common bulk operations using one database ro
 ### Not included
 
 - Automatic chunking of very large documents.
-As with the current single resource variants, we don't chunk when we would exceed MongoDB's 16 MB request size.
+  As with the current single resource variants, we don't chunk when we would exceed MongoDB's 16 MB request size.
 
 ## API Definitions
 
 ### DAO
 
-The following methods are added to the existing `Dao` protocol. They are asynchronous like the rest of the protocol, share the same `Dto` type variable, and are kept provider-agnostic:
+The following methods are added to the existing `Dao` protocol.
+They are asynchronous like the rest of the protocol, share the same `Dto` type variable, and are kept provider-agnostic:
 
 ```python
 class Dao(typing.Protocol[Dto]):
@@ -76,8 +76,7 @@ New implementations for the protocol methods are added to `MongoDbDao` and reuse
 As we don't get atomic guarantees around the batch operations in MongoDB, operation results need to be checked for what actually succeeded and might have failed.
 For the non-delete operation this should return the document IDs for all failed operations inside a compound error encapsulating the corresponding error types (`ResourceAlreadyExistsError`/`ResourceNotFoundError`) from single resource variants.
 
-Using the `ordered` argument (default) for batch operations would perform them in sequence and abort on the first failure encountered in a predictable manner, however,
-not using it would allow to collect all failures instead and all successful operations to be performed.
+Using the `ordered` argument (default) for batch operations would perform them in sequence and abort on the first failure encountered in a predictable manner, however, not using it would allow to collect all failures instead and all successful operations to be performed.
 For this implementation, the default should be inverted, but opting into it should be made possible via an argument.
 
 `insert_many` and `delete_many` can delegate to `AsyncCollection.insert_many` and `AsyncCollection.delete_many`, respectively.
