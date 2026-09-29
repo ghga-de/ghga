@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
@@ -75,7 +74,7 @@ trace_provider = TracerProvider(resource=resource)
 # Endpoint can be overwritten by config, but needs to be provided
 processor = BatchSpanProcessor(OTLPSpanExporter(endpoint="http://localhost"))
 trace_provider.add_span_processor(processor)
-trace.set_tracer_provider(trace_provider) 
+trace.set_tracer_provider(trace_provider)
 
 
 # Create new span for a FastAPI endpoint (decorator)

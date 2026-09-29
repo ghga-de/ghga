@@ -143,6 +143,10 @@
     "python.testing.unittestEnabled": false,
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
     "python.analysis.autoImportCompletions": true,
+    // Markdown is one sentence per line (ADR-0044), so long lines are read soft-wrapped.
+    "[markdown]": {
+      "editor.wordWrap": "on"
+    },
     // Copilot finds the root `AGENTS.md` by itself, but the nested ones only with
     // this. Window-scoped, so `.vscode/settings.json` does not cover this workspace.
     "chat.useNestedAgentsMdFiles": true,

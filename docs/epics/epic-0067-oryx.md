@@ -2,41 +2,27 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
 ### Outline
 
-We have different configuration key names that refer to the same topic or type in
-different services, complicating the proper configuration of the services when they
-are deployed jointly. To clarify,
-"configuration" here means the various service-specific event publisher/subscriber
-and config schemas defined in Python code, which contain
-`"abc_topic"` and `"abc_type"` fields, *as well as* the values assigned for those
-fields at runtime.
+We have different configuration key names that refer to the same topic or type in different services, complicating the proper configuration of the services when they are deployed jointly.
+To clarify, "configuration" here means the various service-specific event publisher/subscriber and config schemas defined in Python code, which contain `"abc_topic"` and `"abc_type"` fields, *as well as* the values assigned for those fields at runtime.
 
 Example:  
-When a user requests to download a file that's not yet in the outbox/download bucket,
-the `DCS` fires an event to its *unstaged_download_event_topic*. The `IFRS` subscribes
-to this topic, but the topic name is assigned to its config option labeled
-*files_to_stage_topic*. Devs not familiar with this relationship between the two
-services could be forgiven for not realizing that the two configured topics
-are actually the same topic.
+When a user requests to download a file that's not yet in the outbox/download bucket, the `DCS` fires an event to its *unstaged_download_event_topic*.
+The `IFRS` subscribes to this topic, but the topic name is assigned to its config option labeled *files_to_stage_topic*.
+Devs not familiar with this relationship between the two services could be forgiven for not realizing that the two configured topics are actually the same topic.
 Ideally, both services will refer to this topic with identical configuration.
 That is, the `DCS`'s config would also be named `files_to_stage_topic` (or vice-versa).
 
-Thankfully the majority of configuration *does* use the same names, but the
-issue can be completely resolved if we just standardize the config.
-After all, if we can define a schema for a given Kafka event in a library, i.e.
-`ghga-event-schemas`, then we can also define standardized config for the
-corresponding event topic and type.
+Thankfully the majority of configuration *does* use the same names, but the issue can be completely resolved if we just standardize the config.
+After all, if we can define a schema for a given Kafka event in a library, i.e. `ghga-event-schemas`, then we can also define standardized config for the corresponding event topic and type.
 
-By storing this config schema in a central location, we also reduce change
-propagation & maintenance costs in the potential event that we drastically
-rework our use of Kafka. This could later be married with the currently dormant
-`schema_registry` so Kafka-related domain concepts are fully co-located.
+By storing this config schema in a central location, we also reduce change propagation & maintenance costs in the potential event that we drastically rework our use of Kafka.
+This could later be married with the currently dormant `schema_registry` so Kafka-related domain concepts are fully co-located.
 
 ### Included/Required
 
@@ -50,38 +36,31 @@ rework our use of Kafka. This could later be married with the currently dormant
 
 ## Additional Implementation Details
 
-We already have an unofficial document mapping the relationships between all
-the various Kafka configurations, so this epic will lean on that information.
+We already have an unofficial document mapping the relationships between all the various Kafka configurations, so this epic will lean on that information.
 Developer review will help identify mistakes.
 
 The config schema standardization process will involve three steps:
 
-1. Identify existing Kafka pub/sub config schemas that refer to the same thing, i.e.
-   the same topic & type.
+1. Identify existing Kafka pub/sub config schemas that refer to the same thing, i.e. the same topic & type.
 2. Create a configuration class in `ghga-event-schemas` to standardize the config.
 3. Update services to use the new standardized config schemas as appropriate.
 
-The process will apply to all instances of Kafka event pub/sub config so that no
-such config is defined outside of `ghga-event-schemas`. After all, if a service
-publishes an event, presumably another service will consume that event, meaning they
-will have to share configuration. If the schema is centrally defined, the config
-should be too.
+The process will apply to all instances of Kafka event pub/sub config so that no such config is defined outside of `ghga-event-schemas`.
+After all, if a service publishes an event, presumably another service will consume that event, meaning they will have to share configuration.
+If the schema is centrally defined, the config should be too.
 
 ### A Note on "Normal" (non-outbox, e.g. stateless) Events Using the Outbox Pattern
 
-We have events that don't communicate state but that nevertheless use the
-outbox pattern solely for persistence. The motivation for storing these *stateless*
-events is to aid in application restoration following the loss of Kafka data.
-The *stateless* events that are persisted and published via the outbox pattern
-always use the `upserted` event type, because deletion isn't an applicable
-concept. The result is a "shoehorned" process that actually needs a dedicated
-mechanism in `hexkit`. That mechanism, a class that mimics some of the outbox
-DAO's functionality, can be created in another epic.
+We have events that don't communicate state but that nevertheless use the outbox pattern solely for persistence.
+The motivation for storing these *stateless* events is to aid in application restoration following the loss of Kafka data.
+The *stateless* events that are persisted and published via the outbox pattern always use the `upserted` event type, because deletion isn't an applicable concept.
+The result is a "shoehorned" process that actually needs a dedicated mechanism in `hexkit`.
+That mechanism, a class that mimics some of the outbox DAO's functionality, can be created in another epic.
 
 ### Proposed Config Classes
 
 > (stateful) means these events communicate state and should use the outbox pattern
-
+>
 > \* means the marked config naming has changed
 
 <table>

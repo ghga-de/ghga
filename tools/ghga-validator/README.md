@@ -1,7 +1,4 @@
-[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-validator.svg)](https://pypi.org/project/ghga-validator/)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-validator.svg)](https://pypi.org/project/ghga-validator/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-validator.svg)](https://pypi.org/project/ghga-validator/) [![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-validator.svg)](https://pypi.org/project/ghga-validator/) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # Ghga Validator
 
@@ -11,20 +8,20 @@ GHGA Validator - A Python library and command line utility to validate metadata
 
 <!-- Please provide a short overview of the features of this service.-->
 
-ghga-validator is a Python library and command line utility to validate metadata
-w.r.t. its compliance to the [GHGA Metadata
-Model](https://github.com/ghga-de/ghga-metadata-schema). It takes metadata encoded in JSON of YAML format and produces a validation report in JSON format.
-
+ghga-validator is a Python library and command line utility to validate metadata w.r.t. its compliance to the [GHGA Metadata Model](https://github.com/ghga-de/ghga-metadata-schema).
+It takes metadata encoded in JSON of YAML format and produces a validation report in JSON format.
 
 ## Installation
+
 We recommend installing the latest version of ghga-validator using pip:
-```
+
+```text
 pip install -U ghga-validator
 ```
 
 ## Usage
 
-```
+```text
 Usage: ghga-validator [OPTIONS]
 
   GHGA Validator
@@ -51,15 +48,10 @@ Options:
 
 ## Development
 
-This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
-developed from the repository root rather than on its own. The repository ships a
-devcontainer with the whole toolchain: open it in VS Code and run
-`Remote-Containers: Reopen in Container`, or set the environment up directly with
-`just sync`.
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is developed from the repository root rather than on its own.
+The repository ships a devcontainer with the whole toolchain: open it in VS Code and run `Remote-Containers: Reopen in Container`, or set the environment up directly with `just sync`.
 
-The usual tasks, run from the repository root (see
-[ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the
-full recipe list):
+The usual tasks, run from the repository root (see [ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the full recipe list):
 
 ```bash
 just sync                        # install every member plus the shared dev toolchain
@@ -68,5 +60,5 @@ just lint                        # ruff check + format check across the workspac
 ```
 
 ## License
-This repository is free to use and modify according to the
-[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/tools/ghga-validator/LICENSE).
+
+This repository is free to use and modify according to the [Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/tools/ghga-validator/LICENSE).

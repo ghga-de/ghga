@@ -96,11 +96,13 @@ sync-check: _guard
 lint: _guard
     uv run ruff check .
     uv run ruff format --check .
+    uv run rumdl check .
 
 # Auto-fix lint + format.
 fmt: _guard
     uv run ruff format .
     uv run ruff check --fix .
+    uv run rumdl fmt .
 
 # A single `mypy .` collides on duplicate module names across members, and the result
 # depends on the path set it is given -- so the unit, not the file, is what gets checked.

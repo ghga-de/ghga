@@ -1,12 +1,10 @@
 # Epic Documentation
 
 > [!NOTE]
-> Each specification records the plan as it stood when its epic started and is not
-> updated afterwards. For current behaviour and binding rules, see the
-> [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
+> Each specification records the plan as it stood when its epic started and is not updated afterwards.
+> For current behaviour and binding rules, see the [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
 
-This directory contains technical specifications for GHGA development epics,
-documenting the scope and plans for each epic before the epic is started.
+This directory contains technical specifications for GHGA development epics, documenting the scope and plans for each epic before the epic is started.
 
 ## Structure and Conventions
 
@@ -14,9 +12,12 @@ Each epic should have a descriptive title, a number and code name which should b
 
 Each epic is named `epic-NNNN-<code-name>`, with the number padded to four digits and the code name in kebab-case (e.g., `epic-0000-blob-fish` or `epic-0077-alpine-longhorn-beetle`).
 
-An epic without supporting files is a single Markdown file under that name (e.g., `epic-0093-giraffe.md`). An epic with supporting files is a directory under that name, holding the specification as `README.md` next to them (e.g., `epic-0019-pied-raven/README.md` next to `images/`). Start a new epic as a single file, and turn it into a directory in the same commit that adds the first supporting file, so a directory always means there is something else in it.
+An epic without supporting files is a single Markdown file under that name (e.g., `epic-0093-giraffe.md`).
+An epic with supporting files is a directory under that name, holding the specification as `README.md` next to them (e.g., `epic-0019-pied-raven/README.md` next to `images/`).
+Start a new epic as a single file, and turn it into a directory in the same commit that adds the first supporting file, so a directory always means there is something else in it.
 
-There are three epic types: `Exploratory Epic`, `Implementation Epic`, and `Exploration and Implementation Epic` for an epic that is half of each. Every specification names its own on an `**Epic Type:**` line below the heading, and `just docs-check` rejects anything else.
+There are three epic types: `Exploratory Epic`, `Implementation Epic`, and `Exploration and Implementation Epic` for an epic that is half of each.
+Every specification names its own on an `**Epic Type:**` line below the heading, and `just docs-check` rejects anything else.
 
 Please have a look at the templates ([exploratory](./epic-template-exploratory), [implementation](./epic-template-implementation)) and especially the contained technical specifications ([exploratory](./epic-template-exploratory/README.md), [implementation](./epic-template-implementation/README.md)).
 
@@ -24,7 +25,8 @@ These specifications are part of the [Epic Planning and Marathon SOP](https://gh
 
 ## Writing an epic
 
-The audience is GHGA developers. Follow the [writing style](../style.md) and the structure of the template; what follows is what is specific to an epic.
+The audience is GHGA developers.
+Follow the [writing style](../style.md) and the structure of the template; what follows is what is specific to an epic.
 
 - State requirements with "must", "should" and "may" in the RFC 2119 sense, and keep the template's split between "Included/Required", "Optional" and "Not included".
 - Cover both functional and non-functional requirements, and name the security and performance considerations where there are any.
@@ -32,7 +34,8 @@ The audience is GHGA developers. Follow the [writing style](../style.md) and the
 - Be explicit about assumptions and constraints, and explain a scope decision where it is not obvious.
 - Add a Mermaid diagram where it shows something prose does not.
 - Name the outputs the epic is meant to produce — a document, a prototype, a repository — and link the ones that already exist when it is planned.
-- Link related epics with relative links, and the [ADRs](../adrs/) an epic follows from or leads to. The services, libraries and tools an epic describes live in `services/`, `libs/`, `tools/` and `frontend/`; the delivery side in `deploy/` and `testbed/`.
+- Link related epics with relative links, and the [ADRs](../adrs/) an epic follows from or leads to.
+  The services, libraries and tools an epic describes live in `services/`, `libs/`, `tools/` and `frontend/`; the delivery side in `deploy/` and `testbed/`.
 
 ## The Saga so far
 

@@ -1,7 +1,4 @@
-[![PyPI version shields.io](https://img.shields.io/pypi/v/schemapack.svg)](https://pypi.org/project/schemapack/)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/schemapack.svg)](https://pypi.org/project/schemapack/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/schemapack.svg)](https://pypi.org/project/schemapack/) [![PyPI pyversions](https://img.shields.io/pypi/pyversions/schemapack.svg)](https://pypi.org/project/schemapack/) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # Schemapack
 
@@ -11,29 +8,33 @@ Make your JSON Schemas sociable and create linked data models.
 
 <!-- Please provide a short overview of the features of this service. -->
 
-Schemapack is a library that defines a lightweight data modeling framework based on a schema description, a compatible data instance format, and the tooling that supports them. It introduces two main components: the schemapack, which describes linked data structures, and the datapack, which represents the data conforming to those structures. The tooling around `schemapack` and `datapack` focuses on loading, extraction, and validation, and supports partial extraction and data embedding operations. The Schemapack library includes a CLI component that provides access to core functionality via the command line.
-
+Schemapack is a library that defines a lightweight data modeling framework based on a schema description, a compatible data instance format, and the tooling that supports them.
+It introduces two main components: the schemapack, which describes linked data structures, and the datapack, which represents the data conforming to those structures.
+The tooling around `schemapack` and `datapack` focuses on loading, extraction, and validation, and supports partial extraction and data embedding operations.
+The Schemapack library includes a CLI component that provides access to core functionality via the command line.
 
 ## Installation
 
 This package is available at PyPI:
-https://pypi.org/project/schemapack
+<https://pypi.org/project/schemapack>
 
 Install:
-```
+
+```text
 bash
 
 pip install schemapack
 ```
 
 Upgrade:
-```
+
+```text
 pip install --upgrade schemapack
 ```
 
 ## Usage
 
-```
+```text
 bash
 
 schemapack --help
@@ -65,10 +66,12 @@ schemapack --help
 
 
 ```
+
 ## Quick Start
 
-
-This example shows how to validate a `datapack.yaml` file against a `schemapack.yaml` using the `schemapack` Python library. The `schemapack` defines the schema and validation rules, while the `datapack` contains the actual data to be validated. The steps below demonstrate how to load both files and run validation with `SchemaPackValidator`.
+This example shows how to validate a `datapack.yaml` file against a `schemapack.yaml` using the `schemapack` Python library.
+The `schemapack` defines the schema and validation rules, while the `datapack` contains the actual data to be validated.
+The steps below demonstrate how to load both files and run validation with `SchemaPackValidator`.
 
 ```python
 from pathlib import Path
@@ -89,26 +92,18 @@ validator = SchemaPackValidator(schemapack=schemapack)
 validator.validate(datapack=datapack)
 ```
 
-
-
 ## Documentation
 
 - [SchemaPack specification](https://github.com/ghga-de/ghga/blob/main/libs/schemapack/docs/schemapack_spec.md)
 - [DataPack specification](https://github.com/ghga-de/ghga/blob/main/libs/schemapack/docs/datapack_spec.md)
 - [Data isolation](https://github.com/ghga-de/ghga/blob/main/libs/schemapack/docs/data_isolation.md)
 
-
 ## Development
 
-This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
-developed from the repository root rather than on its own. The repository ships a
-devcontainer with the whole toolchain: open it in VS Code and run
-`Remote-Containers: Reopen in Container`, or set the environment up directly with
-`just sync`.
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is developed from the repository root rather than on its own.
+The repository ships a devcontainer with the whole toolchain: open it in VS Code and run `Remote-Containers: Reopen in Container`, or set the environment up directly with `just sync`.
 
-The usual tasks, run from the repository root (see
-[ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the
-full recipe list):
+The usual tasks, run from the repository root (see [ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the full recipe list):
 
 ```bash
 just sync                  # install every member plus the shared dev toolchain
@@ -118,5 +113,4 @@ just lint                  # ruff check + format check across the workspace
 
 ## License
 
-This repository is free to use and modify according to the
-[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/schemapack/LICENSE).
+This repository is free to use and modify according to the [Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/schemapack/LICENSE).

@@ -1,17 +1,15 @@
 # Metadata & File Journeys — Current-State Reference
 
-> **Purpose.** A durable, implementation-level map of how metadata and files flow through
-> the GHGA platform **as built today** (LinkML + offline metadata management via
-> `ghga-datasteward-kit`). It is written for both humans and future coding agents: read it
-> before touching submission, accession, upload, file-mapping, or metadata-serving code so
-> you start from ground truth rather than re-deriving it.
+> **Purpose.**
+> A durable, implementation-level map of how metadata and files flow through the GHGA platform **as built today** (LinkML + offline metadata management via `ghga-datasteward-kit`).
+> It is written for both humans and future coding agents: read it before touching submission, accession, upload, file-mapping, or metadata-serving code so you start from ground truth rather than re-deriving it.
 >
-> **Status.** Describes the *current* system. The planned early "data lifecycle" changes are
-> tracked separately in [`docs/epics/epic-0093-giraffe.md`](../epics/epic-0093-giraffe.md);
-> where this document notes an invariant the feature will change, it links there.
+> **Status.**
+> Describes the *current* system.
+> The planned early "data lifecycle" changes are tracked separately in [`docs/epics/epic-0093-giraffe.md`](../epics/epic-0093-giraffe.md); where this document notes an invariant the feature will change, it links there.
 >
-> File:line anchors are provided as entry points. They drift — treat them as "start looking
-> here", not as guarantees.
+> File:line anchors are provided as entry points.
+> They drift — treat them as "start looking here", not as guarantees.
 
 ---
 
@@ -37,10 +35,7 @@
 | `tools/ghga-connector` | CLI | Uploader client for the **new** box path (`ubox`, `batch-upload`). |
 | `frontend/data-portal` | Angular app | Browse/search datasets, dataset & study detail pages, steward upload-box + mapping UI. |
 
-Not part of the metadata world today: the future schemapack services (resource-registry,
-resource-search) do not exist yet, and `em-transformation-service` is developed upstream
-against the metldata 5.x schemapack line — it was removed from this monorepo until the
-workspace moves off the integrated metldata 4.x line (see `scripts/migration/repos.tsv`).
+Not part of the metadata world today: the future schemapack services (resource-registry, resource-search) do not exist yet, and `em-transformation-service` is developed upstream against the metldata 5.x schemapack line — it was removed from this monorepo until the workspace moves off the integrated metldata 4.x line (see `scripts/migration/repos.tsv`).
 
 ---
 
@@ -49,225 +44,170 @@ workspace moves off the integrated metldata 4.x line (see `scripts/migration/rep
 Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
 
 1. `metadata generate-artifact-models` — build artifact models + `artifact_infos.json` from the LinkML model.
-2. `metadata transpile input.xlsx input.json` — spreadsheet → JSON. Re-exported from
-   `ghga_transpiler.cli.transpile`. **No schema validation here.**
+2. `metadata transpile input.xlsx input.json` — spreadsheet → JSON.
+   Re-exported from `ghga_transpiler.cli.transpile`.
+   **No schema validation here.**
 3. `metadata submit` — validate + register a submission locally, mint accessions, publish a source event.
 4. `metadata transform` — run the GHGA archive workflow → produce artifacts on disk.
 5. `load` (top-level, **not** `metadata load`) — POST artifacts to the loader API.
 
 ### The submission object & store
+
 - `Submission` model: `libs/metldata/src/metldata/submission_registry/models.py:60`.
-  Fields: `id` (UUID4), `title`, `description`, `content` (`{anchor_slot: {alias: instance}}`),
-  `accession_map` (`{anchor_slot: {alias: accession}}`), `status_history`.
+  Fields: `id` (UUID4), `title`, `description`, `content` (`{anchor_slot: {alias: instance}}`), `accession_map` (`{anchor_slot: {alias: accession}}`), `status_history`.
 - Persisted as **one JSON file per submission** (`{id}.json`) — `submission_store.py:61`.
   Full-document overwrite each save; not event-sourced at the store layer.
-- Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content`
-  (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a
-  source event) → `complete_submission`. **Only `PENDING`→`COMPLETED` is ever used.**
-- `SubmissionStatus` (`models.py:31`) *defines* `DEPRECATED_*`, `PUBLISHED`, `HIDDEN_*`,
-  `EMPTIED_*`, `CANCELED`, `IN_REVIEW` — **none are ever set**. There is no replaces/replaced-by
-  field and no versioning anywhere today. → [changed by the feature](../epics/epic-0093-giraffe.md).
+- Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content` (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a source event) → `complete_submission`.
+  **Only `PENDING`→`COMPLETED` is ever used.**
+- `SubmissionStatus` (`models.py:31`) *defines* `DEPRECATED_*`, `PUBLISHED`, `HIDDEN_*`, `EMPTIED_*`, `CANCELED`, `IN_REVIEW` — **none are ever set**.
+  There is no replaces/replaced-by field and no versioning anywhere today. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
 ### Accession generation (offline, random, no counter)
-- Engine: `accession_registry/accession_registry.py:82`. Accession = `prefix + suffix`, where
-  `suffix = "".join(secrets.randbelow(10) for _ in range(suffix_length))` — **decimal digits
-  only**, cryptographically random, `suffix_length` = 14 in GHGA config. **No counter, no year,
-  no structure.**
-- Prefix per **LinkML class name** (current testbed config
-  `testbed/example_data/metadata/metadata_config.yaml:6`): `Study→GHGAS`, `Dataset→GHGAD`,
-  all `*File`→`GHGAF`, `DataAccessPolicy→GHGAP`, `DataAccessCommittee→GHGAC`, `Sample→GHGAN`,
-  `Individual→GHGAI`, `Experiment→GHGAX`, `ExperimentMethod→GHGAQ`, `Analysis→GHGAR`,
-  `AnalysisMethod→GHGAZ`, `Publication→GHGAU`.
-- Persisted in a flat, append-only **text file** (`accession_store.py:56`), one accession per
-  line; `exists()` is a linear scan. Up to 10 collision retries.
-- Alias↔accession stability (`submission_registry/identifiers.py:102`): within one submission
-  object, re-upserting the same alias **reuses** its accession; new aliases get new ones;
-  dropped aliases fall out. **But `submit` always calls `init_submission` (fresh UUID, empty
-  map), so a new `submit` run of the same aliases mints *fresh* accessions.** There is no
-  cross-submission accession stability today. → [changed by the feature](../epics/epic-0093-giraffe.md).
-- A **separate** catalog-accession scheme exists (`generate-catalog-accessions`,
-  `catalog_accession_generator.py`): base `GHGAMC` + per-type letter + 14 digits. Distinct from
-  submission accessions; not on the submission path.
+
+- Engine: `accession_registry/accession_registry.py:82`.
+  Accession = `prefix + suffix`, where `suffix = "".join(secrets.randbelow(10) for _ in range(suffix_length))` — **decimal digits only**, cryptographically random, `suffix_length` = 14 in GHGA config.
+  **No counter, no year, no structure.**
+- Prefix per **LinkML class name** (current testbed config `testbed/example_data/metadata/metadata_config.yaml:6`): `Study→GHGAS`, `Dataset→GHGAD`, all `*File`→`GHGAF`, `DataAccessPolicy→GHGAP`, `DataAccessCommittee→GHGAC`, `Sample→GHGAN`, `Individual→GHGAI`, `Experiment→GHGAX`, `ExperimentMethod→GHGAQ`, `Analysis→GHGAR`, `AnalysisMethod→GHGAZ`, `Publication→GHGAU`.
+- Persisted in a flat, append-only **text file** (`accession_store.py:56`), one accession per line; `exists()` is a linear scan.
+  Up to 10 collision retries.
+- Alias↔accession stability (`submission_registry/identifiers.py:102`): within one submission object, re-upserting the same alias **reuses** its accession; new aliases get new ones; dropped aliases fall out.
+  **But `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.**
+  There is no cross-submission accession stability today. → [changed by the feature](../epics/epic-0093-giraffe.md).
+- A **separate** catalog-accession scheme exists (`generate-catalog-accessions`, `catalog_accession_generator.py`): base `GHGAMC` + per-type letter + 14 digits.
+  Distinct from submission accessions; not on the submission path.
 
 ### The LinkML model (current testbed model)
-- Root/tree class `Submission`; every entity class is a required, multivalued, `inlined_as_list`
-  slot of it. **The model permits multiple studies per submission** (used in fixtures:
-  `STUDY_A`, `STUDY_B`), though operationally there has only ever been one.
-- Entities reference each other **by alias** at submission time; `add_accessions` swaps aliases
-  for accessions during transform.
+
+- Root/tree class `Submission`; every entity class is a required, multivalued, `inlined_as_list` slot of it.
+  **The model permits multiple studies per submission** (used in fixtures: `STUDY_A`, `STUDY_B`), though operationally there has only ever been one.
+- Entities reference each other **by alias** at submission time; `add_accessions` swaps aliases for accessions during transform.
 - Study↔Dataset: `Dataset.study` is a **single** alias reference (`testbed/.../metadata.json`).
-  Files (`ResearchDataFile`, `ProcessDataFile`, `*SupportingFile`) carry `alias`, a `name`
-  (filename), a `dataset` ref, and an `ega_accession` slot. Study→datasets is *inferred* during
-  transform (`Study<(study)Dataset`).
-- **`studies[0]` assumption:** the loader derives a publishable artifact's `study_accession` from
-  `content["studies"][0]["accession"]` (`libs/metldata/src/metldata/load/collect.py:91`) — a
-  hard one-study-per-submission assumption. → [made a hard rule by the
-  feature](../epics/epic-0093-giraffe.md).
+  Files (`ResearchDataFile`, `ProcessDataFile`, `*SupportingFile`) carry `alias`, a `name` (filename), a `dataset` ref, and an `ega_accession` slot.
+  Study→datasets is *inferred* during transform (`Study<(study)Dataset`).
+- **`studies[0]` assumption:** the loader derives a publishable artifact's `study_accession` from `content["studies"][0]["accession"]` (`libs/metldata/src/metldata/load/collect.py:91`) — a hard one-study-per-submission assumption. → [made a hard rule by the feature](../epics/epic-0093-giraffe.md).
 
 ### Transform artifacts
-Workflow `builtin_workflows/ghga_archive.py:36`: normalize → **add_accessions** → embed_restricted
-→ infer_multiway_references → merge_dataset_file_lists → remove_restricted_metadata →
-aggregate_stats → embed_public. Artifacts produced: `added_accessions`, `embedded_restricted`,
-`resolved_restricted`, `resolved_public`, `embedded_public`, `stats_public`. The **primary**
-queryable artifact/class is `embedded_public` / `EmbeddedDataset`.
+
+Workflow `builtin_workflows/ghga_archive.py:36`: normalize → **add_accessions** → embed_restricted → infer_multiway_references → merge_dataset_file_lists → remove_restricted_metadata → aggregate_stats → embed_public.
+Artifacts produced: `added_accessions`, `embedded_restricted`, `resolved_restricted`, `resolved_public`, `embedded_public`, `stats_public`.
+The **primary** queryable artifact/class is `embedded_public` / `EmbeddedDataset`.
 
 ---
 
 ## 3. Journey B — File upload, interrogation, archival
 
 ### Upload boxes
-- Schemas (`libs/ghga-event-schemas/src/ghga_event_schemas/pydantic_.py`):
-  `UploadBoxState = "open" | "locked" | "archived"` (:501); `ResearchDataUploadBox` (RS, :504);
-  `FileUploadBox` (UCS, :619). One RDUB wraps one FUB.
-- Box lifecycle transitions (`rs/constants.py:28`): `open ⇄ locked`, `locked → archived`
-  (terminal). No `open→archived`, no un-archiving.
-- Creation: `POST /upload-boxes` (steward-only) → `RDUBManager.create_research_data_upload_box`
-  → calls UCS `POST /boxes` (guarded by a `CreateFileBoxWorkOrder` token) → inserts RDUB
-  (`open`, v0).
-- Uploader access = **upload grants** (`/upload-grants`, steward-managed, tie user+IVA+box+window)
-  plus per-file **work-order tokens** issued by WPS and verified at each UCS file endpoint.
+
+- Schemas (`libs/ghga-event-schemas/src/ghga_event_schemas/pydantic_.py`): `UploadBoxState = "open" | "locked" | "archived"` (:501); `ResearchDataUploadBox` (RS, :504); `FileUploadBox` (UCS, :619).
+  One RDUB wraps one FUB.
+- Box lifecycle transitions (`rs/constants.py:28`): `open ⇄ locked`, `locked → archived` (terminal).
+  No `open→archived`, no un-archiving.
+- Creation: `POST /upload-boxes` (steward-only) → `RDUBManager.create_research_data_upload_box` → calls UCS `POST /boxes` (guarded by a `CreateFileBoxWorkOrder` token) → inserts RDUB (`open`, v0).
+- Uploader access = **upload grants** (`/upload-grants`, steward-managed, tie user+IVA+box+window) plus per-file **work-order tokens** issued by WPS and verified at each UCS file endpoint.
   `ghga-connector` (`ubox`/`batch-upload`) is the uploader client.
 
 ### File upload state machine (who owns each transition)
-- `FileUploadState = "init" | "inbox" | "failed" | "cancelled" | "interrogated" |
-  "awaiting_archival" | "archived"` (`pydantic_.py:540`). `FileUpload` (:551) carries
-  `alias` (unique within box), checksums, sizes, `secret_id`, storage refs.
+
+- `FileUploadState = "init" | "inbox" | "failed" | "cancelled" | "interrogated" | "awaiting_archival" | "archived"` (`pydantic_.py:540`).
+  `FileUpload` (:551) carries `alias` (unique within box), checksums, sizes, `secret_id`, storage refs.
 - **init** — UCS `initiate_file_upload` (starts S3 multipart; captures alias, sizes, part_size).
 - **inbox** — UCS `complete_file_upload` (verifies ETag/size/checksums).
 - UCS publishes the change → **FIS** ingests it as a `FileUnderInterrogation`.
 - **DHFS** polls FIS `GET /storages/{alias}/uploads`, re-encrypts, POSTs an `InterrogationReport`.
-- FIS on success deposits the Crypt4GH secret with **EKSS**, sets `interrogated`, emits
-  `InterrogationSuccess`; on failure emits `InterrogationFailure`.
+- FIS on success deposits the Crypt4GH secret with **EKSS**, sets `interrogated`, emits `InterrogationSuccess`; on failure emits `InterrogationFailure`.
 - **interrogated** — UCS consumes success (records `secret_id`, new object refs).
 - **IFRS** consumes success → permanently registers → emits `FileInternallyRegistered`.
 - **archived** — UCS consumes `FileInternallyRegistered`; **DCS** consumes it to enable download.
 
 ### Archival (today)
-- Triggered by `PATCH /upload-boxes/{box_id}` `state:"archived"` (steward-only); only valid from
-  `locked`.
-- **Prerequisite (today):** `_check_archival_prerequisites` (`rdub_manager.py:314`) rejects
-  archival unless **every file in the box already has an accession mapped**; UCS additionally
-  rejects if any `init`/`inbox` file remains. On archival every file flips to `awaiting_archival`.
-  → **[this coupling is inverted by the feature](../epics/epic-0093-giraffe.md)**
-  — archival stops requiring mapping, and mapping starts requiring archival.
+
+- Triggered by `PATCH /upload-boxes/{box_id}` `state:"archived"` (steward-only); only valid from `locked`.
+- **Prerequisite (today):** `_check_archival_prerequisites` (`rdub_manager.py:314`) rejects archival unless **every file in the box already has an accession mapped**; UCS additionally rejects if any `init`/`inbox` file remains.
+  On archival every file flips to `awaiting_archival`. → **[this coupling is inverted by the feature](../epics/epic-0093-giraffe.md)** — archival stops requiring mapping, and mapping starts requiring archival.
 - After archival the box is **immutable**: accession maps, deletion, etc. are all rejected.
-- **Retained after archival (important):** the RDUB, the FUB, and every `FileUpload`
-  (alias, filename, checksums, sizes, accession) **remain stored and queryable** in both RS and
-  UCS. `GET /upload-boxes/{box_id}/uploads` still works for archived boxes. This is what makes
-  "select the boxes originally used" feasible later.
+- **Retained after archival (important):** the RDUB, the FUB, and every `FileUpload` (alias, filename, checksums, sizes, accession) **remain stored and queryable** in both RS and UCS.
+  `GET /upload-boxes/{box_id}/uploads` still works for archived boxes.
+  This is what makes "select the boxes originally used" feasible later.
 
 ---
 
 ## 4. Journey C — File-to-metadata mapping (current, box-centric)
 
-**Today the mapping is portal-driven and box-centric.** The steward maps *metadata file
-accessions* → *upload-box file IDs*.
+**Today the mapping is portal-driven and box-centric.**
+The steward maps *metadata file accessions* → *upload-box file IDs*.
 
-- Endpoint: `POST /upload-boxes/{box_id}/file-ids` (steward-only) →
-  `RDUBManager.store_accession_map` (`rdub_manager.py:939`). Body: `{box_version, study_id,
-  mapping: {accession → file_id}}`.
+- Endpoint: `POST /upload-boxes/{box_id}/file-ids` (steward-only) → `RDUBManager.store_accession_map` (`rdub_manager.py:939`).
+  Body: `{box_version, study_id, mapping: {accession → file_id}}`.
 - Constraints enforced today:
   - box **not archived** (optimistic version lock on `box_version`);
-  - **strict 1:1** — each file_id appears once; an accession already mapped elsewhere / to another
-    study → `ConflictingAccessionError`. → **[relaxed to one file → many accessions by the
-    feature](../epics/epic-0093-giraffe.md).**
+  - **strict 1:1** — each file_id appears once; an accession already mapped elsewhere / to another study → `ConflictingAccessionError`. → **[relaxed to one file → many accessions by the feature](../epics/epic-0093-giraffe.md).**
   - **every active file in the box must be mapped** (no leftovers);
-  - the accession must **already exist as an *unmapped* `FileAccession`** — those rows are
-    pre-seeded by an **interim ingestion bridge** consuming metldata's `SearchableResource`
-    events (`ResourceSubTranslator` → `LegacyResourceManager.upsert_resource` →
-    `FileController.register_unmapped_accessions`; `rs/adapters/inbound/event_sub.py:65`,
-    `rs/core/legacy_resources.py:109`, `rs/core/files.py:100`). The same bridge also inserts the
-    embedded `Study` into RS's **forward-looking** `Study` store — but with *placeholder* values
-    (forced `ARCHIVED` status, sentinel creator) because a searchable resource carries no
-    lifecycle info. It is the **bridge** that is legacy (*"remove once this service owns studies"*),
-    **not** the `Study` entity, which already models `DRAFT`/`ARCHIVED` status and
-    `superseded_by_id`.
-- Mapping produces a `FileAccession` (`pid` accession ↔ `file_id` ↔ `study_id`), persisted in the
-  `fileAccessions` collection and emitted via outbox. Read back via
-  `GET /studies/{study_id}/file-ids` (`{accession: file_id | null}`),
-  `GET /studies?with_unmapped_files=true`, and `GET /upload-boxes/{box}/uploads`
-  (`FileUploadWithAccession`).
-- Portal (`frontend/data-portal/src/app/upload/features/upload-box-mapping/`): appears when the
-  box is **locked**; steward picks a study + a `MappedField` (`alias | name`); auto-matches box
-  file alias against the metadata file's `alias` or `name`, with manual overrides; then
-  **submits the map and archives in one action** (`onConfirmAndArchive`).
+  - the accession must **already exist as an *unmapped* `FileAccession`** — those rows are pre-seeded by an **interim ingestion bridge** consuming metldata's `SearchableResource` events (`ResourceSubTranslator` → `LegacyResourceManager.upsert_resource` → `FileController.register_unmapped_accessions`; `rs/adapters/inbound/event_sub.py:65`, `rs/core/legacy_resources.py:109`, `rs/core/files.py:100`).
+    The same bridge also inserts the embedded `Study` into RS's **forward-looking** `Study` store — but with *placeholder* values (forced `ARCHIVED` status, sentinel creator) because a searchable resource carries no lifecycle info.
+    It is the **bridge** that is legacy (*"remove once this service owns studies"*), **not** the `Study` entity, which already models `DRAFT`/`ARCHIVED` status and `superseded_by_id`.
+- Mapping produces a `FileAccession` (`pid` accession ↔ `file_id` ↔ `study_id`), persisted in the `fileAccessions` collection and emitted via outbox.
+  Read back via `GET /studies/{study_id}/file-ids` (`{accession: file_id | null}`), `GET /studies?with_unmapped_files=true`, and `GET /upload-boxes/{box}/uploads` (`FileUploadWithAccession`).
+- Portal (`frontend/data-portal/src/app/upload/features/upload-box-mapping/`): appears when the box is **locked**; steward picks a study + a `MappedField` (`alias | name`); auto-matches box file alias against the metadata file's `alias` or `name`, with manual overrides; then **submits the map and archives in one action** (`onConfirmAndArchive`).
 
 ---
 
 ## 5. Journey D — Load → serve → browse
 
 ### Load API
-- metldata's **combined** app (`libs/metldata/src/metldata/combined.py`, run via `metldata run-api`)
-  mounts the loader (`POST /rpc/load-artifacts`, bearer loader-token) + the artifacts query API.
+
+- metldata's **combined** app (`libs/metldata/src/metldata/combined.py`, run via `metldata run-api`) mounts the loader (`POST /rpc/load-artifacts`, bearer loader-token) + the artifacts query API.
   **Not** a `services/` microservice.
-- `dskit load` collects artifacts from the local event store and POSTs `ArtifactResourceDict`
-  (`{artifact_name: [{study_accession, artifact_name, content}]}`).
+- `dskit load` collects artifacts from the local event store and POSTs `ArtifactResourceDict` (`{artifact_name: [{study_accession, artifact_name, content}]}`).
 - The loader **diffs DB-vs-payload** (full-state reconciliation, no tombstones/versioning):
   - per-resource diff (`load/load.py:192`) → new/changed/removed resources;
-  - whole-artifact diff for `publishable_artifacts` (`added_accessions`) keyed by
-    `(artifact_name, study_accession)`.
+  - whole-artifact diff for `publishable_artifacts` (`added_accessions`) keyed by `(artifact_name, study_accession)`.
 
 ### Events emitted (`load/event_publisher.py`) & consumers
+
 | Event (topic / type) | Payload | Consumers |
 |---|---|---|
 | `searchable_resources` upsert/delete | `SearchableResource` / `SearchableResourceInfo` | **MASS** (search index); **RS** (interim bridge seeding its forward-looking Study + unmapped FileAccession state) |
 | `metadata_datasets` created/deleted | `MetadataDatasetOverview` / `MetadataDatasetID` | **WPS** (`register_dataset`); **DINS** (`register_dataset_information`); claims/auth (deletion) |
 | `artifacts` upserted/deleted | `Artifact` / `ArtifactTag` | **RTS** (filters `added_accessions:` key prefix) |
 
-Resource/dataset events fire **only for the primary dataset source** (`embedded_public` /
-`EmbeddedDataset`). `MetadataDatasetOverview` is assembled from the embedded dataset content
-(title, description, DAC alias/email, file list). Downstream consumers are idempotent about
-missing targets.
+Resource/dataset events fire **only for the primary dataset source** (`embedded_public` / `EmbeddedDataset`).
+`MetadataDatasetOverview` is assembled from the embedded dataset content (title, description, DAC alias/email, file list).
+Downstream consumers are idempotent about missing targets.
 
 ### Search (MASS)
-- `GET /search?class_name=...&filter_by=...&value=...&query=...&skip=&limit=` and
-  `GET /search-options`. Searchable classes are **config-driven**; the portal searches
-  `class_name=EmbeddedDataset` only — **there is no Study search class**. Upsert/delete are purely
-  event-driven; MASS does no diffing.
-  → **[search hiding of superseded datasets is added by the feature](../epics/epic-0093-giraffe.md).**
+
+- `GET /search?class_name=...&filter_by=...&value=...&query=...&skip=&limit=` and `GET /search-options`.
+  Searchable classes are **config-driven**; the portal searches `class_name=EmbeddedDataset` only — **there is no Study search class**.
+  Upsert/delete are purely event-driven; MASS does no diffing. → **[search hiding of superseded datasets is added by the feature](../epics/epic-0093-giraffe.md).**
 
 ### Portal (`frontend/data-portal/src/app/app-routes.ts`)
+
 - `browse` (datasets, `class_name=EmbeddedDataset`), `dataset/:id`, `study/:id` (and `s/:id`).
-- Dataset detail: `GET {metldata}/artifacts/embedded_public/classes/EmbeddedDataset/resources/{id}`;
-  summary from `stats_public/.../DatasetStats/...`; study detail from
-  `embedded_public/.../Study/...`; file info from DINS `GET /dataset_information/{id}`; metadata
-  xlsx from RTS `GET /studies/{accession}`.
-- `loadStudiesMap()` is an explicitly temporary fan-out (EmbeddedDataset → stats → Study) labeled
-  *"until we switch to a study-based backend"*.
-- **No versioning/deprecation UI anywhere** — re-load silently replaces.
-  → **[the "updated version available" hint is added by the feature](../epics/epic-0093-giraffe.md).**
+- Dataset detail: `GET {metldata}/artifacts/embedded_public/classes/EmbeddedDataset/resources/{id}`; summary from `stats_public/.../DatasetStats/...`; study detail from `embedded_public/.../Study/...`; file info from DINS `GET /dataset_information/{id}`; metadata xlsx from RTS `GET /studies/{accession}`.
+- `loadStudiesMap()` is an explicitly temporary fan-out (EmbeddedDataset → stats → Study) labeled *"until we switch to a study-based backend"*.
+- **No versioning/deprecation UI anywhere** — re-load silently replaces. → **[the "updated version available" hint is added by the feature](../epics/epic-0093-giraffe.md).**
 
 ---
 
 ## 6. Journey E — Download (brief)
 
 dataset accession → **ARS** access request/grant (`dataset_id: Accession`) → **WPS** work package
-+ per-file download work-order token → **ghga-connector** → **DCS** `GET /objects/{id}` (+
-`/envelopes`), keys via **EKSS**. Dataset accessions live on ARS requests/grants, the WPS dataset
-collection (from `MetadataDatasetOverview`), and DINS.
+
+- per-file download work-order token → **ghga-connector** → **DCS** `GET /objects/{id}` (+ `/envelopes`), keys via **EKSS**.
+  Dataset accessions live on ARS requests/grants, the WPS dataset collection (from `MetadataDatasetOverview`), and DINS.
 
 ---
 
 ## 7. Invariants the data-lifecycle feature will change
 
-Collected here as a checklist; details in
-[`docs/epics/epic-0093-giraffe.md`](../epics/epic-0093-giraffe.md).
+Collected here as a checklist; details in [`docs/epics/epic-0093-giraffe.md`](../epics/epic-0093-giraffe.md).
 
-1. **Accession format** is `{prefix}{14 random digits}` with no structure/version → studies move
-   to `GHGA.YY.XXX.V`; child entities to `{study_pid}.{alias}`; datasets to `{study_pid}.DS.xxx`.
-2. **No cross-submission stability / no versioning** → studies gain a stable lineage
-   (`GHGA.YY.XXX`) with an incrementing version; study-level supersession is **declared by the
-   steward** (`--replaces` / `replace-study`) and recorded by metldata — never inferred from version
-   order, since a predecessor may be a legacy accession that carries no version at all. The portal
-   is the only online reader, via metldata's successor endpoint; RS's `superseded_by_id` stays unset
-   and MASS only ever sees the existing `searchable_resource_deleted`.
-3. **File mapping is 1:1 and box-centric, with mapping as a prerequisite for archival** →
-   many-accessions-per-file, study/submission-centric mapping, and the dependency **inverted**:
-   files are archived first, then mapped against archived boxes.
-4. **Search shows everything; no legacy handling** → superseded studies' datasets are hidden from
-   search but reachable by URL/PID, with an "updated version" hint.
-5. **`studies[0]` one-study-per-submission assumption** in the loader — the study becomes the
-   submission scope.
+1. **Accession format** is `{prefix}{14 random digits}` with no structure/version → studies move to `GHGA.YY.XXX.V`; child entities to `{study_pid}.{alias}`; datasets to `{study_pid}.DS.xxx`.
+2. **No cross-submission stability / no versioning** → studies gain a stable lineage (`GHGA.YY.XXX`) with an incrementing version; study-level supersession is **declared by the steward** (`--replaces` / `replace-study`) and recorded by metldata — never inferred from version order, since a predecessor may be a legacy accession that carries no version at all.
+   The portal is the only online reader, via metldata's successor endpoint; RS's `superseded_by_id` stays unset and MASS only ever sees the existing `searchable_resource_deleted`.
+3. **File mapping is 1:1 and box-centric, with mapping as a prerequisite for archival** → many-accessions-per-file, study/submission-centric mapping, and the dependency **inverted**: files are archived first, then mapped against archived boxes.
+4. **Search shows everything; no legacy handling** → superseded studies' datasets are hidden from search but reachable by URL/PID, with an "updated version" hint.
+5. **`studies[0]` one-study-per-submission assumption** in the loader — the study becomes the submission scope.
 
 ---
 
@@ -275,12 +215,8 @@ Collected here as a checklist; details in
 
 - **Accession / PID** — a public GHGA identifier for an entity.
 - **RDUB / FUB** — ResearchDataUploadBox (RS) / FileUploadBox (UCS); 1:1.
-- **Mapping** — binding a metadata file entity's accession to a physical uploaded file
-  (`file_id`).
+- **Mapping** — binding a metadata file entity's accession to a physical uploaded file (`file_id`).
 - **Artifact** — a transformed metadata product (e.g. `embedded_public`); the query/serve unit.
-- **Primary dataset source** — `embedded_public` / `EmbeddedDataset`; the only source that emits
-  searchable-resource and dataset-overview events.
-- **Interim ingestion bridge** (a.k.a. the "legacy resource" consumer) — RS populating its
-  **forward-looking** Study + unmapped-FileAccession state by consuming metldata's
-  `SearchableResource` events. The *bridge* is interim (removed once RS owns studies); RS's
-  `Study` entity is not legacy.
+- **Primary dataset source** — `embedded_public` / `EmbeddedDataset`; the only source that emits searchable-resource and dataset-overview events.
+- **Interim ingestion bridge** (a.k.a. the "legacy resource" consumer) — RS populating its **forward-looking** Study + unmapped-FileAccession state by consuming metldata's `SearchableResource` events.
+  The *bridge* is interim (removed once RS owns studies); RS's `Study` entity is not legacy.

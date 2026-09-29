@@ -1,5 +1,4 @@
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # GHGA Data Steward Kit
 
@@ -7,123 +6,91 @@ Utilities for data stewards interacting with GHGA infrastructure.
 
 ## Installation
 
-The kit is not published to PyPI; the last release there is 5.4.3. It ships with the
-platform release instead, and you run it from a checkout of a release tag, so that
-`uv.lock` at the tag pins the service and library versions it was tested with. You need
-`git` and [uv](https://docs.astral.sh/uv/getting-started/installation/); uv fetches the
-matching Python itself.
+The kit is not published to PyPI; the last release there is 5.4.3.
+It ships with the platform release instead, and you run it from a checkout of a release tag, so that `uv.lock` at the tag pins the service and library versions it was tested with.
+You need `git` and [uv](https://docs.astral.sh/uv/getting-started/installation/); uv fetches the matching Python itself.
 
-Pick a `ghga/X.Y.Z` tag from the
-[releases](https://github.com/ghga-de/ghga/releases), then clone it and run the kit from
-the checkout:
+Pick a `ghga/X.Y.Z` tag from the [releases](https://github.com/ghga-de/ghga/releases), then clone it and run the kit from the checkout:
 
-```
+```text
 git clone --depth 1 --branch ghga/X.Y.Z https://github.com/ghga-de/ghga.git
 cd ghga
 uv run --locked ghga-datasteward-kit --help
 ```
 
-With `--locked`, uv refuses to run rather than resolve versions other than the pinned
-ones. The first run creates the environment in `.venv`, and later runs reuse it. To move
-to another release, clone that tag afresh.
+With `--locked`, uv refuses to run rather than resolve versions other than the pinned ones.
+The first run creates the environment in `.venv`, and later runs reuse it.
+To move to another release, clone that tag afresh.
 
 ## Step by Step Guide
 
-It is important to outline that some commands can only be used by Central Data
-Stewards while other commands address Local Data Stewards.
+It is important to outline that some commands can only be used by Central Data Stewards while other commands address Local Data Stewards.
 
-The workflow for both the Local and Central Data Stewards is outlined in the following
-paragraphs:
+The workflow for both the Local and Central Data Stewards is outlined in the following paragraphs:
 
 ### Local Data Steward
 
-In v1.1 of the Archive, Local Data Stewards are responsible for (A) preparing the metadata
-of a submission and (B) for encrypting and uploading the corresponding files to the
-Data Hub's S3-compatible Object Storage.
+In v1.1 of the Archive, Local Data Stewards are responsible for (A) preparing the metadata of a submission and (B) for encrypting and uploading the corresponding files to the Data Hub's S3-compatible Object Storage.
 
 #### A. Metadata Preparation
-The data steward kit has no functionality to help with metadata preparation, however,
-it is still described here for completeness of the workflow.
+
+The data steward kit has no functionality to help with metadata preparation, however, it is still described here for completeness of the workflow.
 
 To define metadata for a submission, you have two options:
 
-**Option 1:** Use an excel spreadsheet (please do not use Google Spreadsheets because
-of data protection). Templates can be found
-[here](https://github.com/ghga-de/ghga-metadata-schema/tree/main/spreadsheets). You may
-validate the metadata by:
-1. Running the [GHGA Metadata Transpiler](https://github.com/ghga-de/ghga-transpiler)
-   to generate JSON (as in Option 2).
-2. Run the [GHGA Metadata Validator](https://github.com/ghga-de/ghga-validator/)
-   on the produced JSON.
+**Option 1:** Use an excel spreadsheet (please do not use Google Spreadsheets because of data protection).
+Templates are in the [metadata schema repository](https://github.com/ghga-de/ghga-metadata-schema/tree/main/spreadsheets).
+You may validate the metadata by:
 
-**Option 2:** Directly specify the metadata using JSON compliant with our
-[LinkML schema](https://github.com/ghga-de/ghga-metadata-schema/blob/main/src/schema/submission.yaml).
-Validation of the metadata can be achieved using the
-[GHGA Metadata Validator](https://github.com/ghga-de/ghga-validator/).
+1. Running the [GHGA Metadata Transpiler](https://github.com/ghga-de/ghga-transpiler) to generate JSON (as in Option 2).
+2. Run the [GHGA Metadata Validator](https://github.com/ghga-de/ghga-validator/) on the produced JSON.
 
-Once your spreadsheet or JSON file have passed validation, you may send the metadata to
-the Central Data Steward.
+**Option 2:** Directly specify the metadata using JSON compliant with our [LinkML schema](https://github.com/ghga-de/ghga-metadata-schema/blob/main/src/schema/submission.yaml).
+Validation of the metadata can be achieved using the [GHGA Metadata Validator](https://github.com/ghga-de/ghga-validator/).
 
-#### B. File Encryption and Upload:
+Once your spreadsheet or JSON file have passed validation, you may send the metadata to the Central Data Steward.
+
+#### B. File Encryption and Upload
 
 This is achieved using the data steward kit, using the following steps:
 
-1. **Generate credentials**: The kit interacts with services at GHGA central. To
-   authenticate yourself against these services you need to create a set of credentials
-   using the `ghga-datasteward-kit generate-credentials` command. Please see
-   [this section](#generate-credentials) for further details.
+1. **Generate credentials**: The kit interacts with services at GHGA central.
+   To authenticate yourself against these services you need to create a set of credentials using the `ghga-datasteward-kit generate-credentials` command.
+   Please see [this section](#generate-credentials) for further details.
 
-2. **Encrypt and Upload**: File encryption and upload to the S3-compatible object
-   storage is done in one go. This is achieved using either the
-   `ghga-datasteward-kit files upload` for uploading a single file or the
-   `ghga-datasteward-kit files batch-upload` for uploading multiple files at once.
-   There also exist legacy versions of these subcommands for compatibility reasons,
-   where the command is prefixed with `legacy-`.
-   Please see [this section](#files-batch-upload) for further details. This will output
-   one summary JSON per uploaded file. The encryption secret is automatically
-   transferred to GHGA central for the normal upload path.
-   For the legacy version of the commands, the encryption secret is present in the summary
-   JSON and will be exchanged for a secret during ingest.
+2. **Encrypt and Upload**: File encryption and upload to the S3-compatible object storage is done in one go.
+   This is achieved using either the `ghga-datasteward-kit files upload` for uploading a single file or the `ghga-datasteward-kit files batch-upload` for uploading multiple files at once.
+   There also exist legacy versions of these subcommands for compatibility reasons, where the command is prefixed with `legacy-`.
+   Please see [this section](#files-batch-upload) for further details.
+   This will output one summary JSON per uploaded file.
+   The encryption secret is automatically transferred to GHGA central for the normal upload path.
+   For the legacy version of the commands, the encryption secret is present in the summary JSON and will be exchanged for a secret during ingest.
 
-Once the upload of all files of a submission has completed, please notify the GHGA
-Central Data Steward and provide the summary JSONs obtained in step 2.
+Once the upload of all files of a submission has completed, please notify the GHGA Central Data Steward and provide the summary JSONs obtained in step 2.
 
 ### Central Data Steward
 
-The Central Data Steward is responsible for ingesting the metadata and the upload summary files into the running
-system. This is performed with the following steps:
+The Central Data Steward is responsible for ingesting the metadata and the upload summary files into the running system.
+This is performed with the following steps:
 
-1. **Generate credentials**: As for the local data stewards, central data stewards need
-   to have credentials for authentication with GHGA Central Services. To create these
-   credentials the `ghga-datasteward-kit generate-credentials` command is used.
+1. **Generate credentials**: As for the local data stewards, central data stewards need to have credentials for authentication with GHGA Central Services.
+   To create these credentials the `ghga-datasteward-kit generate-credentials` command is used.
    Please see [this section](#generate-credentials) for further details.
-2. **Transpile Metadata Spreadsheet**: If the Local Data Steward provided a metadata
-   spreadsheet, this spreadsheet has to be first transpiled to the JSON format using the
-   `ghga-datasteward-kit metadata transpile` command. Please see
-   [this section](#metadata) for further details.
-3. **Include in Submission Registry**: The submission JSON is included in a
-   submission registry on the local file system using the
-   `ghga-datasteward-kit metadata submit` command. Please see
-   [this section](#metadata) for further details.
-4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions
-   in the submission registry to produce multiple query-specific metadata artifacts
-   using the `ghga-datasteward-kit metadata transform` command. Please see
-   [this section](#metadata) for further details.
-5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the
-   running system so that they are available on the GHGA website, the
-   `ghga-datasteward-kit load` command can be used.
-6. **Make Files Downloadable**: To make files downloadable, the file summary JSONs
-   provided by the Local Data Steward (see [here](#b-file-encryption-and-upload)) need
-   to be ingested into the running system using the
-   `ghga-datasteward-kit files ingest-upload-metadata` command. Please see
-   [this section](#files-ingest-upload-metadata) for further details.
-
+2. **Transpile Metadata Spreadsheet**: If the Local Data Steward provided a metadata spreadsheet, this spreadsheet has to be first transpiled to the JSON format using the `ghga-datasteward-kit metadata transpile` command.
+   Please see [this section](#metadata) for further details.
+3. **Include in Submission Registry**: The submission JSON is included in a submission registry on the local file system using the `ghga-datasteward-kit metadata submit` command.
+   Please see [this section](#metadata) for further details.
+4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions in the submission registry to produce multiple query-specific metadata artifacts using the `ghga-datasteward-kit metadata transform` command.
+   Please see [this section](#metadata) for further details.
+5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the running system so that they are available on the GHGA website, the `ghga-datasteward-kit load` command can be used.
+6. **Make Files Downloadable**: To make files downloadable, the file summary JSONs provided by the Local Data Steward (see [file encryption and upload](#b-file-encryption-and-upload)) need to be ingested into the running system using the `ghga-datasteward-kit files ingest-upload-metadata` command.
+   Please see [this section](#files-ingest-upload-metadata) for further details.
 
 ## Details per Command
 
 An overview of all commands is provided using:
 
-```
+```text
 ghga-datasteward-kit --help
 ```
 
@@ -133,24 +100,23 @@ The following paragraphs provide additional help for using the different command
 
 *To be performed by Local Data Stewards.*
 
-This command facilitates encrypting files using Crypt4GH and uploading the encrypted
-content to a (remote) S3-compatible object storage.
+This command facilitates encrypting files using Crypt4GH and uploading the encrypted content to a (remote) S3-compatible object storage.
 This process consists of multiple steps:
+
 1. Generate a unique file/object id for S3
 2. Create SHA256 checksum for the unencrypted file
 3. Encrypt and upload file in chunks, generate checksums for encrypted parts.
-Verify successful transfer using content MD5 on the part level
+   Verify successful transfer using content MD5 on the part level
 4. Compute content MD5 of the assembled object locally and compare with S3
 5. Decrypt local parts, generate SHA256 checksum and compare with checksum calculated in step 2
 6. Write file/upload information to output file
 
-The user needs to provide a config yaml containing information as described
-[here](./s3_upload_config.md).
+The user needs to provide a config yaml containing information as described in the [S3 upload config](./s3_upload_config.md).
 
-An overview of important information about each the upload is written to a file called
-\<alias\>.json in the output directory.
+An overview of important information about each the upload is written to a file called \<alias\>.json in the output directory.
 
 It contains the following information:
+
 1. The file alias
 2. A unique identifier for the file
 3. An identifier of the storage bucket the file was uploaded to (Added in v4.4.0)
@@ -177,11 +143,9 @@ If you want to disable it, the value has to be explicitly set to 1.
 
 *To be performed by Central Data Stewards only.*
 
-Upload all file summary JSONs (produced using the
-[files (batch-)upload](#files-batch-upload) command) from the given directory to the
-running system and make the corresponding files available for download.
+Upload all file summary JSONs (produced using the [files (batch-)upload](#files-batch-upload) command) from the given directory to the running system and make the corresponding files available for download.
 
-This command requires a configuration file as described [here](./ingest_config.md).
+This command requires a configuration file as described in the [ingest config](./ingest_config.md).
 
 #### Ingest version compatibility
 
@@ -196,7 +160,7 @@ This command requires a configuration file as described [here](./ingest_config.m
 
 The metadata label groups metadata related commands.
 
-Some of them require a configuration file as described [here](./metadata_config.md).
+Some of them require a configuration file as described in the [metadata config](./metadata_config.md).
 
 ### load
 
@@ -204,37 +168,33 @@ Some of them require a configuration file as described [here](./metadata_config.
 
 The load command makes files and metadata available to user in the running system.
 
-It needs a configuration parameters as described [here](./load_config.md).
+It needs a configuration parameters as described in the [load config](./load_config.md).
 
 ### generate-credentials
 
 A command to generate a token/hash pair for interacting with GHGA Central services.
 
-The generated token file should not be moved to a different system and never be shared
-with another user.
-The token hash (**not the token*) must be shared with the GHGA Central Operation
-Team. This process has to be done only once per data steward and system (if a data
-steward is working with multiple compute environments, one set of credentials per
-environment should be created).
+The generated token file should not be moved to a different system and never be shared with another user.
+The token hash (**not the token*) must be shared with the GHGA Central Operation Team.
+This process has to be done only once per data steward and system (if a data steward is working with multiple compute environments, one set of credentials per environment should be created).
 
 ## Development
-For setting up the development environment, we rely on the
-[devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode
-in combination with Docker Compose.
+
+For setting up the development environment, we rely on the [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of vscode in combination with Docker Compose.
 
 To use it, you have to have Docker Compose as well as vscode with its "Remote - Containers" extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in vscode and run the command
-`Remote-Containers: Reopen in Container` from the vscode "Command Palette".
+Then open this repository in vscode and run the command `Remote-Containers: Reopen in Container` from the vscode "Command Palette".
 
 This will give you a full-fledged, pre-configured development environment including:
+
 - infrastructural dependencies (databases, etc.)
 - all relevant vscode extensions pre-installed
 - pre-configured linting and auto-formating
 - a pre-configured debugger
 - automatic license-header insertion
 
-If you prefer not to use vscode, you could get a similar setup (without the editor specific features)
-by running the following commands:
+If you prefer not to use vscode, you could get a similar setup (without the editor specific features) by running the following commands:
+
 ``` bash
 # Execute in the repo's root dir:
 cd ./.devcontainer
@@ -248,4 +208,5 @@ docker exec -it devcontainer_app_1 /bin/bash
 ```
 
 ## License
+
 This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).

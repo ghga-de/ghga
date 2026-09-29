@@ -1,20 +1,18 @@
-[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/)
-[![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/) [![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-jsonsubschema.svg)](https://pypi.org/project/ghga-jsonsubschema/) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 # GHGA JSON Subschema
 
-> **Note:** This is a fork of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) maintained by the [German Human Genome-Phenome Archive (GHGA)](https://www.ghga.de/). It was created to bring in necessary fixes, updates, and functionality required by GHGA-related projects.
+> **Note:** This is a fork of [IBM/jsonsubschema](https://github.com/ibm/jsonsubschema) maintained by the [German Human Genome-Phenome Archive (GHGA)](https://www.ghga.de/).
+> It was created to bring in necessary fixes, updates, and functionality required by GHGA-related projects.
 
 **ghga-jsonsubschema** checks if one JSON schema is a subschema (subtype) of another.
 
 For any two JSON schemas s1 and s2, s1 <: s2 (reads s1 is subschema/subtype of s2) if every JSON document instance that validates against s1 also validates against s2.
 
-jsonsubschema is very useful in analysing schema evolution and ensuring that newer schema versions are backward compatible.
-jsonsubschema also enables static type checking on different components of a system that uses JSON schema to describe data interfaces among the system's different components.
+jsonsubschema is very useful in analysing schema evolution and ensuring that newer schema versions are backward compatible. jsonsubschema also enables static type checking on different components of a system that uses JSON schema to describe data interfaces among the system's different components.
 
-For a practical overview of the architecture, purpose, and usage of this library, please see [DETAILS.md](https://github.com/ghga-de/ghga/blob/main/libs/ghga-jsonsubschema/DETAILS.md). For the formal foundations and deep technical details, please refer to the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
+For a practical overview of the architecture, purpose, and usage of this library, please see [DETAILS.md](https://github.com/ghga-de/ghga/blob/main/libs/ghga-jsonsubschema/DETAILS.md).
+For the formal foundations and deep technical details, please refer to the [ISSTA 2021 paper](https://dl.acm.org/doi/10.1145/3460319.3464796) by Andrew Habib, Avraham Shinnar, Martin Hirzel, and Michael Pradel, the original authors of this library.
 
 ## Installation
 
@@ -74,9 +72,8 @@ if __name__ == "__main__":
 
 ## Development
 
-This package is developed in the [GHGA monorepo](https://github.com/ghga-de/ghga), where
-it lives in `libs/ghga-jsonsubschema`. Clone that repository and work inside this
-package's directory:
+This package is developed in the [GHGA monorepo](https://github.com/ghga-de/ghga), where it lives in `libs/ghga-jsonsubschema`.
+Clone that repository and work inside this package's directory:
 
 ```sh
 git clone https://github.com/ghga-de/ghga.git
@@ -99,10 +96,8 @@ Run the test suite with coverage:
 uv run pytest --cov tests/
 ```
 
-Note that `uv sync` uses the monorepo's shared environment and lockfile at the repository
-root, but installs only this package and its dependencies. To work on the monorepo as a
-whole, with all of its packages installed, run `just sync` from the repository root; its
-[README](https://github.com/ghga-de/ghga#readme) describes the available tasks.
+Note that `uv sync` uses the monorepo's shared environment and lockfile at the repository root, but installs only this package and its dependencies.
+To work on the monorepo as a whole, with all of its packages installed, run `just sync` from the repository root; its [README](https://github.com/ghga-de/ghga#readme) describes the available tasks.
 
 ## Changes made by GHGA
 
@@ -113,29 +108,11 @@ This fork is based on version 0.0.8 of [IBM/jsonsubschema](https://github.com/ib
 * Packaging uses more modern conventions.
 * Tests have been converted from `unittest` to `pytest`.
 * An empty `enum` is now treated as an uninhabited schema.
-* Bugs inherited from upstream have been fixed: negating a numeric schema now
-  respects `exclusiveMinimum`/`exclusiveMaximum`, intersecting numeric schemas
-  no longer drops exclusive bounds, nested `anyOf` unions are now fully
-  flattened (previously, adjacent nested unions could make two equivalent
-  schemas compare as unrelated), and arrays with at most one item are now
-  recognized as satisfying `uniqueItems`.
-* The `dependencies` keyword (which upstream silently ignores) now raises
-  `exceptions.UnsupportedDependencies` instead of potentially returning
-  unsound verdicts.
-* Negating an integer schema (e.g.
-  `{"not": {"type": "integer", "minimum": 10, "maximum": 20}}`) now yields
-  the exact complement — including the non-integer numbers, represented
-  internally as `{"type": "number", "not": {"multipleOf": 1}}` — where
-  upstream silently computes a too-small complement that can yield unsound
-  verdicts. Only negating a numeric schema with a non-trivial `multipleOf`
-  (whose complement would contain the non-multiples) raises
-  `exceptions.UnsupportedNegatedNumeric` instead of returning potentially
-  wrong results.
-* Uninhabited numeric schemas whose `multipleOf` has no multiple within the
-  schema's bounds are now recognized as such, and subtype checks of numeric
-  schemas admitting a single value are now exact (e.g.
-  `{"type": "integer"}` is now a subschema of
-  `{"type": "number", "multipleOf": 0.5}`).
+* Bugs inherited from upstream have been fixed: negating a numeric schema now respects `exclusiveMinimum`/`exclusiveMaximum`, intersecting numeric schemas no longer drops exclusive bounds, nested `anyOf` unions are now fully flattened (previously, adjacent nested unions could make two equivalent schemas compare as unrelated), and arrays with at most one item are now recognized as satisfying `uniqueItems`.
+* The `dependencies` keyword (which upstream silently ignores) now raises `exceptions.UnsupportedDependencies` instead of potentially returning unsound verdicts.
+* Negating an integer schema (e.g. `{"not": {"type": "integer", "minimum": 10, "maximum": 20}}`) now yields the exact complement — including the non-integer numbers, represented internally as `{"type": "number", "not": {"multipleOf": 1}}` — where upstream silently computes a too-small complement that can yield unsound verdicts.
+  Only negating a numeric schema with a non-trivial `multipleOf` (whose complement would contain the non-multiples) raises `exceptions.UnsupportedNegatedNumeric` instead of returning potentially wrong results.
+* Uninhabited numeric schemas whose `multipleOf` has no multiple within the schema's bounds are now recognized as such, and subtype checks of numeric schemas admitting a single value are now exact (e.g. `{"type": "integer"}` is now a subschema of `{"type": "number", "multipleOf": 0.5}`).
 
 ## License
 

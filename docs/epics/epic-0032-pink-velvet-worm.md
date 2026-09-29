@@ -6,7 +6,8 @@
 
 ### Outline
 
-The metadata search service will be rewritten to conform to standards/best practices of our current architectural approach. The focus is on re-implementing the service and not on adding or altering functionality.
+The metadata search service will be rewritten to conform to standards/best practices of our current architectural approach.
+The focus is on re-implementing the service and not on adding or altering functionality.
 
 ### Included/Required
 
@@ -28,7 +29,8 @@ The hits returned in the response will contain the fully embedded documents, whi
 - POST /rpc/search: Submit search query
   - Request Body:
     - class_name: string - the name of the document type being searched (e.g. "DatasetEmbedded")
-    - skip: integer (default 0) - the number of initial results to skip. Used for pagination.
+    - skip: integer (default 0) - the number of initial results to skip.
+      Used for pagination.
     - limit: integer (default 10) - the number of results to return, representing one page's worth of results.
     - query: string - the search string
     - filters: list (optional) - contains dictionaries with keys "key" and "value" for specifying filters
@@ -45,7 +47,9 @@ The hits returned in the response will contain the fully embedded documents, whi
 
 ### Configuration
 
-The searchable classes, or resource types, will be moved into configuration and made available at deploy time. Therefore, any class intended to be made available through the search service will need to be defined under the **searchable_classes** config variable. Each searchable class should contain the **description** as a string and any **facetable_properties** as a list of objects with two fields each: "key", which contains the raw property name, and "name", which contains the user-friendly name.
+The searchable classes, or resource types, will be moved into configuration and made available at deploy time.
+Therefore, any class intended to be made available through the search service will need to be defined under the **searchable_classes** config variable.
+Each searchable class should contain the **description** as a string and any **facetable_properties** as a list of objects with two fields each: "key", which contains the raw property name, and "name", which contains the user-friendly name.
 
 Example:
 

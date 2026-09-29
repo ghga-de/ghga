@@ -4,7 +4,7 @@
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/sICcCw
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/sICcCw>
 
 ## Principal Components of Exploration
 
@@ -31,21 +31,22 @@ Thus Tübingen will be tested from Heidelberg and vice versa.
 
 ### Benchmarking Script
 
-Create a benchmarking script based on the S3 provider implementation in hexkit (https://github.com/ghga-de/hexkit/blob/main/hexkit/providers/s3/provider.py) and file operation functions from the CLI (https://github.com/ghga-de/ghga-connector/blob/main/ghga_connector/core/file_operations.py).
+Create a benchmarking script based on the S3 provider implementation in hexkit (<https://github.com/ghga-de/hexkit/blob/main/hexkit/providers/s3/provider.py>) and file operation functions from the CLI (<https://github.com/ghga-de/ghga-connector/blob/main/ghga_connector/core/file_operations.py>).
 
 ### Benchmarking Goals
 
-- How fast are the downloads/uploads? Determine average duration and transfer rate
+- How fast are the downloads/uploads?
+  Determine average duration and transfer rate
 - Establish how reliable the upload/download processes are: Do sporadic errors/unavailabilities occur?
-For reliability testing, run a continuous upload cycle (~2 days).
+  For reliability testing, run a continuous upload cycle (~2 days).
 - (Optional) Determine if content structure has influence on the up-/download performance
 
 ## Additional Details
 
-- IBM COS Documentation: https://cloud.ibm.com/docs/cloud-object-storage
+- IBM COS Documentation: <https://cloud.ibm.com/docs/cloud-object-storage>
 - IBM COS expert in Heidelberg: Koray
-- Ceph Documentation: https://docs.ceph.com/en/quincy/
-- Ceph Storage in Tübingen deployed by Sardina Systems (info@sardinasystems.com)
+- Ceph Documentation: <https://docs.ceph.com/en/quincy/>
+- Ceph Storage in Tübingen deployed by Sardina Systems (<info@sardinasystems.com>)
 - Ceph Storage & de.NBI expert in Tübingen: Moritz
 
 ## Human Resource/Time Estimation
