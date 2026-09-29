@@ -18,35 +18,14 @@ The service maintains its own view of the requestable datasets by consuming data
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/ars), tagged with the platform version:
+The service ships as the container image `ghga/ars` and the Helm chart [`ars`](../../deploy/charts/ars/README.md).
+Its executable `ars` takes one of these commands:
 
-```bash
-docker pull ghga/ars:<platform-version>
-```
+- `run-rest` runs the HTTP REST API
+- `consume-events` runs an event consumer listening to the configured topics
+- `publish-events` publishes pending events
 
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=ars --build-arg EXECUTABLE=ars -t ghga/ars .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/ars:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`ars`](../../deploy/charts/ars/README.md):
-
-```bash
-helm install ars oci://registry-1.docker.io/ghga/ars-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run ars
-```
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -541,38 +520,17 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.ars.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.ars.yaml`)
-- in your home directory (on Linux: `~/.ars.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `ars_`, e.g. for the `host` set an environment variable named `ars_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `ars`: the environment variable `ARS_HOST` sets `host`, and the YAML file is `.ars.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
 The service's OpenAPI specification is in [`openapi.yaml`](./openapi.yaml).
 
 ## Architecture and Design
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard triple hexagonal architecture and
-the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the [hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/access-request-service`, and the linters with `just lint`.
 
 ## License
 

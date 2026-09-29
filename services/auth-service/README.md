@@ -4,8 +4,6 @@ Authentication adapter and services used for the GHGA data portal
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service. -->
-
 This repository contains two services for the management, authentication and authorization of users of the GHGA data portal.
 
 These two services are described in the following sections.
@@ -51,35 +49,9 @@ If no API is specified, then only a health endpoint is provided.
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/auth-service), tagged with the platform version:
-
-```bash
-docker pull ghga/auth-service:<platform-version>
-```
-
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=auth-service --build-arg EXECUTABLE=auth-service -t ghga/auth-service .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/auth-service:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`auth-service`](../../deploy/charts/auth-service/README.md):
-
-```bash
-helm install auth-service oci://registry-1.docker.io/ghga/auth-service-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run auth-service
-```
+The service ships as the container image `ghga/auth-service` and the Helm chart [`auth-service`](../../deploy/charts/auth-service/README.md).
+Its executable `auth-service` starts the service and takes no command.
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -770,38 +742,17 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.auth_service.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.auth_service.yaml`)
-- in your home directory (on Linux: `~/.auth_service.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `auth_service_`, e.g. for the `host` set an environment variable named `auth_service_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `auth_service`: the environment variable `AUTH_SERVICE_HOST` sets `host`, and the YAML file is `.auth_service.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
 The service's OpenAPI specification is in [`openapi.yaml`](./openapi.yaml).
 
 ## Architecture and Design
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard triple hexagonal architecture and
-the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the [hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/auth-service`, and the linters with `just lint`.
 
 ## License
 

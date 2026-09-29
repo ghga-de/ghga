@@ -4,41 +4,18 @@ Reverse Transpiler Service - A service running a REST API that serves accessione
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service. -->
-
-Here you should provide a short summary of the purpose of this microservice.
+The service consumes the artifact events that carry a study's accessioned metadata as JSON, converts the metadata back into a spreadsheet workbook, and serves the workbook in `.xlsx` format by study ID over its REST API.
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/rts), tagged with the platform version:
+The service ships as the container image `ghga/rts` and the Helm chart [`rts`](../../deploy/charts/rts/README.md).
+Its executable `rts` takes one of these commands:
 
-```bash
-docker pull ghga/rts:<platform-version>
-```
+- `run-rest` runs the HTTP REST API
+- `consume-events` runs an event consumer listening to the configured topics
+- `migrate-db` runs the database migrations
 
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=rts --build-arg EXECUTABLE=rts -t ghga/rts .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/rts:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`rts`](../../deploy/charts/rts/README.md):
-
-```bash
-helm install rts oci://registry-1.docker.io/ghga/rts-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run rts
-```
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -483,38 +460,17 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.rts.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.rts.yaml`)
-- in your home directory (on Linux: `~/.rts.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `rts_`, e.g. for the `host` set an environment variable named `rts_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `rts`: the environment variable `RTS_HOST` sets `host`, and the YAML file is `.rts.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
 The service's OpenAPI specification is in [`openapi.yaml`](./openapi.yaml).
 
 ## Architecture and Design
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard Triple Hexagonal Architecture and
-the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the [hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/reverse-transpiler-service`, and the linters with `just lint`.
 
 ## License
 

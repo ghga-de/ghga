@@ -48,35 +48,9 @@ The guarantees for immutability and stability of accessions are not violated, ho
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/metldata), tagged with the platform version:
-
-```bash
-docker pull ghga/metldata:<platform-version>
-```
-
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=metldata --build-arg EXECUTABLE=metldata -t ghga/metldata .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/metldata:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`metldata`](../../deploy/charts/metldata/README.md):
-
-```bash
-helm install metldata oci://registry-1.docker.io/ghga/metldata-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run metldata
-```
+The service ships as the container image `ghga/metldata` and the Helm chart [`metldata`](../../deploy/charts/metldata/README.md).
+Its executable `metldata` starts the service and takes no command.
+[Running a service](../../services/README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -569,21 +543,8 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.metldata.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.metldata.yaml`)
-- in your home directory (on Linux: `~/.metldata.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `metldata_`, e.g. for the `host` set an environment variable named `metldata_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `metldata`: the environment variable `METLDATA_HOST` sets `host`, and the YAML file is `.metldata.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../../services/README.md#configuration) says where the service looks for them.
 
 ## Architecture and Design
 

@@ -32,35 +32,9 @@ Because email clients like Outlook, Gmail, etc. have differences in the way they
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/ns), tagged with the platform version:
-
-```bash
-docker pull ghga/ns:<platform-version>
-```
-
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=ns --build-arg EXECUTABLE=ns -t ghga/ns .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/ns:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`ns`](../../deploy/charts/ns/README.md):
-
-```bash
-helm install ns oci://registry-1.docker.io/ghga/ns-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run ns
-```
+The service ships as the container image `ghga/ns` and the Helm chart [`ns`](../../deploy/charts/ns/README.md).
+Its executable `ns` starts the service and takes no command.
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -426,21 +400,8 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.ns.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.ns.yaml`)
-- in your home directory (on Linux: `~/.ns.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `ns_`, e.g. for the `host` set an environment variable named `ns_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `ns`: the environment variable `NS_HOST` sets `host`, and the YAML file is `.ns.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## Architecture and Design
 
@@ -454,11 +415,6 @@ There is a DummyServer, which has an 'expect_email()' method that is used simila
 It can perform simple a authentication check so error handling can be tested.
 When an email is sent to the test server, the connection is closed and the received/expected emails are compared to make sure that the header and body content is intact.
 This enables testing the flow of sending an email without actually issuing any real emails and without using real credentials.
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/notification-service`, and the linters with `just lint`.
 
 ## License
 

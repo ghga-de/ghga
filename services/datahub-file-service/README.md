@@ -41,35 +41,14 @@ This key that the data hub should use for this purpose must be passed in the con
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/dhfs), tagged with the platform version:
+The service ships as the container image `ghga/dhfs` and the Helm chart [`dhfs`](../../deploy/charts/dhfs/README.md).
+Its executable `dhfs` takes one of these commands:
 
-```bash
-docker pull ghga/dhfs:<platform-version>
-```
+- `interrogate` runs the file interrogation and re-encryption process
+- `cleanup` cleans up the S3 interrogation bucket
+- `verify` re-encrypts a dummy file to verify that the service works with the current S3 backend
 
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=dhfs --build-arg EXECUTABLE=dhfs -t ghga/dhfs .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/dhfs:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`dhfs`](../../deploy/charts/dhfs/README.md):
-
-```bash
-helm install dhfs oci://registry-1.docker.io/ghga/dhfs-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run dhfs
-```
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -305,38 +284,17 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.dhfs.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.dhfs.yaml`)
-- in your home directory (on Linux: `~/.dhfs.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `dhfs_`, e.g. for the `host` set an environment variable named `dhfs_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `dhfs`: the environment variable `DHFS_HOST` sets `host`, and the YAML file is `.dhfs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
 The service's OpenAPI specification is in [`openapi.yaml`](./openapi.yaml).
 
 ## Architecture and Design
-<!-- Please provide an overview of the architecture and design of the code base.
-Mention anything that deviates from the standard Triple Hexagonal Architecture and
-the corresponding structure. -->
 
 This is a Python-based service following the Triple Hexagonal Architecture pattern.
 It uses protocol/provider pairs and dependency injection mechanisms provided by the [hexkit](https://github.com/ghga-de/ghga/tree/main/libs/hexkit) library.
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/datahub-file-service`, and the linters with `just lint`.
 
 ## License
 

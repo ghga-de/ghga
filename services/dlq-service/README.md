@@ -4,8 +4,6 @@ DLQ Service - a service to manage the dead letter queue for Kafka events
 
 ## Description
 
-<!-- Please provide a short overview of the features of this service. -->
-
 The DLQ Service provides a way to manage Kafka topics designated as dead letter queues via a RESTful API interface.
 
 The DLQ Service subscribes to the configured DLQ topic and saves all inbound events to the database.
@@ -14,35 +12,13 @@ When requeuing an event, the DLQ service publishes the event to a Kafka "retry" 
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/dlqs), tagged with the platform version:
+The service ships as the container image `ghga/dlqs` and the Helm chart [`dlqs`](../../deploy/charts/dlqs/README.md).
+Its executable `dlqs` takes one of these commands:
 
-```bash
-docker pull ghga/dlqs:<platform-version>
-```
+- `run-rest` runs the HTTP REST API
+- `consume-events` runs an event consumer listening to the configured topics
 
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=dlqs --build-arg EXECUTABLE=dlqs -t ghga/dlqs .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/dlqs:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`dlqs`](../../deploy/charts/dlqs/README.md):
-
-```bash
-helm install dlqs oci://registry-1.docker.io/ghga/dlqs-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run dlqs
-```
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -476,48 +452,12 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.dlqs.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.dlqs.yaml`)
-- in your home directory (on Linux: `~/.dlqs.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `dlqs_`, e.g. for the `host` set an environment variable named `dlqs_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `dlqs`: the environment variable `DLQS_HOST` sets `host`, and the YAML file is `.dlqs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
 The service's OpenAPI specification is in [`openapi.yaml`](./openapi.yaml).
-
-## Architecture and Design
-<!--
- Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
- for the German Human Genome-Phenome Archive (GHGA)
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/dlq-service`, and the linters with `just lint`.
 
 ## License
 

@@ -12,35 +12,9 @@ Despite this, the services provides a way to restrict which databases and collec
 
 ## Installation
 
-Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/sms), tagged with the platform version:
-
-```bash
-docker pull ghga/sms:<platform-version>
-```
-
-To build the image yourself, run this from the repository root:
-
-```bash
-docker build -f docker/Dockerfile --build-arg PACKAGE=sms --build-arg EXECUTABLE=sms -t ghga/sms .
-```
-
-The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
-
-```bash
-docker run -p 8080:8080 ghga/sms:<platform-version>
-```
-
-For Kubernetes, use the Helm chart [`sms`](../../deploy/charts/sms/README.md):
-
-```bash
-helm install sms oci://registry-1.docker.io/ghga/sms-chart
-```
-
-To run the service without a container, start it from the repository root in the workspace environment:
-
-```bash
-uv run sms
-```
+The service ships as the container image `ghga/sms` and the Helm chart [`sms`](../../deploy/charts/sms/README.md).
+Its executable `sms` starts the service and takes no command.
+[Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
 
@@ -639,21 +613,8 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML file for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
-Please adapt it, rename it to `.sms.yaml`, and place it in one of the following locations:
-
-- in the current working directory where you execute the service (on Linux: `./.sms.yaml`)
-- in your home directory (on Linux: `~/.sms.yaml`)
-
-The config YAML file will be automatically parsed by the service.
-
-**Important: If you are using containers, the locations refer to paths within the container.**
-
-All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) can also be set using environment variables or file secrets.
-
-For naming the environment variables, just prefix the parameter name with `sms_`, e.g. for the `host` set an environment variable named `sms_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
-
-To use file secrets, please refer to the [corresponding section](https://pydantic-docs.helpmanual.io/usage/settings/#secret-support) of the pydantic documentation.
+The settings take the prefix `sms`: the environment variable `SMS_HOST` sets `host`, and the YAML file is `.sms.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
@@ -675,11 +636,6 @@ For each technology, REST API endpoints will be exposed, prefixed as follows:
 Branch isolation is achieved in shared state technologies by the use of prefixes in, for example, database names.
 The `db_prefix` and `topic_prefix` config values are used so the prefixes must only be specified once.
 They are applied to database and topic names automatically throughout the SMS instance, establishing another means to restrict access.
-
-## Development
-
-The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
-Run the service's tests with `just test services/state-management-service`, and the linters with `just lint`.
 
 ## License
 
