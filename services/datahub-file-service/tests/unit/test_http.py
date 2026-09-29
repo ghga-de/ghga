@@ -13,25 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for custom exceptions and exception helpers."""
+"""Unit tests for the HTTP client helpers"""
 
 import httpx2
 import pytest
 
-from ghga_connector import exceptions
-
-
-def test_reason_from_exception_uses_message_when_present():
-    """Ensure a non-empty exception message is used verbatim as the reason."""
-    assert exceptions.extract_reason(RuntimeError("boom")) == "boom"
-
-
-def test_reason_from_exception_falls_back_to_type_for_blank_message():
-    """Ensure an exception with an empty message falls back to its qualified type name."""
-    reason = exceptions.extract_reason(httpx2.ReadError(""))
-
-    assert reason  # assert not empty
-    assert "httpx2.ReadError" in reason
+from dhfs.adapters.outbound.http import (
+    ConnectionFailedError,
+    raise_if_connection_failed,
+)
 
 
 @pytest.mark.parametrize(
@@ -49,7 +39,7 @@ def test_connection_failed_reason_is_never_blank(
 ):
     """Ensure a connection failure names its cause even when httpx gives no message."""
     url = "https://example.org/api"
-    with pytest.raises(exceptions.ConnectionFailedError) as exc_info:
-        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
+    with pytest.raises(ConnectionFailedError) as exc_info:
+        raise_if_connection_failed(request_error=request_error, url=url)
 
     assert expected_reason in str(exc_info.value)

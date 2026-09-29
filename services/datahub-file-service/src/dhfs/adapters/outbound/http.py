@@ -94,8 +94,15 @@ class ConnectionFailedError(RuntimeError):
 def raise_if_connection_failed(request_error: httpx2.RequestError, url: str):
     """Check if request exception is caused by hitting max retries and raise accordingly"""
     if isinstance(request_error, (httpx2.ConnectError, httpx2.ConnectTimeout)):
-        connection_failure = str(request_error.args[0])
-        raise ConnectionFailedError(url=url, reason=connection_failure)
+        # A connect timeout carries no message, which would leave the reason blank
+        reason = str(request_error).strip()
+        if not reason:
+            exc_type = type(request_error)
+            reason = (
+                f"An exception of type '{exc_type.__module__}.{exc_type.__qualname__}'"
+                " was raised without a message."
+            )
+        raise ConnectionFailedError(url=url, reason=reason)
 
 
 def check_for_request_errors(retry_error: RetryError, url: str):
