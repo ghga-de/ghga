@@ -105,6 +105,8 @@ export class UserIvaListComponent implements OnInit {
       By clicking "Send SMS", you agree to receive this message.`,
       cancelText: 'Cancel',
       confirmText: 'Send SMS',
+      // narrower than the default of 560px, so that the text wraps better
+      maxWidth: 'min(450px, 80vw)',
     };
     const otherTexts = {
       title: 'Request verification of your address',
