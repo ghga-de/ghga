@@ -474,8 +474,6 @@ The Data Hub public keys used for JWT verification are loaded directly from conf
 
 In addition to implementing the endpoints defined here, the existing functionality and config that directly interacts with Vault should be removed so that EKSS is the sole middleman for Vault activity.
 
-> See the [diagram](#example-auth-token-structure-for-dhfs-calls-to-fis-api) for an illustration of the proposed auth token structure for inbound requests to the FIS API
-
 **JWT Authentication:**  
 The FIS's endpoints which are meant for the DHFS require a JWT (JSON Web Token) signed with the Data Hub's private key. The `sub` field should contain the storage alias. The `aud` and `iss` fields should both be `GHGA`.
 
