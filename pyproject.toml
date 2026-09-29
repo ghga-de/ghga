@@ -185,11 +185,6 @@ unfixable = ["MD034", "MD037", "MD046"]
 "libs/hexkit/user_guide/**" = ["MD051", "MD057", "MD078"]
 # anchors from JSON Schema $defs, which rumdl does not resolve
 "tools/ghga-datasteward-kit/s3_upload_config.md" = ["MD051"]
-# the installation, development and README generation sections still describe the
-# single-service repositories; rewriting them is its own change
-"services/*/README.md" = ["MD057", "MD059"]
-"services/*/.readme_generation/*.md" = ["MD041", "MD057", "MD059"]
-"libs/{ghga-event-schemas,metldata}/README.md" = ["MD057"]
 
 [tool.rumdl.MD013]
 line-length = 0

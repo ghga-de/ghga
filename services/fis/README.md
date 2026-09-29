@@ -8,36 +8,34 @@ The File Ingest Service provides an endpoint to populate the Encryption Key Stor
 
 ## Installation
 
-We recommend using the provided Docker container.
-
-A pre-built version is available at [docker hub](https://hub.docker.com/repository/docker/ghga/file-ingest-service):
+Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/fis), tagged with the platform version:
 
 ```bash
-docker pull ghga/file-ingest-service:12.1.0
+docker pull ghga/fis:<platform-version>
 ```
 
-Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
+To build the image yourself, run this from the repository root:
 
 ```bash
-# Execute in the repo's root dir:
-docker build -t ghga/file-ingest-service:12.1.0 .
+docker build -f docker/Dockerfile --build-arg PACKAGE=fis --build-arg EXECUTABLE=fis -t ghga/fis .
 ```
 
-For production-ready deployment, we recommend using Kubernetes, however, for simple use cases, you could execute the service using docker on a single server:
+The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
 
 ```bash
-# The entrypoint is preconfigured:
-docker run -p 8080:8080 ghga/file-ingest-service:12.1.0 --help
+docker run -p 8080:8080 ghga/fis:<platform-version>
 ```
 
-If you prefer not to use containers, you may install the service from source:
+For Kubernetes, use the Helm chart [`fis`](../../deploy/charts/fis/README.md):
 
 ```bash
-# Execute in the repo's root dir:
-pip install .
+helm install fis oci://registry-1.docker.io/ghga/fis-chart
+```
 
-# To run the service:
-fis --help
+To run the service without a container, start it from the repository root in the workspace environment:
+
+```bash
+uv run fis
 ```
 
 ## Configuration
@@ -615,7 +613,7 @@ The service requires the following configuration parameters:
 
 ### Usage
 
-A template YAML for configuring the service can be found at [`./example-config.yaml`](./example-config.yaml).
+A template YAML for configuring the service can be found at [`./example_config.yaml`](./example_config.yaml).
 Please adapt it, rename it to `.fis.yaml`, and place it in one of the following locations:
 
 - in the current working directory where you execute the service (on Linux: `./.fis.yaml`)
@@ -625,7 +623,7 @@ The config yaml will be automatically parsed by the service.
 
 **Important: If you are using containers, the locations refer to paths within the container.**
 
-All parameters mentioned in the [`./example-config.yaml`](./example-config.yaml) could also be set using environment variables or file secrets.
+All parameters mentioned in the [`./example_config.yaml`](./example_config.yaml) could also be set using environment variables or file secrets.
 
 For naming the environment variables, just prefix the parameter name with `fis_`, e.g. for the `host` set an environment variable named `fis_host` (you may use both upper or lower cases, however, it is standard to define all env variables in upper cases).
 
@@ -633,7 +631,7 @@ To use file secrets, please refer to the [corresponding section](https://pydanti
 
 ## HTTP API
 
-An OpenAPI specification for this service can be found [here](openapi.yaml).
+The service's OpenAPI specification is in [`openapi.yaml`](./openapi.yaml).
 
 ## Architecture and Design
 <!-- Please provide an overview of the architecture and design of the code base.
@@ -645,29 +643,9 @@ It uses protocol/provider pairs and dependency injection mechanisms provided by 
 
 ## Development
 
-For setting up the development environment, we rely on the [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code in combination with Docker Compose.
-
-To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers" extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in VS Code and run the command `Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
-
-This will give you a full-fledged, pre-configured development environment including:
-
-- infrastructural dependencies of the service (databases, etc.)
-- all relevant VS Code extensions pre-installed
-- pre-configured linting and auto-formatting
-- a pre-configured debugger
-- automatic license-header insertion
-
-Moreover, inside the devcontainer, a command `dev_install` is available for convenience.
-It installs the service with all development dependencies, and it installs pre-commit.
-
-The installation is performed automatically when you build the devcontainer.
-However, if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the [`./requirements-dev.txt`](./requirements-dev.txt), please run it again.
+The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
+Run the service's tests with `just test services/fis`, and the linters with `just lint`.
 
 ## License
 
 This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).
-
-## README Generation
-
-This README file is auto-generated, please see [`readme_generation.md`](./readme_generation.md) for details.

@@ -48,37 +48,34 @@ The guarantees for immutability and stability of accessions are not violated, ho
 
 ## Installation
 
-We recommend using the provided Docker container.
-
-A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/metldata):
+Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/metldata), tagged with the platform version:
 
 ```bash
-docker pull ghga/metldata:4.2.1
+docker pull ghga/metldata:<platform-version>
 ```
 
-Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
+To build the image yourself, run this from the repository root:
 
 ```bash
-# Execute in the repo's root dir:
-docker build -t ghga/metldata:4.2.1 .
+docker build -f docker/Dockerfile --build-arg PACKAGE=metldata --build-arg EXECUTABLE=metldata -t ghga/metldata .
 ```
 
-For production-ready deployment, we recommend using Kubernetes.
-However for simple use cases, you could execute the service using docker on a single server:
+The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
 
 ```bash
-# The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/metldata:4.2.1 --help
+docker run -p 8080:8080 ghga/metldata:<platform-version>
 ```
 
-If you prefer not to use containers, you may install the service from source:
+For Kubernetes, use the Helm chart [`metldata`](../../deploy/charts/metldata/README.md):
 
 ```bash
-# Execute in the repo's root dir:
-pip install .
+helm install metldata oci://registry-1.docker.io/ghga/metldata-chart
+```
 
-# To run the service:
-metldata --help
+To run the service without a container, start it from the repository root in the workspace environment:
+
+```bash
+uv run metldata
 ```
 
 ## Configuration
@@ -680,29 +677,9 @@ The migration can be implemented as a transformation that is applied to the sour
 
 ## Development
 
-For setting up the development environment, we rely on the [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code in combination with Docker Compose.
-
-To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers" extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in VS Code and run the command `Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
-
-This will give you a full-fledged, pre-configured development environment including:
-
-- infrastructural dependencies of the service (databases, etc.)
-- all relevant VS Code extensions pre-installed
-- pre-configured linting and auto-formatting
-- a pre-configured debugger
-- automatic license-header insertion
-
-Inside the devcontainer, a command `dev_install` is available for convenience.
-It installs the service with all development dependencies, and it installs pre-commit.
-
-The installation is performed automatically when you build the devcontainer.
-However, if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the [`lock/requirements-dev.txt`](./lock/requirements-dev.txt), run it again.
+The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
+Run the service's tests with `just test libs/metldata`, and the linters with `just lint`.
 
 ## License
 
 This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).
-
-## README Generation
-
-This README file is auto-generated, please see [.readme_generation/README.md](./.readme_generation/README.md) for details.

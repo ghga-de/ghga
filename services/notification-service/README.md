@@ -26,43 +26,40 @@ The information is sent to the SMTP client, where a secure connection is establi
 In the configuration there are two template requirements: a plaintext email template and an HTML email template.
 The point of these is to produce consistently formatted emails while keeping the requirements light for microservices trying to send notifications.
 The templates are both used to make the email.
-Template variables are denoted with "$", e.g. $recipient_name, and are required to match the notification schema field names defined [here](https://github.com/ghga-de/ghga-event-schemas/blob/8e535ac271e7f27b6132505aad8cf572decc7ab4/ghga_event_schemas/pydantic_.py#L304).
+Template variables are denoted with "$", e.g. $recipient_name, and are required to match the notification schema field names in [ghga-event-schemas](https://github.com/ghga-de/ghga-event-schemas/blob/8e535ac271e7f27b6132505aad8cf572decc7ab4/ghga_event_schemas/pydantic_.py#L304).
 Having both HTML and plaintext means everyone should be able to receive the emails without a problem, and most of the time they should look nice.
 Because email clients like Outlook, Gmail, etc. have differences in the way they render HTML emails, it is recommended that styling be kept to a minimum or to use a pre-made template where these things have been taken into account.
 
 ## Installation
 
-We recommend using the provided Docker container.
-
-A pre-built version is available on [Docker Hub](https://hub.docker.com/repository/docker/ghga/notification-service):
+Each GHGA platform release publishes the service as a container image on [Docker Hub](https://hub.docker.com/r/ghga/ns), tagged with the platform version:
 
 ```bash
-docker pull ghga/notification-service:7.0.1
+docker pull ghga/ns:<platform-version>
 ```
 
-Or you can build the container yourself from the [`./Dockerfile`](./Dockerfile):
+To build the image yourself, run this from the repository root:
 
 ```bash
-# Execute in the repo's root dir:
-docker build -t ghga/notification-service:7.0.1 .
+docker build -f docker/Dockerfile --build-arg PACKAGE=ns --build-arg EXECUTABLE=ns -t ghga/ns .
 ```
 
-For production-ready deployment, we recommend using Kubernetes.
-However for simple use cases, you could execute the service using docker on a single server:
+The entrypoint starts the service, which reads its settings as described under [Configuration](#configuration):
 
 ```bash
-# The entrypoint is pre-configured:
-docker run -p 8080:8080 ghga/notification-service:7.0.1 --help
+docker run -p 8080:8080 ghga/ns:<platform-version>
 ```
 
-If you prefer not to use containers, you may install the service from source:
+For Kubernetes, use the Helm chart [`ns`](../../deploy/charts/ns/README.md):
 
 ```bash
-# Execute in the repo's root dir:
-pip install .
+helm install ns oci://registry-1.docker.io/ghga/ns-chart
+```
 
-# To run the service:
-ns --help
+To run the service without a container, start it from the repository root in the workspace environment:
+
+```bash
+uv run ns
 ```
 
 ## Configuration
@@ -456,29 +453,9 @@ This enables testing the flow of sending an email without actually issuing any r
 
 ## Development
 
-For setting up the development environment, we rely on the [devcontainer feature](https://code.visualstudio.com/docs/remote/containers) of VS Code in combination with Docker Compose.
-
-To use it, you have to have Docker Compose as well as VS Code with its "Remote - Containers" extension (`ms-vscode-remote.remote-containers`) installed.
-Then open this repository in VS Code and run the command `Remote-Containers: Reopen in Container` from the VS Code "Command Palette".
-
-This will give you a full-fledged, pre-configured development environment including:
-
-- infrastructural dependencies of the service (databases, etc.)
-- all relevant VS Code extensions pre-installed
-- pre-configured linting and auto-formatting
-- a pre-configured debugger
-- automatic license-header insertion
-
-Inside the devcontainer, a command `dev_install` is available for convenience.
-It installs the service with all development dependencies, and it installs pre-commit.
-
-The installation is performed automatically when you build the devcontainer.
-However, if you update dependencies in the [`./pyproject.toml`](./pyproject.toml) or the [`lock/requirements-dev.txt`](./lock/requirements-dev.txt), run it again.
+The service is a member of the [GHGA monorepo](../../README.md), which provides the development environment: work in its dev container, as described in [Work inside the dev container](../../README.md#work-inside-the-dev-container).
+Run the service's tests with `just test services/notification-service`, and the linters with `just lint`.
 
 ## License
 
 This repository is free to use and modify according to the [Apache 2.0 License](./LICENSE).
-
-## README Generation
-
-This README file is auto-generated, please see [.readme_generation/README.md](./.readme_generation/README.md) for details.
