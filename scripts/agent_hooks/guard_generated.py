@@ -1,7 +1,8 @@
 """PreToolUse hook for Edit and Write: block edits to generated files.
 
-Exits 2 with the command that regenerates the file. The ADR and epic indexes sit
-inside hand-edited files, so `docs_check.py` keeps them, not this hook.
+Exits 2 with the command that regenerates the file. The ADR and epic indexes and
+the README parameter lists sit inside hand-edited files, so `docs_check.py` and the
+service-docs pre-commit hook keep them, not this hook.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 SCRIPTS = Path(__file__).resolve().parents[1]
+REPO = SCRIPTS.parent
 
 FIXED = {
     "uv.lock": "just lock",
@@ -23,13 +25,22 @@ CHARTS_HOW = (
     " run just charts"
 )
 
+# The files scripts/service_docs.py writes, named as it names them. Importing it would
+# pull in FastAPI, so the test checks that the names match.
+MEMBER_TIERS = ("libs", "services", "tools")
+SCHEMA_FILE = "config_schema.json"
+EXAMPLE_FILE = "example_config.yaml"
+OPENAPI_FILE = "openapi.yaml"
+SERVICE_DOCS_HOW = (
+    "change the Config class, the routes or dev_config.yaml, then run just service-docs"
+)
 
-def repo_relative(file_path: str) -> PurePosixPath | None:
-    """The path relative to the enclosing checkout, which may be a worktree."""
-    path = Path(file_path.replace("\\", "/"))
+
+def checkout_of(path: Path) -> Path | None:
+    """The checkout that encloses the path, which may be a worktree."""
     for parent in path.parents:
         if (parent / ".git").exists():
-            return PurePosixPath(path.relative_to(parent).as_posix())
+            return parent
     return None
 
 
@@ -43,22 +54,45 @@ def generated_charts() -> set[str]:
     return {member["package"] for member in image_members()}
 
 
-def regenerate_with(rel: PurePosixPath) -> str | None:
-    """How to regenerate the file, or None when it is edited by hand."""
+def service_doc(rel: PurePosixPath, root: Path) -> bool:
+    """Whether service_docs.py writes the file.
+
+    It takes part for a member with a config schema, and writes the OpenAPI
+    specification only where one exists already.
+    """
+    parts = rel.parts
+    if len(parts) != 3 or parts[0] not in MEMBER_TIERS:
+        return False
+    member = root / parts[0] / parts[1]
+    if not (member / SCHEMA_FILE).is_file():
+        return False
+    if rel.name == OPENAPI_FILE:
+        return (member / OPENAPI_FILE).is_file()
+    return rel.name in (SCHEMA_FILE, EXAMPLE_FILE)
+
+
+def regenerate_with(rel: PurePosixPath, root: Path = REPO) -> str | None:
+    """How to regenerate the file in the checkout, or None when it is edited by hand."""
     if str(rel) in FIXED:
         return FIXED[str(rel)]
     parts = rel.parts
     if len(parts) > 3 and parts[:2] == ("deploy", "charts"):
         if parts[2] in generated_charts():
             return CHARTS_HOW
+    if service_doc(rel, root):
+        return SERVICE_DOCS_HOW
     return None
 
 
 def main() -> int:
     """Exit 2 when the tool call writes a generated file."""
     file_path = json.load(sys.stdin).get("tool_input", {}).get("file_path", "")
-    rel = repo_relative(file_path) if file_path else None
-    how = regenerate_with(rel) if rel else None
+    path = Path(file_path.replace("\\", "/"))
+    root = checkout_of(path) if file_path else None
+    if root is None:
+        return 0
+    rel = PurePosixPath(path.relative_to(root).as_posix())
+    how = regenerate_with(rel, root)
     if how:
         print(
             f"Blocked: {rel} is generated; do not edit it by hand. Instead, {how}.",
