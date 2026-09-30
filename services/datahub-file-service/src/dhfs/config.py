@@ -130,7 +130,7 @@ class Config(
             + " at a time, so this is the whole budget for the file in flight. It lets"
             + " the download of one part overlap the re-encryption of another and the"
             + " upload of a third, and it is the service's memory budget: peak use is"
-            + " roughly max_concurrent_parts * 3 * the part size."
+            + " roughly `max_concurrent_parts * 3 * part size`."
         ),
     )
 

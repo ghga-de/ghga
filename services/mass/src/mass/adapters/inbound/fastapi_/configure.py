@@ -34,7 +34,8 @@ def get_configured_app(*, config: Config) -> FastAPI:
         author = author.strip().strip('"')
         email = email[:-1]
     email = metadata["Author-email"]
-    license = metadata["License"]
+    # a PEP 639 `license` string in pyproject.toml fills License-Expression, not License
+    license = metadata.get("License-Expression") or metadata["License"]
     title, summary = summary.split(" - ", 1)
     contact = {
         "name": author,
