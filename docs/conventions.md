@@ -28,7 +28,7 @@ roles = ["rest", "consumer"]  # deployment roles (distinct service_instance_id p
 
 Directories supply the defaults, so a marker is only written where a member deviates: `services/*` and `frontend/*` default to the platform lane with an image, `libs/*` to the PyPI lane, `tools/*` to no lane at all ([ADR-0033](adrs/adr-0033-capability-markers-and-placement.md)).
 
-Examples: `libs/hexkit` → `{pypi}` and `services/auth-service` → `{platform, image}`, both by default; `libs/metldata` → `{platform, image, notes}` (a library that is also deployed); `libs/ghga-event-schemas` → `{none}` (embedded in the images, never published on its own); `tools/ghga-connector` and `tools/ghga-transpiler` → `{pypi, cli}` (public CLIs opting in).
+Examples: `libs/hexkit` → `{pypi}` and `services/auth-service` → `{platform, image}`, both by default; `libs/metldata` → `{platform, image}` (a library that is also deployed); `libs/ghga-event-schemas` → `{none}` (embedded in the images, never published on its own); `tools/ghga-connector` and `tools/ghga-transpiler` → `{pypi, cli}` (public CLIs opting in).
 
 ## Internal dependencies
 

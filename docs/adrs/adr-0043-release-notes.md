@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-09-23
+amended: 2026-09-30
 tags: [release, process]
 related: [ADR-0027, ADR-0038]
 ---
@@ -55,10 +56,11 @@ Comparing with nothing would list the history imported from the old repositories
   The platform's notes name each library and tool whose shipped files changed, with its version before and now and a link to its release.
 - **Libraries and tools:** a `name/x.y.z` tag lists the pull requests that changed what the member ships.
   That is the set the drift gate uses: the packaged roots, `pyproject.toml`, the README and the licence.
-- **Companions:** a platform-lane member that declares `notes = true` in `[tool.ghga]` ([ADR-0033](adr-0033-capability-markers-and-placement.md)), now `metldata` and `ghga-datasteward-kit`, has no tag of its own.
+- **Companions:** a platform-lane member that declares `notes = true` in `[tool.ghga]` ([ADR-0033](adr-0033-capability-markers-and-placement.md)), now `ghga-datasteward-kit`, has no tag of its own.
   A platform release tags each of them as `name/X.Y.Z` with the platform version, the version stamping gives them in the images, and drafts their release like a library's.
   A companion with no change since its previous release gets neither.
-  Of `metldata`, the library is the companion, and its chart belongs to the platform.
+  **Amended 2026-09-30:** `metldata` is no longer a companion and counts as part of the platform.
+  It gets release notes of its own again once the workspace moves to schemapack and integrates metldata fully.
   Every other platform-lane member counts as part of the platform.
 - **Sweeps:** a `packages/` release tags every member it uploaded as `name/x.y.z`, so that the next release of each member has a tag to compare with.
 - **No release page:** `ghga-event-schemas` is embedded in the images only, and `auth-km-jobs` is a service, counted with the platform.

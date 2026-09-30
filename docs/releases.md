@@ -124,7 +124,7 @@ Do not create the release in the GitHub UI: GitHub creates the tag only when tha
 Once the tag is pushed, edit the draft the workflow created.
 
 - `release.yaml` drafts one for a `ghga/` tag once its images and charts are built.
-  It also tags the companions, the platform-lane members with `notes = true`, now `metldata` and `ghga-datasteward-kit`, as `name/X.Y.Z` with the platform version and drafts theirs, unless nothing they ship has changed.
+  It also tags the companions, the platform-lane members with `notes = true`, now only `ghga-datasteward-kit`, as `name/X.Y.Z` with the platform version and drafts theirs, unless nothing they ship has changed.
 - `pypi-publish.yaml` drafts one for each member it uploaded.
   A sweep first tags each of them as `name/x.y.z`.
 
