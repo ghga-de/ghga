@@ -18,7 +18,7 @@
 import json
 from pathlib import Path
 from unittest.mock import patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import httpx2
 import pytest
@@ -32,10 +32,12 @@ from ghga_connector.core.utils import modify_for_debug
 from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
+    PART_PATH,
+    UPLOAD_PATH,
     MockApis,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import mock_health_checks
+from tests.fixtures.mock_api.router import mock_health_checks, path_variables
 from tests.fixtures.s3 import S3Fixture, s3_fixture  # noqa: F401
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,
@@ -77,9 +79,7 @@ class S3BackedUpload:
         upload_api.on_get_part_upload_url = self._get_part_upload_url
         upload_api.on_complete_file_upload = self._complete_file_upload
 
-    async def _create_file_upload(
-        self, request: httpx2.Request, **path_variables
-    ) -> httpx2.Response:
+    async def _create_file_upload(self, request: httpx2.Request) -> httpx2.Response:
         """Start a multipart upload for a newly made up object ID."""
         self.object_id = str(uuid4())
         self._upload_id = await self._s3.storage.init_multipart_upload(
@@ -94,32 +94,30 @@ class S3BackedUpload:
             },
         )
 
-    async def _get_part_upload_url(
-        self, request: httpx2.Request, file_id: UUID, part_no: int, **path_variables
-    ) -> httpx2.Response:
+    async def _get_part_upload_url(self, request: httpx2.Request) -> httpx2.Response:
         """Presign an upload URL for the requested part of the multipart upload."""
         assert self._upload_id, "No multipart upload was started"
+        part = path_variables(request, PART_PATH)
         url = await self._s3.storage.get_part_upload_url(
             bucket_id=self._bucket_id,
-            object_id=str(file_id),
+            object_id=part["file_id"],
             upload_id=self._upload_id,
-            part_number=part_no,
+            part_number=int(part["part_no"]),
         )
         return httpx2.Response(200, json=url)
 
-    async def _complete_file_upload(
-        self, request: httpx2.Request, file_id: UUID, **path_variables
-    ) -> httpx2.Response:
+    async def _complete_file_upload(self, request: httpx2.Request) -> httpx2.Response:
         """Finish the multipart upload and check the announced MD5 against S3."""
         assert self._upload_id, "No multipart upload was started"
+        file_id = path_variables(request, UPLOAD_PATH)["file_id"]
         await self._s3.storage.complete_multipart_upload(
-            upload_id=self._upload_id, bucket_id=self._bucket_id, object_id=str(file_id)
+            upload_id=self._upload_id, bucket_id=self._bucket_id, object_id=file_id
         )
         self._upload_id = None
 
         calculated_md5 = json.loads(request.read())["encrypted_md5"]
         etag = await self._s3.storage.get_object_etag(
-            object_id=str(file_id), bucket_id=self._bucket_id
+            object_id=file_id, bucket_id=self._bucket_id
         )
         assert etag.strip('"') == calculated_md5, (
             f"Connector calculated {calculated_md5}, but S3 says it should be {etag}"
