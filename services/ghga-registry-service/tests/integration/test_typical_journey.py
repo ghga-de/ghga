@@ -204,7 +204,9 @@ async def test_typical_journey(joint_fixture: JointFixture):
         box_id=box_id,
         auth_context=user_auth_context,
     )
-    assert box_after_lock.state == box_after_lock.file_upload_box_state == "locked"
+    assert box_after_lock.state == "locked"
+    # file_upload_box_state still mirrors UCS until the FileUploadBox event lands
+    assert box_after_lock.file_upload_box_state == "open"
     assert box_after_lock.version == 3
 
     # Create test file IDs for files in the box
@@ -342,7 +344,9 @@ async def test_typical_journey(joint_fixture: JointFixture):
         auth_context=ds_auth_context,
     )
     assert archived_box.state == "archived"
-    assert archived_box.file_upload_box_state == "archived"
+    # No FileUploadBox event has been consumed since the lock, so the mirrored state
+    # still shows what UCS last reported
+    assert archived_box.file_upload_box_state == "open"
     assert archived_box.version == box_after_mapping.version + 1
 
 

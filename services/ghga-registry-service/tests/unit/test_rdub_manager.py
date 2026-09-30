@@ -1507,7 +1507,10 @@ async def test_state_change_persists_when_box_stats_are_stale(
 
     stored = await rig.box_dao.get_by_id(box_id)
     assert stored.state == "locked"
-    assert stored.file_upload_box_state == "locked"
+
+    # RS doesn't update the value proactively, rather it waits for the outbox event
+    #  so the state should still be 'open'
+    assert stored.file_upload_box_state == "open"
 
 
 async def test_archive_research_data_upload_box_happy(
@@ -1587,9 +1590,9 @@ async def test_archive_research_data_upload_box_happy(
     updated_box = await rig.box_dao.get_by_id(box_id)
     assert updated_box.state == "archived"
     assert updated_box.version == 2
-    assert updated_box.file_upload_box_state == "archived"
-    # RS does not predict the FUB version; it arrives via the FileUploadBox outbox
-    # event, which `upsert_file_upload_box` applies
+
+    # RS doesn't update state or version, rather it gets that from the outbox event
+    assert updated_box.file_upload_box_state == "open"
     assert updated_box.file_upload_box_version == 0
     assert updated_box.changed_by == TEST_DS_ID
 
@@ -1939,7 +1942,9 @@ async def test_update_box_max_size(rig: JointRig, populated_boxes: list[UUID]):
     )
 
     updated_box = await rig.box_dao.get_by_id(box_id)
-    assert updated_box.max_size == new_max_size
+    # UCS owns max_size. RS just records who resized and when
+    assert updated_box.max_size == box.max_size
+    assert updated_box.changed_by == TEST_DS_ID
     assert updated_box.version == box.version + 1
     rig.file_upload_box_client.resize_file_upload_box.assert_called_once_with(  # type: ignore
         box_id=box.file_upload_box_id,
