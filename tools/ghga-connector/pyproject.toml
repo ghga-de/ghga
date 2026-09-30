@@ -24,7 +24,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
 ]
 name = "ghga_connector"
-version = "4.0.1"
+version = "4.0.2"
 description = "GHGA Connector - A CLI client application for interacting with the GHGA system."
 license = "Apache-2.0"
 dependencies = [

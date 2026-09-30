@@ -22,7 +22,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "schemapack"
-version = "4.4.1"
+version = "4.4.2"
 description = "Make your JSON Schemas sociable and create linked data models."
 license = "Apache-2.0"
 dependencies = [
