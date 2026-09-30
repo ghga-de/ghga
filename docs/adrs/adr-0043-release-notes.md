@@ -46,7 +46,9 @@ That takes a short summary, which only a person can write.
 We keep release notes as GitHub releases, one for each platform release and one for each release of a library or tool.
 There are no changelog files in the repository.
 A release lists the pull requests since the previous release of the same name that touched its files.
-A final release compares with the previous final release, so it covers the whole cycle; a candidate compares with the previous tag, candidate or not.
+Only final releases get one; a release candidate gets no release page.
+A final release compares with the previous final release, so it covers the whole cycle.
+Notes generated locally for a candidate compare with the previous tag, candidate or not.
 A first release, such as the first `hexkit/` tag or the first final `ghga/` tag, compares with the first platform tag before it, `ghga/15.3.1-rc.1`.
 Comparing with nothing would list the history imported from the old repositories, whose pull request numbers lead to the wrong pull requests here.
 
@@ -57,7 +59,7 @@ Comparing with nothing would list the history imported from the old repositories
 - **Libraries and tools:** a `name/x.y.z` tag lists the pull requests that changed what the member ships.
   That is the set the drift gate uses: the packaged roots, `pyproject.toml`, the README and the licence.
 - **Companions:** a platform-lane member that declares `notes = true` in `[tool.ghga]` ([ADR-0033](adr-0033-capability-markers-and-placement.md)), now `ghga-datasteward-kit`, has no tag of its own.
-  A platform release tags each of them as `name/X.Y.Z` with the platform version, the version stamping gives them in the images, and drafts their release like a library's.
+  A final platform release tags each of them as `name/X.Y.Z` with the platform version, the version stamping gives them in the images, and drafts their release like a library's; a candidate tags none.
   A companion with no change since its previous release gets neither.
   **Amended 2026-09-30:** `metldata` is no longer a companion and counts as part of the platform.
   It gets release notes of its own again once the workspace moves to schemapack and integrates metldata fully.
@@ -66,7 +68,8 @@ Comparing with nothing would list the history imported from the old repositories
 - **No release page:** `ghga-event-schemas` is embedded in the images only, and `auth-km-jobs` is a service, counted with the platform.
 - **Tag names:** a tag spells the member with its canonical name, `ghga-connector`, also where the distribution declares `ghga_connector`.
 
-`scripts/release_notes.py` generates the notes, and the release workflows create them as a **draft** release once the tag's build is green.
+`scripts/release_notes.py` generates the notes, and the release workflows create them as a **draft** release once the tag's build is green and, for the platform, its images and charts are pushed to Docker Hub.
+A sweep or targeted PyPI release of a prerelease version still tags the member but drafts no release.
 A tag that already has a release is left alone.
 So a release starts with pushing its tag, never in the GitHub UI: GitHub creates the tag only when the release is published there, and the workflow would then find a release it must not touch.
 The notes have two parts:

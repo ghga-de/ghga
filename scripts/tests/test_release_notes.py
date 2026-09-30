@@ -421,14 +421,19 @@ def test_draft_sends_the_notes(gh):
     assert "--prerelease" not in command
 
 
-def test_draft_marks_only_a_final_platform_release_as_latest(gh):
+def test_draft_marks_a_platform_release_as_latest(gh):
     release_notes.draft("ghga/15.4.0", "notes")
-    release_notes.draft("ghga/15.5.0-rc.1", "notes")
-    final, candidate = (command for command, _ in gh if "create" in command)
-    assert final[final.index("--title") + 1] == "GHGA 15.4.0"
-    assert "--latest=true" in final
-    assert "--latest=false" in candidate
-    assert "--prerelease" in candidate
+    command, _ = gh[-1]
+    assert command[command.index("--title") + 1] == "GHGA 15.4.0"
+    assert "--latest=true" in command
+    assert "--prerelease" not in command
+
+
+@pytest.mark.parametrize("tag", ["ghga/15.5.0-rc.1", "hexkit/8.7.0rc1"])
+def test_draft_refuses_a_prerelease(tag, gh):
+    with pytest.raises(SystemExit, match="only final releases are drafted"):
+        release_notes.main([tag, "--draft"])
+    assert gh == []
 
 
 def test_draft_leaves_an_existing_release_alone(gh, monkeypatch):
