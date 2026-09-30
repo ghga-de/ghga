@@ -61,6 +61,8 @@ Further rules:
   It defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut from `main` instead, pass `origin/main`.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the `config.js` generation the launcher does.
   For anything beyond the `just fe-*` recipes, work in `frontend/data-portal` under its own `AGENTS.md`.
+- For parallel work, create a worktree with `just wt <branch>`, which syncs its `.venv`; a worktree from Claude Code's `--worktree` gets a branch name outside the [grammar](docs/conventions.md#names-branches-prs-commits), so rename it before pushing.
+  Only one worktree at a time runs the demo or the test bed, since all share one kind cluster and the host's ports.
 
 ## Test levels
 
