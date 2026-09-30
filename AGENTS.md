@@ -98,7 +98,8 @@ Further rules:
 
 ## Writing
 
-Docs, code comments, docstrings, commits and pull requests follow the [writing style](docs/style.md): plain language, one sentence per line in repo Markdown, comments that explain why rather than history, and the [docstring rules](docs/style.md#docstrings).
+Docs, code comments, docstrings, commits and pull requests follow the [writing style](docs/style.md): plain language, comments that explain why rather than history, and the [docstring rules](docs/style.md#docstrings).
+Markdown files in the repo take one sentence per line; text for a GitHub web form — pull request descriptions, review and issue comments, release notes — takes one line per paragraph, as the [line wrapping](docs/style.md#line-wrapping) rules say.
 Read the section that applies before writing any of them.
 For anything under `docs/`, read [docs/README.md](docs/README.md) first for what each document is for, then the [ADR shape](docs/style.md#architecture-decision-records) or the [epic conventions](docs/epics/README.md).
 An epic specification records the plan as its epic started, so do not update it afterwards; current behaviour belongs in an ADR or the code.
