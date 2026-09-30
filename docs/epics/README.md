@@ -142,4 +142,5 @@ An epic that was resolved in another way than its specification planned counts a
 - (89) [Apollo](./epic-0089-apollo.md): Initial Version of the GHGA Registry Service
 - (90) [Red-billed Quelea](./epic-0090-red-billed-quelea.md): Support for Batch DAO Operations in Hexkit
 - (93) [Giraffe](./epic-0093-giraffe.md): Early Data Lifecycle Rollout
+- (94) [Cuckoo Wasp](./epic-0094-cuckoo-wasp.md): Test Bed Runs Against a Cluster
 <!-- epic-index:unfolding:end -->
