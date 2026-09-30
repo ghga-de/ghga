@@ -2010,6 +2010,308 @@ async def test_resize_box_fub_version_error(rig: JointRig, populated_boxes: list
     assert unchanged_box.version == original_version
 
 
+async def test_upsert_file_upload_box_does_not_clobber_a_concurrent_write(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that an inbound FileUploadBox update retries instead of overwriting.
+
+    The consumer reads the RDUB, then a request writes a state change. Applying the
+    event from the stale read would silently discard that state change.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    assert box.state == "open"
+
+    stale_read = box.model_copy()
+    original_find_one = rig.box_dao.find_one
+    calls: list[int] = []
+
+    async def find_one_then_let_a_request_win(**kwargs):
+        """Serve the stale copy once, simulating a request landing after the read."""
+        calls.append(1)
+        if len(calls) == 1:
+            changed = box.model_copy(
+                update={"version": box.version + 1, "state": "locked"}
+            )
+            await rig.box_dao.update(changed)
+            return stale_read
+        return await original_find_one(**kwargs)
+
+    rig.box_dao.find_one = find_one_then_let_a_request_win
+
+    await rig.rdub_manager.upsert_file_upload_box(
+        models.FileUploadBox(
+            id=box.file_upload_box_id,
+            version=4,
+            state="locked",
+            file_count=2,
+            size=99,
+            max_size=TEST_MAX_SIZE,
+            storage_alias="HD01",
+        )
+    )
+
+    stored = await rig.box_dao.get_by_id(box_id)
+    # The request's state change survived, and the event still landed
+    assert stored.state == "locked"
+    assert stored.file_upload_box_version == 4
+    assert stored.file_count == 2
+    assert len(calls) == 2, "expected one retry against a fresh copy"
+
+
+async def test_upsert_file_upload_box_escalates_persistent_conflict(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that an unresolvable conflict is raised, not swallowed.
+
+    Returning normally would commit the Kafka offset and discard the update. Raising
+    sends it to the DLQ instead, which matters most for an archived box: that state is
+    terminal, so no later event arrives to repair the drift.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    bumps: list[int] = []
+    original_find_one = rig.box_dao.find_one
+
+    async def find_one_but_always_lose(**kwargs):
+        """Move the stored box on after every read, so no attempt can ever win."""
+        stale = await original_find_one(**kwargs)
+        bumps.append(1)
+        await rig.box_dao.update(
+            stale.model_copy(update={"version": stale.version + 1})
+        )
+        return stale
+
+    rig.box_dao.find_one = find_one_but_always_lose
+
+    with pytest.raises(rig.rdub_manager.BoxUpdateConflictError):
+        await rig.rdub_manager.upsert_file_upload_box(
+            models.FileUploadBox(
+                id=box.file_upload_box_id,
+                version=4,
+                state="archived",
+                file_count=2,
+                size=99,
+                max_size=TEST_MAX_SIZE,
+                storage_alias="HD01",
+            )
+        )
+
+    assert len(bumps) == 3, "expected MAX_UPSERT_ATTEMPTS attempts before giving up"
+
+
+async def test_state_change_survives_a_conflicting_request(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that an edit to another field cannot fail a state change UCS applied.
+
+    A rename wants nothing this request wants, so it merges. Failing here would leave
+    UCS locked and the RDUB open, and RDUB `state` is the one field the outbox event
+    never repairs.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_lock = rig.file_upload_box_client.lock_file_upload_box
+
+    async def lock_then_let_another_request_in(**kwargs):
+        """UCS applies the lock, then a rename lands before we persist."""
+        await original_lock(**kwargs)
+        current = await rig.box_dao.get_by_id(box_id)
+        await rig.box_dao.update(
+            current.model_copy(
+                update={"version": current.version + 1, "title": "Renamed"}
+            )
+        )
+
+    rig.file_upload_box_client.lock_file_upload_box = lock_then_let_another_request_in
+
+    await rig.rdub_manager.update_research_data_upload_box(
+        box_id=box_id,
+        version=box.version,
+        title=None,
+        description=None,
+        state="locked",
+        auth_context=DATA_STEWARD_AUTH_CONTEXT,
+    )
+
+    stored = await rig.box_dao.get_by_id(box_id)
+    assert stored.state == "locked", "the state change UCS applied must be recorded"
+    assert stored.title == "Renamed", "the concurrent rename must survive too"
+
+
+async def test_persist_box_update_rejects_a_competing_change_to_the_same_field(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that two requests wanting the same field is a real conflict.
+
+    Retrying over it would apply this request's value on top of one the caller never
+    saw, and there is no way to tell which of the two should win.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Another request sets the title and lands first
+    await rig.box_dao.update(
+        box.model_copy(update={"version": box.version + 1, "title": "Other request"})
+    )
+
+    updated_box = box.model_copy(update={"version": box.version + 1, "title": "Mine"})
+    with pytest.raises(rig.rdub_manager.BoxVersionError):
+        await rig.rdub_manager._persist_rdub_update(box=box, updated_box=updated_box)
+
+    stored = await rig.box_dao.get_by_id(box_id)
+    assert stored.title == "Other request"
+
+
+async def test_persist_box_update_merges_a_disjoint_concurrent_change(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that two requests wanting different fields both land.
+
+    There are few enough RDUB fields that a title edit and a state change are
+    routinely independent. Neither wanted what the other wrote, so there is nothing
+    to resolve and refusing one of them would be a conflict we invented.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+
+    # Another request changes the state and lands first, stamping as it goes
+    await rig.box_dao.update(
+        box.model_copy(
+            update={
+                "version": box.version + 1,
+                "state": "locked",
+                "last_changed": now_utc_ms_prec(),
+                "changed_by": uuid4(),
+            }
+        )
+    )
+
+    stamp = uuid4()
+    updated_box = box.model_copy(
+        update={
+            "version": box.version + 1,
+            "title": "Mine",
+            "description": "Also mine",
+            "changed_by": stamp,
+        }
+    )
+    await rig.rdub_manager._persist_rdub_update(box=box, updated_box=updated_box)
+
+    stored = await rig.box_dao.get_by_id(box_id)
+    assert stored.state == "locked", "the other request's field was reverted"
+    assert stored.title == "Mine"
+    assert stored.description == "Also mine"
+    assert stored.changed_by == stamp
+
+
+async def test_persist_box_update_merges_over_a_concurrent_change(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a lost race is retried instead of failing the caller.
+
+    The outbox consumer writes the same document, so a straight write of a copy read
+    before it would discard the FileUploadBox fields it had just applied. The retry
+    re-reads and re-applies only this request's own fields.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_get = rig.box_dao.get_by_id
+    reads: list[int] = []
+
+    async def get_then_let_the_consumer_win(bid):
+        """Serve a stale copy once, with the consumer landing after the read."""
+        current = await original_get(bid)
+        reads.append(1)
+        if len(reads) == 1:
+            await rig.box_dao.update(
+                current.model_copy(
+                    update={
+                        "version": current.version + 1,
+                        "file_upload_box_version": 7,
+                    }
+                )
+            )
+        return current
+
+    rig.box_dao.get_by_id = get_then_let_the_consumer_win
+
+    updated_box = box.model_copy(update={"version": box.version + 1, "title": "New"})
+    await rig.rdub_manager._persist_rdub_update(box=box, updated_box=updated_box)
+
+    rig.box_dao.get_by_id = original_get
+    stored = await rig.box_dao.get_by_id(box_id)
+    # Both survived: the consumer's FUB field and this request's title
+    assert stored.file_upload_box_version == 7
+    assert stored.title == "New"
+    assert len(reads) == 2, "expected one retry against a fresh copy"
+
+
+async def test_persist_box_update_gives_up_on_a_persistent_conflict(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a conflict that never clears is reported as BoxVersionError."""
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    original_get = rig.box_dao.get_by_id
+
+    async def get_but_always_lose(bid):
+        """Move the stored box on after every read, so no attempt can win."""
+        current = await original_get(bid)
+        await rig.box_dao.update(
+            current.model_copy(update={"version": current.version + 1})
+        )
+        return current
+
+    rig.box_dao.get_by_id = get_but_always_lose
+
+    updated_box = box.model_copy(update={"version": box.version + 1, "title": "New"})
+    with pytest.raises(rig.rdub_manager.BoxVersionError):
+        await rig.rdub_manager._persist_rdub_update(box=box, updated_box=updated_box)
+
+    rig.box_dao.get_by_id = original_get
+    stored = await rig.box_dao.get_by_id(box_id)
+    assert stored.title == box.title
+
+
+async def test_persist_box_update_never_writes_a_mirrored_field(
+    rig: JointRig, populated_boxes: list[UUID]
+):
+    """Test that a mirrored field is left alone even when nothing has moved.
+
+    The request path does not write UCS's answer under any circumstance, so the
+    stored max_size stays as the consumer last left it and the request's own fields
+    still land alongside it.
+    """
+    box_id = populated_boxes[0]
+    box = await rig.box_dao.get_by_id(box_id)
+    stamp = uuid4()
+
+    updated_box = box.model_copy(
+        update={
+            "version": box.version + 1,
+            # Owned, so both must land
+            "state": "locked",
+            "changed_by": stamp,
+            # Mirrored, so neither may be written
+            "max_size": TEST_MAX_SIZE * 2,
+            "file_upload_box_state": "locked",
+        }
+    )
+    await rig.rdub_manager._persist_rdub_update(
+        box=box, updated_box=updated_box, remote_committed=True
+    )
+
+    stored = await rig.box_dao.get_by_id(box_id)
+    assert stored.max_size == box.max_size
+    assert stored.file_upload_box_state == box.file_upload_box_state
+    assert stored.file_upload_box_version == box.file_upload_box_version
+    # What the request does own still lands
+    assert stored.state == "locked"
+    assert stored.changed_by == stamp
+    assert stored.version == box.version + 1
+
+
 async def test_update_box_state_and_max_size_exclusive(rig: JointRig):
     """Test that passing both state and max_size to update raises ValueError."""
     with pytest.raises(ValueError):
