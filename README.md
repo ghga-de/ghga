@@ -193,6 +193,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 - **[docs/adrs/](docs/adrs/)** — the decisions (and why); the [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 - **[docs/style.md](docs/style.md)** — writing style for coding agents.
+- **[docs/dev/using-agents.md](docs/dev/using-agents.md)** — how to work with coding agents here: the setup, personal instructions, parallel worktrees.
 - **[docs/agent-instructions.md](docs/agent-instructions.md)** — which instruction file holds what, and where the `AGENTS.md` files sit.
 
 ## Conventions

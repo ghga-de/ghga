@@ -42,19 +42,10 @@ An `AGENTS.md` covers an area, not a member — the 32 workspace members share t
 ## The stubs
 
 `AGENTS.md` is the only file with instructions in it.
-Each tool that cannot read it gets a stub that points at it, and nothing else.
-For Claude Code, a `CLAUDE.md` beside every `AGENTS.md`, whose **first line is the import**:
+Claude Code reads it natively, from v2.1.277 on, and no `CLAUDE.md` is committed: one in or above the working directory makes Claude Code read it instead of every `AGENTS.md`.
+Personal instructions stay out of the repo; [dev/using-agents.md](dev/using-agents.md#personal-setup) says where they go.
 
-```markdown
-@AGENTS.md
-
-# Claude Code instructions
-
-`AGENTS.md` holds the instructions for every agent. This stub exists because Claude Code
-does not read that file yet.
-```
-
-For Copilot, one `.github/copilot-instructions.md` at the repo root, of the same shape.
+Copilot gets one stub, `.github/copilot-instructions.md` at the repo root, which points at `AGENTS.md` and holds nothing else.
 Copilot reads the root `AGENTS.md` by itself but finds the nested ones only with `chat.useNestedAgentsMdFiles`, which is set in the committed `.vscode/settings.json`.
 
 ## AGENTS.md and README.md
@@ -86,13 +77,13 @@ Only a name and a description load until the skill is invoked.
 The folder-with-a-`SKILL.md` shape is the [Agent Skills](https://agentskills.io) standard — open and stewarded like `AGENTS.md`; `.agents/skills/` is its tool-agnostic location, and our own dependencies ship skills there.
 
 Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, which its documentation supports.
-The symlink is the stub for skills, the same trick as `CLAUDE.md`, and it goes when Claude Code reads the standard path.
+The symlink is a stub for skills, and it goes when Claude Code reads the standard path.
 
 The links are relative and committed: git stores a symlink as its target path, so a clone gets working links without a setup step.
 Generating them instead, from a recipe or a container hook, would leave the skills missing for everyone who has not run it.
 
 A Windows checkout without `core.symlinks` gets text files instead, and the skills go quiet there.
-That is why [ADR-0042](adrs/adr-0042-agent-instruction-files.md) rejects a `CLAUDE.md` symlink and accepts these ones: the devcontainer is the intended environment, and a skill that fails to load costs one procedure, where a `CLAUDE.md` that fails to load costs every rule at once.
+[ADR-0042](adrs/adr-0042-agent-instruction-files.md) accepts that: the devcontainer is the intended environment, and a skill that fails to load costs one procedure, not every rule at once.
 
 `AGENTS.md` names the directory and says no more about it: the tools list the skills they find, and an index in prose would only duplicate them and go stale.
 The line is there so an agent without skill support knows the directory holds procedures it can read as plain Markdown.
@@ -117,4 +108,4 @@ Two limits, because the instinct is always to add a line:
 
 ## Checks
 
-`scripts/docs_check.py` ([ADR-0041](adrs/adr-0041-docs-linting.md)) fails when an `AGENTS.md` is missing its stubs, a stub carries content of its own, or an instruction file sits at a path no tool reads.
+`scripts/docs_check.py` ([ADR-0041](adrs/adr-0041-docs-linting.md)) fails when a `CLAUDE.md` is committed, the Copilot stub carries content of its own, or an instruction file sits at a path no tool reads.

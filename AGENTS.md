@@ -8,7 +8,7 @@ What the repository is, its layout, and how to run the demo and test bed are doc
 - `AGENTS.md` (this file) is the canonical AI entrypoint, covering what holds everywhere.
   The area file for the directory you are working in applies on top of it; read it first.
 - `README.md` and the files in `docs/` are authoritative for humans and agents alike; read the [writing style](docs/style.md) and the [conventions](docs/conventions.md) when a task touches what they cover.
-- [docs/agent-instructions.md](docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill, and why `CLAUDE.md` and `.github/copilot-instructions.md` are stubs that hold nothing of their own.
+- [docs/agent-instructions.md](docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill, why `.github/copilot-instructions.md` is a stub that holds nothing of its own, and why no `CLAUDE.md` is committed.
 
 ## Prime Directive
 

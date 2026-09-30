@@ -332,7 +332,6 @@ def test_missing_index_markers(repo, capsys):
     assert "missing <!-- adr-index:start -->" in out
 
 
-STUB = "@AGENTS.md\n\n# Claude Code instructions\n\n`AGENTS.md` holds the rules.\n"
 COPILOT = "# GitHub Copilot instructions\n\n`AGENTS.md` holds the rules.\n"
 
 
@@ -340,12 +339,10 @@ COPILOT = "# GitHub Copilot instructions\n\n`AGENTS.md` holds the rules.\n"
 def agents(repo):
     """The `repo` fixture with a conforming set of instruction files on top."""
     (repo / "AGENTS.md").write_text("# Agent Instructions\n")
-    (repo / "CLAUDE.md").write_text(STUB)
     (repo / ".github").mkdir()
     (repo / ".github/copilot-instructions.md").write_text(COPILOT)
     (repo / "libs").mkdir()
     (repo / "libs/AGENTS.md").write_text("# Agent Instructions for libs\n")
-    (repo / "libs/CLAUDE.md").write_text(STUB)
     (repo / "libs/.agents/skills/qa").mkdir(parents=True)
     (repo / "libs/.agents/skills/qa/SKILL.md").write_text("---\nname: qa\n---\n")
     return repo
@@ -357,23 +354,21 @@ def _instruction_problems(repo: Path) -> list[str]:
 
 
 def test_conforming_instruction_files(agents):
-    """A complete set of area files, stubs and skills reports nothing."""
+    """A complete set of area files, the Copilot stub and skills reports nothing."""
     assert _instruction_problems(agents) == []
 
 
-def test_agents_file_needs_its_stub(agents):
-    """Claude Code finds a nested area file only through the CLAUDE.md beside it."""
-    (agents / "libs/CLAUDE.md").unlink()
+@pytest.mark.parametrize(
+    "rel", ["CLAUDE.md", "libs/CLAUDE.md", ".claude/CLAUDE.md", "libs/CLAUDE.local.md"]
+)
+def test_no_committed_claude_file(agents, rel):
+    """One CLAUDE.md in or above the working directory switches AGENTS.md off."""
+    (agents / rel).parent.mkdir(exist_ok=True)
+    (agents / rel).write_text("@AGENTS.md\n")
     assert _instruction_problems(agents) == [
-        "libs/AGENTS.md: no CLAUDE.md stub beside it"
+        f"{rel}: a committed CLAUDE.md stops Claude Code reading AGENTS.md;"
+        " move its rules into the AGENTS.md"
     ]
-
-
-def test_stub_needs_its_agents_file(agents):
-    """A stub pointing at nothing is a dangling import."""
-    (agents / "services").mkdir()
-    (agents / "services/CLAUDE.md").write_text(STUB)
-    assert "services/CLAUDE.md: no AGENTS.md beside it" in _instruction_problems(agents)
 
 
 def test_missing_copilot_stub(agents):
@@ -389,16 +384,16 @@ def test_missing_copilot_stub(agents):
     "stub,expected",
     [
         ("", "the stub is empty"),
-        ("# Claude\n\nSee AGENTS.md.\n", "the first line must be"),
-        (STUB + "\n## More\n\nRules.\n", "carries one heading, not 2"),
-        (STUB + "\n- Prefer minimal diffs\n", "carries no content of its own"),
-        (STUB + "\n@docs/style.md\n", "carries no content of its own"),
-        (STUB + "\nOne.\nTwo.\nThree.\nFour.\n", "the stub is 7 lines"),
+        ("# Copilot\n\nSee the docs.\n", "the stub must point at AGENTS.md"),
+        (COPILOT + "\n## More\n\nRules.\n", "carries one heading, not 2"),
+        (COPILOT + "\n- Prefer minimal diffs\n", "carries no content of its own"),
+        (COPILOT + "\n@docs/style.md\n", "carries no content of its own"),
+        (COPILOT + "\nOne.\nTwo.\nThree.\nFour.\nFive.\n", "the stub is 7 lines"),
     ],
 )
 def test_stub_carries_nothing_of_its_own(agents, stub, expected):
-    """Anything beyond the import, a heading and a sentence belongs in the AGENTS.md."""
-    (agents / "libs/CLAUDE.md").write_text(stub)
+    """Anything beyond a heading and a sentence belongs in the AGENTS.md."""
+    (agents / ".github/copilot-instructions.md").write_text(stub)
     problems = _instruction_problems(agents)
     assert any(expected in p for p in problems), problems
 
@@ -423,20 +418,8 @@ def test_skill_outside_the_standard_path(agents):
     ]
 
 
-def test_a_dotted_area_keeps_its_leading_dot(agents):
-    """`.github/AGENTS.md` is reported at its real path, not as `github/AGENTS.md`."""
-    (agents / ".github/AGENTS.md").write_text("# Agent Instructions for .github\n")
-    assert _instruction_problems(agents) == [
-        ".github/AGENTS.md: no CLAUDE.md stub beside it"
-    ]
-
-
 def test_a_tracked_stub_missing_from_the_tree_is_skipped(agents):
     """A half-applied rebase must not bury every other problem under a traceback."""
-    (agents / "services").mkdir()
-    (agents / "services/CLAUDE.md").write_text(STUB)
     _stage(agents)
-    (agents / "libs/CLAUDE.md").unlink()
-    assert docs_check.check_instruction_files(agents) == [
-        "services/CLAUDE.md: no AGENTS.md beside it"
-    ]
+    (agents / ".github/copilot-instructions.md").unlink()
+    assert docs_check.check_instruction_files(agents) == []

@@ -6,11 +6,11 @@ This is the primary, tool-agnostic AI entrypoint for any coding agent working in
 
 - `AGENTS.md` is the canonical AI entrypoint for this repository.
 - `AGENTS.md` may reference additional project documentation (for example `README.md` and files in `docs/`) that is also authoritative and intended for both human developers and agents.
-- `CLAUDE.md` beside this file is a stub pointing here and holds nothing else; Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
+- Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
 - Avoid duplicating AI-specific guidance across files to prevent instruction drift; prefer linking from `AGENTS.md`.
 - [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
   Keep always-on rules here and move longer task procedures into skills, which live in `.agents/skills/<name>/SKILL.md` and are symlinked into `.claude/skills/` until Claude Code reads the standard path.
-- Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code finds it through the `CLAUDE.md` stub beside it.
+- Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code loads it once it reads a file in this directory.
 - The dev container's CLI tools and the repo-wide rules are in the root [AGENTS.md](../../AGENTS.md).
 
 ## Prime Directive

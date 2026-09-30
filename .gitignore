@@ -49,6 +49,9 @@ claude-backup/
 !/.claude/output-styles/
 # leave out every local claude settings
 **/.claude/settings.local.json
+# and personal instructions: a committed CLAUDE.local.md would switch AGENTS.md off
+**/CLAUDE.local.md
+**/.claude/rules/*.local.md
 # and the local Copilot settings
 .github/copilot/settings.local.json
 
