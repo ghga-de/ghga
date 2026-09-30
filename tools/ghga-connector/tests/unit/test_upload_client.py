@@ -31,6 +31,7 @@ from ghga_connector import exceptions
 from ghga_connector.constants import UPLOAD_LISTING_PAGE_SIZE
 from ghga_connector.core.client import async_client
 from ghga_connector.core.uploading.api_calls import UploadClient
+from ghga_service_commons.http.mock_api import respond
 from tests.fixtures import set_runtime_test_config  # noqa: F401
 from tests.fixtures.mock_api.apis import (
     UPLOAD_URL,
@@ -38,7 +39,6 @@ from tests.fixtures.mock_api.apis import (
     UploadApiMock,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import api_url, respond
 from tests.fixtures.utils import (
     TEST_FILE_ID,
     TEST_FUB_ID,
@@ -117,7 +117,7 @@ async def test_create_file_upload_success(
     assert file_id == TEST_FILE_ID
     assert storage_alias == TEST_STORAGE_ALIAS1
 
-    request = upload_api.last_request
+    [request] = upload_api.requests
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads")
     assert json.loads(request.read()) == {
         "alias": FILE_ALIAS,
@@ -154,7 +154,8 @@ async def test_create_file_upload_sends_overwrite(
         overwrite=overwrite,
     )
     assert file_id == TEST_FILE_ID
-    assert json.loads(upload_api.last_request.read()) == {
+    [request] = upload_api.requests
+    assert json.loads(request.read()) == {
         "alias": FILE_ALIAS,
         "decrypted_size": decrypted_size,
         "encrypted_size": encrypted_size,
@@ -194,7 +195,7 @@ async def test_get_box_uploads(
     assert uploads[0].decrypted_size == 2048
     assert uploads[0].state == "inbox"
 
-    request = upload_api.last_request
+    [request] = upload_api.requests
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads")
     assert request.url.params["skip"] == "0"
     assert request.url.params["limit"] == str(UPLOAD_LISTING_PAGE_SIZE)
@@ -262,7 +263,8 @@ async def test_get_part_upload_url(
         file_id=TEST_FILE_ID, part_no=1
     )
     assert upload_url == UPLOAD_URL
-    assert upload_api.last_request.url.path.endswith(
+    [request] = upload_api.requests
+    assert request.url.path.endswith(
         f"/boxes/{TEST_FUB_ID}/uploads/{TEST_FILE_ID}/parts/1"
     )
 
@@ -282,11 +284,12 @@ async def test_upload_file_part(
     """Test that upload_file_part fetches the presigned URL and PUTs the content to S3."""
     uploaded: list[bytes] = []
 
-    @mock_apis.router.put(api_url(UPLOAD_URL, ""))
     def upload_part(request: httpx2.Request) -> httpx2.Response:
         """Accept the part content at the presigned URL."""
         uploaded.append(request.read())
         return httpx2.Response(200)
+
+    mock_apis.storage.on_upload_part = upload_part
 
     await upload_client.upload_file_part(
         file_id=TEST_FILE_ID, content=b"abc123", part_no=1
@@ -303,7 +306,7 @@ async def test_complete_file_upload(
         file_id=TEST_FILE_ID, file_alias=FILE_ALIAS, **CHECKSUMS
     )
 
-    request = upload_api.last_request
+    [request] = upload_api.requests
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads/{TEST_FILE_ID}")
     assert json.loads(request.read()) == CHECKSUMS
 
@@ -323,7 +326,7 @@ async def test_delete_file(
     """Test that delete_file sends a DELETE request and uses the correct work order token."""
     await upload_client.delete_file(file_id=TEST_FILE_ID, file_alias=FILE_ALIAS)
 
-    request = upload_api.last_request
+    [request] = upload_api.requests
     assert request.method == "DELETE"
     assert request.url.path.endswith(f"/boxes/{TEST_FUB_ID}/uploads/{TEST_FILE_ID}")
 
