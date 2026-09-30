@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_service_commons"
-version = "8.1.2"
+version = "9.0.0"
 description = "A library that contains common functionality used in services of GHGA"
 license = "Apache-2.0"
 dependencies = [
