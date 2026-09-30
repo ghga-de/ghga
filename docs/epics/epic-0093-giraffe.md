@@ -64,12 +64,12 @@ relation, written by the loader and read by the data portal.
 
 ### Included/Required
 
-- **One study per submission.** dskit must reject any submission whose metadata contains more than
-  one study, and the metldata loader must assert the same rather than silently truncating. Every
-  other item below would be ambiguous for a multi-study submission: child accessions derive from
-  *the* study PID, replacement is declared per study, supersede is study-level. The test bed's
-  example metadata is currently a single submission containing two studies and must be split as part
-  of this work.
+- **One study per submission.** metldata must reject any submission whose metadata contains more
+  than one study — before minting on the `submit` path, surfaced by dskit, and again in the loader
+  rather than silently truncating. Every other item below would be ambiguous for a multi-study
+  submission: child accessions derive from *the* study PID, replacement is declared per study,
+  supersede is study-level. The test bed's example metadata is currently a single submission
+  containing two studies and must be split as part of this work.
 - **Lifecycle PID scheme.** Studies and their children must be accessioned as `GHGA.YY.XXX.V`,
   `{study_pid}.DS.xxx` for datasets and `{study_pid}.{alias}` for everything else, minted in
   metldata with dskit supplying the parameters. `XXX` is unique within its year; `.DS.xxx` is unique
@@ -166,7 +166,7 @@ This epic covers the following user journeys.
    reused from an earlier study, they put its prior GHGA file accession in that file entity's
    `reused_accession` instead of providing a new upload.
 2. `dskit metadata submit --replaces GHGA.24.ABC.1 …` — repeat the flag to merge several
-   predecessors, omit it entirely for a brand-new study. dskit rejects a multi-study submission or
+   predecessors, omit it entirely for a brand-new study. Submit rejects a multi-study submission or
    one naming an already-replaced predecessor, mints the study PID and the child accessions, reuses
    a dataset's `.DS.xxx` block where the file set is unchanged, runs the three reuse warnings for
    the steward to confirm, carries reuse accessions through untouched, and records the declared
@@ -352,15 +352,24 @@ lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff
 
 #### Work to be performed
 
+- [ ] Validate the submission before minting — exactly one study, aliases unique across all
+      entities of the revision — naming the offending studies or entities and minting nothing on
+      failure
 - [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the config fields
       above
 - [ ] Restructure `AccessionStore` into per-year buckets plus a flat legacy list
 - [ ] Extend the submission record to carry the assigned PIDs and the lineage that justifies them
+- [ ] Resolve the declared predecessors: reject an already-replaced predecessor and a cycle-closing
+      declaration
+- [ ] Compute dataset file sets and diff against the predecessor's for `.DS.xxx` reuse
+- [ ] Compute all three reuse findings dskit prompts on: reuse declared without a predecessor,
+      reused accessions absent from every ancestor, and governance drift via the shared traversal,
+      each naming what it found
 - [ ] Add tests covering: PID format; per-year `XXX` uniqueness; the random path, the fallback to
       picking from the unused sequences, and the error on a full bucket; lineage-scoped `.DS.xxx`
       uniqueness; version continuation from a new-scheme predecessor; fresh root from a legacy
       predecessor; dataset file-set reuse hit and miss; alias-uniqueness violation surfaced as an
-      error
+      error; multi-study submission rejected before any PID is minted
 
 ---
 
@@ -375,15 +384,15 @@ successor, which is how a merge is expressed.
 It is persisted in two places for two readers:
 
 1. **On the submission record**, so the declared relation and the metadata it describes stay one
-   object. This is what dskit reads offline for version continuation, ancestor resolution and the
-   cycle check.
+   object. This is what the offline submit path reads for version continuation, ancestor resolution
+   and the cycle check.
 2. **In a new server-side ancestry collection**, written by the loader, exposed through `GET
    /studies/{study_pid}/successor`. This is what the portal hint resolves against.
 
 `load/collect.py` currently takes `content["studies"][0]["accession"]` for publishable artifacts
-and silently discards any further studies. It must assert a single study and fail loudly. dskit
-rejects multi-study submissions upstream, but the loader is a separate trust boundary and must not
-depend on that.
+and silently discards any further studies. It must assert a single study and fail loudly. The
+submit path rejects multi-study submissions upstream, but the loader is a separate trust boundary
+— reachable over HTTP by anything holding the loader token — and must not depend on that.
 
 The loader (`load/api.py`, `load/load.py`, `load/event_publisher.py`) must apply the replacement
 carried in the payload:
@@ -395,9 +404,9 @@ carried in the payload:
 3. Write the relation into the ancestry collection.
 4. Reject a declaration whose predecessor is already replaced.
 5. Reject a declaration that would close a cycle, and bound the chain walk in `GET
-   /studies/{study_pid}/successor` by a hop limit. dskit checks this offline, but the loader is a
-   separate trust boundary and the endpoint is what fails to terminate if a cycle ever reaches the
-   ancestry collection.
+   /studies/{study_pid}/successor` by a hop limit. The submit path checks this offline, but the
+   loader is a separate trust boundary and the endpoint is what fails to terminate if a cycle ever
+   reaches the ancestry collection.
 
 Re-application of the same declaration must be idempotent, and a `replace-study` declaration must
 produce the same three effects as one arriving with a successor's artifacts. That second path is
@@ -405,7 +414,7 @@ easy to miss: supersede status can change without any new artifacts being loaded
 
 **Governance resolution lives here too.** The file → dataset → `data_access_policy` →
 `data_access_committee` traversal is written **once**, as a function in `libs/metldata`
-parameterised over the metadata representation, so dskit's warning 3 calls it offline against the
+parameterised over the metadata representation, so the submit path calls it offline against the
 submission store and the loader calls it against artifacts. The sharing is at function level, not
 endpoint level: warning 3 asks a historical question ("what applied before?"), the admin panel a
 current one ("what applies now?"). The loader denormalises the result into an accession-keyed
@@ -420,14 +429,14 @@ precomputing costs no freshness. `POST /file-governance/query` serves that colle
 - [ ] Add `GET /studies/{study_pid}/successor`, resolving a full chain (e.g. the chain a->b->c
       resolves to c for a) and returning `null` when there is no successor, including for legacy
       predecessors, and bounding the walk by a hop limit
-- [ ] Reject a cycle-closing declaration in the loader as well, not only in dskit
+- [ ] Reject a cycle-closing declaration in the loader as well, not only on the submit path
 - [ ] Replace the `studies[0]` truncation in `load/collect.py` with a hard assertion
 - [ ] Apply supersede in the loader: mark, emit deletions, write ancestry
 - [ ] Handle the `replace-study` path through the same code
 - [ ] Add the `reused_accession` property to the metadata model's file classes, and regenerate the
       artifact models
 - [ ] Add the governance traversal function, parameterised over the metadata representation, and
-      call it from both dskit's warning 3 and the loader
+      call it from both the submit-path reuse findings and the loader
 - [ ] Add the governance collection, its loader write path, and `POST /file-governance/query`
 - [ ] Add tests covering: idempotent re-declaration; already-replaced predecessor rejected; legacy
       predecessor; merge with several predecessors; chain resolution over more than one hop;
@@ -438,11 +447,13 @@ precomputing costs no freshness. `POST /file-governance/query` serves that colle
 
 ---
 
-### dskit — submission validation, replacement declaration, and warnings
+### dskit — replacement declaration and the warning surface
 
-dskit reads prior studies from metldata's existing submission store. It needs, per previously
-submitted study, its PID, the studies it declares it replaces, and its submitted metadata. Since the
-store holds metadata only, dskit does not resolve a reuse accession to a physical file.
+The checks in this section run in the same process as `dskit metadata submit`, but they are
+metldata's code: dskit imports it, as it already does for minting. What they read is metldata's
+existing submission store — per previously submitted study, its PID, the studies it declares it
+replaces, and its submitted metadata. Since the store holds metadata only, nothing here resolves a
+reuse accession to a physical file.
 
 The store lives on the data steward VM, which is the trusted source and its durability is not a
 lifecycle concern here.
@@ -474,19 +485,23 @@ Note that the "reused file must belong to my own lineage" rule is deliberately *
 anywhere. Merging removes any single lineage to validate against, which is why the judgement moves
 offline into these warnings.
 
+**Where these rules live.** They are metldata's, not dskit's: each one reads the submission store,
+walks the ancestry or knows the GHGA metadata model, which is what metldata's accessioning path
+already does for version continuation and the `.DS.xxx` diff. metldata validates, resolves and
+returns findings; dskit is the CLI that renders them, prompts, applies the auto-confirm option and
+either aborts or lets the mint proceed.
+
 #### Work to be performed
 
-- [ ] Reject multi-study submissions at `submit`, naming the studies found
-- [ ] Enforce alias uniqueness across all entities within the study, with a clear error
-- [ ] Read prior studies, their declared replacements and their metadata from the submission store
-- [ ] Add repeatable `--replaces`, with the two failure rules and the merge prompt
-- [ ] Add `metadata replace-study <old PID> <new PID>` with the same failure rules
-- [ ] Implement the three reuse warnings plus the auto-confirm option
-- [ ] Compute dataset file sets and diff against predecessor datasets for `.DS.xxx` reuse
+- [ ] Add repeatable `--replaces` and the merge lineage prompt
+- [ ] Add `metadata replace-study <old PID> <new PID>`
+- [ ] Render the validation failures as CLI errors, naming what metldata reported: multi-study,
+      duplicate alias, already-replaced predecessor, cycle closure
+- [ ] Prompt for the three reuse warnings reported by metldata, plus the auto-confirm option
 - [ ] Carry reuse accessions through the submission untouched
-- [ ] Add tests covering: two-study rejection; duplicate alias rejection; already-replaced
-      predecessor; cycle closure via `replace-study`; merge lineage prompt, both answers; each
-      warning firing and being overridden; auto-confirm accepting all three
+- [ ] Add tests covering: merge lineage prompt, both answers; each warning firing and being
+      overridden; auto-confirm accepting all three; each validation failure surfacing with the
+      names metldata reported
 
 ---
 
@@ -687,14 +702,16 @@ Feature files referencing the two studies and needing review: `202_upload_comple
 
 ## Cross-cutting invariants to preserve
 
-- **One study per submission** — dskit `submit`, asserted again in the loader.
-- **Aliases unique within a study revision** — dskit `submit`; child accessions derive from the
-  alias.
-- **A study is replaced at most once** — dskit, on both declaration paths; keeps the successor chain
-  single-valued.
-- **The successor relation is acyclic** — dskit walking the chain in the submission store, with the
-  loader rejecting a cycle-closing declaration and the successor endpoint bounded by a hop limit, so
-  a cycle reaching the ancestry collection cannot hang the resolver.
+- **One study per submission** — metldata's pre-mint validation on the `submit` path, asserted again
+  in the loader.
+- **Aliases unique within a study revision** — the same pre-mint validation; child accessions derive
+  from the alias.
+- **A study is replaced at most once** — metldata, on both declaration paths; keeps the successor
+  chain single-valued.
+- **The successor relation is acyclic** — metldata walking the chain in the submission store on
+  either declaration path, with the loader rejecting a cycle-closing declaration and the successor
+  endpoint bounded by a hop limit, so a cycle reaching the ancestry collection cannot hang the
+  resolver.
 - **`accession -> file` single-valued and immutable once bound** — RS
   `FileController.map_accessions_to_file_ids`; only `file -> accession` becomes many.
 - **Legacy PIDs stay valid forever** — never rewritten, never assumed parseable into root and
