@@ -64,5 +64,5 @@ A rule is a PR to an `AGENTS.md` or `docs/`, and a skill a PR to `.agents/skills
 
 ## Reviews and credit
 
-The [PR template](../../.github/pull_request_template.md) asks for the size, the checks and the credit.
+The [PR template](../../.github/pull_request_template.md) asks for the checks and the credit.
 Credit an agent in the PR description as the [conventions](../conventions.md#names-branches-prs-commits) say, never with a `Co-authored-by:` trailer.
