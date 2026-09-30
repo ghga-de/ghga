@@ -310,8 +310,7 @@ def layout() -> Layout:
     """Reads the `[tool.ghga]` markers of the libraries and tools (ADR-0033).
 
     A platform-lane member is part of the platform, unless it declares `notes = true`:
-    then it is a companion, released with the platform but with notes of its own. Of
-    metldata, a companion, the library counts there, while its chart is in `deploy/`.
+    then it is a companion, released with the platform but with notes of its own.
     """
     platform, companions, components = list(PLATFORM_ROOTS), {}, {}
     for root in ("libs", "tools"):
