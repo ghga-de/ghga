@@ -27,6 +27,9 @@ The previous release is the highest tag of the same name below this one. A final
 release compares with the previous final release, a candidate with any earlier tag. A
 first release compares with the first platform tag before it.
 
+Only final releases are drafted. The notes of a candidate can still be printed, to see
+what changed since the previous one.
+
 Usage (`uv run --script`, so the PEP 723 block above resolves):
     uv run --script scripts/release_notes.py ghga/15.4.0
     uv run --script scripts/release_notes.py hexkit/8.7.0 --previous hexkit/8.6.0
@@ -484,10 +487,10 @@ def render(
 
 
 def draft(tag: str, text: str) -> None:
-    """Creates the draft release for `tag`, leaving an existing release untouched.
+    """Creates the draft release for a final `tag`, leaving an existing one untouched.
 
-    Only the platform's final releases may become the repository's latest release;
-    otherwise a library release would take that badge from the platform.
+    Only the platform's releases may become the repository's latest release; otherwise
+    a library release would take that badge from the platform.
     """
     exists = (
         subprocess.run(
@@ -499,9 +502,8 @@ def draft(tag: str, text: str) -> None:
         print(f"{tag} already has a release, left as it is")
         return
     name, _, version = tag.rpartition("/")
-    prerelease = Version(version).is_prerelease
     title = f"GHGA {version}" if name == PLATFORM else f"{name} {version}"
-    latest = name == PLATFORM and not prerelease
+    latest = name == PLATFORM
     command = [
         "gh", "release", "create", tag,
         "--draft", "--verify-tag",
@@ -509,8 +511,6 @@ def draft(tag: str, text: str) -> None:
         "--notes-file", "-",
         f"--latest={str(latest).lower()}",
     ]  # fmt: skip
-    if prerelease:
-        command.append("--prerelease")
     subprocess.run(command, cwd=ROOT, input=text, text=True, check=True)
     print(f"drafted the release {title} for {tag}")
 
@@ -528,13 +528,16 @@ def main(argv: list[str] | None = None) -> int:
         "--draft",
         action="store_true",
         help="create the draft GitHub release instead of printing the notes; for a"
-        " platform tag, also tag and draft the companions",
+        " platform tag, also tag and draft the companions; final releases only",
     )
     args = parser.parse_args(argv)
 
-    name, _, version = args.tag.rpartition("/")
-    if not name or name == "packages" or _parse_version(version) is None:
+    name, _, text = args.tag.rpartition("/")
+    version = _parse_version(text)
+    if not name or name == "packages" or version is None:
         sys.exit(f"error: {args.tag} is not a release tag of the platform or a member")
+    if args.draft and version.is_prerelease:
+        sys.exit(f"error: {args.tag} is a prerelease; only final releases are drafted")
     release_prefixes(name)
     if not _has_tag(args.tag):
         sys.exit(f"error: no tag {args.tag} in this clone")
