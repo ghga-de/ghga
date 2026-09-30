@@ -96,9 +96,20 @@ class Member:
         """
         return f"{_canonical(self.package)}/{self.version}"
 
+    @property
+    def prerelease(self) -> bool:
+        """Whether the declared version is a PEP 440 pre- or dev release, e.g. `2.0.0rc1`.
+
+        A member without a valid version is not one.
+        """
+        try:
+            return Version(self.version).is_prerelease
+        except InvalidVersion:
+            return False
+
     def as_json(self) -> dict:
         """The member as the workflows consume it. Tuples serialize as JSON arrays."""
-        return {**asdict(self), "tag": self.tag}
+        return {**asdict(self), "tag": self.tag, "prerelease": self.prerelease}
 
 
 @dataclass(frozen=True)

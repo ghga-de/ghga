@@ -128,7 +128,7 @@ How a release runs end to end is in [releases.md](releases.md).
 - A pushed git tag **`packages/x.y.z`** releases every PyPI-lane member the index is behind on, dependencies first; the version is a label naming no member ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
 - Wheels publish to **PyPI**, rehearsed on **TestPyPI** first, both by trusted publishing.
   Images publish to `docker.io/ghga/<member>` and charts as OCI artifacts under `ghga/<chart>-chart` — a tag push builds both; publishing them is a deliberate dispatch ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
-- The platform and each library and tool get a generated draft GitHub release per release, listing their pull requests by commit type.
+- The platform and each library and tool get a generated draft GitHub release per final release, listing their pull requests by commit type; release candidates get none.
   The summaries above the list are filled in by hand in the draft, which is then published ([ADR-0043](adrs/adr-0043-release-notes.md)).
 
 ## Toolchain

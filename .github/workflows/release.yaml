@@ -84,6 +84,7 @@ jobs:
       mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
+      prerelease: ${{ steps.route.outputs.prerelease }}
       images: ${{ steps.images.outputs.images }}
     steps:
       - uses: actions/checkout@v5
@@ -135,6 +136,11 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "lane=$lane"       >> "$GITHUB_OUTPUT"
           echo "mode=$mode"       >> "$GITHUB_OUTPUT"
+          # A candidate (x.y.z-rc.N) gets no draft release; the regex above vouched for the
+          # shape, so a `-` is decisive.
+          prerelease=false
+          [[ "$version" == *-* ]] && prerelease=true
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
       # ADR-0027: the release VERIFIES the integrated HEAD, it does not re-test it. CI
       # already proved this commit good; the tag only snapshots that. So the two things
@@ -684,11 +690,18 @@ jobs:
   # The companions, members released with the platform but with notes of their own, are
   # tagged with the platform version here and drafted too. A tag pushed with the workflow
   # token starts no workflow, so their tags do not reach `resolve`. PyPI-lane releases
-  # are drafted in pypi-publish.yaml, once their members are uploaded. Only a green build
-  # is drafted: a release whose images or charts failed has nothing to publish yet.
+  # are drafted in pypi-publish.yaml, once their members are uploaded.
+  #
+  # Only a final release that reached Docker Hub is drafted: a green build of a final
+  # version dispatched with `push`. A candidate gets no release page and its companions
+  # no tags; its notes can still be generated locally. A tag push is build-only, so it
+  # has nothing to publish yet, and neither has a failed build.
   draft-release:
     needs: [resolve, build-images, package-charts]
-    if: ${{ needs.resolve.outputs.lane == 'platform' }}
+    if: >-
+      ${{ needs.resolve.outputs.lane == 'platform'
+      && needs.resolve.outputs.prerelease == 'false'
+      && inputs.push }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
