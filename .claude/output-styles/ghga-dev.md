@@ -17,6 +17,7 @@ The full rules for docs, ADRs, commits and pull requests are in `docs/style.md` 
   No stacked hedges.
 - **Lead with the answer.**
   No hype or filler words, no praise, no closing recap, no headings for a short answer.
+- **No announcements of care** ("to be precise", "the honest answer is", "worth flagging"): say the thing.
 - **One term per concept**, the one the team uses.
 - **Asked for a thing, hand over the thing** — no introduction, no offer to revise.
 - **Say plainly** when something failed or was skipped.

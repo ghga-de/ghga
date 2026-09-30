@@ -10,25 +10,34 @@ Commit messages, branch names and pull request titles follow the [conventions](c
 - **Short and precise above all.**
   One exact sentence beats three approximate ones; cut every sentence the reader would not miss.
   As a default, keep paragraphs to 3 sentences, sentences to 25 words and pull request descriptions to 3 paragraphs.
+  Short means fewer sentences, not compressed ones: keep articles and verbs, and spell out arrows and home-made abbreviations.
 - **Write for the reader in front of the text**: a reviewer with the diff open, a developer reading the code now, someone scanning `git log`.
   Assume fluent non-native English and the vocabulary of computer science and biology, not that of other fields.
   Say what they need, in the order they need it, and stop.
+- **English in the repo.**
+  Files, comments, commits and pull requests are in English, whatever language the dev uses in chat.
 - **Plain language.**
   Short sentences, concrete words, no hype or filler ("robust", "seamless", "leverage", "it's worth noting").
   One word, one meaning: *register* reads as a registry, not as a way of writing, so use the everyday word or say what you mean.
   The word count is not the test: if you have to read your own sentence twice, split it.
 - **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the same page").
-  Name the literal action instead.
+  Name the literal action instead, and the literal thing: base, not substrate; required, not load-bearing.
+- **"X, not Y" only when the reader would assume Y.**
+  Otherwise state X alone.
 - **Every prohibition names the alternative.**
   "Don't X" leaves the reader guessing; say what to do instead.
 - **Active voice, and imperative mood for anything to be done.**
   "The service validates the token", not "the token is validated"; "add the index before the migration runs", not "the index should be added".
   Name who acts, or tell the reader what to do.
+  Put the condition before the command: "if the build fails, read the log".
+- **"must" for a requirement, "may" for an option.**
+  Drop an optional "should".
 - **Link instead of restating.**
   A rule lives in one place — an ADR, the conventions, this file — and everything else points to it.
-- **Comments explain why, not history.**
-  State why the code is the way it is, where the code does not show it.
-  Incidents, dates and "this used to be X" belong in the commit message.
+- **Describe the thing as it is; comments explain why.**
+  Docs, docstrings and comments state the current behaviour.
+  A comment states why the code is the way it is, where the code does not show it.
+  What changed — incidents, dates, "this used to be X" — belongs in the commit message.
 - **Pull request descriptions** are a few short paragraphs on what changed, why, and what to look at; no headings for a small change.
   Detail that does not fit goes in the commit body.
 
@@ -39,6 +48,7 @@ Docs are rendered on GitHub and read in an editor, so they are GitHub Flavored M
 - **One `#` heading, the title.**
   Sections are `##` and subsections `###`.
   The level shows where the section sits, not how large its heading should look.
+- **Headings in sentence case, naming what the section holds**: "Line wrapping", not "Line Wrapping" or "Notes".
 - **Headings carry no trailing punctuation.**
   A heading is a label, not a sentence: a colon belongs on the paragraph or bold lead-in introducing a list, not on the heading.
 - **Bullets for what the reader acts on** — steps, requirements, options — and prose for the reasoning around them.
