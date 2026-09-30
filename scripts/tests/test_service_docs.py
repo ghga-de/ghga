@@ -72,12 +72,12 @@ def test_render_readme_replaces_between_markers(tmp_path, monkeypatch):
     readme.write_text(
         "### Parameters\n\n"
         f"{service_docs.BEGIN_MARKER}\n\nstale\n\n{service_docs.END_MARKER}\n\n"
-        "### Usage\n"
+        "## HTTP API\n"
     )
     assert service_docs.render_readme(readme, "- fresh") == (
         "### Parameters\n\n"
         f"{service_docs.BEGIN_MARKER}\n\n- fresh\n\n{service_docs.END_MARKER}\n\n"
-        "### Usage\n"
+        "## HTTP API\n"
     )
 
 

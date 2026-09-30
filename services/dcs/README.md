@@ -2,6 +2,8 @@
 
 a GA4GH DRS-compliant service for delivering files from S3 encrypted according to the GA4GH Crypt4GH standard.
 
+The service ships as the container image `ghga/dcs` and the Helm chart [`dcs`](../../deploy/charts/dcs/README.md).
+
 ## Description
 
 This service implements the [GA4GH DRS](https://github.com/ga4gh/data-repository-service-schemas) v1.0.0 for serving files that where encrypted according to the [GA4GH Crypt4GH](https://www.ga4gh.org/news/crypt4gh-a-secure-method-for-sharing-human-genetic-data/) from S3-compatible object storages.
@@ -27,10 +29,9 @@ A user-specific envelope can be requested from the `GET /objects/{object_id}/env
 The actual envelope creation is delegated to another service via a RESTful call.
 Please see the configuration for further details.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/dcs` and the Helm chart [`dcs`](../../deploy/charts/dcs/README.md).
-Its executable `dcs` takes one of these commands:
+The executable `dcs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -41,6 +42,9 @@ Its executable `dcs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `dcs`: the environment variable `DCS_HOST` sets `host`, and the YAML file is `.dcs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -760,11 +764,6 @@ The service requires the following configuration parameters:
   - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`** *(required)*: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `dcs`: the environment variable `DCS_HOST` sets `host`, and the YAML file is `.dcs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

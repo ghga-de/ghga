@@ -2,12 +2,11 @@
 
 manages uploads to an S3 inbox bucket.
 
-## Description
-
-## Installation
-
 The service ships as the container image `ghga/ucs` and the Helm chart [`ucs`](../../deploy/charts/ucs/README.md).
-Its executable `ucs` takes one of these commands:
+
+## Usage
+
+The executable `ucs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -17,6 +16,9 @@ Its executable `ucs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `ucs`: the environment variable `UCS_HOST` sets `host`, and the YAML file is `.ucs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -622,11 +624,6 @@ The service requires the following configuration parameters:
   - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`** *(required)*: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `ucs`: the environment variable `UCS_HOST` sets `host`, and the YAML file is `.ucs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

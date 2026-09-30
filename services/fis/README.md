@@ -2,14 +2,15 @@
 
 A service to liaise between Central File Services and Data Hubs for file inspection.
 
+The service ships as the container image `ghga/fis` and the Helm chart [`fis`](../../deploy/charts/fis/README.md).
+
 ## Description
 
 The File Ingest Service provides an endpoint to populate the Encryption Key Store, Internal File Registry and Download Controller with output metadata from the S3 upload script at <https://github.com/ghga-de/data-steward-scripts/blob/main/src/s3_upload.py>.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/fis` and the Helm chart [`fis`](../../deploy/charts/fis/README.md).
-Its executable `fis` takes one of these commands:
+The executable `fis` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -19,6 +20,9 @@ Its executable `fis` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `fis`: the environment variable `FIS_HOST` sets `host`, and the YAML file is `.fis.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -536,11 +540,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `fis`: the environment variable `FIS_HOST` sets `host`, and the YAML file is `.fis.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

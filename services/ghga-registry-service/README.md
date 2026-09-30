@@ -2,15 +2,16 @@
 
 GHGA Registry Service - a service for ingesting and archiving metadata from data submitters.
 
+The service ships as the container image `ghga/rs` and the Helm chart [`rs`](../../deploy/charts/rs/README.md).
+
 ## Description
 
 Metadata submitted for a study - administrative details, experimental metadata, publications, and datasets - is validated, assigned a permanent accession number, and kept immutable once the study is archived.
 The service also orchestrates the upload of the research data files that metadata describes, and enforces access control over both the metadata and the upload process.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/rs` and the Helm chart [`rs`](../../deploy/charts/rs/README.md).
-Its executable `rs` takes one of these commands:
+The executable `rs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -20,6 +21,9 @@ Its executable `rs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `rs`: the environment variable `RS_HOST` sets `host`, and the YAML file is `.rs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -574,11 +578,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `rs`: the environment variable `RS_HOST` sets `host`, and the YAML file is `.rs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

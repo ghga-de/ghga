@@ -2,15 +2,16 @@
 
 Dataset Information Service - Providing public metadata about files registered with the Internal File Registry
 
+The service ships as the container image `ghga/dins` and the Helm chart [`dins`](../../deploy/charts/dins/README.md).
+
 ## Description
 
 The Dataset Information Service serves publicly available metadata about files registered with the Internal File Registry.
 Currently this includes the SHA256 checksum of the unencrypted file content and the size of the unencrypted file in bytes.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/dins` and the Helm chart [`dins`](../../deploy/charts/dins/README.md).
-Its executable `dins` takes one of these commands:
+The executable `dins` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -18,6 +19,9 @@ Its executable `dins` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `dins`: the environment variable `DINS_HOST` sets `host`, and the YAML file is `.dins.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -467,11 +471,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `dins`: the environment variable `DINS_HOST` sets `host`, and the YAML file is `.dins.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

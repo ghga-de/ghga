@@ -2,6 +2,8 @@
 
 a service to commission file deletions
 
+The service ships as the container image `ghga/pcs` and the Helm chart [`pcs`](../../deploy/charts/pcs/README.md).
+
 ## Description
 
 This service exposes an external API to commission file deletions from the whole file backend.
@@ -20,10 +22,9 @@ It commissions the deletion of the file with the given id from the whole file ba
 This event is published after a file deletion was requested via an API call.
 It contains the file_id of the file that should be deleted.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/pcs` and the Helm chart [`pcs`](../../deploy/charts/pcs/README.md).
-Its executable `pcs` takes one of these commands:
+The executable `pcs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `publish-events` publishes pending events
@@ -31,6 +32,9 @@ Its executable `pcs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `pcs`: the environment variable `PCS_HOST` sets `host`, and the YAML file is `.pcs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -474,11 +478,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `pcs`: the environment variable `PCS_HOST` sets `host`, and the YAML file is `.pcs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

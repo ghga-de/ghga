@@ -2,6 +2,8 @@
 
 State Management Service - Provides a REST API for basic infrastructure technology state management.
 
+The service ships as the container image `ghga/sms` and the Helm chart [`sms`](../../deploy/charts/sms/README.md).
+
 ## Description
 
 This service is intended to aid testing of the GHGA Archive by providing a unified API for managing state in infrastructure technologies such as MongoDB, S3, Apache Kafka, and the Hashicorp Vault.
@@ -10,13 +12,15 @@ This service should **never** be deployed to production.
 It is *only* intended for use in the Testing and Staging environments, where there is no access to real data.
 Despite this, the services provides a way to restrict which databases and collections can be accessed with this service through configuration, and a simple API key (set in config) that can be used to authenticate requests.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/sms` and the Helm chart [`sms`](../../deploy/charts/sms/README.md).
-Its executable `sms` starts the service and takes no command.
+The executable `sms` starts the service and takes no command.
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `sms`: the environment variable `SMS_HOST` sets `host`, and the YAML file is `.sms.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -610,11 +614,6 @@ The service requires the following configuration parameters:
   - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`** *(required)*: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `sms`: the environment variable `SMS_HOST` sets `host`, and the YAML file is `.sms.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

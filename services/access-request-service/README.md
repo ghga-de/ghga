@@ -2,6 +2,8 @@
 
 Access Request Service - a service for managing requests for access to GHGA datasets.
 
+The service ships as the container image `ghga/ars` and the Helm chart [`ars`](../../deploy/charts/ars/README.md).
+
 ## Description
 
 Researchers use the GHGA Data Portal to request access to a dataset for a limited period of time.
@@ -16,10 +18,9 @@ Configuration parameters limit how far in advance access may be requested and ho
 
 The service maintains its own view of the requestable datasets by consuming dataset upsertion and deletion events, and it publishes every change to an access request as an event, so that other services can notify the parties involved.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/ars` and the Helm chart [`ars`](../../deploy/charts/ars/README.md).
-Its executable `ars` takes one of these commands:
+The executable `ars` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -28,6 +29,9 @@ Its executable `ars` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `ars`: the environment variable `ARS_HOST` sets `host`, and the YAML file is `.ars.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -517,11 +521,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `ars`: the environment variable `ARS_HOST` sets `host`, and the YAML file is `.ars.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

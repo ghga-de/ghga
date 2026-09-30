@@ -2,17 +2,21 @@
 
 The Notification Orchestration Service controls the creation of notification events.
 
+The service ships as the container image `ghga/nos` and the Helm chart [`nos`](../../deploy/charts/nos/README.md).
+
 ## Description
 
 The Notification Orchestration Service (NOS) uses data harvested from events published by various services to form Notification events, which are subsequently consumed by the Notification Service (NS) for dissemination.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/nos` and the Helm chart [`nos`](../../deploy/charts/nos/README.md).
-Its executable `nos` starts the service and takes no command.
+The executable `nos` starts the service and takes no command.
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `nos`: the environment variable `NOS_HOST` sets `host`, and the YAML file is `.nos.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -390,11 +394,6 @@ The service requires the following configuration parameters:
   Default: `"https://data.ghga.de/"`.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `nos`: the environment variable `NOS_HOST` sets `host`, and the YAML file is `.nos.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## Architecture and Design
 

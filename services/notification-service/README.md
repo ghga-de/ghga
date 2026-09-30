@@ -2,6 +2,8 @@
 
 The Notification Service (NS) handles notification kafka events.
 
+The service ships as the container image `ghga/ns` and the Helm chart [`ns`](../../deploy/charts/ns/README.md).
+
 ## Description
 
 The Notification Service is a microservice intended to provide general notification capabilities.
@@ -30,13 +32,15 @@ Template variables are denoted with "$", e.g. $recipient_name, and are required 
 Having both HTML and plaintext means everyone should be able to receive the emails without a problem, and most of the time they should look nice.
 Because email clients like Outlook, Gmail, etc. have differences in the way they render HTML emails, it is recommended that styling be kept to a minimum or to use a pre-made template where these things have been taken into account.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/ns` and the Helm chart [`ns`](../../deploy/charts/ns/README.md).
-Its executable `ns` starts the service and takes no command.
+The executable `ns` starts the service and takes no command.
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `ns`: the environment variable `NS_HOST` sets `host`, and the YAML file is `.ns.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -397,11 +401,6 @@ The service requires the following configuration parameters:
   - <a id="%24defs/SmtpAuthConfig/properties/password"></a>**`password`** *(string, format: password, required and write-only)*: The login password.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `ns`: the environment variable `NS_HOST` sets `host`, and the YAML file is `.ns.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## Architecture and Design
 

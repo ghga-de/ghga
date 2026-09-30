@@ -2,6 +2,8 @@
 
 Metadata Artifact Search Service - A service for searching metadata artifacts and filtering results.
 
+The service ships as the container image `ghga/mass` and the Helm chart [`mass`](../../deploy/charts/mass/README.md).
+
 ## Description
 
 The Metadata Artifact Search Service uses search parameters to look for metadata.
@@ -23,10 +25,9 @@ Facet options can help avoid having to rely on this feature by filtering down th
 
 For more information see the OpenAPI spec linked below.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/mass` and the Helm chart [`mass`](../../deploy/charts/mass/README.md).
-Its executable `mass` takes one of these commands:
+The executable `mass` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -34,6 +35,9 @@ Its executable `mass` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `mass`: the environment variable `MASS_HOST` sets `host`, and the YAML file is `.mass.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -445,11 +449,6 @@ The service requires the following configuration parameters:
     - <a id="%24defs/SearchableClass/properties/selected_fields/items"></a>**Items**: Refer to *[#/$defs/FieldLabel](#%24defs/FieldLabel)*.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `mass`: the environment variable `MASS_HOST` sets `host`, and the YAML file is `.mass.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

@@ -2,6 +2,8 @@
 
 This service acts as a registry for the internal location and representation of files.
 
+The service ships as the container image `ghga/ifrs` and the Helm chart [`ifrs`](../../deploy/charts/ifrs/README.md).
+
 ## Description
 
 This service provides functionality to administer files stored in an S3-compatible object storage.
@@ -31,10 +33,9 @@ It contains all the file-related metadata that was provided by the files_to_regi
 
 This event is published after a file was successfully staged to the outbox.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/ifrs` and the Helm chart [`ifrs`](../../deploy/charts/ifrs/README.md).
-Its executable `ifrs` takes one of these commands:
+The executable `ifrs` takes one of these commands:
 
 - `consume-events` runs an event consumer listening to the configured topics
 - `publish-events` publishes pending events
@@ -43,6 +44,9 @@ Its executable `ifrs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `ifrs`: the environment variable `IFRS_HOST` sets `host`, and the YAML file is `.ifrs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -508,11 +512,6 @@ The service requires the following configuration parameters:
   - <a id="%24defs/S3ObjectStorageNodeConfig/properties/credentials"></a>**`credentials`** *(required)*: Refer to *[#/$defs/S3Config](#%24defs/S3Config)*.
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `ifrs`: the environment variable `IFRS_HOST` sets `host`, and the YAML file is `.ifrs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## Architecture and Design
 

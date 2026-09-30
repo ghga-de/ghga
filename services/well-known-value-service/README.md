@@ -2,17 +2,21 @@
 
 Well-Known-Value-Service - Provides access to common values via API
 
+The service ships as the container image `ghga/wkvs` and the Helm chart [`wkvs`](../../deploy/charts/wkvs/README.md).
+
 ## Description
 
 This service is intended to provide access to configured values via API in order to reduce the required config for other GHGA microservices.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/wkvs` and the Helm chart [`wkvs`](../../deploy/charts/wkvs/README.md).
-Its executable `wkvs` starts the service and takes no command.
+The executable `wkvs` starts the service and takes no command.
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `wkvs`: the environment variable `WKVS_HOST` sets `host`, and the YAML file is `.wkvs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -211,11 +215,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `wkvs`: the environment variable `WKVS_HOST` sets `host`, and the YAML file is `.wkvs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

@@ -2,14 +2,15 @@
 
 Reverse Transpiler Service - A service running a REST API that serves accessioned metadata files by study ID
 
+The service ships as the container image `ghga/rts` and the Helm chart [`rts`](../../deploy/charts/rts/README.md).
+
 ## Description
 
 The service consumes the artifact events that carry a study's accessioned metadata as JSON, converts the metadata back into a spreadsheet workbook, and serves the workbook in `.xlsx` format by study ID over its REST API.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/rts` and the Helm chart [`rts`](../../deploy/charts/rts/README.md).
-Its executable `rts` takes one of these commands:
+The executable `rts` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -18,6 +19,9 @@ Its executable `rts` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `rts`: the environment variable `RTS_HOST` sets `host`, and the YAML file is `.rts.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -457,11 +461,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `rts`: the environment variable `RTS_HOST` sets `host`, and the YAML file is `.rts.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

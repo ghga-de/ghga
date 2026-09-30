@@ -2,6 +2,8 @@
 
 Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs
 
+The service ships as the container image `ghga/dhfs` and the Helm chart [`dhfs`](../../deploy/charts/dhfs/README.md).
+
 ## Description
 
 ### JWK Configuration
@@ -39,10 +41,9 @@ The key path is set as `data_hub_crypt4gh_private_key_path`, and the passphrase,
 The second use for Crypt4GH is to securely transfer the *new* file encryption secret to GHGA Central after file re-encryption.
 This key that the data hub should use for this purpose must be passed in the configuration setting `central_api_crypt4gh_public_key`.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/dhfs` and the Helm chart [`dhfs`](../../deploy/charts/dhfs/README.md).
-Its executable `dhfs` takes one of these commands:
+The executable `dhfs` takes one of these commands:
 
 - `interrogate` runs the file interrogation and re-encryption process
 - `cleanup` cleans up the S3 interrogation bucket
@@ -51,6 +52,9 @@ Its executable `dhfs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `dhfs`: the environment variable `DHFS_HOST` sets `host`, and the YAML file is `.dhfs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -281,11 +285,6 @@ The service requires the following configuration parameters:
   - <a id="properties/library_logger_names/items"></a>**Items** *(string)*
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `dhfs`: the environment variable `DHFS_HOST` sets `host`, and the YAML file is `.dhfs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## Architecture and Design
 

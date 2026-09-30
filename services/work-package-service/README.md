@@ -2,6 +2,8 @@
 
 Work Package Service - a service for authorizing downloads of dataset files and uploads of research data.
 
+The service ships as the container image `ghga/wps` and the Helm chart [`wps`](../../deploy/charts/wps/README.md).
+
 ## Description
 
 Before a user can download the files of a dataset or upload research data, the client - the GHGA Data Portal or the GHGA Connector - creates a *work package* describing the intended piece of work.
@@ -67,10 +69,9 @@ Gets a list of all upload boxes that the user can upload to.
 
 - auth header: internal access token with the user context
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/wps` and the Helm chart [`wps`](../../deploy/charts/wps/README.md).
-Its executable `wps` takes one of these commands:
+The executable `wps` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -79,6 +80,9 @@ Its executable `wps` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `wps`: the environment variable `WPS_HOST` sets `host`, and the YAML file is `.wps.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -586,11 +590,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `wps`: the environment variable `WPS_HOST` sets `host`, and the YAML file is `.wps.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

@@ -2,19 +2,23 @@
 
 Test OpenID Connect provider
 
+The service ships as the container image `ghga/test-oidc-provider` and the Helm chart [`test-oidc-provider`](../../deploy/charts/test-oidc-provider/README.md).
+
 ## Description
 
 A test OpenID Connect provider for the integration test bed and local front-end development.
 Test users log in through its `/login` endpoint, and it serves the discovery document, the JSON Web Key Set, and the authorization, token and user info endpoints that the auth service and the data portal use.
 It is built as a platform image only so that the test bed can deploy it, and it is never enabled outside test environments.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/test-oidc-provider` and the Helm chart [`test-oidc-provider`](../../deploy/charts/test-oidc-provider/README.md).
-Its executable `test-oidc-provider` starts the service and takes no command.
+The executable `test-oidc-provider` starts the service and takes no command.
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `top`: the environment variable `TOP_HOST` sets `host`, and the YAML file is `.top.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -198,11 +202,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `top`: the environment variable `TOP_HOST` sets `host`, and the YAML file is `.top.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 

@@ -2,6 +2,8 @@
 
 DLQ Service - a service to manage the dead letter queue for Kafka events
 
+The service ships as the container image `ghga/dlqs` and the Helm chart [`dlqs`](../../deploy/charts/dlqs/README.md).
+
 ## Description
 
 The DLQ Service provides a way to manage Kafka topics designated as dead letter queues via a RESTful API interface.
@@ -10,10 +12,9 @@ The DLQ Service subscribes to the configured DLQ topic and saves all inbound eve
 Using the REST API to interact with a given service + topic, events can be previewed, discarded, modified, and requeued for the original service to re-consume them.
 When requeuing an event, the DLQ service publishes the event to a Kafka "retry" topic, whose name is automatically derived from the service name included in the event's DLQ information.
 
-## Installation
+## Usage
 
-The service ships as the container image `ghga/dlqs` and the Helm chart [`dlqs`](../../deploy/charts/dlqs/README.md).
-Its executable `dlqs` takes one of these commands:
+The executable `dlqs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
@@ -21,6 +22,9 @@ Its executable `dlqs` takes one of these commands:
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
+
+The settings take the prefix `dlqs`: the environment variable `DLQS_HOST` sets `host`, and the YAML file is `.dlqs.yaml`.
+[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ### Parameters
 
@@ -449,11 +453,6 @@ The service requires the following configuration parameters:
   ```
 
 <!-- config-docs: end -->
-
-### Usage
-
-The settings take the prefix `dlqs`: the environment variable `DLQS_HOST` sets `host`, and the YAML file is `.dlqs.yaml`.
-[`example_config.yaml`](./example_config.yaml) holds a complete set to adapt, and [Configuration](../README.md#configuration) says where the service looks for them.
 
 ## HTTP API
 
