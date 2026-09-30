@@ -25,6 +25,15 @@ WORK_ORDER_TOKEN_VALID_SECONDS = 30
 FILE_ACCESSION_COLLECTION = "fileAccessions"
 STUDY_COLLECTION = "studies"
 UCS_UPLOADS_PAGE_SIZE = 100
+
+# The RDUB-specific fields are used to look for changes in that subset of an RDUB document
+#  i.e. ignore changes in FUB-only fields. Version is excluded on purpose.
+RDUB_OWNED_FIELDS = frozenset(
+    {"state", "title", "description", "last_changed", "changed_by"}
+)
+
+STAMP_FIELDS = frozenset({"last_changed", "changed_by"})
+
 VALID_STATE_TRANSITIONS = [
     ("open", "locked"),
     ("locked", "open"),

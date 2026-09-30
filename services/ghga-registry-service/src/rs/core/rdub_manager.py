@@ -30,7 +30,7 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
 )
 from hexkit.utils import now_utc_ms_prec
-from rs.constants import VALID_STATE_TRANSITIONS
+from rs.constants import RDUB_OWNED_FIELDS, STAMP_FIELDS, VALID_STATE_TRANSITIONS
 from rs.core._rc_helper import race_condition_retries
 from rs.core.models import (
     PID,
@@ -243,7 +243,13 @@ class RDUBManager(RDUBManagerPort):
             "state": state,
             "max_size": max_size,
         }
-        changed_fields = {k: v for k, v in update.items() if v and getattr(box, k) != v}
+
+        # See which fields in the upate are different from the current values
+        changed_fields = {
+            field: value
+            for field, value in update.items()
+            if value is not None and getattr(box, field) != value
+        }
         if not changed_fields:
             log.info(
                 "RDUB update request for box %s did not contain any changes.", box_id
@@ -274,7 +280,9 @@ class RDUBManager(RDUBManagerPort):
                 box=box, updated_box=updated_box, user_id=user_id
             )
         else:
-            await self._apply_metadata_update(updated_box=updated_box, user_id=user_id)
+            await self._apply_metadata_update(
+                box=box, updated_box=updated_box, user_id=user_id
+            )
 
     def _check_state_change_is_valid(
         self, *, old_state: UploadBoxState, new_state: UploadBoxState
@@ -438,15 +446,106 @@ class RDUBManager(RDUBManagerPort):
     async def _apply_metadata_update(
         self,
         *,
+        box: ResearchDataUploadBox,
         updated_box: ResearchDataUploadBox,
         user_id: UUID,
     ) -> None:
-        """Persist a title/description-only change and write the audit record."""
+        """Persist a title/description-only change and write the audit record.
+
+        Raises:
+            BoxVersionError: The RDUB changed after it was read.
+            BoxTitleExistsError: Another box already has this title.
+        """
         try:
-            await self._box_dao.update(updated_box)
+            await self._persist_rdub_update(box=box, updated_box=updated_box)
         except UniqueConstraintViolationError as err:
             raise self.BoxTitleExistsError() from err
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
+
+    async def _persist_rdub_update(
+        self,
+        *,
+        box: ResearchDataUploadBox,
+        updated_box: ResearchDataUploadBox,
+        remote_committed: bool = False,
+    ) -> None:
+        """Write this request's changes to the RDUB, retrying on a lost race.
+
+        The DB document holds both RDUB and FUB contents, but updates come from
+        two different paths: RS core logic (e.g. title/description updates, state
+        changes) and the RS outbox consumer (FUB events from UCS). Since the two
+        paths target the same resource, it's critical to avoid overwrites and race
+        conditions.
+
+        Only RDUB_OWNED_FIELDS are ever written from here. The core-logic path will
+        never write updates that contain FUB fields, even when RS is the driver of that
+        change, like with `max_size` updates. This way, the two update paths cannot
+        contend over a field and the merge below cannot lose data. A resize is
+        therefore invisible locally until the event arrives.
+
+        When a DB write fails due to a `PreconditionFailedError`, we try again.
+        There are three attempts. Each attempt re-reads, re-applies this request's
+        own fields, and writes guarded on the versions it just read. If the attempts
+        are exhausted, `remote_committed` determines which error to raise,
+        BoxVersionError or BoxUpdateConflictError.
+
+        Raises:
+            BoxVersionError: Another request changed a field this one wants to write,
+                or the write kept losing its race with `remote_committed` unset.
+            BoxUpdateConflictError: The write kept losing its race after an external
+                commit and the conflict can't be resolved by merging the changes.
+        """
+        changed_fields = {
+            field: getattr(updated_box, field)
+            for field in RDUB_OWNED_FIELDS
+            if getattr(box, field) != getattr(updated_box, field)
+        }
+
+        def give_up() -> BaseException:
+            if remote_committed:
+                fub_id = box.file_upload_box_id
+                return self.BoxUpdateConflictError(
+                    "Applied the change elsewhere but could not record it on RDUB"
+                    + f" {box.id}. It might now disagree with FileUploadBox {fub_id}."
+                )
+            return self.BoxVersionError(
+                f"Research Data Upload Box {box.id} has changed"
+            )
+
+        async for attempt in race_condition_retries(
+            description=f"update RDUB {box.id}",
+            error_on_failure=give_up,
+            logger=log,
+        ):
+            with attempt:
+                current = await self._box_dao.get_by_id(box.id)
+                contested = sorted(
+                    field
+                    for field in changed_fields
+                    if field not in STAMP_FIELDS
+                    and getattr(current, field) != getattr(box, field)
+                )
+                if contested:
+                    log.info(
+                        "Can't update RDUB %s because another request changed %s"
+                        + " first.",
+                        box.id,
+                        ", ".join(contested),
+                        extra={"box_id": box.id, "contested_fields": contested},
+                    )
+                    raise self.BoxVersionError(
+                        f"Research Data Upload Box {box.id} has changed"
+                    )
+                merged = current.model_copy(
+                    update={**changed_fields, "version": current.version + 1}
+                )
+                await self._box_dao.update(
+                    merged,
+                    precondition={
+                        "version": current.version,
+                        "file_upload_box_version": current.file_upload_box_version,
+                    },
+                )
 
     async def _apply_max_size_update(
         self,
@@ -458,12 +557,14 @@ class RDUBManager(RDUBManagerPort):
         """Resize the FileUploadBox, persist the change, and write the audit record.
 
         The owning service is called first and the local write only happens once it
-        confirms, so a failure there leaves no local state to roll back.
-        `file_upload_box_version` is not set here: the owning service decides it and
-        reports it back through the FileUploadBox outbox event.
+        confirms, so a failure there leaves nothing to undo.
+
+        Neither `max_size` nor `file_upload_box_version` is written locally: UCS
+        reports them back through the FileUploadBox outbox event.
+        The local write records only `last_changed` and `changed_by`.
 
         Raises:
-            BoxVersionError: FUB version is out of date.
+            BoxVersionError: The FUB version is out of date, or the RDUB kept changing.
             BoxMaxSizeTooLowError: New max_size is smaller than bytes already uploaded.
         """
         try:
@@ -501,7 +602,10 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.BoxMaxSizeTooLowError(str(size_err)) from size_err
 
-        await self._box_dao.update(updated_box)
+        # The resize is applied in the owning service, so this write must not fail
+        await self._persist_rdub_update(
+            box=box, updated_box=updated_box, remote_committed=True
+        )
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def _apply_state_update(
@@ -516,28 +620,30 @@ class RDUBManager(RDUBManagerPort):
         audit.
 
         The owning service is called first and the local write only happens once it
-        confirms, so a failure there leaves no local state to roll back.
-        `file_upload_box_version` is not set here: the owning service decides it and
-        reports it back through the FileUploadBox outbox event.
+        confirms. The local write retries on a lost race instead of failing.
+
+        Only `state` is written locally. `file_upload_box_state` and
+        `file_upload_box_version` mirror UCS and arrive through the FileUploadBox
+        outbox event; writing our own guess for either is what used to let a slow
+        request revert a newer one.
 
         Raises:
             StateChangeError: The requested transition is not in
                 VALID_STATE_TRANSITIONS.
-            BoxVersionError: FUB version is out of date.
+            BoxVersionError: The FUB version is out of date, or the RDUB kept changing.
             ArchivalPrereqsError: Archival prerequisites not met.
         """
         self._check_state_change_is_valid(
             old_state=box.state, new_state=updated_box.state
         )
-        updated_box.file_upload_box_state = updated_box.state
         try:
             await self._handle_state_change(
                 old_box=box, updated_box=updated_box, force=force
             )
         except FileBoxClientPort.FUBStatsUnavailableError:
             # The owning service recomputes the box stats after applying the state
-            # change, so the change itself went through and must be persisted. Only
-            # the stats lag behind, and they reach us via the outbox event.
+            # change, so the change itself went through and must be kept. Only the
+            # stats lag behind, and they reach us via the outbox event.
             log.warning(
                 "Changed the state of FUB %s for RDUB %s, but its stats are stale in"
                 + " the owning service.",
@@ -549,7 +655,11 @@ class RDUBManager(RDUBManagerPort):
                 },
             )
 
-        await self._box_dao.update(updated_box)
+        # The state change is applied in the owning service, so this write must not
+        # fail: RDUB `state` can't be fixed by the FUB outbox event
+        await self._persist_rdub_update(
+            box=box, updated_box=updated_box, remote_committed=True
+        )
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def grant_upload_access(  # noqa: PLR0913
@@ -1425,6 +1535,9 @@ class RDUBManager(RDUBManagerPort):
                 conflicting_accessions=err.conflicting_accessions,
             ) from err
 
-        # Bump the RDUB version number
+        # Bump the RDUB version number. The accessions are already committed, so a
+        # concurrent edit here must not turn a mapping that worked into a conflict.
         updated_box = box.model_copy(update={"version": box.version + 1})
-        await self._box_dao.update(updated_box)
+        await self._persist_rdub_update(
+            box=box, updated_box=updated_box, remote_committed=True
+        )
