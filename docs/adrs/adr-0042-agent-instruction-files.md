@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-09-16
+amended: 2026-09-30
 tags: [docs, process]
 related: [ADR-0033, ADR-0041]
 ---
@@ -38,6 +39,10 @@ Support differs by tool.
 Codex, Cursor and Copilot read `AGENTS.md`, Copilot since [August 2025](https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/), though nested files need `chat.useNestedAgentsMdFiles` in VS Code and are still uneven in its CLI.
 Claude Code has no native support ([issue #34235](https://github.com/anthropics/claude-code/issues/34235)) and discovers nested files only as `CLAUDE.md`, so a stub per area is what makes the layering work there at all.
 
+**Amended 2026-09-30:** Claude Code reads `AGENTS.md` natively since v2.1.277: the root file at session start, and an area's file once it reads a file there.
+It does so only while no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` sits in the working directory or above it.
+`chat.useNestedAgentsMdFiles` governs only VS Code's Local agent, which VS Code is retiring; its Agent Host harnesses follow their own rules.
+
 Size and reachability decide whether a file is used.
 [Measurements published by Augment Code](https://www.augmentcode.com/blog/how-to-write-good-agents-dot-md-files) put the useful size at 100 to 150 lines with a few referenced documents beside it, and find that a document no `AGENTS.md` references is read in fewer than one session in ten.
 Our root file is 194 lines and the data portal's 264.
@@ -52,6 +57,11 @@ The decision itself:
 
 - **`AGENTS.md` is the only file with instructions in it.**
   Every tool that cannot read it gets a stub that points at it and holds nothing else: a `CLAUDE.md` beside each `AGENTS.md`, whose first line is the `@AGENTS.md` import Anthropic documents for this, and one `.github/copilot-instructions.md` at the root.
+
+  **Amended 2026-09-30:** Claude Code reads `AGENTS.md` natively, so the `CLAUDE.md` stubs are removed.
+  `docs_check.py` now rejects a committed `CLAUDE.md`, since one file above the working directory switches native reading off.
+  Personal instructions go in `~/.claude/CLAUDE.md` or a gitignored `.claude/rules/*.local.md`.
+  A dev who keeps a `CLAUDE.local.md`, which is gitignored too, sets Project instructions to `claude-md-and-agents-md` in `/config`, or Claude Code skips `AGENTS.md`.
 - **Areas, not members.**
   A set covers the repo root, `frontend/data-portal/`, `libs/ghga-jsonsubschema/`, `libs/`, `services/`, `deploy/` and `testbed/` — the places whose working rules genuinely differ.
   The 35 members share theirs.

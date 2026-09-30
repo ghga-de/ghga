@@ -91,10 +91,11 @@ EPIC_TYPES = (
 EPIC_SIBLING_LINK = re.compile(r"\]\((\.{1,2}/epic-[a-z0-9-]+(?:/README)?\.md)\)")
 EPIC_PATH_LINK = re.compile(r"\bepics/(epic-[a-z0-9-]+(?:/README)?\.md)")
 
-# Instruction files for coding agents (ADR-0042, docs/agent-instructions.md). A stub
-# points at the AGENTS.md beside it and holds nothing of its own, so it is allowed the
-# import, one heading and a few lines of prose.
-STUB_IMPORT = "@AGENTS.md"
+# Instruction files for coding agents (ADR-0042, docs/agent-instructions.md). Claude
+# Code reads AGENTS.md only while no CLAUDE.md sits in the working directory or above
+# it, so none may be committed. The Copilot stub points at AGENTS.md and holds nothing
+# of its own, so it is allowed one heading and a few lines of prose.
+CLAUDE_FILES = ("CLAUDE.md", "CLAUDE.local.md")
 STUB_MAX_LINES = 6
 STUB_CONTENT = re.compile(r"^(?:[-*+]\s|\d+\.\s|>|\||#{1,6}\s|```|@)")
 COPILOT_STUB = ".github/copilot-instructions.md"
@@ -506,11 +507,6 @@ def _tracked(root: pathlib.Path) -> list[str]:
     return [p for p in result.stdout.split("\0") if p]
 
 
-def _beside(area: str, name: str) -> str:
-    """Join a PurePosixPath.parent with a file name; the repo root's parent is `.`."""
-    return name if area == "." else f"{area}/{name}"
-
-
 def _stub_text(root: pathlib.Path, rel: str) -> str | None:
     """Return the stub's text, or None when git tracks it but the tree has it not.
 
@@ -523,21 +519,18 @@ def _stub_text(root: pathlib.Path, rel: str) -> str | None:
         return None
 
 
-def _stub_problems(rel: str, text: str, wants_import: bool) -> list[str]:
-    """Report content a pointer stub carries beyond the import, a heading and a sentence."""
+def _stub_problems(rel: str, text: str) -> list[str]:
+    """Report content a pointer stub carries beyond a heading and a sentence."""
     lines = [line for line in text.splitlines() if line.strip()]
     if not lines:
-        return [f"{rel}: the stub is empty; it points at the AGENTS.md beside it"]
+        return [f"{rel}: the stub is empty; it points at AGENTS.md"]
     problems = []
-    if wants_import and lines[0].strip() != STUB_IMPORT:
-        problems.append(f"{rel}: the first line must be the `{STUB_IMPORT}` import")
-    elif not wants_import and "AGENTS.md" not in text:
+    if "AGENTS.md" not in text:
         problems.append(f"{rel}: the stub must point at AGENTS.md")
-    body = lines[1:] if wants_import else lines
-    headings = [line for line in body if line.startswith("#")]
+    headings = [line for line in lines if line.startswith("#")]
     if len(headings) > 1:
         problems.append(f"{rel}: a stub carries one heading, not {len(headings)}")
-    for line in body:
+    for line in lines:
         if line not in headings and STUB_CONTENT.match(line):
             problems.append(f"{rel}: a stub carries no content of its own: {line!r}")
             break
@@ -552,33 +545,21 @@ def _stub_problems(rel: str, text: str, wants_import: bool) -> list[str]:
 def check_instruction_files(root: pathlib.Path) -> list[str]:
     """Report instruction files that break the layout in docs/agent-instructions.md.
 
-    Every AGENTS.md needs its CLAUDE.md stub beside it, a stub carries nothing but the
-    import, a heading and a sentence, and no instruction file sits at a path no tool
-    reads ([ADR-0042](docs/adrs/adr-0042-agent-instruction-files.md)).
+    No CLAUDE.md is committed, the Copilot stub carries nothing but a heading and a
+    sentence, and no instruction file sits at a path no tool reads
+    ([ADR-0042](docs/adrs/adr-0042-agent-instruction-files.md)).
     """
     tracked = _tracked(root)
-    areas = {
-        str(pathlib.PurePosixPath(p).parent) for p in tracked if p.endswith("AGENTS.md")
-    }
-    stubs = {
-        str(pathlib.PurePosixPath(p).parent) for p in tracked if p.endswith("CLAUDE.md")
-    }
     problems = [
-        f"{_beside(area, 'AGENTS.md')}: no CLAUDE.md stub beside it"
-        for area in sorted(areas - stubs)
+        f"{rel}: a committed CLAUDE.md stops Claude Code reading AGENTS.md;"
+        " move its rules into the AGENTS.md"
+        for rel in tracked
+        if pathlib.PurePosixPath(rel).name in CLAUDE_FILES
     ]
-    problems += [
-        f"{_beside(area, 'CLAUDE.md')}: no AGENTS.md beside it"
-        for area in sorted(stubs - areas)
-    ]
-
-    for rel in sorted(p for p in tracked if p.endswith("CLAUDE.md")):
-        if (text := _stub_text(root, rel)) is not None:
-            problems += _stub_problems(rel, text, True)
-    if "." in areas:
+    if "AGENTS.md" in tracked:
         if COPILOT_STUB in tracked:
             if (text := _stub_text(root, COPILOT_STUB)) is not None:
-                problems += _stub_problems(COPILOT_STUB, text, False)
+                problems += _stub_problems(COPILOT_STUB, text)
         else:
             problems.append(
                 f"{COPILOT_STUB}: missing; Copilot has no pointer to AGENTS.md"
