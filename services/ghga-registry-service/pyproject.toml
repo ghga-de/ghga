@@ -25,7 +25,7 @@ description = "GHGA Registry Service - a service for ingesting and archiving met
 license = "Apache-2.0"
 dependencies = [
     "typer >= 0.26",
-    "ghga-service-commons[api,auth,http] >= 8.0",
+    "ghga-service-commons[api,auth,http] >= 9.0, < 10",
     "ghga-event-schemas ~= 13.0",
     "hexkit[akafka,mongodb,opentelemetry] >= 9.0",
 ]

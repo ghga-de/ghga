@@ -23,12 +23,12 @@ import pytest
 
 from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
+from ghga_service_commons.http.mock_api import respond
 from hexkit.utils import now_utc_ms_prec
 from rs.constants import EXC_ID_BOX_NOT_FOUND
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort
-from tests.fixtures.external_apis import respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
 
