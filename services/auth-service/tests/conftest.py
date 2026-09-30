@@ -18,13 +18,14 @@
 import httpx2
 import pytest
 
-from ghga_service_commons.api.mock_router import MockRouter
+from auth_service.config import CONFIG
+from tests.fixtures.oidc_provider import OidcProviderMock
 
 
 @pytest.fixture
-def mock_router(monkeypatch: pytest.MonkeyPatch) -> MockRouter:
-    """Provide a MockRouter that intercepts the requests made with httpx2."""
-    router: MockRouter = MockRouter()
-    client = httpx2.Client(transport=router.as_transport())
+def oidc_provider(monkeypatch: pytest.MonkeyPatch) -> OidcProviderMock:
+    """Provide a mock of the OIDC provider that answers the `httpx2.get` calls."""
+    provider = OidcProviderMock(str(CONFIG.oidc_userinfo_endpoint))
+    client = httpx2.Client(transport=provider.as_transport())
     monkeypatch.setattr(httpx2, "get", client.get)
-    return router
+    return provider
