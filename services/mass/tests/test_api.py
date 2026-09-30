@@ -22,6 +22,7 @@ import httpx2
 import pytest
 
 from hexkit.providers.mongodb.provider import ConfiguredMongoClient
+from mass.adapters.inbound.fastapi_.configure import get_configured_app
 from mass.core import models
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture, QueryParams
@@ -63,6 +64,16 @@ async def test_health_check(joint_fixture: JointFixture):
 
     assert response.status_code == 200
     assert response.json() == {"status": "OK"}
+
+
+def test_openapi_spec():
+    """Test that the app builds its OpenAPI spec, which /docs and /openapi.json serve."""
+    app = get_configured_app(config=get_config())
+
+    info = app.openapi()["info"]
+
+    assert info["title"] == "Metadata Artifact Search Service"
+    assert info["license"] == {"name": "Apache-2.0"}
 
 
 async def test_search_options(joint_fixture: JointFixture):

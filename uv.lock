@@ -48,6 +48,7 @@ dev = [
     { name = "aiosmtpd", specifier = ">=1.4.6" },
     { name = "cryptography", specifier = ">=46" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "jsonschema2md", specifier = ">=1.7" },
     { name = "logot", specifier = ">=1.3" },
     { name = "mypy", specifier = ">=2.1" },
     { name = "openapi-core", specifier = ">=0.19.5" },
@@ -2483,6 +2484,20 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonschema2md"
+version = "1.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "babel" },
+    { name = "markdown" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/aa/c3/056bfe8d6360750ed4a13eeafd37d5ace8859b69c9fdb8d6aac82dad7d58/jsonschema2md-1.7.0.tar.gz", hash = "sha256:d69a5b011bf355c005e3c18be4515ae46d2689b38b593ced8d03c5ab66ddbaf3", size = 20017, upload-time = "2025-08-14T11:55:42.67Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/c5/0f9bd3ac958f8136e24e980ecd23e02de929eed9946fc4bf91e057142483/jsonschema2md-1.7.0-cp313-cp313-manylinux_2_39_x86_64.whl", hash = "sha256:06c327866a845827bc08b98cbea70ec96f46c0f8b67cb5a6d9833078a78764d3", size = 22991, upload-time = "2025-08-14T11:55:41.556Z" },
+]
+
+[[package]]
 name = "jupyter"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2910,6 +2925,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/7b/55/f0080f7c1b997166244833dac8d293d2b66e68aa250c242010b67db8f096/logot-1.7.0.tar.gz", hash = "sha256:b917189ebe1fb2ba298014f886fa72ff85f75be8d5a48d94c138e14b4f31fbb8", size = 15012, upload-time = "2026-03-31T13:33:12.097Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/ec/c20720e6d4055dd59a37ff84ed204870e07e042cd24d97736ac6910dd190/logot-1.7.0-py3-none-any.whl", hash = "sha256:5c7a8b561d22f0d08dcf3524359507d61400cb9ee61dc921b73b965c60fbab0c", size = 23399, upload-time = "2026-03-31T13:33:13.516Z" },
+]
+
+[[package]]
+name = "markdown"
+version = "3.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/4f/700155c8c20d9e655dd0732b5fc3c7614f291b9148da271d7388e50bf774/markdown-3.11.tar.gz", hash = "sha256:180224db6aed87ba9ce1f2781ebcd5826253de8ff637112090e24b84502bbf9f", size = 485623, upload-time = "2026-09-25T13:46:23.473Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/1e/32971905a7ab47f8b66866ed949fa48b104ba1c4a6fa57794c4f2c4b2cb8/markdown-3.11-py3-none-any.whl", hash = "sha256:cd6c89e7eb308c8b332ed673215a52d208a43f8bacc030b1419376129408719e", size = 111296, upload-time = "2026-09-25T13:46:22.163Z" },
 ]
 
 [[package]]

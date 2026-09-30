@@ -25,6 +25,7 @@ dev = [
     "httpx>=0.28.1",
     "tomli_w>=1.2",
     "pyyaml>=6",  # scripts/docs_check.py reads ADR frontmatter
+    "jsonschema2md>=1.7",  # scripts/service_docs.py renders the config parameters
     # per-member test deps recovered from the dropped lock/requirements-dev.in files.
     # testcontainers is needed by hexkit's provider testutils across most suites; make it a
     # first-class dev dep so container tests fail on the Docker daemon (not on import).
@@ -185,11 +186,6 @@ unfixable = ["MD034", "MD037", "MD046"]
 "libs/hexkit/user_guide/**" = ["MD051", "MD057", "MD078"]
 # anchors from JSON Schema $defs, which rumdl does not resolve
 "tools/ghga-datasteward-kit/s3_upload_config.md" = ["MD051"]
-# the installation, development and README generation sections still describe the
-# single-service repositories; rewriting them is its own change
-"services/*/README.md" = ["MD057", "MD059"]
-"services/*/.readme_generation/*.md" = ["MD041", "MD057", "MD059"]
-"libs/{ghga-event-schemas,metldata}/README.md" = ["MD057"]
 
 [tool.rumdl.MD013]
 line-length = 0

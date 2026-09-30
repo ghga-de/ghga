@@ -135,6 +135,11 @@ hooks-update: _guard
 docs-check: _guard
     uv run python scripts/docs_check.py
 
+# The same check the service-docs pre-commit hook runs; `--check` writes nothing.
+# Regenerate each service's config schema, example config, README parameters and OpenAPI spec.
+service-docs *args: _guard
+    uv run python scripts/service_docs.py {{args}}
+
 # Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
 # collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the

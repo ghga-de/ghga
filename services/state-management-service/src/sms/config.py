@@ -61,10 +61,10 @@ class SmsConfig(VaultConfig):
     db_permissions: list[str] = Field(
         default=[],
         description=(
-            "List of permissions that can be granted on a collection. Use * to signify"
-            + " 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g."
-            + " 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for"
-            + " write. '*' can be used to mean both read and write (or 'rw')."
+            "List of permissions that can be granted on a collection. Use `*` to"
+            + " signify 'all'. The format is `<db_name>.<collection_name>:<permissions>`,"
+            + " e.g. `db1.collection1.crud`. The permissions are `r` for read and `w` for"
+            + " write. `*` can be used to mean both read and write (or `rw`)."
             + " Deletion is a write operation. If db_permissions are not set, no"
             + " operations are allowed on any database or collection."
         ),

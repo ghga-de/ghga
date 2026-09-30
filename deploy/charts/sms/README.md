@@ -20,7 +20,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `config.host` | IP of the host. | `"127.0.0.1"` |
 | `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
-| `config.db_permissions` | List of permissions that can be granted on a collection. Use * to signify 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g. 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for write. '*' can be used to mean both read and write (or 'rw'). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection. | `[]` |
+| `config.db_permissions` | List of permissions that can be granted on a collection. Use `*` to signify 'all'. The format is `<db_name>.<collection_name>:<permissions>`, e.g. `db1.collection1.crud`. The permissions are `r` for read and `w` for write. `*` can be used to mean both read and write (or `rw`). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection. | `[]` |
 | `config.allow_empty_prefix` | Only set to True for local testing. If False, `db_prefix` cannot be empty. This is to prevent accidental deletion of others' data in shared environments, i.e. staging. | `false` |
 | `config.db_prefix` | Prefix to add to all database names used in the SMS. | `null` |
 | `config.token_hashes` | List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256. | `null` |
