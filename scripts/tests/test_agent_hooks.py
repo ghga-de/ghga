@@ -13,6 +13,7 @@ REPO = HOOKS.parents[1]
 sys.path.insert(0, str(HOOKS))
 
 import container_check
+import format_python
 import guard_generated
 import guard_uv
 import host
@@ -151,11 +152,126 @@ def test_hand_edited_files(rel):
     assert guard_generated.regenerate_with(PurePosixPath(rel)) is None
 
 
-def test_repo_relative_in_worktree(tmp_path):
+def test_checkout_of_worktree(tmp_path):
     """A worktree has a .git file rather than a directory."""
     (tmp_path / ".git").write_text("gitdir: elsewhere\n")
-    rel = guard_generated.repo_relative(str(tmp_path / "deploy/charts/ars/Chart.yaml"))
-    assert rel == PurePosixPath("deploy/charts/ars/Chart.yaml")
+    assert guard_generated.checkout_of(tmp_path / "deploy/charts/ars/Chart.yaml") == (
+        tmp_path
+    )
+
+
+def test_service_doc_names_match_the_generator():
+    sys.path.insert(0, str(REPO / "scripts"))
+    import service_docs
+
+    assert service_docs.MEMBER_GLOBS == tuple(
+        f"{tier}/*" for tier in guard_generated.MEMBER_TIERS
+    )
+    assert (
+        guard_generated.SCHEMA_FILE,
+        guard_generated.EXAMPLE_FILE,
+        guard_generated.OPENAPI_FILE,
+    ) == (
+        service_docs.SCHEMA_FILE,
+        service_docs.EXAMPLE_FILE,
+        service_docs.OPENAPI_FILE,
+    )
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "services/ucs/config_schema.json",
+        "services/ucs/example_config.yaml",
+        "services/ucs/openapi.yaml",
+        "libs/metldata/example_config.yaml",
+        "tools/ghga-connector/config_schema.json",
+    ],
+)
+def test_service_docs_blocked(rel):
+    assert "just service-docs" in (
+        guard_generated.regenerate_with(PurePosixPath(rel)) or ""
+    )
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "tools/ghga-datasteward-kit/example_config.yaml",  # no config schema: by hand
+        "services/ifrs/openapi.yaml",  # no REST API, so none to regenerate
+        "services/ucs/dev_config.yaml",
+        "services/ucs/README.md",  # the parameter list is left to the pre-commit hook
+        "services/ucs/tests/fixtures/example_config.yaml",
+        "example_config.yaml",
+    ],
+)
+def test_service_docs_hand_edited(rel):
+    assert guard_generated.regenerate_with(PurePosixPath(rel)) is None
+
+
+@pytest.fixture
+def checkout(monkeypatch, tmp_path):
+    """A checkout with its own ruff and the repo's config, standing in for the repo."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "pyproject.toml").write_text((REPO / "pyproject.toml").read_text())
+    bin_dir = tmp_path / ".venv" / "bin"
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "ruff").symlink_to(Path(sys.executable).parent / "ruff")
+    monkeypatch.setattr(format_python, "REPO", tmp_path)
+    return tmp_path
+
+
+UNFORMATTED = "import sys\nimport os\nx = {'a':1}\n"
+
+
+def _format(monkeypatch, path):
+    _stdin(monkeypatch, {"tool_name": "Edit", "tool_input": {"file_path": str(path)}})
+    return format_python.main()
+
+
+@pytest.mark.usefixtures("in_container")
+def test_format_python_file(monkeypatch, capsys, checkout):
+    path = checkout / "pkg" / "module.py"
+    path.parent.mkdir()
+    path.write_text(UNFORMATTED)
+    assert _format(monkeypatch, path) == 0
+    # formatted, imports sorted, the unused imports left for `just lint` to report
+    assert path.read_text() == 'import os\nimport sys\n\nx = {"a": 1}\n'
+    assert capsys.readouterr() == ("", "")
+
+
+@pytest.mark.usefixtures("in_container")
+def test_format_skips_non_python(monkeypatch, checkout):
+    path = checkout / "notes.txt"
+    path.write_text(UNFORMATTED)
+    assert _format(monkeypatch, path) == 0
+    assert path.read_text() == UNFORMATTED
+
+
+@pytest.mark.usefixtures("in_container")
+def test_format_skips_outside_repo(monkeypatch, checkout):
+    monkeypatch.setattr(format_python, "REPO", checkout / "elsewhere")
+    path = checkout / "module.py"
+    path.write_text(UNFORMATTED)
+    assert _format(monkeypatch, path) == 0
+    assert path.read_text() == UNFORMATTED
+
+
+@pytest.mark.usefixtures("in_container")
+def test_format_skips_without_ruff(monkeypatch, checkout):
+    (checkout / ".venv" / "bin" / "ruff").unlink()
+    path = checkout / "module.py"
+    path.write_text(UNFORMATTED)
+    assert _format(monkeypatch, path) == 0
+    assert path.read_text() == UNFORMATTED
+
+
+@pytest.mark.usefixtures("on_the_host")
+def test_format_skips_on_host(monkeypatch, checkout):
+    path = checkout / "module.py"
+    path.write_text(UNFORMATTED)
+    assert _format(monkeypatch, path) == 0
+    assert path.read_text() == UNFORMATTED
 
 
 def _run(script, payload, **env):
@@ -190,3 +306,10 @@ def test_uv_hook_exempt_in_ci():
 def test_container_check_silent_in_ci():
     result = _run("container_check.py", {"source": "startup"}, CI="true")
     assert (result.returncode, result.stdout) == (0, "")
+
+
+def test_format_hook_as_registered():
+    result = _run(
+        "format_python.py", {"tool_input": {"file_path": str(REPO / "README.md")}}
+    )
+    assert (result.returncode, result.stdout, result.stderr) == (0, "", "")
