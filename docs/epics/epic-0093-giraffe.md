@@ -359,8 +359,9 @@ lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff
       above
 - [ ] Restructure `AccessionStore` into per-year buckets plus a flat legacy list
 - [ ] Extend the submission record to carry the assigned PIDs and the lineage that justifies them
-- [ ] Resolve the declared predecessors: reject an already-replaced predecessor and a cycle-closing
-      declaration
+- [ ] Resolve the declared predecessors on both declaration paths — `submit`, before minting, and
+      `replace-study`, which mints nothing: reject an already-replaced predecessor and a
+      cycle-closing declaration
 - [ ] Compute dataset file sets and diff against the predecessor's for `.DS.xxx` reuse
 - [ ] Compute all three reuse findings dskit prompts on: reuse declared without a predecessor,
       reused accessions absent from every ancestor, and governance drift via the shared traversal,
@@ -369,7 +370,9 @@ lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff
       picking from the unused sequences, and the error on a full bucket; lineage-scoped `.DS.xxx`
       uniqueness; version continuation from a new-scheme predecessor; fresh root from a legacy
       predecessor; dataset file-set reuse hit and miss; alias-uniqueness violation surfaced as an
-      error; multi-study submission rejected before any PID is minted
+      error; multi-study submission rejected before any PID is minted; an already-replaced
+      predecessor rejected on both declaration paths; a cycle closed via `replace-study` rejected;
+      each of the three reuse findings computed, with the accessions and committees it names
 
 ---
 
@@ -489,12 +492,14 @@ offline into these warnings.
 walks the ancestry or knows the GHGA metadata model, which is what metldata's accessioning path
 already does for version continuation and the `.DS.xxx` diff. metldata validates, resolves and
 returns findings; dskit is the CLI that renders them, prompts, applies the auto-confirm option and
-either aborts or lets the mint proceed.
+either aborts or lets the operation proceed. Both declaration paths run the same resolution, on
+`submit` ahead of minting and on `replace-study`, which mints nothing.
 
 #### Work to be performed
 
 - [ ] Add repeatable `--replaces` and the merge lineage prompt
-- [ ] Add `metadata replace-study <old PID> <new PID>`
+- [ ] Add `metadata replace-study <old PID> <new PID>`, running the same predecessor resolution as
+      `--replaces`
 - [ ] Render the validation failures as CLI errors, naming what metldata reported: multi-study,
       duplicate alias, already-replaced predecessor, cycle closure
 - [ ] Prompt for the three reuse warnings reported by metldata, plus the auto-confirm option
