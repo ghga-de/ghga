@@ -16,6 +16,8 @@ Conventions baked into the derived values:
 - image.digest is empty unless --digests supplies one: release.yaml's build-images
   only knows a member's real digest after it pushes, so it is injected here as a
   post-build overlay rather than derived like the other image fields
+- --mono points every Python member at the single mono image instead of its own; the
+  command stays the member's console script, which the mono image carries on its PATH
 """
 
 import argparse
@@ -93,15 +95,19 @@ def deep_merge(base, override):
     return override
 
 
-def derived_values(member: dict, registry: str) -> dict:
+def image_name(member: dict, mono: bool = False) -> str:
+    """The image a member chart runs: its own, or the mono image for Python members."""
+    return MONO_IMAGE if mono and member["kind"] == "python" else member["package"]
+
+
+def derived_values(member: dict, registry: str, mono: bool = False) -> dict:
     """Values derived from workspace metadata for one member chart."""
     registry_host, _, repo_prefix = registry.partition("/")
+    image = image_name(member, mono)
     values: dict = {
         "image": {
             "registry": registry_host,
-            "repository": f"{repo_prefix}/{member['package']}"
-            if repo_prefix
-            else member["package"],
+            "repository": f"{repo_prefix}/{image}" if repo_prefix else image,
         },
         "configPrefix": member["package"].replace("-", "_"),
         "commandStyle": "exec",
@@ -404,11 +410,11 @@ def current_member_version() -> str:
 
 
 def compose_member_values(
-    member: dict, registry: str, defaults: dict
+    member: dict, registry: str, defaults: dict, mono: bool = False
 ) -> tuple[dict, str]:
     """Merge one member chart's values: defaults <- derived <- chart-values."""
     source = f"{member['path']}/chart-values.yaml"
-    values = deep_merge(defaults, derived_values(member, registry))
+    values = deep_merge(defaults, derived_values(member, registry, mono))
 
     values_file = REPO_ROOT / member["path"] / "chart-values.yaml"
     if values_file.is_file():
@@ -639,7 +645,17 @@ def main() -> None:
             "JSON file mapping member package name to its resolved image digest"
             " (release.yaml's build-images output, merged across matrix members);"
             " a member missing from it keeps image.digest empty, falling back to"
-            " tag/appVersion as usual"
+            " tag/appVersion as usual; with --mono, Python members look up"
+            f" {MONO_IMAGE!r} instead"
+        ),
+    )
+    parser.add_argument(
+        "--mono",
+        action="store_true",
+        help=(
+            f"point every Python member at the {MONO_IMAGE!r} image"
+            " (docker/Dockerfile VARIANT=mono) instead of its own; for dev"
+            " deployments only, the release lane keeps one image per member"
         ),
     )
     args = parser.parse_args()
@@ -652,8 +668,10 @@ def main() -> None:
     docs = library_docs()
     for member in image_members():
         description = member["description"] or member["package"]
-        values, source = compose_member_values(member, args.registry, defaults)
-        digest = digests.get(member["package"])
+        values, source = compose_member_values(
+            member, args.registry, defaults, args.mono
+        )
+        digest = digests.get(image_name(member, args.mono))
         if digest:
             values = deep_merge(values, {"image": {"digest": digest}})
         chart_dir = stamp_chart(
