@@ -1105,8 +1105,8 @@ paths:
                 $ref: '#/components/schemas/HttpBoxStatsUnavailableError'
           description: 'Exceptions by ID:
 
-            - boxStatsUnavailable: The FileUploadBox stats could not be updated. Repeat
-            the request.'
+            - boxStatsUnavailable: The FileUploadBox stats could not be updated. Fetch
+            the box again and repeat the request with its latest version.'
       security:
       - HTTPBearer: []
       summary: Update a FileUploadBox (lock/unlock/archive/resize)

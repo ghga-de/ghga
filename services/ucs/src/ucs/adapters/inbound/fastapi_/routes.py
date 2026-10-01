@@ -50,6 +50,14 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpBoxStatsUnavailableError.get_body_model(),
     },
+    "boxStatsUnavailableVersioned": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- boxStatsUnavailable: The FileUploadBox stats could not be updated."
+            + " Fetch the box again and repeat the request with its latest version."
+        ),
+        "model": http_exceptions.HttpBoxStatsUnavailableError.get_body_model(),
+    },
     "boxNotFound": {
         "description": (
             "Exceptions by ID:"
@@ -256,7 +264,9 @@ async def create_box(
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"]
         | ERROR_RESPONSES["boxMaxSizeTooLow"]
         | ERROR_RESPONSES["incompleteOrFailed"],
-        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES["boxStatsUnavailable"],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            "boxStatsUnavailableVersioned"
+        ],
     },
 )
 @TRACER.start_as_current_span("routes.update_box")
@@ -325,7 +335,9 @@ async def update_box(  # noqa: C901, PLR0912
         ) from error
     except UploadControllerPort.BoxStatsCalcError as error:
         # The controller already logs the underlying cause, so don't re-log here
-        raise http_exceptions.HttpBoxStatsUnavailableError(box_id=box_id) from error
+        raise http_exceptions.HttpBoxStatsUnavailableError(
+            box_id=box_id, versioned=True
+        ) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error

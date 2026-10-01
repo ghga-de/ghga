@@ -652,7 +652,9 @@ async def test_create_box_endpoint_error_handling(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpBoxStatsUnavailableError(box_id=TEST_BOX_ID),
+            http_exceptions.HttpBoxStatsUnavailableError(
+                box_id=TEST_BOX_ID, versioned=True
+            ),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
