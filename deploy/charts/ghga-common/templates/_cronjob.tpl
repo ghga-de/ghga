@@ -18,12 +18,19 @@ metadata:
   {{- end }}
 spec:
   schedule: {{ $job.schedule | default $.Values.cronSchedule }}
+  concurrencyPolicy: {{ $job.concurrencyPolicy | default $.Values.concurrencyPolicy }}
+  {{- with ($job.startingDeadlineSeconds | default $.Values.startingDeadlineSeconds) }}
+  startingDeadlineSeconds: {{ . }}
+  {{- end }}
   successfulJobsHistoryLimit: {{ $job.successfulJobsHistoryLimit | default $.Values.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: 1
   jobTemplate:
     metadata:
       labels: {{- include "common.labels.standard" $ | nindent 8 }}
     spec:
+      {{- with ($job.activeDeadlineSeconds | default $.Values.activeDeadlineSeconds) }}
+      activeDeadlineSeconds: {{ . }}
+      {{- end }}
       template:
         metadata:
           {{- /* Merge (rather than concatenate) annotation sources so a per-cronjob
