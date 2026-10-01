@@ -607,8 +607,7 @@ class WellKnownValueNotFound(RuntimeError):
 def raise_if_connection_failed(request_error: httpx2.RequestError, url: str):
     """Check if request exception is caused by hitting max retries and raise accordingly"""
     if isinstance(request_error, (httpx2.ConnectError, httpx2.ConnectTimeout)):
-        connection_failure = str(request_error.args[0])
-        raise ConnectionFailedError(url=url, reason=connection_failure)
+        raise ConnectionFailedError(url=url, reason=extract_reason(request_error))
 
 
 # What a request can fail with once the retry transport has given up. Kept beside the
