@@ -48,7 +48,7 @@ def test_connection_failed_reason_is_never_blank(
     request_error: httpx2.RequestError, expected_reason: str
 ):
     """Ensure a connection failure names its cause even when httpx gives no message."""
-    url = "https://example.org/api"
+    url = "https://central-api.invalid/api"
     with pytest.raises(exceptions.ConnectionFailedError) as exc_info:
         exceptions.raise_if_connection_failed(request_error=request_error, url=url)
 
