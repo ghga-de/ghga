@@ -886,7 +886,7 @@ class RDUBManager(RDUBManagerPort):
                     # This might happen during initial creation - ignore
                     log.info(
                         "Did not find a matching ResearchDataUploadBox for inbound"
-                        + " FileUploadBox with ID %s. Was it just created?",
+                        + " FileUploadBox with ID %s. Try again later, if it was recently created.",
                         file_upload_box.id,
                     )
                     return
