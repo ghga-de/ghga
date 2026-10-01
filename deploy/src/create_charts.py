@@ -552,7 +552,7 @@ def _parameters_table(rows: list[tuple[str, str, object]]) -> str:
 
 
 def chart_readme_text(
-    name: str, description: str, path: str, chart_registry: str, schema: dict
+    name: str, description: str, path: str, chart_ref: str, schema: dict
 ) -> str:
     """Chart root README.md — `helm package` bundles it into the .tgz (Helm convention;
     also what Artifact Hub reads as the chart's Overview, were this repo ever listed
@@ -587,7 +587,7 @@ def chart_readme_text(
 ## Installing
 
 ```
-helm install {name} oci://{chart_registry}/{name}-chart
+helm install {name} oci://{chart_ref}
 ```
 
 ## Source
@@ -636,6 +636,14 @@ def main() -> None:
         help=(
             "OCI registry root charts are published under (release.yaml's"
             " CHART_REGISTRY); used only for each chart README's install snippet"
+        ),
+    )
+    parser.add_argument(
+        "--chart-suffix",
+        default="-chart",
+        help=(
+            "suffix the published chart name carries, for each chart README's install"
+            " snippet; Docker Hub needs one to keep charts apart from same-named images"
         ),
     )
     parser.add_argument(
@@ -691,7 +699,7 @@ def main() -> None:
                 name=member["package"],
                 description=description,
                 path=member["path"],
-                chart_registry=args.chart_registry,
+                chart_ref=f"{args.chart_registry}/{member['package']}{args.chart_suffix}",
                 schema=schema,
             )
         )

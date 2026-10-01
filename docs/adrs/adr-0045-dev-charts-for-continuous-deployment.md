@@ -13,7 +13,7 @@ In the context of **running the `dev` branch continuously on a cluster of our ow
 
 facing **charts that are published only at a platform release, and dev images that exist only as the mono image under a mutable `:dev` tag**
 
-we decided for **publishing every member chart to GHCR on each merge to `dev`, versioned `0.0.0-dev.<run number>`, generated with `--mono` and pinned to the image digests built in the same run**
+we decided for **publishing every member chart to GHCR on each merge to `dev`, versioned `0.0.0-dev.<run number>.<attempt>`, generated with `--mono` and pinned to the image digests built in the same run**
 
 and neglected **per-member dev images, setting the images in the cluster's own values, and a version taken from the commit SHA**
 
@@ -38,10 +38,12 @@ Every member chart already starts its service by that script (`command: [<packag
   `create_charts.py --mono` points every Python member chart at the `platform` image and leaves its command as it is.
   The front end keeps its own image.
 - **Version.**
-  Each run of `dev-images.yaml` is `0.0.0-dev.<run number>`, as chart version, `appVersion` and an extra image tag beside `:dev`.
+  Each run of `dev-images.yaml` is `0.0.0-dev.<run number>.<attempt>`, as chart version, `appVersion` and an extra image tag beside `:dev`.
   SemVer compares numeric prerelease fields as numbers, so the newest merge is always the highest version and a CD tool following `>=0.0.0-0` picks it.
+  The attempt makes a re-run a new version: the mono build is not reproducible, so a re-run under the same version would change its digest without the cluster rolling out.
 - **Digests.**
   The chart job takes the digests the image job just pushed and pins them in the charts, as the release lane does.
+  It fails if a chart is left without one, which is what a member whose image the job does not build would get.
 - **Scope.**
   Only the generated member charts are published, to `oci://ghcr.io/ghga-de/ghga/charts`.
   `aai`, `ghga-common` and `ghga-demo` are not; `ghga-common` is bundled into each chart.
@@ -55,8 +57,10 @@ Every member chart already starts its service by that script (`command: [<packag
 - The dev cluster tests the mono image, not the per-member release images: a fault in one member's image alone reaches production first.
 - Dev and release charts live in different registries, so a range on one never picks up the other.
   Switching a cluster to releases means changing the chart source, not only the version.
+- A run cancelled by a newer merge partway through the push leaves some charts at the older version until the newer run finishes.
+  Each chart still pins a valid digest.
+- The run number restarts at 1 if `dev-images.yaml` is renamed or recreated, and versions would then go backwards; raising the `0.0.0` base in `DEV_VERSION` restores the order.
 - Every merge adds one version per member chart and one image tag, and nothing prunes them yet.
-- The chart READMEs still give the Docker Hub install line, which does not apply to dev charts.
 
 ### Alternatives
 
