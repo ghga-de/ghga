@@ -560,6 +560,24 @@ async def test_error_status_triggers_error_translation(
             TEST_FILE_ID,
             exceptions.TooManyRequestsError,
         ),
+        # 503 status code - boxStatsUnavailable
+        (
+            503,
+            {"exception_id": "boxStatsUnavailable"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            TEST_FILE_ID,
+            exceptions.BoxStatsUnavailableError,
+        ),
+        # 503 status code - no matching exception id
+        (
+            503,
+            {"exception_id": "nosuchexceptionid"},
+            TEST_FUB_ID,
+            FILE_ALIAS,
+            TEST_FILE_ID,
+            exceptions.UnexpectedError,
+        ),
         # 507 status code - no matching exception id
         (
             507,
