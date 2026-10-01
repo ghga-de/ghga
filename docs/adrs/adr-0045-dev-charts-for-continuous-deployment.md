@@ -40,7 +40,8 @@ Every member chart already starts its service by that script (`command: [<packag
 - **Version.**
   Each run of `dev-images.yaml` is `0.0.0-dev.<run number>.<attempt>`, as chart version, `appVersion` and an extra image tag beside `:dev`.
   SemVer compares numeric prerelease fields as numbers, so the newest merge is always the highest version and a CD tool following `>=0.0.0-0` picks it.
-  The attempt makes a re-run a new version: the mono build is not reproducible, so a re-run under the same version would change its digest without the cluster rolling out.
+  The attempt makes a full re-run a new version: the mono build is not reproducible, so a re-run under the same version would change its digest without the cluster rolling out.
+  The version is computed once per run, in a job of its own, so re-running only the failed jobs keeps it and the image tags and charts still agree.
 - **Digests.**
   The chart job takes the digests the image job just pushed and pins them in the charts, as the release lane does.
   It fails if a chart is left without one, which is what a member whose image the job does not build would get.

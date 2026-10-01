@@ -57,7 +57,8 @@ def test_mono_run_pins_the_mono_digest(tmp_path, monkeypatch):
         "argv",
         [
             *("create_charts.py", "--version", "0.0.0-dev.1.1", "--mono"),
-            *("--chart-suffix", "", "--digests", str(digests)),
+            *("--chart-registry", "ghcr.io/ghga-de/ghga/charts", "--chart-suffix", ""),
+            *("--digests", str(digests)),
         ],
     )
 
@@ -69,4 +70,4 @@ def test_mono_run_pins_the_mono_digest(tmp_path, monkeypatch):
     assert image("wps")["digest"] == "sha256:mono"
     assert image("data-portal")["digest"] == "sha256:portal"
     readme = (tmp_path / "wps" / "README.md").read_text()
-    assert "oci://registry-1.docker.io/ghga/wps\n" in readme
+    assert "oci://ghcr.io/ghga-de/ghga/charts/wps\n" in readme

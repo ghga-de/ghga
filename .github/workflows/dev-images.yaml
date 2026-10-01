@@ -14,8 +14,8 @@
 #
 # The member charts are published alongside, for continuous deployment of `dev` to a
 # cluster: generated with --mono, so every Python member runs the platform image, and
-# pinned to the digests built here. Each run is DEV_VERSION, so a CD tool following
-# the semver range >=0.0.0-0 rolls out every merge in order (ADR-0045).
+# pinned to the digests built here. Each run has one version (the version job), so a CD
+# tool following the semver range >=0.0.0-0 rolls out every merge in order (ADR-0045).
 #
 # Publishing is deliberately independent of ci.yaml: merges are already gated by PR CI,
 # and :dev makes no greenness promise beyond that. PLATFORM_VERSION is left at its
@@ -52,13 +52,25 @@ env:
   # image_registry and release.yaml).
   IMAGE_REGISTRY: ghcr.io/ghga-de/ghga
   CHART_REGISTRY: ghcr.io/ghga-de/ghga/charts
-  # Numbers, not the SHA: semver compares numeric prerelease fields numerically, so the
-  # newest merge, or a re-run of it, is always the highest version. run_number restarts
-  # at 1 if this workflow is renamed or recreated; raise the 0.0.0 base then.
-  DEV_VERSION: 0.0.0-dev.${{ github.run_number }}.${{ github.run_attempt }}
 
 jobs:
+  # The one version both the image tag and the charts carry. Computed once: "Re-run
+  # failed jobs" never re-runs a job that succeeded, so its output survives, while a
+  # re-run job reading run_attempt itself would get a new one. Numbers, not the SHA:
+  # semver compares numeric prerelease fields numerically, so the newest merge, or a
+  # full re-run of it, is always the highest version. run_number restarts at 1 if this
+  # workflow is renamed or recreated; raise the 0.0.0 base then.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        run: echo "version=0.0.0-dev.${{ github.run_number }}.${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+
   publish:
+    needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -79,6 +91,7 @@ jobs:
             build-args: ""
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      DEV_VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
       - name: Short SHA
@@ -149,9 +162,11 @@ jobs:
   # rather than resolved. Only the generated member charts are pushed: aai,
   # ghga-common and ghga-demo carry their own versions and are not deployed from here.
   publish-charts:
-    needs: publish
+    needs: [version, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DEV_VERSION: ${{ needs.version.outputs.version }}
     permissions:
       contents: read
       packages: write
