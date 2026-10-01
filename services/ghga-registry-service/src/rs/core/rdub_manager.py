@@ -54,7 +54,7 @@ from rs.ports.outbound.http import AccessClientPort, FileBoxClientPort
 log = logging.getLogger(__name__)
 
 # How often to re-read and re-apply an inbound FileUploadBox update whose RDUB was
-# changed by a request in the meantime. Should usually resolve in attempt, but this
+# changed by a request in the meantime. Should usually resolve in one attempt, but this
 # acts as a reasonable cap.
 MAX_UPSERT_ATTEMPTS = 3
 
