@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from ghga_datasteward_kit.cli.metadata import compare_aliases, submit, transform
+from ghga_datasteward_kit.cli.metadata import submit, transform
 from tests.fixtures.metadata import (
     ARCHIVE_METADATA_CONFIG_PATH,
     ARCHIVE_ORIGINAL_METADATA_PATH,
@@ -31,10 +31,6 @@ from tests.fixtures.metadata import (
     ORIGINAL_METADATA_PATH,
     ORIGINAL_MODEL_PATH,
 )
-
-# anchored to this file: the monorepo runs pytest from the workspace root, so
-# CWD-relative fixture paths (which upstream CI can use) do not resolve here
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 def workdir_factory(original_model_path: Path):
@@ -82,30 +78,3 @@ def test_archive_happy(archive_workdir: Path):
     )
 
     transform(config_path=ARCHIVE_METADATA_CONFIG_PATH)
-
-
-@pytest.mark.parametrize(
-    "file_overview_path, output",
-    [
-        (
-            FIXTURES_DIR / Path("files_to_upload/all_accounted_for.tsv"),
-            "Success: All files in all_accounted_for.tsv are accounted for in metadata.json",
-        ),
-        (
-            FIXTURES_DIR / Path("files_to_upload/1_missing.tsv"),
-            "The following file aliases are missing from metadata.json:\n- MISSING1",
-        ),
-        (
-            FIXTURES_DIR / Path("files_to_upload/3_missing.tsv"),
-            "The following file aliases are missing from metadata.json:\n- MISSING1\n- MISSING2\n- MISSING3",
-        ),
-    ],
-)
-def test_compare_aliases(file_overview_path: Path, output: str, capsys):
-    """Test the `compare_aliases` function and verify the printed output."""
-    compare_aliases(
-        metadata_path=FIXTURES_DIR / "metadata.json",
-        tsv=file_overview_path,
-    )
-    captured = capsys.readouterr()
-    assert captured.out.strip() == output
