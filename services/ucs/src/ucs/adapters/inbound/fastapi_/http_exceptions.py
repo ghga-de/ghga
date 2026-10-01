@@ -460,8 +460,11 @@ class HttpPaginationError(HttpCustomExceptionBase):
 class HttpBoxStatsUnavailableError(HttpCustomExceptionBase):
     """Thrown when the FileUploadBox stats could not be updated.
 
-    The requested action itself succeeded, so the client should repeat the request
-    after fetching the latest box data.
+    The requested action itself succeeded, so the client should repeat the request:
+    - Completing or removing a file upload can be repeated as is.
+    - Locking, unlocking or archiving a box has already raised the box version the
+      request carries, so the client must fetch the box again and retry with the
+      new version. Set `versioned` for these.
     """
 
     exception_id = "boxStatsUnavailable"
@@ -471,14 +474,18 @@ class HttpBoxStatsUnavailableError(HttpCustomExceptionBase):
 
         box_id: UUID4
 
-    def __init__(self, *, box_id: UUID4, status_code: int = 503):
+    def __init__(
+        self, *, box_id: UUID4, versioned: bool = False, status_code: int = 503
+    ):
         """Construct message and init the exception."""
+        retry_hint = (
+            "Please fetch the box again and retry using the latest version."
+            if versioned
+            else "Please retry."
+        )
         super().__init__(
             status_code=status_code,
-            description=(
-                "The box stats could not be updated. Please fetch the box again"
-                + " and retry using the latest version."
-            ),
+            description=f"The box stats could not be updated. {retry_hint}",
             data={"box_id": str(box_id)},
         )
 
