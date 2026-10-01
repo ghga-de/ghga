@@ -674,7 +674,7 @@ async def test_upsert_file_upload_box_not_found(rig: JointRig):
     await rig.rdub_manager.upsert_file_upload_box(orphaned_file_upload_box)
 
     # Verify nothing was inserted in the DB
-    assert not await rig.box_dao.find_all(mapping={}).total_count()
+    assert not await rig.box_dao.find_all(filter_={}).total_count()
 
 
 async def test_get_research_data_upload_box_happy(
@@ -1056,7 +1056,7 @@ async def test_store_accession_map_happy(rig: JointRig, populated_boxes: list[UU
         )
 
     # Verify that the FileController's method was not called
-    assert not await rig.file_accession_dao.find_all(mapping={}).total_count()
+    assert not await rig.file_accession_dao.find_all(filter_={}).total_count()
 
     # Verify file box client was not called
     rig.file_upload_box_client.get_all_file_uploads.assert_not_called()  # type: ignore
@@ -1300,7 +1300,7 @@ async def test_store_accession_map_filters_cancelled_and_failed(
     )
 
     # Verify the accession map was stored by checking the FileController mock
-    file_accessions = await rig.file_accession_dao.find_all(mapping={}).to_list()
+    file_accessions = await rig.file_accession_dao.find_all(filter_={}).to_list()
     assert len(file_accessions) == 3
     file_accessions.sort(key=lambda x: x.pid)
     assert [(fa.pid, fa.file_id) for fa in file_accessions] == [
@@ -1435,7 +1435,7 @@ async def test_map_accessions_to_file_ids_updates_unmapped_entries(rig: JointRig
         study_id=TEST_STUDY_ID, file_id_map={accession: file_id}
     )
 
-    all_mappings = await rig.file_accession_dao.find_all(mapping={}).to_list()
+    all_mappings = await rig.file_accession_dao.find_all(filter_={}).to_list()
     assert len(all_mappings) == 1
     updated = all_mappings[0]
     assert updated.file_id == file_id
@@ -1458,7 +1458,7 @@ async def test_map_accessions_to_file_ids_unknown_accession(rig: JointRig):
     assert exc_info.value.unknown_accessions == [accession]
 
     # Nothing was created.
-    assert not await rig.file_accession_dao.find_all(mapping={}).total_count()
+    assert not await rig.file_accession_dao.find_all(filter_={}).total_count()
 
 
 async def test_map_accessions_to_file_ids_study_conflict(rig: JointRig):
@@ -2467,7 +2467,7 @@ async def test_delete_research_data_upload_box_happy(
     assert revoked == set(grant_ids)
 
     # Make sure the accession mapping was deleted
-    assert not await rig.file_accession_dao.find_all(mapping={}).total_count()
+    assert not await rig.file_accession_dao.find_all(filter_={}).total_count()
 
     # Make sure the FUB was deleted with the correct ID and version
     rig.file_upload_box_client.delete_file_upload_box.assert_awaited_once_with(  # type: ignore

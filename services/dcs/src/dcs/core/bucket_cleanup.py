@@ -128,7 +128,7 @@ class DownloadBucketCleaner(BucketCleanerPort):
             force_removal = False
             try:
                 drs_object = await self._drs_object_dao.find_one(
-                    mapping={"object_id": object_id}
+                    filter_={"object_id": object_id}
                 )
             except NoHitsFoundError:
                 if not remove_dangling_objects:

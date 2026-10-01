@@ -164,7 +164,7 @@ async def populated_real_item_dao(
 
 
 @pytest.mark.parametrize(
-    "mapping, results",
+    "filter_, results",
     [
         pytest.param(
             {"top_item.other_data.sold_last_week": {"$exists": True}},
@@ -219,19 +219,19 @@ async def populated_real_item_dao(
     ],
 )
 async def test_with_category_dao(
-    real_category_dao, mock_category_dao, mapping: Mapping[str, Any], results: list[str]
+    real_category_dao, mock_category_dao, filter_: Mapping[str, Any], results: list[str]
 ):
     """Test that dot notation is interpreted by the InMemDao"""
     mongodb_results = [
-        x.title async for x in real_category_dao.find_all(mapping=mapping)
+        x.title async for x in real_category_dao.find_all(filter_=filter_)
     ]
-    inmem_results = [x.title async for x in mock_category_dao.find_all(mapping=mapping)]
+    inmem_results = [x.title async for x in mock_category_dao.find_all(filter_=filter_)]
     assert sorted(mongodb_results) == results, "MongoDB results not as expected"
     assert sorted(inmem_results) == results, "Mock DAO results not as expected"
 
 
 @pytest.mark.parametrize(
-    "mapping, results",
+    "filter_, results",
     [
         pytest.param(
             {"count": {"$lt": 200, "$ne": 7}},
@@ -311,17 +311,17 @@ async def test_with_category_dao(
     ],
 )
 async def test_with_item_dao(
-    real_item_dao, mock_item_dao, mapping: Mapping[str, Any], results: list[str]
+    real_item_dao, mock_item_dao, filter_: Mapping[str, Any], results: list[str]
 ):
     """Test that dot notation is interpreted by the InMemDao"""
-    mongodb_results = [x.title async for x in real_item_dao.find_all(mapping=mapping)]
-    inmem_results = [x.title async for x in mock_item_dao.find_all(mapping=mapping)]
+    mongodb_results = [x.title async for x in real_item_dao.find_all(filter_=filter_)]
+    inmem_results = [x.title async for x in mock_item_dao.find_all(filter_=filter_)]
     assert sorted(mongodb_results) == results, "MongoDB results not as expected"
     assert sorted(inmem_results) == results, "Mock DAO results not as expected"
 
 
 @pytest.mark.parametrize(
-    "mapping, results",
+    "filter_, results",
     [
         pytest.param(
             {"top_item.other_data": APPLES.other_data.model_dump()},
@@ -336,13 +336,13 @@ async def test_with_item_dao(
     ],
 )
 async def test_also_on_non_mql(
-    real_category_dao, mock_category_dao, mapping: Mapping[str, Any], results: list[str]
+    real_category_dao, mock_category_dao, filter_: Mapping[str, Any], results: list[str]
 ):
     """Tests for direct equality of a nested field with MQL enabled and disabled"""
     mongodb_results = [
-        x.title async for x in real_category_dao.find_all(mapping=mapping)
+        x.title async for x in real_category_dao.find_all(filter_=filter_)
     ]
-    inmem_results = [x.title async for x in mock_category_dao.find_all(mapping=mapping)]
+    inmem_results = [x.title async for x in mock_category_dao.find_all(filter_=filter_)]
     assert sorted(mongodb_results) == results, "MongoDB results not as expected"
     assert sorted(inmem_results) == results, "Mock DAO results not as expected"
 
@@ -353,5 +353,5 @@ async def test_also_on_non_mql(
     dao = CategoryDaoClassNoMQL()
     await dao.insert(PRODUCE)
     await dao.insert(BIKE_PARTS)
-    nomql_results = [x.title async for x in dao.find_all(mapping=mapping)]
+    nomql_results = [x.title async for x in dao.find_all(filter_=filter_)]
     assert nomql_results == inmem_results, "Non-MQL Mock DAO results not as expected"

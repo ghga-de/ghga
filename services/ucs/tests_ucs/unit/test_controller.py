@@ -2238,7 +2238,7 @@ async def test_upload_activity_lifecycle(rig: JointRig):
     """Test that an UploadActivity entry is created when a FileUpload is initiated
     and deleted when the upload is completed.
     """
-    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    assert not [x async for x in rig.upload_activity_dao.find_all(filter_={})]
     box_id = await rig.create_default_box()
     file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
@@ -2328,7 +2328,7 @@ async def test_cleanup_falls_back_to_initiated_when_no_activity(rig: JointRig):
     await rig.file_upload_dao.insert(file_upload)
 
     # No activity entry is created for this file
-    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    assert not [x async for x in rig.upload_activity_dao.find_all(filter_={})]
 
     # Run the cleanup job and make sure the upload is still cancelled
     await rig.controller.cleanup_stale_uploads()
@@ -2690,7 +2690,7 @@ async def test_initiate_file_upload_marks_failed_on_insert_kafka_error(
     assert stuck_upload.failure_reason == "Internal error during upload initiation"
 
     # Just double check that no UploadActivity was inserted
-    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    assert not [x async for x in rig.upload_activity_dao.find_all(filter_={})]
 
 
 @pytest.mark.parametrize("box_state", ["open", "locked"])

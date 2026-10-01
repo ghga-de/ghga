@@ -70,7 +70,7 @@ class InMemBoxStatsAggregator(BoxStatsAggregatorPort):
         file_count = 0
         total_size = 0
         async for file_upload in self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "state": {"$in": list(COUNTED_UPLOAD_STATES)}}
+            filter_={"box_id": box_id, "state": {"$in": list(COUNTED_UPLOAD_STATES)}}
         ):
             file_count += 1
             total_size += file_upload.decrypted_size
