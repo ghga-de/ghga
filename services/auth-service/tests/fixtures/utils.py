@@ -249,9 +249,9 @@ def request_with_authorization(token: str = "") -> Request:
     return Request({"type": "http", "headers": [(b"authorization", authorization)]})
 
 
-def _matches(data: Mapping[str, Any], mapping: Mapping[str, Any]) -> bool:
-    """Check whether the given data matches the given filter mapping."""
-    for key, value in mapping.items():
+def _matches(data: Mapping[str, Any], filter_: Mapping[str, Any]) -> bool:
+    """Check whether the given data matches the given filter."""
+    for key, value in filter_.items():
         if isinstance(value, dict) and "$in" in value:
             # mock the MongoDB "$in" operator
             if data[key] not in value["$in"]:
@@ -264,7 +264,7 @@ def _matches(data: Mapping[str, Any], mapping: Mapping[str, Any]) -> bool:
 def mock_find_all(
     items: list[Any],
     *,
-    mapping: Mapping[str, Any],
+    filter_: Mapping[str, Any],
     skip: int | None = None,
     limit: int | None = None,
     sort: list[str] | None = None,
@@ -274,7 +274,7 @@ def mock_find_all(
     Returns a FindResult that is async-iterable and also provides to_list()
     and total_count(), just like the real DAO implementation.
     """
-    matched = [item for item in items if _matches(item.model_dump(), mapping)]
+    matched = [item for item in items if _matches(item.model_dump(), filter_)]
     if sort:
         for field in reversed(sort):
             reverse = field.startswith("-")
@@ -340,25 +340,25 @@ class MockUserDao:
                 return user
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> User:
+    async def find_one(self, *, filter_: Mapping[str, Any]) -> User:
         """Find the dummy user via LS-ID."""
-        ext_id = mapping.get("ext_id")
+        ext_id = filter_.get("ext_id")
         for user in self.users:
             if not ext_id or ext_id == user.ext_id:
                 return user
-        raise NoHitsFoundError(mapping=mapping)
+        raise NoHitsFoundError(filter_=filter_)
 
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[User]:
         """Find all dummy users with given ID(s)."""
         return mock_find_all(
-            self.users, mapping=mapping, skip=skip, limit=limit, sort=sort
+            self.users, filter_=filter_, skip=skip, limit=limit, sort=sort
         )
 
     async def insert(self, dto: User) -> None:
@@ -427,14 +427,14 @@ class MockIvaDao:
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Iva]:
         """Find all dummy IVAs."""
         return mock_find_all(
-            self.ivas, mapping=mapping, skip=skip, limit=limit, sort=sort
+            self.ivas, filter_=filter_, skip=skip, limit=limit, sort=sort
         )
 
     async def insert(self, dto: Iva) -> None:
@@ -528,26 +528,26 @@ class MockClaimDao:
                 return claim
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Claim:
+    async def find_one(self, *, filter_: Mapping[str, Any]) -> Claim:
         """Find a dummy user claim."""
-        claims = [claim async for claim in self.find_all(mapping=mapping)]
+        claims = [claim async for claim in self.find_all(filter_=filter_)]
         if not claims:
-            raise NoHitsFoundError(mapping=mapping)
+            raise NoHitsFoundError(filter_=filter_)
         if len(claims) > 1:
-            raise MultipleHitsFoundError(mapping=mapping)
+            raise MultipleHitsFoundError(filter_=filter_)
         return claims[0]
 
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Claim]:
         """Find all dummy user claims."""
         return mock_find_all(
-            self.claims, mapping=mapping, skip=skip, limit=limit, sort=sort
+            self.claims, filter_=filter_, skip=skip, limit=limit, sort=sort
         )
 
     async def update(self, dto: Claim) -> None:

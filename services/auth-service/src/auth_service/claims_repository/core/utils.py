@@ -114,7 +114,7 @@ async def get_active_roles(
         return []
     roles = set()
     async for claim in claim_dao.find_all(
-        mapping={"user_id": user_id, "visa_type": VisaType.GHGA_ROLE}
+        filter_={"user_id": user_id, "visa_type": VisaType.GHGA_ROLE}
     ):
         if is_valid_claim(claim, now=now):
             role = get_role_from_claim(claim)
@@ -137,7 +137,7 @@ async def with_added_roles(
     roles: dict[UUID4, set] = defaultdict(set)
     # Note: Here we rely on "$in" being supported by the DAO.
     async for claim in claim_dao.find_all(
-        mapping={"user_id": {"$in": user_ids}, "visa_type": VisaType.GHGA_ROLE}
+        filter_={"user_id": {"$in": user_ids}, "visa_type": VisaType.GHGA_ROLE}
     ):
         if is_valid_claim(claim, now=now) and (role := get_role_from_claim(claim)):
             roles[claim.user_id].add(str(role))

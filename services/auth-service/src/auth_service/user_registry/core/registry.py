@@ -114,7 +114,7 @@ class UserRegistry(UserRegistryPort):
         try:
             if not self.is_external_user_id(ext_id):
                 raise ValueError(f"Invalid user ID: {ext_id}")
-            user = await self._user_dao.find_one(mapping={"ext_id": ext_id})
+            user = await self._user_dao.find_one(filter_={"ext_id": ext_id})
         except NoHitsFoundError:
             pass
         except Exception as error:
@@ -172,11 +172,11 @@ class UserRegistry(UserRegistryPort):
 
         May raise a UserRetrievalError.
         """
-        mapping = {}
+        filter_ = {}
         if status:
-            mapping["status"] = status
+            filter_["status"] = status
         try:
-            return await self._user_dao.find_all(mapping=mapping).to_list()
+            return await self._user_dao.find_all(filter_=filter_).to_list()
         except Exception as error:
             log.error("Could not retrieve users: %s", error)
             raise self.UserRetrievalError() from error
@@ -250,14 +250,14 @@ class UserRegistry(UserRegistryPort):
             log.error("Could not delete user: %s", error)
             raise self.UserDeletionError(user_id=user_id) from error
         try:
-            async for iva in self._iva_dao.find_all(mapping={"user_id": user_id}):
+            async for iva in self._iva_dao.find_all(filter_={"user_id": user_id}):
                 with suppress(ResourceNotFoundError):
                     await self._iva_dao.delete(iva.id)
         except Exception as error:
             log.error("Could not delete IVAs of user: %s", error)
             raise self.UserDeletionError(user_id=user_id) from error
         try:
-            async for claim in self._claim_dao.find_all(mapping={"user_id": user_id}):
+            async for claim in self._claim_dao.find_all(filter_={"user_id": user_id}):
                 with suppress(ResourceNotFoundError):
                     await self._claim_dao.delete(claim.id)
         except Exception as error:
@@ -342,12 +342,12 @@ class UserRegistry(UserRegistryPort):
         May raise an IvaRetrievalError.
         """
         try:
-            mapping: dict[str, Any] = {}
+            filter_: dict[str, Any] = {}
             if user_id:
-                mapping["user_id"] = user_id
+                filter_["user_id"] = user_id
             if state:
-                mapping["state"] = state
-            return await self._iva_dao.find_all(mapping=mapping).to_list()
+                filter_["state"] = state
+            return await self._iva_dao.find_all(filter_=filter_).to_list()
         except Exception as error:
             log.error("Could not retrieve IVAs: %s", error)
             raise self.IvaRetrievalError(user_id=user_id, state=state) from error
@@ -380,7 +380,7 @@ class UserRegistry(UserRegistryPort):
             users = {
                 user.id: user
                 async for user in self._user_dao.find_all(
-                    mapping={"id": {"$in": user_ids}}
+                    filter_={"id": {"$in": user_ids}}
                 )
             }
         except Exception as error:
