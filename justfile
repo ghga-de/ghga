@@ -96,11 +96,13 @@ sync-check: _guard
 lint: _guard
     uv run ruff check .
     uv run ruff format --check .
+    uv run rumdl check .
 
 # Auto-fix lint + format.
 fmt: _guard
     uv run ruff format .
     uv run ruff check --fix .
+    uv run rumdl fmt .
 
 # A single `mypy .` collides on duplicate module names across members, and the result
 # depends on the path set it is given -- so the unit, not the file, is what gets checked.
@@ -132,6 +134,11 @@ hooks-update: _guard
 # Check the ADRs and epics and every reference to them, and regenerate their indexes.
 docs-check: _guard
     uv run python scripts/docs_check.py
+
+# The same check the service-docs pre-commit hook runs; `--check` writes nothing.
+# Regenerate each service's config schema, example config, README parameters and OpenAPI spec.
+service-docs *args: _guard
+    uv run python scripts/service_docs.py {{args}}
 
 # Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
@@ -206,6 +213,35 @@ test target="": _guard sync-check
 # On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
 affected base="origin/dev":
     uv run python scripts/affected_targets.py --base {{base}}
+
+# --- Worktrees (parallel work) ----------------------------------------------------------
+# Worktrees go under .claude/worktrees/ of the main checkout, even when the recipe runs in
+# a worktree: that is where Claude Code's `--worktree` puts its own, and /.claude/* in
+# .gitignore hides them. Git records a worktree's path absolutely, and the host and the
+# container see different paths, so only the container may create them.
+# Each worktree gets its own .venv, which the uv cache makes a copy rather than a download.
+#
+#   just wt chore/GSI-1234-bump-hexkit       # .claude/worktrees/GSI-1234-bump-hexkit
+#   just wt hotfix/ucs-retry origin/main     # from another base
+#
+# Create a worktree on a new branch and sync its .venv, e.g. `just wt feat/add-x`.
+wt branch base="origin/dev": _guard-host
+    #!/usr/bin/env bash
+    set -euo pipefail
+    main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+    dir="$main/.claude/worktrees/$(basename "{{branch}}")"
+    git fetch origin
+    git worktree add "$dir" -b "{{branch}}" "{{base}}"
+    cd "$dir" && just sync
+
+# Leaves the branch: after a squash merge `git branch -d` refuses it, and deleting it with
+# `-D` is the dev's call, not a recipe's.
+# Remove a worktree created by `just wt`, given its directory name.
+wt-rm name: _guard-host
+    #!/usr/bin/env bash
+    set -euo pipefail
+    main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+    git worktree remove "$main/.claude/worktrees/{{name}}"
 
 # --- PyPI lane --------------------------------------------------------------------------
 # Run ONE cell of the published-combo matrix (.github/workflows/pypi-matrix.yaml) locally.

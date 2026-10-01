@@ -24,15 +24,23 @@ accepting that **features vary between frameworks and there will be effort invol
 
 ### Context
 
-JSDoc is a natural choice because its style is aligned with that of JavaDoc, for example, and is therefore known to most developers. The more important question is which tools to use on top of the information stored in JSDoc and to decide on specifics of how to use JSDoc.
+JSDoc is a natural choice because its style is aligned with that of JavaDoc, for example, and is therefore known to most developers.
+The more important question is which tools to use on top of the information stored in JSDoc and to decide on specifics of how to use JSDoc.
 
-Documentation always entails extra work. The goal in documenting the codebase is therefore to do it in such a way that the benefits outweigh this additional effort, leading to two main levers: Increasing the advantages the documentation provides and decreasing the effort.
+Documentation always entails extra work.
+The goal in documenting the codebase is therefore to do it in such a way that the benefits outweigh this additional effort, leading to two main levers: Increasing the advantages the documentation provides and decreasing the effort.
 
-On the side of generating benefits, the first question is the audience of the documentation. Four groups of readers come to mind: The developers currently working on the codebase, the designers working on the project, new developers joining the project and finally, external developers who use the project as an API or dependency. In discussions, we have decided not to focus on design aspects, because there are currently no designers in the project whose input would be required for these decisions. Due to its focus on UI design, we set Storybook aside for now: its main benefits address design workflows that we do not currently have, while maintaining the required stories would add ongoing effort.
+On the side of generating benefits, the first question is the audience of the documentation.
+Four groups of readers come to mind: The developers currently working on the codebase, the designers working on the project, new developers joining the project and finally, external developers who use the project as an API or dependency.
+In discussions, we have decided not to focus on design aspects, because there are currently no designers in the project whose input would be required for these decisions.
+Due to its focus on UI design, we set Storybook aside for now: its main benefits address design workflows that we do not currently have, while maintaining the required stories would add ongoing effort.
 
-TypeDoc is a framework that is frequently used for API documentation, offering a clear list of all the exposed APIs and the types they use. Since we don't offer APIs externally and this project will not be a dependency for others, we can neglect TypeDoc, since other frameworks offer more features to document the internal structure of the project (instead of focussing on the external interfaces).
+TypeDoc is a framework that is frequently used for API documentation, offering a clear list of all the exposed APIs and the types they use.
+Since we don't offer APIs externally and this project will not be a dependency for others, we can neglect TypeDoc, since other frameworks offer more features to document the internal structure of the project (instead of focussing on the external interfaces).
 
-After these considerations, documentation.js and Compodoc are left as competitors. At the time of writing, the documentation.js repository showed no commits for about two years. Since the JS and TS language standards evolve quickly, we preferred a tool with a more recent release history for our documentation pipeline.
+After these considerations, documentation.js and Compodoc are left as competitors.
+At the time of writing, the documentation.js repository showed no commits for about two years.
+Since the JS and TS language standards evolve quickly, we preferred a tool with a more recent release history for our documentation pipeline.
 
 Compodoc offers multiple main advantages:
 
@@ -47,7 +55,8 @@ Compodoc offers multiple main advantages:
 Use a stack of JSDoc documentation, an ESlint plugin to enforce documentation and using Compodoc to visualize the information.
 The [Eslint plugin JSDoc](https://www.npmjs.com/package/eslint-plugin-jsdoc) offers a recommended set of documentation rules that we can start with and possibly adapt if problems or different wishes arise.
 
-An additional guiding principle is to focus on documenting *public* functions specifically, since these are more likely to be used by other developers who will depend on the documentation to understand these functions. It also makes sense to focus on programming in such a way that makes it almost unnecessary to document functions because their names describe it completely.
+An additional guiding principle is to focus on documenting *public* functions specifically, since these are more likely to be used by other developers who will depend on the documentation to understand these functions.
+It also makes sense to focus on programming in such a way that makes it almost unnecessary to document functions because their names describe it completely.
 
 ### Consequences
 
@@ -59,4 +68,6 @@ The documentation does not have to be deployed anywhere - it can be generated fr
 
 ### Alternatives
 
-Several alternatives were listed above and their properties discussed. If large problems arise from the chosen stack, migrating to different tools is easy. Moving to a different documentation language (away from JSDoc) would be more effort but still a semi-automatic refactoring.
+Several alternatives were listed above and their properties discussed.
+If large problems arise from the chosen stack, migrating to different tools is easy.
+Moving to a different documentation language (away from JSDoc) would be more effort but still a semi-automatic refactoring.

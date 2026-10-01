@@ -259,6 +259,8 @@ jobs:
   # is left alone. A sweep's tag names no member, so each member it uploaded gets its own
   # `name/x.y.z` tag first: its next release needs a previous tag to compare with. A tag
   # pushed with the workflow token starts no workflow, so this does not re-run the release.
+  # A prerelease (PEP 440, e.g. 2.0.0rc1) is tagged but not drafted: only final releases
+  # get a release page.
   draft-releases:
     needs: [plan, publish]
     runs-on: ubuntu-latest
@@ -281,6 +283,10 @@ jobs:
             if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
               git tag "$tag" "$GITHUB_SHA"
               git push origin "refs/tags/$tag"
+            fi
+            if [ "$(echo "$member" | jq -r '.prerelease')" = "true" ]; then
+              echo "$tag is a prerelease, not drafted"
+              continue
             fi
             # stdin is the member list; the script must not read from it.
             uv run --script scripts/release_notes.py "$tag" --draft </dev/null

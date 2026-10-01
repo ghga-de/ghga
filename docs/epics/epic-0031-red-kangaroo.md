@@ -2,8 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
 
 ## Principal Components of Exploration
 
@@ -15,7 +14,9 @@ This epic seeks to explore the use of Angular and Vue for a refactoring of the D
 - If so, which framework is best suited for the development of the data portal?
 - Which framework's data handling system is best suited for the requirements of the data portal?
 - Are Vue's advantages (e.g. shallower learning curve, less restrictive framework) enough of a positive to counter the lack of previous experience with it in the team?
-- How are the overall development ergonomics? How many decisions do we have to make ourselves? How much structure is provided?
+- How are the overall development ergonomics?
+  How many decisions do we have to make ourselves?
+  How much structure is provided?
 
 ## Material and Resources
 
@@ -36,7 +37,8 @@ This epic covers the following user journeys:
 ## Additional Implementation Details
 
 - Although self-evident, it is important to specify the Metadata Catalog(ue) functionality will be implemented in both Angular and Vue.
-- The implementation will require the development of a mock data service to examine the coding required for API calling in both Angular and Vue. This will add to the time required for development.
+- The implementation will require the development of a mock data service to examine the coding required for API calling in both Angular and Vue.
+  This will add to the time required for development.
 
 ## Human Resource/Time Estimation
 

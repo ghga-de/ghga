@@ -15,11 +15,11 @@
 - strategy for enriching the schema with validators/linters for logic that cannot be described using the declarative schema
 - strategy for data deletions when using event sourcing
 - tools and patterns to be evaluated:
-    - ~~LinkML documentation driven design using runtime interpretation~~
-    - GraphQL as alternative for modeling APIs
-    - ElasticSearch or Solr as Alternative to Mongodb-based search
-    - CQRS and storage of metadata in an event history
-    - separation of write and read representations of metadata
+  - ~~LinkML documentation driven design using runtime interpretation~~
+  - GraphQL as alternative for modeling APIs
+  - ElasticSearch or Solr as Alternative to Mongodb-based search
+  - CQRS and storage of metadata in an event history
+  - separation of write and read representations of metadata
 
 ## Human Resource/Time Estimation
 

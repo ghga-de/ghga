@@ -4,7 +4,7 @@
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/4AC2D
+A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/4AC2D>
 
 ## User Journeys
 
@@ -18,7 +18,7 @@ The API should allow to store a secret and return a newly generated ID by which 
 
 Implementing this change includes multiple steps:
 
-1. Explore how to set up HashiCorp Vault for our use case - see also https://wiki.verbis.dkfz.de/x/SoKcCw for what has already been done
+1. Explore how to set up HashiCorp Vault for our use case - see also <https://wiki.verbis.dkfz.de/x/SoKcCw> for what has already been done
 2. Explore how to connect, store and retrieve secrets
 3. Implement a HashiCorp vault setup for development (.devcontainer) and testing (python-testcontainers).
 
@@ -26,7 +26,7 @@ Implementing this change includes multiple steps:
 
 While models and events exist for all the necessary cross-service communication, some have a more prototypical character and might need updates to their definition based on spec compliance or practical concerns.
 Those updates should be applied after all services can communicate with each other.
-This includes moving (remaining) in-service event definitions to the https://github.com/ghga-de/ghga-event-schemas repository.
+This includes moving (remaining) in-service event definitions to the <https://github.com/ghga-de/ghga-event-schemas> repository.
 
 ### 3. Provide a local testbed covering all services using docker-compose
 

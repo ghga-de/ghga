@@ -40,7 +40,8 @@ In this update, a new type of notification event will be added to expand the ser
 
 To utilize the Notification Service to send SMS, publishers will need to publish an event to the "notifications" topic using the "SMS notification" event type, with a payload conforming to the schema defined by `SmsNotification` in the `ghga-event-schemas` repository.
 
-SMS will be sent via HTTP, and SMS contents will be injected into the requests. The parameters required to successfully configure the service are as follows:
+SMS will be sent via HTTP, and SMS contents will be injected into the requests.
+The parameters required to successfully configure the service are as follows:
 
 - `lox24_base_url`: The base url of the SMS gateway
 - `lox24_token`: The API token used for authentication and authorization

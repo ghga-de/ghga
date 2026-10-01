@@ -2,10 +2,11 @@
 
 How an agent looks at the running data portal in VS Code's integrated browser.
 
-The dev server runs at **http://localhost:8080** (not the Angular default 4200).
+The dev server runs at **<http://localhost:8080>** (not the Angular default 4200).
 The dev server must already be running (`just fe-dev`) before attempting visual inspection.
 
-VS Code's integrated browser gives agents full page interaction (read content, take screenshots, click, type, etc.) via built-in browser tools. There are two modes:
+VS Code's integrated browser gives agents full page interaction (read content, take screenshots, click, type, etc.) via built-in browser tools.
+There are two modes:
 
 **Agent-opened pages** (isolated session — no cookies or login state):
 

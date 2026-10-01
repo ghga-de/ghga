@@ -1,47 +1,41 @@
 # GHGA Monorepo — Migration Runbook
 
-> Executable, step-by-step migration plan. Decisions behind it:
-> [ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md) (migration),
-> [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md) (uv workspace),
-> [ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md) (release).
+> Executable, step-by-step migration plan.
+> Decisions behind it: [ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md) (migration), [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md) (uv workspace), [ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md) (release).
 > Tooling: [scripts/migration/](../../scripts/migration/) — **review before running.**
 
 ## 0. Prerequisites
 
-**In the devcontainer** (provisioned automatically): `git`,
-[`git-filter-repo`](https://github.com/newren/git-filter-repo), `uv`, `just`
-([ADR-0034](../adrs/adr-0034-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
+**In the devcontainer** (provisioned automatically): `git`, [`git-filter-repo`](https://github.com/newren/git-filter-repo), `uv`, `just` ([ADR-0034](../adrs/adr-0034-task-runner.md)), `helm`, `kubectl`, `pnpm`/`node`.
 
-**Cluster** ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)): kind inside the devcontainer's own Docker daemon,
-created by `just cluster`. The host needs only host networking for the devcontainer, see
-`.devcontainer/devcontainer.json`. (No mesh/Istio needed for the self-contained path — the
-umbrella bundles Envoy Gateway, [ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md).)
+**Cluster** ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)): kind inside the devcontainer's own Docker daemon, created by `just cluster`.
+The host needs only host networking for the devcontainer, see `.devcontainer/devcontainer.json`. (No mesh/Istio needed for the self-contained path — the umbrella bundles Envoy Gateway, [ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md).)
 
 Hosting ([ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md)):
+
 - GitHub: repo at **`github.com/ghga-de/ghga`**.
-- Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already
-  pulls from. Pushed only by manual `workflow_dispatch` runs, authenticated with the org's
-  stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the same credentials used to pull
-  the hardened dhi.io base images).
+- Platform image target: Docker Hub (`docker.io/ghga/...`) — matches what production already pulls from.
+  Pushed only by manual `workflow_dispatch` runs, authenticated with the org's stored `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets (the same credentials used to pull the hardened dhi.io base images).
 - PyPI target: pypi.org, rehearsed on TestPyPI first (see §5).
 
-The initial import could use local legacy clones in `.legacy_repos/` (gitignored, not part of
-the repo) via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`** (the live source).
+The initial import could use local legacy clones in `.legacy_repos/` (gitignored, not part of the repo) via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`** (the live source).
 
 ## 1. Phase 1 — Monorepo skeleton
 
 1. Initialise the repo and root scaffolding (hand-authored, replaces the retired template):
+
    ```bash
    cd /workspaces/ghga-monorepo
    git init -b main
    printf '.legacy_repos/\n.migration-work/\n' >> .gitignore   # never track these
    ```
+
 2. Author the root workspace files (see [overview §3.1–3.2](../architecture/overview.md)):
-   - root `pyproject.toml` with `[tool.uv.workspace] members = ["libs/*", "services/*", "tools/*"]`
-     and the shared `ruff`/`mypy`/`pytest` config;
+   - root `pyproject.toml` with `[tool.uv.workspace] members = ["libs/*", "services/*", "tools/*"]` and the shared `ruff`/`mypy`/`pytest` config;
    - placeholder `libs/`, `services/`, `tools/`, `frontend/`, `deploy/`, `testbed/`, `docker/` dirs;
    - the consolidated `.github/workflows/` (added in Phase 5).
 3. Commit:
+
    ```bash
    git add -A && git commit -m "Monorepo skeleton: uv workspace + shared toolchain"
    ```
@@ -50,7 +44,8 @@ the repo) via `LEGACY_DIR`; **incremental sync must fetch from `ghga-de`** (the 
 
 ## 2. Phase 2 — History-preserving import
 
-Run the import. Destinations are disjoint, so the unrelated-history merges don't conflict.
+Run the import.
+Destinations are disjoint, so the unrelated-history merges don't conflict.
 
 ```bash
 # from local snapshot (fast, offline):
@@ -60,14 +55,13 @@ scripts/migration/import-all.sh
 ```
 
 What it does, per row in [scripts/migration/repos.tsv](../../scripts/migration/repos.tsv):
-- whole-repo rows: drop centralised boilerplate (kind-specific list in
-  [lib.sh](../../scripts/migration/lib.sh)), then move the rest into the destination subdir;
-- partial rows (a `subpath` other than `.`): keep only that subtree, placed at top level — how
-  the six `file-services-backend` services were imported, before those rows were retired;
-- merge with `--allow-unrelated-histories`, preserving authorship/dates; `git blame`/`log` follow
-  files into their new paths.
+
+- whole-repo rows: drop centralised boilerplate (kind-specific list in [lib.sh](../../scripts/migration/lib.sh)), then move the rest into the destination subdir;
+- partial rows (a `subpath` other than `.`): keep only that subtree, placed at top level — how the six `file-services-backend` services were imported, before those rows were retired;
+- merge with `--allow-unrelated-histories`, preserving authorship/dates; `git blame`/`log` follow files into their new paths.
 
 Verify:
+
 ```bash
 git log --oneline --graph --decorate | head -50
 git -C . ls-files | cut -d/ -f1-2 | sort -u   # sanity-check the tree shape
@@ -75,92 +69,65 @@ git -C . ls-files | cut -d/ -f1-2 | sort -u   # sanity-check the tree shape
 
 ## 3. Phase 3 — Harmonisation (root-only; keep service `src/` aligned)
 
-Per [ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md), do **all** of this at the root so
-incremental sync stays low-conflict:
+Per [ADR-0025](../adrs/adr-0025-consolidate-into-monorepo.md), do **all** of this at the root so incremental sync stays low-conflict:
 
-1. **Workspace wiring:** in each member's `pyproject.toml`, replace PyPI pins on internal libs
-   with `[tool.uv.sources] <lib> = { workspace = true }`. This is the one per-service file the
-   sync may later touch — keep the block minimal and stable.
-2. **Lock:** `uv lock` → single root `uv.lock`. Resolve any genuine conflicts now (this is where
-   today's `event-schemas 12 vs 13` / `transpiler <3 vs 3.0.0` skew gets reconciled).
-3. **Toolchain:** one `ruff`/`mypy`/`pre-commit` config; delete per-member copies (already dropped
-   on import). **Done** — the root `.pre-commit-config.yaml` covers both stacks and the last
-   per-member copy (testbed's) is gone
-   ([ADR-0036](../adrs/adr-0036-pre-commit-hooks.md)).
-4. **Containers:** one shared `docker/Dockerfile` (+ DHI), ENTRYPOINT chosen per service; the
-   frontend keeps its bespoke Dockerfile.
-5. **Per-package lib matrix:** a CI job that runs each `libs/*` standalone across its supported
-   Python range ([ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
+1. **Workspace wiring:** in each member's `pyproject.toml`, replace PyPI pins on internal libs with `[tool.uv.sources] <lib> = { workspace = true }`.
+   This is the one per-service file the sync may later touch — keep the block minimal and stable.
+2. **Lock:** `uv lock` → single root `uv.lock`.
+   Resolve any genuine conflicts now (this is where today's `event-schemas 12 vs 13` / `transpiler <3 vs 3.0.0` skew gets reconciled).
+3. **Toolchain:** one `ruff`/`mypy`/`pre-commit` config; delete per-member copies (already dropped on import).
+   **Done** — the root `.pre-commit-config.yaml` covers both stacks and the last per-member copy (testbed's) is gone ([ADR-0036](../adrs/adr-0036-pre-commit-hooks.md)).
+4. **Containers:** one shared `docker/Dockerfile` (+ DHI), ENTRYPOINT chosen per service; the frontend keeps its bespoke Dockerfile.
+5. **Per-package lib matrix:** a CI job that runs each `libs/*` standalone across its supported Python range ([ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 6. Run `uv sync && uv run pytest` per affected target; commit.
 
 ## 4. Phase 4 — Charts & test bed
 
-1. **Adopt `ghga-common`** ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)): move the
-   library chart + generator into `deploy/`; prune the Emissary paths and the
-   `istio-ext-authz-sync` Job; DRY the generator against `[tool.ghga]` markers
-   ([ADR-0033](../adrs/adr-0033-capability-markers-and-placement.md)). App charts keep
-   their app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy,
-   KafkaUser[toggle]) — the *hybrid* boundary
-   ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)).
-2. `deploy/charts/ghga-demo` — single-command umbrella bundling the **Envoy Gateway** edge
-   ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md); `SecurityPolicy.extAuth` →
-   auth-adapter; gateway Service → NodePort) + lightweight infra + AAI + secret-gen/seed Jobs
-   ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md),
-   [ADR-0029](../adrs/adr-0029-local-aai-generic-oidc.md),
-   [ADR-0035](../adrs/adr-0035-secrets-and-tls.md)).
-3. Port the `testbed/` suite to target the umbrella, with the test OIDC provider for its
-   logins; gate `state-management-service` behind the test-bed profile
-   ([ADR-0030](../adrs/adr-0030-state-management-service-testbed-only.md)).
-4. Validate locally on kind inside the devcontainer
-   ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)) — same artifact users
-   install, same recipes CI runs:
+1. **Adopt `ghga-common`** ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)): move the library chart + generator into `deploy/`; prune the Emissary paths and the `istio-ext-authz-sync` Job; DRY the generator against `[tool.ghga]` markers ([ADR-0033](../adrs/adr-0033-capability-markers-and-placement.md)).
+   App charts keep their app-coupled CRDs (HTTPRoute, DestinationRule[toggle], NetworkPolicy, KafkaUser[toggle]) — the *hybrid* boundary ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)).
+2. `deploy/charts/ghga-demo` — single-command umbrella bundling the **Envoy Gateway** edge ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md); `SecurityPolicy.extAuth` → auth-adapter; gateway Service → NodePort) + lightweight infra + AAI + secret-gen/seed Jobs ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md), [ADR-0029](../adrs/adr-0029-local-aai-generic-oidc.md), [ADR-0035](../adrs/adr-0035-secrets-and-tls.md)).
+3. Port the `testbed/` suite to target the umbrella, with the test OIDC provider for its logins; gate `state-management-service` behind the test-bed profile ([ADR-0030](../adrs/adr-0030-state-management-service-testbed-only.md)).
+4. Validate locally on kind inside the devcontainer ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)) — same artifact users install, same recipes CI runs:
+
    ```bash
    just demo-images-mono   # or `just demo-images` for one image per member
    just testbed-up mono    # creates the kind cluster, loads the images, installs
    just testbed
    ```
-   > CRD note: Gateway API + Envoy Gateway CRDs ship in the chart's `crds/` (install-only);
-   > CRD **upgrades** need a manual `kubectl apply` ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)).
+
+   > CRD note: Gateway API + Envoy Gateway CRDs ship in the chart's `crds/` (install-only); CRD **upgrades** need a manual `kubectl apply` ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)).
 
 ## 5. Phase 5 — CI/CD
 
 Enabled in two stages (the component gate does **not** wait for the charts):
 
-- **Stage 1 — component gate (enabled):** affected-target lint / format / type-check / unit
-  tests, including the front-end leg (pnpm lint + vitest). Requires the affected-target
-  computation to include **reverse dependencies** of changed internal libs (a `hexkit` change
-  must run its consumers' suites, not just `libs/hexkit`).
-- **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed
-  run ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
-- **Image/chart/PyPI publish (live):** a tag push publishes wheels to PyPI, after a TestPyPI
-  rehearsal. Images and charts go to Docker Hub, but a tag push only builds them — publishing
-  a platform release is a deliberate dispatch
-  ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
+- **Stage 1 — component gate (enabled):** affected-target lint / format / type-check / unit tests, including the front-end leg (pnpm lint + vitest).
+  Requires the affected-target computation to include **reverse dependencies** of changed internal libs (a `hexkit` change must run its consumers' suites, not just `libs/hexkit`).
+- **Stage 2 — integration gate (after Phase 4):** the kind-based `ghga-demo` install + testbed run ([ADR-0028](../adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
+- **Image/chart/PyPI publish (live):** a tag push publishes wheels to PyPI, after a TestPyPI rehearsal.
+  Images and charts go to Docker Hub, but a tag push only builds them — publishing a platform release is a deliberate dispatch ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - Push the repo to `github.com/ghga-de/ghga`.
 
 ## 6. Ongoing — one-way incremental sync
 
 While developing the sandbox in parallel with mainline:
+
 ```bash
 scripts/migration/sync-from-mainline.sh                 # all destinations
 scripts/migration/sync-from-mainline.sh libs/metldata   # just one
 ```
-Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`); resolve,
-`git commit`, re-run for the rest. Keep harmonisation root-only and don't restructure service
-`src/` during the window, or conflicts multiply.
 
-Every `main` in this section and in `scripts/migration/` is the **upstream** repo's branch (the
-manifest's optional 5th column, defaulting to `main`), and is unaffected by our own branching
-model. On the monorepo side, sync and retirement work is a branch cut from `dev` and merged
-back into `dev` by pull request like any other change
-([ADR-0038](../adrs/adr-0038-branching-strategy.md)).
+Conflicts are expected only in a service's `pyproject.toml` (`[tool.uv.sources]`); resolve, `git commit`, re-run for the rest.
+Keep harmonisation root-only and don't restructure service `src/` during the window, or conflicts multiply.
+
+Every `main` in this section and in `scripts/migration/` is the **upstream** repo's branch (the manifest's optional 5th column, defaulting to `main`), and is unaffected by our own branching model.
+On the monorepo side, sync and retirement work is a branch cut from `dev` and merged back into `dev` by pull request like any other change ([ADR-0038](../adrs/adr-0038-branching-strategy.md)).
 
 ### Verifying a repo is fully synced
 
-Before retiring a mainline repo (archiving it and dropping its `repos.tsv` row), prove nothing was
-left behind. `sync-from-mainline.sh` reporting "up to date" is necessary but not sufficient: it
-only checks that the rewritten upstream tip is an ancestor of `HEAD`. Compare commit *identity*
-instead — author date, author and subject all survive the `filter-repo` rewrite:
+Before retiring a mainline repo (archiving it and dropping its `repos.tsv` row), prove nothing was left behind.
+`sync-from-mainline.sh` reporting "up to date" is necessary but not sufficient: it only checks that the rewritten upstream tip is an ancestor of `HEAD`.
+Compare commit *identity* instead — author date, author and subject all survive the `filter-repo` rewrite:
 
 ```bash
 git -C <upstream.git> log --format='%at%x09%an%x09%s' main | sort -u > /tmp/up
@@ -170,94 +137,58 @@ comm -23 /tmp/up /tmp/mono          # upstream commits with no counterpart here
 
 Every line that comes back must be accounted for as one of:
 
-- a commit that touched **only** stripped boilerplate (`drop_paths_for_kind` in `lib.sh`) —
-  `filter-repo` drops commits that filter to empty, so these legitimately have no counterpart;
-- a deliberate **upstream-only** commit, i.e. the archival/deprecation notice added when the repo
-  was frozen.
+- a commit that touched **only** stripped boilerplate (`drop_paths_for_kind` in `lib.sh`) — `filter-repo` drops commits that filter to empty, so these legitimately have no counterpart;
+- a deliberate **upstream-only** commit, i.e. the archival/deprecation notice added when the repo was frozen.
 
-Anything else is unsynced work: sync it (or port it) before archiving. Then diff the trees as a
-cross-check — the remaining differences should only be the dropped boilerplate and the monorepo's
-own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
+Anything else is unsynced work: sync it (or port it) before archiving.
+Then diff the trees as a cross-check — the remaining differences should only be the dropped boilerplate and the monorepo's own harmonisation (central ruff/mypy, `[tool.uv.sources]`, import regrouping).
 
 ## 7. Cutover checklist
 
-The cutover is essentially done: development happens here, both release lanes publish
-from here, and the source repos are archived. This section is the one place that lists
-what remains:
+The cutover is essentially done: development happens here, both release lanes publish from here, and the source repos are archived.
+This section is the one place that lists what remains:
 
-- **The schemapack line.** `metldata` 5.x (its `schemapack` branch), `ghga-transpiler`
-  3.x (its `main`) and `em-transformation-service` still live in their own repos. The
-  monorepo carries `metldata` 4.x and `ghga-transpiler` 2.x instead, the versions that
-  build without schemapack. All three come in, history-preserving, once mainline has
-  switched from LinkML to schemapack; then those repos are archived like the others.
-- **Retiring the leftover repos.** `charts` (still serving `ghga-de.github.io/charts`)
-  and `microservice-repository-template` are superseded but not yet archived.
-- **The open items below**, and those listed in
-  [releases.md](../releases.md#open-at-cutover).
-
-- [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas. Left
-      only for the schemapack line.
-- [ ] Freeze mainline repos (announce; protect branches / make read-only). Left only for
-      the repos not yet archived.
-- [x] Wire the CD targets, add the required secrets, enable the release workflow's tag trigger
-      and write permissions. **Done (2026-09):** images and charts to Docker Hub, wheels to
-      PyPI after a TestPyPI rehearsal (trusted publishing on both indexes)
-      ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
-- [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image
-      series (no version regressions).
+- **The schemapack line.**
+  `metldata` 5.x (its `schemapack` branch), `ghga-transpiler` 3.x (its `main`) and `em-transformation-service` still live in their own repos.
+  The monorepo carries `metldata` 4.x and `ghga-transpiler` 2.x instead, the versions that build without schemapack.
+  All three come in, history-preserving, once mainline has switched from LinkML to schemapack; then those repos are archived like the others.
+- **Retiring the leftover repos.**
+  `charts` (still serving `ghga-de.github.io/charts`) and `microservice-repository-template` are superseded but not yet archived.
+- **The open items below**, and those listed in [releases.md](../releases.md#open-at-cutover).
+- [ ] Final `sync-from-mainline.sh` against `ghga-de` HEAD; resolve remaining deltas.
+      Left only for the schemapack line.
+- [ ] Freeze mainline repos (announce; protect branches / make read-only).
+      Left only for the repos not yet archived.
+- [x] Wire the CD targets, add the required secrets, enable the release workflow's tag trigger and write permissions.
+      **Done (2026-09):** images and charts to Docker Hub, wheels to PyPI after a TestPyPI rehearsal (trusted publishing on both indexes) ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
+- [ ] Reconcile versions so the first monorepo release of each component continues its PyPI/image series (no version regressions).
 - [x] Move the repo to `github.com/ghga-de/ghga`.
 - [ ] Set CODEOWNERS per path.
-- [ ] Archive the old repos (keep read-only for history/provenance); update external docs that
-      point at per-repo locations. **Started ahead of the full cutover (2026-09):**
-      `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`,
-      `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`,
-      `epic-docs`, `adrs`, `file-services-backend` (all six of its services at once),
-      `hexkit`, `notification-service`, `notification-orchestration-service`,
-      `dataset-information-service`, `well-known-value-service`, `auth-km-jobs`,
-      `dlq-service`, `reverse-transpiler-service`, `ghga-arcticfreeze`,
-      `ghga-jsonsubschema`, `archive-test-bed`, `ghga-service-commons`,
-      `ghga-connector`, `state-management-service`, `test-oidc-provider`, `schemapack`,
-      `ghga-validator` and `datahub-file-service` are archived and their rows removed from
-      `repos.tsv` — see the "Retired" block there for the last commit merged from each.
+- [ ] Archive the old repos (keep read-only for history/provenance); update external docs that point at per-repo locations.
+      **Started ahead of the full cutover (2026-09):** `auth-service`, `ghga-event-schemas`, `ghga-datasteward-kit`, `data-portal`, `access-request-service`, `work-package-service`, `ghga-registry-service`, `mass`, `epic-docs`, `adrs`, `file-services-backend` (all six of its services at once), `hexkit`, `notification-service`, `notification-orchestration-service`, `dataset-information-service`, `well-known-value-service`, `auth-km-jobs`, `dlq-service`, `reverse-transpiler-service`, `ghga-arcticfreeze`, `ghga-jsonsubschema`, `archive-test-bed`, `ghga-service-commons`, `ghga-connector`, `state-management-service`, `test-oidc-provider`, `schemapack`, `ghga-validator` and `datahub-file-service` are archived and their rows removed from `repos.tsv` — see the "Retired" block there for the last commit merged from each.
       Verify a repo is fully synced (§6) before dropping its row.
-      `hexkit` additionally published a documentation site, so its archived Pages site was
-      replaced with redirects to `ghga-de.github.io/ghga/hexkit`
-      ([ADR-0039](../adrs/adr-0039-docs-lane-github-pages.md)) before archiving — an archived repo
-      keeps serving Pages but cannot run Actions, so that deploy could not be redone.
-- [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` /
-      `schemapack` still install the expected versions from PyPI.
-- [x] Decommission the docker-compose test bed. **Done (2026-09):** `archive-test-bed` is
-      archived; the suite runs from `testbed/` against kind (`just testbed`).
+      `hexkit` additionally published a documentation site, so its archived Pages site was replaced with redirects to `ghga-de.github.io/ghga/hexkit` ([ADR-0039](../adrs/adr-0039-docs-lane-github-pages.md)) before archiving — an archived repo keeps serving Pages but cannot run Actions, so that deploy could not be redone.
+- [ ] Verify external consumers of `ghga-connector` / `ghga-datasteward-kit` / `hexkit` / `schemapack` still install the expected versions from PyPI.
+- [x] Decommission the docker-compose test bed.
+      **Done (2026-09):** `archive-test-bed` is archived; the suite runs from `testbed/` against kind (`just testbed`).
 
 ## Notes & caveats
-- `git filter-repo` **rewrites SHAs**; old commit-message PR refs (`#NNN`) become dangling. The
-  originals remain on `ghga-de`.
-- Determinism (for incremental sync) assumes append-only mainline history and a **pinned
-  `git-filter-repo` version** across runs.
-- Historical release tags are **not** imported (they'd reference rewritten SHAs); the new scheme
-  is `name/x.y.z`, plus `packages/x.y.z` to sweep the PyPI lane
-  ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
+
+- `git filter-repo` **rewrites SHAs**; old commit-message PR refs (`#NNN`) become dangling.
+  The originals remain on `ghga-de`.
+- Determinism (for incremental sync) assumes append-only mainline history and a **pinned `git-filter-repo` version** across runs.
+- Historical release tags are **not** imported (they'd reference rewritten SHAs); the new scheme is `name/x.y.z`, plus `packages/x.y.z` to sweep the PyPI lane ([ADR-0027](../adrs/adr-0027-versioning-and-release-by-tag.md)).
 - `.legacy_repos/` and `.migration-work/` must stay gitignored (nested `.git` dirs; scratch).
 
 ## Deploy (charts): manual semantic port — no textual sync
 
-The `charts` repo row was removed from `repos.tsv` (2026-08): after the ADR-0031
-restructure (`base/` → `deploy/charts/ghga-common`, per-service charts generated),
-upstream commits no longer apply as patches. Instead, port upstream library changes
-**semantically**:
+The `charts` repo row was removed from `repos.tsv` (2026-08): after the ADR-0031 restructure (`base/` → `deploy/charts/ghga-common`, per-service charts generated), upstream commits no longer apply as patches.
+Instead, port upstream library changes **semantically**:
 
-1. Diff upstream **final state** against ours (`.legacy_repos/charts`,
-   `base/ghga-common/templates/*` vs `deploy/charts/ghga-common/templates/*`) —
-   don't replay individual commits; increments of one rework reconcile as one step.
-2. Check each feature for monorepo fit (anything serving upstream's Emissary/Istio
-   path that the demo pruned may be unwanted).
-3. Port upstream's new `base/tests` cases into `deploy/tests` — the harnesses share
-   ancestry; ours keeps its render-to-files debug output on purpose.
-4. Migrate member `chart-values.yaml` / `deploy/src/values/*` if the values schema
-   changed (upstream's `src/values` diffs show the target shape).
-5. Verify: `just charts-test`, `just charts`, `just demo-template`, and a
-   before/after `helm template` diff of the affected charts (a backward-compatible
-   port renders byte-identically).
+1. Diff upstream **final state** against ours (`.legacy_repos/charts`, `base/ghga-common/templates/*` vs `deploy/charts/ghga-common/templates/*`) — don't replay individual commits; increments of one rework reconcile as one step.
+2. Check each feature for monorepo fit (anything serving upstream's Emissary/Istio path that the demo pruned may be unwanted).
+3. Port upstream's new `base/tests` cases into `deploy/tests` — the harnesses share ancestry; ours keeps its render-to-files debug output on purpose.
+4. Migrate member `chart-values.yaml` / `deploy/src/values/*` if the values schema changed (upstream's `src/values` diffs show the target shape).
+5. Verify: `just charts-test`, `just charts`, `just demo-template`, and a before/after `helm template` diff of the affected charts (a backward-compatible port renders byte-identically).
 
-First such port: the cronjob-subsystem rework (`cronjobs` map, per-job overrides,
-merged pod annotations, vault singleTemplate for Job/CronJob), 2026-08.
+First such port: the cronjob-subsystem rework (`cronjobs` map, per-job overrides, merged pod annotations, vault singleTemplate for Job/CronJob), 2026-08.

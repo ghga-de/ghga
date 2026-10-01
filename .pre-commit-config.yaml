@@ -21,13 +21,7 @@ repos:
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md] # keep Markdown hard line breaks
-        # docs/epics/ is imported history (ADR-0025): 36 files there end lines with two
-        # spaces as a hard break, and ~116 more lines would still churn with the arg above.
-        exclude: ^docs/epics/
       - id: end-of-file-fixer
-        # 23 generated config_schema.json — the upstream regenerator was not imported, so
-        # they are frozen artifacts; rewriting them only invites conflicts with it.
-        exclude: (^|/)config_schema\.json$
       - id: check-yaml
         # 379 Go-templated Helm manifests are not YAML; 4 transpiler configs use
         # !!python/object/apply tags that safe_load rejects by design; and one schemapack
@@ -100,6 +94,16 @@ repos:
         # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
         entry: shellcheck -x -P SCRIPTDIR
 
+      # ---- Markdown (ADR-0044) ---------------------------------------------------------
+      # Fixes what it can, one sentence per line among it; pre-commit then fails on the
+      # changed files, as with ruff. [tool.rumdl] exclude applies to named files too.
+      - id: rumdl
+        name: rumdl (Markdown)
+        language: system
+        files: \.(md|qmd)$
+        require_serial: true
+        entry: uv run rumdl check --fix
+
       # ---- ADRs, epics and instruction files (ADR-0041, ADR-0042) ---------------------------
       # The set hook checks both sets, the instruction files and the references across
       # the tree, since most rules span files; it regenerates the two indexes and fails
@@ -121,6 +125,18 @@ repos:
         types: [text]
         require_serial: true
         entry: uv run python scripts/docs_check.py --refs
+
+      # ---- Service docs -----------------------------------------------------------------
+      # Regenerates the config schema, example config, README parameter list and OpenAPI
+      # spec of the services whose files changed, and fails when that changed a file.
+      # A change in a library the services build on changes the output too; the hygiene
+      # job's run over all files regenerates every service and catches that.
+      - id: service-docs
+        name: service docs (config, README, OpenAPI)
+        language: system
+        files: ^((libs|services|tools)/[^/]+/(src/.*\.py|(dev|example)_config\.yaml|config_schema\.json|openapi\.yaml|README\.md)|scripts/service_docs\.py)$
+        require_serial: true
+        entry: uv run python scripts/service_docs.py
 
       # ---- Front end (data-portal) -----------------------------------------------------
       # Both tools REQUIRE cwd = frontend/data-portal: eslint-plugin-boundaries' settings and

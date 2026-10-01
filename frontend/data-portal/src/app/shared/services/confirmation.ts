@@ -26,6 +26,7 @@ export class ConfirmationService {
    * @param opts.confirmClass - optional class for the confirm button
    * @param opts.callback - function to call when the dialog is closed
    * @param opts.panelClass - optional class for the dialog panel
+   * @param opts.maxWidth - optional maximum width of the dialog
    * The callback receives a boolean indicating whether the dialog was confirmed
    */
   confirm({
@@ -35,6 +36,7 @@ export class ConfirmationService {
     confirmText,
     confirmClass,
     panelClass,
+    maxWidth,
     callback,
   }: {
     title?: string;
@@ -43,6 +45,7 @@ export class ConfirmationService {
     confirmText?: string;
     confirmClass?: string;
     panelClass?: string | string[];
+    maxWidth?: string;
     callback?: (confirmed: boolean | undefined) => void;
   }): void {
     const dialogRef = this.#dialog.open(ConfirmDialogComponent, {
@@ -54,6 +57,8 @@ export class ConfirmationService {
         confirmClass,
       },
       panelClass: panelClass,
+      // an undefined value would override the default maximum width of the dialog
+      ...(maxWidth && { maxWidth }),
     });
 
     dialogRef.afterClosed().subscribe((result) => {

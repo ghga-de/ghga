@@ -22,5 +22,6 @@ title: "Developer Help"
 (intro here)
 
 ## Guides
+
 - [Outbox vs Persistent Publisher: Choosing the Right One](outbox_v_persistent_pub.qmd)
 - [Getting the Most Out of the Test Fixtures](testing.qmd)
