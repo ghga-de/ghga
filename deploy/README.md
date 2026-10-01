@@ -7,7 +7,10 @@ The system was imported (history-preserving) from the `charts` repo.
 helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version X.Y.Z
 ```
 
-Chart version/`appVersion` and publishing are not per-merge: they're stamped and pushed as OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via [release.yaml](../.github/workflows/release.yaml), ADR-0027), so a chart version always matches a released set of images.
+Release charts are not per-merge: they're stamped and pushed as OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via [release.yaml](../.github/workflows/release.yaml), ADR-0027), so a release chart version always matches a released set of images.
+
+Every merge to `dev` also publishes the member charts to `oci://ghcr.io/ghga-de/ghga/charts` as `0.0.0-dev.<run number>`, on the mono image and pinned to its digest, for continuous deployment of `dev` ([dev-images.yaml](../.github/workflows/dev-images.yaml), ADR-0045).
+Dev charts are pushed without the `-chart` suffix, so the install line above does not apply to them.
 
 Layout:
 

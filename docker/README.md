@@ -20,6 +20,7 @@ docker build -f docker/Dockerfile \
 
 - `<member>:<platform-version>` — release artifacts, one image per member (`.github/workflows/release.yaml`, manual for now).
 - `platform:dev` + `data-portal:dev` — mutable dev tags tracking `dev` (`.github/workflows/dev-images.yaml`): the mono Python image (VARIANT=mono, all members in one venv) and the front-end image.
+  Each build is also tagged `0.0.0-dev.<run number>`, the version of the dev charts that pin it (ADR-0045).
   Not release artifacts — they feed the daily vulnerability watch (`.github/workflows/security-scan.yaml`), which rescans them, trials a lockfile update, and opens a PR when the update fixes known CVEs.
 
 Every published tag also carries a keyless cosign signature (over the resolved digest) plus SBOM and SLSA-provenance attestations (buildx-native, `provenance=mode=max`).

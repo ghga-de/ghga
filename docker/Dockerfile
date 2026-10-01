@@ -9,7 +9,8 @@
 # EXECUTABLE       = the member's console script, exposed as the ENTRYPOINT
 # PLATFORM_VERSION = stamped onto the environment (ADR-0027); default marks dev builds
 # VARIANT          = single (default, one member per image) | mono (all Python members
-#                    in one venv; demo/CI only, PACKAGE is ignored) — `just demo-images-mono`
+#                    in one venv; demo, CI and dev cluster only, PACKAGE is ignored) —
+#                    `just demo-images-mono`
 #
 # Based on Docker Hardened Images (mirrors the template's Dockerfile.dhi):
 # build ON the DHI dev variant so the runtime libc (musl/alpine) matches, run on the plain
@@ -21,7 +22,7 @@
 ARG PYTHON_BASE=3.13.15-alpine3.24
 ARG BASE=dhi.io/python:${PYTHON_BASE}
 # single = one member per image (the release artifact); mono = every Python member in
-# one venv, for the demo and the integration gate only (see the mono stage below).
+# one venv, for the demo, the integration gate and the dev cluster only (ADR-0045).
 ARG VARIANT=single
 
 # ---- workspace: the toolchain + sources both variants resolve against -------------------
@@ -65,7 +66,7 @@ RUN /app/.venv/bin/python /stamp_platform_version.py \
 # expose the member's console script behind a fixed path instead.
 RUN ln -s "/app/.venv/bin/${EXECUTABLE}" /app/entrypoint && test -e /app/entrypoint
 
-# ---- venv-mono: every Python member in one venv (demo + integration gate only) -----------
+# ---- venv-mono: every Python member in one venv (never a release image) -----------------
 # One build instead of ~22 cuts the demo/CI image step from ~15-20 min to ~1 min, and
 # `kind load` from ~2.4 GB to ~0.6 GB. Safe because the workspace already guarantees the
 # members are co-installable — a single uv.lock, resolved exactly as `just sync` does —

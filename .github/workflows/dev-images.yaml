@@ -4,18 +4,18 @@
 # docker.io/ghga, the production target (ADR-0027).
 #
 # :dev is NOT a release artifact. The mono variant packs every Python member into one
-# venv (docker/Dockerfile VARIANT=mono — demo/CI only), and the tag simply tracks the
+# venv (docker/Dockerfile VARIANT=mono — never a release image), and the tag tracks the
 # `dev` branch — integration state, which is what it is named for. `main` deliberately
 # does not feed it: `main` only moves at release time (ADR-0038) and its artifacts are
 # the version-stamped release images. Consumers are the daily security-scan workflow
-# (which pulls these images as its published-exposure baseline) and anyone wanting
-# "latest integrated" without a release.
+# (which pulls these images as its published-exposure baseline), the dev cluster
+# through the charts below, and anyone wanting "latest integrated" without a release.
 # Release images remain per-member and version-stamped (release.yaml, ADR-0027).
 #
 # The member charts are published alongside, for continuous deployment of `dev` to a
 # cluster: generated with --mono, so every Python member runs the platform image, and
 # pinned to the digests built here. Each run is DEV_VERSION, so a CD tool following
-# the semver range >=0.0.0-0 rolls out every merge in order.
+# the semver range >=0.0.0-0 rolls out every merge in order (ADR-0045).
 #
 # Publishing is deliberately independent of ci.yaml: merges are already gated by PR CI,
 # and :dev makes no greenness promise beyond that. PLATFORM_VERSION is left at its
