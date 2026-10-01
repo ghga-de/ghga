@@ -23,7 +23,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga-arcticfreeze"
-version = "1.1.2"
+version = "1.1.3"
 description = "Enjoy Python on the rocks with deeply (recursively) frozen data structures."
 license = "Apache-2.0"
 maintainers = [

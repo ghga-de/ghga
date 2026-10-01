@@ -28,8 +28,10 @@ accepting that **more convincing reasons for a service specific versioning or us
 Currently the Chart version is bumped by either a new (i) service release or an update of the (ii) library chart.
 The microservice Charts are instances of the library chart differing only in their values.
 
-We need a way to handle Chart update events more elegantly. We are maintaining a separate application chart per microservice, plus one library chart.
-With a growing number of services, this leads to a version landscape that is more complex than necessary. Also, due to our microservice and application behavior, this process often requires a lot of back and forth development in order to lift it into Kubernetes.
+We need a way to handle Chart update events more elegantly.
+We are maintaining a separate application chart per microservice, plus one library chart.
+With a growing number of services, this leads to a version landscape that is more complex than necessary.
+Also, due to our microservice and application behavior, this process often requires a lot of back and forth development in order to lift it into Kubernetes.
 
 ### Decision
 
@@ -38,7 +40,8 @@ We propose to implement a custom solution that takes into account our Chart arch
 1. Use only one Chart version for all Charts belonging to one application^1.
 2. Bump Chart version analogous to version change for case (i) and (ii).
 
-^1 The definition of application is another topic. Since we have only one currently, this could be straightforward.
+^1 The definition of application is another topic.
+Since we have only one currently, this could be straightforward.
 
 ### Consequences
 
@@ -52,6 +55,10 @@ We will update all Charts for every change in the application version, which pro
 
 ### Alternatives
 
-An alternative would be to use a Helm super chart. However, this approach doesn't work well with our downstream CD pipeline (Helmfile), due to the nested values. It might be possible to use Helm instead of Helmfile in the future, but this requires exploration how it affects the (hierarchical) templating of values.
+An alternative would be to use a Helm super chart.
+However, this approach doesn't work well with our downstream CD pipeline (Helmfile), due to the nested values.
+It might be possible to use Helm instead of Helmfile in the future, but this requires exploration how it affects the (hierarchical) templating of values.
 
-Another solution could be to use a local Charts repository. This would reduce the credibility of the version, since it would suggest less agreement with semver guarantees. However, developing Charts is often a back and forth process, and looking at this component in isolation is helpful.
+Another solution could be to use a local Charts repository.
+This would reduce the credibility of the version, since it would suggest less agreement with semver guarantees.
+However, developing Charts is often a back and forth process, and looking at this component in isolation is helpful.

@@ -17,7 +17,7 @@ auth_ext_algs:
 - RS256
 - ES256
 auth_ext_keys: null
-auth_key: null
+auth_key: '{"crv":"P-256","kty":"EC","x":"WroSHyGfvqryXoKfCRYiiyBoxuBPou_bh1ooLmB5NEA","y":"QN3CsyHLCeZtapYx4Dhjr6YcadwcTggK_o5e7gD3jTc"}'
 auth_map_claims: {}
 auth_paths:
 - /api/

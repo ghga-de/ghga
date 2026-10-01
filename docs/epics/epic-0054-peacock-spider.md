@@ -18,7 +18,8 @@ The proposed event schema that should be used to extract and store file informat
 The event payload contains all relevant information and it is guaranteed that the file in question is actually stored in permanent storage at that point in time.
 Additionally, the service needs to subscribe to file deletion events and remove all data as requested.
 
-Analogous functionality also needs to be implemented for upsertion and deletion events that deal with datasets. This means that the events captured by this service need to include those that are currently handled by the work package service, i.e. those conforming to the `MetadataDatasetOverview` and `MetadataDatasetID` schemas.
+Analogous functionality also needs to be implemented for upsertion and deletion events that deal with datasets.
+This means that the events captured by this service need to include those that are currently handled by the work package service, i.e. those conforming to the `MetadataDatasetOverview` and `MetadataDatasetID` schemas.
 
 File information should be provided through one simple REST endpoint returning all relevant information for a given file accession.
 Analogously, information for all files in a dataset identified by a dataset accession should be returned by another REST endpoint.
@@ -62,13 +63,13 @@ This should return a list of objects with each element containing the `file_id/a
     'file_information':
     [
         {
-            `accession`: ...,    
+            `accession`: ...,  
             'size': ...,
             'sha256_hash': ...,
             'storage_alias': ...,
         },
         {
-            `accession`: ...,    
+            `accession`: ...,  
             'size': ...,
             'sha256_hash': ...,
             'storage_alias': ...,
@@ -104,23 +105,23 @@ Incoming deletion event schema: [MetadataDatasetID](https://github.com/ghga-de/g
 
 Dataset information can exist in one of five states:
 
-1) The requested dataset is not yet registered
-2) The requested dataset is registered, but no file information is available
-3) The requested dataset is registered and some file information is available
-4) The requested dataset is registered and all file information is available
-5) The requested dataset is deleted
+1. The requested dataset is not yet registered
+2. The requested dataset is registered, but no file information is available
+3. The requested dataset is registered and some file information is available
+4. The requested dataset is registered and all file information is available
+5. The requested dataset is deleted
 
 File information can exist in one of three states:
 
-1) The requested file is not yet registered
-2) The requested file is registered
-3) The requested file is deleted
+1. The requested file is not yet registered
+2. The requested file is registered
+3. The requested file is deleted
 
 If the reason why data is not available is of no interest and if all dataset registered states are treated the same, the following responses will be returned:
 
-1) The file information endpoint either returns a payload or 404
-2) The dataset information endpoint returns either a payload or 404.
-Within the payload, the fields of each file information object either are populated with the actual data or only contain the accession to signal that the data for the corresponding file is not yet available or has been deleted.
+1. The file information endpoint either returns a payload or 404
+2. The dataset information endpoint returns either a payload or 404.
+   Within the payload, the fields of each file information object either are populated with the actual data or only contain the accession to signal that the data for the corresponding file is not yet available or has been deleted.
 
 ## Human Resource/Time Estimation
 

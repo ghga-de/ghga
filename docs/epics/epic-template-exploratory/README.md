@@ -2,8 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 **Attention: Please do not put any confidential content here.**
 
@@ -32,7 +31,8 @@ Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and
 
 This epic covers the following user journeys:
 
-\<Images and descriptions of user journeys go here. Adding an image turns the epic into a directory: move the specification to `README.md` and deposit the images in the `./images` sub-directory next to it.\>
+\<Images and descriptions of user journeys go here.
+Adding an image turns the epic into a directory: move the specification to `README.md` and deposit the images in the `./images` sub-directory next to it.\>
 
 ![\<Example Image\>](./images/data_upload.jpg)
 

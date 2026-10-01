@@ -1,47 +1,38 @@
+<!-- rumdl-disable MD013 -->
 [![PyPI version shields.io](https://img.shields.io/pypi/v/ghga-arcticfreeze.svg)](https://pypi.org/project/ghga-arcticfreeze/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/ghga-arcticfreeze.svg)](https://pypi.org/project/ghga-arcticfreeze/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+<!-- rumdl-enable MD013 -->
 
 # arcticfreeze
 
-> **Note:** This is a fork of [KerstenBreuer/arcticfreeze](https://github.com/KerstenBreuer/arcticfreeze)
-> maintained by the [German Human Genome-Phenome Archive (GHGA)](https://www.ghga.de/).
+> **Note:** This is a fork of [KerstenBreuer/arcticfreeze](https://github.com/KerstenBreuer/arcticfreeze) maintained by the [German Human Genome-Phenome Archive (GHGA)](https://www.ghga.de/).
 > It was created to bring in fixes and updates required by GHGA-related projects.
 > Many thanks to Kersten Breuer for the initial implementation.
-> The distribution is published as `ghga-arcticfreeze`, but the import path remains
-> `arcticfreeze`, so it is a drop-in replacement for the upstream package.
+> The distribution is published as `ghga-arcticfreeze`, but the import path remains `arcticfreeze`, so it is a drop-in replacement for the upstream package.
 
 Enjoy Python on the rocks with deeply (recursively) frozen data structures.
 
 ## Description
 
-Python's built-in immutable types only go one level deep: a `tuple` may still contain a
-`list`, and a `frozenset` cannot contain a `dict` at all. **arcticfreeze** closes that
-gap by recursively converting a nested data structure into an immutable counterpart.
+Python's built-in immutable types only go one level deep: a `tuple` may still contain a `list`, and a `frozenset` cannot contain a `dict` at all.
+**arcticfreeze** closes that gap by recursively converting a nested data structure into an immutable counterpart.
 
 It provides:
 
-- **`freeze`** – a function that deep freezes an arbitrary object. It walks the object
-  tree bottom-up and replaces every mutable container with an immutable equivalent
-  (`list`/`deque` → `tuple`, `dict` → `FrozenDict`, `set` → `frozenset`), leaving
-  already-immutable values untouched.
-- **`FrozenDict`** – a hashable, immutable `Mapping` (built on
-  [immutabledict](https://pypi.org/project/immutabledict/)) with first-class type-hint
-  support and out-of-the-box Pydantic v2 integration (validation, JSON schema, and
-  serialization).
-- **`Converter`** – an extension point for teaching `freeze` how to handle your own
-  types, including a priority mechanism to override the standard converters.
+- **`freeze`** – a function that deep freezes an arbitrary object.
+  It walks the object tree bottom-up and replaces every mutable container with an immutable equivalent (`list`/`deque` → `tuple`, `dict` → `FrozenDict`, `set` → `frozenset`), leaving already-immutable values untouched.
+- **`FrozenDict`** – a hashable, immutable `Mapping` (built on [immutabledict](https://pypi.org/project/immutabledict/)) with first-class type-hint support and out-of-the-box Pydantic v2 integration (validation, JSON schema, and serialization).
+- **`Converter`** – an extension point for teaching `freeze` how to handle your own types, including a priority mechanism to override the standard converters.
 
-Freezing is useful wherever shared data must not be mutated by accident: configuration
-objects, cached values, dictionary keys, or any value that should be hashable and safe
-to pass around.
+Freezing is useful wherever shared data must not be mutated by accident: configuration objects, cached values, dictionary keys, or any value that should be hashable and safe to pass around.
 
 ## Installation
 
 ### Requirements
 
-* Python 3.11+
+- Python 3.11+
 
 ### Install from PyPI
 
@@ -49,8 +40,7 @@ to pass around.
 pip install ghga-arcticfreeze
 ```
 
-To use the `FrozenDict` type within Pydantic models, install the optional `pydantic`
-extra:
+To use the `FrozenDict` type within Pydantic models, install the optional `pydantic` extra:
 
 ```sh
 pip install "ghga-arcticfreeze[pydantic]"
@@ -117,15 +107,10 @@ assert isinstance(config.model_dump()["parameters"], FrozenDict)
 
 ## Development
 
-This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is
-developed from the repository root rather than on its own. The repository ships a
-devcontainer with the whole toolchain: open it in VS Code and run
-`Remote-Containers: Reopen in Container`, or set the environment up directly with
-`just sync`.
+This package is a member of the [GHGA monorepo](https://github.com/ghga-de/ghga) and is developed from the repository root rather than on its own.
+The repository ships a devcontainer with the whole toolchain: open it in VS Code and run `Remote-Containers: Reopen in Container`, or set the environment up directly with `just sync`.
 
-The usual tasks, run from the repository root (see
-[ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the
-full recipe list):
+The usual tasks, run from the repository root (see [ADR-0034](https://github.com/ghga-de/ghga/blob/main/docs/adrs/adr-0034-task-runner.md) for the full recipe list):
 
 ```bash
 just sync                         # install every member plus the shared dev toolchain
@@ -135,5 +120,4 @@ just lint                         # ruff check + format check across the workspa
 
 ## License
 
-This repository is free to use and modify according to the
-[Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/ghga-arcticfreeze/LICENSE).
+This repository is free to use and modify according to the [Apache 2.0 License](https://github.com/ghga-de/ghga/blob/main/libs/ghga-arcticfreeze/LICENSE).

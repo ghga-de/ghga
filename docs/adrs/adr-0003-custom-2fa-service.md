@@ -25,7 +25,12 @@ accepting that **this will cause more implementation work and put the responsibi
 
 ### Context
 
-At the time of this decision, we used LS Login to authenticate users in the GHGA data portal. In our configured federation flow, most participating research-institution identity providers did not provide 2FA, and the portal did not receive assurance information about the identification and authentication method. Step-up authentication using a second factor was also not available through this integration. As a result, any additional factor provided in that flow would not have been linked to the independent identity-verification process used by the portal. We therefore decided to add 2FA on our end, where we can, for example, invalidate a verified independent verification address if the second factor changes. See our white paper on "Two-Factor Authentication and Identity Verification Enablement" for the underlying concept.
+At the time of this decision, we used LS Login to authenticate users in the GHGA data portal.
+In our configured federation flow, most participating research-institution identity providers did not provide 2FA, and the portal did not receive assurance information about the identification and authentication method.
+Step-up authentication using a second factor was also not available through this integration.
+As a result, any additional factor provided in that flow would not have been linked to the independent identity-verification process used by the portal.
+We therefore decided to add 2FA on our end, where we can, for example, invalidate a verified independent verification address if the second factor changes.
+See our white paper on "Two-Factor Authentication and Identity Verification Enablement" for the underlying concept.
 
 A decision was needed on how to implement this 2FA functionality: either use a third-party solution, for which [privacyIDEA](https://www.privacyidea.org/) appeared to be the most suitable option (it was also used for step-up authentication in Elixir AAI), or create a service that provides only the necessary features.
 
@@ -33,29 +38,30 @@ A decision was needed on how to implement this 2FA functionality: either use a t
 
 We propose creating a tailor-made 2FA service that covers our requirements and that only supports TOTP as 2nd factor which is the most commonly used mechanism.
 
-This service manages and validates TOTP codes. It can also create QR codes if we do not want to do this in the frontend. As a Python service, it can build on standard library modules such as hashlib and hmac, or on a dedicated library like [PyOTP](https://github.com/pyauth/pyotp), which implements the TOTP algorithm itself. Protections that go beyond the algorithm itself are provided by the service: it limits the number of verification attempts per code as well as the number of consecutive failed attempts, and it prevents a code from being accepted more than once.
+This service manages and validates TOTP codes.
+It can also create QR codes if we do not want to do this in the frontend.
+As a Python service, it can build on standard library modules such as hashlib and hmac, or on a dedicated library like [PyOTP](https://github.com/pyauth/pyotp), which implements the TOTP algorithm itself.
+Protections that go beyond the algorithm itself are provided by the service: it limits the number of verification attempts per code as well as the number of consecutive failed attempts, and it prevents a code from being accepted more than once.
 
-**Amended 2026-09-15:** The TOTP handling was not built as a separate service. It
-lives in the auth adapter of `auth-service`, which uses PyOTP and enforces the limits
-above.
+**Amended 2026-09-15:** The TOTP handling was not built as a separate service.
+It lives in the auth adapter of `auth-service`, which uses PyOTP and enforces the limits above.
 
 ### Consequences
 
 The advantage is that the custom solution can be kept simpler and better tailored to our needs, and can be implemented, integrated and maintained in the same way as our existing micro services.
 
-The disadvantage is that more implementation work is needed, and that we take on
-responsibility for implementing the security-relevant parts ourselves, following
-established practice for TOTP. A third-party solution would provide these out of the
-box, but its dashboards and self-service portal would need to be customized or replaced,
-which is work as well.
+The disadvantage is that more implementation work is needed, and that we take on responsibility for implementing the security-relevant parts ourselves, following established practice for TOTP.
+A third-party solution would provide these out of the box, but its dashboards and self-service portal would need to be customized or replaced, which is work as well.
 
 ### Alternatives
 
-As an alternative, we could run an existing authentication system supporting 2FA tokens,
-such as [privacyIDEA](https://www.privacyidea.org/), instead of our custom 2FA service.
-We would then depend on that third-party component, with the costs of learning,
-configuring and maintaining it.
+As an alternative, we could run an existing authentication system supporting 2FA tokens, such as [privacyIDEA](https://www.privacyidea.org/), instead of our custom 2FA service.
+We would then depend on that third-party component, with the costs of learning, configuring and maintaining it.
 
-Using privacyIDEA would require us to operate and maintain an SQL database in addition to the NoSQL databases used by our other services. Its broader feature set, self-service portal, and administration interface exceeded this portal's requirements. Integrating its portal into the existing UI would also require additional work, while users already interact with LS Login and their home organizations for the first factor. Introducing a further interface for the second factor could make the authentication journey less coherent. For the requirements we had at that time, we therefore judged a focused, custom integration to be the better fit.
+Using privacyIDEA would require us to operate and maintain an SQL database in addition to the NoSQL databases used by our other services.
+Its broader feature set, self-service portal, and administration interface exceeded this portal's requirements.
+Integrating its portal into the existing UI would also require additional work, while users already interact with LS Login and their home organizations for the first factor.
+Introducing a further interface for the second factor could make the authentication journey less coherent.
+For the requirements we had at that time, we therefore judged a focused, custom integration to be the better fit.
 
 On the other hand, if we ever decide to support hardware tokens and other 2FA factors and mechanisms, then using a feature-packed system like privacyIDEA could become more reasonable.

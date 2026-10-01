@@ -17,12 +17,13 @@
 
 # Data Isolation
 
-The Schemapack library provides tooling to isolate individual resources and their dependencies from larger datasets. This is useful for partial extraction, targeted validation, or incremental processing.
+The Schemapack library provides tooling to isolate individual resources and their dependencies from larger datasets.
+This is useful for partial extraction, targeted validation, or incremental processing.
 
 It creates a rooted datapack that contains only the specified resource and all its dependencies, e.g., the resulting datapack will only contain resources referenced by the root resource as well as the root resource itself.
 
-> [!IMPORTANT] The isolated datapack will not be compatible with the original non-rooted schemapack anymore.
-
+> [!IMPORTANT]
+> The isolated datapack will not be compatible with the original non-rooted schemapack anymore.
 
 Example
 
@@ -35,7 +36,6 @@ schemapack isolate-resource \
 ```
 
 Isolated output for class `Experiment` and resource `exp1`:
-
 
 ```yaml
 datapack: 3.0.0

@@ -1,3 +1,4 @@
+<!-- rumdl-disable MD013 -->
 [![ci](https://github.com/ghga-de/ghga/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/ci.yaml?query=branch%3Adev)
 [![integration](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml?query=branch%3Adev)
 [![security-scan](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml/badge.svg)](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml)
@@ -7,17 +8,15 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 [![License](https://img.shields.io/github/license/ghga-de/ghga)](LICENSE)
+<!-- rumdl-enable MD013 -->
 
 # GHGA Monorepo
 
-One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `uv` workspace)
-alongside the Angular `data-portal`, with Helm charts and a Kubernetes integration test bed as
-build products.
+One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `uv` workspace) alongside the Angular `data-portal`, with Helm charts and a Kubernetes integration test bed as build products.
 
-> **Status: cutover essentially done.** The source repos are imported and archived, and
-> CI and both release lanes run from here. The few leftovers, chiefly importing the
-> schemapack line of `metldata`, `ghga-transpiler` and `em-transformation-service`, are
-> listed in the [runbook §7](docs/migration/runbook.md#7-cutover-checklist).
+> **Status: cutover essentially done.**
+> The source repos are imported and archived, and CI and both release lanes run from here.
+> The few leftovers, chiefly importing the schemapack line of `metldata`, `ghga-transpiler` and `em-transformation-service`, are listed in the [runbook §7](docs/migration/runbook.md#7-cutover-checklist).
 
 ## Layout
 
@@ -43,36 +42,26 @@ just lint && just test
 
 ### Work inside the dev container
 
-`.devcontainer/` is the intended environment, and `just` now holds you to it: the Python
-workspace and hooks recipes refuse to run on the host. CI is exempt, and `GHGA_ALLOW_HOST=1`
-overrides it for a deliberate bare-host run.
+`.devcontainer/` is the intended environment, and `just` now holds you to it: the Python workspace and hooks recipes refuse to run on the host.
+CI is exempt, and `GHGA_ALLOW_HOST=1` overrides it for a deliberate bare-host run.
 
-The reason is that `.venv` lives in the workspace and the container bind-mounts the
-workspace from the host, so whichever side ran `uv` last owns it — and leaves the other
-side an interpreter symlink into a home directory that does not exist there.
+The reason is that `.venv` lives in the workspace and the container bind-mounts the workspace from the host, so whichever side ran `uv` last owns it — and leaves the other side an interpreter symlink into a home directory that does not exist there.
 
-Nothing reports that plainly, which is the real cost. The usual symptom is the git hooks
-going quiet with `pre-commit not found. Did you forget to activate your virtualenv?`
-Activation is not the problem: `.git/hooks/pre-commit` hardcodes `.venv/bin/python3`, and
-the symlink underneath it has gone stale. Confirm with `readlink -f .venv/bin/python3`
-(empty output means dangling) and repair with `just sync` on the side you are working on —
-reinstalling the hooks is not needed, since the hook's path was right all along.
+Nothing reports that plainly, which is the real cost.
+The usual symptom is the git hooks going quiet with `pre-commit not found. Did you forget to activate your virtualenv?` Activation is not the problem: `.git/hooks/pre-commit` hardcodes `.venv/bin/python3`, and the symlink underneath it has gone stale.
+Confirm with `readlink -f .venv/bin/python3` (empty output means dangling) and repair with `just sync` on the side you are working on — reinstalling the hooks is not needed, since the hook's path was right all along.
 
-Coding agents (Claude Code, Copilot, …) belong in the container too. Their state is
-per-machine, so a session started on the host writes its history, settings, and memory into
-the host's home, where the container cannot see it — and work splits across two stores that
-never reconcile.
+Coding agents (Claude Code, Copilot, …) belong in the container too.
+Their state is per-machine, so a session started on the host writes its history, settings, and memory into the host's home, where the container cannot see it — and work splits across two stores that never reconcile.
 
 ## Task runner
 
-Everything runs through [`just`](justfile) — a thin facade over uv / pnpm / helm / kind
-([ADR-0034](docs/adrs/adr-0034-task-runner.md)). Run `just` with no arguments to list
-every recipe with its description.
+Everything runs through [`just`](justfile) — a thin facade over uv / pnpm / helm / kind ([ADR-0034](docs/adrs/adr-0034-task-runner.md)).
+Run `just` with no arguments to list every recipe with its description.
 
 ### Run the demo locally
 
-The demo is the whole platform on a local kind cluster: all 20 deployable services behind
-an Envoy Gateway edge, with lightweight infra (Kafka, MongoDB, MinIO, a mock OIDC issuer).
+The demo is the whole platform on a local kind cluster: all 20 deployable services behind an Envoy Gateway edge, with lightweight infra (Kafka, MongoDB, MinIO, a mock OIDC issuer).
 
 ```bash
 just demo-images-mono   # build the container images (one Python image — see "Image profiles")
@@ -82,19 +71,15 @@ just up mono            # create the cluster, load the images, install the umbre
 Then open <http://localhost/> — the data portal at `/`, the OIDC issuer at `/ghga`.
 
 `just up` is `helm upgrade --install`, so re-run it freely after chart or values edits.
-`just down` deletes the cluster; the built images survive it, so the next `just up`
-reloads rather than rebuilds.
+`just down` deletes the cluster; the built images survive it, so the next `just up` reloads rather than rebuilds.
 
-If `kubectl` or `helm` ever says `context "kind-ghga" does not exist` while the cluster is
-plainly running, run `kind export kubeconfig --name ghga`. A devcontainer rebuild keeps the
-cluster (docker's storage is a named volume) but wipes `~/.kube` (the home directory is
-rebuilt from the image), leaving the node running with nothing pointing at it. `just cluster`
-re-exports the context on every run, so the recipes recover on their own.
+If `kubectl` or `helm` ever says `context "kind-ghga" does not exist` while the cluster is plainly running, run `kind export kubeconfig --name ghga`.
+A devcontainer rebuild keeps the cluster (docker's storage is a named volume) but wipes `~/.kube` (the home directory is rebuilt from the image), leaving the node running with nothing pointing at it.
+`just cluster` re-exports the context on every run, so the recipes recover on their own.
 
 #### Logging in as the data steward
 
-The demo seeds one data steward ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)),
-configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
+The demo seeds one data steward ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)), configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
 
 | | |
 |---|---|
@@ -103,10 +88,9 @@ configured in the umbrella's `auth-claims.config.add_as_data_stewards`:
 | email | `data.steward@ghga.dev` |
 | IVA | Phone `+4915112345678`, seeded **unverified** |
 
-**1. Verify the IVA first.** The steward role is only active while the IVA backing its
-claim is verified, and there is no self-service path to verify it — creating a verification
-code is itself a steward action. Roles are resolved when the session is created, so do this
-*before* logging in (or log out and back in afterwards):
+**Step 1: verify the IVA first.**
+The steward role is only active while the IVA backing its claim is verified, and there is no self-service path to verify it — creating a verification code is itself a steward action.
+Roles are resolved when the session is created, so do this *before* logging in (or log out and back in afterwards):
 
 ```bash
 kubectl --context kind-ghga exec deploy/ghga-mongodb -- mongosh --quiet --eval \
@@ -114,33 +98,28 @@ kubectl --context kind-ghga exec deploy/ghga-mongodb -- mongosh --quiet --eval \
      {"__metadata__.deleted": {$ne: true}}, {$set: {state: "Verified"}})'
 ```
 
-This writes state directly, bypassing the event flow, so downstream projections never see
-an IVA-verified event. That is what the test bed does too, and it is fine for the demo.
+This writes state directly, bypassing the event flow, so downstream projections never see an IVA-verified event.
+That is what the test bed does too, and it is fine for the demo.
 
-**2. Sign in at the mock issuer.** Click login in the portal; you land on the
-mock-oauth2-server form, which has exactly two fields:
+**Step 2: sign in at the mock issuer.**
+Click login in the portal; you land on the mock-oauth2-server form, which has exactly two fields:
 
 - **username** — the subject, `data.steward@ghga.dev` (must match `ext_id` exactly)
-- **claims** — a JSON object; `name` and `email` are required and must match the seeded
-  user, or the portal treats it as changed contact data:
+- **claims** — a JSON object; `name` and `email` are required and must match the seeded user, or the portal treats it as changed contact data:
 
 ```json
 {"name": "Data Steward", "email": "data.steward@ghga.dev"}
 ```
 
-**3. Set up the second factor.** The user is already registered, so you go straight to
-TOTP: add the offered secret to an authenticator app and enter the six-digit code.
+**Step 3: set up the second factor.**
+The user is already registered, so you go straight to TOTP: add the offered secret to an authenticator app and enter the six-digit code.
 
-Any other subject you type into that form is simply a new user and goes through normal
-registration — that is how you get a non-steward account to test against. The test-bed
-profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev` /
-`data.steward@home.org`, see `values-testbed.yaml`); the steps are otherwise identical.
+Any other subject you type into that form is simply a new user and goes through normal registration — that is how you get a non-steward account to test against.
+The test-bed profile swaps the issuer and the steward identity (`id-of-data-steward@ghga.dev` / `data.steward@home.org`, see `values-testbed.yaml`); the steps are otherwise identical.
 
 ### Run the test bed locally
 
-The BDD + Playwright integration suite ([`testbed/`](testbed/)) against the same umbrella
-plus the test-bed profile — state-management service, test OIDC provider, and the
-generated metldata artifact model ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
+The BDD + Playwright integration suite ([`testbed/`](testbed/)) against the same umbrella plus the test-bed profile — state-management service, test OIDC provider, and the generated metldata artifact model ([ADR-0028](docs/adrs/adr-0028-self-contained-demo-lightweight-infra.md)).
 
 ```bash
 just sync               # workspace env: the artifact generation needs ghga-datasteward-kit
@@ -150,16 +129,12 @@ just testbed-up mono    # deploy with the test-bed profile
 just testbed            # run the suite
 ```
 
-Scope a run with `just testbed steps/test_001_health_check.py`, and use
-`just testbed-reset` to return the cluster to a coherent cold start between runs — the
-suite starts from an empty state and its feature files are ordered by numeric prefix.
+Scope a run with `just testbed steps/test_001_health_check.py`, and use `just testbed-reset` to return the cluster to a coherent cold start between runs — the suite starts from an empty state and its feature files are ordered by numeric prefix.
 
 #### Debugging a failing browser test
 
-The UI tests (`-m frontend`) drive a headless browser, so a failure arrives as a locator
-timeout with no way to see what the page looked like. Setting `TB_TRACE` records a
-[Playwright trace](https://playwright.dev/python/docs/trace-viewer) — a replay of the run
-action by action, with the DOM, network and console at each step:
+The UI tests (`-m frontend`) drive a headless browser, so a failure arrives as a locator timeout with no way to see what the page looked like.
+Setting `TB_TRACE` records a [Playwright trace](https://playwright.dev/python/docs/trace-viewer) — a replay of the run action by action, with the DOM, network and console at each step:
 
 ```bash
 TB_TRACE=1 just testbed -m frontend     # traces kept for failed tests only
@@ -168,49 +143,42 @@ just testbed-trace                      # list what the run left behind
 just testbed-trace test_500_data_portal_browse  # serve one on :9323
 ```
 
-Tracing is off unless `TB_TRACE` is set, and arms only for `@frontend` tests, so ordinary
-runs pay nothing for it. Traces land in `testbed/.traces` (git-ignored, override with
-`TB_TRACE_DIR`) and the directory is emptied at the start of each traced run. Prefer
-`all` when a test fails but its own trace looks innocent: the browser context is shared
-across the whole session, so the culprit is often an earlier test that passed.
+Tracing is off unless `TB_TRACE` is set, and arms only for `@frontend` tests, so ordinary runs pay nothing for it.
+Traces land in `testbed/.traces` (git-ignored, override with `TB_TRACE_DIR`) and the directory is emptied at the start of each traced run.
+Prefer `all` when a test fails but its own trace looks innocent: the browser context is shared across the whole session, so the culprit is often an earlier test that passed.
 
 #### Watching the services
 
-There is no compose project to browse: every service is a pod inside the single kind node
-container, so Docker-level tooling only ever shows the node.
+There is no compose project to browse: every service is a pod inside the single kind node container, so Docker-level tooling only ever shows the node.
 
 ```bash
 just logs                # what is deployed, and its ready count
 just logs auth-adapter   # follow one service (substring match, `ghga-` prefix optional)
 ```
 
-For the click-through equivalent, the Kubernetes extension
-(`ms-kubernetes-tools.vscode-kubernetes-tools`, recommended by the devcontainer) gives a pod
-tree with logs, exec and port-forward against the `kind-ghga` context.
+For the click-through equivalent, the Kubernetes extension (`ms-kubernetes-tools.vscode-kubernetes-tools`, recommended by the devcontainer) gives a pod tree with logs, exec and port-forward against the `kind-ghga` context.
 
 ### Image profiles
 
-Building and loading are separate steps: the build lands in the local docker store and
-survives `just down`, the load copies into the kind node and does not.
+Building and loading are separate steps: the build lands in the local docker store and survives `just down`, the load copies into the kind node and does not.
 
 | profile | build | what you get |
 |---|---|---|
 | **mono** (fast) | `just demo-images-mono` | one image with every Python member in a single venv, plus the frontend |
 | per-member | `just demo-images` | one image per member, exactly as released |
 
-The mono profile is **demo/CI only** — same lockfile, same base image, same commands, only
-the packaging differs ([`docker/Dockerfile`](docker/Dockerfile) `VARIANT=mono`). Production
-and the release workflow always build one image per member. It exists because it replaces
-~22 builds with one; locally that is ~15-20 min down to ~1 min, and ~6 GB of images down to
-~0.6 GB. Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overlays
-`values-mono.yaml`, which `just charts` generates.
+The mono profile is **demo/CI only** — same lockfile, same base image, same commands, only the packaging differs ([`docker/Dockerfile`](docker/Dockerfile) `VARIANT=mono`).
+Production and the release workflow always build one image per member.
+It exists because it replaces ~22 builds with one; locally that is ~15-20 min down to ~1 min, and ~6 GB of images down to ~0.6 GB.
+Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overlays `values-mono.yaml`, which `just charts` generates.
 
 ### Recipe reference
 
 | area | recipes |
 |---|---|
 | Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
-| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check` |
+| Parallel work | `wt <branch> [base]`, `wt-rm <name>` |
+| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `service-docs` |
 | Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
@@ -221,26 +189,19 @@ and the release workflow always build one image per member. It exists because it
 ## Where to read
 
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)**
-  — how metadata and files flow across the platform.
-- **[docs/adrs/](docs/adrs/)** — the decisions (and why); the
-  [index](docs/README.md#decisions-adrs) carries their status and supersession.
+- **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
+- **[docs/adrs/](docs/adrs/)** — the decisions (and why); the [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 - **[docs/style.md](docs/style.md)** — writing style for coding agents.
-- **[docs/agent-instructions.md](docs/agent-instructions.md)** — which instruction file
-  holds what, and where the `AGENTS.md` files sit.
+- **[docs/dev/using-agents.md](docs/dev/using-agents.md)** — how to work with coding agents here: the setup, personal instructions, parallel worktrees.
+- **[docs/agent-instructions.md](docs/agent-instructions.md)** — which instruction file holds what, and where the `AGENTS.md` files sit.
 
 ## Conventions
 
-See [docs/conventions.md](docs/conventions.md) — workspace layout, the `[tool.ghga]` capability
-markers, naming, the [branching model](docs/conventions.md#branching) (cut from `dev`, merge
-into `dev`; `main` is the latest release), and the per-component release-tag scheme
-(`name/x.y.z`).
+See [docs/conventions.md](docs/conventions.md) — workspace layout, the `[tool.ghga]` capability markers, naming, the [branching model](docs/conventions.md#branching) (cut from `dev`, merge into `dev`; `main` is the latest release), and the per-component release-tag scheme (`name/x.y.z`).
 
 ## License
 
-Everything in this repository is licensed under the [Apache License 2.0](LICENSE). Each
-member also carries its own copy of the license, which ships with its wheel or image. Two
-members contain work by others, whose copyright notices are kept in their own license
-files: [`libs/ghga-jsonsubschema`](libs/ghga-jsonsubschema/LICENSE.txt), a fork of IBM's
-`jsonsubschema`, and [`libs/ghga-arcticfreeze`](libs/ghga-arcticfreeze/LICENSE).
+Everything in this repository is licensed under the [Apache License 2.0](LICENSE).
+Each member also carries its own copy of the license, which ships with its wheel or image.
+Two members contain work by others, whose copyright notices are kept in their own license files: [`libs/ghga-jsonsubschema`](libs/ghga-jsonsubschema/LICENSE.txt), a fork of IBM's `jsonsubschema`, and [`libs/ghga-arcticfreeze`](libs/ghga-arcticfreeze/LICENSE).

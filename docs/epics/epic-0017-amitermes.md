@@ -32,17 +32,13 @@ Refactoring aims:
 - [DCS] use httpyexpect to format exceptions
 - migrate all services from PostgreSQL to MongoDB
 - migrate all services from RabbitMQ to Apache Kafka
-- use triple hexagonal components for interactions with the Database, the Event Broker,
-and the Object Storage
-- [hexkit] add multipart copy method to the Object Storage Protocol and corresponding
-  providers
+- use triple hexagonal components for interactions with the Database, the Event Broker, and the Object Storage
+- [hexkit] add multipart copy method to the Object Storage Protocol and corresponding providers
 - [hexkit] add schema validation before sending and upon receiving events
-- harmonize the domain logic of all services with the [File Validation and Encryption
-  Concept](https://github.com/ghga-de/arch_concepts/blob/main/file_validation_and_encryption.md):
+- harmonize the domain logic of all services with the [File Validation and Encryption Concept](https://github.com/ghga-de/arch_concepts/blob/main/file_validation_and_encryption.md):
   - use SHA-256-based content ID as file identifiers
   - adapt event schemas
-  - [IFRS] perform a multipart copy between buckets when registering new files as part
-    of an upload or staging files as part of a download
+  - [IFRS] perform a multipart copy between buckets when registering new files as part of an upload or staging files as part of a download
 
 ### Not Included
 

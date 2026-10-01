@@ -19,28 +19,17 @@ title: "Apache Kafka"
  limitations under the License.
 -->
 
-The `akafka` subpackage (`hexkit.providers.akafka`) implements hexkit's event
-protocols on top of [Apache Kafka](https://kafka.apache.org/), using the
-asynchronous [aiokafka](https://aiokafka.readthedocs.io/) client library. It is
-hexkit's production event-streaming backend; the architectural background is covered
-in the [Event-Driven Architecture](../../arch_concepts/event_driven_arch.qmd) chapter.
+The `akafka` subpackage (`hexkit.providers.akafka`) implements hexkit's event protocols on top of [Apache Kafka](https://kafka.apache.org/), using the asynchronous [aiokafka](https://aiokafka.readthedocs.io/) client library.
+It is hexkit's production event-streaming backend; the architectural background is covered in the [Event-Driven Architecture](../../arch_concepts/event_driven_arch.qmd) chapter.
 
 The subpackage provides:
 
-- [`KafkaEventPublisher`](publisher.qmd) — publishes events, implementing the
-  [`EventPublisherProtocol`](../../../reference/protocols.eventpub.EventPublisherProtocol.qmd).
-- [`KafkaEventSubscriber`](subscriber.qmd) — consumes events and hands them to a
-  service-defined translator implementing the
-  [`EventSubscriberProtocol`](../../../reference/protocols.eventsub.EventSubscriberProtocol.qmd).
-- [`KafkaOutboxSubscriber`](../../protocols/daosubscriber.qmd#running-a-subscriber-the-kafka-provider)
-  — a convenience wrapper for consuming outbox events with translators implementing
-  the [`DaoSubscriberProtocol`](../../protocols/daosubscriber.qmd).
-- [Kafka test utils](test_utils.qmd) — pytest fixtures and helpers for testing
-  against a real, disposable Kafka broker.
+- [`KafkaEventPublisher`](publisher.qmd) — publishes events, implementing the [`EventPublisherProtocol`](../../../reference/protocols.eventpub.EventPublisherProtocol.qmd).
+- [`KafkaEventSubscriber`](subscriber.qmd) — consumes events and hands them to a service-defined translator implementing the [`EventSubscriberProtocol`](../../../reference/protocols.eventsub.EventSubscriberProtocol.qmd).
+- [`KafkaOutboxSubscriber`](../../protocols/daosubscriber.qmd#running-a-subscriber-the-kafka-provider) — a convenience wrapper for consuming outbox events with translators implementing the [`DaoSubscriberProtocol`](../../protocols/daosubscriber.qmd).
+- [Kafka test utils](test_utils.qmd) — pytest fixtures and helpers for testing against a real, disposable Kafka broker.
 
-Two hybrid providers combine Kafka with MongoDB and are documented in the
-[MongoDB + Kafka](../mongokafka.qmd) chapter: the outbox publisher
-(`MongoKafkaDaoPublisher`) and the `PersistentKafkaPublisher`.
+Two hybrid providers combine Kafka with MongoDB and are documented in the [MongoDB + Kafka](../mongokafka.qmd) chapter: the outbox publisher (`MongoKafkaDaoPublisher`) and the `PersistentKafkaPublisher`.
 
 Install hexkit with the `akafka` extra to use these providers:
 
@@ -50,10 +39,8 @@ pip install hexkit[akafka]
 
 ## Configuration
 
-All Kafka providers are configured through a single Pydantic settings class,
-[`KafkaConfig`](../../../reference/providers.akafka.KafkaConfig.qmd)
-(`hexkit.providers.akafka.KafkaConfig`). The connection-related parameters, relevant
-to every Kafka provider, are:
+All Kafka providers are configured through a single Pydantic settings class, [`KafkaConfig`](../../../reference/providers.akafka.KafkaConfig.qmd) (`hexkit.providers.akafka.KafkaConfig`).
+The connection-related parameters, relevant to every Kafka provider, are:
 
 | Parameter | Default | Description |
 | --------- | ------- | ----------- |
@@ -67,18 +54,12 @@ to every Kafka provider, are:
 | `kafka_ssl_password` | `""` | Optional password for the client private key. |
 | `kafka_max_message_size` | `1048576` (1 MiB) | The largest transmittable message size in bytes, applied to producers (before compression) and consumers alike. |
 
-`KafkaConfig` carries further parameters that only concern one side of the
-event flow; they are documented where they apply:
-[compression and correlation ID generation](publisher.qmd#configuration) on the
-publisher page, and [retries and the dead letter queue](subscriber.qmd#configuration)
-on the subscriber page.
+`KafkaConfig` carries further parameters that only concern one side of the event flow; they are documented where they apply: [compression and correlation ID generation](publisher.qmd#configuration) on the publisher page, and [retries and the dead letter queue](subscriber.qmd#configuration) on the subscriber page.
 
 ### Providing Configuration Values
 
-In a typical service, `KafkaConfig` is not instantiated on its own. Instead, the
-service defines one config class inheriting from all the hexkit config classes it
-needs and decorates it with `config_from_yaml` to draw the values from environment
-variables, secret files, and a config YAML:
+In a typical service, `KafkaConfig` is not instantiated on its own.
+Instead, the service defines one config class inheriting from all the hexkit config classes it needs and decorates it with `config_from_yaml` to draw the values from environment variables, secret files, and a config YAML:
 
 ```python
 from hexkit.config import config_from_yaml
@@ -95,15 +76,9 @@ class Config(KafkaConfig):
 config = Config()  # reads .my_service.yaml, MY_SERVICE_* env vars, etc.
 ```
 
-See the [Configuration](../../configuration.qmd) chapter for the full precedence of
-configuration sources and the role of the prefix.
+See the [Configuration](../../configuration.qmd) chapter for the full precedence of configuration sources and the role of the prefix.
 
 ## Kafka Test Utils
 
-The `hexkit.providers.akafka.testutils` module provides pytest fixtures that spin
-up a disposable Kafka broker in a container, so integration tests exercise real
-broker semantics without external infrastructure — publish test events, record
-what a service publishes, and assert expectations. The
-[Kafka Test Utils](test_utils.qmd) page documents the fixtures, the
-`KafkaFixture` utility methods, and common testing patterns, including in-memory
-alternatives for broker-less unit tests.
+The `hexkit.providers.akafka.testutils` module provides pytest fixtures that spin up a disposable Kafka broker in a container, so integration tests exercise real broker semantics without external infrastructure — publish test events, record what a service publishes, and assert expectations.
+The [Kafka Test Utils](test_utils.qmd) page documents the fixtures, the `KafkaFixture` utility methods, and common testing patterns, including in-memory alternatives for broker-less unit tests.

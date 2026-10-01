@@ -2,26 +2,19 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 ## Scope
 
 ### Outline
 
-The outbox pattern must be applied to our microservices in order to back up Kafka events,
-but not every event needs to be saved in the database. Rather, we can apply the outbox
-pattern strategically by backing up just the initial events in a request flow.
-The services that generate the first event in a request flow should be fitted
-with outbox publishers, and the corresponding consumers of such events should be fitted
-with outbox subscribers. By doing this, only the initial events need to be backed up. A
-republishing and reprocessing of these events should then result in the re-creation of
-all transitive events, as far as idempotence allows.
+The outbox pattern must be applied to our microservices in order to back up Kafka events, but not every event needs to be saved in the database.
+Rather, we can apply the outbox pattern strategically by backing up just the initial events in a request flow.
+The services that generate the first event in a request flow should be fitted with outbox publishers, and the corresponding consumers of such events should be fitted with outbox subscribers.
+By doing this, only the initial events need to be backed up.
+A republishing and reprocessing of these events should then result in the re-creation of all transitive events, as far as idempotence allows.
 
-The outbox pattern may be implemented to make information about domain objects available
-to services beyond the primary owning service, but that is outside the scope of *this*
-epic, which is concerned only with the implementation of the outbox subscriber as a
-backup mechanism for Kafka events.
+The outbox pattern may be implemented to make information about domain objects available to services beyond the primary owning service, but that is outside the scope of *this* epic, which is concerned only with the implementation of the outbox subscriber as a backup mechanism for Kafka events.
 
 ### Included/Required
 

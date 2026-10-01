@@ -9,17 +9,17 @@ The goal is to create a prototype.
 ## Principal Components of Exploration
 
 - Metadata generator based on GHGA model
-    - Controlled vocabulary for CV fields
-    - (Random but realistic) Value in non-CV data fields following right data type
-    - Dataset generator
-    - Submission JSON model
-    - Post creation json model
-    - Data model multiplicities
-    - Connectivity of the classes
-    - Realistic file name and size
+  - Controlled vocabulary for CV fields
+  - (Random but realistic) Value in non-CV data fields following right data type
+  - Dataset generator
+  - Submission JSON model
+  - Post creation json model
+  - Data model multiplicities
+  - Connectivity of the classes
+  - Realistic file name and size
 - FASTQ file generator
-    - Employ dummy_data_generator
-    - Storage space requirements (platform selection: ABI cluster or de.NBI)
+  - Employ dummy_data_generator
+  - Storage space requirements (platform selection: ABI cluster or de.NBI)
 - Connection between metadata and file generators for file related parameters
 - Run time - Not a focus on the performance, but aim for reasonable
 

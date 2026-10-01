@@ -46,8 +46,16 @@ uv tool install --reinstall git-filter-repo
 
 # Provision both stacks
 uv sync --all-packages --all-extras
-(cd frontend/data-portal && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium)
+(cd frontend/data-portal && pnpm install --frozen-lockfile)
+
+# Skip reformatting commits in git blame, as GitHub does with the same file.
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 # Git hooks (ADR-0036). Idempotent, and after the sync above because the hooks run ruff,
 # mypy, prettier and eslint out of the two workspaces rather than their own environments.
 uv run pre-commit install
+
+# Last and a warning, not a failure: only the front end's Playwright smoke tests need the
+# browser, and its download from the Playwright CDN can fail on some networks.
+(cd frontend/data-portal && pnpm exec playwright install --with-deps chromium) \
+  || echo "warning: Playwright Chromium not installed; run in frontend/data-portal: pnpm exec playwright install --with-deps chromium" >&2

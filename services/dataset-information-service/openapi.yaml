@@ -159,8 +159,10 @@ components:
       title: ValidationError
       type: object
 info:
-  title: FastAPI
-  version: 0.1.0
+  description: Providing public metadata about files registered with the Internal
+    File Registry
+  title: Dataset Information Service
+  version: 7.0.2
 openapi: 3.1.0
 paths:
   /dataset_information/{dataset_id}:
@@ -248,3 +250,5 @@ paths:
       summary: health
       tags:
       - DatasetInformationService
+tags:
+- name: DatasetInformationService

@@ -67,7 +67,6 @@ Other component libraries are rejected.
 
 ### Alternatives
 
-Although most libraries did not meet our main requirements, a few of the most viable alternatives to the selection made here are the following:
-PrimeNG offers a wider range of useful components than our selection.
+Although most libraries did not meet our main requirements, a few of the most viable alternatives to the selection made here are the following: PrimeNG offers a wider range of useful components than our selection.
 In our evaluation, however, we ran into behavioural and performance issues in several of the components we tried, and only the basic themes are available free of charge, while further themes and the theming tools are part of a paid offering, which does not fit our aim to build on free and open source software only.
 Onsen UI could also be an interesting choice because it ships a Material implementation, but its focus on small-screen sites and PWAs is a weaker match for our portal.

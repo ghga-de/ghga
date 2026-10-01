@@ -1,0 +1,4 @@
+# Check out every text file with LF, whatever core.autocrlf says: the repo is used in a
+# Linux dev container, also from Windows hosts, where CRLF breaks shell scripts and the
+# justfile. Binary files are detected and left alone.
+* text=auto eol=lf

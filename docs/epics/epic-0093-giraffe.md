@@ -2,8 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
 
 **Attention: Please do not put any confidential content here.**
 
@@ -11,54 +10,41 @@ Epic planning and implementation follow the
 
 ### Outline
 
-GHGA so far has no notion of study identity, versioning or replacement. A submission may in
-principle carry several studies — the loader silently keeps only the first — and a re-submission
-mints fresh random accessions with no link back to what it supersedes. At the same time, file upload
-and file-to-metadata mapping are welded together by two separate guards in RS. A Research Data
-Upload Box only archives once every one of its files carries an accession, and each mapping request
-must be a complete bijection over the box's active files — it may not name a file twice, and it may
-not leave one out (active meaning not cancelled or failed). Neither the mapping request nor the box
-has to cover all files of the corresponding study though. The portal warns about study files left
-unmapped, but that warning is overridable. Independently of that, a mapping request against an
-archived box is refused outright. Since mapping is the only way to bind an accession to a file and
-is always addressed to a specific box, that second guard is what makes reusing an already-archived
-file in a later study impossible: the file's box is by definition archived, so no further accession
-can ever be bound to anything in it.
+GHGA so far has no notion of study identity, versioning or replacement.
+A submission may in principle carry several studies — the loader silently keeps only the first — and a re-submission mints fresh random accessions with no link back to what it supersedes.
+At the same time, file upload and file-to-metadata mapping are welded together by two separate guards in RS.
+A Research Data Upload Box only archives once every one of its files carries an accession, and each mapping request must be a complete bijection over the box's active files — it may not name a file twice, and it may not leave one out (active meaning not cancelled or failed).
+Neither the mapping request nor the box has to cover all files of the corresponding study though.
+The portal warns about study files left unmapped, but that warning is overridable.
+Independently of that, a mapping request against an archived box is refused outright.
+Since mapping is the only way to bind an accession to a file and is always addressed to a specific box, that second guard is what makes reusing an already-archived file in a later study impossible: the file's box is by definition archived, so no further accession can ever be bound to anything in it.
 
-The long-term plan solves this with schemapack and dedicated backend services (resource-registry,
-resource-search, em-transformation-service), where the study is the defining scope of a submission
-and receives a structured PID. This epic delivers a smaller step first, on the existing LinkML plus
-offline `ghga-datasteward-kit` stack, so lifecycle PIDs and study revisions are available before
-those services land. The design is agreed; this document is its full write-up and fixes the scope
-and the per-component work. Read
-[`docs/architecture/metadata-and-file-journeys.md`](../architecture/metadata-and-file-journeys.md)
-— the current-state reference for the submission, accession, upload and mapping paths this epic
-changes — before starting.
+The long-term plan solves this with schemapack and dedicated backend services (resource-registry, resource-search, em-transformation-service), where the study is the defining scope of a submission and receives a structured PID.
+This epic delivers a smaller step first, on the existing LinkML plus offline `ghga-datasteward-kit` stack, so lifecycle PIDs and study revisions are available before those services land.
+The design is agreed; this document is its full write-up and fixes the scope and the per-component work.
+Read [`docs/architecture/metadata-and-file-journeys.md`](../architecture/metadata-and-file-journeys.md) — the current-state reference for the submission, accession, upload and mapping paths this epic changes — before starting.
 
 ### Terminology
 
-`Study PID`: The lifecycle identifier of a study, `GHGA.YY.XXX.V` — 2-digit year, 3 base32
-characters, version counter.
+`Study PID`: The lifecycle identifier of a study, `GHGA.YY.XXX.V` — 2-digit year, 3 base32 characters, version counter.
 
 `Lineage root`: `GHGA.YY.XXX`, the part of a study PID stable across all revisions of one study.
 Only `.V` changes.
 
-`Legacy accession`: An identifier minted under the current flat scheme (`GHGAS`/`GHGAD`/`GHGAF` +
-random digits). Not parseable into a root and a version.
+`Legacy accession`: An identifier minted under the current flat scheme (`GHGAS`/`GHGAD`/`GHGAF` + random digits).
+Not parseable into a root and a version.
 
-`Superseded study`: A study for which a successor has been declared. Its datasets leave the search
-index but stay reachable by URL/PID.
+`Superseded study`: A study for which a successor has been declared.
+Its datasets leave the search index but stay reachable by URL/PID.
 
-`Successor chain`: The forward path from a study to its successor, its successor's successor, and so
-on. Single-valued, so it terminates at a unique newest study.
+`Successor chain`: The forward path from a study to its successor, its successor's successor, and so on.
+Single-valued, so it terminates at a unique newest study.
 
 `Merge`: One successor declared as the replacement of more than one predecessor.
 
-`Reuse accession`: The prior GHGA file accession a submission puts on a file entity
-(`reused_accession`) to reuse that file rather than re-upload it.
+`Reuse accession`: The prior GHGA file accession a submission puts on a file entity (`reused_accession`) to reuse that file rather than re-upload it.
 
-`Ancestry collection`: The metldata collection holding the `predecessor PID -> successor PID`
-relation, written by the loader and read by the data portal.
+`Ancestry collection`: The metldata collection holding the `predecessor PID -> successor PID` relation, written by the loader and read by the data portal.
 
 `RDUB` / `FUB`: Research Data Upload Box (RS-owned) and File Upload Box (UCS-owned).
 
@@ -117,44 +103,35 @@ relation, written by the loader and read by the data portal.
 
 ### Optional
 
-- **"This study replaced A, B and C" note.** The reverse direction of the portal's "updated version
-  available" hint, as a line on `study/:id` rather than a screen of its own, listing direct
-  predecessors only. Merges make it meaningful, but nothing depends on it and the forward hint is
-  the user-visible outcome this epic promises. It would need the ancestry collection queryable by
-  successor and a second endpoint, `GET /studies/{study_pid}/predecessors`, returning the direct
-  predecessors as an array; `GET /studies/{study_pid}/successor` resolves only the forward
-  direction.
+- **"This study replaced A, B and C" note.** The reverse direction of the portal's "updated version available" hint, as a line on `study/:id` rather than a screen of its own, listing direct predecessors only.
+  Merges make it meaningful, but nothing depends on it and the forward hint is the user-visible outcome this epic promises.
+  It would need the ancestry collection queryable by successor and a second endpoint, `GET /studies/{study_pid}/predecessors`, returning the direct predecessors as an array; `GET /studies/{study_pid}/successor` resolves only the forward direction.
 
 ### Not included
 
-- **The schemapack services** — resource-registry, resource-search, em-transformation-service — and
-  the schemapack migration itself. This epic is deliberately confined to the LinkML plus
-  offline-dskit stack.
-- **Re-accessioning existing studies.** Legacy identifiers are never rewritten.
-- **Entity-level deprecation.** Deprecation is tracked study-level only.
-- **Populating RS's `Study.superseded_by_id`.** This is a pre-existing, currently unused attribute
-  on RS's `Study` model — it is not introduced by this epic. Nothing reads it in this rollout: the
-  portal resolves the successor from metldata's ancestry collection, so propagating a supersede
-  pointer through the events RS consumes would serve no reader.
+- **The schemapack services** — resource-registry, resource-search, em-transformation-service — and the schemapack migration itself.
+  This epic is deliberately confined to the LinkML plus offline-dskit stack.
+- **Re-accessioning existing studies.**
+  Legacy identifiers are never rewritten.
+- **Entity-level deprecation.**
+  Deprecation is tracked study-level only.
+- **Populating RS's `Study.superseded_by_id`.**
+  This is a pre-existing, currently unused attribute on RS's `Study` model — it is not introduced by this epic.
+  Nothing reads it in this rollout: the portal resolves the successor from metldata's ancestry collection, so propagating a supersede pointer through the events RS consumes would serve no reader.
 
-  *Why RS could not populate it.* The only supersede-related signal RS receives is
-  `searchable_resource_deleted`, whose `SearchableResourceInfo` payload carries a dataset accession
-  and a class name — no study PID and no successor, so RS cannot tell which study was superseded,
-  let alone by what. RS also writes a study exactly once and has no update path:
-  `LegacyResourceManager.upsert_resource` inserts and swallows `ResourceAlreadyExistsError`
-  deliberately, to avoid resetting `created` and churning the outbox for a study that is embedded in
-  many resources — while a replacement may be declared long after load through `replace-study`. And
-  a supersede pointer held in RS would be a second copy of a relation metldata owns, free to drift
-  from ground truth with nothing to reconcile it.
+  *Why RS could not populate it.*
+  The only supersede-related signal RS receives is `searchable_resource_deleted`, whose `SearchableResourceInfo` payload carries a dataset accession and a class name — no study PID and no successor, so RS cannot tell which study was superseded, let alone by what.
+  RS also writes a study exactly once and has no update path: `LegacyResourceManager.upsert_resource` inserts and swallows `ResourceAlreadyExistsError` deliberately, to avoid resetting `created` and churning the outbox for a study that is embedded in many resources — while a replacement may be declared long after load through `replace-study`.
+  And a supersede pointer held in RS would be a second copy of a relation metldata owns, free to drift from ground truth with nothing to reconcile it.
 
-  *When it does get populated.* At the handover where RS becomes the owner of study metadata. That
-  step includes a backfill against metldata's submission store, and RS taking over the
-  forward-resolving successor endpoint metldata serves today.
-- **Changes to `libs/ghga-event-schemas`.** See the API section — the design avoids needing any.
-- **Changes to `services/mass`.** Superseded datasets are hidden by the
-  existing `searchable_resource_deleted` event, which MASS already consumes.
-- **A steward search that can still see superseded datasets.** There is no retained "hidden" flag;
-  direct URL through the artifacts API is the guaranteed route to a superseded dataset.
+  *When it does get populated.*
+  At the handover where RS becomes the owner of study metadata.
+  That step includes a backfill against metldata's submission store, and RS taking over the forward-resolving successor endpoint metldata serves today.
+- **Changes to `libs/ghga-event-schemas`.**
+  See the API section — the design avoids needing any.
+- **Changes to `services/mass`.** Superseded datasets are hidden by the existing `searchable_resource_deleted` event, which MASS already consumes.
+- **A steward search that can still see superseded datasets.**
+  There is no retained "hidden" flag; direct URL through the artifacts API is the guaranteed route to a superseded dataset.
 
 ## User Journeys
 
@@ -178,112 +155,90 @@ This epic covers the following user journeys.
 
 **Serving:**
 
-5. Service-side metldata records the declared replacement: each named predecessor is marked
-   superseded, its datasets leave the search track while staying queryable by URL, and the relation
-   lands in the ancestry collection.
+5. Service-side metldata records the declared replacement: each named predecessor is marked superseded, its datasets leave the search track while staying queryable by URL, and the relation lands in the ancestry collection.
 6. MASS stops returning the superseded studies' datasets, as a consequence of the deletion events.
-7. The portal shows the successor in search. Visiting a superseded dataset or study by URL shows an
-   "updated version available" hint, resolved by following the successor chain to its terminal
-   study.
+7. The portal shows the successor in search.
+   Visiting a superseded dataset or study by URL shows an "updated version available" hint, resolved by following the successor chain to its terminal study.
 
 **File mapping (study-centric, in the portal, after archival):**
 
-8. Files are uploaded via the UCS box path and archived, with no mapping required. The steward opens
-   the mapping view for a study and works against the archived box(es): entities carrying a reuse
-   accession are bound to that same file and show every study the file already maps to; entities
-   without one are matched by alias/filename against a pool of archived boxes, with manual
-   corrections.
+8. Files are uploaded via the UCS box path and archived, with no mapping required.
+   The steward opens the mapping view for a study and works against the archived box(es): entities carrying a reuse accession are bound to that same file and show every study the file already maps to; entities without one are matched by alias/filename against a pool of archived boxes, with manual corrections.
 
 **Browsing archived files (portal, steward-only):**
 
-9. The file admin panel lists every archived file in GHGA, including files archived but not yet
-   mapped to any metadata.
+9. The file admin panel lists every archived file in GHGA, including files archived but not yet mapped to any metadata.
 
 ## API Definitions
 
 ### RESTful/Synchronous
 
-**metldata — new**
+#### metldata — new
 
-- `GET /studies/{study_pid}/successor`: Resolve the successor chain for a study PID to its terminal
-  study, returning `null` when the study has no successor. Must answer for legacy `GHGAS…`
-  predecessors that never had a lineage, and must resolve the whole chain rather than one hop — the
-  response is the newest study, not the direct successor. This is the sole online reader of the
-  supersede relation in this rollout.
-- `POST /file-governance/query`: Return the governing `data_access_policy` and its nested
-  `data_access_committee` for a batch of file accessions. POST rather than GET because a batch is
-  one page of the file admin panel and can outgrow a URL; HTTP `QUERY` would fit but is not yet safe
-  to rely on. Called by RS, not by the portal.
+- `GET /studies/{study_pid}/successor`: Resolve the successor chain for a study PID to its terminal study, returning `null` when the study has no successor.
+  Must answer for legacy `GHGAS…` predecessors that never had a lineage, and must resolve the whole chain rather than one hop — the response is the newest study, not the direct successor.
+  This is the sole online reader of the supersede relation in this rollout.
+- `POST /file-governance/query`: Return the governing `data_access_policy` and its nested `data_access_committee` for a batch of file accessions.
+  POST rather than GET because a batch is one page of the file admin panel and can outgrow a URL; HTTP `QUERY` would fit but is not yet safe to rely on.
+  Called by RS, not by the portal.
 
-**RS — new**
+#### RS — new
 
-- `GET /files`: Steward-only, paginated, filterable listing over all archived files. Each row
-  carries the file UUID, its GHGA accession(s), whether it is mapped, the study/studies those
-  accessions belong to, and the originating upload box. Filtering by mapped/unmapped state and by
-  box is required. The governance columns are served here too, composed by RS from metldata (below).
-  Legacy files that never came through an upload box have no box — that field is empty rather than
-  omitted, and the response must not assume a box exists.
-- `POST /studies/{study_id}/file-ids`: Submit an accession map for a whole study. This is a new,
-  study-scoped endpoint that **fully replaces** `POST /upload-boxes/{box_id}/file-ids`; the per-box
-  endpoint is removed, not kept alongside. One request carries all the file IDs being mapped for the
-  study, whichever archived box each file was uploaded into, so mapping is no longer confined to a
-  single box. It mirrors the existing `GET /studies/{study_id}/file-ids`, giving the mapping tool a
-  read and a write on the same study-scoped path. For entities carrying a reuse accession the
-  response must include the list of studies the referenced file already maps to.
+- `GET /files`: Steward-only, paginated, filterable listing over all archived files.
+  Each row carries the file UUID, its GHGA accession(s), whether it is mapped, the study/studies those accessions belong to, and the originating upload box.
+  Filtering by mapped/unmapped state and by box is required.
+  The governance columns are served here too, composed by RS from metldata (below).
+  Legacy files that never came through an upload box have no box — that field is empty rather than omitted, and the response must not assume a box exists.
+- `POST /studies/{study_id}/file-ids`: Submit an accession map for a whole study.
+  This is a new, study-scoped endpoint that **fully replaces** `POST /upload-boxes/{box_id}/file-ids`; the per-box endpoint is removed, not kept alongside.
+  One request carries all the file IDs being mapped for the study, whichever archived box each file was uploaded into, so mapping is no longer confined to a single box.
+  It mirrors the existing `GET /studies/{study_id}/file-ids`, giving the mapping tool a read and a write on the same study-scoped path.
+  For entities carrying a reuse accession the response must include the list of studies the referenced file already maps to.
 
   The validation rules move here from the endpoint it replaces:
-  - Must no longer reject a map containing duplicate `file_id` values — that check is what enforces
-    the current 1:1 relation and is exactly what relaxes.
+  - Must no longer reject a map containing duplicate `file_id` values — that check is what enforces the current 1:1 relation and is exactly what relaxes.
   - Must no longer require the map to cover every active file in a box.
-  - Must **invert** the archived-box guard: `store_accession_map` currently returns an
-    `AccessionMapError` with `error_type="archived"` when the box is archived; the new endpoint must
-    instead require every box it maps into to be archived and reject an unarchived one.
+  - Must **invert** the archived-box guard: `store_accession_map` currently returns an `AccessionMapError` with `error_type="archived"` when the box is archived; the new endpoint must instead require every box it maps into to be archived and reject an unarchived one.
   - Must keep rejecting an accession already bound to a different `file_id` or study.
 
-**RS — unchanged**
+#### RS — unchanged
 
-`GET /upload-boxes/{box_id}/uploads` stays box-scoped and is not replaced. It serves the box detail
-page as well as mapping, and nothing about listing one box's uploads becomes wrong under the new
-model — the mapping tool simply calls it once per archived box it is working against.
+`GET /upload-boxes/{box_id}/uploads` stays box-scoped and is not replaced.
+It serves the box detail page as well as mapping, and nothing about listing one box's uploads becomes wrong under the new model — the mapping tool simply calls it once per archived box it is working against.
 
-**RS — changed**
+#### RS — changed
 
 **`PATCH /upload-boxes/{box_id}`** -> Update box state:
 
 - The `locked -> archived` transition will no longer require every file to carry an accession.
   Archival will only require that no files are in `init` or `inbox` state at the UCS level.
 
-**dskit — CLI surface**
+#### dskit — CLI surface
 
-- `dskit metadata submit --replaces <exact study PID>` — repeatable; names the exact PID, which may
-  be a legacy accession, not a lineage root.
-- `dskit metadata submit --yes` (or equivalent) — auto-confirm option; accepts all three reuse
-  warnings without prompting.
+- `dskit metadata submit --replaces <exact study PID>` — repeatable; names the exact PID, which may be a legacy accession, not a lineage root.
+- `dskit metadata submit --yes` (or equivalent) — auto-confirm option; accepts all three reuse warnings without prompting.
 - `dskit metadata replace-study <old PID> <new PID>` — new command.
 
 ### Payload Schemas for Events
 
 **No changes to `libs/ghga-event-schemas` are required.**
 
-- *The declared replacement* stays inside metldata — recorded on the submission record and in the
-  ancestry collection, read from there by the portal. No supersede pointer is added to
-  `MetadataDatasetOverview` or `SearchableResource`. Hiding superseded datasets travels on the
-  existing `searchable_resource_deleted` event.
-- *The many-to-one file relation* already fits `FileAccessionMapping`, which is emitted per
-  accession carrying its `file_id`. *N* accessions on one file simply produce *N* events. WPS stores
-  and deletes by accession and is unaffected.
+- *The declared replacement* stays inside metldata — recorded on the submission record and in the ancestry collection, read from there by the portal.
+  No supersede pointer is added to `MetadataDatasetOverview` or `SearchableResource`.
+  Hiding superseded datasets travels on the existing `searchable_resource_deleted` event.
+- *The many-to-one file relation* already fits `FileAccessionMapping`, which is emitted per accession carrying its `file_id`.
+  *N* accessions on one file simply produce *N* events.
+  WPS stores and deletes by accession and is unaffected.
 
-DINS is the exception, and its change is a service change rather than a schema change: its
-`PendingFileInfo` merge is keyed by `file_id` and **consumes** the record, so a second accession
-mapped later finds nothing to merge.
+DINS is the exception, and its change is a service change rather than a schema change: its `PendingFileInfo` merge is keyed by `file_id` and **consumes** the record, so a second accession mapped later finds nothing to merge.
 
 Should RS later need `superseded_by_id` populated, that is the point at which a field gets added.
-Keep any such change additive, and mind that this monorepo is source-coupled to a single schema
-version — all consumers see the same one.
+Keep any such change additive, and mind that this monorepo is source-coupled to a single schema version — all consumers see the same one.
 
 ### Configuration
 
-Proposed new config fields. All must have safe defaults.
+Proposed new config fields.
+All must have safe defaults.
 
 ```python
 # libs/metldata — lifecycle accession scheme
@@ -294,61 +249,46 @@ study_pid_random_block_length: int = 3     # base32 chars; 32**3 = 32,768 studie
 max_file_listing_page_size: int = 1000     # matches the existing upload-listing cap
 ```
 
-The base32 alphabet is RFC 4648 (`[A-Z2-7]`, no `0/1/8/9`) and is not a config field. Extending it
-later is possible in principle — already-minted PIDs stay valid, since a longer alphabet only adds
-sequences that were never used. Removing or reassigning characters is not, as that can invalidate
-PIDs already minted.
+The base32 alphabet is RFC 4648 (`[A-Z2-7]`, no `0/1/8/9`) and is not a config field.
+Extending it later is possible in principle — already-minted PIDs stay valid, since a longer alphabet only adds sequences that were never used.
+Removing or reassigning characters is not, as that can invalidate PIDs already minted.
 
 ## Additional Implementation Details
 
-**Land on main incrementally, in this order:** one-study enforcement first, since everything else
-assumes it; then the reuse accession; then the PID scheme and the submission-store extensions; then
-declared replacement end to end, together with the portal's "updated version available" hint. The
-DINS retain-instead-of-consume fix is independent of all of these and can land at any point. Every
-change in this strand is additive rather than breaking, so each piece can ship on its own — noting
-that adding `reused_accession` to the metadata model moves the artifact payloads and the test bed's
-expected artifacts with it.
+**Land on main incrementally, in this order:** one-study enforcement first, since everything else assumes it; then the reuse accession; then the PID scheme and the submission-store extensions; then declared replacement end to end, together with the portal's "updated version available" hint.
+The DINS retain-instead-of-consume fix is independent of all of these and can land at any point.
+Every change in this strand is additive rather than breaking, so each piece can ship on its own — noting that adding `reused_accession` to the metadata model moves the artifact payloads and the test bed's expected artifacts with it.
 
-**Develop the archival/mapping inversion on one branch and cut over in a single step.** That strand
-is the RS cardinality relaxation, the archival inversion, the study-centric mapping endpoint, and
-the portal's mapping rework.
+**Develop the archival/mapping inversion on one branch and cut over in a single step.**
+That strand is the RS cardinality relaxation, the archival inversion, the study-centric mapping endpoint, and the portal's mapping rework.
 
-**The file admin panel lands after the cutover.** "Files archived but never mapped" only comes into
-existence once the inversion ships.
+**The file admin panel lands after the cutover.**
+"Files archived but never mapped" only comes into existence once the inversion ships.
 
 ---
 
 ### metldata — accession scheme and accession store
 
-`AccessionRegistry` (`libs/metldata/src/metldata/accession_registry/accession_registry.py`) mints a
-flat `prefix + random numeric suffix` per resource type from `prefix_mapping`. It will be replaced
-or augmented by a lineage-aware accessioning path that, given a study lineage, a version, an alias
-set and the dataset file sets, produces the structured PIDs:
+`AccessionRegistry` (`libs/metldata/src/metldata/accession_registry/accession_registry.py`) mints a flat `prefix + random numeric suffix` per resource type from `prefix_mapping`.
+It will be replaced or augmented by a lineage-aware accessioning path that, given a study lineage, a version, an alias set and the dataset file sets, produces the structured PIDs:
 
-1. Mint or continue the study PID: for a continued lineage, reuse the root and set `V = predecessor
-   version + 1`; otherwise mint a fresh `XXX` against the current year's bucket.
-2. Mint `{study_pid}.DS.xxx` per dataset, reusing the predecessor revision's block where the
-   dataset's file set is unchanged, else minting a fresh block within the lineage.
+1. Mint or continue the study PID: for a continued lineage, reuse the root and set `V = predecessor version + 1`; otherwise mint a fresh `XXX` against the current year's bucket.
+2. Mint `{study_pid}.DS.xxx` per dataset, reusing the predecessor revision's block where the dataset's file set is unchanged, else minting a fresh block within the lineage.
 3. Mint `{study_pid}.{alias}` for every other entity.
 
 Minting a fresh sequence — `XXX` within a year, `.DS.xxx` within a lineage — proceeds as:
 
-1. Draw a random sequence and check it against the bucket, up to 100 attempts. The attempt count is
-   a constant, not a config field.
-2. If all 100 attempts collide, gather the sequences still unused in that bucket and pick one at
-   random.
+1. Draw a random sequence and check it against the bucket, up to 100 attempts.
+   The attempt count is a constant, not a config field.
+2. If all 100 attempts collide, gather the sequences still unused in that bucket and pick one at random.
 3. Raise an error only if that list is empty.
 
-`AccessionStore` (`accession_store.py`) will be restructured by year, keyed by `YY`, so "is this
-`XXX` free this year" is a lookup in that year's bucket rather than a linear scan over every
-accession ever minted. It keeps a flat list alongside for legacy-scheme accessions, which have no
-year to bucket by and stay reserved forever. The store is an index, not the authority — it must be
-rebuildable from the submission store if lost.
+`AccessionStore` (`accession_store.py`) will be restructured by year, keyed by `YY`, so "is this `XXX` free this year" is a lookup in that year's bucket rather than a linear scan over every accession ever minted.
+It keeps a flat list alongside for legacy-scheme accessions, which have no year to bucket by and stay reserved forever.
+The store is an index, not the authority — it must be rebuildable from the submission store if lost.
 
-The **submission store is the accession source of truth**: it records what was assigned together
-with the metadata and the lineage that justify it. Version continuation is answered there, because
-it needs the predecessor's submitted metadata and not just its accession string, as is
-lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff already reads.
+The **submission store is the accession source of truth**: it records what was assigned together with the metadata and the lineage that justify it.
+Version continuation is answered there, because it needs the predecessor's submitted metadata and not just its accession string, as is lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff already reads.
 
 #### Work to be performed
 
@@ -378,11 +318,9 @@ lineage-scoped `.DS.xxx` uniqueness — read at the same place the file-set diff
 
 ### metldata — declared replacement, ancestry, and the loader
 
-The declared relation `predecessor PID -> successor PID` is **received, never computed**. No PID
-parsing is involved in deciding supersede, since a predecessor may be a legacy accession with no
-version at all. metldata must enforce that each study is replaced by at most one successor, so the
-successor chain stays single-valued. The reverse is unconstrained: several studies may name the same
-successor, which is how a merge is expressed.
+The declared relation `predecessor PID -> successor PID` is **received, never computed**.
+No PID parsing is involved in deciding supersede, since a predecessor may be a legacy accession with no version at all. metldata must enforce that each study is replaced by at most one successor, so the successor chain stays single-valued.
+The reverse is unconstrained: several studies may name the same successor, which is how a merge is expressed.
 
 It is persisted in two places for two readers:
 
@@ -397,13 +335,11 @@ and silently discards any further studies. It must assert a single study and fai
 submit path rejects multi-study submissions upstream, but the loader is a separate trust boundary
 — reachable over HTTP by anything holding the loader token — and must not depend on that.
 
-The loader (`load/api.py`, `load/load.py`, `load/event_publisher.py`) must apply the replacement
-carried in the payload:
+The loader (`load/api.py`, `load/load.py`, `load/event_publisher.py`) must apply the replacement carried in the payload:
 
 1. Mark each named predecessor superseded by the successor.
-2. Emit `searchable_resource_deleted` for the superseded studies' primary-dataset resources, so they
-   leave the search track. The artifacts must stay in Mongo and queryable through the artifacts API
-   — hidden from search must not mean deleted or unreachable.
+2. Emit `searchable_resource_deleted` for the superseded studies' primary-dataset resources, so they leave the search track.
+   The artifacts must stay in Mongo and queryable through the artifacts API — hidden from search must not mean deleted or unreachable.
 3. Write the relation into the ancestry collection.
 4. Reject a declaration whose predecessor is already replaced.
 5. Reject a declaration that would close a cycle, and bound the chain walk in `GET
@@ -411,9 +347,8 @@ carried in the payload:
    loader is a separate trust boundary and the endpoint is what fails to terminate if a cycle ever
    reaches the ancestry collection.
 
-Re-application of the same declaration must be idempotent, and a `replace-study` declaration must
-produce the same three effects as one arriving with a successor's artifacts. That second path is
-easy to miss: supersede status can change without any new artifacts being loaded.
+Re-application of the same declaration must be idempotent, and a `replace-study` declaration must produce the same three effects as one arriving with a successor's artifacts.
+That second path is easy to miss: supersede status can change without any new artifacts being loaded.
 
 **Governance resolution lives here too.** The file → dataset → `data_access_policy` →
 `data_access_committee` traversal is written **once**, as a function in `libs/metldata`
@@ -426,8 +361,7 @@ precomputing costs no freshness. `POST /file-governance/query` serves that colle
 
 #### Work to be performed
 
-- [ ] Persist the declared replacement on the submission record, enforcing that each study is
-      replaced by at most one successor
+- [ ] Persist the declared replacement on the submission record, enforcing that each study is replaced by at most one successor
 - [ ] Add the ancestry collection and its loader write path
 - [ ] Add `GET /studies/{study_pid}/successor`, resolving a full chain (e.g. the chain a->b->c
       resolves to c for a) and returning `null` when there is no successor, including for legacy
@@ -441,12 +375,7 @@ precomputing costs no freshness. `POST /file-governance/query` serves that colle
 - [ ] Add the governance traversal function, parameterised over the metadata representation, and
       call it from both the submit-path reuse findings and the loader
 - [ ] Add the governance collection, its loader write path, and `POST /file-governance/query`
-- [ ] Add tests covering: idempotent re-declaration; already-replaced predecessor rejected; legacy
-      predecessor; merge with several predecessors; chain resolution over more than one hop;
-      superseded artifacts still retrievable through the artifacts API after the deletion event; a
-      cycle-closing declaration rejected, and the successor endpoint terminating on a chain that was
-      cycled into the collection behind the loader's back; the traversal function giving the same
-      answer offline and against artifacts for the same input
+- [ ] Add tests covering: idempotent re-declaration; already-replaced predecessor rejected; legacy predecessor; merge with several predecessors; chain resolution over more than one hop; superseded artifacts still retrievable through the artifacts API after the deletion event; a cycle-closing declaration rejected, and the successor endpoint terminating on a chain that was cycled into the collection behind the loader's back; the traversal function giving the same answer offline and against artifacts for the same input
 
 ---
 
@@ -458,16 +387,13 @@ existing submission store — per previously submitted study, its PID, the studi
 replaces, and its submitted metadata. Since the store holds metadata only, nothing here resolves a
 reuse accession to a physical file.
 
-The store lives on the data steward VM, which is the trusted source and its durability is not a
-lifecycle concern here.
+The store lives on the data steward VM, which is the trusted source and its durability is not a lifecycle concern here.
 
 Both declaration paths must fail when:
 
-1. the named predecessor is already replaced — a study may be replaced only once, so each superseded
-   study has exactly one successor while a successor may have many predecessors;
-2. following the predecessor's successor chain already reaches the successor. Rule 1 alone does not
-   prevent this: after `A -> B`, a steward correcting a mistake with `replace-study B A` passes rule
-   1 and closes a cycle, after which "follow the chain to the newest study" never terminates.
+1. the named predecessor is already replaced — a study may be replaced only once, so each superseded study has exactly one successor while a successor may have many predecessors;
+2. following the predecessor's successor chain already reaches the successor.
+   Rule 1 alone does not prevent this: after `A -> B`, a steward correcting a mistake with `replace-study B A` passes rule 1 and closes a cycle, after which "follow the chain to the newest study" never terminates.
 
 The three reuse warnings are all computed from submitted metadata alone:
 
@@ -477,12 +403,11 @@ The three reuse warnings are all computed from submitted metadata alone:
 | 2 | the study declares predecessor(s), but some reused file accessions occur in no ancestor of those predecessors | warning + confirm, naming the offending accessions |
 | 3 | for the reused files, the `data_access_policy` — including its nested `data_access_committee` — reachable via their dataset(s) does not match what applied before | warning + confirm, naming the committees that would gain authority |
 
-Check 3 must compare **content, never accessions or aliases**. The comparison is per file, since a
-file may sit in datasets with different policies. It resolves governance through the shared
-`libs/metldata` traversal function, called here against the submission store.
+Check 3 must compare **content, never accessions or aliases**.
+The comparison is per file, since a file may sit in datasets with different policies.
+It resolves governance through the shared `libs/metldata` traversal function, called here against the submission store.
 
-The case check 3 exists for is a file becoming subject to *additional* DACs — a governance change —
-so the message must name the committees that would gain authority.
+The case check 3 exists for is a file becoming subject to *additional* DACs — a governance change — so the message must name the committees that would gain authority.
 
 Note that the "reused file must belong to my own lineage" rule is deliberately **not** implemented
 anywhere. Merging removes any single lineage to validate against, which is why the judgement moves
@@ -512,45 +437,35 @@ either aborts or lets the operation proceed. Both declaration paths run the same
 
 ### RS — cardinality, archival inversion, mapping surface, admin panel
 
-**Relaxing the accession-to-file relation needs no schema change or migration.** `FileAccession` in
-RS is already keyed by `pid` with `file_id` as an ordinary nullable field, so many accessions
-pointing at one file already fit the store. What enforces 1:1 today is in `store_accession_map`: the
-duplicate-`file_id` check plus the "every active file in the box must be mapped" check together
-force each submission to be a bijection over the box's files. Those two are what relax.
+**Relaxing the accession-to-file relation needs no schema change or migration.**
+`FileAccession` in RS is already keyed by `pid` with `file_id` as an ordinary nullable field, so many accessions pointing at one file already fit the store.
+What enforces 1:1 today is in `store_accession_map`: the duplicate-`file_id` check plus the "every active file in the box must be mapped" check together force each submission to be a bijection over the box's files.
+Those two are what relax.
 
-**Keep** the per-accession guard in `FileController.map_accessions_to_file_ids` that rejects
-re-binding an already-mapped accession to a different `file_id` or study. That is the single-valued
-`accession -> file` direction the design preserves.
+**Keep** the per-accession guard in `FileController.map_accessions_to_file_ids` that rejects re-binding an already-mapped accession to a different `file_id` or study.
+That is the single-valued `accession -> file` direction the design preserves.
 
-**The archival/mapping dependency inverts, it is not removed.** Remove the requirement that every
-active file carry an accession, so a box can be archived with no mapping at all — archival then only
-requires no `init`/`inbox` files at the UCS level. Conversely, `store_accession_map` currently
-rejects archived boxes; that guard inverts to *require* the box be archived.
+**The archival/mapping dependency inverts, it is not removed.**
+Remove the requirement that every active file carry an accession, so a box can be archived with no mapping at all — archival then only requires no `init`/`inbox` files at the UCS level.
+Conversely, `store_accession_map` currently rejects archived boxes; that guard inverts to *require* the box be archived.
 
-**Study-centric mapping surface.** Mapping becomes driven by study rather than by a single box.
-`POST /upload-boxes/{box_id}/file-ids` is replaced by `POST /studies/{study_id}/file-ids`, which
-takes one accession map for the whole study regardless of which archived box each file was uploaded
-into.
+**Study-centric mapping surface.**
+Mapping becomes driven by study rather than by a single box.
+`POST /upload-boxes/{box_id}/file-ids` is replaced by `POST /studies/{study_id}/file-ids`, which takes one accession map for the whole study regardless of which archived box each file was uploaded into.
 
-- **Reuse-referenced files** — for each file entity carrying a reuse accession, bind the new
-  entity's accession to that file's `file_id` and report the list of studies the file already maps
-  to. Getting `reused_accession` as far as RS needs no `libs/ghga-event-schemas` change, since
-  `SearchableResource.content` is an untyped `dict` — but it is not free either. RS consumes that
-  content through `_LegacyResourceContent`, whose `files` is a flat list of accession strings
-  (`rs/core/legacy_resources.py`), so a per-file reuse accession has nowhere to ride today. The
-  embedded content's `files` aggregation and RS's parsing of it have to widen, and to ship together:
-  content that no longer validates is dropped with nothing but a warning
-  (`legacy_resources.py`). RS still verifies that the referenced accession exists and is mapped.
+- **Reuse-referenced files** — for each file entity carrying a reuse accession, bind the new entity's accession to that file's `file_id` and report the list of studies the file already maps to.
+  Getting `reused_accession` as far as RS needs no `libs/ghga-event-schemas` change, since `SearchableResource.content` is an untyped `dict` — but it is not free either.
+  RS consumes that content through `_LegacyResourceContent`, whose `files` is a flat list of accession strings (`rs/core/legacy_resources.py`), so a per-file reuse accession has nowhere to ride today.
+  The embedded content's `files` aggregation and RS's parsing of it have to widen, and to ship together: content that no longer validates is dropped with nothing but a warning (`legacy_resources.py`).
+  RS still verifies that the referenced accession exists and is mapped.
   There is **no same-lineage validation here** — that judgement was made offline at submit time.
-- **Unreferenced files** — let the steward add a pool of archived boxes as candidates, then map by
-  alias/filename with manual corrections, against the post-archival box/file inventory.
+- **Unreferenced files** — let the steward add a pool of archived boxes as candidates, then map by alias/filename with manual corrections, against the post-archival box/file inventory.
 
-**File admin panel API.** Because files can now be archived without ever being mapped, no existing
-surface is keyed to find them. `GET /upload-boxes/{box_id}/uploads` is file-first but scoped to one
-named box, and returns UCS `FileUpload` records that carry no accession, so it cannot say whether a
-file is mapped. `GET /studies/{study_id}/file-ids` is accession-first, so a file with no accession
-never appears — that endpoint surfaces the opposite population, accessions still awaiting a file. A
-steward will use the file admin panel to view the information:
+**File admin panel API.**
+Because files can now be archived without ever being mapped, no existing surface is keyed to find them.
+`GET /upload-boxes/{box_id}/uploads` is file-first but scoped to one named box, and returns UCS `FileUpload` records that carry no accession, so it cannot say whether a file is mapped.
+`GET /studies/{study_id}/file-ids` is accession-first, so a file with no accession never appears — that endpoint surfaces the opposite population, accessions still awaiting a file.
+A steward will use the file admin panel to view the information:
 
 | field | source |
 |---|---|
@@ -561,121 +476,96 @@ steward will use the file admin panel to view the information:
 | governing `data_access_policy` + nested `data_access_committee` | resolved by metldata, fetched per page by RS (below) |
 | upload box | the RDUB/FUB the upload belongs to |
 
-**metldata resolves governance, RS serves it, the portal only renders it.** RS calls `POST
-/file-governance/query` with the accessions on the page and composes them into the rows it returns,
-so `GET /files` is complete on its own. The portal does no joining. This keeps the panel's contract
-stable: it is written once against `GET /files` and does not change when ownership moves. RS already
-makes synchronous calls to sibling services, so the pattern is established. A metldata failure must
-degrade the governance cells only — the listing itself still returns. Responses should be cached,
-since governance changes only at load. An archived-but-unmapped file carries no accession and so has
-no governance to resolve: those cells are empty, which is a different state from a degraded cell and
-must read differently in the panel, since that population is the reason the panel exists.
+**metldata resolves governance, RS serves it, the portal only renders it.**
+RS calls `POST /file-governance/query` with the accessions on the page and composes them into the rows it returns, so `GET /files` is complete on its own.
+The portal does no joining.
+This keeps the panel's contract stable: it is written once against `GET /files` and does not change when ownership moves.
+RS already makes synchronous calls to sibling services, so the pattern is established.
+A metldata failure must degrade the governance cells only — the listing itself still returns.
+Responses should be cached, since governance changes only at load.
+An archived-but-unmapped file carries no accession and so has no governance to resolve: those cells are empty, which is a different state from a degraded cell and must read differently in the panel, since that population is the reason the panel exists.
 
-Since a file may back several accessions across several studies, and those accessions may sit in
-datasets with different policies, the column can legitimately show more than one policy for the same
-physical file. That is precisely the situation warning 3 exists to make deliberate, which makes this
-panel its audit trail.
+Since a file may back several accessions across several studies, and those accessions may sit in datasets with different policies, the column can legitimately show more than one policy for the same physical file.
+That is precisely the situation warning 3 exists to make deliberate, which makes this panel its audit trail.
 
-This arrangement is interim by design. Once RS owns study metadata it resolves governance internally
-and the metldata client, the cache and the degradation path all disappear — with the `GET /files`
-contract unchanged. Same shape as the `superseded_by_id` handover under "Not included".
+This arrangement is interim by design.
+Once RS owns study metadata it resolves governance internally and the metldata client, the cache and the degradation path all disappear — with the `GET /files` contract unchanged.
+Same shape as the `superseded_by_id` handover under "Not included".
 
-**RS is a consumer of supersede status, not its author.** The steward authors the relation and
-metldata records and propagates it. `superseded_by_id` is left unset in this rollout, as recorded
-under "Not included".
+**RS is a consumer of supersede status, not its author.**
+The steward authors the relation and metldata records and propagates it.
+`superseded_by_id` is left unset in this rollout, as recorded under "Not included".
 
 #### Work to be performed
 
-- [ ] Add `POST /studies/{study_id}/file-ids`, taking one accession map for the whole study across
-      archived boxes, including the "already maps to studies X, Y" report
+- [ ] Add `POST /studies/{study_id}/file-ids`, taking one accession map for the whole study across archived boxes, including the "already maps to studies X, Y" report
 - [ ] Remove `POST /upload-boxes/{box_id}/file-ids` once the new endpoint is in place
-- [ ] Carry the relaxed rules over into the new endpoint: no duplicate-`file_id` check, no "all
-      active files mapped" check, and the archived-box guard inverted to require archival
+- [ ] Carry the relaxed rules over into the new endpoint: no duplicate-`file_id` check, no "all active files mapped" check, and the archived-box guard inverted to require archival
 - [ ] Remove the accession requirement from `_check_archival_prerequisites`
 - [ ] Keep and test the re-binding guard in `FileController.map_accessions_to_file_ids`
-- [ ] Widen the embedded content's `files` aggregation and `_LegacyResourceContent` together so
-      `reused_accession` reaches RS at all, keeping the two in step
-- [ ] Verify the accession named in `reused_accession` is itself mapped, since the new accession
-      copies its `file_id`
+- [ ] Widen the embedded content's `files` aggregation and `_LegacyResourceContent` together so `reused_accession` reaches RS at all, keeping the two in step
+- [ ] Verify the accession named in `reused_accession` is itself mapped, since the new accession copies its `file_id`
 - [ ] Add the paginated, filterable archived-file listing
-- [ ] Add the metldata governance client with caching, composing the governance columns into the
-      listing rows, degrading those cells alone when metldata is unavailable
-- [ ] Add tests covering: N accessions on one `file_id`; re-binding an accession rejected; archiving
-      a box with zero mappings; mapping against an unarchived box rejected; mapping against an
-      archived box accepted; listing a file with no box (legacy); listing an archived-but-unmapped
-      file; filtering by mapped/unmapped and by box; a metldata outage leaving the listing intact
-      with only the governance cells degraded; an unmapped file's governance cells reading as empty
-      rather than as degraded
+- [ ] Add the metldata governance client with caching, composing the governance columns into the listing rows, degrading those cells alone when metldata is unavailable
+- [ ] Add tests covering: N accessions on one `file_id`; re-binding an accession rejected; archiving a box with zero mappings; mapping against an unarchived box rejected; mapping against an archived box accepted; listing a file with no box (legacy); listing an archived-but-unmapped file; filtering by mapped/unmapped and by box; a metldata outage leaving the listing intact with only the governance cells degraded; an unmapped file's governance cells reading as empty rather than as degraded
 
 ---
 
 ### DINS — retain per-file information instead of consuming it
 
-IFRS announces a file's size, checksum and storage alias once, at archival. DINS treats that as a
-one-time hand-off: it parks the payload as a `PendingFileInfo` keyed by `file_id`, merges it into
-the first accession that claims it, and then deletes the pending record.
+IFRS announces a file's size, checksum and storage alias once, at archival.
+DINS treats that as a one-time hand-off: it parks the payload as a `PendingFileInfo` keyed by `file_id`, merges it into the first accession that claims it, and then deletes the pending record.
 
-Under file reuse a second accession is mapped much later, IFRS never re-announces, and nothing is
-left to merge. The dataset page then shows blank size and checksum indefinitely, with only a "still
-waiting for `FileInternallyRegistered`" log line to explain it.
+Under file reuse a second accession is mapped much later, IFRS never re-announces, and nothing is left to merge.
+The dataset page then shows blank size and checksum indefinitely, with only a "still waiting for `FileInternallyRegistered`" log line to explain it.
 
 DINS must therefore:
 
 1. Retain the per-file record rather than deleting it after the first merge.
 2. Serve it to any accession bound to that file, however late that accession appears.
-3. Clear all such accessions when the file is deleted. `delete_file_information` currently resolves
-   a `file_id` to a single accession via `find_one` and deletes only that one.
+3. Clear all such accessions when the file is deleted.
+   `delete_file_information` currently resolves a `file_id` to a single accession via `find_one` and deletes only that one.
 
 #### Work to be performed
 
 - [ ] Stop deleting the per-file record after a successful merge
 - [ ] Merge the retained record into every later accession bound to the same `file_id`
 - [ ] Make `delete_file_information` clear every accession bound to the file, not just the first
-- [ ] Add tests covering: two accessions mapped to one file, the second arriving long after the
-      registration event, both serving size and checksum; deletion clearing both; the existing
-      single-accession path unchanged
+- [ ] Add tests covering: two accessions mapped to one file, the second arriving long after the registration event, both serving size and checksum; deletion clearing both; the existing single-accession path unchanged
 
 ---
 
 ### MASS — no change required
 
-MASS is event-driven and does no diffing, so hiding superseded datasets is achieved entirely by the
-upstream deletion signal: when a replacement is declared, the superseded studies' datasets receive
-`searchable_resource_deleted` and drop out of the index. This now also has to fire for a
-`replace-study` declaration, not only as part of loading a successor's artifacts — that is a
-metldata obligation, not a MASS one.
+MASS is event-driven and does no diffing, so hiding superseded datasets is achieved entirely by the upstream deletion signal: when a replacement is declared, the superseded studies' datasets receive `searchable_resource_deleted` and drop out of the index.
+This now also has to fire for a `replace-study` declaration, not only as part of loading a successor's artifacts — that is a metldata obligation, not a MASS one.
 
 There is no retained "hidden" flag and no steward search that can still see superseded datasets.
-They remain reachable by direct URL through the artifacts API, which is the only guaranteed route to
-them once they leave the index.
+They remain reachable by direct URL through the artifacts API, which is the only guaranteed route to them once they leave the index.
 
 #### Work to be performed
 
-- [ ] Confirm by integration test that a declared replacement removes the predecessor's datasets
-      from search while leaving them retrievable by URL
+- [ ] Confirm by integration test that a declared replacement removes the predecessor's datasets from search while leaving them retrievable by URL
 
 ---
 
 ### data portal — hint, mapping rework, admin panel
 
-- **"Updated version available" hint.** On `dataset/:id` and `study/:id`, detect that the entity
-  belongs to a superseded study and render a hint linking to its successor, following the chain to
-  the terminal study. The successor is resolved from metldata's successor endpoint; RS is not
-  involved. Because merges exist, the hint may lead from several old studies to the same successor.
-- **Study-centric mapping UI.** Rework
-  `frontend/data-portal/src/app/upload/features/upload-box-mapping/` and its services from
-  box-centric to study-centric: select a study; show confirmed reused-file entities together with
-  the "already maps to studies X, Y" information; for unmapped entities let the steward choose a
-  pool of archived boxes and map by alias/filename with manual corrections, reusing today's matching
-  UX. Remove the submit-map-then-archive coupling — archival becomes an independent action.
-- **Reused-file view.** Surface, in the mapping view, which entities are satisfied by a prior GHGA
-  accession and which still need a physical file.
-- **File admin panel.** A browsable table over every archived file, backed by the RS listing. The
-  governing `data_access_policy` and nested `data_access_committee` arrive as part of that listing —
-  the portal renders them and joins nothing itself, and does not call metldata for this view. The
-  box column is empty for legacy files that never came through a box. This is the only place an
-  archived-but-unmapped file becomes findable. Expect it to be used to *find* the files a later
-  mapping pass needs, so filtering by mapped/unmapped and by box matters more than presentation.
+- **"Updated version available" hint.**
+  On `dataset/:id` and `study/:id`, detect that the entity belongs to a superseded study and render a hint linking to its successor, following the chain to the terminal study.
+  The successor is resolved from metldata's successor endpoint; RS is not involved.
+  Because merges exist, the hint may lead from several old studies to the same successor.
+- **Study-centric mapping UI.**
+  Rework `frontend/data-portal/src/app/upload/features/upload-box-mapping/` and its services from box-centric to study-centric: select a study; show confirmed reused-file entities together with the "already maps to studies X, Y" information; for unmapped entities let the steward choose a pool of archived boxes and map by alias/filename with manual corrections, reusing today's matching UX.
+  Remove the submit-map-then-archive coupling — archival becomes an independent action.
+- **Reused-file view.**
+  Surface, in the mapping view, which entities are satisfied by a prior GHGA accession and which still need a physical file.
+- **File admin panel.**
+  A browsable table over every archived file, backed by the RS listing.
+  The governing `data_access_policy` and nested `data_access_committee` arrive as part of that listing — the portal renders them and joins nothing itself, and does not call metldata for this view.
+  The box column is empty for legacy files that never came through a box.
+  This is the only place an archived-but-unmapped file becomes findable.
+  Expect it to be used to *find* the files a later mapping pass needs, so filtering by mapped/unmapped and by box matters more than presentation.
 
 #### Work to be performed
 
@@ -683,27 +573,23 @@ them once they leave the index.
 - [ ] Rework `upload-box-mapping/` and its services from box-centric to study-centric
 - [ ] Remove the submit-map-then-archive coupling; make archival an independent action
 - [ ] Distinguish reuse-satisfied entities from those needing a physical file
-- [ ] Build the file admin panel with mapped/unmapped and box filters, rendering the governance
-      columns as served and showing degraded cells when RS could not resolve them
+- [ ] Build the file admin panel with mapped/unmapped and box filters, rendering the governance columns as served and showing degraded cells when RS could not resolve them
 
 ---
 
 ### Test bed
 
-The integration test bed's example metadata is a **single submission containing two studies** —
-`STUDY_A` and `STUDY_B`, mapped to separate upload boxes. It exercises exactly the case this epic
-forbids and must be split into two submissions.
+The integration test bed's example metadata is a **single submission containing two studies** — `STUDY_A` and `STUDY_B`, mapped to separate upload boxes.
+It exercises exactly the case this epic forbids and must be split into two submissions.
 
-Feature files referencing the two studies and needing review: `202_upload_completed.feature`,
-`320_search_datasets.feature`, `350_combined_browsing.feature`, `502_data_portal_uploads.feature`.
+Feature files referencing the two studies and needing review: `202_upload_completed.feature`, `320_search_datasets.feature`, `350_combined_browsing.feature`, `502_data_portal_uploads.feature`.
 
 #### Work to be performed
 
 - [ ] Split the example metadata into two single-study submissions
 - [ ] Update the affected feature files and their step implementations
 - [ ] Add a scenario covering a superseded study: absent from search, reachable by URL, hint shown
-- [ ] Add a scenario covering file reuse across two studies end to end, including DINS serving size
-      and checksum for the later accession
+- [ ] Add a scenario covering file reuse across two studies end to end, including DINS serving size and checksum for the later accession
 
 ## Cross-cutting invariants to preserve
 

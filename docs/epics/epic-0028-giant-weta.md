@@ -30,9 +30,7 @@ For now, we want to have an explicit function that pulls the information from en
 
 An additional check should be implemented to compare the retrieved user's public key with the one provided by the WPS.
 
-With the newly added file ending, we want to add the file ending to the file for the following structure:
-`{file_id}.{file_extension}.c4gh`
-Additionally, we want to distinguish between finished files and files in progress.
+With the newly added file ending, we want to add the file ending to the file for the following structure: `{file_id}.{file_extension}.c4gh` Additionally, we want to distinguish between finished files and files in progress.
 Therefore, all partial files will now be added the file ending `.part`.
 This ending will be removed, once the download is completed.
 If a download fails, its corresponding `.part` file will be deleted.
