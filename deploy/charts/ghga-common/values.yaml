@@ -238,6 +238,14 @@ exports:
 
     successfulJobsHistoryLimit: 5
 
+    # What a cronjob does when a run is still active at the next schedule.
+    # Forbid skips the new run, so hung runs cannot pile up.
+    concurrencyPolicy: Forbid
+    # Kill a cronjob run after this many seconds; null means no limit.
+    activeDeadlineSeconds: null
+    # Skip a cronjob run that could not start within this many seconds of its schedule.
+    startingDeadlineSeconds: null
+
     environment:
       name: default
 
