@@ -1,4 +1,4 @@
-# Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs (Miniature Horse)
+# Data Portal Accessibility, Responsiveness, Semantics and SOPs (Miniature Horse)
 
 **Epic Type:** Implementation Epic
 

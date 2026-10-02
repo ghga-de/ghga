@@ -36,6 +36,26 @@ def _epic(title: str, code_name: str, kind: str = "Implementation Epic"):
     return f"# {title} ({code_name})\n**Epic Type:** {kind}\n"
 
 
+def _epic_index(completed: str = "", unfolding: str = "") -> str:
+    return (
+        "# Epics\n\n## Completed\n\n"
+        f"<!-- epic-index:completed:start -->\n{completed}"
+        "<!-- epic-index:completed:end -->\n\n## Unfolding\n\n"
+        f"<!-- epic-index:unfolding:start -->\n{unfolding}"
+        "<!-- epic-index:unfolding:end -->\n"
+    )
+
+
+def _epic_lists(repo: Path) -> tuple[str, str]:
+    """Return the completed and the unfolding list from the epic index."""
+    text = (repo / "docs/epics/README.md").read_text()
+    lists = []
+    for marks in (docs_check.EPIC_COMPLETED_MARKS, docs_check.EPIC_UNFOLDING_MARKS):
+        start, end = (text.index(mark) for mark in marks)
+        lists.append(text[start + len(marks[0]) + 1 : end])
+    return lists[0], lists[1]
+
+
 @pytest.fixture
 def repo(tmp_path):
     """A git repo with two valid ADRs, two valid epics, and empty indexes."""
@@ -56,9 +76,7 @@ def repo(tmp_path):
     )
     (epics / "epic-0002-wood-ant/images").mkdir()
     (epics / "epic-0002-wood-ant/images/j.png").write_bytes(b"x")
-    (epics / "README.md").write_text(
-        "# Epics\n\n<!-- epic-index:start -->\n<!-- epic-index:end -->\n"
-    )
+    (epics / "README.md").write_text(_epic_index())
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     return tmp_path
 
@@ -85,10 +103,70 @@ def test_valid_set_regenerates_indexes_once(repo, capsys):
     assert "| [0001](adrs/adr-0001-first.md) | First | accepted | docs |" in readme
     assert "0000" not in readme
     assert readme.endswith("<!-- adr-index:end -->\n\nMore.\n")
-    epics = (repo / "docs/epics/README.md").read_text()
-    assert "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n" in epics
-    assert "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n" in epics
+    assert _epic_lists(repo) == (
+        "None at the moment.\n",
+        "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
+        "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
     assert _run(repo, capsys) == (0, "")
+
+
+def test_moved_epic_stays_completed(repo, capsys):
+    """A line moved into the completed list stays there and is regenerated."""
+    (repo / "docs/epics/README.md").write_text(
+        _epic_index(completed="- [stale](./epic-0001-blob-fish.md): old title\n")
+    )
+    _stage(repo)
+    _run(repo, capsys)
+    assert _epic_lists(repo) == (
+        "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n",
+        "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
+    assert _run(repo, capsys) == (0, "")
+
+
+def test_epic_in_both_lists_counts_as_completed(repo, capsys):
+    """A line copied rather than moved leaves the epic in the completed list only."""
+    line = "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
+    (repo / "docs/epics/README.md").write_text(_epic_index(line, line))
+    _stage(repo)
+    _run(repo, capsys)
+    assert _epic_lists(repo) == (
+        line,
+        "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
+
+
+def test_epic_lists_share_the_style(repo, capsys):
+    """A gap in one list makes both lists bullet lists."""
+    epics = repo / "docs/epics"
+    (epics / "epic-0003-giraffe.md").write_text(_epic("Lifecycle", "Giraffe"))
+    (epics / "README.md").write_text(
+        _epic_index(
+            completed="- (1) [x](./epic-0001-x.md)\n- (3) [y](./epic-0003-y.md)\n"
+        )
+    )
+    _stage(repo)
+    _run(repo, capsys)
+    assert _epic_lists(repo) == (
+        "- (1) [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
+        "- (3) [Giraffe](./epic-0003-giraffe.md): Lifecycle\n",
+        "- (2) [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
+
+
+def test_epic_index_needs_both_lists(repo, capsys):
+    (repo / "docs/epics/README.md").write_text(
+        "# Epics\n\n<!-- epic-index:completed:start -->\n"
+        "<!-- epic-index:completed:end -->\n"
+    )
+    _stage(repo)
+    code, out = _run(repo, capsys)
+    assert code == 1
+    assert (
+        "docs/epics/README.md: missing <!-- epic-index:unfolding:start -->"
+        " or <!-- epic-index:unfolding:end -->"
+    ) in out.splitlines()
 
 
 def test_epic_index_numbers_gaps(repo, capsys):

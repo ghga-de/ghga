@@ -107,8 +107,19 @@ ORPHAN_NAMES = (".cursorrules", ".clinerules", ".windsurfrules", ".aider.conf.ym
 
 ADR_INDEX_START = "<!-- adr-index:start -->"
 ADR_INDEX_END = "<!-- adr-index:end -->"
-EPIC_INDEX_START = "<!-- epic-index:start -->"
-EPIC_INDEX_END = "<!-- epic-index:end -->"
+# The epic index is two lists. Where an epic's line sits is the one part edited by
+# hand: a line moved into the completed list stays there, and every other epic, a new
+# one included, is listed as unfolding (docs/epics/README.md).
+EPIC_COMPLETED_MARKS = (
+    "<!-- epic-index:completed:start -->",
+    "<!-- epic-index:completed:end -->",
+)
+EPIC_UNFOLDING_MARKS = (
+    "<!-- epic-index:unfolding:start -->",
+    "<!-- epic-index:unfolding:end -->",
+)
+EPIC_INDEX_LINK = re.compile(r"\]\(\./epic-(\d{4})-")
+EPIC_INDEX_EMPTY = "None at the moment.\n"
 
 # Test data that holds broken ADRs and references on purpose.
 REF_EXCLUDED = ("scripts/tests/test_docs_check.py",)
@@ -427,17 +438,48 @@ def _epic_header(base: pathlib.Path, epic: Epic) -> list[str]:
     return problems
 
 
-def render_epic_index(epics: list[Epic]) -> str:
-    """Render the epic index, one line per epic in number order."""
+def _continuous(epics: list[Epic]) -> bool:
+    """Whether the epics are numbered without a gap."""
+    return not epics or epics[-1].number - epics[0].number == len(epics) - 1
+
+
+def render_epic_index(epics: list[Epic], ordered: bool) -> str:
+    """Render one epic list, one line per epic in number order."""
     if not epics:
-        return ""
-    continuous = epics[-1].number - epics[0].number == len(epics) - 1
+        return EPIC_INDEX_EMPTY
     rows = []
     for epic in epics:
         link = f"[{epic.code_name}](./{epic.path})"
-        head = f"{epic.number}." if continuous else f"- ({epic.number})"
+        head = f"{epic.number}." if ordered else f"- ({epic.number})"
         rows.append(f"{head} {link}: {epic.title}")
     return "\n".join(rows) + "\n"
+
+
+def completed_epics(text: str) -> set[int]:
+    """Return the numbers of the epics listed between the completed markers."""
+    start_mark, end_mark = EPIC_COMPLETED_MARKS
+    start, end = text.find(start_mark), text.find(end_mark)
+    if start < 0 or end < start:
+        return set()
+    return {int(n) for n in EPIC_INDEX_LINK.findall(text[start:end])}
+
+
+def render_epic_lists(
+    epics: list[Epic], text: str
+) -> list[tuple[str, tuple[str, str]]]:
+    """Split the epics into the completed and the unfolding list.
+
+    An ordered list only shows the right numbers when they have no gap, since Markdown
+    counts on from the first. Both lists take the same style, so they read as one index.
+    """
+    done = completed_epics(text)
+    completed = [e for e in epics if e.number in done]
+    unfolding = [e for e in epics if e.number not in done]
+    ordered = _continuous(completed) and _continuous(unfolding)
+    return [
+        (render_epic_index(completed, ordered), EPIC_COMPLETED_MARKS),
+        (render_epic_index(unfolding, ordered), EPIC_UNFOLDING_MARKS),
+    ]
 
 
 def _epic_link_problems(
@@ -483,14 +525,17 @@ def update_index(text: str, table: str, start_mark: str, end_mark: str) -> str |
 
 
 def _regenerate(
-    root: pathlib.Path, rel: str, table: str, marks: tuple[str, str]
+    root: pathlib.Path, rel: str, blocks: list[tuple[str, tuple[str, str]]]
 ) -> list[str]:
-    """Write the index between the markers; report when a marker or the staging is missing."""
+    """Write each block between its markers; report a missing marker or staging."""
     path = root / rel
     text = path.read_text(encoding="utf-8")
-    updated = update_index(text, table, *marks)
-    if updated is None:
-        return [f"{rel}: missing {marks[0]} or {marks[1]}"]
+    updated = text
+    for table, marks in blocks:
+        result = update_index(updated, table, *marks)
+        if result is None:
+            return [f"{rel}: missing {marks[0]} or {marks[1]}"]
+        updated = result
     if updated == text:
         return []
     path.write_text(updated, encoding="utf-8")
@@ -606,13 +651,13 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         paths = set(_tracked_files(root)) | {f"{ADR_DIR}/{n}" for n in adr_names}
         problems += check_references(root, sorted(paths), adr_names)
         problems += _regenerate(
-            root, ADR_INDEX_FILE, render_index(adrs), (ADR_INDEX_START, ADR_INDEX_END)
-        )
-        problems += _regenerate(
             root,
-            EPIC_INDEX_FILE,
-            render_epic_index(epics),
-            (EPIC_INDEX_START, EPIC_INDEX_END),
+            ADR_INDEX_FILE,
+            [(render_index(adrs), (ADR_INDEX_START, ADR_INDEX_END))],
+        )
+        epic_index = (root / EPIC_INDEX_FILE).read_text(encoding="utf-8")
+        problems += _regenerate(
+            root, EPIC_INDEX_FILE, render_epic_lists(epics, epic_index)
         )
 
     for problem in problems:
