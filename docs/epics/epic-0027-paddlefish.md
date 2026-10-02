@@ -1,4 +1,4 @@
-# Implementation of encryption and parallel file part processing in uploads and downloads for ghga-connector (Paddlefish)
+# Connector Encryption and Parallel File Part Processing (Paddlefish)
 
 **Epic Type:** Implementation Epic
 
