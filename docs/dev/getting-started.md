@@ -10,7 +10,7 @@ The repo holds GHGA's backend services, the libraries they share, the command-li
 From it, CI builds the platform's container images and Helm charts, and the wheels of the libraries and tools published on PyPI.
 The same charts run the whole platform on a local kind cluster, as a demo and as the integration test bed.
 
-The services follow a hexagonal design on hexkit: the core logic talks to ports, and adapters connect them to Kafka, MongoDB and S3.
+The services have a hexagonal architecture (ports and adapters), built on our hexkit library: the core logic depends only on interfaces, the ports, and adapters implement them for Kafka, MongoDB and S3.
 They exchange events over Kafka, each keeps its own MongoDB database, and files live in S3 buckets.
 The data portal and the CLIs call the services' REST APIs through one gateway, Envoy Gateway in the demo.
 The [architecture overview](../architecture/overview.md) and the [journeys](../architecture/metadata-and-file-journeys.md) have the details.
