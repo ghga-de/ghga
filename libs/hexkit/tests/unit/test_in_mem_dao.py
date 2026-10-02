@@ -82,7 +82,7 @@ async def test_deletion():
         _ = dao.latest
 
     with pytest.raises(NoHitsFoundError):
-        _ = await dao.find_one(mapping={})
+        _ = await dao.find_one(filter_={})
 
 
 async def test_update():
@@ -175,25 +175,25 @@ async def test_find_one():
     dao = DaoClass()
 
     with pytest.raises(NoHitsFoundError):
-        await dao.find_one(mapping={"title": "Lawnmower"})
+        await dao.find_one(filter_={"title": "Lawnmower"})
 
     item = InventoryItem(title="Lawnmower", count=9)
     await dao.insert(item)
 
-    result = await dao.find_one(mapping={"title": "Lawnmower"})
+    result = await dao.find_one(filter_={"title": "Lawnmower"})
     assert result is not item
     assert result.model_dump() == item.model_dump()
 
 
-async def test_find_invalid_mapping():
+async def test_find_invalid_filter():
     """Test that `find_one()` and `find_all()` reject fields not in the model"""
     dao = DaoClass()
 
-    for mapping in ({"no_such_field": 1}, {"": 1}):
+    for filter_ in ({"no_such_field": 1}, {"": 1}):
         with pytest.raises(InvalidMappingError):
-            await dao.find_one(mapping=mapping)
+            await dao.find_one(filter_=filter_)
         with pytest.raises(InvalidMappingError):
-            _ = dao.find_all(mapping=mapping)
+            _ = dao.find_all(filter_=filter_)
 
 
 async def test_find_all():
@@ -207,19 +207,19 @@ async def test_find_all():
     await dao.insert(bat)
 
     # Get resources with count=1, sorted alphabetically by title
-    results = sorted([x.title async for x in dao.find_all(mapping={"count": 1})])
+    results = sorted([x.title async for x in dao.find_all(filter_={"count": 1})])
     assert results == ["Brick", "Shovel"]
 
     # Filter by the id field
-    results = [x.title async for x in dao.find_all(mapping={"title": "Bat"})]
+    results = [x.title async for x in dao.find_all(filter_={"title": "Bat"})]
     assert results == ["Bat"]
 
     # Look for something that doesn't exist
-    results = [x.title async for x in dao.find_all(mapping={"title": "Broom"})]
+    results = [x.title async for x in dao.find_all(filter_={"title": "Broom"})]
     assert not results
 
     # Get everything
-    results = sorted([x.title async for x in dao.find_all(mapping={})])
+    results = sorted([x.title async for x in dao.find_all(filter_={})])
     assert results == ["Bat", "Brick", "Shovel"]
 
 
@@ -242,7 +242,7 @@ async def test_get_by_id():
 
 
 @pytest.mark.parametrize(
-    "mapping,expected",
+    "filter_,expected",
     [
         ({"title": {"$eq": "Brick"}}, ["Brick"]),
         ({"count": {"$gt": 1}}, ["Shovel", "Tophat"]),
@@ -254,7 +254,7 @@ async def test_get_by_id():
         ({"title": {"$nin": ["This", "is", "my", "Tophat"]}}, ["Brick", "Shovel"]),
     ],
 )
-async def test_mql_comparison_ops(mapping: dict[str, Any], expected: list[str]):
+async def test_mql_comparison_ops(filter_: dict[str, Any], expected: list[str]):
     """Test the different MQL comparison operators"""
     dao = DaoClass()
     brick = InventoryItem(title="Brick", count=1)
@@ -264,7 +264,7 @@ async def test_mql_comparison_ops(mapping: dict[str, Any], expected: list[str]):
     await dao.insert(shovel)
     await dao.insert(tophat)
 
-    results = sorted([x.title async for x in dao.find_all(mapping=mapping)])
+    results = sorted([x.title async for x in dao.find_all(filter_=filter_)])
     assert results == expected
 
 
@@ -564,15 +564,15 @@ async def test_find_all_sort():
     await dao.insert(InventoryItem(title="Cherry", count=1))
 
     # sort ascending by title
-    results = [x.title async for x in dao.find_all(mapping={}, sort=["title"])]
+    results = [x.title async for x in dao.find_all(filter_={}, sort=["title"])]
     assert results == ["Apple", "Banana", "Cherry"]
 
     # sort descending by title
-    results = [x.title async for x in dao.find_all(mapping={}, sort=["-title"])]
+    results = [x.title async for x in dao.find_all(filter_={}, sort=["-title"])]
     assert results == ["Cherry", "Banana", "Apple"]
 
     # sort ascending by count
-    results = [x.title async for x in dao.find_all(mapping={}, sort=["count"])]
+    results = [x.title async for x in dao.find_all(filter_={}, sort=["count"])]
     assert results == ["Cherry", "Banana", "Apple"]
 
 
@@ -586,21 +586,21 @@ async def test_find_all_pagination():
     asc_sort = ["title"]
 
     # skip=2 returns items starting from index 2
-    results = [x.title async for x in dao.find_all(mapping={}, skip=2, sort=asc_sort)]
+    results = [x.title async for x in dao.find_all(filter_={}, skip=2, sort=asc_sort)]
     assert results == ["Cherry", "Date", "Elderberry"]
 
     # limit=3 returns first 3 items
-    results = [x.title async for x in dao.find_all(mapping={}, limit=3, sort=asc_sort)]
+    results = [x.title async for x in dao.find_all(filter_={}, limit=3, sort=asc_sort)]
     assert results == ["Apple", "Banana", "Cherry"]
 
     # skip=1, limit=2 returns the window [1, 3)
     results = [
-        x.title async for x in dao.find_all(mapping={}, skip=1, limit=2, sort=asc_sort)
+        x.title async for x in dao.find_all(filter_={}, skip=1, limit=2, sort=asc_sort)
     ]
     assert results == ["Banana", "Cherry"]
 
     # skip larger than collection size returns no results
-    results = [x.title async for x in dao.find_all(mapping={}, skip=10, sort=asc_sort)]
+    results = [x.title async for x in dao.find_all(filter_={}, skip=10, sort=asc_sort)]
     assert results == []
 
 
@@ -615,12 +615,12 @@ async def test_find_all_limit_zero_and_none():
     for title in titles:
         await dao.insert(InventoryItem(title=title, count=1))
 
-    result = dao.find_all(mapping={}, limit=0)
+    result = dao.find_all(filter_={}, limit=0)
     page = {x.title async for x in result}
     assert page == set()
     assert await result.total_count() == 3
 
-    result = dao.find_all(mapping={}, limit=None)
+    result = dao.find_all(filter_={}, limit=None)
     page = {x.title async for x in result}
     assert page == titles
     assert await result.total_count() == 3
@@ -629,7 +629,7 @@ async def test_find_all_limit_zero_and_none():
 async def test_find_all_pagination_empty_collection():
     """Test find_all() with skip and limit on an empty collection produces no errors."""
     dao = DaoClass()
-    assert await dao.find_all(mapping={}, skip=5, limit=10).to_list() == []
+    assert await dao.find_all(filter_={}, skip=5, limit=10).to_list() == []
 
 
 async def test_find_all_pagination_negative_values():
@@ -637,13 +637,13 @@ async def test_find_all_pagination_negative_values():
     dao = DaoClass()
 
     with pytest.raises(ValueError):
-        _ = dao.find_all(mapping={}, skip=-1)
+        _ = dao.find_all(filter_={}, skip=-1)
 
     with pytest.raises(ValueError):
-        _ = dao.find_all(mapping={}, limit=-1)
+        _ = dao.find_all(filter_={}, limit=-1)
 
     with pytest.raises(ValueError):
-        _ = dao.find_all(mapping={}, skip=-1, limit=-1)
+        _ = dao.find_all(filter_={}, skip=-1, limit=-1)
 
 
 async def test_find_all_sort_by_id_field():
@@ -657,10 +657,10 @@ async def test_find_all_sort_by_id_field():
     await dao.insert(InventoryItem(title="Apple", count=2))
     await dao.insert(InventoryItem(title="Banana", count=3))
 
-    results = [x.title async for x in dao.find_all(mapping={}, sort=["title"])]
+    results = [x.title async for x in dao.find_all(filter_={}, sort=["title"])]
     assert results == ["Apple", "Banana", "Cherry"]
 
-    results = [x.title async for x in dao.find_all(mapping={}, sort=["-title"])]
+    results = [x.title async for x in dao.find_all(filter_={}, sort=["-title"])]
     assert results == ["Cherry", "Banana", "Apple"]
 
 
@@ -673,7 +673,7 @@ async def test_find_all_sort_compound():
     await dao.insert(InventoryItem(title="Date", count=2))
 
     # Primary: count asc; secondary: title asc (tiebreak within count=2 group)
-    results = [x.title async for x in dao.find_all(mapping={}, sort=["count", "title"])]
+    results = [x.title async for x in dao.find_all(filter_={}, sort=["count", "title"])]
     assert results == ["Cherry", "Apple", "Banana", "Date"]
 
 
@@ -687,7 +687,7 @@ async def test_find_all_total_count_with_filter():
     for title in ["Date", "Elderberry"]:
         await dao.insert(InventoryItem(title=title, count=2))
 
-    result = dao.find_all(mapping={"count": 1}, skip=1, limit=1, sort=["title"])
+    result = dao.find_all(filter_={"count": 1}, skip=1, limit=1, sort=["title"])
     page = [x.title async for x in result]
     assert page == ["Banana"]
 
@@ -701,7 +701,7 @@ async def test_find_all_total_count_before_iteration():
     for title in ["Apple", "Banana", "Cherry"]:
         await dao.insert(InventoryItem(title=title, count=1))
 
-    result = dao.find_all(mapping={}, skip=1, limit=1)
+    result = dao.find_all(filter_={}, skip=1, limit=1)
     total = await result.total_count()
     assert total == 3
 
@@ -715,7 +715,7 @@ async def test_find_all_total_count_empty_filter_result():
     await dao.insert(InventoryItem(title="Apple", count=1))
     await dao.insert(InventoryItem(title="Banana", count=1))
 
-    result = dao.find_all(mapping={"count": 999})
+    result = dao.find_all(filter_={"count": 999})
     page = await result.to_list()
     assert page == []
 
@@ -730,7 +730,7 @@ async def test_find_all_total_count():
     for title in titles:
         await dao.insert(InventoryItem(title=title, count=1))
 
-    result = dao.find_all(mapping={}, skip=2, limit=2, sort=["title"])
+    result = dao.find_all(filter_={}, skip=2, limit=2, sort=["title"])
     page = [x.title async for x in result]
     assert page == ["Cherry", "Date"]
 
@@ -750,7 +750,7 @@ async def test_find_all_to_list():
     for item in inserted:
         await dao.insert(item)
 
-    result = dao.find_all(mapping={}, sort=["title"])
+    result = dao.find_all(filter_={}, sort=["title"])
     items = await result.to_list()
     assert isinstance(items, list)
     assert items == inserted
@@ -781,11 +781,11 @@ async def test_nested_sort_in_find_all():
     find_all = dao.find_all
 
     # First retrieve results and make sure they're returned in the order defined above
-    assert [x.id async for x in find_all(mapping={})] == [1, 2, 3]
+    assert [x.id async for x in find_all(filter_={})] == [1, 2, 3]
 
     # Now apply ascending and descending sorting on the nested field
-    assert [x.id async for x in find_all(mapping={}, sort=["inner.x"])] == [2, 1, 3]
-    assert [x.id async for x in find_all(mapping={}, sort=["-inner.x"])] == [3, 1, 2]
+    assert [x.id async for x in find_all(filter_={}, sort=["inner.x"])] == [2, 1, 3]
+    assert [x.id async for x in find_all(filter_={}, sort=["-inner.x"])] == [3, 1, 2]
 
 
 async def test_sort_field_starting_with_id_field():
@@ -811,11 +811,11 @@ async def test_sort_field_starting_with_id_field():
         await dao.insert(dto)
 
     # Sorting by the exact ID field maps to the internal "_id" field
-    assert [x.id async for x in dao.find_all(mapping={}, sort=["id"])] == [1, 2, 3]
-    assert [x.id async for x in dao.find_all(mapping={}, sort=["-id"])] == [3, 2, 1]
+    assert [x.id async for x in dao.find_all(filter_={}, sort=["id"])] == [1, 2, 3]
+    assert [x.id async for x in dao.find_all(filter_={}, sort=["-id"])] == [3, 2, 1]
 
     # Sorting by the prefix-colliding field sorts by *that* field, not the ID field
-    assert [x.id async for x in dao.find_all(mapping={}, sort=["id_code"])] == [2, 3, 1]
+    assert [x.id async for x in dao.find_all(filter_={}, sort=["id_code"])] == [2, 3, 1]
 
 
 async def test_sort_with_missing_values_matches_mongodb():
@@ -848,11 +848,11 @@ async def test_sort_with_missing_values_matches_mongodb():
 
     # Ascending: missing (None) values first (insertion order kept among them), then
     # present values in ascending order.
-    asc = [x.id async for x in dao.find_all(mapping={}, sort=["inner.x"])]
+    asc = [x.id async for x in dao.find_all(filter_={}, sort=["inner.x"])]
     assert asc == [2, 4, 3, 1]
 
     # Descending: present values in descending order, missing values last.
-    desc = [x.id async for x in dao.find_all(mapping={}, sort=["-inner.x"])]
+    desc = [x.id async for x in dao.find_all(filter_={}, sort=["-inner.x"])]
     assert desc == [1, 3, 2, 4]
 
 
@@ -885,7 +885,7 @@ async def test_nested_id_sort_matches_mongodb():
         await dao.insert(dto)
 
     # Sorting by a nested sub-field of the ID field is a no-op (insertion order kept)
-    assert [x.label async for x in dao.find_all(mapping={}, sort=["inner.x"])] == [
+    assert [x.label async for x in dao.find_all(filter_={}, sort=["inner.x"])] == [
         1,
         2,
         3,

@@ -113,7 +113,7 @@ class UploadController(UploadControllerPort):
             }
             try:
                 existing_upload = await self._file_upload_dao.find_one(
-                    mapping={"box_id": box_id, "alias": alias}
+                    filter_={"box_id": box_id, "alias": alias}
                 )
             except (NoHitsFoundError, MultipleHitsFoundError) as find_err:
                 # If we don't get any hits, something weird is going on. This isn't a
@@ -389,7 +389,7 @@ class UploadController(UploadControllerPort):
         if overwrite:
             try:
                 existing_upload = await self._file_upload_dao.find_one(
-                    mapping={"box_id": box_id, "alias": alias}
+                    filter_={"box_id": box_id, "alias": alias}
                 )
             except NoHitsFoundError:
                 existing_upload = None
@@ -404,7 +404,7 @@ class UploadController(UploadControllerPort):
         # Get both box size + in-progress size and the number of in-progress files
         in_progress_count = 0
         async for upload in self._file_upload_dao.find_all(
-            mapping={"box_id": box.id, "state": "init"}
+            filter_={"box_id": box.id, "state": "init"}
         ):
             current_size += upload.decrypted_size
             in_progress_count += 1
@@ -852,7 +852,7 @@ class UploadController(UploadControllerPort):
 
         # Get all FileUploads for this box that failed interrogation
         potential_uploads = self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "state": "failed_interrogation"},
+            filter_={"box_id": box_id, "state": "failed_interrogation"},
             sort=["alias"],
         )
 
@@ -1002,7 +1002,7 @@ class UploadController(UploadControllerPort):
         files_with_wrong_state = [
             x
             async for x in self._file_upload_dao.find_all(
-                mapping={
+                filter_={
                     "box_id": box_id,
                     "state": {"$in": ["awaiting_archival", "archived"]},
                 }
@@ -1050,7 +1050,7 @@ class UploadController(UploadControllerPort):
             file_uploads = [
                 upload
                 async for upload in self._file_upload_dao.find_all(
-                    mapping={"box_id": box_id}
+                    filter_={"box_id": box_id}
                 )
             ]
             if not file_uploads:
@@ -1231,7 +1231,7 @@ class UploadController(UploadControllerPort):
         # Look for ongoing uploads and files that failed interrogation
         if not force:
             blocking_files_cursor = self._file_upload_dao.find_all(
-                mapping={
+                filter_={
                     "box_id": box_id,
                     "state": {"$in": ["init", "failed_interrogation"]},
                 },
@@ -1344,7 +1344,7 @@ class UploadController(UploadControllerPort):
 
         # Scan for incomplete files (including 'inbox') and failed_interrogation files
         blocking_files_cursor = self._file_upload_dao.find_all(
-            mapping={
+            filter_={
                 "box_id": box_id,
                 "state": {"$in": ["init", "inbox", "failed_interrogation"]},
             },
@@ -1378,7 +1378,7 @@ class UploadController(UploadControllerPort):
         # Verify that all files are in state 'interrogated' or 'awaiting_archival'.
         # We include the latter in case an early crash occurred after partial update
         files_cursor = self._file_upload_dao.find_all(
-            mapping={
+            filter_={
                 "box_id": box_id,
                 "state": {"$in": ["interrogated", "awaiting_archival"]},
             }
@@ -1452,7 +1452,7 @@ class UploadController(UploadControllerPort):
 
         try:
             find_result = self._file_upload_dao.find_all(
-                mapping={"box_id": box_id},
+                filter_={"box_id": box_id},
                 skip=skip,
                 limit=limit,
                 sort=sort,
@@ -1717,10 +1717,10 @@ class UploadController(UploadControllerPort):
         Falls back to the upload's `initiated` timestamp when no activity entry exists.
         """
         stale_uploads: list[FileUpload] = []
-        mapping = {"file_id": {"$in": [file.id for file in ongoing_uploads]}}
+        filter_ = {"file_id": {"$in": [file.id for file in ongoing_uploads]}}
         activities = {
             activity.file_id: activity.last_activity
-            async for activity in self._upload_activity_dao.find_all(mapping=mapping)
+            async for activity in self._upload_activity_dao.find_all(filter_=filter_)
         }
 
         for upload in ongoing_uploads:
@@ -1810,7 +1810,7 @@ class UploadController(UploadControllerPort):
         uploads_in_inbox_bucket = [
             upload
             async for upload in self._file_upload_dao.find_all(
-                mapping={
+                filter_={
                     "storage_alias": storage_alias,
                     "state": {"$in": ["init", "inbox", "failed_interrogation"]},
                 }

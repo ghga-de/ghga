@@ -134,7 +134,7 @@ class RDUBManager(RDUBManagerPort):
         """
         # Title uniqueness is checked upfront instead of relying on the unique index
         # to avoid chicken-egg problem with dependent FUB-RDUB creation
-        if await self._box_dao.find_all(mapping={"title": title}).total_count():
+        if await self._box_dao.find_all(filter_={"title": title}).total_count():
             log.info(
                 "ResearchDataUploadBox creation failed because a box with the title %s"
                 + " already exists.",
@@ -999,11 +999,11 @@ class RDUBManager(RDUBManagerPort):
         is_ds = is_data_steward(auth_context)
 
         # Filter by state if specified
-        mapping = {"state": state} if state is not None else {}
+        filter_ = {"state": state} if state is not None else {}
 
         if is_ds:
             # Data stewards can see all boxes
-            boxes = await self._box_dao.find_all(mapping=mapping).to_list()
+            boxes = await self._box_dao.find_all(filter_=filter_).to_list()
         else:
             # Regular users can only see boxes they have access to
             user_id = UUID(auth_context.id)
@@ -1049,7 +1049,7 @@ class RDUBManager(RDUBManagerPort):
     async def get_storage_overview(self) -> list[HubStorageSummary]:
         """Aggregate upload box storage statistics per data hub (storage alias)."""
         summaries: dict[str, HubStorageSummary] = {}
-        async for box in self._box_dao.find_all(mapping={}):
+        async for box in self._box_dao.find_all(filter_={}):
             summary = summaries.get(box.storage_alias)
             if summary is None:
                 summaries[box.storage_alias] = HubStorageSummary(

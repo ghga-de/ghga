@@ -65,12 +65,12 @@ class Registry(RegistryPort):
 
     async def get_studies(self, *, with_unmapped_files: bool = False) -> list[Study]:
         """Get the list of all studies, sorted by study ID."""
-        mapping: dict = {}
+        filter_: dict = {}
         if with_unmapped_files:
             study_ids = (
                 await self._file_controller.get_study_ids_with_unmapped_accessions()
             )
             if not study_ids:
                 return []
-            mapping = {"id": {"$in": list(study_ids)}}
-        return await self._study_dao.find_all(mapping=mapping, sort=["id"]).to_list()
+            filter_ = {"id": {"$in": list(study_ids)}}
+        return await self._study_dao.find_all(filter_=filter_, sort=["id"]).to_list()
