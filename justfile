@@ -141,6 +141,8 @@ docs-check *args: _guard
 # (docs/agent-instructions.md). A pass is due when the skill's SKILL.md changes, and for
 # every suite when SKILL_EVAL_MODEL moves to a new default model. The report stays local;
 # extra arguments go to `claude plugin eval`, e.g. `--case new-adr --runs 1`.
+# Each run's trace is copied into the results, so a fixed grader can be checked against a
+# pass without rerunning it; the workspaces themselves, a clone and a .venv each, go.
 SKILL_EVAL_MODEL := "claude-opus-5-5"
 
 # Run a root skill's eval suite and print its scores, e.g. `just skill-eval adr`.
@@ -148,9 +150,21 @@ skill-eval name *args: _guard-host
     #!/usr/bin/env bash
     set -euo pipefail
     out=".agents/skills/{{name}}/evals/results/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    # The threshold is 0 so that only a run that breaks, not a low score, fails the recipe.
     claude plugin eval ".agents/skills/{{name}}" --model "{{SKILL_EVAL_MODEL}}" \
         --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
-        --concurrency 4 --max-cost-usd 20 --output-dir "$out" {{args}} || status=$?
+        --concurrency 4 --max-cost-usd 20 --threshold 0 --keep-temp \
+        --output-dir "$out" {{args}} || status=$?
+    mkdir -p "$out/traces"
+    jq -r '.cases[] | .name as $c | .arms | to_entries[] | .key as $a
+        | .value | to_entries[] | select(.value.tracePath)
+        | "\(.value.tracePath)\t\($c)-\($a)-\(.key + 1).jsonl"' "$out/aggregate-result.json" |
+        while IFS=$'\t' read -r trace name; do
+            kept=$(dirname "$(dirname "$trace")")
+            chmod -R u+rwx "$kept"
+            cp "$trace" "$out/traces/$name"
+            rm -rf "$kept"
+        done
     echo "== {{name}} on {{SKILL_EVAL_MODEL}}: score and turns per run, with / without"
     jq -r 'def mean(f): if length == 0 then "-" else (map(f) | add / length * 100 | round / 100) end;
         (.cases[] | [.name, (.arms.with | mean(.score)), (.arms.without // [] | mean(.score)),

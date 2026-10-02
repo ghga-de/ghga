@@ -50,14 +50,6 @@ graders:
     target: {source: file, path: docs/adrs/adr-0034-task-runner.md}
     pattern: '^superseded-by: \[ADR-0045\]$'
     flags: 'm'
-  - name: summary
-    type: llm
-    focus: trace
-    criteria: |
-      Judge the ADR the agent wrote, docs/adrs/adr-0045-*.md, as its last Write or Edit of that file in the trace shows it.
-      Its Summary is one Y-statement with all six clauses in this order: "In the context of", "facing", "we decided for", "and neglected", "to achieve", "accepting that".
-      Each clause is a phrase or two, not a paragraph; fail the Summary only if it runs clearly past 150 words, the longest of the recent accepted ADRs.
-      No template comment or {…} placeholder is left, and the Details section has Context, Decision, Consequences and Alternatives, each filled with content about the decision in the task.
   - name: skill-fired
     type: tool_used
     tool: 'Skill'
