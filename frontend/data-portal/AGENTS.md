@@ -1,10 +1,9 @@
 # Agent Instructions for the Data Portal
 
-This is the primary, tool-agnostic AI entrypoint for any coding agent working in this repository.
+How we work on the Angular data portal, on top of the repo-wide rules in the root [AGENTS.md](../../AGENTS.md).
 
 ## Instruction source of truth
 
-- `AGENTS.md` is the canonical AI entrypoint for this repository.
 - `AGENTS.md` may reference additional project documentation (for example `README.md` and files in `docs/`) that is also authoritative and intended for both human developers and agents.
 - Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
 - Avoid duplicating AI-specific guidance across files to prevent instruction drift; prefer linking from `AGENTS.md`.
@@ -79,7 +78,7 @@ Leave those flows to the test bed, which is more expensive to run.
 
 ## Repo commands (pnpm)
 
-This repo uses `pnpm` (not npm) for dependency installation and scripts.
+The data portal uses `pnpm` (not npm) for dependency installation and scripts.
 
 - Prefer pnpm scripts over direct CLI invocation for consistency with repo tooling.
 - Install deps: `just fe-install` from the repo root (`pnpm install --frozen-lockfile`, as CI does), or `pnpm install` here when you are deliberately changing dependencies.
@@ -104,7 +103,7 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 - E2E tests (Playwright): `pnpm e2e` / `pnpm e2e:ui` / `pnpm e2e:headed` / `pnpm e2e:debug` / `pnpm e2e:report`
   - Default command for e2e tests is always `pnpm e2e`.
   - Test framework: Playwright
-  - Run individual tests with `playwright test TEST-FILTER`.
+  - Run individual tests with `pnpm e2e <filter>`.
   - You don’t need to start the app manually; Playwright starts it via config in `playwright.config.ts`.
   - Prefer assertions on stable end states (URL/title/visible content) over transient intermediate states.
   - For known flaky UI transitions (menus/dialogs/navigation), use small bounded retries in shared test helpers rather than ad-hoc per-test logic.
