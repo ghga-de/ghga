@@ -607,7 +607,8 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.BoxMaxSizeTooLowError(str(size_err)) from size_err
 
-        # The resize is applied in the owning service, so this write must not fail
+        # The resize is applied in the owning service. If writing fails completely,
+        #  the operation should be retried from the front end
         await self._persist_rdub_update(
             box=box, updated_box=updated_box, remote_committed=True
         )
@@ -660,8 +661,8 @@ class RDUBManager(RDUBManagerPort):
                 },
             )
 
-        # The state change is applied in the owning service, so this write must not
-        # fail: RDUB `state` can't be fixed by the FUB outbox event
+        # The state change is applied in the owning service, and if writing to the DB
+        #  fails completely, the request should be retried.
         await self._persist_rdub_update(
             box=box, updated_box=updated_box, remote_committed=True
         )
