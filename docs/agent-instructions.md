@@ -124,7 +124,7 @@ The budget for what the repo puts into a session before any task, at characters 
 The last ceiling leaves room for personal skills: Claude Code gives the skill listing 1% of the context window and drops descriptions past it.
 `just docs-check --budget` prints each session's figures.
 
-A root skill's eval suite sits in `.agents/skills/<name>/evals/`, one `case.yaml` per case, and `just skill-eval <name>` runs it with `claude plugin eval`.
+A root skill's eval suite is one file, `.agents/skills/<name>/evals.yaml`, and `just skill-eval <name>` expands it into the case directories `claude plugin eval` reads and runs it.
 Each case runs 3 times with the skill and 3 times without it, in a clone at a pinned commit that `scripts/skill-eval-scaffold.sh` prepares without the root skills.
 Neither arm loads the project's settings, hooks or `AGENTS.md`, so each case tells the agent to read the root `AGENTS.md` first.
 A pass is due when the skill's `SKILL.md` changes, and for every suite when `SKILL_EVAL_MODEL` in the justfile moves to a new default model.

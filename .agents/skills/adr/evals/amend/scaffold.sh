@@ -1,1 +1,0 @@
-../../../../../scripts/skill-eval-scaffold.sh

@@ -63,7 +63,7 @@ It cuts the branch from `origin/dev`, or from the base you pass as the second ar
 
 A rule is a PR to an `AGENTS.md` or `docs/`, and a skill a PR to `.agents/skills/`; [agent-instructions.md](../agent-instructions.md) says which file a change belongs in.
 A change to a root skill with an eval suite gets a pass, `just skill-eval <name>`, quoted in the PR ([agent-instructions.md](../agent-instructions.md#admitting-a-skill)).
-It runs about 45 sessions on your own Claude credential in 15 to 20 minutes, about $10 to $20 at API prices; on a subscription it counts against your usage limits.
+For `adr` it runs 42 sessions on your own Claude credential in about 15 minutes, about $16 at API prices; on a subscription it counts against your usage limits.
 
 ## Reviews and credit
 

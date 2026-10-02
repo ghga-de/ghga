@@ -409,12 +409,10 @@ def test_set_check_scans_tracked_files(repo, capsys):
 
 
 def test_references_skip_skill_evals(repo, capsys):
-    case = repo / ".agents/skills/adr/evals/new-adr/case.yaml"
-    case.parent.mkdir(parents=True)
-    case.write_text("pattern: superseded-by: [ADR-0045]\n")
-    code, out = _run(
-        repo, capsys, "--refs", ".agents/skills/adr/evals/new-adr/case.yaml"
-    )
+    suite = repo / ".agents/skills/adr/evals.yaml"
+    suite.parent.mkdir(parents=True)
+    suite.write_text("pattern: superseded-by: [ADR-0045]\n")
+    code, out = _run(repo, capsys, "--refs", ".agents/skills/adr/evals.yaml")
     assert (code, out) == (0, "")
 
 
