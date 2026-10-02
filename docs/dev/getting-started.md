@@ -43,7 +43,7 @@ It has its own `pnpm` workspace and lockfile, and the `just fe-*` recipes drive 
 - **Work in the dev container** (`.devcontainer/`), which has the whole toolchain.
   The Python recipes refuse to run on the host, because the host and the container share `.venv`; the [README](../../README.md#work-inside-the-dev-container) explains why that breaks.
 - **Run everything through `just`**; `just` alone lists the recipes, and the [recipe reference](../../README.md#recipe-reference) groups them.
-  On the first day you need these:
+  The ones you use most:
   - `just sync` installs the workspace into `.venv`.
   - `just lint` checks lint and formatting, and `just fmt` fixes what it can.
   - `just test services/auth-service` runs one member's tests.
