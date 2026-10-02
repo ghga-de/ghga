@@ -127,7 +127,7 @@ This epic covers the following user journeys.
 1. The submitter prepares the spreadsheet as usual, with **exactly one study**.
    For any file being reused from an earlier study, they put its prior GHGA file accession in that file entity's `reused_accession` instead of providing a new upload.
 2. `dskit metadata submit --replaces GHGA.24.ABC.1 …` — repeat the flag to merge several predecessors, omit it entirely for a brand-new study.
-   Submit rejects a multi-study submission or one naming an already-replaced predecessor, mints the study PID and the child accessions, reuses a dataset's `.DS.xxx` block where the file set is unchanged, runs the three reuse warnings for the steward to confirm, carries reuse accessions through untouched, and records the declared replacement.
+   `submit` rejects a multi-study submission or one naming an already-replaced predecessor, mints the study PID and the child accessions, reuses a dataset's `.DS.xxx` block where the file set is unchanged, runs the three reuse warnings for the steward to confirm, carries reuse accessions through untouched, and records the declared replacement.
 3. `dskit metadata transform` — unchanged.
 4. `dskit load` — unchanged.
 
@@ -135,9 +135,7 @@ This epic covers the following user journeys.
 
 **Serving:**
 
-5. Service-side metldata records the declared replacement: each named predecessor is marked
-   superseded, its datasets leave the search track while staying queryable by URL, and the relation
-   lands in the ancestry collection.
+5. Service-side metldata records the declared replacement: each named predecessor is marked superseded, its datasets leave the search track while staying queryable by URL, and the relation lands in the ancestry collection.
 6. MASS stops returning the superseded studies' datasets, as a consequence of the deletion events.
 7. The portal shows the successor in search.
    Visiting a superseded dataset or study by URL shows an "updated version available" hint, resolved by following the successor chain to its terminal study.
@@ -149,8 +147,7 @@ This epic covers the following user journeys.
 
 **Browsing archived files (portal, steward-only):**
 
-9. The file admin panel lists every archived file in GHGA, including files archived but not yet
-   mapped to any metadata.
+9. The file admin panel lists every archived file in GHGA, including files archived but not yet mapped to any metadata.
 
 ## API Definitions
 
@@ -179,12 +176,9 @@ This epic covers the following user journeys.
   For entities carrying a reuse accession the response must include the list of studies the referenced file already maps to.
 
   The validation rules move here from the endpoint it replaces:
-  - Must no longer reject a map containing duplicate `file_id` values — that check is what enforces
-    the current 1:1 relation and is exactly what relaxes.
+  - Must no longer reject a map containing duplicate `file_id` values — that check is what enforces the current 1:1 relation and is exactly what relaxes.
   - Must no longer require the map to cover every active file in a box.
-  - Must **invert** the archived-box guard: `store_accession_map` currently returns an
-    `AccessionMapError` with `error_type="archived"` when the box is archived; the new endpoint must
-    instead require every box it maps into to be archived and reject an unarchived one.
+  - Must **invert** the archived-box guard: `store_accession_map` currently returns an `AccessionMapError` with `error_type="archived"` when the box is archived; the new endpoint must instead require every box it maps into to be archived and reject an unarchived one.
   - Must keep rejecting an accession already bound to a different `file_id` or study.
 
 #### RS — unchanged
@@ -201,10 +195,8 @@ It serves the box detail page as well as mapping, and nothing about listing one 
 
 #### dskit — CLI surface
 
-- `dskit metadata submit --replaces <exact study PID>` — repeatable; names the exact PID, which may
-  be a legacy accession, not a lineage root.
-- `dskit metadata submit --yes` (or equivalent) — auto-confirm option; accepts all three reuse
-  warnings without prompting.
+- `dskit metadata submit --replaces <exact study PID>` — repeatable; names the exact PID, which may be a legacy accession, not a lineage root.
+- `dskit metadata submit --yes` (or equivalent) — auto-confirm option; accepts all three reuse warnings without prompting.
 - `dskit metadata replace-study <old PID> <new PID>` — new command.
 
 ### Payload Schemas for Events
@@ -260,18 +252,15 @@ That strand is the RS cardinality relaxation, the archival inversion, the study-
 `AccessionRegistry` (`libs/metldata/src/metldata/accession_registry/accession_registry.py`) mints a flat `prefix + random numeric suffix` per resource type from `prefix_mapping`.
 It will be replaced or augmented by a lineage-aware accessioning path that, given a study lineage, a version, an alias set and the dataset file sets, produces the structured PIDs:
 
-1. Mint or continue the study PID: for a continued lineage, reuse the root and set `V = predecessor
-   version + 1`; otherwise mint a fresh `XXX` against the current year's bucket.
-2. Mint `{study_pid}.DS.xxx` per dataset, reusing the predecessor revision's block where the
-   dataset's file set is unchanged, else minting a fresh block within the lineage.
+1. Mint or continue the study PID: for a continued lineage, reuse the root and set `V = predecessor version + 1`; otherwise mint a fresh `XXX` against the current year's bucket.
+2. Mint `{study_pid}.DS.xxx` per dataset, reusing the predecessor revision's block where the dataset's file set is unchanged, else minting a fresh block within the lineage.
 3. Mint `{study_pid}.{alias}` for every other entity.
 
 Minting a fresh sequence — `XXX` within a year, `.DS.xxx` within a lineage — proceeds as:
 
 1. Draw a random sequence and check it against the bucket, up to 100 attempts.
    The attempt count is a constant, not a config field.
-2. If all 100 attempts collide, gather the sequences still unused in that bucket and pick one at
-   random.
+2. If all 100 attempts collide, gather the sequences still unused in that bucket and pick one at random.
 3. Raise an error only if that list is empty.
 
 `AccessionStore` (`accession_store.py`) will be restructured by year, keyed by `YY`, so "is this `XXX` free this year" is a lookup in that year's bucket rather than a linear scan over every accession ever minted.
@@ -283,27 +272,14 @@ Version continuation is answered there, because it needs the predecessor's submi
 
 #### Work to be performed
 
-- [ ] Validate the submission before minting — exactly one study, aliases unique across all
-      entities of the revision — naming the offending studies or entities and minting nothing on
-      failure
-- [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the config fields
-      above
+- [ ] Validate the submission before minting — exactly one study, aliases unique across all entities of the revision — naming the offending studies or entities and minting nothing on failure
+- [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the config fields above
 - [ ] Restructure `AccessionStore` into per-year buckets plus a flat legacy list
 - [ ] Extend the submission record to carry the assigned PIDs and the lineage that justifies them
-- [ ] Resolve the declared predecessors on both declaration paths — `submit`, before minting, and
-      `replace-study`, which mints nothing: reject an already-replaced predecessor and a
-      cycle-closing declaration
+- [ ] Resolve the declared predecessors on both declaration paths — `submit`, before minting, and `replace-study`, which mints nothing: reject an already-replaced predecessor and a cycle-closing declaration
 - [ ] Compute dataset file sets and diff against the predecessor's for `.DS.xxx` reuse
-- [ ] Compute all three reuse findings dskit prompts on: reuse declared without a predecessor,
-      reused accessions absent from every ancestor, and governance drift via the shared traversal,
-      each naming what it found
-- [ ] Add tests covering: PID format; per-year `XXX` uniqueness; the random path, the fallback to
-      picking from the unused sequences, and the error on a full bucket; lineage-scoped `.DS.xxx`
-      uniqueness; version continuation from a new-scheme predecessor; fresh root from a legacy
-      predecessor; dataset file-set reuse hit and miss; alias-uniqueness violation surfaced as an
-      error; multi-study submission rejected before any PID is minted; an already-replaced
-      predecessor rejected on both declaration paths; a cycle closed via `replace-study` rejected;
-      each of the three reuse findings computed, with the accessions and committees it names
+- [ ] Compute all three reuse findings dskit prompts on: reuse declared without a predecessor, reused accessions absent from every ancestor, and governance drift via the shared traversal, each naming what it found
+- [ ] Add tests covering: PID format; per-year `XXX` uniqueness; the random path, the fallback to picking from the unused sequences, and the error on a full bucket; lineage-scoped `.DS.xxx` uniqueness; version continuation from a new-scheme predecessor; fresh root from a legacy predecessor; dataset file-set reuse hit and miss; alias-uniqueness violation surfaced as an error; multi-study submission rejected before any PID is minted; an already-replaced predecessor rejected on both declaration paths; a cycle closed via `replace-study` rejected; each of the three reuse findings computed, with the accessions and committees it names
 
 ---
 
@@ -316,7 +292,7 @@ The reverse is unconstrained: several studies may name the same successor, which
 It is persisted in two places for two readers:
 
 1. **On the submission record**, so the declared relation and the metadata it describes stay one object.
-   This is what the offline submit path reads for version continuation, ancestor resolution and the cycle check.
+   This is what metldata's offline checks read for version continuation, ancestor resolution and the cycle check.
 2. **In a new server-side ancestry collection**, written by the loader, exposed through `GET /studies/{study_pid}/successor`.
    This is what the portal hint resolves against.
 
@@ -332,7 +308,7 @@ The loader (`load/api.py`, `load/load.py`, `load/event_publisher.py`) must apply
 3. Write the relation into the ancestry collection.
 4. Reject a declaration whose predecessor is already replaced.
 5. Reject a declaration that would close a cycle, and bound the chain walk in `GET /studies/{study_pid}/successor` by a hop limit.
-   The submit path checks this offline, but the loader is a separate trust boundary and the endpoint is what fails to terminate if a cycle ever reaches the ancestry collection.
+   metldata checks this offline on both declaration paths, but the loader is a separate trust boundary and the endpoint is what fails to terminate if a cycle ever reaches the ancestry collection.
 
 Re-application of the same declaration must be idempotent, and a `replace-study` declaration must produce the same three effects as one arriving with a successor's artifacts.
 That second path is easy to miss: supersede status can change without any new artifacts being loaded.
@@ -345,27 +321,17 @@ The loader denormalises the result into an accession-keyed governance collection
 
 #### Work to be performed
 
-- [ ] Persist the declared replacement on the submission record, enforcing that each study is
-      replaced by at most one successor
+- [ ] Persist the declared replacement on the submission record, enforcing that each study is replaced by at most one successor
 - [ ] Add the ancestry collection and its loader write path
-- [ ] Add `GET /studies/{study_pid}/successor`, resolving a full chain (e.g. the chain a->b->c
-      resolves to c for a) and returning `null` when there is no successor, including for legacy
-      predecessors, and bounding the walk by a hop limit
-- [ ] Reject a cycle-closing declaration in the loader as well, not only on the submit path
+- [ ] Add `GET /studies/{study_pid}/successor`, resolving a full chain (e.g. the chain a->b->c resolves to c for a) and returning `null` when there is no successor, including for legacy predecessors, and bounding the walk by a hop limit
+- [ ] Reject a cycle-closing declaration in the loader as well, not only in the offline checks
 - [ ] Replace the `studies[0]` truncation in `load/collect.py` with a hard assertion
 - [ ] Apply supersede in the loader: mark, emit deletions, write ancestry
 - [ ] Handle the `replace-study` path through the same code
-- [ ] Add the `reused_accession` property to the metadata model's file classes, and regenerate the
-      artifact models
-- [ ] Add the governance traversal function, parameterised over the metadata representation, and
-      call it from both the submit-path reuse findings and the loader
+- [ ] Add the `reused_accession` property to the metadata model's file classes, and regenerate the artifact models
+- [ ] Add the governance traversal function, parameterised over the metadata representation, and call it from both the submit-path reuse findings and the loader
 - [ ] Add the governance collection, its loader write path, and `POST /file-governance/query`
-- [ ] Add tests covering: idempotent re-declaration; already-replaced predecessor rejected; legacy
-      predecessor; merge with several predecessors; chain resolution over more than one hop;
-      superseded artifacts still retrievable through the artifacts API after the deletion event; a
-      cycle-closing declaration rejected, and the successor endpoint terminating on a chain that was
-      cycled into the collection behind the loader's back; the traversal function giving the same
-      answer offline and against artifacts for the same input
+- [ ] Add tests covering: idempotent re-declaration; already-replaced predecessor rejected; legacy predecessor; merge with several predecessors; chain resolution over more than one hop; superseded artifacts still retrievable through the artifacts API after the deletion event; a cycle-closing declaration rejected, and the successor endpoint terminating on a chain that was cycled into the collection behind the loader's back; the traversal function giving the same answer offline and against artifacts for the same input
 
 ---
 
@@ -379,8 +345,7 @@ The store lives on the data steward VM, which is the trusted source and its dura
 
 Both declaration paths must fail when:
 
-1. the named predecessor is already replaced — a study may be replaced only once, so each superseded
-   study has exactly one successor while a successor may have many predecessors;
+1. the named predecessor is already replaced — a study may be replaced only once, so each superseded study has exactly one successor while a successor may have many predecessors;
 2. following the predecessor's successor chain already reaches the successor.
    Rule 1 alone does not prevent this: after `A -> B`, a steward correcting a mistake with `replace-study B A` passes rule 1 and closes a cycle, after which "follow the chain to the newest study" never terminates.
 
@@ -402,21 +367,18 @@ Note that the "reused file must belong to my own lineage" rule is deliberately *
 Merging removes any single lineage to validate against, which is why the judgement moves offline into these warnings.
 
 **Where these rules live.**
-They are metldata's, not dskit's: each one reads the submission store, walks the ancestry or knows the GHGA metadata model, which is what metldata's accessioning path already does for version continuation and the `.DS.xxx` diff. metldata validates, resolves and returns findings; dskit is the CLI that renders them, prompts, applies the auto-confirm option and either aborts or lets the operation proceed.
+They are metldata's, not dskit's: each one reads the submission store, walks the ancestry or knows the GHGA metadata model, which is what metldata's accessioning path already does for version continuation and the `.DS.xxx` diff.
+Hence metldata validates, resolves and returns findings; dskit is the CLI that renders them, prompts, applies the auto-confirm option and either aborts or lets the operation proceed.
 Both declaration paths run the same resolution, on `submit` ahead of minting and on `replace-study`, which mints nothing.
 
 #### Work to be performed
 
 - [ ] Add repeatable `--replaces` and the merge lineage prompt
-- [ ] Add `metadata replace-study <old PID> <new PID>`, running the same predecessor resolution as
-      `--replaces`
-- [ ] Render the validation failures as CLI errors, naming what metldata reported: multi-study,
-      duplicate alias, already-replaced predecessor, cycle closure
+- [ ] Add `metadata replace-study <old PID> <new PID>`, running the same predecessor resolution as `--replaces`
+- [ ] Render the validation failures as CLI errors, naming what metldata reported: multi-study, duplicate alias, already-replaced predecessor, cycle closure
 - [ ] Prompt for the three reuse warnings reported by metldata, plus the auto-confirm option
 - [ ] Carry reuse accessions through the submission untouched
-- [ ] Add tests covering: merge lineage prompt, both answers; each warning firing and being
-      overridden; auto-confirm accepting all three; each validation failure surfacing with the
-      names metldata reported
+- [ ] Add tests covering: merge lineage prompt, both answers; each warning firing and being overridden; auto-confirm accepting all three; each validation failure surfacing with the names metldata reported
 
 ---
 
@@ -444,8 +406,7 @@ Mapping becomes driven by study rather than by a single box.
   The embedded content's `files` aggregation and RS's parsing of it have to widen, and to ship together: content that no longer validates is dropped with nothing but a warning (`legacy_resources.py`).
   RS still verifies that the referenced accession exists and is mapped.
   There is **no same-lineage validation here** — that judgement was made offline at submit time.
-- **Unreferenced files** — let the steward add a pool of archived boxes as candidates, then map by
-  alias/filename with manual corrections, against the post-archival box/file inventory.
+- **Unreferenced files** — let the steward add a pool of archived boxes as candidates, then map by alias/filename with manual corrections, against the post-archival box/file inventory.
 
 **File admin panel API.**
 Because files can now be archived without ever being mapped, no existing surface is keyed to find them.
@@ -484,26 +445,16 @@ The steward authors the relation and metldata records and propagates it.
 
 #### Work to be performed
 
-- [ ] Add `POST /studies/{study_id}/file-ids`, taking one accession map for the whole study across
-      archived boxes, including the "already maps to studies X, Y" report
+- [ ] Add `POST /studies/{study_id}/file-ids`, taking one accession map for the whole study across archived boxes, including the "already maps to studies X, Y" report
 - [ ] Remove `POST /upload-boxes/{box_id}/file-ids` once the new endpoint is in place
-- [ ] Carry the relaxed rules over into the new endpoint: no duplicate-`file_id` check, no "all
-      active files mapped" check, and the archived-box guard inverted to require archival
+- [ ] Carry the relaxed rules over into the new endpoint: no duplicate-`file_id` check, no "all active files mapped" check, and the archived-box guard inverted to require archival
 - [ ] Remove the accession requirement from `_check_archival_prerequisites`
 - [ ] Keep and test the re-binding guard in `FileController.map_accessions_to_file_ids`
-- [ ] Widen the embedded content's `files` aggregation and `_LegacyResourceContent` together so
-      `reused_accession` reaches RS at all, keeping the two in step
-- [ ] Verify the accession named in `reused_accession` is itself mapped, since the new accession
-      copies its `file_id`
+- [ ] Widen the embedded content's `files` aggregation and `_LegacyResourceContent` together so `reused_accession` reaches RS at all, keeping the two in step
+- [ ] Verify the accession named in `reused_accession` is itself mapped, since the new accession copies its `file_id`
 - [ ] Add the paginated, filterable archived-file listing
-- [ ] Add the metldata governance client with caching, composing the governance columns into the
-      listing rows, degrading those cells alone when metldata is unavailable
-- [ ] Add tests covering: N accessions on one `file_id`; re-binding an accession rejected; archiving
-      a box with zero mappings; mapping against an unarchived box rejected; mapping against an
-      archived box accepted; listing a file with no box (legacy); listing an archived-but-unmapped
-      file; filtering by mapped/unmapped and by box; a metldata outage leaving the listing intact
-      with only the governance cells degraded; an unmapped file's governance cells reading as empty
-      rather than as degraded
+- [ ] Add the metldata governance client with caching, composing the governance columns into the listing rows, degrading those cells alone when metldata is unavailable
+- [ ] Add tests covering: N accessions on one `file_id`; re-binding an accession rejected; archiving a box with zero mappings; mapping against an unarchived box rejected; mapping against an archived box accepted; listing a file with no box (legacy); listing an archived-but-unmapped file; filtering by mapped/unmapped and by box; a metldata outage leaving the listing intact with only the governance cells degraded; an unmapped file's governance cells reading as empty rather than as degraded
 
 ---
 
@@ -527,9 +478,7 @@ DINS must therefore:
 - [ ] Stop deleting the per-file record after a successful merge
 - [ ] Merge the retained record into every later accession bound to the same `file_id`
 - [ ] Make `delete_file_information` clear every accession bound to the file, not just the first
-- [ ] Add tests covering: two accessions mapped to one file, the second arriving long after the
-      registration event, both serving size and checksum; deletion clearing both; the existing
-      single-accession path unchanged
+- [ ] Add tests covering: two accessions mapped to one file, the second arriving long after the registration event, both serving size and checksum; deletion clearing both; the existing single-accession path unchanged
 
 ---
 
@@ -543,8 +492,7 @@ They remain reachable by direct URL through the artifacts API, which is the only
 
 #### Work to be performed
 
-- [ ] Confirm by integration test that a declared replacement removes the predecessor's datasets
-      from search while leaving them retrievable by URL
+- [ ] Confirm by integration test that a declared replacement removes the predecessor's datasets from search while leaving them retrievable by URL
 
 ---
 
@@ -572,8 +520,7 @@ They remain reachable by direct URL through the artifacts API, which is the only
 - [ ] Rework `upload-box-mapping/` and its services from box-centric to study-centric
 - [ ] Remove the submit-map-then-archive coupling; make archival an independent action
 - [ ] Distinguish reuse-satisfied entities from those needing a physical file
-- [ ] Build the file admin panel with mapped/unmapped and box filters, rendering the governance
-      columns as served and showing degraded cells when RS could not resolve them
+- [ ] Build the file admin panel with mapped/unmapped and box filters, rendering the governance columns as served and showing degraded cells when RS could not resolve them
 
 ---
 
@@ -589,27 +536,17 @@ Feature files referencing the two studies and needing review: `202_upload_comple
 - [ ] Split the example metadata into two single-study submissions
 - [ ] Update the affected feature files and their step implementations
 - [ ] Add a scenario covering a superseded study: absent from search, reachable by URL, hint shown
-- [ ] Add a scenario covering file reuse across two studies end to end, including DINS serving size
-      and checksum for the later accession
+- [ ] Add a scenario covering file reuse across two studies end to end, including DINS serving size and checksum for the later accession
 
 ## Cross-cutting invariants to preserve
 
-- **One study per submission** — metldata's pre-mint validation on the `submit` path, asserted again
-  in the loader.
-- **Aliases unique within a study revision** — the same pre-mint validation; child accessions derive
-  from the alias.
-- **A study is replaced at most once** — metldata, on both declaration paths; keeps the successor
-  chain single-valued.
-- **The successor relation is acyclic** — metldata walking the chain in the submission store on
-  either declaration path, with the loader rejecting a cycle-closing declaration and the successor
-  endpoint bounded by a hop limit, so a cycle reaching the ancestry collection cannot hang the
-  resolver.
-- **`accession -> file` single-valued and immutable once bound** — RS
-  `FileController.map_accessions_to_file_ids`; only `file -> accession` becomes many.
-- **Legacy PIDs stay valid forever** — never rewritten, never assumed parseable into root and
-  version.
-- **Superseded artifacts stay resolvable by URL after leaving search** — the loader hides them from
-  the index without deleting the artifacts.
+- **One study per submission** — metldata's pre-mint validation on the `submit` path, asserted again in the loader.
+- **Aliases unique within a study revision** — the same pre-mint validation; child accessions derive from the alias.
+- **A study is replaced at most once** — metldata, on both declaration paths; keeps the successor chain single-valued.
+- **The successor relation is acyclic** — metldata walking the chain in the submission store on either declaration path, with the loader rejecting a cycle-closing declaration and the successor endpoint bounded by a hop limit, so a cycle reaching the ancestry collection cannot hang the resolver.
+- **`accession -> file` single-valued and immutable once bound** — RS `FileController.map_accessions_to_file_ids`; only `file -> accession` becomes many.
+- **Legacy PIDs stay valid forever** — never rewritten, never assumed parseable into root and version.
+- **Superseded artifacts stay resolvable by URL after leaving search** — the loader hides them from the index without deleting the artifacts.
 - **Re-load and re-declare are idempotent** — consumers already tolerate missing targets.
 
 ## Human Resource/Time Estimation
