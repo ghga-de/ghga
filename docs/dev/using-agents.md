@@ -2,6 +2,7 @@
 
 How to work with coding agents in this repo, for the dev using them.
 Whoever changes the instruction files themselves reads [agent-instructions.md](../agent-instructions.md) instead.
+If you are new to the repo, read [getting-started.md](getting-started.md) first.
 
 ## What the repo sets up
 

@@ -16,7 +16,7 @@ Design and migration records for the consolidation of GHGA's ~28 maintained repo
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
 - **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes, their tags, version stamping, the PyPI upload plan and the publish targets.
 - **[agent-instructions.md](agent-instructions.md)** — where guidance for coding agents lives: the `AGENTS.md` files, the READMEs and the skills, and what belongs in each ([ADR-0042](adrs/adr-0042-agent-instruction-files.md)).
-- **[dev/](dev/using-agents.md)** — pages for developers rather than agents, which no `AGENTS.md` links; [using-agents.md](dev/using-agents.md) says how to work with coding agents here and where personal instructions go.
+- **[dev/](dev/getting-started.md)** — pages for developers rather than agents, which no `AGENTS.md` links: [getting-started.md](dev/getting-started.md) is a first read for new developers, and [using-agents.md](dev/using-agents.md) says how to work with coding agents here and where personal instructions go.
 - **[dependencies.md](dependencies.md)** — how dependencies are updated, and which are deliberately kept behind their latest version, why, and the signal to update.
 
 ## Epics

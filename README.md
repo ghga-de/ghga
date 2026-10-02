@@ -34,6 +34,8 @@ One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `
 
 ## Getting started
 
+If you are new to the repo, read [docs/dev/getting-started.md](docs/dev/getting-started.md) first: how the parts fit together and what to read next.
+
 ```bash
 uv sync                 # or: just sync
 just hooks              # install the git hooks (the dev container does this for you)
@@ -188,6 +190,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 
 ## Where to read
 
+- **[docs/dev/getting-started.md](docs/dev/getting-started.md)** — a first read for new developers, with a reading path.
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
 - **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
 - **[docs/adrs/](docs/adrs/)** — the decisions (and why); the [index](docs/README.md#decisions-adrs) carries their status and supersession.
