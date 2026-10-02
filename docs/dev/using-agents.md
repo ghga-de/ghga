@@ -8,7 +8,7 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 
 - **Instructions:** `AGENTS.md` at the root and one per area; an agent reads the root file at the start and an area's file once it works there ([agent-instructions.md](../agent-instructions.md#areas)).
   There is no `CLAUDE.md`: Claude Code reads `AGENTS.md` itself, from v2.1.277 on.
-- **Skills:** task procedures in `.agents/skills/`, for now only in the data portal and `libs/ghga-jsonsubschema`; `/skills` in Claude Code lists them.
+- **Skills:** task procedures in `.agents/skills/`, listed with where each applies in the [skill catalogue](../agent-skills.md); `/skills` in Claude Code lists the ones your session can use.
 - **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), a check at session start that you run in the dev container, and guards that stop edits to generated files and `uv` on the host.
 - **Permissions:** the same file allows the read-only `gh` commands, asks before creating or commenting on a PR, and denies merges, releases, force pushes and reading `.env` files.
 - **MCP:** only the data portal has servers, in [`frontend/data-portal/.mcp.json`](../../frontend/data-portal/.mcp.json); a session started at the repo root does not load them.
