@@ -22,7 +22,7 @@ The [architecture overview](../architecture/overview.md) and the [journeys](../a
 - **`libs/`** holds the shared libraries, chief among them hexkit, the ports-and-adapters framework the services are built on, and ghga-service-commons, the functionality our services share: FastAPI server setup, authentication and authorization, HTTP utilities.
   A change here reaches every member that uses the library.
 - **`tools/`** holds the CLIs and jobs, such as `ghga-connector` for uploads and downloads and `ghga-validator`, which checks submitted metadata against the GHGA metadata model.
-- **`frontend/data-portal/`** is the data portal.
+- **`frontend/data-portal/`** is the data portal, the repo's only web front end: an Angular app where users browse and request access to datasets, and data stewards manage access requests, users and upload boxes.
 - **`deploy/`** holds the Helm charts.
   Most are generated from the members' metadata, so you change the generator or a member's `chart-values.yaml`, not the chart.
 - **`testbed/`** is the BDD and Playwright suite that runs against the platform on kind.
