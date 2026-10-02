@@ -1,7 +1,8 @@
 # Getting started
 
-A first read for developers new to this repo; coding agents start from the `AGENTS.md` files instead.
-It says how the parts fit together and what to read next; the commands and rules live in the pages it links.
+A first read for developers new to this repo: how the parts fit together, how you work, test and ship here, and what to read next.
+It is about the repo itself, not about coding agents: [using-agents.md](using-agents.md) covers working with them, and the agents themselves start from the `AGENTS.md` files.
+The commands and rules live in the pages it links.
 
 ## What the repo is
 
