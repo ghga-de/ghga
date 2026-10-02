@@ -408,6 +408,14 @@ def test_set_check_scans_tracked_files(repo, capsys):
     assert "ADR-0043" not in out
 
 
+def test_references_skip_skill_evals(repo, capsys):
+    suite = repo / ".agents/skills/adr/evals.yaml"
+    suite.parent.mkdir(parents=True)
+    suite.write_text("pattern: superseded-by: [ADR-0045]\n")
+    code, out = _run(repo, capsys, "--refs", ".agents/skills/adr/evals.yaml")
+    assert (code, out) == (0, "")
+
+
 def test_missing_index_markers(repo, capsys):
     (repo / "docs/README.md").write_text("# Docs\n")
     _, out = _run(repo, capsys)

@@ -136,6 +136,30 @@ hooks-update: _guard
 docs-check *args: _guard
     uv run python scripts/docs_check.py {{args}}
 
+# A root skill's eval suite, .agents/skills/<name>/evals.yaml, each case run with and without
+# the skill in a pinned clone that scripts/skill-eval-scaffold.sh prepares
+# (docs/agent-instructions.md). A pass is due when the skill's SKILL.md changes, and for
+# every suite when SKILL_EVAL_MODEL moves to a new default model. The report stays local;
+# extra arguments go to `claude plugin eval`, e.g. `--case new-adr --runs 1`.
+# Each run's trace is kept in the results, so a fixed grader can be checked against a pass
+# without rerunning it; the workspaces themselves, a clone and a .venv each, go.
+SKILL_EVAL_MODEL := "claude-opus-5-5"
+
+# Run a root skill's eval suite and print its scores, e.g. `just skill-eval adr`.
+skill-eval name *args: _guard
+    #!/usr/bin/env bash
+    set -euo pipefail
+    evals=$(uv run python scripts/skill_eval.py expand "{{name}}")
+    out="$evals/results/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    # The threshold is 0 so that only a run that breaks, not a low score, fails the recipe.
+    claude plugin eval ".agents/skills/{{name}}" --model "{{SKILL_EVAL_MODEL}}" \
+        --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
+        --concurrency 4 --max-cost-usd 20 --threshold 0 --keep-temp \
+        --output-dir "$out" {{args}} || status=$?
+    echo "== {{name}} on {{SKILL_EVAL_MODEL}}"
+    uv run python scripts/skill_eval.py collect "$out"
+    exit "${status:-0}"
+
 # The same check the service-docs pre-commit hook runs; `--check` writes nothing.
 # Regenerate each service's config schema, example config, README parameters and OpenAPI spec.
 service-docs *args: _guard

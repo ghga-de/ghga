@@ -1,0 +1,213 @@
+# The eval suite of the adr skill (docs/agent-instructions.md#admitting-a-skill).
+# `just skill-eval adr` expands each case into evals/<case>/case.yaml for
+# `claude plugin eval`. A case takes the execution fields below unless it sets its own,
+# and a grader given by name is one of the shared graders.
+# The expected values hold at the commit scripts/skill-eval-scaffold.sh pins: the next free
+# ADR number is 0045, ADR-0034 and ADR-0036 are accepted and ADR-0036 is not amended.
+
+execution:
+  max_turns: 40
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill]
+  # Neither arm loads AGENTS.md, which a session in the repo would.
+  append_system_prompt: >-
+    You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
+    root and in the AGENTS.md of each area; read the root file before you start, as a
+    session here loads it.
+
+graders:
+  next-number:
+    type: file_exists
+    path: docs/adrs/adr-0045-*.md
+  no-new-adr:
+    type: file_exists
+    path: docs/adrs/adr-0045-*.md
+    exists: false
+  # A grader cannot read a file by a glob, so the new ADR is read in the generated index.
+  status-proposed:
+    type: regex
+    target: {source: file, path: docs/README.md}
+    pattern: '^\| \[0045\]\(adrs/adr-0045-[a-z0-9-]+\.md\) \| [^|\n]+ \| proposed\b'
+    flags: m
+  index-regenerated:
+    type: regex
+    target: {source: file, path: docs/README.md}
+    pattern: adr-0045-
+  ran-docs-check:
+    type: tool_used
+    tool: Bash
+    input_match: 'just docs-check|docs_check\.py'
+  # Neither arm loads the uv guard hook, so in a real session this is stopped earlier.
+  no-direct-uv:
+    type: tool_used
+    tool: Bash
+    input_match: '(^|[\s;&|(\x60])uv\s'
+    min: 0
+    max: 0
+  still-accepted:
+    type: regex
+    target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+    pattern: '^status: accepted$'
+    flags: m
+  skill-fired:
+    type: tool_used
+    tool: Skill
+    arm: with-only
+
+cases:
+  new-adr:
+    description: A new decision with no predecessor; the team has agreed, which baits status accepted.
+    tags: [new]
+    prompt: |
+      Record our decision as an ADR: every service logs JSON to stdout, with the correlation ID on each line, and no service writes log files.
+      The team agreed on it in today's meeting.
+    graders: [next-number, status-proposed, index-regenerated, ran-docs-check, no-direct-uv, skill-fired]
+
+  supersede:
+    description: 'The pilot task: mise tasks replace just, which supersedes ADR-0034.'
+    tags: [supersede]
+    prompt: |
+      The team has decided to replace `just` with mise tasks as the task runner.
+      Record that decision; it replaces ADR-0034.
+    graders:
+      - next-number
+      - status-proposed
+      - index-regenerated
+      - ran-docs-check
+      - no-direct-uv
+      - name: new-supersedes
+        type: regex
+        target: {source: file, path: docs/README.md}
+        pattern: '^\| \[0045\]\(adrs/adr-0045-[a-z0-9-]+\.md\) \| [^|\n]+ \| [^|\n]*supersedes \[0034\]'
+        flags: m
+      - name: old-superseded
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0034-task-runner.md}
+        pattern: '^status: superseded$'
+        flags: m
+      - name: old-points-to-new
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0034-task-runner.md}
+        pattern: '^superseded-by: \[ADR-0045\]$'
+        flags: m
+      - skill-fired
+
+  amend:
+    description: 'Part of ADR-0036 changes and the decision stands: an amendment with field and marker.'
+    tags: [amend]
+    execution: {max_turns: 30}
+    prompt: |
+      We changed one part of ADR-0036: prettier now fixes formatting in the pre-commit hook, the way ruff does, while eslint still only checks.
+      Update the ADR.
+    graders:
+      - name: amended-field
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+        pattern: '^amended: \d{4}-\d{2}-\d{2}$'
+        flags: m
+      - name: amended-marker
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+        pattern: '\*\*Amended \d{4}-\d{2}-\d{2}:\*\*'
+      - still-accepted
+      - no-new-adr
+      - ran-docs-check
+      - no-direct-uv
+      - name: scoped-edit
+        type: llm
+        focus: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+        criteria: |
+          ADR-0036 now says that the prettier hook fixes formatting and that eslint still only checks, in an amendment paragraph at the bullet about front-end hooks.
+          The rest of the ADR keeps its wording: no other passage is rewritten.
+      - skill-fired
+
+  clarify:
+    description: 'A rewording of ADR-0036 that keeps the decision: no amended field, no marker.'
+    tags: [clarify]
+    execution: {max_turns: 30}
+    prompt: |
+      In ADR-0036, people misread this sentence: "The hook checks the members a commit touches; their dependents are CI's job."
+      Reword it so it is clear what the hook type-checks and what it leaves to CI.
+      The decision itself stays the same.
+    graders:
+      - name: no-amended-field
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+        pattern: '^amended:'
+        flags: m
+        match: not_contains
+      - name: no-amended-marker
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+        pattern: '\*\*Amended'
+        match: not_contains
+      - still-accepted
+      - no-new-adr
+      - name: scoped-edit
+        type: llm
+        focus: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+        criteria: |
+          The sentence about what the mypy hook checks is reworded and says the same thing as before: the hook type-checks the members a commit touches, and CI checks the members that depend on them.
+          No other passage of ADR-0036 is changed.
+      - skill-fired
+
+  new-tag:
+    description: 'A new ADR whose tag is not in the list yet: the list and TAGS are extended.'
+    tags: [new, tag]
+    prompt: |
+      Write an ADR for this decision: every service exports OpenTelemetry traces through the cluster's collector, and spans carry the correlation ID.
+      Tag it `observability`; we do not have that tag yet.
+    graders:
+      - next-number
+      - status-proposed
+      - index-regenerated
+      - ran-docs-check
+      - no-direct-uv
+      - name: tag-on-adr
+        type: regex
+        target: {source: file, path: docs/README.md}
+        pattern: '^\| \[0045\]\(adrs/adr-0045-[a-z0-9-]+\.md\) \| [^|\n]+ \| [^|\n]+ \| [^|\n]*\bobservability\b'
+        flags: m
+      - name: tag-in-check
+        type: regex
+        target: {source: file, path: scripts/docs_check.py}
+        pattern: '\"observability\"'
+      - name: tag-in-style-guide
+        type: regex
+        target: {source: file, path: docs/style.md}
+        pattern: observability
+      - skill-fired
+
+  rollout-status:
+    description: A request to put rollout status into ADR-0003, which belongs in a PR, issue or runbook.
+    tags: [out-of-scope]
+    execution: {max_turns: 25}
+    prompt: |
+      Add an "Implementation status" section to ADR-0003 with where the 2FA rollout stands: TOTP enrolment is live in the auth service, recovery codes are still pending, and the remaining checklist is to enable it on staging, run the user test, then enable it in production.
+    graders:
+      - name: no-status-section
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0003-custom-2fa-service.md}
+        pattern: implementation status
+        flags: i
+        match: not_contains
+      - name: no-checklist
+        type: regex
+        target: {source: file, path: docs/adrs/adr-0003-custom-2fa-service.md}
+        pattern: 'recovery codes (are )?(still )?pending'
+        flags: i
+        match: not_contains
+      - name: keeps-rollout-out
+        type: llm
+        criteria: |
+          The agent does not add the rollout status or the checklist to ADR-0003.
+          It says that an ADR records the decision and not its rollout, and points to a better place, such as the PR, an issue or a runbook; it may offer to write it there.
+          Fail if the ADR gains the rollout status in any form.
+      - skill-fired
+
+  in-a-hurry:
+    description: The new-ADR task under time pressure; the check still runs and the status stays proposed.
+    tags: [new, pressure]
+    prompt: |
+      I'm in a hurry, so just get an ADR in for this: every Kafka topic gets an explicit retention of seven days, set in the charts, instead of the broker default.
+    graders: [next-number, status-proposed, index-regenerated, ran-docs-check, no-direct-uv, skill-fired]
