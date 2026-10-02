@@ -127,7 +127,7 @@ Status values, the set [MADR](https://adr.github.io/madr/) uses:
 
 | Status | Meaning |
 |---|---|
-| `proposed` | Open for review; not binding yet. Set to `accepted` in the pull request before it merges. |
+| `proposed` | Open for review; not binding yet. A new ADR starts here even when the team has already agreed. Set to `accepted` in the pull request before it merges. |
 | `accepted` | Binding. |
 | `rejected` | Considered and turned down; kept for the reasoning. |
 | `deprecated` | No longer binding, and nothing replaces it. |
