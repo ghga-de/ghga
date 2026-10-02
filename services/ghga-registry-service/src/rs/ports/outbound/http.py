@@ -112,6 +112,18 @@ class FileBoxClientPort(ABC):
             msg = f"Requested version of FileUploadBox {box_id} is out of date."
             super().__init__(msg)
 
+    class FUBStatsUnavailableError(RuntimeError):
+        """Raised when the owning service applied the operation but could not update
+        the FileUploadBox stats.
+
+        The operation itself succeeded, so callers must not roll back. The stats and
+        the box version arrive later via the FileUploadBox outbox event.
+        """
+
+        def __init__(self, *, box_id: UUID4):
+            msg = f"FileUploadBox {box_id} stats could not be updated by its owner."
+            super().__init__(msg)
+
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
@@ -178,6 +190,8 @@ class FileBoxClientPort(ABC):
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -187,6 +201,8 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -254,6 +270,8 @@ class FileBoxClientPort(ABC):
                 been interrogated yet or files that failed interrogation.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -276,6 +294,8 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBStateError if the FileUploadBox is locked.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the file was deleted but the owning
+                service could not update the box stats.
         """
 
     @abstractmethod
