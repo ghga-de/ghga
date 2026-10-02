@@ -1,6 +1,9 @@
 ---
 name: doc-lookup
 description: Find the passage in the repo docs that answers a question about a design decision, a convention, a release or migration step, or how a service or flow behaves. Use before changing behaviour you do not know, or when asked "which ADR", "why" or "how does X flow".
+# User-invoked: an eval showed no gain over a session without it
+# (docs/agent-instructions.md#admitting-a-skill).
+disable-model-invocation: true
 ---
 
 # Look up the docs
