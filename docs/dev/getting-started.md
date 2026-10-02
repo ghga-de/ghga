@@ -1,6 +1,6 @@
 # Getting started
 
-A first read for a developer new to this repo, with or without a coding agent.
+A first read for developers new to this repo; coding agents start from the `AGENTS.md` files instead.
 It says how the parts fit together and what to read next; the commands and rules live in the pages it links.
 
 ## What the repo is
