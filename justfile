@@ -131,9 +131,10 @@ hooks-update: _guard
     uv run pre-commit autoupdate
 
 # The same check the docs-set pre-commit hook runs (ADR-0041).
-# Check the ADRs and epics and every reference to them, and regenerate their indexes.
-docs-check: _guard
-    uv run python scripts/docs_check.py
+# Check the ADRs, epics, instruction files and skills and every reference to them, and
+# regenerate their indexes; `--budget` prints each session's context budget.
+docs-check *args: _guard
+    uv run python scripts/docs_check.py {{args}}
 
 # The same check the service-docs pre-commit hook runs; `--check` writes nothing.
 # Regenerate each service's config schema, example config, README parameters and OpenAPI spec.

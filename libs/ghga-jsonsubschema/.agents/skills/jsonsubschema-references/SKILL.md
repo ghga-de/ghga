@@ -1,6 +1,6 @@
 ---
 name: jsonsubschema-references
-description: Authoritative references for this library — the JSON Schema draft-4 spec, how draft 4 differs from later drafts, and the API pitfalls of the pinned greenery, portion, jsonref and jsonschema versions. Use when unsure about a keyword's semantics or before changing code that calls into these libraries; do not answer from memory.
+description: The JSON Schema draft-4 spec, how draft 4 differs from later drafts, and the API pitfalls of the pinned greenery, portion, jsonref and jsonschema versions. Use when unsure about a keyword's semantics or before changing code that calls into these libraries; do not answer from memory.
 ---
 
 # References for jsonsubschema

@@ -2,17 +2,20 @@
 """Check the ADRs and the epics, and the references to them, across the tree (ADR-0041).
 
 Without arguments it checks both sets: ADR file names, frontmatter, headings and
-supersession, epic names and shape, the shape of the instruction files for coding
-agents, and every reference in the tracked text files. It then regenerates the ADR index
-in docs/README.md and the epic index in docs/epics/README.md, and fails when that
-changed a file, so the fix is to stage the result. With `--refs` it checks only the
-references in the files given.
+supersession, epic names and shape, the shape of the instruction files and skills for
+coding agents, and every reference in the tracked text files. It then regenerates the
+ADR index in docs/README.md, the epic index in docs/epics/README.md and the skill
+catalogue in docs/agent-skills.md, and fails when that changed a file, so the fix is to
+stage the result. A session's context budget over its ceiling is a warning, which leaves
+the exit code alone; `--budget` prints every session's figures. With `--refs` it checks
+only the references in the files given.
 
 The rules are the ones in docs/style.md, docs/epics/README.md and
 docs/agent-instructions.md; a change to one needs a change to the other.
 
 Usage:
     uv run python scripts/docs_check.py
+    uv run python scripts/docs_check.py --budget
     uv run python scripts/docs_check.py --refs README.md docs/conventions.md
 """
 
@@ -101,6 +104,37 @@ STUB_CONTENT = re.compile(r"^(?:[-*+]\s|\d+\.\s|>|\||#{1,6}\s|```|@)")
 COPILOT_STUB = ".github/copilot-instructions.md"
 SKILL_DIR = ".agents/skills"
 SKILL_FILE = "SKILL.md"
+SKILL_PATH = re.compile(r"^(?:(.+)/)?\.agents/skills/([^/]+)/SKILL\.md$")
+# Claude Code reads .claude/skills/ only, so each skill has a symlink there.
+CLAUDE_SKILL_ENTRY = re.compile(r"^(?:(.+)/)?\.claude/skills/([^/]+)$")
+SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SKILL_NAME_MAX = 64
+DESCRIPTION_MAX = 1024
+DESCRIPTION_WARN = 300
+# The six fields of the Agent Skills spec, then the Claude Code fields that only
+# optimise and that the other tools ignore without harm.
+SKILL_FIELDS = (
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "metadata",
+    "allowed-tools",
+    "disable-model-invocation",
+    "user-invocable",
+    "paths",
+)
+LINK = re.compile(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)")
+LINK_EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|#)")
+
+# What the repo puts into a session before any task, at characters / 4: the root
+# AGENTS.md, the output style, the AGENTS.md files down to the area, and the
+# descriptions of the skills the model may invoke there (docs/agent-instructions.md).
+OUTPUT_STYLE = ".claude/output-styles/ghga-dev.md"
+CHARS_PER_TOKEN = 4
+BUDGET_ROOT = 4000
+BUDGET_AREA = 7000
+BUDGET_DESCRIPTIONS = 1500
 # Paths that were instruction files for one tool and that no tool reads here.
 ORPHAN_DIRS = (".copilot/", ".github/instructions/", ".cursor/rules/")
 ORPHAN_NAMES = (".cursorrules", ".clinerules", ".windsurfrules", ".aider.conf.yml")
@@ -119,7 +153,9 @@ EPIC_UNFOLDING_MARKS = (
     "<!-- epic-index:unfolding:end -->",
 )
 EPIC_INDEX_LINK = re.compile(r"\]\(\./epic-(\d{4})-")
-EPIC_INDEX_EMPTY = "None at the moment.\n"
+INDEX_EMPTY = "None at the moment.\n"
+SKILL_INDEX_FILE = "docs/agent-skills.md"
+SKILL_INDEX_MARKS = ("<!-- skill-index:start -->", "<!-- skill-index:end -->")
 
 # Test data that holds broken ADRs and references on purpose.
 REF_EXCLUDED = ("scripts/tests/test_docs_check.py",)
@@ -150,6 +186,28 @@ class Epic:
     title: str = ""
     code_name: str = ""
     type: str = ""
+
+
+@dataclass
+class Skill:
+    """One skill, from the frontmatter of its SKILL.md."""
+
+    name: str
+    base: str  # the directory holding its .agents/, "" at the root
+    path: str  # the SKILL.md, relative to the root
+    description: str = ""
+    paths: list[str] = field(default_factory=list)
+    by_model: bool = True
+    by_user: bool = True
+
+
+@dataclass
+class Budget:
+    """The always-on context of a session started in one directory, in tokens."""
+
+    area: str  # "" for the root
+    total: int
+    descriptions: int
 
 
 def _split(text: str) -> tuple[dict | None, str]:
@@ -446,7 +504,7 @@ def _continuous(epics: list[Epic]) -> bool:
 def render_epic_index(epics: list[Epic], ordered: bool) -> str:
     """Render one epic list, one line per epic in number order."""
     if not epics:
-        return EPIC_INDEX_EMPTY
+        return INDEX_EMPTY
     rows = []
     for epic in epics:
         link = f"[{epic.code_name}](./{epic.path})"
@@ -618,6 +676,243 @@ def check_instruction_files(root: pathlib.Path) -> list[str]:
     return sorted(problems)
 
 
+def _body_links(body: str) -> list[str]:
+    """Return the relative link targets outside fenced code blocks, without anchors."""
+    targets, fenced = [], False
+    for line in body.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        elif not fenced:
+            targets += [
+                t.split("#", 1)[0]
+                for t in LINK.findall(line)
+                if not LINK_EXTERNAL.match(t)
+            ]
+    return targets
+
+
+def _skill_paths(value: object) -> list[str] | None:
+    """Return `paths` as a list of globs; None when it is neither a string nor a list."""
+    if isinstance(value, str):  # Claude Code also takes a comma-separated string
+        return [p.strip() for p in value.split(",") if p.strip()]
+    if isinstance(value, list) and all(isinstance(p, str) for p in value):
+        return value
+    return None
+
+
+def _skill_meta(skill: Skill, meta: dict, directory: str) -> tuple[list, list]:
+    """Check the frontmatter fields, fill in the skill and return problems, warnings."""
+    rel, problems, warnings = skill.path, [], []
+    name = meta.get("name")
+    if name != directory:
+        problems.append(f"{rel}: name {name!r} must equal its directory {directory!r}")
+    elif len(name) > SKILL_NAME_MAX or not SKILL_NAME.match(name):
+        problems.append(
+            f"{rel}: name must be 1 to {SKILL_NAME_MAX} lowercase letters, digits"
+            " and single hyphens"
+        )
+    description = meta.get("description")
+    if not isinstance(description, str) or not description.strip():
+        problems.append(f"{rel}: missing description")
+    else:
+        skill.description = " ".join(description.split())
+        if len(skill.description) > DESCRIPTION_MAX:
+            problems.append(
+                f"{rel}: description is {len(skill.description)} characters;"
+                f" at most {DESCRIPTION_MAX}"
+            )
+        elif len(skill.description) > DESCRIPTION_WARN:
+            warnings.append(
+                f"{rel}: description is {len(skill.description)} characters;"
+                f" keep it under {DESCRIPTION_WARN}"
+            )
+    problems += [f"{rel}: unknown field '{k}'" for k in meta if k not in SKILL_FIELDS]
+    for key in ("disable-model-invocation", "user-invocable"):
+        if key in meta and not isinstance(meta[key], bool):
+            problems.append(f"{rel}: {key} must be true or false")
+    skill.by_model = meta.get("disable-model-invocation") is not True
+    skill.by_user = meta.get("user-invocable") is not False
+    if "paths" in meta:
+        paths = _skill_paths(meta["paths"])
+        if not paths:
+            problems.append(f"{rel}: paths must be a glob or a list of globs")
+        else:
+            skill.paths = paths
+    return problems, warnings
+
+
+def load_skills(
+    root: pathlib.Path, tracked: list[str]
+) -> tuple[list[Skill], list[str], list[str]]:
+    """Parse every tracked SKILL.md under an .agents/skills/<name>/ and check it.
+
+    Returns:
+        The skills, root ones first, then the problems and the warnings found.
+    """
+    skills, problems, warnings = [], [], []
+    for rel in tracked:
+        match = SKILL_PATH.match(rel)
+        if not match or (text := _stub_text(root, rel)) is None:
+            continue
+        skill = Skill(match.group(2), match.group(1) or "", rel)
+        meta, body = _split(text)
+        if meta is None or "" in meta:
+            problems.append(f"{rel}: frontmatter must be a YAML mapping between ---")
+            continue
+        found, warned = _skill_meta(skill, meta, match.group(2))
+        problems += found
+        warnings += warned
+        base = (root / rel).parent
+        problems += [
+            f"{rel}: link to {target}, which does not exist"
+            for target in _body_links(body)
+            if target and not (base / target).exists()
+        ]
+        skills.append(skill)
+    skills.sort(key=lambda s: (s.base, s.name))
+    return skills, problems, warnings
+
+
+def check_skill_links(root: pathlib.Path, tracked: list[str]) -> list[str]:
+    """Report a skill without its .claude/skills/ symlink, and a symlink without its skill.
+
+    The link sits beside the same .agents/ and is relative, so a clone gets it working
+    without a setup step (docs/agent-instructions.md).
+    """
+    tracked_set, problems, expected = set(tracked), [], {}
+    for rel in tracked:
+        if match := SKILL_PATH.match(rel):
+            prefix = f"{match.group(1)}/" if match.group(1) else ""
+            name = match.group(2)
+            expected[f"{prefix}.claude/skills/{name}"] = f"../../{SKILL_DIR}/{name}"
+    for entry, target in expected.items():
+        path = root / entry
+        if entry not in tracked_set:
+            problems.append(f"{entry}: missing; link it to {target}")
+        elif not path.is_symlink() or os.readlink(path) != target:
+            problems.append(f"{entry}: must be a symlink to {target}")
+    problems += [
+        f"{rel}: no skill at {SKILL_DIR}/{match.group(2)}"
+        for rel in tracked
+        if (match := CLAUDE_SKILL_ENTRY.match(rel)) and rel not in expected
+    ]
+    return sorted(problems)
+
+
+def _within(path: str, base: str) -> bool:
+    """Whether a directory is the base or below it; "" is the root."""
+    return not base or path == base or path.startswith(f"{base}/")
+
+
+def _glob_prefix(glob: str) -> str:
+    """Return the directories of a glob before its first wildcard."""
+    parts = []
+    for part in glob.split("/")[:-1]:
+        if any(c in part for c in "*?[{"):
+            break
+        parts.append(part)
+    return "/".join(parts)
+
+
+def _visible(skill: Skill, area: str) -> bool:
+    """Whether the model is offered the skill in a session working in the area.
+
+    A nested skill is offered at and below its directory. A root skill with `paths` is
+    offered once the agent reads a matching file, so it counts wherever a match could be.
+    """
+    if not skill.by_model:
+        return False
+    if skill.base:
+        return bool(area) and _within(area, skill.base)
+    if not skill.paths:
+        return True
+    prefixes = [_glob_prefix(p) for p in skill.paths]
+    return bool(area) and any(_within(area, p) or _within(p, area) for p in prefixes)
+
+
+def context_budget(
+    root: pathlib.Path, tracked: list[str], skills: list[Skill]
+) -> list[Budget]:
+    """Estimate the always-on context of a root session and of each area session.
+
+    An area is a directory with an AGENTS.md or its own skills; its session also
+    carries every AGENTS.md above it.
+    """
+    agents = {
+        rel.removesuffix("AGENTS.md").rstrip("/"): rel
+        for rel in tracked
+        if pathlib.PurePosixPath(rel).name == "AGENTS.md"
+    }
+    areas = sorted({"", *agents, *(s.base for s in skills)})
+
+    def chars(rel: str) -> int:
+        return len(_stub_text(root, rel) or "") if rel in tracked_set else 0
+
+    tracked_set, budgets = set(tracked), []
+    for area in areas:
+        files = [rel for base, rel in agents.items() if _within(area, base)]
+        descriptions = sum(len(s.description) for s in skills if _visible(s, area))
+        total = sum(map(chars, [*files, OUTPUT_STYLE])) + descriptions
+        budgets.append(
+            Budget(area, total // CHARS_PER_TOKEN, descriptions // CHARS_PER_TOKEN)
+        )
+    return budgets
+
+
+def budget_warnings(budgets: list[Budget]) -> list[str]:
+    """Report each session over its ceiling."""
+    warnings = []
+    for budget in budgets:
+        where = f"{budget.area}/ session" if budget.area else "root session"
+        ceiling = BUDGET_AREA if budget.area else BUDGET_ROOT
+        if budget.total > ceiling:
+            warnings.append(
+                f"{where}: {budget.total} tokens always on; the ceiling is {ceiling}"
+            )
+        if budget.descriptions > BUDGET_DESCRIPTIONS:
+            warnings.append(
+                f"{where}: {budget.descriptions} tokens of skill descriptions;"
+                f" the ceiling is {BUDGET_DESCRIPTIONS}"
+            )
+    return warnings
+
+
+def render_budget(budgets: list[Budget]) -> str:
+    """Render the budget figures, one session per line."""
+    rows = []
+    for budget in budgets:
+        where = f"{budget.area}/" if budget.area else "root"
+        rows.append(
+            f"{where}: {budget.total} tokens, {budget.descriptions} of them"
+            " skill descriptions"
+        )
+    return "\n".join(rows) + "\n"
+
+
+def render_skill_index(skills: list[Skill]) -> str:
+    """Render the skill catalogue, root skills first, then each nested set."""
+    if not skills:
+        return INDEX_EMPTY
+    rows = ["| Skill | Applies | Invoked by | Description |", "|---|---|---|---|"]
+    for skill in skills:
+        if skill.base:
+            applies = f"`{skill.base}/`"
+        elif skill.paths:
+            applies = ", ".join(f"`{p}`" for p in skill.paths)
+        else:
+            applies = "whole repo"
+        invoked = [
+            *(["model"] if skill.by_model else []),
+            *([f"`/{skill.name}`"] if skill.by_user else []),
+        ]
+        description = skill.description.replace("|", "\\|")
+        rows.append(
+            f"| [{skill.name}](../{skill.path}) | {applies} |"
+            f" {' or '.join(invoked) or 'nobody'} | {description} |"
+        )
+    return "\n".join(rows) + "\n"
+
+
 def _tracked_files(root: pathlib.Path) -> list[str]:
     """Return the tracked text files that could hold a reference to an ADR or an epic."""
     result = subprocess.run(
@@ -637,9 +932,13 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
     parser.add_argument(
         "--refs", nargs="*", metavar="FILE", help="check only references in FILE"
     )
+    parser.add_argument(
+        "--budget", action="store_true", help="print the context budget per session"
+    )
     args = parser.parse_args(argv)
 
     adr_names = {p.name for p in (root / ADR_DIR).iterdir() if p.is_file()}
+    warnings: list[str] = []
     if args.refs is not None:
         problems = check_references(root, args.refs, adr_names)
     else:
@@ -647,6 +946,13 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         epics, epic_problems = load_epics(root)
         problems += epic_problems
         problems += check_instruction_files(root)
+        tracked = _tracked(root)
+        skills, skill_problems, warnings = load_skills(root, tracked)
+        problems += skill_problems + check_skill_links(root, tracked)
+        budgets = context_budget(root, tracked, skills)
+        warnings += budget_warnings(budgets)
+        if args.budget:
+            print(render_budget(budgets), end="")
         # sibling links inside docs/adrs/ need none of the search terms
         paths = set(_tracked_files(root)) | {f"{ADR_DIR}/{n}" for n in adr_names}
         problems += check_references(root, sorted(paths), adr_names)
@@ -659,9 +965,16 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         problems += _regenerate(
             root, EPIC_INDEX_FILE, render_epic_lists(epics, epic_index)
         )
+        problems += _regenerate(
+            root,
+            SKILL_INDEX_FILE,
+            [(render_skill_index(skills), SKILL_INDEX_MARKS)],
+        )
 
     for problem in problems:
         print(problem, file=sys.stderr)
+    for warning in warnings:
+        print(f"warning: {warning}", file=sys.stderr)
     return 1 if problems else 0
 
 

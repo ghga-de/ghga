@@ -105,16 +105,20 @@ repos:
         entry: uv run rumdl check --fix
 
       # ---- ADRs, epics and instruction files (ADR-0041, ADR-0042) ---------------------------
-      # The set hook checks both sets, the instruction files and the references across
-      # the tree, since most rules span files; it regenerates the two indexes and fails
-      # when that changed a file. The reference hook checks only the committed files, so
-      # every commit pays little.
+      # The set hook checks both sets, the instruction files, the skills and the
+      # references across the tree, since most rules span files; it regenerates the
+      # three indexes and fails when that changed a file. The reference hook checks only
+      # the committed files, so every commit pays little.
       - id: docs-set
-        name: ADR, epic and instruction-file sets
+        name: ADR, epic, instruction-file and skill sets
         language: system
         # the orphan paths the check polices are part of the shape, so a commit that
-        # adds one has to run the hook that rejects it
-        files: ^(docs/(adrs/|epics/|README\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|\.github/(copilot-instructions\.md$|instructions/)|(.*/)?\.(copilot|cursor/rules)/|(.*/)?\.(cursorrules|clinerules|windsurfrules|aider\.conf\.yml)$|scripts/docs_check\.py$)
+        # adds one has to run the hook that rejects it; the output style counts toward
+        # the context budget
+        files: ^(docs/(adrs/|epics/|README\.md$|agent-skills\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|(.*/)?\.(agents|claude)/skills/|\.claude/output-styles/|\.github/(copilot-instructions\.md$|instructions/)|(.*/)?\.(copilot|cursor/rules)/|(.*/)?\.(cursorrules|clinerules|windsurfrules|aider\.conf\.yml)$|scripts/docs_check\.py$)
+        # a .claude/skills/ entry is a symlink, which the default `types: [file]` skips
+        types: []
+        types_or: [file, symlink]
         pass_filenames: false
         require_serial: true
         entry: uv run python scripts/docs_check.py

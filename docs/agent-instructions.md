@@ -76,8 +76,16 @@ Reusable task procedures live in `.agents/skills/<name>/SKILL.md`.
 Only a name and a description load until the skill is invoked.
 The folder-with-a-`SKILL.md` shape is the [Agent Skills](https://agentskills.io) standard — open and stewarded like `AGENTS.md`; `.agents/skills/` is its tool-agnostic location, and our own dependencies ship skills there.
 
-Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, which its documentation supports.
-The symlink is a stub for skills, and it goes when Claude Code reads the standard path.
+Shared skills sit in the root `.agents/skills/`, flat, one directory per skill, named after its task.
+A skill for one area says so in its `paths` frontmatter field, a list of globs such as `services/**`: Claude Code and Cursor list it once the agent reads a matching file, and the other tools list it everywhere.
+Only a skill about one member's internals stays nested in that member, as the `libs/ghga-jsonsubschema` ones do, because Copilot CLI, OpenCode and Codex find a nested skill only in a session started there.
+The [skill catalogue](agent-skills.md) is generated from the frontmatter and lists every skill, where it applies and who invokes it.
+
+The frontmatter holds the fields of the [specification](https://agentskills.io/specification): `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
+Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable` and `paths` are allowed, since they only narrow when a skill loads and the other tools ignore them without harm.
+
+Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, beside the same `.agents/`: in the root for a root skill, in the member for a nested one.
+Its documentation supports this, and the symlink goes when Claude Code reads the standard path.
 
 The links are relative and committed: git stores a symlink as its target path, so a clone gets working links without a setup step.
 Generating them instead, from a recipe or a container hook, would leave the skills missing for everyone who has not run it.
@@ -87,9 +95,44 @@ A Windows checkout without `core.symlinks` gets text files instead, and the skil
 
 `AGENTS.md` names the directory and says no more about it: the tools list the skills they find, and an index in prose would only duplicate them and go stale.
 The line is there so an agent without skill support knows the directory holds procedures it can read as plain Markdown.
+The catalogue does not count as such an index: it is generated, and only a person opening it loads it.
 
 A passage is a skill when it is only needed while doing one named task and runs to more than a couple of lines — writing an ADR, cutting a release, running the test bed, regenerating the charts.
 It stays in `AGENTS.md` when it changes how any task is done.
+
+### Admitting a skill
+
+Every description the model is offered costs context in each session that sees it, so a skill joins the shared set, committed and model-invoked, only if all of these hold:
+
+- **Frequent:** most devs of its area do the task at least monthly; a root skill counts everyone.
+- **Repo-specific:** it carries our conventions, commands and traps, and no sentence the model would follow unprompted.
+- **Beats the baseline:** on an eval of at least 5 cases with 3 runs per arm, graded by checks fixed before the run, it scores higher than a session without it; a tie is a rejection.
+- **Points, does not restate:** it links the rule in `docs/` or an `AGENTS.md` and holds only the order of steps, the commands and the traps.
+- **Small:** a description under 300 characters with the key use case first, and a body under about 100 lines; longer material goes into `references/` files the body links.
+
+A useful skill that fails the first or the third test is user-invoked instead (`disable-model-invocation: true`): committed, started only by a person, and its description stays out of the model's context.
+Anything else stays personal ([dev/using-agents.md](dev/using-agents.md#personal-setup)).
+
+The budget for what the repo puts into a session before any task, at characters divided by 4:
+
+| Session | Counts | Ceiling |
+|---|---|---|
+| root | the root `AGENTS.md`, the output style, the descriptions of model-invoked root skills without `paths` | 4k tokens |
+| an area | the above, every `AGENTS.md` down to the area, every model-invoked description offered there | 7k tokens |
+| any | the skill descriptions alone | 1.5k tokens |
+
+The last ceiling leaves room for personal skills: Claude Code gives the skill listing 1% of the context window and drops descriptions past it.
+`just docs-check --budget` prints each session's figures.
+
+The PR that adds or changes a shared skill shows the reviewer:
+
+- the evidence for each test above, with the eval result of both arms;
+- that the `name` clashes with no built-in command and no popular public skill, such as `code-review` or `commit`;
+- each frontmatter field beyond `name` and `description`, with its reason;
+- for a third-party skill, its source URL, commit SHA and licence in `license` and `metadata`;
+- the budget figures after the change, and what `/doctor prompt-audit` reports about the skill.
+
+Skills are reviewed each quarter: one unused for two quarters, or no longer beating the baseline after a model change, is removed.
 
 ## Keeping them true
 
@@ -109,3 +152,5 @@ Two limits, because the instinct is always to add a line:
 ## Checks
 
 `scripts/docs_check.py` ([ADR-0041](adrs/adr-0041-docs-linting.md)) fails when a `CLAUDE.md` is committed, the Copilot stub carries content of its own, or an instruction file sits at a path no tool reads.
+It fails, too, when a skill's `name` differs from its directory or leaves the specification's pattern, its description is missing or longer than 1024 characters, its frontmatter has a field not listed above, a relative link in it resolves to nothing, or its `.claude/skills/` symlink is missing or points elsewhere.
+It warns, without failing, about a description past 300 characters and a session past its budget, and it regenerates the [skill catalogue](agent-skills.md).
