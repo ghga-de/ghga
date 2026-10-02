@@ -658,6 +658,14 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--require-digests",
+        action="store_true",
+        help=(
+            "fail when a member gets no digest from --digests, instead of falling back"
+            " to a tag: dev charts pin images that are only ever pushed by digest"
+        ),
+    )
+    parser.add_argument(
         "--mono",
         action="store_true",
         help=(
@@ -680,6 +688,11 @@ def main() -> None:
             member, args.registry, defaults, args.mono
         )
         digest = digests.get(image_name(member, args.mono))
+        if args.require_digests and not digest:
+            sys.exit(
+                f"no digest for {member['package']}"
+                f" (image {image_name(member, args.mono)!r}) in {args.digests}"
+            )
         if digest:
             values = deep_merge(values, {"image": {"digest": digest}})
         chart_dir = stamp_chart(

@@ -76,7 +76,7 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 | [0042](adrs/adr-0042-agent-instruction-files.md) | Layered AGENTS.md for coding agents | accepted | docs, process |
 | [0043](adrs/adr-0043-release-notes.md) | Release notes as drafted GitHub releases | accepted | release, process |
 | [0044](adrs/adr-0044-sentence-per-line-markdown.md) | One sentence per line in Markdown, checked by rumdl | accepted | docs, process |
-| [0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md) | Publish dev charts on the mono image for continuous deployment | proposed | deploy, release |
+| [0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md) | Publish dev charts on the mono image for continuous deployment | accepted | deploy, release |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)

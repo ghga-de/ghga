@@ -40,16 +40,14 @@ def test_mono_keeps_the_member_executable():
     assert values["executable"] == "wps"
 
 
-def test_mono_run_pins_the_mono_digest(tmp_path, monkeypatch):
-    """A --mono run pins Python members to the mono digest, the front end to its own."""
+def _dev_run(tmp_path, monkeypatch, digests: dict) -> None:
+    """Generate the charts into tmp_path the way dev-images.yaml does."""
     demo = tmp_path / "ghga-demo"
     demo.mkdir()
     for name in ("Chart.yaml", "values.yaml"):
         shutil.copy(create_charts.DEMO_CHART / name, demo / name)
-    digests = tmp_path / "digests.json"
-    digests.write_text(
-        json.dumps({MONO_IMAGE: "sha256:mono", "data-portal": "sha256:portal"})
-    )
+    digests_file = tmp_path / "digests.json"
+    digests_file.write_text(json.dumps(digests))
     monkeypatch.setattr(create_charts, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(create_charts, "DEMO_CHART", demo)
     monkeypatch.setattr(
@@ -58,11 +56,19 @@ def test_mono_run_pins_the_mono_digest(tmp_path, monkeypatch):
         [
             *("create_charts.py", "--version", "0.0.0-dev.1.1", "--mono"),
             *("--chart-registry", "ghcr.io/ghga-de/ghga/charts", "--chart-suffix", ""),
-            *("--digests", str(digests)),
+            *("--digests", str(digests_file), "--require-digests"),
         ],
     )
-
     create_charts.main()
+
+
+def test_mono_run_pins_the_mono_digest(tmp_path, monkeypatch):
+    """A --mono run pins Python members to the mono digest, the front end to its own."""
+    _dev_run(
+        tmp_path,
+        monkeypatch,
+        {MONO_IMAGE: "sha256:mono", "data-portal": "sha256:portal"},
+    )
 
     def image(chart: str) -> dict:
         return yaml.safe_load((tmp_path / chart / "values.yaml").read_text())["image"]
@@ -71,3 +77,9 @@ def test_mono_run_pins_the_mono_digest(tmp_path, monkeypatch):
     assert image("data-portal")["digest"] == "sha256:portal"
     readme = (tmp_path / "wps" / "README.md").read_text()
     assert "oci://ghcr.io/ghga-de/ghga/charts/wps\n" in readme
+
+
+def test_require_digests_fails_on_a_missing_one(tmp_path, monkeypatch):
+    """A member whose image was not built stops the run instead of getting a tag."""
+    with pytest.raises(SystemExit, match="no digest for data-portal"):
+        _dev_run(tmp_path, monkeypatch, {MONO_IMAGE: "sha256:mono"})

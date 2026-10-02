@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-01
 tags: [deploy, release]
 related: [ADR-0027, ADR-0037, ADR-0038]
@@ -38,13 +38,13 @@ Every member chart already starts its service by that script (`command: [<packag
   `create_charts.py --mono` points every Python member chart at the `platform` image and leaves its command as it is.
   The front end keeps its own image.
 - **Version.**
-  Each run of `dev-images.yaml` is `0.0.0-dev.<run number>.<attempt>`, as chart version, `appVersion` and an extra image tag beside `:dev`.
+  Each run of `dev-images.yaml` is `0.0.0-dev.<run number>.<attempt>`, as chart version, `appVersion`, an extra image tag beside `:dev` and the platform version the running services report.
   SemVer compares numeric prerelease fields as numbers, so the newest merge is always the highest version and a CD tool following `>=0.0.0-0` picks it.
   The attempt makes a full re-run a new version: the mono build is not reproducible, so a re-run under the same version would change its digest without the cluster rolling out.
   The version is computed once per run, in a job of its own, so re-running only the failed jobs keeps it and the image tags and charts still agree.
 - **Digests.**
   The chart job takes the digests the image job just pushed and pins them in the charts, as the release lane does.
-  It fails if a chart is left without one, which is what a member whose image the job does not build would get.
+  `--require-digests` fails the generation if a chart is left without one, which is what a member whose image the job does not build would get.
 - **Scope.**
   Only the generated member charts are published, to `oci://ghcr.io/ghga-de/ghga/charts`.
   `aai`, `ghga-common` and `ghga-demo` are not; `ghga-common` is bundled into each chart.
@@ -60,7 +60,7 @@ Every member chart already starts its service by that script (`command: [<packag
   Switching a cluster to releases means changing the chart source, not only the version.
 - A run cancelled by a newer merge partway through the push leaves some charts at the older version until the newer run finishes.
   Each chart still pins a valid digest.
-- The run number restarts at 1 if `dev-images.yaml` is renamed or recreated, and versions would then go backwards; raising the `0.0.0` base in `DEV_VERSION` restores the order.
+- The run number restarts at 1 if `dev-images.yaml` is renamed or recreated, and versions would then go backwards; raising the `0.0.0` base in the `version` job restores the order.
 - Every merge adds one version per member chart and one image tag, and nothing prunes them yet.
 
 ### Alternatives
