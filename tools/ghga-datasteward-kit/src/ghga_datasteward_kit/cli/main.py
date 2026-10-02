@@ -20,17 +20,14 @@ from pathlib import Path
 import typer
 
 from ghga_datasteward_kit import catalog_accession_generator, loading
-from ghga_datasteward_kit.cli.file import cli as file_cli
 from ghga_datasteward_kit.cli.metadata import cli as metadata_cli
 from ghga_datasteward_kit.utils import (
-    DELETION_TOKEN,
     STEWARD_TOKEN,
     AuthorizationToken,
     TokenNotExistError,
 )
 
 cli = typer.Typer(no_args_is_help=True)
-cli.add_typer(file_cli, name="files", help="File related operations.")
 cli.add_typer(metadata_cli, name="metadata", help="Metadata related operations.")
 
 
@@ -120,13 +117,3 @@ def generate_steward_credentials(
 ):
     """Generate data steward credentials, save them into file and return hash together with file paths"""
     generate_specific_credentials(overwrite=overwrite, token=STEWARD_TOKEN)
-
-
-@cli.command()
-def generate_deletion_credentials(
-    overwrite: bool = typer.Option(
-        False, help="If specify, overwrite the existing credentials"
-    ),
-):
-    """Generate file deletion credentials, save them into file and return hash together with file paths"""
-    generate_specific_credentials(overwrite=overwrite, token=DELETION_TOKEN)
