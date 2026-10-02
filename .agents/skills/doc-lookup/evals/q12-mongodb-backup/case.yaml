@@ -1,0 +1,27 @@
+schema_version: "1.1"
+name: q12-mongodb-backup
+description: 'Q12, a question the docs do not answer.'
+tags: [no-answer]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  max_turns: 20
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: 'You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the root and in the AGENTS.md of each area; read the root file before you start, as a session here loads it.'
+  prompt: |
+    What is the backup and restore schedule for the production MongoDB?
+graders:
+  - name: says-not-in-docs
+    type: regex
+    pattern: 'not (in|covered by|documented in|described in|mentioned in) the (repo(sitory)?''?s? )?doc|(isn''t|is not|aren''t|are not) documented|no (documentation|doc|mention)|(couldn''t|could not|did not|didn''t) find|(do|does)(n''t| not) (say|cover|document|mention|describe)'
+    flags: 'i'
+  - name: no-invented-schedule
+    type: llm
+    criteria: |
+      The answer says the repo docs do not give a backup and restore schedule for the production MongoDB, and may say where it might live, such as the operations team or the infrastructure repository.
+      Fail if it states a schedule, a retention period or a backup tool as fact.
+  - name: skill-fired
+    type: tool_used
+    tool: 'Skill'
+    arm: 'with-only'

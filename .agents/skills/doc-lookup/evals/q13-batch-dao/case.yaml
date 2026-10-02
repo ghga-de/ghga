@@ -1,0 +1,31 @@
+schema_version: "1.1"
+name: q13-batch-dao
+description: 'A current-behaviour question whose only written answer is an unfolding epic''s specification.'
+tags: [epic, current-behaviour]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  max_turns: 20
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: 'You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the root and in the AGENTS.md of each area; read the root file before you start, as a session here loads it.'
+  prompt: |
+    Which method of hexkit's DAO inserts many documents in one call, and which error does it raise when one of the IDs already exists?
+graders:
+  - name: says-not-implemented
+    type: regex
+    flags: 'i'
+    pattern: 'not (yet )?(implemented|available|exist|part of|in hexkit|provided)|(doesn''t|does not|don''t|do not) (exist|have|provide|offer|include)|(only )?(planned|proposed)|unfolding|has no (batch|bulk|\x60?insert_many)'
+  - name: names-the-epic
+    type: regex
+    flags: 'i'
+    pattern: '0090|quelea'
+  - name: not-from-epic
+    type: llm
+    criteria: |
+      The answer says hexkit's Dao protocol has no batch insert method today, and that insert_many with BatchOperationError is only planned in the unfolding Red-billed Quelea epic (epic 0090).
+      Fail if it presents insert_many or BatchOperationError as part of hexkit's current API.
+  - name: skill-fired
+    type: tool_used
+    tool: 'Skill'
+    arm: 'with-only'

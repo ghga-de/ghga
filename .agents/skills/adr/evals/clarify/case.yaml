@@ -1,0 +1,46 @@
+schema_version: "1.1"
+name: clarify
+description: 'A rewording of ADR-0036 that keeps the decision: no amended field, no marker.'
+tags: [clarify]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: 'You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the root and in the AGENTS.md of each area; read the root file before you start, as a session here loads it.'
+  prompt: |
+    In ADR-0036, people misread this sentence: "The hook checks the members a commit touches; their dependents are CI's job."
+    Reword it so it is clear what the hook type-checks and what it leaves to CI.
+    The decision itself stays the same.
+graders:
+  - name: no-amended-field
+    type: regex
+    target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+    pattern: '^amended:'
+    flags: 'm'
+    match: 'not_contains'
+  - name: no-amended-marker
+    type: regex
+    target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+    pattern: '\*\*Amended'
+    match: 'not_contains'
+  - name: still-accepted
+    type: regex
+    target: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+    pattern: '^status: accepted$'
+    flags: 'm'
+  - name: no-new-adr
+    type: file_exists
+    path: 'docs/adrs/adr-0045-*.md'
+    exists: False
+  - name: scoped-edit
+    type: llm
+    focus: {source: file, path: docs/adrs/adr-0036-pre-commit-hooks.md}
+    criteria: |
+      The sentence about what the mypy hook checks is reworded and says the same thing as before: the hook type-checks the members a commit touches, and CI checks the members that depend on them.
+      No other passage of ADR-0036 is changed.
+  - name: skill-fired
+    type: tool_used
+    tool: 'Skill'
+    arm: 'with-only'

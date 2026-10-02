@@ -1,0 +1,31 @@
+schema_version: "1.1"
+name: q08-giraffe-scope
+description: 'Q8, a section deep in a 44 KB epic.'
+tags: [epic, large-file]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  max_turns: 20
+  timeout_seconds: 300
+  allowed_tools: [Read, Glob, Grep, Skill]
+  append_system_prompt: 'You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the root and in the AGENTS.md of each area; read the root file before you start, as a session here loads it.'
+  prompt: |
+    What does the Giraffe epic explicitly leave out of scope?
+graders:
+  - name: fact-1
+    type: regex
+    pattern: 'schemapack'
+    flags: 'i'
+  - name: fact-2
+    type: regex
+    pattern: 're-?accession'
+    flags: 'i'
+  - name: answer
+    type: llm
+    criteria: |
+      The answer lists the items of the Giraffe epic's "Not included" section: the schemapack services and migration, re-accessioning existing studies, entity-level deprecation, populating RS's Study.superseded_by_id, changes to ghga-event-schemas, changes to MASS, and a steward search that still sees superseded datasets.
+                Missing one or two items is acceptable; inventing items is not.
+  - name: skill-fired
+    type: tool_used
+    tool: 'Skill'
+    arm: 'with-only'

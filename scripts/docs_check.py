@@ -157,8 +157,10 @@ INDEX_EMPTY = "None at the moment.\n"
 SKILL_INDEX_FILE = "docs/agent-skills.md"
 SKILL_INDEX_MARKS = ("<!-- skill-index:start -->", "<!-- skill-index:end -->")
 
-# Test data that holds broken ADRs and references on purpose.
+# Test data that holds broken ADRs and references on purpose, and skill eval cases, which
+# name the ADRs a run is expected to create.
 REF_EXCLUDED = ("scripts/tests/test_docs_check.py",)
+REF_EXCLUDED_DIR = re.compile(r"(?:^|/)\.agents/skills/[^/]+/evals/")
 
 
 @dataclass
@@ -373,7 +375,7 @@ def check_references(
     numbers = {m.group(1) for n in adr_names if (m := FILE_NAME.match(n))}
     problems = []
     for rel in paths:
-        if rel in REF_EXCLUDED:
+        if rel in REF_EXCLUDED or REF_EXCLUDED_DIR.search(rel):
             continue
         try:
             text = (root / rel).read_text(encoding="utf-8")
