@@ -19,7 +19,7 @@ The [architecture overview](../architecture/overview.md) and the [journeys](../a
 
 - **`services/`** holds the deployable services; you change an API, an event consumer or a database model here.
   Most services run as a REST process and a consumer process from one codebase.
-- **`libs/`** holds the shared libraries, chief among them hexkit, the ports-and-adapters framework the services are built on, and ghga-service-commons, the chassis for the services: FastAPI server setup, authentication and authorization, HTTP utilities.
+- **`libs/`** holds the shared libraries, chief among them hexkit, the ports-and-adapters framework the services are built on, and ghga-service-commons, the functionality our services share: FastAPI server setup, authentication and authorization, HTTP utilities.
   A change here reaches every member that uses the library.
 - **`tools/`** holds the CLIs and jobs, such as `ghga-connector` for uploads and downloads and `ghga-datasteward-kit`.
 - **`frontend/data-portal/`** is the data portal.
