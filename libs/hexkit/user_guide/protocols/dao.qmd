@@ -109,9 +109,8 @@ The write operations are deliberately strict about existence.
 That makes accidental data loss loud instead of quiet.
 When "create or replace" is genuinely what you want, say so explicitly by calling `upsert`.
 
-`update` also guards against lost updates. Pass `precondition` as a mapping of field
-names to the values the stored resource must still have, and the provider checks and
-writes atomically, raising `PreconditionFailedError` if another writer got there first.
+`update` also guards against lost updates.
+Pass `precondition` as a mapping of field names to the values the stored resource must still have, and the provider checks and writes atomically, raising `PreconditionFailedError` if another writer got there first.
 The ID field is implied, so leave it out:
 
 ```python
@@ -137,11 +136,10 @@ await book_dao.delete(book.id)
 
 ## Finding Resources
 
-Beyond lookups by ID, DAOs support searching by field values. Both find methods take a
-filter as the `filter_` argument: a mapping from field names of the DTO model to the
-values a matching resource must have. Multiple entries must all match (a logical AND).
-The argument used to be called `mapping`, which still works until hexkit v11 but emits
-a `DeprecationWarning`:
+Beyond lookups by ID, DAOs support searching by field values.
+Both find methods take a filter as the `filter_` argument: a mapping from field names of the DTO model to the values a matching resource must have.
+Multiple entries must all match (a logical AND).
+The argument used to be called `mapping`, which still works until hexkit v11 but emits a `DeprecationWarning`:
 
 ```python
 # Exactly one match expected:
@@ -158,14 +156,10 @@ all_books = await book_dao.find_all(filter_={}).to_list()
 `find_one` enforces that exactly one resource matches and raises `NoHitsFoundError` or `MultipleHitsFoundError` otherwise.
 Use it when your logic depends on uniqueness; use `find_all` when zero or many hits are acceptable.
 
-Filter keys are validated against the DTO model, so a typo in a field name raises
-`InvalidMappingError` instead of silently matching nothing. Pass filter values
-using the same Python types as the corresponding model fields: a `UUID` for a UUID
-field, a `datetime` for a datetime field, and so on. Whether richer values (nested
-structures, or query operators expressed as dictionaries) are supported is up to the
-provider. The [MongoDB provider](../providers/mongodb.qmd#queries-and-filters), for
-example, passes dictionary values through to MongoDB's query language, enabling range
-and pattern queries.
+Filter keys are validated against the DTO model, so a typo in a field name raises `InvalidMappingError` instead of silently matching nothing.
+Pass filter values using the same Python types as the corresponding model fields: a `UUID` for a UUID field, a `datetime` for a datetime field, and so on.
+Whether richer values (nested structures, or query operators expressed as dictionaries) are supported is up to the provider.
+The [MongoDB provider](../providers/mongodb.qmd#queries-and-filters), for example, passes dictionary values through to MongoDB's query language, enabling range and pattern queries.
 
 ### Pagination and Sorting
 
@@ -193,11 +187,9 @@ books = await result.to_list()   # collect everything into a list
 total = await result.total_count()  # matches ignoring skip and limit
 ```
 
-`total_count()` reports how many resources match the filter in total, deliberately
-ignoring `skip` and `limit`, which is exactly the number you need to render pagination
-controls. It runs an extra count query on first call and caches the answer. Keep in
-mind that iterating (or calling `to_list()`) consumes the iterator, so collect the
-results once and reuse the list.
+`total_count()` reports how many resources match the filter in total, deliberately ignoring `skip` and `limit`, which is exactly the number you need to render pagination controls.
+It runs an extra count query on first call and caches the answer.
+Keep in mind that iterating (or calling `to_list()`) consumes the iterator, so collect the results once and reuse the list.
 
 ## Error Handling
 
