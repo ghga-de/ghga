@@ -21,7 +21,7 @@ The [architecture overview](../architecture/overview.md) and the [journeys](../a
   Most services run as a REST process and a consumer process from one codebase.
 - **`libs/`** holds the shared libraries, chief among them hexkit, the ports-and-adapters framework the services are built on, and ghga-service-commons, the functionality our services share: FastAPI server setup, authentication and authorization, HTTP utilities.
   A change here reaches every member that uses the library.
-- **`tools/`** holds the CLIs and jobs, such as `ghga-connector` for uploads and downloads and `ghga-datasteward-kit`.
+- **`tools/`** holds the CLIs and jobs, such as `ghga-connector` for uploads and downloads and `ghga-validator`, which checks submitted metadata against the GHGA metadata model.
 - **`frontend/data-portal/`** is the data portal.
 - **`deploy/`** holds the Helm charts.
   Most are generated from the members' metadata, so you change the generator or a member's `chart-values.yaml`, not the chart.
