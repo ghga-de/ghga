@@ -244,7 +244,7 @@ class RDUBManager(RDUBManagerPort):
             "max_size": max_size,
         }
 
-        # See which fields in the upate are different from the current values
+        # See which fields in the update are different from the current values
         changed_fields = {
             field: value
             for field, value in update.items()
