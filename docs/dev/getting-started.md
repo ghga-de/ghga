@@ -8,7 +8,7 @@ The commands and rules live in the pages it links.
 
 The repo holds GHGA's backend services, the libraries they share, the command-line tools for data stewards and submitters, and the Angular data portal.
 From it, CI builds the platform's container images and Helm charts, and the wheels of the libraries and tools published on PyPI.
-The same charts run the whole platform on a local kind cluster, as a demo and as the integration test bed.
+The same charts run the whole platform on a local Kubernetes cluster, created with [kind](https://kind.sigs.k8s.io/) (Kubernetes in Docker), as a demo and as the integration test bed.
 
 The services have a hexagonal architecture (ports and adapters), built on our hexkit library: the core logic depends only on interfaces, the ports, and adapters implement them for Kafka, MongoDB and S3.
 They exchange events over Kafka, each keeps its own MongoDB database, and files live in S3 buckets.
@@ -25,7 +25,7 @@ The [architecture overview](../architecture/overview.md) and the [journeys](../a
 - **`frontend/data-portal/`** is the data portal, the repo's only web front end: an Angular app where users browse and request access to datasets, and data stewards manage access requests, users and upload boxes.
 - **`deploy/`** holds the Helm charts.
   Most are generated from the members' metadata, so you change the generator or a member's `chart-values.yaml`, not the chart.
-- **`testbed/`** is the BDD and Playwright suite that runs against the platform on kind.
+- **`testbed/`** is the BDD and Playwright suite that runs against the platform on the local cluster.
 - **`docker/`** and **`scripts/`** hold the shared Dockerfile and the repo's own tooling: code generation, affected targets, checks.
 - **`docs/`** holds the architecture documents, the ADRs, the conventions and the epics.
 
@@ -50,7 +50,7 @@ It has its own `pnpm` workspace and lockfile, and the `just fe-*` recipes drive 
   - `just affected` lists the members your branch reaches, compared with `origin/dev`.
   - `just fe-dev` starts the data portal against mocked APIs, with no backend.
 
-  To run the whole platform, `just demo-images-mono` and `just up mono` build it and start it on kind ([demo walkthrough](../../README.md#run-the-demo-locally)).
+  To run the whole platform, `just demo-images-mono` and `just up mono` build it and start it on the local cluster ([demo walkthrough](../../README.md#run-the-demo-locally)).
 - **Branch from `dev` and open the pull request against `dev`**, where it is squash-merged; `main` carries the latest release and takes hotfixes only.
   Branch names, pull request titles and commit messages follow one [grammar](../conventions.md#names-branches-prs-commits).
 - **Let the pre-commit hooks run.**
@@ -59,7 +59,7 @@ It has its own `pnpm` workspace and lockfile, and the `just fe-*` recipes drive 
 
 ## Ports and networking
 
-The dev container shares the host's network (`--net=host`), and kind runs inside the container's own Docker.
+The dev container shares the host's network (`--net=host`), and the local cluster runs inside the container's own Docker.
 So a port the demo or a dev server opens in the container is the same port on your computer, and `.devcontainer/devcontainer.json` sets no `forwardPorts`.
 Forwarding a port as well creates a loop that hangs the connection; leave VS Code's port forwarding off for these ports.
 
@@ -76,7 +76,7 @@ Because of these fixed ports, only one checkout or worktree at a time can run th
 Three problems come up most often:
 
 - **Docker Desktop** forwards host-network ports only with *Settings → Resources → Network → Enable host networking* turned on; OrbStack and Docker Engine on Linux need nothing ([devcontainer.json](../../.devcontainer/devcontainer.json)).
-- **No network from inside kind** after a VM restart, on hosts whose firewall drops forwarded traffic: run `just net-fix`.
+- **No network from inside the cluster** after a VM restart, on hosts whose firewall drops forwarded traffic: run `just net-fix`.
 - **`context "kind-ghga" does not exist`** after a container rebuild: run `just cluster`, or see the [README](../../README.md#run-the-demo-locally).
 
 ## How a change is tested
@@ -88,7 +88,7 @@ Each level is defined in the root [AGENTS.md](../../AGENTS.md#test-levels) and t
 - **Consumers of a library:** after a change under `libs/`, run `just affected` and test what it lists.
 - **Chart tests** (`just charts-test`, `just demo-template`) render the charts; run them for any change under `deploy/`.
 - **Front-end tests** are Vitest unit tests (`just fe-test`) and Playwright smoke tests against mocked APIs ([data portal README](../../frontend/data-portal/README.md#test-levels)).
-- **The test bed** (`just testbed`) runs the whole platform on kind, and is the only level that checks a flow across services.
+- **The test bed** (`just testbed`) runs the whole platform on the local cluster, and is the only level that checks a flow across services.
   It is slow to set up; run it locally when your change crosses services, following the [walkthrough](../../README.md#run-the-test-bed-locally).
 
 CI runs the same levels: `ci.yaml` lints the whole repo and tests the affected members, and `integration.yaml` runs the test bed on every pull request with relevant changes.
