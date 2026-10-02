@@ -12,7 +12,7 @@ The same charts run the whole platform on a local kind cluster, as a demo and as
 
 The services have a hexagonal architecture (ports and adapters), built on our hexkit library: the core logic depends only on interfaces, the ports, and adapters implement them for Kafka, MongoDB and S3.
 They exchange events over Kafka, each keeps its own MongoDB database, and files live in S3 buckets.
-The data portal and the CLIs call the services' REST APIs through one gateway, Envoy Gateway in the demo.
+The data portal and the CLIs call the services' REST APIs through one gateway: Istio in staging and production, Envoy Gateway in the demo and the test bed ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)).
 The [architecture overview](../architecture/overview.md) and the [journeys](../architecture/metadata-and-file-journeys.md) have the details.
 
 ## How it is organised
