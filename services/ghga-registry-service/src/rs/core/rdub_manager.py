@@ -492,8 +492,13 @@ class RDUBManager(RDUBManagerPort):
         Raises:
             BoxVersionError: Another request changed a field this one wants to write,
                 or the write kept losing its race with `remote_committed` unset.
+                In this case the request should be retried after fetching the latest
+                box data.
             BoxUpdateConflictError: The write kept losing its race after an external
                 commit and the conflict can't be resolved by merging the changes.
+                In this case, the request should also be retried after fetching the
+                latest box data, and any linked operations in UCS should be considered
+                idempotent and safe for retrying.
         """
         changed_fields = {
             field: getattr(updated_box, field)
