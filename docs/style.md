@@ -63,7 +63,7 @@ Agents read these files as well as people, so every extra paragraph costs contex
 | Pull request description | Up to 3 short paragraphs, about 150 words |
 | Commit message body | 3 to 5 bullets, per the [conventions](conventions.md#names-branches-prs-commits) |
 | Code comment | One line, a few at most |
-| ADR | About 500 words; the Summary alone about 80. Long analysis goes into an architecture document that the ADR links to |
+| ADR | About 500 words; the Summary alone about 120, at most 150. Long analysis goes into an architecture document that the ADR links to |
 | Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture documents instead of restating them |
 | Architecture document | As long as the subject needs; open with a summary of up to 10 lines and use headings, so a reader can load a single section |
 
