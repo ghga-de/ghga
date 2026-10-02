@@ -52,6 +52,8 @@ claude-backup/
 # and personal instructions: a committed CLAUDE.local.md would switch AGENTS.md off
 **/CLAUDE.local.md
 **/.claude/rules/*.local.md
+# skill eval results (`just skill-eval`): local reports, quoted in the PR instead
+.agents/skills/*/evals/results/
 # and the local Copilot settings
 .github/copilot/settings.local.json
 

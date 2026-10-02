@@ -136,6 +136,28 @@ hooks-update: _guard
 docs-check *args: _guard
     uv run python scripts/docs_check.py {{args}}
 
+# A root skill's eval suite in .agents/skills/<name>/evals/, each case run with and without
+# the skill in a pinned clone that scripts/skill-eval-scaffold.sh prepares
+# (docs/agent-instructions.md). A pass is due when the skill's SKILL.md changes, and for
+# every suite when SKILL_EVAL_MODEL moves to a new default model. The report stays local;
+# extra arguments go to `claude plugin eval`, e.g. `--case new-adr --runs 1`.
+SKILL_EVAL_MODEL := "claude-opus-5-5"
+
+# Run a root skill's eval suite and print its scores, e.g. `just skill-eval adr`.
+skill-eval name *args: _guard-host
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out=".agents/skills/{{name}}/evals/results/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    claude plugin eval ".agents/skills/{{name}}" --model "{{SKILL_EVAL_MODEL}}" \
+        --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
+        --concurrency 4 --max-cost-usd 20 --output-dir "$out" {{args}} || status=$?
+    echo "== {{name}} on {{SKILL_EVAL_MODEL}}: score and turns per run, with / without"
+    jq -r 'def mean(f): if length == 0 then "-" else (map(f) | add / length * 100 | round / 100) end;
+        (.cases[] | [.name, (.arms.with | mean(.score)), (.arms.without // [] | mean(.score)),
+            (.arms.with | mean(.turns)), (.arms.without // [] | mean(.turns))] | @tsv),
+        "cost-usd\t\(.costUsd * 100 | round / 100)"' "$out/aggregate-result.json" | column -t
+    exit "${status:-0}"
+
 # The same check the service-docs pre-commit hook runs; `--check` writes nothing.
 # Regenerate each service's config schema, example config, README parameters and OpenAPI spec.
 service-docs *args: _guard
