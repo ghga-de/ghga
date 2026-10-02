@@ -141,11 +141,8 @@ Under the hood, `update` and `upsert` replace the whole document; partial update
 
 ### Queries and Filters
 
-The find methods take a filter as the `filter_` argument: a mapping from field names to
-expected values, all of which must match (a logical AND). Pass values with the same
-Python types as on your model: a `UUID` for a UUID field, a timezone-aware `datetime`
-for a datetime field, and so on, since matching happens against the natively stored
-values:
+The find methods take a filter as the `filter_` argument: a mapping from field names to expected values, all of which must match (a logical AND).
+Pass values with the same Python types as on your model: a `UUID` for a UUID field, a timezone-aware `datetime` for a datetime field, and so on, since matching happens against the natively stored values:
 
 ```python
 # Exactly one hit expected (raises NoHitsFoundError / MultipleHitsFoundError):
@@ -156,9 +153,8 @@ async for book in book_dao.find_all(filter_={"author": "Martin Fowler"}):
     print(book.title)
 ```
 
-Filter keys are validated against the DTO model, and unknown field names raise an
-`InvalidMappingError`. Two MongoDB-specific extensions pass through this
-validation:
+Filter keys are validated against the DTO model, and unknown field names raise an `InvalidMappingError`.
+Two MongoDB-specific extensions pass through this validation:
 
 - **Dot notation** reaches into nested documents.
   Only the top-level field is validated against the model: `{"address.city": "Tübingen"}`.
