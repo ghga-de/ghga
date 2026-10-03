@@ -2,12 +2,17 @@ deployment:
   enabled: true
 
 cronSchedule: "0 * * * *"
+concurrencyPolicy: Allow
+activeDeadlineSeconds: 600
 
 cronjobs:
   cleanup:
     enabled: true
     schedule: "0 3 * * *"
     successfulJobsHistoryLimit: 2
+    concurrencyPolicy: Replace
+    activeDeadlineSeconds: 3000
+    startingDeadlineSeconds: 300
     executable: cleanup-tool
     executableArgs:
       - "--dry-run"

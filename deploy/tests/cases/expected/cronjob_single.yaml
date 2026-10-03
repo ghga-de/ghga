@@ -4,6 +4,7 @@ metadata:
 spec:
   schedule: "0 * * * *"
   successfulJobsHistoryLimit: 5
+  concurrencyPolicy: Forbid
 
 command:
 - sh
