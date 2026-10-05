@@ -15,10 +15,12 @@
 
 """Collection of all config classes."""
 
+from ghga_datasteward_kit.file_deletion import FileDeletionConfig
 from ghga_datasteward_kit.loading import LoadConfig
 from ghga_datasteward_kit.metadata import MetadataConfig
 
 CONFIG_CLASSES = {
+    "purge": FileDeletionConfig,
     "metadata": MetadataConfig,
     "load": LoadConfig,
 }
