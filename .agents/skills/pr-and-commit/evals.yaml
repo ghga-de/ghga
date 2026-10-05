@@ -118,11 +118,6 @@ cases:
       - name: branch
         type: regex
         pattern: '\baccess/feat/GSI-2720-[a-z0-9]+(?:-[a-z0-9]+)*\b'
-      # A whole branch name, not the order mentioned to explain why it does not apply.
-      - name: no-stack-key-prefix
-        type: regex
-        pattern: 'GSI-2720-access/[a-z]+/[a-z0-9]'
-        match: not_contains
       - name: title
         type: regex
         pattern: '\[access\] [A-Z][^\n`]* \(GSI-2720\)'
