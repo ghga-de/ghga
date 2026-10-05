@@ -208,6 +208,16 @@ jobs:
             # from.
             uv build --out-dir "dist/$package" "$path"
             ls -l "dist/$package"
+            # The tests run in the monorepo: setuptools would ship only tests/test*.py, a
+            # suite that cannot run, so each member's MANIFEST.in prunes them. Only a
+            # top-level tests/ matches; test data inside the package (hexkit's test_files)
+            # stays. No `grep -q`: it would close the pipe early and fail tar under pipefail.
+            shipped=$(tar -tzf "dist/$package"/*.tar.gz | grep '^[^/]*/tests/' || true)
+            if [ -n "$shipped" ]; then
+              echo "::error::$package: the sdist contains tests/; add 'prune tests' to $path/MANIFEST.in"
+              echo "$shipped" | head -5
+              exit 1
+            fi
             uvx twine check "dist/$package"/*
             echo "::endgroup::"
           done

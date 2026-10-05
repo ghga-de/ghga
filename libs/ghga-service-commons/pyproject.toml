@@ -71,11 +71,6 @@ where = [
     "src",
 ]
 
-[tool.pytest.ini_options]
-minversion = "9.0"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
-
 [tool.coverage.paths]
 source = [
     "src",

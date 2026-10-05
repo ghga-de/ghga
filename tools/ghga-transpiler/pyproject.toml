@@ -56,10 +56,6 @@ where = [
     "*.yaml",
 ]
 
-[tool.pytest.ini_options]
-minversion = "8.0"
-asyncio_mode = "strict"
-
 [tool.coverage.paths]
 source = [
     "src",

@@ -169,15 +169,15 @@ skill-eval name *args: _guard
 service-docs *args: _guard
     uv run python scripts/service_docs.py {{args}}
 
-# Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
+# Each member runs as its own pytest: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
-# collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the
-# members' own `[tool.pytest.ini_options]` anyway (auth-service's `testpaths`, say). That
-# collision is why a bare tier ("libs", "services", "tools") is swept member-by-member too,
-# not handed to pytest as one target.
+# collision scripts/typecheck.py works around for mypy). That collision is why a bare tier
+# ("libs", "services", "tools") is swept member-by-member too, not handed to pytest as one
+# target. Every run still finds the one pytest config in the root pyproject.toml, so the
+# rootdir is the repo root.
 # So the sweep runs one pytest per member, from the member directory, exactly as CI's
-# check-python matrix does; scripts/ and deploy/ belong to no member and share the root
-# rootdir, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
+# check-python matrix does; scripts/ and deploy/ belong to no member and run from the
+# root, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
 # member should not hide the state of the other 31.
 #
 #   just test                                    # every member, then the non-member suites
@@ -351,7 +351,7 @@ published-combo member python="3.12":
     uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" \
       -r "$work/test-requirements.txt"
 
-    # cwd = the member directory, as in CI: each member is its own pytest rootdir, and the
+    # cwd = the member directory, as in CI: each member runs as its own pytest, and the
     # src/ layout means the tests import the installed package, not the working tree.
     echo "== running {{member}} tests on {{python}} (env: $work/venv)"
     cd "{{member}}"

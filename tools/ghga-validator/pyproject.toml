@@ -49,10 +49,6 @@ where = [
     "src",
 ]
 
-[tool.pytest.ini_options]
-minversion = "7.1"
-asyncio_mode = "strict"
-
 [tool.coverage.paths]
 source = [
     "src",
