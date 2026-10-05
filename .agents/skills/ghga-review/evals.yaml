@@ -3,7 +3,7 @@
 # `claude plugin eval`. A case takes the execution fields below unless it sets its own,
 # and a grader given by name is one of the shared graders.
 # Each case reviews a change of its own: the scaffold applies its `patch` to the pin and
-# commits it on `branch`, off a local `dev` at the pin. The skill is user-invoked, so the
+# commits it on `branch`, off an `origin/dev` at the pin. The skill is user-invoked, so the
 # prompt starts it by its command; the arm without it gets the same words.
 
 execution:
@@ -16,7 +16,7 @@ execution:
     root and in the AGENTS.md of each area; read the root file before you start, as a
     session here loads it.
   prompt: |
-    /ghga-review Review the change on this branch against `dev` before I open the PR.
+    /ghga-review Review the change on this branch before I open the PR.
 
 graders:
   # A finding line in the skill's format, anywhere in the reply.

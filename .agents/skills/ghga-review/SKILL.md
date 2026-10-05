@@ -11,7 +11,8 @@ Run both before asking a person for review.
 
 ## Gather
 
-1. Find the change: `git diff dev...HEAD` and `git log dev..HEAD` for a branch, `gh pr view <n> --json title,headRefName,body` and `gh pr diff <n>` for a PR.
+1. Find the change: for a PR, `gh pr view <n> --json title,headRefName,baseRefName,body` and `gh pr diff <n>`.
+   For a branch, diff against its base: `git diff <base>...HEAD` and `git log <base>..HEAD`, where the base is `origin/dev`, `origin/main` for a hotfix, or the branch below it in a stack.
 2. Read the root `AGENTS.md` and the `AGENTS.md` of every area the diff touches, `docs/style.md`, and the names section of `docs/conventions.md`.
 3. If the branch or title names a YouTrack key or an epic the session can read, compare the change with what it asks for.
 

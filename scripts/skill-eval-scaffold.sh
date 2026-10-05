@@ -11,8 +11,8 @@
 # network, so the .venv is synced here from the warm uv cache; linking the main clone's
 # .venv instead would let `uv run` rewrite it for the clone's paths.
 #
-# Given a patch and a branch name, it also commits the patch on that branch, off a local
-# `dev` at the pin, so that a case can review or describe a change of its own. Such a clone
+# Given a patch and a branch name, it also commits the patch on that branch, off an
+# `origin/dev` at the pin, so that a case can review or describe a change of its own. Such a clone
 # is repacked to hold its own objects (about 60 MB, a second): the sandbox of a run cannot
 # read the main clone's, so `git diff` would fail.
 set -euo pipefail
@@ -36,7 +36,7 @@ git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "eval: remo
 if [[ $# -eq 2 ]]; then
     git repack -a -d -q
     rm .git/objects/info/alternates
-    git branch --force dev
+    git update-ref refs/remotes/origin/dev HEAD
     git checkout --quiet -b "$2"
     git apply --index "$1"
     git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "wip"

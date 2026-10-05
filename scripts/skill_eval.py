@@ -5,7 +5,8 @@ A suite is one file, .agents/skills/<name>/evals.yaml. The runner wants a direct
 case with its scaffold script inside, so `expand` writes them to the gitignored
 .agents/skills/<name>/evals/, each case with a symlink to scripts/skill-eval-scaffold.sh.
 A case with a `patch` gets a scaffold of its own instead, which runs the shared one with
-the patch and the case's `branch`, so the case starts with that change on that branch.
+the patch and the case's `branch`, so the case starts with that change on that branch,
+off an `origin/dev` at the pin.
 `collect` copies each run's trace into the results, removes the run's kept workspace, and
 prints the score and turns of each case with and without the skill.
 
