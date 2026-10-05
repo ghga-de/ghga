@@ -72,3 +72,8 @@ The [PR template](../../.github/pull_request_template.md) asks for the checks an
 Before you ask a person for review, run `/ghga-review`, which checks the change against the written rules, and the built-in `/code-review`, which looks for bugs.
 `/pr-and-commit` drafts branch names, PR titles and descriptions, replies to review comments and, before you squash, the merge commit, which GitHub's prefill never gets right.
 Credit an agent in the PR description as the [conventions](../conventions.md#names-branches-prs-commits) say, never with a `Co-authored-by:` trailer.
+
+## Delivery
+
+`/release <name> <version>`, such as `/release ghga 15.4.0`, works out the tag and its branch, runs the checks before it, and stops for your go before each step that cannot be undone: pushing the tag and dispatching the publish ([releases.md](../releases.md)).
+Publishing the release notes stays with you, since agents may not edit a release.
