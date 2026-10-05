@@ -38,6 +38,7 @@ Read the first failure: the features after it fail on states it never set.
 1. **"not every deployment is available"** at the start: `just logs` lists the deployments, `just logs <service>` follows one.
    A `MigrationStepError` there after a restart is no code bug: the suite's clean slate removes the migration records, so a restarted service re-runs its migrations over migrated data.
    Run `just testbed-reset`, and do not touch the migration.
+   `just testbed-up` on such a cluster waits its 15 minutes for the same pods and fails, so reset first.
 2. **A step timed out waiting for a state:** the wait names the service that owns the state.
    Run `just logs` for it and for the services before it in the flow; uploads pass the connector, UCS, DHFS, FIS and EKSS, downloads WPS, WKVS and DCS, metadata DSKit, metldata and MASS.
    Fix the cause, and never raise the timeout: the upload waits already allow 60 s against the 2 s DHFS poll.
@@ -48,6 +49,7 @@ Read the first failure: the features after it fail on states it never set.
    `just testbed-reset` drops every database, the states included, so after it run the suite from the start, or every feature from 010 up to yours, never one feature alone.
 5. **A locator timeout in a browser step:** record a trace before you touch a selector, `TB_TRACE=1` for the failed tests or `TB_TRACE=all` when the failing test's own trace looks innocent, since the browser session is shared and an earlier test may be the cause.
    `just testbed-trace <name>` serves it on port 9323.
+   For a fault in what the portal renders, `playwright-cli` on the live portal is cheaper than reading a trace, but it cannot see the run's browser session; setup in [references/playwright-cli.md](references/playwright-cli.md).
 6. **Feature 110 fails while `just fe-dev` runs:** the dev server holds port 8080, so the lox24 port-forward fails without a message; stop the dev server.
 7. **EKSS-backed steps fail after Vault restarted:** dev-mode Vault forgets the secrets EKSS stored, so a scoped run of a later feature such as 420 fails; run from 010.
 
