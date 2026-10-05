@@ -26,9 +26,24 @@ class FakeAccessionRegistry:
         """Initialize with counter to generate predictable accessions."""
         self._counter = 1
 
-    def get_accession(self, *, resource_type: str) -> str:
-        """Generates and registers a new accession for a resource of the specified type."""
-        accession = f"generated_{resource_type.lower()}_accession{self._counter}"
+    def is_study_class(self, class_name: str) -> bool:
+        """Tell whether the given class is the study class."""
+        return class_name == "Study"
+
+    def get_study_accession(self, *, predecessor_pid: str | None = None) -> str:
+        """Generate the PID of a study."""
+        return "generated_study_pid"
+
+    def get_accession(
+        self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
+    ) -> str:
+        """Generate the accession of a resource of the specified class in a study."""
+        if self.is_study_class(class_name):
+            return study_pid
+
+        accession = (
+            f"{study_pid}.generated_{class_name.lower()}_accession{self._counter}"
+        )
         self._counter += 1
 
         return accession
@@ -38,10 +53,14 @@ def test_generate_accession_map():
     """Test generating an accession map for a given content."""
     accession_registry = FakeAccessionRegistry()
     content = {
+        "study_anchor": [{"alias": "test_study"}],
         "class1_anchor": [{"alias": "test_alias1"}],
         "class2_anchor": [{"alias": "test_alias2"}, {"alias": "test_alias3"}],
     }
     anchor_points_by_target = {
+        "Study": AnchorPoint(
+            root_slot="study_anchor", target_class="Study", identifier_slot="alias"
+        ),
         "Class1": AnchorPoint(
             root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
         ),
@@ -57,10 +76,13 @@ def test_generate_accession_map():
         "class3_anchor": {"test_alias3": "existing_class3_accession2"},
     }
     expected_accession_map = {
-        "class1_anchor": {"test_alias1": "generated_class1_accession1"},
+        "study_anchor": {"test_study": "generated_study_pid"},
+        "class1_anchor": {
+            "test_alias1": "generated_study_pid.generated_class1_accession1"
+        },
         "class2_anchor": {
             "test_alias2": "existing_class2_accession1",
-            "test_alias3": "generated_class2_accession2",
+            "test_alias3": "generated_study_pid.generated_class2_accession2",
         },
     }
 
