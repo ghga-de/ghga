@@ -222,16 +222,16 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 log.error(authorization_error)
                 raise authorization_error
 
-        mapping: dict[str, Any] = {}
+        filter_: dict[str, Any] = {}
         if user_id is not None:
-            mapping["user_id"] = user_id
+            filter_["user_id"] = user_id
         if dataset_id is not None:
-            mapping["dataset_id"] = dataset_id
+            filter_["dataset_id"] = dataset_id
         if status is not None:
-            mapping["status"] = status
+            filter_["status"] = status
 
         requests = [
-            request async for request in self._request_dao.find_all(mapping=mapping)
+            request async for request in self._request_dao.find_all(filter_=filter_)
         ]
 
         # latests requests should be served first
@@ -362,7 +362,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         dataset_id = dataset.id
 
         async for request in self._request_dao.find_all(
-            mapping={"dataset_id": dataset_id}
+            filter_={"dataset_id": dataset_id}
         ):
             if request.status == AccessRequestStatus.PENDING:
                 update = {
@@ -397,7 +397,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             raise dataset_not_found_error from error
 
         async for request in self._request_dao.find_all(
-            mapping={"dataset_id": dataset_id}
+            filter_={"dataset_id": dataset_id}
         ):
             if request.status == AccessRequestStatus.PENDING:
                 update = {

@@ -153,10 +153,10 @@ async def test_mongodb_timeout():
             await dao.get_by_id(resource.id)
 
         with pytest.raises(DbTimeoutError):
-            await dao.find_one(mapping={"id": str(resource.id)})
+            await dao.find_one(filter_={"id": str(resource.id)})
 
         with pytest.raises(DbTimeoutError):
-            [hit async for hit in dao.find_all(mapping={})]
+            [hit async for hit in dao.find_all(filter_={})]
 
         with pytest.raises(DbTimeoutError):
             await dao.update(resource)
