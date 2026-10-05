@@ -143,10 +143,11 @@ cases:
         type: regex
         target: {source: file, path: scripts/agent_hooks/guard_generated.py}
         pattern: notebook_path
+      # The limit is for the prose: a checklist line of the template counts as one word.
       - name: at-most-150-words
         type: regex
         target: {source: file, path: PR_BODY.md}
-        pattern: '^\s*(?:\S+\s+){0,149}\S*\s*$'
+        pattern: '^\s*(?:- \[[ xX]\] [^\n]*(?:\n|$)\s*|\S+\s+){0,152}\S*\s*$'
       # A line that runs on into the next: GitHub would show the break.
       - name: one-line-per-paragraph
         type: regex
