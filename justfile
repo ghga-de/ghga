@@ -442,6 +442,12 @@ fe-format-check:
 fe-dev:
     cd frontend/data-portal && node run.js --dev
 
+# For what only a deployment shows: the optimized build and the sws.toml headers, on
+# http://localhost:8080. The production build starts no MSW mocks, so API calls fail.
+# Build the data-portal for production and serve it with static-web-server, as deployed.
+fe-prod: fe-build
+    cd frontend/data-portal && node run.js
+
 # Run the data-portal against a real backend (default: staging) instead of mocks.
 fe-dev-backend:
     cd frontend/data-portal && node run.js --dev --with-backend

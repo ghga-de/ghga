@@ -260,8 +260,9 @@ jobs:
           # (justfile recipes, .devcontainer/post-create.sh, scripts/migration, testbed),
           # dig for the container's several competing sources of name resolution. dig
           # arrives via docker-in-docker too, so this also catches that feature dropping
-          # it. One at a time: `command -v a b c` exits 0 even when some are missing.
-          for t in fd bat rg jq shellcheck shfmt dig; do command -v "$t"; done
+          # it. static-web-server serves the data portal's production build (`just fe-prod`).
+          # One at a time: `command -v a b c` exits 0 even when some are missing.
+          for t in fd bat rg jq shellcheck shfmt dig static-web-server; do command -v "$t"; done
           # docker/Dockerfile uses `RUN --mount=type=cache`, so the image builds the repo
           # publishes depend on BuildKit being available, not just a docker CLI.
           docker buildx version

@@ -181,7 +181,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 | Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
 | Parallel work | `wt <branch> [base]`, `wt-rm <name>` |
 | Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `service-docs` |
-| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
+| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-prod`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
 | Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix`, `logs [name]` |
