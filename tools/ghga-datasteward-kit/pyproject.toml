@@ -20,15 +20,13 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ghga_datasteward_kit"
-version = "5.4.2"
+version = "6.0.0"
 description = "GHGA Data Steward Kit - A utils package for GHGA data stewards."
 license = "Apache-2.0"
 dependencies = [
-    "crypt4gh >=1.8.6, <2",
-    "hexkit[s3] >=9.0.0",
     "ghga-transpiler >=2.1.2, <3",
     "metldata >=4.2.1, <5",
-    "ghga-service-commons[transports,crypt] >=8.0.0, <9",
+    "ghga-service-commons[http] >=8.0.0, <9",
 ]
 
 [project.urls]

@@ -1469,22 +1469,18 @@ requires-dist = [
 
 [[package]]
 name = "ghga-datasteward-kit"
-version = "5.4.2"
+version = "6.0.0"
 source = { editable = "tools/ghga-datasteward-kit" }
 dependencies = [
-    { name = "crypt4gh" },
-    { name = "ghga-service-commons", extra = ["crypt", "transports"] },
+    { name = "ghga-service-commons", extra = ["http"] },
     { name = "ghga-transpiler" },
-    { name = "hexkit", extra = ["s3"] },
     { name = "metldata" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "crypt4gh", specifier = ">=1.8.6,<2" },
-    { name = "ghga-service-commons", extras = ["transports", "crypt"], editable = "libs/ghga-service-commons" },
+    { name = "ghga-service-commons", extras = ["http"], editable = "libs/ghga-service-commons" },
     { name = "ghga-transpiler", editable = "tools/ghga-transpiler" },
-    { name = "hexkit", extras = ["s3"], editable = "libs/hexkit" },
     { name = "metldata", editable = "libs/metldata" },
 ]
 

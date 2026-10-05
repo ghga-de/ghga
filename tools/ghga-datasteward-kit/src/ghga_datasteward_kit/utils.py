@@ -15,13 +15,11 @@
 
 """Utility functions"""
 
-import logging
 from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
 from typing import TypeVar
 
-import httpx2
 import yaml
 from pydantic_settings import BaseSettings
 
@@ -31,8 +29,6 @@ DELETION_TOKEN_PATH = Path.home() / ".ghga_file_deletion_token.txt"
 DELETION_TOKEN_HASH_PATH = Path.home() / ".ghga_file_deletion_token_hash.txt"
 TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"
 TOKEN_HASH_PATH = Path.home() / ".ghga_data_steward_token_hash.txt"
-
-LOG = logging.getLogger("utils")
 
 ConfigType = TypeVar("ConfigType", bound=BaseSettings)
 
@@ -94,24 +90,3 @@ def path_join(base: str, *paths: str) -> str:
     return reduce(
         lambda base, path: f"{base.rstrip('/')}/{path.lstrip('/')}", paths, base
     )
-
-
-def retrieve_well_known_values(wkvs_api_url: str, value_name: str = "storage_aliases"):
-    """Get S3 endpoint URLS from WKVS"""
-    url = path_join(wkvs_api_url, "values", value_name)
-
-    try:
-        response = httpx2.get(url)
-    except httpx2.RequestError:
-        LOG.error(f"Could not retrieve data from {url} due to connection issues.")
-        raise
-
-    status_code = response.status_code
-    if status_code != 200:
-        raise ValueError(f"Received unexpected response code {status_code} from {url}.")
-    try:
-        return response.json()[value_name]
-    except KeyError as err:
-        raise ValueError(
-            f"Response from {url} did not include expected field '{value_name}'"
-        ) from err
