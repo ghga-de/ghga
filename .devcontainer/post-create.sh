@@ -44,16 +44,15 @@ fi
 # Migration tooling
 uv tool install --reinstall git-filter-repo
 
-# Provision both stacks
+# Provision both stacks. The git hooks (ADR-0036) are installed as soon as the uv sync
+# has provided pre-commit, so a failed pnpm install cannot leave the clone without them;
+# they run ruff, mypy, prettier and eslint out of the two workspaces, not their own.
 uv sync --all-packages --all-extras
+uv run pre-commit install
 (cd frontend/data-portal && pnpm install --frozen-lockfile)
 
 # Skip reformatting commits in git blame, as GitHub does with the same file.
 git config blame.ignoreRevsFile .git-blame-ignore-revs
-
-# Git hooks (ADR-0036). Idempotent, and after the sync above because the hooks run ruff,
-# mypy, prettier and eslint out of the two workspaces rather than their own environments.
-uv run pre-commit install
 
 # Last and a warning, not a failure: only the front end's Playwright smoke tests need the
 # browser, and its download from the Playwright CDN can fail on some networks.

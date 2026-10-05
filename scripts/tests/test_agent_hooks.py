@@ -13,7 +13,10 @@ REPO = HOOKS.parents[1]
 sys.path.insert(0, str(HOOKS))
 
 import container_check
+import git_hooks_check
+import guard_bypass
 import guard_generated
+import guard_lint_config
 import guard_uv
 import host
 
@@ -232,6 +235,13 @@ def test_generated_hook_as_registered():
     assert (result.returncode, result.stderr) == (0, "")
 
 
+def test_generated_hook_reads_notebook_path():
+    result = _run(
+        "guard_generated.py", {"tool_input": {"notebook_path": str(REPO / "uv.lock")}}
+    )
+    assert result.returncode == 2
+
+
 def test_uv_hook_exempt_in_ci():
     result = _run("guard_uv.py", {"tool_input": {"command": "uv sync"}}, CI="true")
     assert (result.returncode, result.stdout, result.stderr) == (0, "", "")
@@ -240,3 +250,191 @@ def test_uv_hook_exempt_in_ci():
 def test_container_check_silent_in_ci():
     result = _run("container_check.py", {"source": "startup"}, CI="true")
     assert (result.returncode, result.stdout) == (0, "")
+
+
+@pytest.mark.parametrize(
+    ("command", "what"),
+    [
+        ("git commit --no-verify -m x", "--no-verify"),
+        ("git commit -nm x", "-n"),
+        ("git commit -an", "-n"),
+        ("git push --no-verify", "--no-verify"),
+        ("cd a && git -c core.hooksPath=/dev/null commit", "core.hooksPath"),
+        ("git -c CORE.HOOKSPATH=x commit", "HOOKSPATH"),
+        ("git --config-env=core.hooksPath=X commit", "core.hooksPath"),
+        ("git config core.hooksPath /tmp/none", "core.hooksPath"),
+        ("git config set --local core.hooksPath x", "core.hooksPath"),
+        ("SKIP=mypy git commit -m x", "SKIP"),
+        ("env SKIP=ruff git commit -m x", "SKIP"),
+        ("export SKIP=ruff", "SKIP"),
+        ("true\nexport SKIP=ruff", "SKIP"),
+        ('bash -c "git commit --no-verify"', "--no-verify"),
+        ("sh -lc 'git commit -n'", "-n"),
+        ("eval git commit --no-verify", "--no-verify"),
+        ("pre-commit uninstall", "uninstall"),
+        ("uv run pre-commit uninstall", "uninstall"),
+        ("git commit -m 'unbalanced --no-verify", "--no-verify"),
+        ("cat <<EOF\ntext\nEOF\ngit commit --no-verify", "--no-verify"),
+    ],
+)
+def test_bypass_blocked(command, what):
+    assert what in (guard_bypass.bypass(command) or "")
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git commit -m x",
+        "git commit -mn",  # "n" is the message
+        "git commit -am 'mention -n and --no-verify'",
+        "git commit -m -n",
+        "git push -n",  # a dry run, not --no-verify
+        "git merge -n dev",
+        "git config core.hooksPath",
+        "git config --get core.hooksPath",
+        "git config --unset core.hooksPath",
+        "rg -- --no-verify docs",
+        "rg -n 'SKIP=' justfile",
+        "SKIP=no-commit-to-branch uv run pre-commit run --all-files",
+        "just hooks-all",
+        "git log --oneline | head",
+        "git commit -F - <<'EOF'\ndon't use --no-verify\nEOF",
+        "git commit -m \"$(cat <<'EOF'\nBlock SKIP= and --no-verify, don't allow\nEOF\n)\"",
+        "git commit -F- <<-EOF\n\tit's -n\n\tEOF",
+    ],
+)
+def test_bypass_allowed(command):
+    assert guard_bypass.bypass(command) is None
+
+
+def test_bypass_hook_as_registered():
+    result = _run(
+        "guard_bypass.py", {"tool_input": {"command": "git commit --no-verify"}}
+    )
+    assert result.returncode == 2
+    assert "ask the dev" in result.stderr
+    result = _run("guard_bypass.py", {"tool_input": {"command": "git status"}})
+    assert (result.returncode, result.stderr) == (0, "")
+
+
+@pytest.fixture
+def checkout(tmp_path):
+    """A checkout with a root pyproject.toml holding check and dependency tables."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\ndependencies = ["a"]\n\n[tool.ruff]\nline-length = 88\n'
+    )
+    return tmp_path
+
+
+def _asks(path, **tool_input):
+    """The reason the lint-config hook asks for, or None when it lets the edit pass."""
+    payload = {"tool_input": {"file_path": str(path), **tool_input}}
+    result = _run("guard_lint_config.py", payload)
+    assert result.returncode == 0
+    if not result.stdout:
+        return None
+    output = json.loads(result.stdout)["hookSpecificOutput"]
+    assert output["permissionDecision"] == "ask"
+    return output["permissionDecisionReason"]
+
+
+def test_changed_tables_names_only_check_tables():
+    before = "[tool.ruff]\nx = 1\n[tool.pytest.ini_options]\ny = 1\n[tool.uv]\nz = 1\n"
+    after = "[tool.ruff]\nx = 1\n[tool.pytest.ini_options]\ny = 2\n[tool.uv]\nz = 2\n"
+    assert guard_lint_config.changed_tables(before, after) == ["pytest"]
+
+
+def test_lint_config_asks_for_check_tables(checkout):
+    reason = _asks(
+        checkout / "pyproject.toml",
+        old_string="line-length = 88",
+        new_string="line-length = 120",
+    )
+    assert "[tool.ruff]" in reason
+
+
+def test_lint_config_asks_for_a_new_member_table(checkout):
+    member = checkout / "services/x/pyproject.toml"
+    member.parent.mkdir(parents=True)
+    member.write_text('[project]\nname = "x"\n')
+    content = '[project]\nname = "x"\n\n[tool.mypy]\nstrict = false\n'
+    assert "[tool.mypy]" in _asks(member, content=content)
+
+
+def test_lint_config_lets_dependencies_pass(checkout):
+    path = checkout / "pyproject.toml"
+    assert _asks(path, old_string='["a"]', new_string='["a", "b"]') is None
+
+
+def test_lint_config_asks_when_toml_breaks(checkout):
+    path = checkout / "pyproject.toml"
+    reason = _asks(path, old_string="[tool.ruff]", new_string="[")
+    assert "could not be compared" in reason
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        ".pre-commit-config.yaml",
+        "ruff.toml",
+        "libs/x/mypy.ini",
+        "frontend/data-portal/eslint.config.js",
+        "frontend/data-portal/.prettierrc",
+        "frontend/data-portal/.prettierignore",
+        "frontend/data-portal/eslint-local-rules/no-x.js",
+    ],
+)
+def test_lint_config_asks_for_config_files(checkout, rel):
+    assert rel in _asks(checkout / rel, content="x")
+
+
+@pytest.mark.parametrize(
+    "rel", ["README.md", "frontend/data-portal/tsconfig.json", "ruff_notes.md"]
+)
+def test_lint_config_lets_other_files_pass(checkout, rel):
+    assert _asks(checkout / rel, content="x") is None
+
+
+GIT_ENV = {
+    "PATH": "/usr/bin:/bin",
+    "GIT_CONFIG_GLOBAL": "/dev/null",
+    "GIT_AUTHOR_NAME": "x",
+    "GIT_AUTHOR_EMAIL": "x@example.org",
+    "GIT_COMMITTER_NAME": "x",
+    "GIT_COMMITTER_EMAIL": "x@example.org",
+}
+
+
+def _git(*args):
+    subprocess.run(["git", *args], check=True, capture_output=True, env=GIT_ENV)
+
+
+@pytest.mark.usefixtures("in_container")
+def test_git_hooks_check_warns_when_missing(monkeypatch, tmp_path, capsys):
+    _git("init", "-q", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    assert git_hooks_check.main() == 0
+    assert "just hooks" in json.loads(capsys.readouterr().out)["systemMessage"]
+    (tmp_path / ".git/hooks/pre-commit").write_text("#!/bin/sh\n")
+    assert git_hooks_check.main() == 0
+    assert capsys.readouterr() == ("", "")
+
+
+@pytest.mark.usefixtures("in_container")
+def test_git_hooks_check_finds_the_hook_from_a_worktree(monkeypatch, tmp_path, capsys):
+    main, worktree = tmp_path / "main", tmp_path / "wt"
+    _git("init", "-q", str(main))
+    _git("-C", str(main), "commit", "-q", "--allow-empty", "-m", "x")
+    _git("-C", str(main), "worktree", "add", "-q", str(worktree))
+    (main / ".git/hooks/pre-commit").write_text("#!/bin/sh\n")
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(worktree))
+    assert git_hooks_check.main() == 0
+    assert capsys.readouterr() == ("", "")
+
+
+@pytest.mark.usefixtures("on_the_host")
+def test_git_hooks_check_silent_on_host(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    assert git_hooks_check.main() == 0
+    assert capsys.readouterr() == ("", "")
