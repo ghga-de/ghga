@@ -68,5 +68,6 @@ For `adr` it runs 42 sessions on your own Claude credential in about 15 minutes,
 ## Reviews and credit
 
 The [PR template](../../.github/pull_request_template.md) asks for the checks and the credit.
+Before you ask a person for review, run `/ghga-review`, which checks the change against the written rules, and the built-in `/code-review`, which looks for bugs.
 `/pr-and-commit` drafts branch names, PR titles and descriptions, replies to review comments and, before you squash, the merge commit, which GitHub's prefill never gets right.
 Credit an agent in the PR description as the [conventions](../conventions.md#names-branches-prs-commits) say, never with a `Co-authored-by:` trailer.
