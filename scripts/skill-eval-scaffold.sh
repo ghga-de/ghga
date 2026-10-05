@@ -12,7 +12,9 @@
 # .venv instead would let `uv run` rewrite it for the clone's paths.
 #
 # Given a patch and a branch name, it also commits the patch on that branch, off a local
-# `dev` at the pin, so that a case can review or describe a change of its own.
+# `dev` at the pin, so that a case can review or describe a change of its own. Such a clone
+# is repacked to hold its own objects (about 60 MB, a second): the sandbox of a run cannot
+# read the main clone's, so `git diff` would fail.
 set -euo pipefail
 
 PIN=9f5df2dd4
@@ -32,6 +34,8 @@ uv run --offline --quiet python scripts/docs_check.py >/dev/null
 git add -A
 git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "eval: remove the root skills"
 if [[ $# -eq 2 ]]; then
+    git repack -a -d -q
+    rm .git/objects/info/alternates
     git branch --force dev
     git checkout --quiet -b "$2"
     git apply --index "$1"

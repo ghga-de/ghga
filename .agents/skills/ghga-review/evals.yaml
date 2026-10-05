@@ -170,6 +170,6 @@ cases:
       - name: leaves-it-to-ruff
         type: llm
         criteria: |
-          The review does not report the unused `import os` as a finding, in any format; saying in passing that ruff or CI catches it is fine.
-          It reports no other problem with the change.
+          Pass if the review concludes that it has nothing to report: it may describe the change and say that ruff or CI will flag the unused `import os`.
+          Fail if it presents the unused import, or anything else, as a finding, a blocker or something to fix before the PR opens.
       - no-direct-uv
