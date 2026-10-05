@@ -41,6 +41,7 @@ Read the first failure: the features after it fail on states it never set.
 2. **A step timed out waiting for a state:** the wait names the service that owns the state.
    Run `just logs` for it and for the services before it in the flow; uploads pass the connector, UCS, DHFS, FIS and EKSS, downloads WPS, WKVS and DCS, metadata DSKit, metldata and MASS.
    Fix the cause, and never raise the timeout: the upload waits already allow 60 s against the 2 s DHFS poll.
+   To check the fix, rebuild the image, recreate the pods (3), rerun from the start (4), and watch `just logs <service>` for the error to go.
 3. **The old behaviour after a rebuild:** images are tagged `:local` with `IfNotPresent`, so `just testbed-up` loads them but restarts no pod.
    `just testbed-reset` recreates the pods.
 4. **"The expected state … has not yet been set":** the feature ran without the ones before it.
