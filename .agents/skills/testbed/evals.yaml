@@ -14,12 +14,15 @@ execution:
   max_turns: 40
   timeout_seconds: 900
   allowed_tools: [Read, Glob, Grep, Bash, Write, Edit, Skill]
-  # Neither arm loads AGENTS.md, which a session in the repo would.
+  # Neither arm loads AGENTS.md, which a session in the repo would. Runs guessed the main
+  # clone's path and worked there, without the case's patch, so the prompt keeps them in
+  # their own clone.
   append_system_prompt: >-
     You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
     root and in the AGENTS.md of each area; read the root file before you start, as a
-    session here loads it. No kind cluster runs in this session, so the test bed cannot
-    run here.
+    session here loads it. The clone is your working directory: work only there, since
+    another checkout on this machine is not the one under test. No kind cluster runs in
+    this session, so the test bed cannot run here.
 
 graders:
   # A grader on a tool sees its input as JSON, so a command starts after `"command":"`.
