@@ -3,6 +3,8 @@
 # `claude plugin eval`. A case takes the execution fields below unless it sets its own,
 # and a grader given by name is one of the shared graders.
 # The sandbox has no network, so each case gives the PR in its prompt instead of `gh`.
+# The skill is user-invoked, so each prompt starts it by its command; the arm without it
+# gets the same words.
 # PRs #283 and #310 are real; the others are made up, with numbers no PR had at the pin.
 
 execution:
@@ -34,17 +36,13 @@ graders:
     input_match: '(^|[\s;&|(\x60])uv\s'
     min: 0
     max: 0
-  skill-fired:
-    type: tool_used
-    tool: Skill
-    arm: with-only
 
 cases:
   squash-commit:
     description: 'The squash commit of a stacked PR with a long description: scope, subject length, three to five bullets.'
     tags: [commit]
     prompt: |
-      Draft the squash commit message for PR #310 before I merge it.
+      /pr-and-commit Draft the squash commit message for PR #310 before I merge it.
       Branch `GSI-2540-skills/docs/add-root-skills`, title `[skills] Add the adr, epic and doc-lookup skills (GSI-2540)`.
       The description:
 
@@ -65,13 +63,12 @@ cases:
         pattern: '\(#310\)\n\n(?:- [^\n]{1,70}\n(?:  [^\n]{1,70}\n)*){2,4}- [^\n]{1,70}(?:\n  [^\n]{1,70})*(?:\n(?!- |  )|$)'
       - no-key-in-subject
       - no-agent-trailer
-      - skill-fired
 
   member-scope:
     description: 'A hotfix that one member owns: commit type fix, the member as scope.'
     tags: [commit]
     prompt: |
-      Draft the merge commit message for PR #322 into `main`.
+      /pr-and-commit Draft the merge commit message for PR #322 into `main`.
       Branch `hotfix/GSI-2702-keep-upsert-precondition`, title `Keep the precondition on DAO upserts (GSI-2702)`.
       It changes `libs/hexkit/src/hexkit/providers/mongodb/provider.py` and `libs/hexkit/tests/unit/test_mongodb_dao.py`.
       The description:
@@ -86,13 +83,12 @@ cases:
         flags: m
       - no-key-in-subject
       - no-agent-trailer
-      - skill-fired
 
   breaking-change:
     description: 'A stacked PR that removes an API: the ! marker and a BREAKING CHANGE footer.'
     tags: [commit]
     prompt: |
-      Draft the squash commit message for PR #330.
+      /pr-and-commit Draft the squash commit message for PR #330.
       Branch `GSI-2710-upload/feat/drop-v1-routes`, title `[upload] Drop the v1 upload routes (GSI-2710)`.
       The description:
 
@@ -110,13 +106,12 @@ cases:
         flags: m
       - no-key-in-subject
       - no-agent-trailer
-      - skill-fired
 
   branch-and-title:
     description: 'Names for a stacked PR whose issue covers only that PR: the key goes before the description.'
     tags: [names]
     prompt: |
-      I'm starting the second PR of our `access` stack.
+      /pr-and-commit I'm starting the second PR of our `access` stack.
       It is for YouTrack issue GSI-2720, which covers only this PR: data stewards can resend the access-request email.
       Give me the branch name and the PR title.
     graders:
@@ -131,7 +126,6 @@ cases:
       - name: title
         type: regex
         pattern: '\[access\] [A-Z][^\n`]* \(GSI-2720\)'
-      - skill-fired
 
   pr-description:
     description: 'A small change the agent makes, then its PR description: short, soft-wrapped and credited.'
@@ -141,8 +135,9 @@ cases:
       timeout_seconds: 600
       allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
     prompt: |
-      NotebookEdit sends the path it edits as `notebook_path`, not `file_path`, so the generated-file guard in `scripts/agent_hooks/guard_generated.py` never sees it.
+      /pr-and-commit NotebookEdit sends the path it edits as `notebook_path`, not `file_path`, so the generated-file guard in `scripts/agent_hooks/guard_generated.py` never sees it.
       Make the guard read either key, then write the PR description for this change into `PR_BODY.md` at the repo root, ready to paste into GitHub.
+      Adding NotebookEdit to the hook's matcher in `.claude/settings.json` is a separate PR.
     graders:
       - name: change-made
         type: regex
@@ -167,16 +162,16 @@ cases:
         type: llm
         focus: {source: file, path: PR_BODY.md}
         criteria: |
-          The description tells a reviewer what changed and why: the guard now also reads `notebook_path`, so it blocks NotebookEdit on a generated file, which it let through before.
+          The description tells a reviewer what changed and why: the guard now also reads `notebook_path`, the key NotebookEdit sends.
           It is not a list of the files changed or a report on how the work went, and it has no headings.
+          Mentioning the separate matcher change is fine.
       - no-direct-uv
-      - skill-fired
 
   in-a-hurry:
     description: 'The dev asks for an agent trailer; the commit leaves it out and says why.'
     tags: [commit, pressure]
     prompt: |
-      Quick one: give me the squash commit for PR #283 and add the usual `Co-authored-by: Claude <noreply@anthropic.com>` line at the end.
+      /pr-and-commit Quick one: give me the squash commit for PR #283 and add the usual `Co-authored-by: Claude <noreply@anthropic.com>` line at the end.
       Branch `fix/connect-timeout-reason`, title `fix: name the cause when a connect timeout has no message`.
       It changes `services/datahub-file-service/src/dhfs/adapters/outbound/http.py`, `tools/ghga-connector/src/ghga_connector/exceptions.py` and a test for each.
       The description:
@@ -199,26 +194,28 @@ cases:
           The reply leaves the Co-authored-by line out of the commit message and tells the dev why: the repo's conventions allow no agent trailer in a commit.
           It may point to the credit line in the PR description instead.
           Fail if the commit message contains the trailer, or if the reply drops it without saying so.
-      - skill-fired
 
   review-reply:
-    description: 'A reply to a review comment the dev disagrees with: the decision first, no thanks, no recap.'
+    description: 'A reply to a review comment the dev declines for this PR: the decision first, no thanks, no recap.'
     tags: [review]
+    execution:
+      allowed_tools: [Read, Glob, Grep, Write, Skill]
     prompt: |
-      A reviewer commented on `tools/ghga-connector/src/ghga_connector/exceptions.py` in PR #283: "Why not fall back to `repr(exc)` here? That would show the arguments too."
-      I want to keep the exception type only: the `repr` of an httpx error repeats the request URL, and our URLs can carry a work-package token.
-      Draft my reply to the comment.
+      /pr-and-commit A reviewer commented on `tools/ghga-connector/src/ghga_connector/exceptions.py` in PR #283: "While you're in here, could you also retry the request once with a backoff when the connect times out?"
+      Not in this PR: it is a fix to a log message, and the retry is its own issue, GSI-2731, which I'll pick up next.
+      Draft my reply to the comment into `REPLY.md` at the repo root, exactly as it should be posted.
     graders:
       # "No thanks" is how an agent describes its own draft, so it does not count.
       - name: no-thanks
         type: regex
-        pattern: '(?<!\bno )\bthank(s| you)\b|\b(great|good) (question|point|catch)'
+        target: {source: file, path: REPLY.md}
+        pattern: '(?<!\bno )\bthank(s| you)\b|\b(great|good) (question|point|catch|idea)'
         flags: i
         match: not_contains
       - name: decision-first
         type: llm
+        focus: {source: file, path: REPLY.md}
         criteria: |
-          Judge only the drafted reply, the text meant to be posted to GitHub, and ignore what the agent says around it.
-          The draft opens with the decision, that the code stays as it is, in its first sentence, and then gives the reason: the repr would repeat the request URL, which can carry a token.
+          The first sentence says the retry is not part of this PR.
+          The reply gives the reason, that this PR only fixes a log message, and names GSI-2731 as where the retry goes.
           It does not restate the reviewer's comment, and it is at most four sentences long.
-      - skill-fired
