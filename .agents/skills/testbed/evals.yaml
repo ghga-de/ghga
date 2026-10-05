@@ -7,8 +7,8 @@
 # The skill's `paths` does not apply in a run: the runner loads it as a plugin skill and
 # offers it from the first turn, as a session that has read a file under testbed/ would.
 # The expected values hold at the commit scripts/skill-eval-scaffold.sh pins: features 400,
-# 410 and 420 hand the access grant for dataset A from one to the next, and 503 starts
-# over with an empty claims repository.
+# 410 and 420 hand the access grant for dataset A from one to the next, 503 empties the
+# claims repository and grants dataset A again, and 504 uses that grant.
 
 execution:
   max_turns: 40
@@ -63,11 +63,13 @@ cases:
     prompt: |
       Write a test-bed feature for revoking a download access grant: the Data Steward revokes the grant Dr. John Doe holds for dataset A, and afterwards his download of dataset A's files with the GHGA connector is refused. Write the feature file and its step module, and reuse the shared steps where they fit. When you are done, list the files you wrote.
     graders:
-      # 420 downloads dataset A with that grant, so the feature runs after it; 503 starts over.
+      # The revoked grant must not be one a later feature still needs: 420 and 504 use it,
+      # and 503 grants it again, so the feature runs after 420 and not between 503 and 504.
+      # A new 503 sorts after 503_data_portal_..., into that gap.
       - name: runs-after-420
         type: tool_used
         tool: Write
-        input_match: '"file_path":"[^"]*/testbed/features/(?:42[1-9]|4[3-9]\d)_[a-z0-9_]+\.feature"'
+        input_match: '"file_path":"[^"]*/testbed/features/(?:42[1-9]|4[3-9]\d|50[0-2]|50[5-9]|5[1-9]\d)_[a-z0-9_]+\.feature"'
       - name: module-binds-feature
         type: tool_used
         tool: Write
