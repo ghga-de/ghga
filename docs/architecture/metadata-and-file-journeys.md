@@ -17,7 +17,7 @@
 
 | Component | Kind | Owns / does |
 |---|---|---|
-| `tools/ghga-datasteward-kit` (**dskit**) | CLI | Offline driver: transpile xlsx→json, `submit` (mint accessions), `transform` (run workflow), `load` (push artifacts). Legacy S3 upload + FIS ingest. |
+| `tools/ghga-datasteward-kit` (**dskit**) | CLI | Offline driver: transpile xlsx→json, `submit` (mint accessions), `transform` (run workflow), `load` (push artifacts). `files delete-file` purges a file from all file services. |
 | `libs/metldata` | library + deployable API | The engine behind dskit. Submission registry, accession registry, transformation workflows, and the **combined loader + artifacts-query API** (`metldata run-api`). |
 | `libs/ghga-event-schemas` | library | Shared Kafka event/payload models (upload boxes, file uploads, searchable resources, dataset overviews, artifacts). |
 | `services/ghga-registry-service` (**RS**) | service | A **new, forward-looking** service (built with the upcoming metadata services in mind). Owns `ResearchDataUploadBox` (RDUB), `FileAccession` mapping records, and a first-class **`Study`** entity that already models lifecycle (`DRAFT`/`ARCHIVED` status, approval provenance, and a `superseded_by_id` deprecation link). Steward-facing box + mapping + grants API. Its Study/FileAccession state is *currently populated* by an interim bridge consuming metldata's `SearchableResource` events — **that ingestion path is the legacy part, not the entity**. |
