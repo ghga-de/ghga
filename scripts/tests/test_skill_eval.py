@@ -41,6 +41,23 @@ def test_expand_cases_merges_execution_and_shared_graders():
     assert case["context"] == {"scaffold_script": "scaffold.sh"}
 
 
+def test_expand_cases_takes_the_suite_prompt_and_leaves_out_the_patch():
+    suite = {
+        "execution": {"prompt": "Review it.\n"},
+        "cases": {
+            "c": {
+                "description": "A case with a change.",
+                "patch": "diff --git a/x b/x\n",
+                "branch": "fix/x",
+                "graders": [{"name": "said", "type": "regex", "pattern": "x"}],
+            }
+        },
+    }
+    case = skill_eval.expand_cases(suite)["c"]
+    assert case["execution"] == {"prompt": "Review it.\n"}
+    assert "patch" not in case and "branch" not in case
+
+
 def test_expand_cases_rejects_an_unknown_grader():
     suite = {**SUITE, "graders": {}}
     with pytest.raises(ValueError, match="no shared grader 'fired'"):
@@ -63,6 +80,34 @@ def test_expand_writes_cases_and_keeps_results(tmp_path):
     link = evals / "short/scaffold.sh"
     assert link.is_symlink()
     assert link.resolve() == (tmp_path / skill_eval.SCAFFOLD).resolve()
+
+
+def test_expand_gives_a_case_with_a_patch_its_own_scaffold(tmp_path):
+    suite = {
+        "cases": {
+            "change": {
+                "description": "A case with a change on a branch.",
+                "prompt": "Review it.\n",
+                "patch": "diff --git a/x b/x\n",
+                "branch": "fix/x",
+                "graders": [{"name": "said", "type": "regex", "pattern": "x"}],
+            }
+        }
+    }
+    skill = tmp_path / ".agents/skills/demo"
+    skill.mkdir(parents=True)
+    (skill / "evals.yaml").write_text(yaml.safe_dump(suite))
+
+    evals = skill_eval.expand(tmp_path, "demo")
+
+    case_dir = evals / "change"
+    assert (case_dir / "change.patch").read_text() == "diff --git a/x b/x\n"
+    scaffold = case_dir / "scaffold.sh"
+    assert not scaffold.is_symlink()
+    assert os.access(scaffold, os.X_OK)
+    assert scaffold.read_text().splitlines()[-1] == (
+        f"exec bash {tmp_path / skill_eval.SCAFFOLD} {case_dir / 'change.patch'} fix/x"
+    )
 
 
 def test_collect_keeps_traces_and_removes_workspaces(tmp_path):
