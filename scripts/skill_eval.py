@@ -4,6 +4,8 @@
 A suite is one file, .agents/skills/<name>/evals.yaml. The runner wants a directory per
 case with its scaffold script inside, so `expand` writes them to the gitignored
 .agents/skills/<name>/evals/, each case with a symlink to scripts/skill-eval-scaffold.sh.
+A case with a `patch` gets a scaffold of its own instead, which runs the shared one with
+the patch and the case's `branch`, so the case starts with that change on that branch.
 `collect` copies each run's trace into the results, removes the run's kept workspace, and
 prints the score and turns of each case with and without the skill.
 
@@ -21,6 +23,7 @@ import argparse
 import json
 import os
 import pathlib
+import shlex
 import shutil
 import stat
 import sys
@@ -31,13 +34,15 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SKILLS = ".agents/skills"
 SCAFFOLD = "scripts/skill-eval-scaffold.sh"
 SCHEMA_VERSION = "1.1"
+DEFAULT_BRANCH = "chore/eval-case"
 
 
 def expand_cases(suite: dict) -> dict[str, dict]:
     """Return each case of a suite as the runner's case.yaml content, by case name.
 
-    A case's `execution` fields override the suite's, its prompt joins them, and a
-    grader given by name is replaced with the shared grader of that name.
+    A case's `execution` fields override the suite's, its prompt replaces the suite's
+    if it has one, and a grader given by name is replaced with the shared grader of that
+    name. A case's `patch` and `branch` stay out: they are for its scaffold.
     """
     shared = suite.get("graders", {})
     cases = {}
@@ -58,7 +63,7 @@ def expand_cases(suite: dict) -> dict[str, dict]:
             "execution": {
                 **suite.get("execution", {}),
                 **case.get("execution", {}),
-                "prompt": case["prompt"],
+                **({"prompt": case["prompt"]} if "prompt" in case else {}),
             },
             "graders": graders,
         }
@@ -81,9 +86,24 @@ def expand(root: pathlib.Path, skill: str) -> pathlib.Path:
             yaml.safe_dump(case, sort_keys=False, allow_unicode=True, width=10_000),
             encoding="utf-8",
         )
-        (case_dir / "scaffold.sh").symlink_to(
-            os.path.relpath(root / SCAFFOLD, case_dir)
+        patch = suite["cases"][name].get("patch")
+        if patch is None:
+            (case_dir / "scaffold.sh").symlink_to(
+                os.path.relpath(root / SCAFFOLD, case_dir)
+            )
+            continue
+        (case_dir / "change.patch").write_text(patch, encoding="utf-8")
+        branch = suite["cases"][name].get("branch", DEFAULT_BRANCH)
+        # The runner starts the scaffold from the run's workspace, so the paths are
+        # absolute.
+        args = [root / SCAFFOLD, case_dir / "change.patch", branch]
+        scaffold = case_dir / "scaffold.sh"
+        scaffold.write_text(
+            "#!/usr/bin/env bash\n# Written by scripts/skill_eval.py.\n"
+            f"exec bash {shlex.join(str(arg) for arg in args)}\n",
+            encoding="utf-8",
         )
+        scaffold.chmod(0o755)
     return evals
 
 

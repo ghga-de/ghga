@@ -10,6 +10,9 @@
 # find it in the repo, and `git status` would point at it. The sandbox of a run blocks the
 # network, so the .venv is synced here from the warm uv cache; linking the main clone's
 # .venv instead would let `uv run` rewrite it for the clone's paths.
+#
+# Given a patch and a branch name, it also commits the patch on that branch, off a local
+# `dev` at the pin, so that a case can review or describe a change of its own.
 set -euo pipefail
 
 PIN=9f5df2dd4
@@ -28,3 +31,9 @@ uv run --offline --quiet python scripts/docs_check.py >/dev/null || true
 uv run --offline --quiet python scripts/docs_check.py >/dev/null
 git add -A
 git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "eval: remove the root skills"
+if [[ $# -eq 2 ]]; then
+    git branch --force dev
+    git checkout --quiet -b "$2"
+    git apply --index "$1"
+    git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "wip"
+fi

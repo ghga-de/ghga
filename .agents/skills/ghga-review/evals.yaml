@@ -1,0 +1,175 @@
+# The eval suite of the ghga-review skill (docs/agent-instructions.md#admitting-a-skill).
+# `just skill-eval ghga-review` expands each case into evals/<case>/case.yaml for
+# `claude plugin eval`. A case takes the execution fields below unless it sets its own,
+# and a grader given by name is one of the shared graders.
+# Each case reviews a change of its own: the scaffold applies its `patch` to the pin and
+# commits it on `branch`, off a local `dev` at the pin. The skill is user-invoked, so the
+# prompt starts it by its command; the arm without it gets the same words.
+
+execution:
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+  # Neither arm loads AGENTS.md, which a session in the repo would.
+  append_system_prompt: >-
+    You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
+    root and in the AGENTS.md of each area; read the root file before you start, as a
+    session here loads it.
+  prompt: |
+    /ghga-review Review the change on this branch against `dev` before I open the PR.
+
+graders:
+  # A finding line in the skill's format, anywhere in the reply.
+  no-finding:
+    type: regex
+    pattern: '^\s*(?:[-*]\s*|\d+\.\s*)?(?:nit: |q: )?[*\x60]{0,3}[\w./-]+:\d+(?:-\d+)?[*\x60]{0,3}\s+[—–-]\s'
+    flags: m
+    match: not_contains
+  # Neither arm loads the uv guard hook, so in a real session this is stopped earlier.
+  no-direct-uv:
+    type: tool_used
+    tool: Bash
+    input_match: '(^|[\s;&|(\x60])uv\s'
+    min: 0
+    max: 0
+
+cases:
+  history-comment:
+    description: 'A code comment that tells how a bug was found instead of why the code does what it does.'
+    tags: [comment]
+    branch: chore/explain-replaced-upload-count
+    patch: |
+      diff --git a/services/ucs/src/ucs/core/controller.py b/services/ucs/src/ucs/core/controller.py
+      index b87c8f769..2ced69bcf 100644
+      --- a/services/ucs/src/ucs/core/controller.py
+      +++ b/services/ucs/src/ucs/core/controller.py
+      @@ -407,7 +407,8 @@ class UploadController(UploadControllerPort):
+                   current_size += upload.decrypted_size
+                   in_progress_count += 1
+
+      -        # Don't count the upload being replaced against the box limits
+      +        # Until July the upload being replaced was counted twice, which made full boxes
+      +        #  out of half-empty ones after a client retried; we found it in the logs.
+               if upload_to_replace:
+                   current_size -= upload_to_replace.decrypted_size
+                   if upload_to_replace.state == "init":
+    graders:
+      - name: finding
+        type: regex
+        pattern: '^\s*(?:[-*]\s*|\d+\.\s*)?(?:nit: |q: )?[*\x60]{0,3}services/ucs/src/ucs/core/controller\.py:41[01](?:-41[0-2])?[*\x60]{0,3}\s+[—–-]\s'
+        flags: m
+      - name: names-the-rule
+        type: llm
+        criteria: |
+          The review reports that the comment at controller.py lines 410 to 411 tells history (when the bug was, how it was found) instead of why the code subtracts the replaced upload, and proposes a comment that says why, with the history going to the commit message.
+      - no-direct-uv
+
+  untested-change:
+    description: 'A behaviour change in the UCS controller without a test.'
+    tags: [tests]
+    branch: feat/ucs-reject-empty-files
+    patch: |
+      diff --git a/services/ucs/src/ucs/core/controller.py b/services/ucs/src/ucs/core/controller.py
+      index b87c8f769..15d8361e1 100644
+      --- a/services/ucs/src/ucs/core/controller.py
+      +++ b/services/ucs/src/ucs/core/controller.py
+      @@ -438,6 +438,10 @@ class UploadController(UploadControllerPort):
+               ):
+                   raise self.PartSizeError(file_alias=alias, part_size=part_size)
+
+      +        # An empty file has no part to upload
+      +        if decrypted_size == 0:
+      +            raise self.PartSizeError(file_alias=alias, part_size=part_size)
+      +
+               # All checks passed, so it's now safe to remove the upload being replaced
+               if upload_to_replace:
+                   await self.remove_file_upload(
+    graders:
+      - name: finding
+        type: regex
+        pattern: '^\s*(?:[-*]\s*|\d+\.\s*)?(?:nit: |q: )?[*\x60]{0,3}services/ucs/src/ucs/core/controller\.py:44[0-4](?:-44[0-4])?[*\x60]{0,3}\s+[—–-]\s[^\n]*\btests?\b'
+        flags: mi
+      - no-direct-uv
+
+  branch-name:
+    description: 'A clean change on a branch whose name breaks the grammar, which no tool checks.'
+    tags: [names]
+    branch: feature/UCS_part_size_comment
+    patch: |
+      diff --git a/services/ucs/src/ucs/core/controller.py b/services/ucs/src/ucs/core/controller.py
+      index b87c8f769..3abd01c67 100644
+      --- a/services/ucs/src/ucs/core/controller.py
+      +++ b/services/ucs/src/ucs/core/controller.py
+      @@ -430,8 +430,8 @@ class UploadController(UploadControllerPort):
+                   log.info(error, extra=extra)
+                   raise error
+
+      -        # Ensure part size is okay - verify size & implied part count. Min and Max part
+      -        #  size are enforced by the pydantic model at ingress, but double-checked here
+      +        # Check the part size and the part count it implies. The pydantic model checks
+      +        #  the part size at ingress already; this guards calls from other adapters.
+               if (
+                   not (MIN_PART_SIZE <= part_size <= MAX_PART_SIZE)
+                   or ceil(encrypted_size / part_size) > MAX_PART_COUNT
+    graders:
+      - name: names-the-branch
+        type: llm
+        criteria: |
+          The review reports that the branch name `feature/UCS_part_size_comment` breaks the naming grammar: `feature` is not one of the kinds, and branch names are lowercase kebab-case.
+          It proposes a name in the grammar, such as `chore/clarify-part-size-comment`.
+          It reports no finding about the code change itself, which is correct.
+      - no-direct-uv
+
+  clean-change:
+    description: 'A small correct change: nothing reaches the cut-off, and the review says so briefly.'
+    tags: [clean]
+    branch: chore/clarify-part-size-comment
+    patch: |
+      diff --git a/services/ucs/src/ucs/core/controller.py b/services/ucs/src/ucs/core/controller.py
+      index b87c8f769..3abd01c67 100644
+      --- a/services/ucs/src/ucs/core/controller.py
+      +++ b/services/ucs/src/ucs/core/controller.py
+      @@ -430,8 +430,8 @@ class UploadController(UploadControllerPort):
+                   log.info(error, extra=extra)
+                   raise error
+
+      -        # Ensure part size is okay - verify size & implied part count. Min and Max part
+      -        #  size are enforced by the pydantic model at ingress, but double-checked here
+      +        # Check the part size and the part count it implies. The pydantic model checks
+      +        #  the part size at ingress already; this guards calls from other adapters.
+               if (
+                   not (MIN_PART_SIZE <= part_size <= MAX_PART_SIZE)
+                   or ceil(encrypted_size / part_size) > MAX_PART_COUNT
+    graders:
+      - no-finding
+      - name: nothing-to-report
+        type: llm
+        criteria: |
+          The review reports no problem with the change, in any format, and says so in a few lines at most.
+      - no-direct-uv
+
+  lint-caught:
+    description: 'An unused import only: ruff catches it, so the review does not report it.'
+    tags: [clean, tools]
+    branch: chore/tidy-ucs-imports
+    patch: |
+      diff --git a/services/ucs/src/ucs/core/controller.py b/services/ucs/src/ucs/core/controller.py
+      index b87c8f769..057a69675 100644
+      --- a/services/ucs/src/ucs/core/controller.py
+      +++ b/services/ucs/src/ucs/core/controller.py
+      @@ -17,6 +17,7 @@
+
+       import contextlib
+       import logging
+      +import os
+       from datetime import timedelta
+       from math import ceil
+       from typing import Any
+    graders:
+      - no-finding
+      - name: leaves-it-to-ruff
+        type: llm
+        criteria: |
+          The review does not report the unused `import os` as a finding, in any format; saying in passing that ruff or CI catches it is fine.
+          It reports no other problem with the change.
+      - no-direct-uv
