@@ -33,26 +33,39 @@ from tests.fixtures.event_handling import (
 )
 from tests.fixtures.metadata import (
     INVALID_MINIMAL_METADATA_EXAMPLES,
-    VALID_MINIMAL_METADATA_EXAMPLES,
+    VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES,
 )
+from tests.fixtures.metadata_models import VALID_MINIMAL_MODEL_WITH_STUDY_EXAMPLE_PATH
 from tests.submission_registry.test_event_publisher import check_source_events
 
 
-def test_happy(
+@pytest.fixture
+def config_with_study_fixture(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
+) -> SubmissionConfig:
+    """The test config with a model holding a study, which accessioning needs."""
+    return config_sub_fixture.model_copy(
+        update={"metadata_model_path": VALID_MINIMAL_MODEL_WITH_STUDY_EXAMPLE_PATH}
+    )
+
+
+def test_happy(
+    config_with_study_fixture: SubmissionConfig,
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test the happy path of using the submission registry."""
+    config = config_with_study_fixture
+
     # inject dependencies:
-    submission_store = SubmissionStore(config=config_sub_fixture)
+    submission_store = SubmissionStore(config=config)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
-    accession_store = AccessionStore(config=config_sub_fixture)
+    event_publisher = SourceEventPublisher(config=config, provider=provider)
+    accession_store = AccessionStore(config=config)
     accession_registry = AccessionRegistry(
-        config=config_sub_fixture, accession_store=accession_store
+        config=config, accession_store=accession_store
     )
     submission_registry = SubmissionRegistry(
-        config=config_sub_fixture,
+        config=config,
         submission_store=submission_store,
         event_publisher=event_publisher,
         accession_registry=accession_registry,
@@ -70,7 +83,7 @@ def test_happy(
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
 
     # provide content:
-    submission_content = VALID_MINIMAL_METADATA_EXAMPLES[0]
+    submission_content = VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0]
     submission_registry.upsert_submission_content(
         submission_id=submission_id, content=submission_content
     )
@@ -79,9 +92,10 @@ def test_happy(
     observed_submission = submission_store.get_by_id(submission_id)
     assert observed_submission.content == submission_content
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
+    study_pid = observed_submission.accession_map["studies"]["test_study"]
 
     # update content:
-    submission_content_updated = VALID_MINIMAL_METADATA_EXAMPLES[1]
+    submission_content_updated = VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[1]
     submission_registry.upsert_submission_content(
         submission_id=submission_id, content=submission_content_updated
     )
@@ -91,16 +105,21 @@ def test_happy(
     assert observed_submission.content == submission_content_updated
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
 
-    # check accessions are in store:
-    for class_ in observed_submission.accession_map.values():
-        for accession in class_.values():
-            assert accession_store.exists(accession=accession)
+    # check the update kept the study PID, which every other accession derives from:
+    assert observed_submission.accession_map["studies"]["test_study"] == study_pid
+    for accessions_by_alias in observed_submission.accession_map.values():
+        for accession in accessions_by_alias.values():
+            assert accession.startswith(study_pid)
+
+    # check only the random block of the study PID is registered, under its year:
+    _, year, random_block, _ = study_pid.split(".")
+    assert accession_store.get_random_blocks(year=year) == {random_block}
 
     # check published source event:
     check_source_events(
         expected_submissions=[observed_submission],
-        source_event_topic=config_sub_fixture.source_event_topic,
-        source_event_type=config_sub_fixture.source_event_type,
+        source_event_topic=config.source_event_topic,
+        source_event_type=config.source_event_type,
         file_system_event_fixture=file_system_event_fixture,
     )
 
@@ -114,8 +133,8 @@ def test_happy(
     # check published source event:
     check_source_events(
         expected_submissions=[observed_submission],
-        source_event_topic=config_sub_fixture.source_event_topic,
-        source_event_type=config_sub_fixture.source_event_type,
+        source_event_topic=config.source_event_topic,
+        source_event_type=config.source_event_type,
         file_system_event_fixture=file_system_event_fixture,
     )
 
@@ -160,20 +179,22 @@ def test_failed_content_validation(
 
 
 def test_update_after_completion(
-    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    config_with_study_fixture: SubmissionConfig,
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test no updates can be carried out after completion."""
+    config = config_with_study_fixture
+
     # inject dependencies:
-    submission_store = SubmissionStore(config=config_sub_fixture)
+    submission_store = SubmissionStore(config=config)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
-    accession_store = AccessionStore(config=config_sub_fixture)
+    event_publisher = SourceEventPublisher(config=config, provider=provider)
+    accession_store = AccessionStore(config=config)
     accession_registry = AccessionRegistry(
-        config=config_sub_fixture, accession_store=accession_store
+        config=config, accession_store=accession_store
     )
     submission_registry = SubmissionRegistry(
-        config=config_sub_fixture,
+        config=config,
         submission_store=submission_store,
         event_publisher=event_publisher,
         accession_registry=accession_registry,
@@ -184,7 +205,7 @@ def test_update_after_completion(
     submission_id = submission_registry.init_submission(header=submission_header)
 
     # provide content:
-    submission_content = VALID_MINIMAL_METADATA_EXAMPLES[0]
+    submission_content = VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0]
     submission_registry.upsert_submission_content(
         submission_id=submission_id, content=submission_content
     )
@@ -196,7 +217,7 @@ def test_update_after_completion(
     submission_registry.complete_submission(id_=submission_id)
 
     # try to update content:
-    submission_content_updated = VALID_MINIMAL_METADATA_EXAMPLES[1]
+    submission_content_updated = VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[1]
     with pytest.raises(SubmissionRegistry.StatusError):
         submission_registry.upsert_submission_content(
             submission_id=submission_id, content=submission_content_updated

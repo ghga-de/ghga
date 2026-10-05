@@ -6,28 +6,6 @@ accession_store_path: accession_store
 metadata_model_path: original_model.yaml
 submission_store_dir: submission_store
 artifact_model_dir: artifact_model
-prefix_mapping:
-  Study: GHGAS
-  StudyFile: GHGAF
-  SampleFile: GHGAF
-  SequencingProcessFile: GHGAF
-  AnalysisProcessOutputFile: GHGAF
-  DataAccessPolicy: GHGAP
-  DataAccessCommittee: GHGAC
-  Analysis: GHGAZ
-  Publication: GHGAU
-  AnalysisProcess: GHGAR
-  SequencingExperiment: GHGAX
-  Condition: GHGAK
-  LibraryPreparationProtocol: GHGAL
-  SequencingProtocol: GHGAQ
-  SequencingProcess: GHGAO
-  Individual: GHGAI
-  Trio: GHGAT
-  Biospecimen: GHGAM
-  Sample: GHGAN
-  Dataset: GHGAD
-suffix_length: 14
 workflow_config:
   normalize_model: {}
   aggregate_stats:

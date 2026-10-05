@@ -35,6 +35,9 @@ VALID_MINIMAL_METADATA_EXAMPLES = [
     _get_example_metadata(f"minimal_metadata_{idx}") for idx in range(1, 3)
 ]
 VALID_MINIMAL_METADATA_EXAMPLE = VALID_MINIMAL_METADATA_EXAMPLES[0]
+VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES = [
+    _get_example_metadata(f"minimal_metadata_with_study_{idx}") for idx in range(1, 3)
+]
 INVALID_MINIMAL_METADATA_EXAMPLES = [
     _get_example_metadata(f"minimal_metadata_{invalid_example}")
     for invalid_example in [

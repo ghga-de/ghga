@@ -3,13 +3,6 @@ source_event_type: source_event
 event_store_path: event_store
 artifact_topic_prefix: artifact
 accession_store_path: accession_store
-prefix_mapping:
-  SampleFile: GHGASF
-  ExperimentFile: GHGAEF
-  Experiment: GHGAE
-  Sample: GHGAS
-  Dataset: GHGAD
-suffix_length: 14
 metadata_model_path: original_model.yaml
 submission_store_dir: submission_store
 artifact_model_dir: artifact_model

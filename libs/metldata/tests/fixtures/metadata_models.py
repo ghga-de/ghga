@@ -21,6 +21,9 @@ from tests.fixtures.utils import BASE_DIR
 
 EXAMPLE_MODEL_DIR = BASE_DIR / "example_models"
 VALID_MINIMAL_MODEL_EXAMPLE_PATH = EXAMPLE_MODEL_DIR / "minimal_model.yaml"
+VALID_MINIMAL_MODEL_WITH_STUDY_EXAMPLE_PATH = (
+    EXAMPLE_MODEL_DIR / "minimal_model_with_study.yaml"
+)
 
 
 def _get_example_model(name: str) -> MetadataModel:

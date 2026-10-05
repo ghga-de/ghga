@@ -15,13 +15,17 @@
 
 - **`event_store_path`** *(string, format: path)*: Path of the directory on the file system where all events are stored. Each topic is a sub-directory. Each event is stored as a JSON file within the sub-directory for the topic. The file name corresponds to the event key. The event type is stored together with the payload in the event file.
 
-- **`accession_store_path`** *(string, format: path)*: A file for storing the already registered accessions.
+- **`accession_store_path`** *(string, format: path)*: A JSON file holding the random blocks of the study PIDs minted so far, by year, so that none is minted twice.
 
-- **`prefix_mapping`** *(object)*: Specifies the ID prefix (values) per resource type (keys). Can contain additional properties.
+- **`study_pid_prefix`** *(string)*: The leading block of the study PID 'PREFIX.YY.XXX.V'. Must not contain dots, as they separate the blocks of the PID. Default: `"GHGA"`.
 
-  - **Additional Properties** *(string)*
+- **`dataset_pid_prefix`** *(string)*: The part of a dataset PID '{study_pid}.DS.XXX' that marks it as a dataset. Must not contain dots, as they separate the blocks of the PID. Default: `"DS"`.
 
-- **`suffix_length`** *(integer)*: Length of the numeric ID suffix. Default: `8`.
+- **`random_block_length`** *(integer)*: Number of base32 characters (RFC 4648) in the random block of a study PID ('XXX') and of a dataset accession ('DS.xxx'). Minimum: `1`. Default: `3`.
+
+- **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the bare study PID. The model does not need to contain it. Default: `"Study"`.
+
+- **`dataset_class_name`** *(string)*: Name of the metadata model class whose entities are accessioned as '{study_pid}.DS.xxx'. Default: `"Dataset"`.
 
 - **`metadata_model_path`** *(string, format: path)*: The path to the metadata model defined in LinkML.
 
