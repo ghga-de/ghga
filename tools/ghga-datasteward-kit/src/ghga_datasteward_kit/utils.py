@@ -16,6 +16,7 @@
 """Utility functions"""
 
 from dataclasses import dataclass
+from functools import reduce
 from pathlib import Path
 from typing import TypeVar
 
@@ -24,6 +25,8 @@ from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.simple_token import generate_token_and_hash
 
+DELETION_TOKEN_PATH = Path.home() / ".ghga_file_deletion_token.txt"
+DELETION_TOKEN_HASH_PATH = Path.home() / ".ghga_file_deletion_token_hash.txt"
 TOKEN_PATH = Path.home() / ".ghga_data_steward_token.txt"
 TOKEN_HASH_PATH = Path.home() / ".ghga_data_steward_token_hash.txt"
 
@@ -70,6 +73,20 @@ def load_config_yaml[ConfigType: BaseSettings](
     return config_cls(**config_dict)
 
 
+DELETION_TOKEN = AuthorizationToken(
+    token_path=DELETION_TOKEN_PATH, token_hash_path=DELETION_TOKEN_HASH_PATH
+)
 STEWARD_TOKEN = AuthorizationToken(
     token_path=TOKEN_PATH, token_hash_path=TOKEN_HASH_PATH
 )
+
+
+def path_join(base: str, *paths: str) -> str:
+    """Join paths, fixing duplicate or missing slashes between parts.
+
+    The paths can be arbitrary URL paths or POSIX file paths,
+    they are not checked for validity and concatenated as they are.
+    """
+    return reduce(
+        lambda base, path: f"{base.rstrip('/')}/{path.lstrip('/')}", paths, base
+    )
