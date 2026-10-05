@@ -30,6 +30,7 @@ from rs.constants import (
     EXC_ID_BOX_MAX_SIZE_TOO_LOW,
     EXC_ID_BOX_NOT_FOUND,
     EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_STATS_UNAVAILABLE,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
     EXC_ID_FILE_UPLOAD_STATE_ERROR,
@@ -1015,3 +1016,55 @@ async def test_requeue_all_box_uploads_fallback_error(
     assert str(operation_err.value) == (
         f"Failed to requeue the failed files in FileUploadBox {TEST_BOX_ID}."
     )
+
+
+@pytest.mark.parametrize(
+    "operation",
+    ["lock_file_upload_box", "unlock_file_upload_box", "archive_file_upload_box"],
+)
+async def test_state_change_503_means_the_operation_succeeded(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    operation: str,
+):
+    """Test that a 503 'boxStatsUnavailable' becomes FUBStatsUnavailableError.
+
+    The owning service recomputes the box stats after applying the state change, so
+    this reports a stale stat, not a failed operation, and must be distinguishable
+    from one.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    call = getattr(file_upload_box_client, operation)
+
+    file_box_api.on_update_file_upload_box = respond(
+        503, json={"exception_id": EXC_ID_BOX_STATS_UNAVAILABLE}
+    )
+    with pytest.raises(FileBoxClient.FUBStatsUnavailableError):
+        await call(box_id=TEST_BOX_ID, version=0)
+
+    # Any other 503 is still a plain failure
+    file_box_api.on_update_file_upload_box = respond(
+        503, json={"exception_id": "other"}
+    )
+    with pytest.raises(FileBoxClient.OperationError):
+        await call(box_id=TEST_BOX_ID, version=0)
+
+
+async def test_resize_503_is_not_a_stats_error(
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
+):
+    """Test that resize does not translate a 503 as a stats failure.
+
+    Unlike the state changes, update_box_max_size never recomputes the box stats, so
+    it cannot report one as stale.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    file_box_api.on_update_file_upload_box = respond(
+        503, json={"exception_id": EXC_ID_BOX_STATS_UNAVAILABLE}
+    )
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.resize_file_upload_box(
+            box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
+        )
