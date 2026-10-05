@@ -151,6 +151,10 @@ skill-eval name *args: _guard
     set -euo pipefail
     evals=$(uv run python scripts/skill_eval.py expand "{{name}}")
     out="$evals/results/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    # Each kept workspace holds a clone and a copied .venv, about 2.5 GB, until `collect`
+    # removes it: a pass outgrows the container's /tmp, so the runner works on the disk.
+    export TMPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/ghga-skill-eval"
+    mkdir -p "$TMPDIR"
     # The threshold is 0 so that only a run that breaks, not a low score, fails the recipe.
     claude plugin eval ".agents/skills/{{name}}" --model "{{SKILL_EVAL_MODEL}}" \
         --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
