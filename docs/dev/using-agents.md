@@ -9,7 +9,8 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 - **Instructions:** `AGENTS.md` at the root and one per area; an agent reads the root file at the start and an area's file once it works there ([agent-instructions.md](../agent-instructions.md#areas)).
   There is no `CLAUDE.md`: Claude Code reads `AGENTS.md` itself, from v2.1.277 on.
 - **Skills:** task procedures in `.agents/skills/`, listed with where each applies in the [skill catalogue](../agent-skills.md); `/skills` in Claude Code lists the ones your session can use.
-- **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), a check at session start that you run in the dev container, and guards that stop edits to generated files and `uv` on the host.
+- **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), checks at session start that you run in the dev container and that the git hooks are installed.
+  Guards stop edits to generated files, `uv` on the host and commands that skip the git hooks, and an edit to lint configuration asks you first.
 - **Permissions:** the same file allows the read-only `gh` commands, asks before creating or commenting on a PR, and denies merges, releases, force pushes and reading `.env` files.
 - **MCP:** only the data portal has servers, in [`frontend/data-portal/.mcp.json`](../../frontend/data-portal/.mcp.json); a session started at the repo root does not load them.
 - **Output style:** Claude Code sessions default to **GHGA Dev** ([`.claude/output-styles/ghga-dev.md`](../../.claude/output-styles/ghga-dev.md)), which keeps replies short and plain.

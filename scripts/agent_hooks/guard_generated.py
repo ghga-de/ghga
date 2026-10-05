@@ -1,4 +1,4 @@
-"""PreToolUse hook for Edit and Write: block edits to generated files.
+"""PreToolUse hook for Edit, Write and NotebookEdit: block edits to generated files.
 
 Exits 2 with the command that regenerates the file. The ADR and epic indexes and
 the README parameter lists sit inside hand-edited files, so `docs_check.py` and the
@@ -86,7 +86,8 @@ def regenerate_with(rel: PurePosixPath, root: Path = REPO) -> str | None:
 
 def main() -> int:
     """Exit 2 when the tool call writes a generated file."""
-    file_path = json.load(sys.stdin).get("tool_input", {}).get("file_path", "")
+    tool_input = json.load(sys.stdin).get("tool_input", {})
+    file_path = tool_input.get("file_path") or tool_input.get("notebook_path", "")
     path = Path(file_path.replace("\\", "/"))
     root = checkout_of(path) if file_path else None
     if root is None:
