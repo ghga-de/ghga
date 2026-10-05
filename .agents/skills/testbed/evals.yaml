@@ -8,7 +8,8 @@
 # offers it from the first turn, as a session that has read a file under testbed/ would.
 # The expected values hold at the commit scripts/skill-eval-scaffold.sh pins: features 400,
 # 410 and 420 hand the access grant for dataset A from one to the next, 503 empties the
-# claims repository and grants dataset A again, and 504 uses that grant.
+# claims repository and the access requests and grants dataset A again, and 504 uses that
+# grant.
 
 execution:
   max_turns: 40
@@ -67,7 +68,8 @@ cases:
       Write a test-bed feature for revoking a download access grant: the Data Steward revokes the grant Dr. John Doe holds for dataset A, and afterwards his download of dataset A's files with the GHGA connector is refused. Write the feature file and its step module, and reuse the shared steps where they fit. When you are done, list the files you wrote.
     graders:
       # The revoked grant must not be one a later feature still needs: 420 and 504 use it,
-      # and 503 grants it again, so the feature runs after 420 and not between 503 and 504.
+      # and 503 clears the claims and access requests and grants it again, so the feature
+      # runs after 420 and not between 503 and 504.
       # A new 503 sorts after 503_data_portal_..., into that gap.
       - name: runs-after-420
         type: tool_used
@@ -80,7 +82,7 @@ cases:
       - name: registered-tag
         type: tool_used
         tool: Write
-        input_match: '/testbed/features/[^"]+\.feature","content":"(?:[^"\\]|\\.)*@(?:ars|download|wps|files|unhappy)\b'
+        input_match: '/testbed/features/[^"]+\.feature","content":"(?:[^"\\]|\\.)*@(?:ars|auth|users|download|wps|files|unhappy)\b'
       - name: no-sleep-write
         type: tool_used
         tool: Write
@@ -191,9 +193,16 @@ cases:
       `just logs wps` ends with:
 
       ```text
-      INFO hexkit.providers.mongodb.migrations Database lock acquired
-      INFO hexkit.providers.mongodb.migrations Running migration to DB version 3 (V3Migration)
+      INFO hexkit.providers.mongodb.migrations._manager Database lock acquired
+      CRITICAL hexkit.providers.mongodb.migrations._manager Unable to apply DB version 3 (V3Migration)
+      Traceback (most recent call last):
+        ...
       KeyError: 'id'
+
+      The above exception was the direct cause of the following exception:
+
+      Traceback (most recent call last):
+        ...
       hexkit.providers.mongodb.migrations._manager.MigrationStepError: Unable to apply DB version 3 (V3Migration)
       ```
 
@@ -201,13 +210,69 @@ cases:
     graders:
       - name: proposes-reset
         type: regex
-        pattern: 'just testbed-reset'
+        pattern: 'just (?:testbed-reset|down)\b'
       - name: not-the-migration
         type: llm
         criteria: |
           The reply advises against changing the migration code, explains that the data no longer matches the migration records (the suite's clean slate removes them, so a restarted service re-runs its migrations over migrated data), and proposes `just testbed-reset`, or a fresh cluster with `just down`, before any code change.
       - no-edit
       - no-write
+      - skill-fired
+      - no-direct-uv
+
+  migration-bug:
+    description: Services crash-loop on a migration the branch broke; the crash outlives a reset, so the fix is in the migration.
+    tags: [debug]
+    branch: feat/wps-tidy-migrations
+    patch: |
+      diff --git a/services/work-package-service/src/wps/migrations/definitions/v3.py b/services/work-package-service/src/wps/migrations/definitions/v3.py
+      --- a/services/work-package-service/src/wps/migrations/definitions/v3.py
+      +++ b/services/work-package-service/src/wps/migrations/definitions/v3.py
+      @@ -39,7 +39,7 @@
+           async def apply(self):
+               """Perform the migration."""
+               config = Config()
+      -        datasets_collection = config.datasets_collection
+      +        datasets_collection = config.dataset_collection
+
+               async def rename_id_to_accession(doc: Document) -> Document:
+                   updated_files = []
+    prompt: |
+      On this branch I tidied up the WPS migrations. I rebuilt the images with `just demo-images-mono` and deployed with `just testbed-up mono`, which timed out waiting for the pods. `just testbed` then stops at once:
+
+      ```text
+      error: not every deployment is available — `just logs` lists them:
+        ghga-wps 0/1
+      ```
+
+      `just testbed-reset` did not help either; it ends with `error: ghga-wps did not become ready within 600s`. `just logs wps` ends with:
+
+      ```text
+      INFO hexkit.providers.mongodb.migrations._manager Database lock acquired
+      CRITICAL hexkit.providers.mongodb.migrations._manager Unable to apply DB version 3 (V3Migration)
+      Traceback (most recent call last):
+        ...
+      AttributeError: 'Config' object has no attribute 'dataset_collection'
+
+      The above exception was the direct cause of the following exception:
+
+      Traceback (most recent call last):
+        ...
+      hexkit.providers.mongodb.migrations._manager.MigrationStepError: Unable to apply DB version 3 (V3Migration)
+      ```
+
+      Fix it, and tell me how to check the fix.
+    graders:
+      - name: fixed-migration
+        type: regex
+        target: {source: file, path: services/work-package-service/src/wps/migrations/definitions/v3.py}
+        pattern: 'config = Config\(\)\n\s+datasets_collection = config\.datasets_collection\n\n\s+async def rename_id_to_accession'
+      - name: code-not-cluster
+        type: llm
+        criteria: |
+          The reply names the branch's change to the WPS V3 migration as the cause and fixes it there; it does not offer another `just testbed-reset` or a fresh cluster with `just down` as the fix. To check the fix it rebuilds the image and gets pods running it, for example with `just testbed-reset`.
+      - no-testbed-write
+      - no-testbed-edit
       - skill-fired
       - no-direct-uv
 
