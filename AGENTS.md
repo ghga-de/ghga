@@ -114,7 +114,7 @@ An epic specification records the plan as its epic started, so do not update it 
 
 ## AI agent integration
 
-- Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, symlinked into `.claude/skills/` until Claude Code reads the standard path.
+- Reusable task procedures live in `.agents/skills/<name>/SKILL.md`, symlinked into `.claude/skills/`, where Claude Code reads them.
   Keep always-on rules in the `AGENTS.md` files instead.
 - Claude Code sessions default to the **GHGA Dev** output style (`.claude/output-styles/ghga-dev.md`), which keeps the writing steady across a long session.
   Set `outputStyle` in `.claude/settings.local.json` to use another; user settings do not override the project default.

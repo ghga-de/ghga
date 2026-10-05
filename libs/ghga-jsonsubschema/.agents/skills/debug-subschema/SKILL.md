@@ -17,7 +17,7 @@ s2 = {"type": "string"}
 print(is_subschema(s1, s2))
 ```
 
-Run it with `uv run python <script>` (or `uv run python -c "..."`).
+Run it inside the dev container with `uv run python <script>` (or `uv run python -c "..."`); no `just` recipe runs an ad-hoc script.
 The CLI alternative for existing files: `uv run jsonsubschema lhs.json rhs.json`.
 
 ## Inspect the pipeline stage by stage

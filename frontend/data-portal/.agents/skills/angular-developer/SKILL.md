@@ -37,7 +37,7 @@ Use this skill when working on Angular code in this repository.
 
 ## Tooling and validation
 
-- Prefer MCP-backed Angular guidance and docs before assuming Angular APIs or CLI behavior.
+- When the `angular-cli` MCP server is connected (sessions started in `frontend/data-portal` or below), consult it before assuming Angular APIs or CLI behavior.
 - Prefer `pnpm` scripts over ad-hoc CLI commands.
 - Validate changes with the smallest focused check first, then broaden only if needed.
 - Use `pnpm test` as the default unit-test check when a task needs unit-test validation.
