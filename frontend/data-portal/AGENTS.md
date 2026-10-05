@@ -4,13 +4,10 @@ How we work on the Angular data portal, on top of the repo-wide rules in the roo
 
 ## Instruction source of truth
 
-- `AGENTS.md` may reference additional project documentation (for example `README.md` and files in `docs/`) that is also authoritative and intended for both human developers and agents.
 - Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
-- Avoid duplicating AI-specific guidance across files to prevent instruction drift; prefer linking from `AGENTS.md`.
 - [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
   Keep always-on rules here and move longer task procedures into skills, which live in `.agents/skills/<name>/SKILL.md` and are symlinked into `.claude/skills/`, where Claude Code reads them.
 - Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code loads it once it reads a file in this directory.
-- The dev container's CLI tools and the repo-wide rules are in the root [AGENTS.md](../../AGENTS.md).
 
 ## Role and approach
 
@@ -98,7 +95,6 @@ The data portal uses `pnpm` (not npm) for dependency installation and scripts.
   - Invalid example (causes parsing failures): `ng test --watch=false -- --watch=false --include src/app/...`.
 - E2E tests (Playwright): `pnpm e2e` / `pnpm e2e:ui` / `pnpm e2e:headed` / `pnpm e2e:debug` / `pnpm e2e:report`
   - Default command for e2e tests is always `pnpm e2e`.
-  - Test framework: Playwright
   - Run individual tests with `pnpm e2e <filter>`.
   - You don’t need to start the app manually; Playwright starts it via config in `playwright.config.ts`.
   - Prefer assertions on stable end states (URL/title/visible content) over transient intermediate states.
@@ -127,9 +123,7 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 ## Execution policy
 
 - For code changes, run the smallest relevant validation first (targeted tests/lint/typecheck where possible), then run `pnpm test` as the default unit-test check.
-- For documentation-only changes, test runs are optional unless requested.
 - Prefer project scripts/tasks over ad-hoc commands.
-- Do not create commits or branches unless explicitly requested.
 
 ## Generated artifacts
 
