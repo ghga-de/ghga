@@ -183,8 +183,6 @@ unfixable = ["MD034", "MD037", "MD046"]
 ".github/pull_request_template.md" = ["MD041"]
 # the reference pages these link to are generated when the docs site is built
 "libs/hexkit/user_guide/**" = ["MD051", "MD057", "MD078"]
-# anchors from JSON Schema $defs, which rumdl does not resolve
-"tools/ghga-datasteward-kit/s3_upload_config.md" = ["MD051"]
 
 [tool.rumdl.MD013]
 line-length = 0
