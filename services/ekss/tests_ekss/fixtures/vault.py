@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 import hvac
 import pytest
+import requests
 
 # from testcontainers.vault import DockerContainer
 from testcontainers.core.generic import DockerContainer
@@ -31,6 +32,7 @@ VAULT_URL = "http://0.0.0.0:8200"
 VAULT_NAMESPACE = "vault"
 VAULT_TOKEN = "dev-token"
 VAULT_PORT = 8200
+VAULT_STARTUP_TIMEOUT = 30
 
 
 @dataclass
@@ -63,16 +65,36 @@ def vault_fixture() -> Generator[VaultFixture]:
             vault_secrets_mount_point="secret-mount-point",
         )
         vault_adapter = VaultClient(config=config)
-        # client needs some time after creation
-        time.sleep(2)
         yield VaultFixture(adapter=vault_adapter, config=config)
+
+
+def wait_for_vault(client: hvac.Client, timeout: float = VAULT_STARTUP_TIMEOUT) -> None:
+    """Wait until the dev server has mounted its default secrets engine.
+
+    Docker publishes the port before Vault listens on it, so an early request is reset,
+    and a fixed sleep is too short on a slow runner. Waiting for the "secret/" mount
+    waits for exactly what `configure_vault` relies on first.
+
+    Raises:
+        RuntimeError: if the mount does not appear before `timeout` elapses.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            mounts = client.sys.list_mounted_secrets_engines()
+            if "secret/" in mounts["data"]:
+                return
+        except (requests.exceptions.ConnectionError, hvac.exceptions.VaultError):
+            pass
+        if time.monotonic() > deadline:
+            raise RuntimeError(f"Vault was not ready within {timeout} seconds")
+        time.sleep(0.25)
 
 
 def configure_vault(*, host: str, port: int):
     """Configure vault using direct interaction with hvac.Client"""
     client = hvac.Client(url=f"http://{host}:{port}", token=VAULT_TOKEN)
-    # client needs some time after creation
-    time.sleep(2)
+    wait_for_vault(client)
 
     # use a non-default secret engine to test "vault_secrets_mount_point"
     client.sys.move_backend("secret", "secret-mount-point")
