@@ -26,7 +26,7 @@ license = "Apache-2.0"
 dependencies = [
     "ghga-transpiler >=2.1.2, <3",
     "metldata >=4.2.1, <5",
-    "ghga-service-commons >=8.0.0, <9",
+    "ghga-service-commons[http] >=8.0.0, <9",
 ]
 
 [project.urls]

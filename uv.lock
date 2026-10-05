@@ -1472,14 +1472,14 @@ name = "ghga-datasteward-kit"
 version = "6.0.0"
 source = { editable = "tools/ghga-datasteward-kit" }
 dependencies = [
-    { name = "ghga-service-commons" },
+    { name = "ghga-service-commons", extra = ["http"] },
     { name = "ghga-transpiler" },
     { name = "metldata" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "ghga-service-commons", editable = "libs/ghga-service-commons" },
+    { name = "ghga-service-commons", extras = ["http"], editable = "libs/ghga-service-commons" },
     { name = "ghga-transpiler", editable = "tools/ghga-transpiler" },
     { name = "metldata", editable = "libs/metldata" },
 ]

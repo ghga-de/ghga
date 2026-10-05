@@ -13,14 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Collection of all config classes."""
+"""File related CLI"""
 
-from ghga_datasteward_kit.file_deletion import FileDeletionConfig
-from ghga_datasteward_kit.loading import LoadConfig
-from ghga_datasteward_kit.metadata import MetadataConfig
+from pathlib import Path
 
-CONFIG_CLASSES = {
-    "purge": FileDeletionConfig,
-    "metadata": MetadataConfig,
-    "load": LoadConfig,
-}
+import typer
+
+from ghga_datasteward_kit import file_deletion
+
+cli = typer.Typer(no_args_is_help=True)
+
+
+@cli.command(no_args_is_help=True)
+def delete_file(
+    file_id: str = typer.Option(
+        ...,
+        help=(
+            "Public ID of the file for which all associated data across file services should be deleted."
+        ),
+    ),
+    config_path: Path = typer.Option(..., help="Path to a config YAML."),
+):
+    """Call purge controller to remove all data associated with the given file ID from all file services."""
+    file_deletion.main(file_id=file_id, config_path=config_path)
