@@ -14,7 +14,7 @@ This skill gives only the order of the work, the commands, and the checks before
 1. Map the arguments to a tag with the table in releases.md's "Tags and branches".
    `ghga X.Y.Z` is a platform release, `ghga X.Y.Z-rc.N` a candidate, a PyPI-lane member's name a targeted `name/x.y.z`, and `packages` a sweep.
    Any other member has no tag of its own: a service ships with `ghga/`, `ghga-datasteward-kit` is tagged by the platform run, and `ghga-event-schemas` is never published.
-2. Without a version, propose one: the next after `git tag -l 'ghga/*' --sort=-v:refname | head -3` for the platform, the declared version in the member's `pyproject.toml` for a targeted tag, the platform version as the label of a sweep.
+2. Without a version, propose one: the next after `git -c versionsort.suffix=-rc tag -l 'ghga/*' --sort=-v:refname | head -3` for the platform, where the suffix setting sorts a candidate below its final release, the declared version in the member's `pyproject.toml` for a targeted tag, the platform version as the label of a sweep.
 3. Ask when the release does not follow: a version not above the last tag, a skipped candidate number, a declared version that differs from the tag.
 4. Name the tag, the branch, the commit and what the tag push will do, and wait for the dev to agree.
 
@@ -31,9 +31,10 @@ Run them in this order and stop at the first that fails.
 5. For a PyPI tag, run the plan on a clean checkout of that commit.
    A targeted tag takes `uv run --script scripts/pypi_members.py --plan --target <name>`, which refuses when a dependency in the member's closure waits too: tag that one first, or sweep.
    A sweep takes `--plan` alone, and its list is what goes out; an empty plan means nothing to release.
-6. For a final release, tag locally and show the dev the notes the workflow will draft, as in releases.md's "Release notes".
+6. For a final `ghga/` or targeted tag, tag locally and show the dev the notes the workflow will draft, as in releases.md's "Release notes".
    Run `git tag <tag> <sha>`, then `uv run --script scripts/release_notes.py <tag>`.
-   The script needs the tag in the clone; `git tag -d <tag>` undoes it while it is not pushed.
+   The script needs the tag in the clone; if the dev does not go on, delete it with `git tag -d <tag>`, so no later push takes it along.
+   A sweep has no notes of its own: the script refuses a `packages/` tag, and each member's draft follows its upload.
 
 ## The steps that cannot be undone
 
