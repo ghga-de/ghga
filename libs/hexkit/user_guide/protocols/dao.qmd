@@ -125,9 +125,8 @@ The ID field is implied, so leave it out:
 await book_dao.update(extended, precondition={"pages": 448})
 ```
 
-`update` also guards against lost updates. Pass `precondition` as a mapping of field
-names to the values the stored resource must still have, and the provider checks and
-writes atomically, raising `PreconditionFailedError` if another writer got there first.
+`update` also guards against lost updates.
+Pass `precondition` as a mapping of field names to the values the stored resource must still have, and the provider checks and writes atomically, raising `PreconditionFailedError` if another writer got there first.
 The ID field is implied, so leave it out:
 
 ```python
