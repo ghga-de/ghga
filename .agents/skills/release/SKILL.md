@@ -31,7 +31,7 @@ Run them in this order and stop at the first that fails.
 5. For a PyPI tag, run the plan on a clean checkout of that commit.
    A targeted tag takes `uv run --script scripts/pypi_members.py --plan --target <name>`, which refuses when a dependency in the member's closure waits too: tag that one first, or sweep.
    A sweep takes `--plan` alone, and its list is what goes out; an empty plan means nothing to release.
-6. For a final `ghga/` or targeted tag, tag locally and show the dev the notes the workflow will draft, as in releases.md's "Release notes".
+6. For a final release, on a `ghga/` or a targeted tag, tag locally and show the dev the notes the workflow will draft, as in releases.md's "Release notes".
    Run `git tag <tag> <sha>`, then `uv run --script scripts/release_notes.py <tag>`.
    The script needs the tag in the clone; if the dev does not go on, delete it with `git tag -d <tag>`, so no later push takes it along.
    A sweep has no notes of its own: the script refuses a `packages/` tag, and each member's draft follows its upload.
