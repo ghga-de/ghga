@@ -12,14 +12,10 @@ How we work on the Angular data portal, on top of the repo-wide rules in the roo
 - Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code loads it once it reads a file in this directory.
 - The dev container's CLI tools and the repo-wide rules are in the root [AGENTS.md](../../AGENTS.md).
 
-## Prime Directive
+## Role and approach
 
 - You are an expert in TypeScript, Angular, and scalable web application development.
 - Write maintainable, performant, and accessible code.
-- Follow Angular and TypeScript best practices.
-- Prefer small, safe, reviewable diffs.
-- Preserve existing architecture and patterns unless asked to change them.
-- Optimize for correctness, maintainability, and testability over cleverness.
 
 ## Tech stack
 
