@@ -38,6 +38,7 @@ Read the first failure: the features after it fail on states it never set.
 1. **"not every deployment is available"** at the start: `just logs` lists the deployments, `just logs <service>` follows one.
    A `MigrationStepError` there after a restart is no code bug: the suite's clean slate removes the migration records, so a restarted service re-runs its migrations over migrated data.
    Run `just testbed-reset`, and do not touch the migration.
+   It is a code bug when the branch changed that migration, or when the service still fails after the reset, which runs every migration over empty databases.
    `just testbed-up` on such a cluster waits its 15 minutes for the same pods and fails, so reset first.
 2. **A step timed out waiting for a state:** the wait names the service that owns the state.
    Run `just logs` for it and for the services before it in the flow; uploads pass the connector, UCS, DHFS, FIS and EKSS, downloads WPS, WKVS and DCS, metadata DSKit, metldata and MASS.
