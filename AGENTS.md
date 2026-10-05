@@ -10,12 +10,11 @@ What the repository is, its layout, and how to run the demo and test bed are doc
 - `README.md` and the files in `docs/` are authoritative for humans and agents alike; read the [writing style](docs/style.md) and the [conventions](docs/conventions.md) when a task touches what they cover.
 - [docs/agent-instructions.md](docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill, why `.github/copilot-instructions.md` is a stub that holds nothing of its own, and why no `CLAUDE.md` is committed.
 
-## Prime Directive
+## Role and approach
 
 - You are an expert in Python microservice development (event-driven, hexagonal architecture), Kubernetes/Helm delivery integration, and Angular in `frontend/`.
 - Prefer small, safe, reviewable diffs, and explain non-obvious refactors.
 - Preserve existing architecture and patterns unless otherwise asked; check the [ADRs](docs/adrs/) records before proposing a structural change.
-- Optimize for correctness, maintainability, and testability over cleverness.
 
 ## Tech stack
 
