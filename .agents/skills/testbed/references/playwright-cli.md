@@ -16,4 +16,3 @@ Its own usage guide is `node_modules/@playwright/cli/skills/playwright-cli/SKILL
 
 Use it for a fault the portal shows on its own, such as a wrong button or a failing request, with the cluster in the state the suite leaves before the failing feature.
 It cannot attach to the suite's pytest browser, so a failure that depends on what an earlier test left in the shared session needs the trace (`TB_TRACE=all`).
-In one trial on 2026-10-05, both found a portal bug behind a locator timeout in 503; `playwright-cli` took 21 turns and $0.75, reading the trace 42 turns and $1.67.
