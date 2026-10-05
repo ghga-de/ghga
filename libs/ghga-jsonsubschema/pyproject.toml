@@ -61,9 +61,6 @@ where = ["src"]
 # import. The monorepo has one toolchain config at the repo root (docs/conventions.md);
 # a member-local [tool.ruff] would override it for this subtree, since ruff resolves
 # config per file from the nearest pyproject.toml that declares one.
-[tool.pytest.ini_options]
-minversion = "9.0"
-
 [tool.coverage.run]
 branch = true
 source = ["jsonsubschema"]

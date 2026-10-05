@@ -1,4 +1,2 @@
-include src/hexkit/py.typed
-include src/hexkit/providers/s3/test_files/*.yaml
 # The tests run in the monorepo; setuptools would ship only tests/test*.py, a broken suite.
 prune tests

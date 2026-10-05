@@ -145,8 +145,8 @@ jobs:
         # same thing: the member's src AND its test package(s), in one invocation
         run: uv run python scripts/typecheck.py "${{ matrix.target }}"
       - name: pytest
-        # cwd = member dir: each member is its own pytest rootdir (the `tests`
-        # packages collide across members otherwise)
+        # cwd = member dir: each member runs as its own pytest (the `tests`
+        # packages collide across members otherwise); the config is the root one
         working-directory: ${{ matrix.target }}
         run: uv run pytest -q --durations=10
 
