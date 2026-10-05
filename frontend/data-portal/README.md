@@ -75,6 +75,10 @@ The API and the authentication are two independent switches, giving four modes:
 Each recipe is a thin wrapper around `node run.js --dev` with `--with-backend` and `--with-oidc` in the corresponding combination, which you can also run directly from this directory.
 The `run.js` launcher is what generates `public/config.js` from the settings before handing over to `ng serve`, so a bare `pnpm start` is not equivalent — it serves the application without a fresh runtime configuration.
 
+To check what only a deployment shows, such as the response headers from `sws.toml` or the timing of the optimized build, run `just fe-prod`.
+It builds for production and serves the result with static-web-server on `http://localhost:8080/`, as the production image does, through `node run.js` without `--dev`.
+The production build starts no mocks, so its API calls fail.
+
 The settings themselves come from three places, each overriding the previous one: `data-portal.default.yaml` (the same defaults the production image uses), `data-portal.dev.yaml` (the development overrides, e.g. the `Development` ribbon and the `ghga-dev-client` OIDC client), and finally the environment, including [`local.env`](#per-developer-settings).
 
 ### Per-developer settings
