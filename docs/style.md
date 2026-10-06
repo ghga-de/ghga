@@ -40,6 +40,8 @@ Commit messages, branch names and pull request titles follow the [conventions](c
   What changed — incidents, dates, "this used to be X" — belongs in the commit message.
 - **Pull request descriptions** are a few short paragraphs on what changed, why, and what to look at; no headings for a small change.
   Detail that does not fit goes in the commit body.
+- **`just prose` flags AI tells** in the Markdown and Python files you changed: filler phrases, shell nouns, and figurative verbs such as "lands in" or "surfaces".
+  It only warns; install [vale](https://vale.sh/docs/install) first, since the dev container lacks it.
 
 ## Markdown
 

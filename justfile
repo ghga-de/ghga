@@ -136,6 +136,29 @@ hooks-update: _guard
 docs-check *args: _guard
     uv run python scripts/docs_check.py {{args}}
 
+# vale is a Go binary outside the uv and pnpm toolchains, so the dev container lacks it;
+# .vale.ini pins the rule package, which `vale sync` downloads into the gitignored .vale/.
+# Warns only. Without paths it reads the Markdown and Python files changed against the
+# base, since the older docs, legacy ADRs among them, would bury a change's own findings.
+# Flag AI tells in prose (docs/style.md), e.g. `just prose` or `just prose README.md`.
+prose *paths:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v vale >/dev/null; then
+        echo "error: vale is not installed: https://vale.sh/docs/install (tested with 3.24)" >&2
+        exit 1
+    fi
+    [ -d .vale/styles/ai-tells ] || vale sync
+    files=({{paths}})
+    if [ ${#files[@]} -eq 0 ]; then
+        mapfile -t files < <(
+            { git diff --name-only --diff-filter=d "$(git merge-base origin/dev HEAD)"
+              git ls-files --others --exclude-standard; } \
+            | grep -E '\.(md|py)$' | grep -Ev '^(docs/epics|deploy/charts)/' | sort -u)
+    fi
+    [ ${#files[@]} -eq 0 ] && { echo "no changed Markdown or Python files"; exit 0; }
+    vale --no-exit "${files[@]}"
+
 # A root skill's eval suite, .agents/skills/<name>/evals.yaml, each case run with and without
 # the skill in a pinned clone that scripts/skill-eval-scaffold.sh prepares
 # (docs/agent-instructions.md). A pass is due when the skill's SKILL.md changes, and for

@@ -64,3 +64,6 @@ metadata.json
 libs/*/great-docs/
 # Playwright traces from failed test-bed runs (diagnostics only, can be large)
 testbed/.traces/
+
+# vale styles, downloaded by `vale sync`
+.vale/
