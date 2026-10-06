@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, model } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, effect, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -27,7 +27,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
 @Component({
   selector: 'app-iva-manager-filter',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatButtonModule,
     MatInputModule,
@@ -51,22 +51,27 @@ export class IvaManagerFilterComponent {
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
 
   /**
-   * The model for the filter properties
+   * The filter form, starting from the current filter
    */
-  name = model<string>(this.#filter().name);
-  fromDate = model<Date | undefined>(this.#filter().fromDate);
-  toDate = model<Date | undefined>(this.#filter().toDate);
-  state = model<IvaState | undefined>(this.#filter().state);
+  protected filterForm = form(
+    signal({
+      name: this.#filter().name,
+      fromDate: this.#filter().fromDate ?? (null as Date | null),
+      toDate: this.#filter().toDate ?? (null as Date | null),
+      state: (this.#filter().state ?? '') as IvaState | '',
+    }),
+  );
 
   /**
    * Communicate filter changes to the IVA service
    */
   #filterEffect = effect(() => {
+    const { name, fromDate, toDate, state } = this.filterForm().value();
     this.#ivaService.setAllIvasFilter({
-      name: this.name(),
-      fromDate: this.fromDate(),
-      toDate: this.toDate(),
-      state: this.state(),
+      name,
+      fromDate: fromDate ?? undefined,
+      toDate: toDate ?? undefined,
+      state: state || undefined,
     });
   });
 

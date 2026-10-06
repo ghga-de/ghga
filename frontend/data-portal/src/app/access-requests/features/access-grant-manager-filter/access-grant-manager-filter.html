@@ -32,13 +32,13 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Name or Email</mat-label>
-              <input matInput type="text" [(ngModel)]="user" />
+              <input matInput type="text" [formField]="filterForm.user" />
             </mat-form-field>
             <button
               mat-icon-button
               aria-label="Remove filter for name and email"
-              [class.invisible]="!this.user()"
-              (click)="this.user.set('')"
+              [class.invisible]="!filterForm.user().value()"
+              (click)="filterForm.user().value.set('')"
               data-umami-event="Access Grant Filters User Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
@@ -47,13 +47,13 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Dataset ID</mat-label>
-              <input matInput type="text" [(ngModel)]="datasetId" />
+              <input matInput type="text" [formField]="filterForm.datasetId" />
             </mat-form-field>
             <button
               mat-icon-button
               aria-label="Remove filter for dataset ID"
-              [class.invisible]="!this.datasetId()"
-              (click)="this.datasetId.set('')"
+              [class.invisible]="!filterForm.datasetId().value()"
+              (click)="filterForm.datasetId().value.set('')"
               data-umami-event="Access Grant Filters Dataset ID Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
@@ -62,14 +62,14 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>
-                @if (status()) {
+                @if (filterForm.status().value()) {
                   Grant status
                 } @else {
                   All grant statuses
                 }
               </mat-label>
-              <mat-select [(ngModel)]="status">
-                <mat-option [value]="undefined">All grant statuses</mat-option>
+              <mat-select [formField]="filterForm.status">
+                <mat-option value="">All grant statuses</mat-option>
                 @for (opt of ['active', 'waiting', 'expired']; track opt) {
                   <mat-option [value]="opt">{{ opt | CapitalisePipe }}</mat-option>
                 }
@@ -78,8 +78,8 @@
             <button
               mat-icon-button
               aria-label="Remove filter for grant status"
-              [class.invisible]="!this.status()"
-              (click)="this.status.set(undefined)"
+              [class.invisible]="!filterForm.status().value()"
+              (click)="filterForm.status().value.set('')"
               data-umami-event="Access Grant Filters Status Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>

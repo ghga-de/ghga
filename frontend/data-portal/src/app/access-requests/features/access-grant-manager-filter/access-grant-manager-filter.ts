@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, model } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, effect, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -26,7 +26,7 @@ import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 @Component({
   selector: 'app-access-grant-manager-filter',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatInputModule,
     MatButtonModule,
@@ -42,18 +42,27 @@ export class AccessGrantManagerFilterComponent {
   displayFilters = true;
   #ars = inject(AccessRequestService);
   #filter = this.#ars.allAccessGrantsFilter;
-  status = model<string | undefined>(this.#filter().status);
-  user = model<string | undefined>(this.#filter().user);
-  datasetId = model<string | undefined>(this.#filter().dataset_id);
+
+  /**
+   * The filter form, starting from the current filter
+   */
+  protected filterForm = form(
+    signal({
+      user: this.#filter().user ?? '',
+      datasetId: this.#filter().dataset_id ?? '',
+      status: (this.#filter().status ?? '') as AccessGrantStatus | '',
+    }),
+  );
 
   /**
    * Communicate filter changes to the access request service
    */
   #filterEffect = effect(() => {
+    const { user, datasetId, status } = this.filterForm().value();
     this.#ars.setAllAccessGrantsFilter({
-      dataset_id: this.datasetId(),
-      user: this.user(),
-      status: this.status() as AccessGrantStatus,
+      dataset_id: datasetId || undefined,
+      user: user || undefined,
+      status: status || undefined,
     });
   });
 }

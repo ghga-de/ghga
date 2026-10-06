@@ -150,4 +150,23 @@ describe('UploadBoxManagerFilterComponent', () => {
       location: 'HD02',
     });
   });
+
+  it('should clear the filter with the remove buttons', async () => {
+    const textbox = screen.getByRole('textbox', { name: 'Upload box title' });
+    await userEvent.type(textbox, 'Upload Box');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for upload box title' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for upload box state' }),
+    );
+    await fixture.whenStable();
+
+    const filter = uploadBoxService.setUploadBoxesFilter.mock.lastCall![0];
+    expect(filter.title).toBeFalsy();
+    expect(filter.state).toBeUndefined();
+    expect(filter.location).toBeUndefined();
+    expect(textbox).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'All states' })).toBeVisible();
+  });
 });

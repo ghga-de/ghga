@@ -32,14 +32,14 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Name or email of user</mat-label>
-              <input matInput type="text" [(ngModel)]="name" />
+              <input matInput type="text" [formField]="filterForm.name" />
               <mat-hint>You can also use partial names or emails</mat-hint>
             </mat-form-field>
             <button
               mat-icon-button
               aria-label="Remove filter for user name"
-              [class.invisible]="!this.name()"
-              (click)="this.name.set('')"
+              [class.invisible]="!filterForm.name().value()"
+              (click)="filterForm.name().value.set('')"
               data-umami-event="IVA Manager Filters User Name Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
@@ -52,7 +52,7 @@
                 matInput
                 type="text"
                 [matDatepicker]="fromPicker"
-                [(ngModel)]="fromDate"
+                [formField]="filterForm.fromDate"
               />
               <mat-hint>{{ dateInputFormatHint }}</mat-hint>
               <mat-datepicker-toggle
@@ -64,8 +64,8 @@
             <button
               mat-icon-button
               aria-label="Remove filter for dates ranging from"
-              [class.invisible]="!this.fromDate()"
-              (click)="this.fromDate.set(undefined)"
+              [class.invisible]="!filterForm.fromDate().value()"
+              (click)="filterForm.fromDate().value.set(null)"
               data-umami-event="IVA Manager Filters Date From Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
@@ -78,7 +78,7 @@
                 matInput
                 type="text"
                 [matDatepicker]="toPicker"
-                [(ngModel)]="toDate"
+                [formField]="filterForm.toDate"
               />
               <mat-hint>{{ dateInputFormatHint }}</mat-hint>
               <mat-datepicker-toggle
@@ -90,8 +90,8 @@
             <button
               mat-icon-button
               aria-label="Remove filter for dates ranging to"
-              [class.invisible]="!this.toDate()"
-              (click)="this.toDate.set(undefined)"
+              [class.invisible]="!filterForm.toDate().value()"
+              (click)="filterForm.toDate().value.set(null)"
               data-umami-event="IVA Manager Filters Date To Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
@@ -100,13 +100,13 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>
-                @if (state()) {
+                @if (filterForm.state().value()) {
                   Status value
                 } @else {
                   All status values
                 }
               </mat-label>
-              <mat-select [(ngModel)]="state">
+              <mat-select [formField]="filterForm.state">
                 @for (opt of stateOptions; track opt) {
                   <mat-option [value]="opt.value">{{ opt.text }}</mat-option>
                 }
@@ -115,8 +115,8 @@
             <button
               mat-icon-button
               aria-label="Remove filter for status"
-              [class.invisible]="!this.state()"
-              (click)="this.state.set(undefined)"
+              [class.invisible]="!filterForm.state().value()"
+              (click)="filterForm.state().value.set('')"
               data-umami-event="IVA Manager Filters State Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>

@@ -117,4 +117,46 @@ describe('UserManagerFilterComponent', () => {
       status: UserStatus.active,
     });
   });
+
+  it('should set the filter after choosing no assigned role and clear it again', async () => {
+    await userEvent.click(screen.getByRole('combobox', { name: 'Any role' }));
+    await userEvent.click(screen.getByRole('option', { name: 'No assigned role' }));
+    await fixture.whenStable();
+
+    expect(userService.setUsersFilter).toHaveBeenLastCalledWith({
+      idStrings: '',
+      roles: [null],
+      status: undefined,
+    });
+
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for user role' }),
+    );
+    await fixture.whenStable();
+
+    expect(
+      vitest.mocked(userService.setUsersFilter).mock.lastCall![0].roles?.length ?? 0,
+    ).toBe(0);
+  });
+
+  it('should clear the name filter with its remove button', async () => {
+    const textbox = screen.getByRole('textbox', {
+      name: 'Name, email, or LS ID of user',
+    });
+    await userEvent.type(textbox, 'Doe');
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove filter for user name, email, and LS ID',
+      }),
+    );
+    await fixture.whenStable();
+
+    expect(userService.setUsersFilter).toHaveBeenLastCalledWith({
+      idStrings: '',
+      roles: undefined,
+      status: undefined,
+    });
+    expect(textbox).toHaveValue('');
+  });
 });

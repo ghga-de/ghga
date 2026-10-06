@@ -91,4 +91,45 @@ describe('IvaManagerFilterComponent', () => {
       state: IvaState.CodeRequested,
     });
   });
+
+  it('should set the filter after typing modification dates', async () => {
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Last modified from' }),
+      '1/15/2025',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Last modified until' }),
+      '2/28/2025',
+    );
+    await fixture.whenStable();
+
+    expect(mockIvaService.setAllIvasFilter).toHaveBeenLastCalledWith({
+      name: '',
+      fromDate: new Date(2025, 0, 15),
+      toDate: new Date(2025, 1, 28),
+      state: undefined,
+    });
+  });
+
+  it('should clear the filter with the remove buttons', async () => {
+    const name = screen.getByRole('textbox', { name: 'Name or email of user' });
+    const until = screen.getByRole('textbox', { name: 'Last modified until' });
+    await userEvent.type(name, 'Doe');
+    await userEvent.type(until, '2/28/2025');
+    await fixture.whenStable();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for user name' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for dates ranging to' }),
+    );
+    await fixture.whenStable();
+
+    const filter = mockIvaService.setAllIvasFilter.mock.lastCall![0];
+    expect(filter.name).toBe('');
+    expect(filter.toDate).toBeFalsy();
+    expect(name).toHaveValue('');
+    expect(until).toHaveValue('');
+  });
 });
