@@ -47,22 +47,18 @@ describe('DeletionConfirmationDialog', () => {
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: { user: users[0] } },
         { provide: MatDialogRef, useValue: dialogRef },
+        { provide: UserService, useValue: MockUserService },
         { provide: ConfigService, useValue: MockConfigService },
         { provide: Notifier, useValue: MockNotifier },
         provideHttpClient(),
         provideHttpCache(),
       ],
-    })
-      // The component provides its own UserService, which would bypass a
-      // module-level mock and send a real request.
-      .overrideComponent(DeletionConfirmationDialog, {
-        set: { providers: [{ provide: UserService, useValue: MockUserService }] },
-      })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(DeletionConfirmationDialog);
     component = fixture.componentInstance;
-    service = fixture.debugElement.injector.get(UserService);
+    // The opener's instance, so its local updates reach the user list
+    service = TestBed.inject(UserService);
     vitest.clearAllMocks();
     await fixture.whenStable();
   });

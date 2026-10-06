@@ -35,7 +35,6 @@ import { Notifier } from '@app/shared/services/notification';
     MatDialogContent,
     MatDialogActions,
   ],
-  providers: [UserService],
   templateUrl: './deletion-confirmation-dialog.html',
 })
 export class DeletionConfirmationDialog {

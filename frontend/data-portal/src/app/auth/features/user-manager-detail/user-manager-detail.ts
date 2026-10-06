@@ -12,6 +12,7 @@ import {
   computed,
   effect,
   inject,
+  Injector,
   input,
   signal,
 } from '@angular/core';
@@ -75,6 +76,7 @@ export class UserManagerDetail implements OnInit {
 
   #location = inject(NavigationTracker);
   #dialog = inject(MatDialog);
+  #injector = inject(Injector);
 
   id = input.required<string>();
   #user = this.#userService.user;
@@ -255,8 +257,11 @@ export class UserManagerDetail implements OnInit {
    * Delete the user after confirmation.
    */
   safeDeletion(): void {
+    // MatDialog resolves from the root injector by default, which cannot see
+    // the route's UserService that holds the user list.
     this.#dialog.open(DeletionConfirmationDialog, {
       data: { user: this.user()! },
+      injector: this.#injector,
     });
   }
 }

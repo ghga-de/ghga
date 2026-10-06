@@ -8,6 +8,7 @@ import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { allIvasOfDoe } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
@@ -171,6 +172,13 @@ describe('UserManagerDetail', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'User Details' }),
     ).toBeInTheDocument();
+  });
+
+  it('should let the deletion dialog use its UserService', () => {
+    const dialog = fixture.debugElement.injector.get(MatDialog);
+    const open = vitest.spyOn(dialog, 'open').mockReturnValue(undefined as never);
+    component.safeDeletion();
+    expect(open.mock.calls[0][1]?.injector?.get(UserService)).toBe(mockUserService);
   });
 
   it('should reload when id input changes', async () => {

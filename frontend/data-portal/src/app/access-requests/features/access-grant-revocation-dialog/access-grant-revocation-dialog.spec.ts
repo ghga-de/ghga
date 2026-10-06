@@ -12,12 +12,20 @@ import { accessGrants } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
+import { Notifier } from '@app/shared/services/notification';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { AccessGrantRevocationDialog } from './access-grant-revocation-dialog';
 
 const MockConfigService = {
   auth_url: '/test/auth',
+};
+
+// A real notifier opens snack bars in document.body, which the test runner
+// shares between spec files.
+const MockNotifier = {
+  showSuccess: vitest.fn(),
+  showError: vitest.fn(),
 };
 
 describe('AccessGrantRevocationDialog', () => {
@@ -43,14 +51,15 @@ describe('AccessGrantRevocationDialog', () => {
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         provideHttpCache(),
         { provide: ConfigService, useValue: MockConfigService },
+        { provide: Notifier, useValue: MockNotifier },
         provideHttpClient(),
       ],
-      teardown: { destroyAfterEach: false },
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccessGrantRevocationDialog);
     component = fixture.componentInstance;
-    service = fixture.debugElement.injector.get(AccessRequestService);
+    // The shared instance, so its local updates reach the grant lists
+    service = TestBed.inject(AccessRequestService);
     await fixture.whenStable();
   });
 
@@ -84,6 +93,8 @@ describe('AccessGrantRevocationDialog', () => {
     expect(button).toHaveTextContent('Confirm revocation');
     button.click();
     expect(revokeSpy).toHaveBeenCalledWith(accessGrants[0].id);
+    expect(MockNotifier.showSuccess).toHaveBeenCalled();
+    expect(dialogRef.close).toHaveBeenCalledWith(true);
   });
 
   it('should keep the confirm button disabled until both entries match', async () => {

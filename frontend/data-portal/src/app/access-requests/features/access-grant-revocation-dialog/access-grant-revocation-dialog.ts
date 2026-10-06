@@ -34,7 +34,6 @@ import { Notifier } from '@app/shared/services/notification';
     MatDialogModule,
     MatInputModule,
   ],
-  providers: [AccessRequestService, Notifier],
   templateUrl: './access-grant-revocation-dialog.html',
 })
 export class AccessGrantRevocationDialog {
