@@ -8,12 +8,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialogRef } from '@angular/material/dialog';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { UploadBoxCreationDialogComponent } from './upload-box-creation-dialog';
+import { UploadBoxCreationDialog } from './upload-box-creation-dialog';
 
 const mockDialogRef = { close: vitest.fn() };
 const mockNotificationService = { showError: vitest.fn() };
@@ -31,9 +31,9 @@ class MockUploadBoxService {
   createUploadBox = vitest.fn();
 }
 
-describe('UploadBoxCreationDialogComponent', () => {
-  let component: UploadBoxCreationDialogComponent;
-  let fixture: ComponentFixture<UploadBoxCreationDialogComponent>;
+describe('UploadBoxCreationDialog', () => {
+  let component: UploadBoxCreationDialog;
+  let fixture: ComponentFixture<UploadBoxCreationDialog>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
@@ -41,18 +41,18 @@ describe('UploadBoxCreationDialogComponent', () => {
     mockNotificationService.showError.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [UploadBoxCreationDialogComponent],
+      imports: [UploadBoxCreationDialog],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
         { provide: UploadBoxService, useClass: MockUploadBoxService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
     }).compileComponents();
 
     uploadBoxService = TestBed.inject(
       UploadBoxService,
     ) as unknown as MockUploadBoxService;
-    fixture = TestBed.createComponent(UploadBoxCreationDialogComponent);
+    fixture = TestBed.createComponent(UploadBoxCreationDialog);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

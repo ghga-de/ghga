@@ -9,7 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { allIvasOfDoe } from '@app/../mocks/data';
 import { IvaService } from '@app/ivas/services/iva';
-import { AccessRequestManagerDetailComponent } from './access-request-manager-detail';
+import { AccessRequestManagerDetail } from './access-request-manager-detail';
 
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -45,13 +45,13 @@ class MockConfigService {
   helpdeskTicketUrl = 'http:/helpdesk.test/ticket/';
 }
 
-describe('AccessRequestManagerDetailComponent', () => {
-  let fixture: ComponentFixture<AccessRequestManagerDetailComponent>;
+describe('AccessRequestManagerDetail', () => {
+  let fixture: ComponentFixture<AccessRequestManagerDetail>;
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      imports: [AccessRequestManagerDetailComponent],
+      imports: [AccessRequestManagerDetail],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
@@ -63,7 +63,7 @@ describe('AccessRequestManagerDetailComponent', () => {
     });
 
     await TestBed.compileComponents();
-    fixture = TestBed.createComponent(AccessRequestManagerDetailComponent);
+    fixture = TestBed.createComponent(AccessRequestManagerDetail);
     httpMock = TestBed.inject(HttpTestingController);
 
     fixture.componentRef.setInput('id', '9409db13-e23e-433e-9afa-544d8f25b720');

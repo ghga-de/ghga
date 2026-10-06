@@ -9,17 +9,17 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
-import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil';
+import { Stencil } from '../../../shared/ui/stencil/stencil/stencil';
 
 /**
  * This component is used on the accounts page and shows a list of pending access requests the user has
  */
 @Component({
   selector: 'app-pending-access-requests-list',
-  imports: [RouterLink, StencilComponent, DatePipe],
+  imports: [RouterLink, Stencil, DatePipe],
   templateUrl: './pending-access-requests-list.html',
 })
-export class PendingAccessRequestsListComponent {
+export class PendingAccessRequestsList {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   #ars = inject(AccessRequestService);
 

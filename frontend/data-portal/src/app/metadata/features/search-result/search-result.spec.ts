@@ -14,7 +14,7 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { SearchResultComponent } from './search-result';
+import { SearchResult } from './search-result';
 
 /**
  * Mock the auth service as needed for the search result component
@@ -46,11 +46,11 @@ class MockMetadataService {
   loadDatasetSummary = vitest.fn();
 }
 
-describe(SearchResultComponent, () => {
-  let result: RenderResult<SearchResultComponent>;
+describe(SearchResult, () => {
+  let result: RenderResult<SearchResult>;
 
   beforeEach(async () => {
-    result = await render(SearchResultComponent, {
+    result = await render(SearchResult, {
       inputs: { hit: searchResults.hits.at(0)! },
       providers: [
         { provide: AuthService, useClass: MockAuthService },
@@ -58,7 +58,7 @@ describe(SearchResultComponent, () => {
         { provide: IvaService, useClass: MockIvaService },
       ],
       configureTestBed: (testBed) =>
-        testBed.overrideComponent(SearchResultComponent, {
+        testBed.overrideComponent(SearchResult, {
           set: {
             providers: [{ provide: MetadataService, useClass: MockMetadataService }],
           },

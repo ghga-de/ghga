@@ -7,9 +7,9 @@
 import { WritableSignal } from '@angular/core';
 import { ComponentFixture } from '@angular/core/testing';
 import { AuthService } from '@app/auth/services/auth';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { fireEvent, render, screen } from '@testing-library/angular';
-import { ConfirmTotpComponent } from './confirm-totp';
+import { ConfirmTotp } from './confirm-totp';
 
 /**
  * Minimal view of the component's protected/private members accessed by these tests.
@@ -32,9 +32,9 @@ const mockNotificationService = {
   showError: vitest.fn(),
 };
 
-describe('ConfirmTotpComponent', () => {
-  let component: ConfirmTotpComponent;
-  let fixture: ComponentFixture<ConfirmTotpComponent>;
+describe('ConfirmTotp', () => {
+  let component: ConfirmTotp;
+  let fixture: ComponentFixture<ConfirmTotp>;
 
   beforeEach(async () => {
     mockAuthService.verifyTotpCode.mockReset();
@@ -43,10 +43,10 @@ describe('ConfirmTotpComponent', () => {
     mockNotificationService.showSuccess.mockReset();
     mockNotificationService.showError.mockReset();
 
-    ({ fixture } = await render(ConfirmTotpComponent, {
+    ({ fixture } = await render(ConfirmTotp, {
       providers: [
         { provide: AuthService, useValue: mockAuthService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
     }));
     component = fixture.componentInstance;

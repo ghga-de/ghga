@@ -14,7 +14,7 @@ import { RouterLink } from '@angular/router';
 
 import { AcademicTitle, UserBasicData } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * User registration page
@@ -31,8 +31,8 @@ import { NotificationService } from '@app/shared/services/notification';
   ],
   templateUrl: './register.html',
 })
-export class RegisterComponent {
-  #notify = inject(NotificationService);
+export class Register {
+  #notify = inject(Notifier);
   #authService = inject(AuthService);
 
   user = this.#authService.user;

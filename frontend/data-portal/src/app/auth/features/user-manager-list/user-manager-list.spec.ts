@@ -17,7 +17,7 @@ import { Router } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
-import { UserManagerListComponent } from './user-manager-list';
+import { UserManagerList } from './user-manager-list';
 
 const WARN_TITLE = 'There are multiple user accounts with this name and email address.';
 /**
@@ -52,9 +52,9 @@ const paginatorDefaults: MatPaginatorDefaultOptions = {
   pageSizeOptions: [10, 25, 50, 100, 250, 500],
 };
 
-describe('UserManagerListComponent', () => {
-  let component: UserManagerListComponent;
-  let fixture: ComponentFixture<UserManagerListComponent>;
+describe('UserManagerList', () => {
+  let component: UserManagerList;
+  let fixture: ComponentFixture<UserManagerList>;
   let mockUserService: MockUserService;
   let mockRouter: MockRouter;
 
@@ -63,7 +63,7 @@ describe('UserManagerListComponent', () => {
     mockRouter = new MockRouter();
 
     await TestBed.configureTestingModule({
-      imports: [UserManagerListComponent],
+      imports: [UserManagerList],
       providers: [
         { provide: UserService, useValue: mockUserService },
         { provide: ConfigService, useClass: MockConfigService },
@@ -74,7 +74,7 @@ describe('UserManagerListComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UserManagerListComponent);
+    fixture = TestBed.createComponent(UserManagerList);
     component = fixture.componentInstance;
   });
 

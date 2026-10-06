@@ -6,13 +6,13 @@
 
 import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { PageNotFoundComponent } from './page-not-found';
+import { PageNotFound } from './page-not-found';
 
-describe('PageNotFoundComponent', () => {
-  let result: RenderResult<PageNotFoundComponent>;
+describe('PageNotFound', () => {
+  let result: RenderResult<PageNotFound>;
 
   beforeEach(async () => {
-    result = await render(PageNotFoundComponent);
+    result = await render(PageNotFound);
   });
 
   it('should create', () => {

@@ -13,7 +13,7 @@ import {
 import { ConfigService } from '@app/shared/services/config';
 import { localDateToContractIsoUtc } from '@app/shared/utils/date-formats';
 import { render, screen } from '@testing-library/angular';
-import { AccessRequestDialogComponent } from './access-request-dialog';
+import { AccessRequestDialog } from './access-request-dialog';
 
 const mockDialogRef = {
   close: vitest.fn(),
@@ -36,12 +36,12 @@ const mockConfig = {
   defaultAccessDurationDays: 365,
 };
 
-describe('AccessRequestDialogComponent', () => {
-  let component: AccessRequestDialogComponent;
+describe('AccessRequestDialog', () => {
+  let component: AccessRequestDialog;
 
   beforeEach(async () => {
     mockDialogRef.close.mockReset();
-    const { fixture } = await render(AccessRequestDialogComponent, {
+    const { fixture } = await render(AccessRequestDialog, {
       imports: [MatDialogModule],
       providers: [
         provideNativeDateAdapter(),

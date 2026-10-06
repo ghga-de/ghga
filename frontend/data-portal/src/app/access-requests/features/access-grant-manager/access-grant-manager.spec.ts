@@ -9,19 +9,19 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { AccessGrantManagerComponent } from './access-grant-manager';
+import { AccessGrantManager } from './access-grant-manager';
 
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { screen } from '@testing-library/angular';
 
-describe('AccessGrantManagerComponent', () => {
-  let component: AccessGrantManagerComponent;
-  let fixture: ComponentFixture<AccessGrantManagerComponent>;
+describe('AccessGrantManager', () => {
+  let component: AccessGrantManager;
+  let fixture: ComponentFixture<AccessGrantManager>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessGrantManagerComponent],
+      imports: [AccessGrantManager],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
@@ -30,7 +30,7 @@ describe('AccessGrantManagerComponent', () => {
 
     accessRequestService = TestBed.inject(AccessRequestService);
     accessRequestService.reloadAllAccessGrants = vitest.fn();
-    fixture = TestBed.createComponent(AccessGrantManagerComponent);
+    fixture = TestBed.createComponent(AccessGrantManager);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

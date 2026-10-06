@@ -11,18 +11,18 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { ConfigService } from '@app/shared/services/config';
 import { provideHttpCache } from '@ngneat/cashew';
 import { render, RenderResult, screen } from '@testing-library/angular';
-import { ActiveAccessGrantsListComponent } from './active-access-grants-list';
+import { ActiveAccessGrantsList } from './active-access-grants-list';
 
 const MockConfigService = {
   auth_url: '/test/auth',
 };
 
-describe('ActiveAccessGrantsListComponent', () => {
-  let result: RenderResult<ActiveAccessGrantsListComponent>;
+describe('ActiveAccessGrantsList', () => {
+  let result: RenderResult<ActiveAccessGrantsList>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
-    result = await render(ActiveAccessGrantsListComponent, {
+    result = await render(ActiveAccessGrantsList, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useValue: MockConfigService },

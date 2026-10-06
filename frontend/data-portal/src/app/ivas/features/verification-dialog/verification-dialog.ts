@@ -25,7 +25,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * Dialog for entering the IVA verification code
@@ -44,9 +44,9 @@ import { NotificationService } from '@app/shared/services/notification';
   ],
   templateUrl: './verification-dialog.html',
 })
-export class VerificationDialogComponent {
-  #dialogRef = inject(MatDialogRef<VerificationDialogComponent, boolean>);
-  #notify = inject(NotificationService);
+export class VerificationDialog {
+  #dialogRef = inject(MatDialogRef<VerificationDialog, boolean>);
+  #notify = inject(Notifier);
   #ivaService = inject(IvaService);
   protected data = inject<{ id: string; address: string }>(MAT_DIALOG_DATA);
   protected address = computed(() => this.data.address);

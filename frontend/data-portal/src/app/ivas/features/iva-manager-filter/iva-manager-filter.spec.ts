@@ -7,7 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { IvaService } from '@app/ivas/services/iva';
-import { IvaManagerFilterComponent } from './iva-manager-filter';
+import { IvaManagerFilter } from './iva-manager-filter';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { IvaState } from '@app/ivas/models/iva';
@@ -27,21 +27,21 @@ const mockIvaService = {
   setAllIvasFilter: vitest.fn(),
 };
 
-describe('IvaManagerFilterComponent', () => {
-  let component: IvaManagerFilterComponent;
-  let fixture: ComponentFixture<IvaManagerFilterComponent>;
+describe('IvaManagerFilter', () => {
+  let component: IvaManagerFilter;
+  let fixture: ComponentFixture<IvaManagerFilter>;
   let ivaService: IvaService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IvaManagerFilterComponent],
+      imports: [IvaManagerFilter],
       providers: [
         { provide: IvaService, useValue: mockIvaService },
         provideNativeDateAdapter(),
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(IvaManagerFilterComponent);
+    fixture = TestBed.createComponent(IvaManagerFilter);
     component = fixture.componentInstance;
     ivaService = TestBed.inject(IvaService);
     await fixture.whenStable();

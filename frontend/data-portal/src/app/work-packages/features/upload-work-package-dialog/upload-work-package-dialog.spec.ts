@@ -10,14 +10,14 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { UploadWorkPackageDialogComponent } from './upload-work-package-dialog';
+import { UploadWorkPackageDialog } from './upload-work-package-dialog';
 
 const TEST_GRANT: GrantWithBoxInfo = {
   id: 'grant-123',
@@ -64,11 +64,11 @@ class MockIvaService {
 
 const VALID_PUBKEY = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=';
 
-describe('UploadWorkPackageDialogComponent', () => {
-  let result: RenderResult<UploadWorkPackageDialogComponent>;
-  let component: UploadWorkPackageDialogComponent;
+describe('UploadWorkPackageDialog', () => {
+  let result: RenderResult<UploadWorkPackageDialog>;
+  let component: UploadWorkPackageDialog;
   let workPackageService: WorkPackageService;
-  let notificationService: NotificationService;
+  let notificationService: Notifier;
   let clipboard: Clipboard;
   let ivaService: MockIvaService;
 
@@ -114,19 +114,19 @@ describe('UploadWorkPackageDialogComponent', () => {
       copy: vitest.fn(() => true),
     };
 
-    result = await render(UploadWorkPackageDialogComponent, {
+    result = await render(UploadWorkPackageDialog, {
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: TEST_GRANT },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: WorkPackageService, useValue: wpServiceMock },
-        { provide: NotificationService, useValue: notifyMock },
+        { provide: Notifier, useValue: notifyMock },
         { provide: Clipboard, useValue: clipboardMock },
         { provide: IvaService, useClass: MockIvaService },
       ],
     });
     component = result.fixture.componentInstance;
     workPackageService = TestBed.inject(WorkPackageService);
-    notificationService = TestBed.inject(NotificationService);
+    notificationService = TestBed.inject(Notifier);
     clipboard = TestBed.inject(Clipboard);
     ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
     vitest.clearAllMocks();

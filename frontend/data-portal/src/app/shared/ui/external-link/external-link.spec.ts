@@ -5,7 +5,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
-import { ExternalLinkDirective } from './external-link';
+import { ExternalLink } from './external-link';
 
 /**
  * Create an anchor with the directive applied
@@ -17,7 +17,7 @@ async function createLink(
   content: string,
   ariaLabel?: string,
 ): Promise<HTMLAnchorElement> {
-  const fixture = TestBed.createDirective(ExternalLinkDirective, { tagName: 'a' });
+  const fixture = TestBed.createDirective(ExternalLink, { tagName: 'a' });
   const anchor = fixture.nativeElement as HTMLAnchorElement;
   anchor.innerHTML = content;
   if (ariaLabel) anchor.setAttribute('aria-label', ariaLabel);
@@ -25,7 +25,7 @@ async function createLink(
   return anchor;
 }
 
-describe('ExternalLinkDirective', () => {
+describe('ExternalLink', () => {
   it('should add target="_blank"', async () => {
     const anchor = await createLink('Test Link');
     expect(anchor.getAttribute('target')).toBe('_blank');

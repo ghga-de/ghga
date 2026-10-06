@@ -1,5 +1,5 @@
 /**
- * Tests for the UserUploadBoxDetailsDialogComponent.
+ * Tests for the UserUploadBoxDetailsDialog.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -15,7 +15,7 @@ import {
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
-import { UserUploadBoxDetailsDialogComponent } from './user-upload-box-details-dialog';
+import { UserUploadBoxDetailsDialog } from './user-upload-box-details-dialog';
 
 const TIB = 1_099_511_627_776;
 
@@ -125,22 +125,22 @@ class MockUploadBoxService {
  * @returns the created fixture and the mocked service
  */
 async function createComponent(): Promise<{
-  fixture: ComponentFixture<UserUploadBoxDetailsDialogComponent>;
+  fixture: ComponentFixture<UserUploadBoxDetailsDialog>;
   service: MockUploadBoxService;
 }> {
   await TestBed.configureTestingModule({
-    imports: [UserUploadBoxDetailsDialogComponent],
+    imports: [UserUploadBoxDetailsDialog],
     providers: [
       { provide: MAT_DIALOG_DATA, useValue: grant },
       { provide: UploadBoxService, useClass: MockUploadBoxService },
     ],
   }).compileComponents();
   const service = TestBed.inject(UploadBoxService) as unknown as MockUploadBoxService;
-  const fixture = TestBed.createComponent(UserUploadBoxDetailsDialogComponent);
+  const fixture = TestBed.createComponent(UserUploadBoxDetailsDialog);
   return { fixture, service };
 }
 
-describe('UserUploadBoxDetailsDialogComponent', () => {
+describe('UserUploadBoxDetailsDialog', () => {
   it('should fetch the box again when opened', async () => {
     const { fixture, service } = await createComponent();
     await fixture.whenStable();

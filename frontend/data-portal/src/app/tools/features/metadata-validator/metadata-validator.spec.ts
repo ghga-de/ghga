@@ -7,11 +7,11 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LogEntry } from '@app/tools/models/pyodide';
-import { PyodideService } from '@app/tools/services/pyodide';
-import { TranspilerService } from '@app/tools/services/transpiler';
+import { PyodideLoader } from '@app/tools/services/pyodide';
+import { Transpiler } from '@app/tools/services/transpiler';
 import { MetadataValidationService } from '@app/tools/services/validator';
 import { screen } from '@testing-library/angular';
-import { MetadataValidatorComponent } from './metadata-validator';
+import { MetadataValidator } from './metadata-validator';
 
 /**
  * Mock the Pyodide service, so that no Python runtime is loaded
@@ -23,22 +23,22 @@ class MockPyodideService {
   getProcessLog = this.processLog.asReadonly();
 }
 
-describe('MetadataValidatorComponent', () => {
-  let fixture: ComponentFixture<MetadataValidatorComponent>;
+describe('MetadataValidator', () => {
+  let fixture: ComponentFixture<MetadataValidator>;
   let pyodide: MockPyodideService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MetadataValidatorComponent],
+      imports: [MetadataValidator],
       providers: [
-        { provide: PyodideService, useClass: MockPyodideService },
+        { provide: PyodideLoader, useClass: MockPyodideService },
         { provide: MetadataValidationService, useValue: {} },
-        { provide: TranspilerService, useValue: {} },
+        { provide: Transpiler, useValue: {} },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(MetadataValidatorComponent);
-    pyodide = TestBed.inject(PyodideService) as unknown as MockPyodideService;
+    fixture = TestBed.createComponent(MetadataValidator);
+    pyodide = TestBed.inject(PyodideLoader) as unknown as MockPyodideService;
     await fixture.whenStable();
   });
 

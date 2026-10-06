@@ -10,9 +10,9 @@ import { render, RenderResult, screen } from '@testing-library/angular';
 import { searchResults } from '@app/../mocks/data';
 import { ConfigService } from '@app/shared/services/config';
 import { MetadataSearchService } from '../../services/metadata-search';
-import { MetadataBrowserFilterComponent } from '../metadata-browser-filter/metadata-browser-filter';
-import { SearchResultListComponent } from '../search-result-list/search-result-list';
-import { MetadataBrowserComponent } from './metadata-browser';
+import { MetadataBrowserFilter } from '../metadata-browser-filter/metadata-browser-filter';
+import { SearchResultList } from '../search-result-list/search-result-list';
+import { MetadataBrowser } from './metadata-browser';
 
 /**
  * Mock the config service as needed for the metadata browser
@@ -34,7 +34,7 @@ class MockMetadataSearchService {
 }
 
 /**
- * Mock SearchResultListComponent as needed for the metadata browser
+ * Mock SearchResultList as needed for the metadata browser
  */
 @Component({
   selector: 'app-search-result-list',
@@ -43,7 +43,7 @@ class MockMetadataSearchService {
 class MockSearchResultListComponent {}
 
 /**
- * Mock MetadataBrowserFilterComponent as needed for the metadata browser
+ * Mock MetadataBrowserFilter as needed for the metadata browser
  */
 @Component({
   selector: 'app-metadata-browser-filter',
@@ -51,19 +51,19 @@ class MockSearchResultListComponent {}
 })
 class MockMetadataBrowserFilterComponent {}
 
-describe('MetadataBrowserComponent', () => {
-  let result: RenderResult<MetadataBrowserComponent>;
+describe('MetadataBrowser', () => {
+  let result: RenderResult<MetadataBrowser>;
 
   beforeEach(async () => {
-    result = await render(MetadataBrowserComponent, {
+    result = await render(MetadataBrowser, {
       providers: [
         { provide: ConfigService, useClass: MockConfigService },
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
       ],
       importOverrides: [
-        { replace: SearchResultListComponent, with: MockSearchResultListComponent },
+        { replace: SearchResultList, with: MockSearchResultListComponent },
         {
-          replace: MetadataBrowserFilterComponent,
+          replace: MetadataBrowserFilter,
           with: MockMetadataBrowserFilterComponent,
         },
       ],

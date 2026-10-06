@@ -10,7 +10,7 @@ import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { AuthService } from '@app/auth/services/auth';
-import { SetupTotpComponent } from './setup-totp';
+import { SetupTotp } from './setup-totp';
 
 const TEST_URI = 'otpauth://totp/GHGA:doe?secret=foobar&issuer=GHGA';
 
@@ -41,13 +41,13 @@ class MockAuthService {
   completeTotpSetup = vitest.fn();
 }
 
-describe('SetupTotpComponent', () => {
-  let component: SetupTotpComponent;
-  let fixture: ComponentFixture<SetupTotpComponent>;
+describe('SetupTotp', () => {
+  let component: SetupTotp;
+  let fixture: ComponentFixture<SetupTotp>;
   let authService: MockAuthService;
 
   beforeEach(async () => {
-    ({ fixture } = await render(SetupTotpComponent, {
+    ({ fixture } = await render(SetupTotp, {
       providers: [{ provide: AuthService, useClass: MockAuthService }],
       routes: [],
     }));

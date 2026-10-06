@@ -12,7 +12,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { AccessGrantManagerListComponent } from './access-grant-manager-list';
+import { AccessGrantManagerList } from './access-grant-manager-list';
 
 /**
  * Stand-in for the access grant details page the list navigates to
@@ -20,11 +20,11 @@ import { AccessGrantManagerListComponent } from './access-grant-manager-list';
 @Component({ template: '' })
 class GrantDetailsStubComponent {}
 
-describe('AccessGrantManagerListComponent', () => {
-  let result: RenderResult<AccessGrantManagerListComponent>;
+describe('AccessGrantManagerList', () => {
+  let result: RenderResult<AccessGrantManagerList>;
 
   beforeEach(async () => {
-    result = await render(AccessGrantManagerListComponent, {
+    result = await render(AccessGrantManagerList, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],

@@ -6,13 +6,13 @@
 
 import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { SiteFooterComponent } from './site-footer';
+import { SiteFooter } from './site-footer';
 
-describe('SiteFooterComponent', () => {
-  let result: RenderResult<SiteFooterComponent>;
+describe('SiteFooter', () => {
+  let result: RenderResult<SiteFooter>;
 
   beforeEach(async () => {
-    result = await render(SiteFooterComponent, { routes: [] });
+    result = await render(SiteFooter, { routes: [] });
   });
 
   it('should create', () => {

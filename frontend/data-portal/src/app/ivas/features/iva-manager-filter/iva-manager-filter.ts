@@ -39,7 +39,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   providers: [IvaStatePipe],
   templateUrl: './iva-manager-filter.html',
 })
-export class IvaManagerFilterComponent {
+export class IvaManagerFilter {
   #ivaService = inject(IvaService);
 
   #filter = this.#ivaService.allIvasFilter;

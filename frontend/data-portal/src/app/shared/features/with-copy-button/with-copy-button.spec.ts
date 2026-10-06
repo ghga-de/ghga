@@ -7,7 +7,7 @@
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { WithCopyButton } from './with-copy-button';
 
 describe('WithCopyButton', () => {
@@ -18,7 +18,7 @@ describe('WithCopyButton', () => {
     mockNotificationService.showInfo.mockClear();
     result = await render(WithCopyButton, {
       inputs: { value: 'some-long-identifier' },
-      providers: [{ provide: NotificationService, useValue: mockNotificationService }],
+      providers: [{ provide: Notifier, useValue: mockNotificationService }],
     });
   });
 

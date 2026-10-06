@@ -39,7 +39,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   ],
   templateUrl: './access-request-manager-filter.html',
 })
-export class AccessRequestManagerFilterComponent {
+export class AccessRequestManagerFilter {
   #ars = inject(AccessRequestService);
 
   #filter = this.#ars.allAccessRequestsFilter;

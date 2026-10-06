@@ -72,7 +72,7 @@ interface AccessRequestRow extends AccessRequest {
   providers: [CommonDatePipe, providePaginatorIntl('Access requests per page')],
   templateUrl: './access-request-manager-list.html',
 })
-export class AccessRequestManagerListComponent implements AfterViewInit {
+export class AccessRequestManagerList implements AfterViewInit {
   #config = inject(ConfigService);
   #baseTicketUrl = this.#config.helpdeskTicketUrl;
 

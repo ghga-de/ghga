@@ -50,10 +50,10 @@ type LoadPyodide = (options: { indexURL: string }) => Promise<PyodideRuntime>;
 
 /**
  * This service handles the initialization of Pyodide,
- * loading necessary packages, and serves as a basis for running our Python scripts in their own services (like TranspilerService and ValidatorService).
+ * loading necessary packages, and serves as a basis for running our Python scripts in their own services (like Transpiler and ValidatorService).
  */
 @Service()
-export class PyodideService {
+export class PyodideLoader {
   #pyodide: PyodideRuntime | null = null;
   #pyodideLoading: WritableSignal<boolean> = signal(false);
   #pyodideInitialized: WritableSignal<boolean> = signal(false);

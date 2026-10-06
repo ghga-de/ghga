@@ -8,14 +8,14 @@ import { WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { VerificationDialogComponent } from './verification-dialog';
+import { VerificationDialog } from './verification-dialog';
 
 /**
- * Shape of the private members of VerificationDialogComponent that the tests
+ * Shape of the private members of VerificationDialog that the tests
  * need to access. Used to type the `as unknown as ...` casts below.
  */
 interface VerificationDialogInternals {
@@ -41,9 +41,9 @@ class MockIvaService {
   validateCodeForIva = vitest.fn();
 }
 
-describe('VerificationDialogComponent', () => {
-  let component: VerificationDialogComponent;
-  let fixture: ComponentFixture<VerificationDialogComponent>;
+describe('VerificationDialog', () => {
+  let component: VerificationDialog;
+  let fixture: ComponentFixture<VerificationDialog>;
   let ivaService: MockIvaService;
 
   beforeEach(async () => {
@@ -51,7 +51,7 @@ describe('VerificationDialogComponent', () => {
     mockNotificationService.showSuccess.mockReset();
     mockNotificationService.showError.mockReset();
 
-    ({ fixture } = await render(VerificationDialogComponent, {
+    ({ fixture } = await render(VerificationDialog, {
       providers: [
         {
           provide: MAT_DIALOG_DATA,
@@ -59,7 +59,7 @@ describe('VerificationDialogComponent', () => {
         },
         { provide: IvaService, useClass: MockIvaService },
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
     }));
     ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;

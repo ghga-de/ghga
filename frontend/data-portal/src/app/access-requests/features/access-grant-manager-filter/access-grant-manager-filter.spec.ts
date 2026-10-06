@@ -11,16 +11,16 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { AccessGrantManagerFilterComponent } from './access-grant-manager-filter';
+import { AccessGrantManagerFilter } from './access-grant-manager-filter';
 
-describe('AccessGrantManagerFilterComponent', () => {
-  let component: AccessGrantManagerFilterComponent;
-  let fixture: ComponentFixture<AccessGrantManagerFilterComponent>;
+describe('AccessGrantManagerFilter', () => {
+  let component: AccessGrantManagerFilter;
+  let fixture: ComponentFixture<AccessGrantManagerFilter>;
   let setFilter: ReturnType<typeof vitest.spyOn>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessGrantManagerFilterComponent],
+      imports: [AccessGrantManagerFilter],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
@@ -28,7 +28,7 @@ describe('AccessGrantManagerFilterComponent', () => {
 
     const service = TestBed.inject(AccessRequestService);
     setFilter = vitest.spyOn(service, 'setAllAccessGrantsFilter');
-    fixture = TestBed.createComponent(AccessGrantManagerFilterComponent);
+    fixture = TestBed.createComponent(AccessGrantManagerFilter);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

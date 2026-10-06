@@ -6,7 +6,7 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { UserManagerFilterComponent } from './user-manager-filter';
+import { UserManagerFilter } from './user-manager-filter';
 
 import { provideHttpClient } from '@angular/common/http';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -35,14 +35,14 @@ class MockConfigService {
   auth_url = 'https://test-auth.example.com';
 }
 
-describe('UserManagerFilterComponent', () => {
-  let component: UserManagerFilterComponent;
-  let fixture: ComponentFixture<UserManagerFilterComponent>;
+describe('UserManagerFilter', () => {
+  let component: UserManagerFilter;
+  let fixture: ComponentFixture<UserManagerFilter>;
   let userService: UserService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UserManagerFilterComponent],
+      imports: [UserManagerFilter],
       providers: [
         { provide: UserService, useValue: mockUserService },
         { provide: ConfigService, useClass: MockConfigService },
@@ -51,7 +51,7 @@ describe('UserManagerFilterComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UserManagerFilterComponent);
+    fixture = TestBed.createComponent(UserManagerFilter);
     component = fixture.componentInstance;
     userService = TestBed.inject(UserService);
     await fixture.whenStable();

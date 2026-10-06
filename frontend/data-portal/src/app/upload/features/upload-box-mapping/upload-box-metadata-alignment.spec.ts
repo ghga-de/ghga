@@ -10,7 +10,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { UploadBoxMetadataAlignmentComponent } from './upload-box-metadata-alignment';
+import { UploadBoxMetadataAlignment } from './upload-box-metadata-alignment';
 
 /**
  * Build a box file upload with the given id and alias.
@@ -84,12 +84,12 @@ async function uploadMetadata(container: Element, text: string): Promise<void> {
   await userEvent.upload(input, file);
 }
 
-describe('UploadBoxMetadataAlignmentComponent', () => {
-  let result: RenderResult<UploadBoxMetadataAlignmentComponent>;
-  let component: UploadBoxMetadataAlignmentComponent;
+describe('UploadBoxMetadataAlignment', () => {
+  let result: RenderResult<UploadBoxMetadataAlignment>;
+  let component: UploadBoxMetadataAlignment;
 
   beforeEach(async () => {
-    result = await render(UploadBoxMetadataAlignmentComponent, {
+    result = await render(UploadBoxMetadataAlignment, {
       providers: [{ provide: UploadBoxService, useClass: MockUploadBoxService }],
     });
     component = result.fixture.componentInstance;

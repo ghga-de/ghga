@@ -12,7 +12,7 @@ import { allIvas } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { IvaService } from '@app/ivas/services/iva';
 import { screen } from '@testing-library/angular';
-import { IvaManagerListComponent } from './iva-manager-list';
+import { IvaManagerList } from './iva-manager-list';
 
 const WARN_TITLE = 'There are multiple user accounts with this name and email address.';
 
@@ -25,20 +25,20 @@ class MockIvaService {
   ambiguousUserIds = signal(new Set<string>(['jekyll@test.dev', 'hyde@test.dev']));
 }
 
-describe('IvaManagerListComponent', () => {
-  let component: IvaManagerListComponent;
-  let fixture: ComponentFixture<IvaManagerListComponent>;
+describe('IvaManagerList', () => {
+  let component: IvaManagerList;
+  let fixture: ComponentFixture<IvaManagerList>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IvaManagerListComponent],
+      imports: [IvaManagerList],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(IvaManagerListComponent);
+    fixture = TestBed.createComponent(IvaManagerList);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

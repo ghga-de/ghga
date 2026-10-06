@@ -11,8 +11,8 @@ import { provideRouter } from '@angular/router';
 import { uploadBoxes } from '@app/../mocks/data';
 import { EmFile } from '@app/metadata/models/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { FileIdMap, Study } from '@app/upload/models/study';
@@ -20,13 +20,13 @@ import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import {
   MappingSnapshot,
-  UploadBoxMappingStateService,
+  UploadBoxMappingStore,
 } from '@app/upload/services/upload-box-mapping-state';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { UploadBoxMappingComponent } from './upload-box-mapping';
-import { UploadBoxMappingConfirmDialogComponent } from './upload-box-mapping-confirm-dialog';
+import { UploadBoxMapping } from './upload-box-mapping';
+import { UploadBoxMappingConfirmDialog } from './upload-box-mapping-confirm-dialog';
 
 const TEST_BOX = {
   ...uploadBoxes.boxes[0],
@@ -189,9 +189,9 @@ const mockMappingStateService = {
   clearSnapshot: vitest.fn(),
 };
 
-describe('UploadBoxMappingComponent', () => {
-  let component: UploadBoxMappingComponent;
-  let fixture: ComponentFixture<UploadBoxMappingComponent>;
+describe('UploadBoxMapping', () => {
+  let component: UploadBoxMapping;
+  let fixture: ComponentFixture<UploadBoxMapping>;
   let uploadBoxService: MockUploadBoxService;
 
   /**
@@ -201,7 +201,7 @@ describe('UploadBoxMappingComponent', () => {
    */
   async function createComponent(snapshot?: MappingSnapshot): Promise<void> {
     mockMappingStateService.snapshotFor.mockReturnValue(snapshot);
-    fixture = TestBed.createComponent(UploadBoxMappingComponent);
+    fixture = TestBed.createComponent(UploadBoxMapping);
     fixture.componentRef.setInput('box', TEST_BOX);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -219,21 +219,21 @@ describe('UploadBoxMappingComponent', () => {
     mockMappingStateService.snapshotFor.mockReturnValue(undefined);
 
     await TestBed.configureTestingModule({
-      imports: [UploadBoxMappingComponent],
+      imports: [UploadBoxMapping],
       providers: [
         provideRouter([]),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
-        { provide: NotificationService, useValue: mockNotificationService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
+        { provide: Notifier, useValue: mockNotificationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
         {
-          provide: UploadBoxMappingStateService,
+          provide: UploadBoxMappingStore,
           useValue: mockMappingStateService,
         },
       ],
     })
-      .overrideComponent(UploadBoxMappingComponent, {
+      .overrideComponent(UploadBoxMapping, {
         set: {
           providers: [{ provide: MetadataService, useClass: MockMetadataService }],
         },
@@ -371,7 +371,7 @@ describe('UploadBoxMappingComponent', () => {
     component.onConfirmAndArchive();
 
     expect(mockDialog.open).toHaveBeenCalledWith(
-      UploadBoxMappingConfirmDialogComponent,
+      UploadBoxMappingConfirmDialog,
       expect.objectContaining({
         data: {
           unmappedBoxFileAliases: [],

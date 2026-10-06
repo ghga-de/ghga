@@ -96,10 +96,10 @@ function validatePubKey(key: string): number {
   imports: [MatFormFieldModule, MatInputModule, FormField],
   templateUrl: './pubkey-input.html',
 })
-export class PubkeyFieldComponent implements FormValueControl<string> {
+export class PubkeyField implements FormValueControl<string> {
   /**
    * Validation schema for Crypt4GH public keys
-   * Apply to form fields using: apply(fieldPath, PubkeyFieldComponent.schema)
+   * Apply to form fields using: apply(fieldPath, PubkeyField.schema)
    */
   static schema = schema<string>((fieldPath) => {
     validate(fieldPath, ({ value }) => {

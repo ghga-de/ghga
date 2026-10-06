@@ -6,7 +6,7 @@
 
 import { effect, inject, Service, signal, WritableSignal } from '@angular/core';
 import { PyodideOutput } from '../models/pyodide';
-import { PyodideService } from './pyodide';
+import { PyodideLoader } from './pyodide';
 
 const INPUT_FILE_PATH = '/data/input.xlsx';
 const OUTPUT_FILE_PATH = '/data/output.json';
@@ -16,8 +16,8 @@ const transpilerScriptPath = '/assets/schemas/transpile.py';
  * This service handles the transpilation of metadata.
  */
 @Service()
-export class TranspilerService {
-  #pyodideService = inject(PyodideService);
+export class Transpiler {
+  #pyodideService = inject(PyodideLoader);
   #isReady: WritableSignal<boolean> = signal(false);
 
   constructor() {

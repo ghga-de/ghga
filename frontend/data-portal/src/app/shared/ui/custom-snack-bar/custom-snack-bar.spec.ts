@@ -8,16 +8,16 @@ import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar';
-import { CustomSnackBarComponent } from './custom-snack-bar';
+import { CustomSnackBar } from './custom-snack-bar';
 
-describe('CustomSnackBarComponent', () => {
-  let result: RenderResult<CustomSnackBarComponent>;
-  let component: CustomSnackBarComponent;
+describe('CustomSnackBar', () => {
+  let result: RenderResult<CustomSnackBar>;
+  let component: CustomSnackBar;
 
   beforeEach(async () => {
     const matSnackBarData = { message: 'Test message', type: 'ok' };
     const mockMatSnackBarRef = { dismiss: vitest.fn() };
-    result = await render(CustomSnackBarComponent, {
+    result = await render(CustomSnackBar, {
       providers: [
         { provide: MAT_SNACK_BAR_DATA, useValue: matSnackBarData },
         { provide: MatSnackBarRef, useValue: mockMatSnackBarRef },

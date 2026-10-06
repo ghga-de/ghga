@@ -8,7 +8,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
-import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog';
+import { ConfirmDialog } from '../ui/confirm-dialog/confirm-dialog';
 import { ConfirmationService } from './confirmation';
 
 describe('ConfirmationService', () => {
@@ -41,7 +41,7 @@ describe('ConfirmationService', () => {
       ...data,
     });
 
-    expect(matDialogMock.open).toHaveBeenCalledWith(ConfirmDialogComponent, {
+    expect(matDialogMock.open).toHaveBeenCalledWith(ConfirmDialog, {
       data,
     });
   });
@@ -50,7 +50,7 @@ describe('ConfirmationService', () => {
     service.confirm({ message: 'Test Message', maxWidth: '420px' });
 
     expect(matDialogMock.open).toHaveBeenLastCalledWith(
-      ConfirmDialogComponent,
+      ConfirmDialog,
       expect.objectContaining({ maxWidth: '420px' }),
     );
   });

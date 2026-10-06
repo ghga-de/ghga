@@ -7,13 +7,13 @@
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { SummaryBadgesComponent } from './summary-badges';
+import { SummaryBadges } from './summary-badges';
 
-describe('SummaryBadgesComponent', () => {
-  let result: RenderResult<SummaryBadgesComponent>;
+describe('SummaryBadges', () => {
+  let result: RenderResult<SummaryBadges>;
 
   beforeEach(async () => {
-    result = await render(SummaryBadgesComponent, {
+    result = await render(SummaryBadges, {
       inputs: {
         data: [
           { value: 'test 1', count: 1 },

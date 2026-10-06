@@ -11,9 +11,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FileStats, ValueCount } from '@app/metadata/models/global-summary';
 import { MetadataStatsService } from '@app/metadata/services/metadata-stats';
-import { GlobalSummaryCardContentComponent } from '@app/metadata/ui/global-summary-card-content/global-summary-card-content';
-import { NotificationService } from '@app/shared/services/notification';
-import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { GlobalSummaryCardContent } from '@app/metadata/ui/global-summary-card-content/global-summary-card-content';
+import { Notifier } from '@app/shared/services/notification';
+import { Stencil } from '@app/shared/ui/stencil/stencil/stencil';
 
 /**
  * Component for the global summary cards
@@ -24,16 +24,16 @@ import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
     MatCardModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    StencilComponent,
+    Stencil,
     DecimalPipe,
-    GlobalSummaryCardContentComponent,
+    GlobalSummaryCardContent,
   ],
   templateUrl: './global-summary.html',
   styleUrl: './global-summary.scss',
   providers: [MetadataStatsService],
 })
-export class GlobalSummaryComponent {
-  #notify = inject(NotificationService);
+export class GlobalStats {
+  #notify = inject(Notifier);
   #metadata = inject(MetadataStatsService);
 
   #stats = this.#metadata.globalSummary;

@@ -55,10 +55,8 @@ import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
   providers: [IvaTypePipe],
   templateUrl: './new-iva-dialog.html',
 })
-export class NewIvaDialogComponent {
-  #dialogRef = inject(
-    MatDialogRef<NewIvaDialogComponent, { type: IvaType; value: string }>,
-  );
+export class NewIvaDialog {
+  #dialogRef = inject(MatDialogRef<NewIvaDialog, { type: IvaType; value: string }>);
   #ivaTypePipe = inject(IvaTypePipe);
 
   protected model = signal<{ type: keyof typeof IvaType | null; value: string }>({

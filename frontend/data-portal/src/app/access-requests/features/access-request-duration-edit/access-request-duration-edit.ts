@@ -58,7 +58,7 @@ function isSameTime(a: Date | null, b: Date | null): boolean {
   providers: [CommonDatePipe],
   templateUrl: './access-request-duration-edit.html',
 })
-export class AccessRequestDurationEditComponent implements OnInit {
+export class AccessRequestDurationEdit implements OnInit {
   #config = inject(ConfigService);
   maxDays = this.#config.accessGrantMaxDays;
   maxExtend = this.#config.accessGrantMaxExtend;

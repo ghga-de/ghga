@@ -10,7 +10,7 @@ import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { UploadBoxManagerFilterComponent } from './upload-box-manager-filter';
+import { UploadBoxManagerFilter } from './upload-box-manager-filter';
 
 const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
   id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68009',
@@ -53,20 +53,20 @@ const mockUploadBoxService = {
   },
 };
 
-describe('UploadBoxManagerFilterComponent', () => {
-  let component: UploadBoxManagerFilterComponent;
-  let fixture: ComponentFixture<UploadBoxManagerFilterComponent>;
+describe('UploadBoxManagerFilter', () => {
+  let component: UploadBoxManagerFilter;
+  let fixture: ComponentFixture<UploadBoxManagerFilter>;
   let uploadBoxService: typeof mockUploadBoxService;
 
   beforeEach(async () => {
     mockUploadBoxService.setUploadBoxes([TEST_UPLOAD_BOX]);
     mockUploadBoxService.setUploadBoxesFilter.mockClear();
     await TestBed.configureTestingModule({
-      imports: [UploadBoxManagerFilterComponent],
+      imports: [UploadBoxManagerFilter],
       providers: [{ provide: UploadBoxService, useValue: mockUploadBoxService }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UploadBoxManagerFilterComponent);
+    fixture = TestBed.createComponent(UploadBoxManagerFilter);
     component = fixture.componentInstance;
     uploadBoxService = TestBed.inject(
       UploadBoxService,

@@ -32,13 +32,13 @@ import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-dialog/deletion-confirmation-dialog';
+import { DeletionConfirmationDialog } from '../deletion-confirmation-dialog/deletion-confirmation-dialog';
 
 /**
  * User Manager Detail component.
@@ -65,7 +65,7 @@ import { DeletionConfirmationDialogComponent } from '../deletion-confirmation-di
   providers: [CommonDatePipe],
   templateUrl: './user-manager-detail.html',
 })
-export class UserManagerDetailComponent implements OnInit {
+export class UserManagerDetail implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   readonly periodTimeZone = DEFAULT_TIME_ZONE;
 
@@ -73,7 +73,7 @@ export class UserManagerDetailComponent implements OnInit {
 
   #userService = inject(UserService);
 
-  #location = inject(NavigationTrackingService);
+  #location = inject(NavigationTracker);
   #dialog = inject(MatDialog);
 
   id = input.required<string>();
@@ -97,7 +97,7 @@ export class UserManagerDetailComponent implements OnInit {
   });
 
   #confirmationService = inject(ConfirmationService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   #ivaService = inject(IvaService);
   userIvas = computed(() =>
@@ -255,7 +255,7 @@ export class UserManagerDetailComponent implements OnInit {
    * Delete the user after confirmation.
    */
   safeDeletion(): void {
-    this.#dialog.open(DeletionConfirmationDialogComponent, {
+    this.#dialog.open(DeletionConfirmationDialog, {
       data: { user: this.user()! },
     });
   }

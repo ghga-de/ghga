@@ -6,13 +6,13 @@
 
 import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { ParagraphsComponent } from './paragraphs';
+import { Paragraphs } from './paragraphs';
 
-describe('ParagraphsComponent', () => {
-  let result: RenderResult<ParagraphsComponent>;
+describe('Paragraphs', () => {
+  let result: RenderResult<Paragraphs>;
 
   beforeEach(async () => {
-    result = await render(ParagraphsComponent, { inputs: { text: 'Hello\nWorld' } });
+    result = await render(Paragraphs, { inputs: { text: 'Hello\nWorld' } });
   });
 
   it('should create', () => {

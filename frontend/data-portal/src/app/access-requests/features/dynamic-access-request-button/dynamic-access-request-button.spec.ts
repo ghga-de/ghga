@@ -10,16 +10,16 @@ import { signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
-import { AccessRequestDialogComponent } from '@app/access-requests/features/access-request-dialog/access-request-dialog';
+import { AccessRequestDialog } from '@app/access-requests/features/access-request-dialog/access-request-dialog';
 import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
-import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
+import { DownloadWorkPackageDialog } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
 import { screen } from '@testing-library/angular';
 import { of } from 'rxjs';
-import { DynamicAccessRequestButtonComponent } from './dynamic-access-request-button';
+import { DynamicAccessRequestButton } from './dynamic-access-request-button';
 
 const DATASET_ID = 'GHGAD12345678901234';
 
@@ -60,15 +60,15 @@ class MockIvaService {
   loadUserIvas = () => undefined;
 }
 
-describe('DynamicAccessRequestButtonComponent', () => {
-  let component: DynamicAccessRequestButtonComponent;
-  let fixture: ComponentFixture<DynamicAccessRequestButtonComponent>;
+describe('DynamicAccessRequestButton', () => {
+  let component: DynamicAccessRequestButton;
+  let fixture: ComponentFixture<DynamicAccessRequestButton>;
   let dialog: MatDialog;
   let accessRequestService: MockAccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DynamicAccessRequestButtonComponent],
+      imports: [DynamicAccessRequestButton],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
@@ -82,7 +82,7 @@ describe('DynamicAccessRequestButtonComponent', () => {
     ) as unknown as MockAccessRequestService;
     dialog = TestBed.inject(MatDialog);
 
-    fixture = TestBed.createComponent(DynamicAccessRequestButtonComponent);
+    fixture = TestBed.createComponent(DynamicAccessRequestButton);
     fixture.componentRef.setInput('datasetID', DATASET_ID);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -111,10 +111,7 @@ describe('DynamicAccessRequestButtonComponent', () => {
 
       screen.getByRole('button', { name: /request access/i }).click();
 
-      expect(openSpy).toHaveBeenCalledWith(
-        AccessRequestDialogComponent,
-        expect.any(Object),
-      );
+      expect(openSpy).toHaveBeenCalledWith(AccessRequestDialog, expect.any(Object));
     });
   });
 
@@ -150,7 +147,7 @@ describe('DynamicAccessRequestButtonComponent', () => {
       screen.getByRole('button', { name: /download the data/i }).click();
 
       expect(openSpy).toHaveBeenCalledWith(
-        DownloadWorkPackageDialogComponent,
+        DownloadWorkPackageDialog,
         expect.objectContaining({
           data: expect.objectContaining({ dataset_id: DATASET_ID }),
         }),

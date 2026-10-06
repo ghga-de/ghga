@@ -7,13 +7,13 @@
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { AdminMenuComponent } from './admin-menu';
+import { AdminMenu } from './admin-menu';
 
-describe('AdminMenuComponent', () => {
-  let result: RenderResult<AdminMenuComponent>;
+describe('AdminMenu', () => {
+  let result: RenderResult<AdminMenu>;
 
   beforeEach(async () => {
-    result = await render(AdminMenuComponent, { routes: [] });
+    result = await render(AdminMenu, { routes: [] });
   });
 
   it('should create', () => {

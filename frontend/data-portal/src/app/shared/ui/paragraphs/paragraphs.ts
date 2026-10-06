@@ -15,7 +15,7 @@ import { SplitLinesPipe } from '@app/shared/pipes/split-lines-pipe';
   imports: [SplitLinesPipe],
   templateUrl: './paragraphs.html',
 })
-export class ParagraphsComponent {
+export class Paragraphs {
   text = input.required<string>();
   label = input<string>();
   labelWithColon = computed(() => (this.label() ? `${this.label()}: ` : undefined));

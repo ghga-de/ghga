@@ -7,7 +7,7 @@
 import { render, RenderResult, screen } from '@testing-library/angular';
 
 import { AuthService } from '@app/auth/services/auth';
-import { SiteHeaderNavButtonsComponent } from './site-header-nav-buttons';
+import { SiteHeaderNavButtons } from './site-header-nav-buttons';
 
 /**
  * Mock the auth service as needed for the site header nav buttons
@@ -16,11 +16,11 @@ class MockAuthService {
   roles = () => ['data_steward'];
 }
 
-describe('SiteHeaderNavButtonsComponent', () => {
-  let result: RenderResult<SiteHeaderNavButtonsComponent>;
+describe('SiteHeaderNavButtons', () => {
+  let result: RenderResult<SiteHeaderNavButtons>;
 
   beforeEach(async () => {
-    result = await render(SiteHeaderNavButtonsComponent, {
+    result = await render(SiteHeaderNavButtons, {
       providers: [{ provide: AuthService, useClass: MockAuthService }],
       routes: [],
     });

@@ -7,13 +7,13 @@
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
-import { ToolsMenuComponent } from './tools-menu';
+import { ToolsMenu } from './tools-menu';
 
-describe('ToolsMenuComponent', () => {
-  let result: RenderResult<ToolsMenuComponent>;
+describe('ToolsMenu', () => {
+  let result: RenderResult<ToolsMenu>;
 
   beforeEach(async () => {
-    result = await render(ToolsMenuComponent, { routes: [] });
+    result = await render(ToolsMenu, { routes: [] });
   });
 
   it('should create', () => {

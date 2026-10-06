@@ -6,8 +6,8 @@
 
 import { Component, inject, OnInit } from '@angular/core';
 import { IvaService } from '@app/ivas/services/iva';
-import { IvaManagerFilterComponent } from '../iva-manager-filter/iva-manager-filter';
-import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list';
+import { IvaManagerFilter } from '../iva-manager-filter/iva-manager-filter';
+import { IvaManagerList } from '../iva-manager-list/iva-manager-list';
 
 /**
  * IVA Manager component.
@@ -17,10 +17,10 @@ import { IvaManagerListComponent } from '../iva-manager-list/iva-manager-list';
  */
 @Component({
   selector: 'app-iva-manager',
-  imports: [IvaManagerListComponent, IvaManagerFilterComponent],
+  imports: [IvaManagerList, IvaManagerFilter],
   templateUrl: './iva-manager.html',
 })
-export class IvaManagerComponent implements OnInit {
+export class IvaManager implements OnInit {
   #ivaService = inject(IvaService);
 
   /**

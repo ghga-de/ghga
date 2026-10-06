@@ -9,7 +9,7 @@ import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
 import { datasetDetails } from '../../../../mocks/data';
-import { DatasetDetailsTableComponent } from './dataset-details-table';
+import { DatasetDetailsTable } from './dataset-details-table';
 
 /**
  * Mock the config service as needed by the dataset details component
@@ -29,9 +29,9 @@ class MockWellKnownValueService {
   };
 }
 
-describe('DatasetDetailsTableComponent', () => {
-  let component: DatasetDetailsTableComponent;
-  let fixture: ComponentFixture<DatasetDetailsTableComponent>;
+describe('DatasetDetailsTable', () => {
+  let component: DatasetDetailsTable;
+  let fixture: ComponentFixture<DatasetDetailsTable>;
 
   const setInputs = async () => {
     fixture.componentRef.setInput('tableName', 'samples');
@@ -67,14 +67,14 @@ describe('DatasetDetailsTableComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DatasetDetailsTableComponent],
+      imports: [DatasetDetailsTable],
       providers: [
         { provide: ConfigService, useClass: MockConfigService },
         { provide: WellKnownValueService, useClass: MockWellKnownValueService },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(DatasetDetailsTableComponent);
+    fixture = TestBed.createComponent(DatasetDetailsTable);
     component = fixture.componentInstance;
   });
 

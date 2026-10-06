@@ -9,14 +9,14 @@ import { accessRequests } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { render, RenderResult, screen } from '@testing-library/angular';
-import { PendingAccessRequestsListComponent } from './pending-access-requests-list';
+import { PendingAccessRequestsList } from './pending-access-requests-list';
 
-describe('PendingAccessRequestsListComponent', () => {
-  let result: RenderResult<PendingAccessRequestsListComponent>;
+describe('PendingAccessRequestsList', () => {
+  let result: RenderResult<PendingAccessRequestsList>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
-    result = await render(PendingAccessRequestsListComponent, {
+    result = await render(PendingAccessRequestsList, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],

@@ -11,11 +11,11 @@ import {
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PyodideOutput } from '@app/tools/models/pyodide';
-import { PyodideService } from '@app/tools/services/pyodide';
+import { PyodideLoader } from '@app/tools/services/pyodide';
 import { MetadataValidationService } from '@app/tools/services/validator';
 import { screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { SchemapackPlaygroundComponent } from './schemapack-playground';
+import { SchemapackPlayground } from './schemapack-playground';
 
 /**
  * Mock the Pyodide service, so that no Python runtime is loaded
@@ -36,24 +36,24 @@ class MockMetadataValidationService {
   }));
 }
 
-describe('SchemapackPlaygroundComponent', () => {
-  let fixture: ComponentFixture<SchemapackPlaygroundComponent>;
+describe('SchemapackPlayground', () => {
+  let fixture: ComponentFixture<SchemapackPlayground>;
   let pyodide: MockPyodideService;
   let validator: MockMetadataValidationService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SchemapackPlaygroundComponent],
+      imports: [SchemapackPlayground],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: PyodideService, useClass: MockPyodideService },
+        { provide: PyodideLoader, useClass: MockPyodideService },
         { provide: MetadataValidationService, useClass: MockMetadataValidationService },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SchemapackPlaygroundComponent);
-    pyodide = TestBed.inject(PyodideService) as unknown as MockPyodideService;
+    fixture = TestBed.createComponent(SchemapackPlayground);
+    pyodide = TestBed.inject(PyodideLoader) as unknown as MockPyodideService;
     validator = TestBed.inject(
       MetadataValidationService,
     ) as unknown as MockMetadataValidationService;

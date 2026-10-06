@@ -14,8 +14,8 @@ import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
-import { SearchResultComponent } from '../search-result/search-result';
-import { SearchResultListComponent } from './search-result-list';
+import { SearchResult } from '../search-result/search-result';
+import { SearchResultList } from './search-result-list';
 
 /**
  * Mock the metadata service as needed for the search result list
@@ -56,18 +56,18 @@ class MockIvaService {
   loadUserIvas = () => undefined;
 }
 
-describe('SearchResultListComponent', () => {
-  let result: RenderResult<SearchResultListComponent>;
+describe('SearchResultList', () => {
+  let result: RenderResult<SearchResultList>;
 
   beforeEach(async () => {
-    result = await render(SearchResultListComponent, {
+    result = await render(SearchResultList, {
       providers: [
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
         { provide: IvaService, useClass: MockIvaService },
       ],
       childComponentOverrides: [
         {
-          component: SearchResultComponent,
+          component: SearchResult,
           providers: [
             { provide: AuthService, useClass: MockAuthService },
             { provide: AccessRequestService, useClass: MockAccessRequestService },

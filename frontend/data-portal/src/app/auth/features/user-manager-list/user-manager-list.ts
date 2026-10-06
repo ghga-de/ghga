@@ -57,7 +57,7 @@ interface UserRow extends DisplayUser {
   providers: [CommonDatePipe, providePaginatorIntl('Users per page')],
   templateUrl: './user-manager-list.html',
 })
-export class UserManagerListComponent implements AfterViewInit {
+export class UserManagerList implements AfterViewInit {
   #router = inject(Router);
   #userService = inject(UserService);
 

@@ -6,13 +6,13 @@
 
 import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { StencilComponent } from './stencil';
+import { Stencil } from './stencil';
 
-describe('StencilComponent', () => {
-  let result: RenderResult<StencilComponent>;
+describe('Stencil', () => {
+  let result: RenderResult<Stencil>;
 
   beforeEach(async () => {
-    result = await render(StencilComponent);
+    result = await render(Stencil);
   });
 
   it('should create', () => {

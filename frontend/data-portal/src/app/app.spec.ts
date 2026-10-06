@@ -6,11 +6,11 @@
 
 import { DeferBlockBehavior, DeferBlockState } from '@angular/core/testing';
 import { render, RenderResult, screen } from '@testing-library/angular';
-import { AppComponent } from './app';
+import { App } from './app';
 
 import { Component } from '@angular/core';
-import { SiteFooterComponent } from './portal/features/site-footer/site-footer';
-import { SiteHeaderComponent } from './portal/features/site-header/site-header';
+import { SiteFooter } from './portal/features/site-footer/site-footer';
+import { SiteHeader } from './portal/features/site-header/site-header';
 import { ConfigService } from './shared/services/config';
 
 /**
@@ -38,15 +38,15 @@ class MockSiteHeaderComponent {}
 })
 class MockSiteFooterComponent {}
 
-describe('AppComponent', () => {
-  let result: RenderResult<AppComponent>;
+describe('App', () => {
+  let result: RenderResult<App>;
 
   beforeEach(async () => {
-    result = await render(AppComponent, {
+    result = await render(App, {
       providers: [{ provide: ConfigService, useClass: MockConfigService }],
       importOverrides: [
-        { replace: SiteHeaderComponent, with: MockSiteHeaderComponent },
-        { replace: SiteFooterComponent, with: MockSiteFooterComponent },
+        { replace: SiteHeader, with: MockSiteHeaderComponent },
+        { replace: SiteFooter, with: MockSiteFooterComponent },
       ],
       deferBlockBehavior: DeferBlockBehavior.Manual,
       // Keep the injector alive for the Umami initialisation the app schedules when idle

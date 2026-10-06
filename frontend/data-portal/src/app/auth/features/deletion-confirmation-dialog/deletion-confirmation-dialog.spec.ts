@@ -14,7 +14,7 @@ import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { DeletionConfirmationDialogComponent } from './deletion-confirmation-dialog';
+import { DeletionConfirmationDialog } from './deletion-confirmation-dialog';
 
 const MockConfigService = {
   auth_url: '/test/auth',
@@ -23,9 +23,9 @@ const MockUserService = {
   deleteUser: vitest.fn(),
 };
 
-describe('DeletionConfirmationDialogComponent', () => {
-  let component: DeletionConfirmationDialogComponent;
-  let fixture: ComponentFixture<DeletionConfirmationDialogComponent>;
+describe('DeletionConfirmationDialog', () => {
+  let component: DeletionConfirmationDialog;
+  let fixture: ComponentFixture<DeletionConfirmationDialog>;
   let service: UserService;
 
   const dialogRef = {
@@ -34,7 +34,7 @@ describe('DeletionConfirmationDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DeletionConfirmationDialogComponent],
+      imports: [DeletionConfirmationDialog],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: { user: users[0] } },
         { provide: MatDialogRef, useValue: dialogRef },
@@ -46,7 +46,7 @@ describe('DeletionConfirmationDialogComponent', () => {
       teardown: { destroyAfterEach: false },
     }).compileComponents();
 
-    fixture = TestBed.createComponent(DeletionConfirmationDialogComponent);
+    fixture = TestBed.createComponent(DeletionConfirmationDialog);
     component = fixture.componentInstance;
     service = fixture.debugElement.injector.get(UserService);
     vitest.clearAllMocks();

@@ -8,11 +8,11 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { uploadBoxes } from '@app/../mocks/data';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { render, RenderResult, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { UploadBoxManagerListComponent } from './upload-box-manager-list';
+import { UploadBoxManagerList } from './upload-box-manager-list';
 
 /**
  * Mock the upload box service as needed by the upload box manager list component.
@@ -50,17 +50,17 @@ const notifyMock = {
   showError: vitest.fn(),
 };
 
-describe('UploadBoxManagerListComponent', () => {
-  let result: RenderResult<UploadBoxManagerListComponent>;
+describe('UploadBoxManagerList', () => {
+  let result: RenderResult<UploadBoxManagerList>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
     notifyMock.showError.mockClear();
 
-    result = await render(UploadBoxManagerListComponent, {
+    result = await render(UploadBoxManagerList, {
       providers: [
         { provide: UploadBoxService, useClass: MockUploadBoxService },
-        { provide: NotificationService, useValue: notifyMock },
+        { provide: Notifier, useValue: notifyMock },
       ],
       routes: [
         { path: 'upload-box-manager/:id', component: UploadBoxDetailsStubComponent },

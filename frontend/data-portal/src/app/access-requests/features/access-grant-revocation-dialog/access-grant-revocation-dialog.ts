@@ -18,7 +18,7 @@ import { MatInputModule } from '@angular/material/input';
 import { RouterModule } from '@angular/router';
 import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * This component contains the logic to re-check the id before revoking an access grant
@@ -34,17 +34,17 @@ import { NotificationService } from '@app/shared/services/notification';
     MatDialogModule,
     MatInputModule,
   ],
-  providers: [AccessRequestService, NotificationService],
+  providers: [AccessRequestService, Notifier],
   templateUrl: './access-grant-revocation-dialog.html',
 })
-export class AccessGrantRevocationDialogComponent {
-  #dialogRef = inject(MatDialogRef<AccessGrantRevocationDialogComponent, boolean>);
+export class AccessGrantRevocationDialog {
+  #dialogRef = inject(MatDialogRef<AccessGrantRevocationDialog, boolean>);
   protected data = inject<{
     grant: AccessGrant;
   }>(MAT_DIALOG_DATA);
 
   #ars = inject(AccessRequestService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   protected confirmForm = form(signal({ email: '', dataset: '' }));
 

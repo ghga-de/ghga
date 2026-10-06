@@ -1,5 +1,5 @@
 /**
- * Tests for the StatusTextBoxComponent
+ * Tests for the StatusTextBox
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -7,13 +7,13 @@
 import { render, RenderResult, screen } from '@testing-library/angular';
 
 import { SchemapackOutputStatus } from '@app/tools/models/status-text';
-import { StatusTextBoxComponent } from './status-text-box';
+import { StatusTextBox } from './status-text-box';
 
-describe('StatusTextBoxComponent', () => {
-  let result: RenderResult<StatusTextBoxComponent>;
+describe('StatusTextBox', () => {
+  let result: RenderResult<StatusTextBox>;
 
   beforeEach(async () => {
-    result = await render(StatusTextBoxComponent, {
+    result = await render(StatusTextBox, {
       inputs: {
         status: SchemapackOutputStatus.READY,
         statusText: 'Ready. Load a default or paste your content.',

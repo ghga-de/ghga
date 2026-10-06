@@ -6,9 +6,9 @@
 
 import { Component, OnInit, inject } from '@angular/core';
 import { UserService } from '@app/auth/services/user';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
-import { UserManagerFilterComponent } from '../user-manager-filter/user-manager-filter';
-import { UserManagerListComponent } from '../user-manager-list/user-manager-list';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
+import { UserManagerFilter } from '../user-manager-filter/user-manager-filter';
+import { UserManagerList } from '../user-manager-list/user-manager-list';
 
 /**
  * User Manager component.
@@ -18,14 +18,10 @@ import { UserManagerListComponent } from '../user-manager-list/user-manager-list
  */
 @Component({
   selector: 'app-user-manager',
-  imports: [
-    UserManagerListComponent,
-    UserManagerFilterComponent,
-    RefreshButtonComponent,
-  ],
+  imports: [UserManagerList, UserManagerFilter, RefreshButton],
   templateUrl: './user-manager.html',
 })
-export class UserManagerComponent implements OnInit {
+export class UserManager implements OnInit {
   userService = inject(UserService);
 
   /**

@@ -14,10 +14,10 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaService } from '@app/ivas/services/iva';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
+import { NavigationTracker } from '@app/shared/services/navigation';
 import { render, RenderResult, screen } from '@testing-library/angular';
-import { UserManagerComponent } from '../user-manager/user-manager';
-import { UserManagerDetailComponent } from './user-manager-detail';
+import { UserManager } from '../user-manager/user-manager';
+import { UserManagerDetail } from './user-manager-detail';
 
 const JOHN_DOE: DisplayUser = {
   id: '123',
@@ -93,16 +93,16 @@ class MockUserService {
   });
 }
 
-describe('UserManagerDetailComponent', () => {
-  let result: RenderResult<UserManagerDetailComponent>;
-  let component: UserManagerDetailComponent;
-  let fixture: ComponentFixture<UserManagerDetailComponent>;
-  let navigation: NavigationTrackingService;
+describe('UserManagerDetail', () => {
+  let result: RenderResult<UserManagerDetail>;
+  let component: UserManagerDetail;
+  let fixture: ComponentFixture<UserManagerDetail>;
+  let navigation: NavigationTracker;
   let mockUserService: MockUserService;
 
   beforeEach(async () => {
     mockUserService = new MockUserService();
-    result = await render(UserManagerDetailComponent, {
+    result = await render(UserManagerDetail, {
       inputs: { id: 'doe@test.dev' },
       providers: [
         CommonDatePipe,
@@ -111,11 +111,11 @@ describe('UserManagerDetailComponent', () => {
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
       routes: [
-        { path: 'user-manager/doe@test.dev', component: UserManagerDetailComponent },
-        { path: 'user-manager', component: UserManagerComponent },
+        { path: 'user-manager/doe@test.dev', component: UserManagerDetail },
+        { path: 'user-manager', component: UserManager },
       ],
     });
-    navigation = TestBed.inject(NavigationTrackingService);
+    navigation = TestBed.inject(NavigationTracker);
     fixture = result.fixture;
     component = fixture.componentInstance;
     await fixture.whenStable();

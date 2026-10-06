@@ -42,8 +42,8 @@ import {
   ],
   templateUrl: './access-request-dialog.html',
 })
-export class AccessRequestDialogComponent {
-  readonly dialogRef = inject(MatDialogRef<AccessRequestDialogComponent>);
+export class AccessRequestDialog {
+  readonly dialogRef = inject(MatDialogRef<AccessRequestDialog>);
   readonly data = inject<AccessRequestDetailData>(MAT_DIALOG_DATA);
   #config = inject(ConfigService);
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;

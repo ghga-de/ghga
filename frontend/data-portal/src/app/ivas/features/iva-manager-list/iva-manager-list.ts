@@ -19,9 +19,9 @@ import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
-import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog';
+import { CodeCreationDialog } from '../code-creation-dialog/code-creation-dialog';
 
 /**
  * A table row: an IVA, marked when another account has the same name and email as its user.
@@ -53,10 +53,10 @@ interface IvaRow extends UserWithIva {
   templateUrl: './iva-manager-list.html',
   styleUrl: './iva-manager-list.scss',
 })
-export class IvaManagerListComponent {
+export class IvaManagerList {
   #dialog = inject(MatDialog);
   #confirm = inject(ConfirmationService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #ivaService = inject(IvaService);
   #ivaTypePipe = inject(IvaTypePipe);
 
@@ -200,7 +200,7 @@ export class IvaManagerListComponent {
     this.#ivaService.createCodeForIva(iva.id).subscribe({
       next: (code) => {
         this.#notify.showSuccess('Verification code has been created');
-        const dialogRef = this.#dialog.open(CodeCreationDialogComponent, {
+        const dialogRef = this.#dialog.open(CodeCreationDialog, {
           data: { ...iva, code },
         });
         dialogRef.afterClosed().subscribe((doConfirm) => {

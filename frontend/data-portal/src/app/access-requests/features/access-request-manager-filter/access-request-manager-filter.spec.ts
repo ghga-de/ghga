@@ -8,7 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { AccessRequestManagerFilterComponent } from './access-request-manager-filter';
+import { AccessRequestManagerFilter } from './access-request-manager-filter';
 
 import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
 import { screen } from '@testing-library/angular';
@@ -31,21 +31,21 @@ const mockAccessRequestService = {
   setAllAccessRequestsFilter: vitest.fn(),
 };
 
-describe('AccessRequestManagerFilterComponent', () => {
-  let component: AccessRequestManagerFilterComponent;
-  let fixture: ComponentFixture<AccessRequestManagerFilterComponent>;
+describe('AccessRequestManagerFilter', () => {
+  let component: AccessRequestManagerFilter;
+  let fixture: ComponentFixture<AccessRequestManagerFilter>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessRequestManagerFilterComponent],
+      imports: [AccessRequestManagerFilter],
       providers: [
         { provide: AccessRequestService, useValue: mockAccessRequestService },
         provideNativeDateAdapter(),
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessRequestManagerFilterComponent);
+    fixture = TestBed.createComponent(AccessRequestManagerFilter);
     component = fixture.componentInstance;
     accessRequestService = TestBed.inject(AccessRequestService);
     await fixture.whenStable();

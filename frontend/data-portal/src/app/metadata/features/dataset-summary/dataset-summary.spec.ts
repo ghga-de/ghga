@@ -11,7 +11,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
-import { DatasetSummaryComponent } from './dataset-summary';
+import { DatasetSummaryPanel } from './dataset-summary';
 
 /**
  * Mock the auth service as needed for the Dataset Summary Component
@@ -31,11 +31,11 @@ class MockIvaService {
   loadUserIvas = () => undefined;
 }
 
-describe('DatasetSummaryComponent', () => {
-  let result: RenderResult<DatasetSummaryComponent>;
+describe('DatasetSummaryPanel', () => {
+  let result: RenderResult<DatasetSummaryPanel>;
 
   beforeEach(async () => {
-    result = await render(DatasetSummaryComponent, {
+    result = await render(DatasetSummaryPanel, {
       inputs: { hit: searchResults.hits.at(0)!, summary: datasetSummary },
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },

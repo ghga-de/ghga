@@ -8,7 +8,7 @@ import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { ConfigService } from '@app/shared/services/config';
-import { VersionRibbonComponent } from './version-ribbon';
+import { VersionRibbon } from './version-ribbon';
 
 /**
  * Mock the config service as needed by the version ribbon component
@@ -17,11 +17,11 @@ class MockConfigService {
   ribbonText = 'Test ribbon text';
 }
 
-describe('VersionRibbonComponent', () => {
-  let result: RenderResult<VersionRibbonComponent>;
+describe('VersionRibbon', () => {
+  let result: RenderResult<VersionRibbon>;
 
   beforeEach(async () => {
-    result = await render(VersionRibbonComponent, {
+    result = await render(VersionRibbon, {
       providers: [{ provide: ConfigService, useClass: MockConfigService }],
     });
   });

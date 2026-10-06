@@ -6,7 +6,7 @@
 
 import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { GlobalSummaryComponent } from './global-summary';
+import { GlobalStats } from './global-summary';
 
 import { metadataGlobalSummary } from '@app/../mocks/data';
 import { MetadataStatsService } from '@app/metadata/services/metadata-stats';
@@ -23,12 +23,12 @@ class MockMetadataStatsService {
 }
 
 describe('GlobalStatsComponent', () => {
-  let result: RenderResult<GlobalSummaryComponent>;
+  let result: RenderResult<GlobalStats>;
 
   beforeEach(async () => {
-    result = await render(GlobalSummaryComponent, {
+    result = await render(GlobalStats, {
       configureTestBed: (testBed) =>
-        testBed.overrideComponent(GlobalSummaryComponent, {
+        testBed.overrideComponent(GlobalStats, {
           set: {
             providers: [
               { provide: MetadataStatsService, useClass: MockMetadataStatsService },

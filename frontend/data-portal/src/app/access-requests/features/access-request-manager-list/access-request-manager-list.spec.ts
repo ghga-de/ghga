@@ -7,7 +7,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AccessRequestManagerListComponent } from './access-request-manager-list';
+import { AccessRequestManagerList } from './access-request-manager-list';
 
 import { ActivatedRoute } from '@angular/router';
 import {
@@ -48,14 +48,14 @@ const MockConfigService = {
   helpdeskTicketUrl: 'https://helpdesk.test/ticket/',
 };
 
-describe('AccessRequestManagerListComponent', () => {
-  let component: AccessRequestManagerListComponent;
-  let fixture: ComponentFixture<AccessRequestManagerListComponent>;
+describe('AccessRequestManagerList', () => {
+  let component: AccessRequestManagerList;
+  let fixture: ComponentFixture<AccessRequestManagerList>;
   let service: MockAccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessRequestManagerListComponent],
+      imports: [AccessRequestManagerList],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useValue: MockConfigService },
@@ -63,7 +63,7 @@ describe('AccessRequestManagerListComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessRequestManagerListComponent);
+    fixture = TestBed.createComponent(AccessRequestManagerList);
     component = fixture.componentInstance;
     service = TestBed.inject(
       AccessRequestService,

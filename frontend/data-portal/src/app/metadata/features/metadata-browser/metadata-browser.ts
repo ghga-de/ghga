@@ -16,9 +16,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
 import { ConfigService } from '@app/shared/services/config';
-import { NotificationService } from '@app/shared/services/notification';
-import { MetadataBrowserFilterComponent } from '../metadata-browser-filter/metadata-browser-filter';
-import { SearchResultListComponent } from '../search-result-list/search-result-list';
+import { Notifier } from '@app/shared/services/notification';
+import { MetadataBrowserFilter } from '../metadata-browser-filter/metadata-browser-filter';
+import { SearchResultList } from '../search-result-list/search-result-list';
 
 /**
  * This is the metadata browser component
@@ -33,15 +33,15 @@ import { SearchResultListComponent } from '../search-result-list/search-result-l
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    SearchResultListComponent,
+    SearchResultList,
     MatCardModule,
-    MetadataBrowserFilterComponent,
+    MetadataBrowserFilter,
   ],
   templateUrl: './metadata-browser.html',
 })
-export class MetadataBrowserComponent {
+export class MetadataBrowser {
   #config = inject(ConfigService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #metadataSearch = inject(MetadataSearchService);
   #max_facet_options = this.#config.maxFacetOptions;
 

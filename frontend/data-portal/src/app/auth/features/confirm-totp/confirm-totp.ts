@@ -17,7 +17,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '@app/auth/services/auth';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * TOTP confirmation page
@@ -28,8 +28,8 @@ import { NotificationService } from '@app/shared/services/notification';
   templateUrl: './confirm-totp.html',
   styleUrl: './confirm-totp.scss',
 })
-export class ConfirmTotpComponent {
-  #notify = inject(NotificationService);
+export class ConfirmTotp {
+  #notify = inject(Notifier);
   #authService = inject(AuthService);
 
   /**

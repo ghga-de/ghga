@@ -15,7 +15,7 @@ import { Component, inject } from '@angular/core';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ConfigService } from '@app/shared/services/config';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { AuthService } from './auth';
 
 /**
@@ -51,7 +51,7 @@ describe('AuthService', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ConfigService, useClass: MockConfigService },
-        { provide: NotificationService, useClass: MockNotificationService },
+        { provide: Notifier, useClass: MockNotificationService },
         provideRouter([
           { path: '', component: PageComponent, data: { name: 'home' } },
           { path: 'other', component: PageComponent, data: { name: 'other' } },
@@ -89,9 +89,7 @@ describe('AuthService', () => {
       await harness.fixture.whenStable();
       expect(router.url).toBe('/');
       expect(harness.routeNativeElement).toHaveTextContent('home');
-      const notify = TestBed.inject(
-        NotificationService,
-      ) as unknown as MockNotificationService;
+      const notify = TestBed.inject(Notifier) as unknown as MockNotificationService;
       expect(notify.showWarning).toHaveBeenCalledWith(
         'Please login to continue the requested action.',
       );

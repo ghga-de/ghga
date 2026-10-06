@@ -41,7 +41,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   providers: [Capitalise],
   templateUrl: './user-manager-filter.html',
 })
-export class UserManagerFilterComponent {
+export class UserManagerFilter {
   #userService = inject(UserService);
 
   #filter = this.#userService.usersFilter;

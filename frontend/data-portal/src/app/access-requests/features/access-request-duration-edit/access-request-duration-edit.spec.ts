@@ -6,7 +6,7 @@
 
 import { provideNativeDateAdapter } from '@angular/material/core';
 
-import { AccessRequestDurationEditComponent } from './access-request-duration-edit';
+import { AccessRequestDurationEdit } from './access-request-duration-edit';
 
 import { accessRequests } from '@app/../mocks/data';
 import {
@@ -29,7 +29,7 @@ interface DurationEditInternals {
  * @param component - the component under test
  * @returns the current form model
  */
-function getFormModel(component: AccessRequestDurationEditComponent) {
+function getFormModel(component: AccessRequestDurationEdit) {
   return (component as unknown as DurationEditInternals).formModel();
 }
 
@@ -40,7 +40,7 @@ function getFormModel(component: AccessRequestDurationEditComponent) {
  * @param untilDate - the end date to set
  */
 function setFormModel(
-  component: AccessRequestDurationEditComponent,
+  component: AccessRequestDurationEdit,
   fromDate: Date | null,
   untilDate: Date | null,
 ): void {
@@ -59,12 +59,12 @@ class MockConfigService {
   defaultAccessDurationDays = 365;
 }
 
-describe('AccessRequestDurationEditComponent', () => {
-  let result: RenderResult<AccessRequestDurationEditComponent>;
-  let component: AccessRequestDurationEditComponent;
+describe('AccessRequestDurationEdit', () => {
+  let result: RenderResult<AccessRequestDurationEdit>;
+  let component: AccessRequestDurationEdit;
 
   beforeEach(async () => {
-    result = await render(AccessRequestDurationEditComponent, {
+    result = await render(AccessRequestDurationEdit, {
       providers: [
         provideNativeDateAdapter(),
         { provide: ConfigService, useClass: MockConfigService },

@@ -13,7 +13,7 @@ import {
 import { computed, inject, Service, signal } from '@angular/core';
 import { RedirectCommand, Router } from '@angular/router';
 import { ConfigService } from '@app/shared/services/config';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import type { OidcMetadata, UserManagerSettings } from 'oidc-client-ts';
 import {
   Log as OidcLog,
@@ -51,7 +51,7 @@ export class AuthService {
   #http = inject(HttpClient);
   #router = inject(Router);
   #csrf = inject(CsrfService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #userSignal = signal<UserSession | null | undefined>(undefined);
 
   #oidcUserManager: OidcUserManager;

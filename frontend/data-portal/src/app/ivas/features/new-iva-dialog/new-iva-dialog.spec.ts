@@ -10,20 +10,20 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { IvaType } from '@app/ivas/models/iva';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { NewIvaDialogComponent } from './new-iva-dialog';
+import { NewIvaDialog } from './new-iva-dialog';
 
-describe('NewIvaDialogComponent', () => {
-  let component: NewIvaDialogComponent;
-  let fixture: ComponentFixture<NewIvaDialogComponent>;
+describe('NewIvaDialog', () => {
+  let component: NewIvaDialog;
+  let fixture: ComponentFixture<NewIvaDialog>;
   const dialogRef = { close: vitest.fn() };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NewIvaDialogComponent],
+      imports: [NewIvaDialog],
       providers: [{ provide: MatDialogRef, useValue: dialogRef }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(NewIvaDialogComponent);
+    fixture = TestBed.createComponent(NewIvaDialog);
     component = fixture.componentInstance;
     dialogRef.close.mockClear();
     await fixture.whenStable();

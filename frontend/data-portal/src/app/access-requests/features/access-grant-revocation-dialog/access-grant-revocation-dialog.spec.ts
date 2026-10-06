@@ -14,15 +14,15 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { AccessGrantRevocationDialogComponent } from './access-grant-revocation-dialog';
+import { AccessGrantRevocationDialog } from './access-grant-revocation-dialog';
 
 const MockConfigService = {
   auth_url: '/test/auth',
 };
 
-describe('AccessGrantRevocationDialogComponent', () => {
-  let component: AccessGrantRevocationDialogComponent;
-  let fixture: ComponentFixture<AccessGrantRevocationDialogComponent>;
+describe('AccessGrantRevocationDialog', () => {
+  let component: AccessGrantRevocationDialog;
+  let fixture: ComponentFixture<AccessGrantRevocationDialog>;
   let service: AccessRequestService;
 
   const dialogRef = {
@@ -31,7 +31,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessGrantRevocationDialogComponent],
+      imports: [AccessGrantRevocationDialog],
       providers: [
         {
           provide: MAT_DIALOG_DATA,
@@ -48,7 +48,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
       teardown: { destroyAfterEach: false },
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessGrantRevocationDialogComponent);
+    fixture = TestBed.createComponent(AccessGrantRevocationDialog);
     component = fixture.componentInstance;
     service = fixture.debugElement.injector.get(AccessRequestService);
     await fixture.whenStable();

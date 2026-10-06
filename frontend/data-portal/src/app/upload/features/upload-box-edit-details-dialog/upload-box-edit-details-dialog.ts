@@ -26,7 +26,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { getBackendErrorMessage } from '@app/shared/utils/errors';
 import {
   BYTES_PER_TIB,
@@ -59,10 +59,10 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   ],
   templateUrl: './upload-box-edit-details-dialog.html',
 })
-export class UploadBoxEditDetailsDialogComponent {
-  #dialogRef = inject(MatDialogRef<UploadBoxEditDetailsDialogComponent, string>);
+export class UploadBoxEditDetailsDialog {
+  #dialogRef = inject(MatDialogRef<UploadBoxEditDetailsDialog, string>);
   #uploadBoxService = inject(UploadBoxService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   /** The upload box being edited, provided by the opener. */
   protected box = inject<ResearchDataUploadBox>(MAT_DIALOG_DATA);

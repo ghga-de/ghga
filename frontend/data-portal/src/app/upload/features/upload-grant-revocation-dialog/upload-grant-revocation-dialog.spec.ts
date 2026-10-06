@@ -7,11 +7,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { uploadGrants } from '@app/../mocks/data';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
-import { UploadGrantRevocationDialogComponent } from './upload-grant-revocation-dialog';
+import { UploadGrantRevocationDialog } from './upload-grant-revocation-dialog';
 
 const testGrant = uploadGrants[0];
 
@@ -25,9 +25,9 @@ class MockUploadBoxService {
   revokeUploadGrant = vitest.fn();
 }
 
-describe('UploadGrantRevocationDialogComponent', () => {
-  let component: UploadGrantRevocationDialogComponent;
-  let fixture: ComponentFixture<UploadGrantRevocationDialogComponent>;
+describe('UploadGrantRevocationDialog', () => {
+  let component: UploadGrantRevocationDialog;
+  let fixture: ComponentFixture<UploadGrantRevocationDialog>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
@@ -36,19 +36,19 @@ describe('UploadGrantRevocationDialogComponent', () => {
     mockNotificationService.showError.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [UploadGrantRevocationDialogComponent],
+      imports: [UploadGrantRevocationDialog],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
         { provide: MAT_DIALOG_DATA, useValue: { grant: testGrant } },
         { provide: UploadBoxService, useClass: MockUploadBoxService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
     }).compileComponents();
 
     uploadBoxService = TestBed.inject(
       UploadBoxService,
     ) as unknown as MockUploadBoxService;
-    fixture = TestBed.createComponent(UploadGrantRevocationDialogComponent);
+    fixture = TestBed.createComponent(UploadGrantRevocationDialog);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

@@ -33,7 +33,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   ],
   templateUrl: './upload-box-manager-filter.html',
 })
-export class UploadBoxManagerFilterComponent {
+export class UploadBoxManagerFilter {
   #uploadBoxService = inject(UploadBoxService);
 
   #filter = this.#uploadBoxService.uploadBoxesFilter;

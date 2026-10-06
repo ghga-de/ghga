@@ -14,13 +14,13 @@ import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
-import { UploadGrantCreationComponent } from './upload-grant-creation';
+import { UploadGrantCreation } from './upload-grant-creation';
 
 const testBox = uploadBoxes.boxes[0];
 
@@ -130,9 +130,9 @@ class MockIvaService {
   }
 }
 
-describe('UploadGrantCreationComponent', () => {
-  let component: UploadGrantCreationComponent;
-  let fixture: ComponentFixture<UploadGrantCreationComponent>;
+describe('UploadGrantCreation', () => {
+  let component: UploadGrantCreation;
+  let fixture: ComponentFixture<UploadGrantCreation>;
   let uploadBoxService: MockUploadBoxService;
   let userService: MockUserService;
   let ivaService: MockIvaService;
@@ -143,14 +143,14 @@ describe('UploadGrantCreationComponent', () => {
     mockNavigationService.back.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [UploadGrantCreationComponent],
+      imports: [UploadGrantCreation],
       providers: [
         provideNativeDateAdapter(),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: UserService, useClass: MockUserService },
         { provide: IvaService, useClass: MockIvaService },
-        { provide: NotificationService, useValue: mockNotificationService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
+        { provide: Notifier, useValue: mockNotificationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
@@ -161,7 +161,7 @@ describe('UploadGrantCreationComponent', () => {
     userService = TestBed.inject(UserService) as unknown as MockUserService;
     ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
 
-    fixture = TestBed.createComponent(UploadGrantCreationComponent);
+    fixture = TestBed.createComponent(UploadGrantCreation);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('boxId', testBox.id);
     await fixture.whenStable();

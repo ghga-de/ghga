@@ -10,11 +10,11 @@ import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
 
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { UserIvaListComponent } from './user-iva-list';
+import { UserIvaList } from './user-iva-list';
 
 const mockNotificationService = {
   showSuccess: vitest.fn(),
@@ -49,9 +49,9 @@ class MockIvaService {
   requestCodeForIva = vitest.fn();
 }
 
-describe('UserIvaListComponent', () => {
-  let component: UserIvaListComponent;
-  let fixture: ComponentFixture<UserIvaListComponent>;
+describe('UserIvaList', () => {
+  let component: UserIvaList;
+  let fixture: ComponentFixture<UserIvaList>;
   let ivaService: MockIvaService;
 
   /**
@@ -70,10 +70,10 @@ describe('UserIvaListComponent', () => {
     mockNotificationService.showError.mockReset();
     mockConfirmationService.confirm.mockReset();
 
-    ({ fixture } = await render(UserIvaListComponent, {
+    ({ fixture } = await render(UserIvaList, {
       providers: [
         { provide: IvaService, useClass: MockIvaService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
         { provide: ConfirmationService, useValue: mockConfirmationService },
       ],
     }));

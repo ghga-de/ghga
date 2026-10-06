@@ -18,7 +18,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { DisplayUser, UserService } from '@app/auth/services/user';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * Component for the deletion confirmation dialog
@@ -38,12 +38,12 @@ import { NotificationService } from '@app/shared/services/notification';
   providers: [UserService],
   templateUrl: './deletion-confirmation-dialog.html',
 })
-export class DeletionConfirmationDialogComponent {
-  #dialogRef = inject(MatDialogRef<DeletionConfirmationDialogComponent, boolean>);
+export class DeletionConfirmationDialog {
+  #dialogRef = inject(MatDialogRef<DeletionConfirmationDialog, boolean>);
   protected data = inject<{ user: DisplayUser }>(MAT_DIALOG_DATA);
 
   #userService = inject(UserService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   protected emailField = form(signal(''));
 

@@ -7,10 +7,10 @@
 import { DeferBlockState } from '@angular/core/testing';
 import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { HomePageComponent } from './home-page';
+import { HomePage } from './home-page';
 
 import { metadataGlobalSummary } from '@app/../mocks/data';
-import { GlobalSummaryComponent } from '@app/metadata/features/global-summary/global-summary';
+import { GlobalStats } from '@app/metadata/features/global-summary/global-summary';
 import { MetadataStatsService } from '@app/metadata/services/metadata-stats';
 
 /**
@@ -24,16 +24,16 @@ class MockMetadataStatsService {
   };
 }
 
-describe('HomePageComponent', () => {
-  let result: RenderResult<HomePageComponent>;
+describe('HomePage', () => {
+  let result: RenderResult<HomePage>;
 
   beforeEach(async () => {
-    result = await render(HomePageComponent, {
+    result = await render(HomePage, {
       routes: [],
       deferBlockStates: DeferBlockState.Complete,
       childComponentOverrides: [
         {
-          component: GlobalSummaryComponent,
+          component: GlobalStats,
           providers: [
             { provide: MetadataStatsService, useClass: MockMetadataStatsService },
           ],

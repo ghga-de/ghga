@@ -23,7 +23,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 
 // we assume that ticket IDs are integers with up to 9 digits
 const PATTERN_TICKET_ID = '^[0-9]{0,9}$';
@@ -35,7 +35,7 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
 @Component({
   selector: 'app-access-request-field-edit',
   imports: [
-    ExternalLinkDirective,
+    ExternalLink,
     MatDatepickerModule,
     MatChipsModule,
     MatIconModule,
@@ -45,7 +45,7 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
   ],
   templateUrl: './access-request-field-edit.html',
 })
-export class AccessRequestFieldEditComponent implements OnInit {
+export class AccessRequestFieldEdit implements OnInit {
   #config = inject(ConfigService);
   #baseTicketUrl = this.#config.helpdeskTicketUrl;
 

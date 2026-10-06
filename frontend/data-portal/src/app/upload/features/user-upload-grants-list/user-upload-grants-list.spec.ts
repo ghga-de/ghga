@@ -1,5 +1,5 @@
 /**
- * Tests for the UserUploadGrantsListComponent.
+ * Tests for the UserUploadGrantsList.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -9,14 +9,14 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
-import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
+import { UploadWorkPackageDialog } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
-import { UserUploadGrantsListComponent } from './user-upload-grants-list';
+import { UserUploadGrantsList } from './user-upload-grants-list';
 
 // --- Test fixtures ---
 
@@ -92,9 +92,9 @@ const mockDialog = { open: vitest.fn() };
 
 // --- Tests ---
 
-describe('UserUploadGrantsListComponent', () => {
-  let component: UserUploadGrantsListComponent;
-  let fixture: ComponentFixture<UserUploadGrantsListComponent>;
+describe('UserUploadGrantsList', () => {
+  let component: UserUploadGrantsList;
+  let fixture: ComponentFixture<UserUploadGrantsList>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
@@ -105,11 +105,11 @@ describe('UserUploadGrantsListComponent', () => {
     mockDialog.open.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [UserUploadGrantsListComponent],
+      imports: [UserUploadGrantsList],
       providers: [
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: ConfirmationService, useValue: mockConfirmationService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
         { provide: MatDialog, useValue: mockDialog },
       ],
     }).compileComponents();
@@ -117,7 +117,7 @@ describe('UserUploadGrantsListComponent', () => {
     uploadBoxService = TestBed.inject(
       UploadBoxService,
     ) as unknown as MockUploadBoxService;
-    fixture = TestBed.createComponent(UserUploadGrantsListComponent);
+    fixture = TestBed.createComponent(UserUploadGrantsList);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
@@ -190,7 +190,7 @@ describe('UserUploadGrantsListComponent', () => {
     const btn = screen.getByRole('button', { name: /create an upload token/i });
     btn.click();
     expect(mockDialog.open).toHaveBeenCalledWith(
-      UploadWorkPackageDialogComponent,
+      UploadWorkPackageDialog,
       expect.objectContaining({
         data: openGrant,
         width: '64rem',

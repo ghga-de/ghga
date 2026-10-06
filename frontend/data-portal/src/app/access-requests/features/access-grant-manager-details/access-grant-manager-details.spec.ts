@@ -11,7 +11,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { IvaService } from '@app/ivas/services/iva';
 import { render, RenderResult, screen } from '@testing-library/angular';
-import { AccessGrantManagerDetailsComponent } from './access-grant-manager-details';
+import { AccessGrantManagerDetails } from './access-grant-manager-details';
 
 /**
  * Mock the IVA service as needed by the access grant manager dialog component
@@ -26,11 +26,11 @@ class MockIvaService {
   };
 }
 
-describe('AccessGrantManagerDetailsComponent', () => {
-  let result: RenderResult<AccessGrantManagerDetailsComponent>;
+describe('AccessGrantManagerDetails', () => {
+  let result: RenderResult<AccessGrantManagerDetails>;
 
   beforeEach(async () => {
-    result = await render(AccessGrantManagerDetailsComponent, {
+    result = await render(AccessGrantManagerDetails, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: IvaService, useClass: MockIvaService },

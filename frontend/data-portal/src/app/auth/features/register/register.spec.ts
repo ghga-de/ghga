@@ -10,7 +10,7 @@ import { UserSession } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { RegisterComponent } from './register';
+import { Register } from './register';
 
 const USER: UserSession = {
   name: 'John Doe',
@@ -31,18 +31,18 @@ class MockAuthService {
   user = signal<UserSession>(USER);
 }
 
-describe('RegisterComponent', () => {
-  let component: RegisterComponent;
-  let fixture: ComponentFixture<RegisterComponent>;
+describe('Register', () => {
+  let component: Register;
+  let fixture: ComponentFixture<Register>;
   let authService: MockAuthService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RegisterComponent],
+      imports: [Register],
       providers: [{ provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(RegisterComponent);
+    fixture = TestBed.createComponent(Register);
     component = fixture.componentInstance;
     authService = TestBed.inject(AuthService) as unknown as MockAuthService;
     await fixture.whenStable();

@@ -11,13 +11,13 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 // eslint-disable-next-line boundaries/dependencies
-import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button';
+import { DynamicAccessRequestButton } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button';
 import { DatasetSummary } from '@app/metadata/models/dataset-summary';
 import { Hit } from '@app/metadata/models/search-results';
 import { AddPluralS } from '@app/shared/pipes/add-plural-s-pipe';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs';
-import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summary-badges';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
+import { Paragraphs } from '../../../shared/ui/paragraphs/paragraphs';
+import { SummaryBadges } from '../../../shared/ui/summary-badges/summary-badges';
 
 /**
  * Component for the content of the expansion panel for each dataset found in the search results
@@ -31,14 +31,14 @@ import { SummaryBadgesComponent } from '../../../shared/ui/summary-badges/summar
     MatButtonModule,
     AddPluralS,
     RouterLink,
-    DynamicAccessRequestButtonComponent,
-    SummaryBadgesComponent,
-    ParagraphsComponent,
-    ExternalLinkDirective,
+    DynamicAccessRequestButton,
+    SummaryBadges,
+    Paragraphs,
+    ExternalLink,
   ],
   templateUrl: './dataset-summary.html',
 })
-export class DatasetSummaryComponent {
+export class DatasetSummaryPanel {
   hit = input.required<Hit>();
   hitContent = computed(() => this.hit().content);
   summary = input.required<DatasetSummary>();

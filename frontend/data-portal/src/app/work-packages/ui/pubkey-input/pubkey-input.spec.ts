@@ -9,18 +9,18 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { apply, form, FormField } from '@angular/forms/signals';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { PubkeyFieldComponent } from './pubkey-input';
+import { PubkeyField } from './pubkey-input';
 
-describe('PubkeyFieldComponent', () => {
-  let component: PubkeyFieldComponent;
-  let fixture: ComponentFixture<PubkeyFieldComponent>;
+describe('PubkeyField', () => {
+  let component: PubkeyField;
+  let fixture: ComponentFixture<PubkeyField>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PubkeyFieldComponent],
+      imports: [PubkeyField],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(PubkeyFieldComponent);
+    fixture = TestBed.createComponent(PubkeyField);
     component = fixture.componentInstance;
 
     // Initialize the value signal as required by FormValueControl
@@ -77,7 +77,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
       TestBed.runInInjectionContext(() => {
         const model = signal({ pubkey: '' });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -90,7 +90,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
       TestBed.runInInjectionContext(() => {
         const model = signal({ pubkey: '   ' });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -102,7 +102,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
       TestBed.runInInjectionContext(() => {
         const model = signal({ pubkey: '-----BEGIN CRYPT4GH PRIVATE KEY-----' });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -116,7 +116,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
       TestBed.runInInjectionContext(() => {
         const model = signal({ pubkey: 'not-valid-base64!!!' });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -130,7 +130,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
       TestBed.runInInjectionContext(() => {
         const model = signal({ pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI' });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(true);
@@ -141,7 +141,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
       TestBed.runInInjectionContext(() => {
         const model = signal({ pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Ng==' });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -158,7 +158,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
             'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Ng==',
         });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -176,7 +176,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
 -----END CRYPT4GH PUBLIC KEY-----`,
         });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(true);
@@ -188,7 +188,7 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
         const privateKeyEncoded = btoa('c4gh-test-private-key-content-here');
         const model = signal({ pubkey: privateKeyEncoded });
         const testForm = form(model, (p) => {
-          apply(p.pubkey, PubkeyFieldComponent.schema);
+          apply(p.pubkey, PubkeyField.schema);
         });
 
         expect(testForm().valid()).toBe(false);
@@ -206,12 +206,12 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
      * A host that binds the input to a form with the key schema
      */
     @Component({
-      imports: [PubkeyFieldComponent, FormField],
+      imports: [PubkeyField, FormField],
       template: '<app-pubkey-input [formField]="keyForm" />',
     })
     class HostComponent {
       model = signal('');
-      keyForm = form(this.model, (path) => apply(path, PubkeyFieldComponent.schema));
+      keyForm = form(this.model, (path) => apply(path, PubkeyField.schema));
     }
 
     let host: HostComponent;

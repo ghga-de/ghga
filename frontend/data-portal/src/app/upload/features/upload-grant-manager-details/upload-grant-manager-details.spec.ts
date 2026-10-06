@@ -9,12 +9,12 @@ import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { uploadBoxes, uploadGrants } from '@app/../mocks/data';
 import { IvaService } from '@app/ivas/services/iva';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
+import { NavigationTracker } from '@app/shared/services/navigation';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
-import { UploadGrantManagerDetailsComponent } from './upload-grant-manager-details';
+import { UploadGrantManagerDetails } from './upload-grant-manager-details';
 
 const testBox = uploadBoxes.boxes[0];
 const testGrant = uploadGrants[0];
@@ -56,20 +56,20 @@ class MockIvaService {
   };
 }
 
-describe('UploadGrantManagerDetailsComponent', () => {
-  let result: RenderResult<UploadGrantManagerDetailsComponent>;
-  let component: UploadGrantManagerDetailsComponent;
+describe('UploadGrantManagerDetails', () => {
+  let result: RenderResult<UploadGrantManagerDetails>;
+  let component: UploadGrantManagerDetails;
 
   beforeEach(async () => {
     mockNavigationService.back.mockReset();
     mockDialog.open.mockReset();
     mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
 
-    result = await render(UploadGrantManagerDetailsComponent, {
+    result = await render(UploadGrantManagerDetails, {
       providers: [
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: IvaService, useClass: MockIvaService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
         { provide: MatDialog, useValue: mockDialog },
       ],
       inputs: { boxId: testBox.id, grantId: testGrant.id },
