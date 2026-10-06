@@ -612,7 +612,9 @@ async def test_auto_finalize(mongodb: MongoDbFixture, error: bool):
     assert movies_changes_applied != error
 
 
-async def test_version_in_backwards_migration_error(mongodb: MongoDbFixture):
+async def test_version_in_backwards_migration_error(
+    mongodb: MongoDbFixture, caplog: pytest.LogCaptureFixture
+):
     """Check the MigrationStepError generated when a backwards migration fails"""
     config = make_migration_config(mongodb.config)
     client = mongodb.client
@@ -639,6 +641,10 @@ async def test_version_in_backwards_migration_error(mongodb: MongoDbFixture):
             config=config, target_version=1, migration_map=migration_map
         )
     assert err.value.args[0] == msg
+
+    # The log carries the migration's own exception, not just the step that failed
+    [record] = [r for r in caplog.records if r.getMessage() == msg]
+    assert record.exc_info and isinstance(record.exc_info[1], RuntimeError)
 
 
 async def test_check_db_version_up_to_date(mongodb: MongoDbFixture):

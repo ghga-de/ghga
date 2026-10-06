@@ -310,7 +310,7 @@ class MigrationManager:
                 migration_class=migration_cls,
                 backward=self._backward,
             )
-            log.critical(error)
+            log.critical(error, exc_info=True)
             raise error from exc
 
     async def _migrate_db(self) -> bool:
@@ -329,7 +329,7 @@ class MigrationManager:
                 init_complete = await self._initialize_versioning()
             except BaseException as exc:
                 error = DbVersioningInitError()
-                log.critical(error)
+                log.critical(error, exc_info=True)
                 raise error from exc
             if not init_complete:
                 return False
