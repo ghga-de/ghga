@@ -41,13 +41,7 @@
             </div>
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>
-                  @if (filterForm.state().value()) {
-                    State
-                  } @else {
-                    All states
-                  }
-                </mat-label>
+                <mat-label>State</mat-label>
                 <mat-select [formField]="filterForm.state">
                   <mat-option value="">All states</mat-option>
                   @for (opt of stateOptions; track opt.value) {
@@ -66,13 +60,7 @@
             </div>
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>
-                  @if (filterForm.location().value()) {
-                    Location
-                  } @else {
-                    All locations
-                  }
-                </mat-label>
+                <mat-label>Location</mat-label>
                 <mat-select [formField]="filterForm.location">
                   <mat-option value="">All locations</mat-option>
                   @for (opt of locationOptions(); track opt.value) {

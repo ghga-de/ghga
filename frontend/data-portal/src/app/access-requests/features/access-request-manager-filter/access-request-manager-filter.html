@@ -94,13 +94,7 @@
           <div class="flex grow flex-col gap-2">
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>
-                  @if (filterForm.status().value()) {
-                    Resolution
-                  } @else {
-                    All resolutions
-                  }
-                </mat-label>
+                <mat-label>Resolution</mat-label>
                 <mat-select [formField]="filterForm.status">
                   <mat-option value="">All resolutions</mat-option>
                   @for (opt of statusOptions; track opt) {

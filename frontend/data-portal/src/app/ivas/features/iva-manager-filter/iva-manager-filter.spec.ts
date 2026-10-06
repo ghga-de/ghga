@@ -75,7 +75,7 @@ describe('IvaManagerFilter', () => {
   });
 
   it('should set the filter after selecting a state', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All status values' });
+    const combobox = screen.getByRole('combobox', { name: 'Status value' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();
@@ -131,5 +131,11 @@ describe('IvaManagerFilter', () => {
     expect(filter.toDate).toBeFalsy();
     expect(name).toHaveValue('');
     expect(until).toHaveValue('');
+  });
+
+  it('should show "All status values" under its label while no value is chosen', () => {
+    expect(screen.getByRole('combobox', { name: 'Status value' })).toHaveTextContent(
+      'All status values',
+    );
   });
 });

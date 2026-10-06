@@ -134,7 +134,7 @@ describe('UploadBoxManagerFilter', () => {
   });
 
   it('should set the filter after selecting a location', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All locations' });
+    const combobox = screen.getByRole('combobox', { name: 'Location' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();
@@ -166,6 +166,14 @@ describe('UploadBoxManagerFilter', () => {
     expect(filter.state).toBeUndefined();
     expect(filter.location).toBeUndefined();
     expect(textbox).toHaveValue('');
-    expect(screen.getByRole('combobox', { name: 'All states' })).toBeVisible();
+    expect(screen.getByRole('combobox', { name: 'State' })).toHaveTextContent(
+      'All states',
+    );
+  });
+
+  it('should show "All locations" under its label while no value is chosen', () => {
+    expect(screen.getByRole('combobox', { name: 'Location' })).toHaveTextContent(
+      'All locations',
+    );
   });
 });

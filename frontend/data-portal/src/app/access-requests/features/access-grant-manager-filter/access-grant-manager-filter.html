@@ -61,13 +61,7 @@
           </div>
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
-              <mat-label>
-                @if (filterForm.status().value()) {
-                  Grant status
-                } @else {
-                  All grant statuses
-                }
-              </mat-label>
+              <mat-label>Grant status</mat-label>
               <mat-select [formField]="filterForm.status">
                 <mat-option value="">All grant statuses</mat-option>
                 @for (opt of ['active', 'waiting', 'expired']; track opt) {

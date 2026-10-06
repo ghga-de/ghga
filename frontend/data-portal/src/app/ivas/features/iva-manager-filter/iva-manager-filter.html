@@ -99,14 +99,9 @@
           </div>
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
-              <mat-label>
-                @if (filterForm.state().value()) {
-                  Status value
-                } @else {
-                  All status values
-                }
-              </mat-label>
+              <mat-label>Status value</mat-label>
               <mat-select [formField]="filterForm.state">
+                <mat-option value="">All status values</mat-option>
                 @for (opt of stateOptions; track opt) {
                   <mat-option [value]="opt.value">{{ opt.text }}</mat-option>
                 }

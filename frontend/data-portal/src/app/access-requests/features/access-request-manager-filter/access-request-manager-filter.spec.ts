@@ -107,7 +107,7 @@ describe('AccessRequestManagerFilter', () => {
   });
 
   it('should set the filter after selecting a status', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All resolutions' });
+    const combobox = screen.getByRole('combobox', { name: 'Resolution' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();
@@ -239,5 +239,11 @@ describe('AccessRequestManagerFilter', () => {
     expect(
       screen.getByRole('textbox', { name: 'Request creation date from' }),
     ).toHaveValue('');
+  });
+
+  it('should show "All resolutions" under its label while no value is chosen', () => {
+    expect(screen.getByRole('combobox', { name: 'Resolution' })).toHaveTextContent(
+      'All resolutions',
+    );
   });
 });
