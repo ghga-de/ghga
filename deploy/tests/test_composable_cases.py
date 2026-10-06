@@ -257,7 +257,8 @@ def test_command_style_exec(rendered_chart):
 def test_cronjob_single_backward_compatible(rendered_chart, expected):
     """A single, unnamed cronjobs[] entry keeps the pre-array naming (no suffix).
 
-    and inherits schedule/command/history-limit from the top-level values.
+    and inherits schedule/command/history-limit from the top-level values. By
+    default it forbids overlapping runs and sets no deadlines.
     """
     manifests = rendered_chart("common.yaml", "cronjob_single.yaml")
 
@@ -270,6 +271,12 @@ def test_cronjob_single_backward_compatible(rendered_chart, expected):
         cronjob["spec"]["successfulJobsHistoryLimit"]
         == expected("cronjob_single", "spec")["successfulJobsHistoryLimit"]
     )
+    assert (
+        cronjob["spec"]["concurrencyPolicy"]
+        == expected("cronjob_single", "spec")["concurrencyPolicy"]
+    )
+    assert "startingDeadlineSeconds" not in cronjob["spec"]
+    assert "activeDeadlineSeconds" not in cronjob["spec"]["jobTemplate"]["spec"]
 
     container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"][
         "containers"
@@ -281,7 +288,8 @@ def test_cronjob_single_backward_compatible(rendered_chart, expected):
 def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
     """Deployment and multiple cronjobs can be shipped side by side; each cronjob.
 
-    entry can override its own schedule/history-limit/entrypoint/resources, an
+    entry can override its own schedule/history-limit/concurrency/deadlines/
+    entrypoint/resources, an
     entry with `enabled: false` is skipped, and entries without overrides fall
     back to the top-level values (same as the Deployment uses).
     """
@@ -311,6 +319,14 @@ def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
             job["spec"]["successfulJobsHistoryLimit"]
             == exp["successfulJobsHistoryLimit"]
         )
+        assert job["spec"]["concurrencyPolicy"] == exp["concurrencyPolicy"]
+        assert (
+            job["spec"].get("startingDeadlineSeconds") == exp["startingDeadlineSeconds"]
+        )
+        job_spec = job["spec"]["jobTemplate"]["spec"]
+        assert job_spec["activeDeadlineSeconds"] == exp["activeDeadlineSeconds"]
+        # A pod-level activeDeadlineSeconds would not stop the Job from retrying.
+        assert "activeDeadlineSeconds" not in job_spec["template"]["spec"]
         container = job["spec"]["jobTemplate"]["spec"]["template"]["spec"][
             "containers"
         ][0]

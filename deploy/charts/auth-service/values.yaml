@@ -202,6 +202,9 @@ config:
 configPrefix: auth_service
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 environment:
   name: default
 cluster:

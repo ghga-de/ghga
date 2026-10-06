@@ -161,7 +161,7 @@
     },
     "cronjobs": {
       "type": "object",
-      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
+      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `concurrencyPolicy`, `activeDeadlineSeconds`, `startingDeadlineSeconds`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
       "additionalProperties": true,
       "properties": {
         "default": {
@@ -1591,6 +1591,19 @@
       "type": "number",
       "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own",
       "default": 5
+    },
+    "concurrencyPolicy": {
+      "type": "string",
+      "description": "Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run",
+      "default": "Forbid"
+    },
+    "activeDeadlineSeconds": {
+      "description": "Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value",
+      "default": null
+    },
+    "startingDeadlineSeconds": {
+      "description": "Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit",
+      "default": null
     },
     "environment": {
       "type": "object",
