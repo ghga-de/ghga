@@ -81,17 +81,6 @@ export class MetadataValidator {
     }
   });
 
-  // Scroll to the bottom of the process log when it grows, after the DOM update
-  #processLogEffect = effect(() => {
-    this.processLogEntries();
-    setTimeout(() => {
-      const logContainer = document.getElementById('processLogContainer');
-      if (logContainer) {
-        logContainer.scrollTop = logContainer.scrollHeight;
-      }
-    }, 0);
-  });
-
   /**
    * Resets all step statuses to 'idle'.
    */
