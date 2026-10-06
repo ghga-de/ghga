@@ -1,6 +1,6 @@
 <h1 mat-dialog-title>Add an IVA</h1>
 <div mat-dialog-content cdkTrapFocus>
-  <form (ngSubmit)="onSubmit()">
+  <form [formRoot]="ivaForm">
     <p class="mb-3">Please select one of the following IVA types:</p>
     <div class="text-center">
       <mat-button-toggle-group
@@ -26,9 +26,7 @@
             [preferredCountries]="['de']"
             [enablePlaceholder]="true"
             [enableSearch]="true"
-            name="value"
-            [ngModel]="model().value"
-            (ngModelChange)="onValueChange($event)"
+            [formField]="ivaForm.value"
             autocomplete="tel"
             maxLength="15"
             #valueField

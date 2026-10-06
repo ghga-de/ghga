@@ -17,14 +17,14 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./portal/features/home-page/home-page').then((m) => m.HomePageComponent),
+      import('./portal/features/home-page/home-page').then((m) => m.HomePage),
     title: 'Home',
   },
   {
     path: 'browse',
     loadComponent: () =>
       import('./metadata/features/metadata-browser/metadata-browser').then(
-        (m) => m.MetadataBrowserComponent,
+        (m) => m.MetadataBrowser,
       ),
     title: 'Browse Datasets',
   },
@@ -32,7 +32,7 @@ export const routes: Routes = [
     path: 'metadata-validator',
     loadComponent: () =>
       import('./tools/features/metadata-validator/metadata-validator').then(
-        (m) => m.MetadataValidatorComponent,
+        (m) => m.MetadataValidator,
       ),
     title: 'Validate Metadata',
   },
@@ -40,7 +40,7 @@ export const routes: Routes = [
     path: 'schemapack-playground',
     loadComponent: () =>
       import('./tools/features/schemapack-playground/schemapack-playground').then(
-        (m) => m.SchemapackPlaygroundComponent,
+        (m) => m.SchemapackPlayground,
       ),
     title: 'Schemapack Playground',
   },
@@ -48,7 +48,7 @@ export const routes: Routes = [
     path: 'dataset/:id',
     loadComponent: () =>
       import('./metadata/features/dataset-details/dataset-details').then(
-        (m) => m.DatasetDetailsComponent,
+        (m) => m.DatasetDetailsPage,
       ),
     title: 'Dataset Details',
   },
@@ -56,7 +56,7 @@ export const routes: Routes = [
     path: 's/:id',
     loadComponent: () =>
       import('./metadata/features/study-details/study-details').then(
-        (m) => m.StudyDetailsComponent,
+        (m) => m.StudyDetails,
       ),
     title: 'Study Details',
   },
@@ -64,7 +64,7 @@ export const routes: Routes = [
     path: 'study/:id',
     loadComponent: () =>
       import('./metadata/features/study-details/study-details').then(
-        (m) => m.StudyDetailsComponent,
+        (m) => m.StudyDetails,
       ),
     title: 'Study Details',
   },
@@ -73,7 +73,7 @@ export const routes: Routes = [
     path: 'account',
     canActivate: [() => inject(AuthService).guardAuthenticated()],
     loadComponent: () =>
-      import('./auth/features/account/account').then((m) => m.AccountComponent),
+      import('./auth/features/account/account').then((m) => m.Account),
     title: 'User Account',
   },
   // routes that are only available to data stewards
@@ -81,9 +81,7 @@ export const routes: Routes = [
     path: 'iva-manager',
     canActivate: [() => inject(AuthService).guardDataSteward()],
     loadComponent: () =>
-      import('./ivas/features/iva-manager/iva-manager').then(
-        (m) => m.IvaManagerComponent,
-      ),
+      import('./ivas/features/iva-manager/iva-manager').then((m) => m.IvaManager),
     title: 'IVA Manager',
   },
   {
@@ -94,7 +92,7 @@ export const routes: Routes = [
         path: '',
         loadComponent: () =>
           import('./access-requests/features/access-request-manager/access-request-manager').then(
-            (m) => m.AccessRequestManagerComponent,
+            (m) => m.AccessRequestManager,
           ),
         title: 'Access Request Manager',
       },
@@ -103,7 +101,7 @@ export const routes: Routes = [
         canDeactivate: [pendingEditsGuard],
         loadComponent: () =>
           import('./access-requests/features/access-request-manager-detail/access-request-manager-detail').then(
-            (m) => m.AccessRequestManagerDetailComponent,
+            (m) => m.AccessRequestManagerDetail,
           ),
         title: 'Access Request Details',
         data: { transition: 'detail' },
@@ -119,7 +117,7 @@ export const routes: Routes = [
         path: '',
         loadComponent: () =>
           import('./auth/features/user-manager/user-manager').then(
-            (m) => m.UserManagerComponent,
+            (m) => m.UserManager,
           ),
         title: 'User Manager',
       },
@@ -127,7 +125,7 @@ export const routes: Routes = [
         path: ':id',
         loadComponent: () =>
           import('./auth/features/user-manager-detail/user-manager-detail').then(
-            (m) => m.UserManagerDetailComponent,
+            (m) => m.UserManagerDetail,
           ),
         title: 'User Details',
         data: { transition: 'detail' },
@@ -142,7 +140,7 @@ export const routes: Routes = [
         path: '',
         loadComponent: () =>
           import('./access-requests/features/access-grant-manager/access-grant-manager').then(
-            (m) => m.AccessGrantManagerComponent,
+            (m) => m.AccessGrantManager,
           ),
         title: 'Access Grant Manager',
       },
@@ -150,7 +148,7 @@ export const routes: Routes = [
         path: ':id',
         loadComponent: () =>
           import('./access-requests/features/access-grant-manager-details/access-grant-manager-details').then(
-            (m) => m.AccessGrantManagerDetailsComponent,
+            (m) => m.AccessGrantManagerDetails,
           ),
         title: 'Access Grant Manager Details',
       },
@@ -165,7 +163,7 @@ export const routes: Routes = [
         path: '',
         loadComponent: () =>
           import('./upload/features/upload-box-manager/upload-box-manager').then(
-            (m) => m.UploadBoxManagerComponent,
+            (m) => m.UploadBoxManager,
           ),
         title: 'Upload Box Manager',
       },
@@ -173,7 +171,7 @@ export const routes: Routes = [
         path: ':id',
         loadComponent: () =>
           import('./upload/features/upload-box-manager-detail/upload-box-manager-detail').then(
-            (m) => m.UploadBoxManagerDetailComponent,
+            (m) => m.UploadBoxManagerDetail,
           ),
         title: 'Upload Box Details',
         data: { transition: 'detail' },
@@ -182,7 +180,7 @@ export const routes: Routes = [
         path: ':boxId/grant/new',
         loadComponent: () =>
           import('./upload/features/upload-grant-creation/upload-grant-creation').then(
-            (m) => m.UploadGrantCreationComponent,
+            (m) => m.UploadGrantCreation,
           ),
         title: 'New Upload Grant',
       },
@@ -190,7 +188,7 @@ export const routes: Routes = [
         path: ':boxId/grant/:grantId',
         loadComponent: () =>
           import('./upload/features/upload-grant-manager-details/upload-grant-manager-details').then(
-            (m) => m.UploadGrantManagerDetailsComponent,
+            (m) => m.UploadGrantManagerDetails,
           ),
         title: 'Upload Grant Details',
       },
@@ -207,7 +205,7 @@ export const routes: Routes = [
     canActivate: [() => inject(AuthService).guardRegister()],
     canDeactivate: [canDeactivateAuth],
     loadComponent: () =>
-      import('./auth/features/register/register').then((m) => m.RegisterComponent),
+      import('./auth/features/register/register').then((m) => m.Register),
     title: 'Registration',
   },
   {
@@ -215,7 +213,7 @@ export const routes: Routes = [
     canActivate: [() => inject(AuthService).guardSetupTotp()],
     canDeactivate: [canDeactivateAuth],
     loadComponent: () =>
-      import('./auth/features/setup-totp/setup-totp').then((m) => m.SetupTotpComponent),
+      import('./auth/features/setup-totp/setup-totp').then((m) => m.SetupTotp),
     title: 'Set up TOTP',
   },
   {
@@ -223,9 +221,7 @@ export const routes: Routes = [
     canActivate: [() => inject(AuthService).guardConfirmTotp()],
     canDeactivate: [canDeactivateAuth],
     loadComponent: () =>
-      import('./auth/features/confirm-totp/confirm-totp').then(
-        (m) => m.ConfirmTotpComponent,
-      ),
+      import('./auth/features/confirm-totp/confirm-totp').then((m) => m.ConfirmTotp),
     title: 'Confirm TOTP',
   },
   // fallback route
@@ -233,7 +229,7 @@ export const routes: Routes = [
     path: '**',
     loadComponent: () =>
       import('./portal/features/page-not-found/page-not-found').then(
-        (m) => m.PageNotFoundComponent,
+        (m) => m.PageNotFound,
       ),
     title: 'Page not found',
   },

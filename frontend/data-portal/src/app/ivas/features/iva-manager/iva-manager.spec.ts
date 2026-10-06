@@ -6,7 +6,7 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { IvaManagerComponent } from './iva-manager';
+import { IvaManager } from './iva-manager';
 
 import { IvaService } from '@app/ivas/services/iva';
 
@@ -33,14 +33,14 @@ class MockIvaService {
   ambiguousUserIds = () => new Set<string>();
 }
 
-describe('IvaManagerComponent', () => {
-  let component: IvaManagerComponent;
-  let fixture: ComponentFixture<IvaManagerComponent>;
+describe('IvaManager', () => {
+  let component: IvaManager;
+  let fixture: ComponentFixture<IvaManager>;
   let ivaService: IvaService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IvaManagerComponent],
+      imports: [IvaManager],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
@@ -48,7 +48,7 @@ describe('IvaManagerComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(IvaManagerComponent);
+    fixture = TestBed.createComponent(IvaManager);
     ivaService = TestBed.inject(IvaService);
     component = fixture.componentInstance;
     vitest.clearAllMocks();

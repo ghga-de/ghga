@@ -18,7 +18,7 @@ import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar'
   templateUrl: './custom-snack-bar.html',
   styleUrl: './custom-snack-bar.scss',
 })
-export class CustomSnackBarComponent {
+export class CustomSnackBar {
   data = inject(MAT_SNACK_BAR_DATA);
   snackBarRef = inject(MatSnackBarRef);
 

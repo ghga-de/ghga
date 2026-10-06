@@ -8,21 +8,15 @@ import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
+import { Stencil } from '@app/shared/ui/stencil/stencil/stencil';
 
 /**
  * A stencil component for dataset summaries used as a loading state
  */
 @Component({
   selector: 'app-dataset-summary-stencil',
-  imports: [
-    MatIconModule,
-    MatButtonModule,
-    MatChipsModule,
-    StencilComponent,
-    ExternalLinkDirective,
-  ],
+  imports: [MatIconModule, MatButtonModule, MatChipsModule, Stencil, ExternalLink],
   templateUrl: './dataset-summary.stencil.html',
 })
-export class DatasetSummaryStencilComponent {}
+export class DatasetSummaryStencil {}

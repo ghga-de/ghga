@@ -12,20 +12,29 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { users } from '@app/../mocks/data';
 import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
+import { Notifier } from '@app/shared/services/notification';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { DeletionConfirmationDialogComponent } from './deletion-confirmation-dialog';
+import { of } from 'rxjs';
+import { DeletionConfirmationDialog } from './deletion-confirmation-dialog';
 
 const MockConfigService = {
   auth_url: '/test/auth',
 };
 const MockUserService = {
-  deleteUser: vitest.fn(),
+  deleteUser: vitest.fn(() => of(null)),
 };
 
-describe('DeletionConfirmationDialogComponent', () => {
-  let component: DeletionConfirmationDialogComponent;
-  let fixture: ComponentFixture<DeletionConfirmationDialogComponent>;
+// A real notifier opens snack bars in document.body, which the test runner
+// shares between spec files.
+const MockNotifier = {
+  showSuccess: vitest.fn(),
+  showError: vitest.fn(),
+};
+
+describe('DeletionConfirmationDialog', () => {
+  let component: DeletionConfirmationDialog;
+  let fixture: ComponentFixture<DeletionConfirmationDialog>;
   let service: UserService;
 
   const dialogRef = {
@@ -34,21 +43,22 @@ describe('DeletionConfirmationDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DeletionConfirmationDialogComponent],
+      imports: [DeletionConfirmationDialog],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: { user: users[0] } },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: UserService, useValue: MockUserService },
         { provide: ConfigService, useValue: MockConfigService },
+        { provide: Notifier, useValue: MockNotifier },
         provideHttpClient(),
         provideHttpCache(),
       ],
-      teardown: { destroyAfterEach: false },
     }).compileComponents();
 
-    fixture = TestBed.createComponent(DeletionConfirmationDialogComponent);
+    fixture = TestBed.createComponent(DeletionConfirmationDialog);
     component = fixture.componentInstance;
-    service = fixture.debugElement.injector.get(UserService);
+    // The opener's instance, so its local updates reach the user list
+    service = TestBed.inject(UserService);
     vitest.clearAllMocks();
     await fixture.whenStable();
   });
@@ -76,5 +86,18 @@ describe('DeletionConfirmationDialogComponent', () => {
     expect(button).toHaveTextContent('Confirm deletion');
     button.click();
     expect(deleteSpy).toHaveBeenCalledWith(users[0].id);
+    expect(MockNotifier.showSuccess).toHaveBeenCalled();
+    expect(dialogRef.close).toHaveBeenCalledWith(true);
+  });
+
+  it('should keep the confirm button disabled until the email matches', async () => {
+    const button = screen.getByRole('button', { name: 'Confirm deletion' });
+    expect(button).toBeDisabled();
+    const input = screen.getByRole('textbox', { name: 'Confirm user email' });
+    await userEvent.type(input, 'doe@home.or');
+    expect(button).toBeDisabled();
+    await userEvent.clear(input);
+    await userEvent.type(input, ' doe@home.org ');
+    expect(button).toBeEnabled();
   });
 });

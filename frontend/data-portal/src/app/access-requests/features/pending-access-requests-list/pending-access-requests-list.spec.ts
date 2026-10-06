@@ -4,41 +4,39 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
-import { ActivatedRoute } from '@angular/router';
-import { fakeActivatedRoute } from '@app/../mocks/route';
+import { TestBed } from '@angular/core/testing';
+import { accessRequests } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
-import { PendingAccessRequestsListComponent } from './pending-access-requests-list';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import { PendingAccessRequestsList } from './pending-access-requests-list';
 
-describe('PendingAccessRequestsListComponent', () => {
-  let component: PendingAccessRequestsListComponent;
-  let fixture: ComponentFixture<PendingAccessRequestsListComponent>;
+describe('PendingAccessRequestsList', () => {
+  let result: RenderResult<PendingAccessRequestsList>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [PendingAccessRequestsListComponent],
+    result = await render(PendingAccessRequestsList, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
-    }).compileComponents();
-
+      routes: [],
+    });
     accessRequestService = TestBed.inject(AccessRequestService);
-    fixture = TestBed.createComponent(PendingAccessRequestsListComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+    const pending = accessRequests.filter((ar) => ar.status === 'pending');
+    expect(screen.getAllByRole('listitem')).toHaveLength(pending.length);
+    expect(
+      screen.getAllByRole('link', { name: pending[0].dataset_id })[0],
+    ).toHaveAttribute('href', `/dataset/${pending[0].dataset_id}`);
   });
 
   it('should fetch the access requests again when refreshed', () => {
     const reload = vitest.spyOn(accessRequestService, 'reloadUserAccessRequests');
-    component.refresh();
+    result.fixture.componentInstance.refresh();
     expect(reload).toHaveBeenCalledTimes(1);
   });
 });

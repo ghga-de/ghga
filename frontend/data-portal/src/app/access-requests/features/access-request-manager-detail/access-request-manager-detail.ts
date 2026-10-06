@@ -12,12 +12,12 @@ import {
   effect,
   inject,
   input,
-  model,
+  linkedSignal,
   OnInit,
   signal,
   Signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -45,16 +45,16 @@ import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { SplitLinesPipe } from '@app/shared/pipes/split-lines-pipe';
 import { ConfigService } from '@app/shared/services/config';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { AccessRequestDurationEditComponent } from '../access-request-duration-edit/access-request-duration-edit';
-import { AccessRequestFieldEditComponent } from '../access-request-field-edit/access-request-field-edit';
+import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
+import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
 
 /**
  * The view component used for managing access requests in the access request manager.
@@ -63,7 +63,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
 @Component({
   selector: 'app-access-request-manager-dialog',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatButtonModule,
     MatRadioModule,
@@ -73,18 +73,18 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
     AccessGrantStatusClassPipe,
     IvaTypePipe,
     IvaStatePipe,
-    AccessRequestFieldEditComponent,
+    AccessRequestFieldEdit,
     MatChipsModule,
     MatInputModule,
     SplitLinesPipe,
-    ExternalLinkDirective,
+    ExternalLink,
     RouterLink,
-    AccessRequestDurationEditComponent,
+    AccessRequestDurationEdit,
   ],
   providers: [IvaTypePipe, CommonDatePipe],
   templateUrl: './access-request-manager-detail.html',
 })
-export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEdits {
+export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   readonly periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
   readonly periodTimeZone = DEFAULT_TIME_ZONE;
@@ -94,13 +94,13 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #config = inject(ConfigService);
   #ivaService = inject(IvaService);
   #confirmationService = inject(ConfirmationService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
   #accessRequestService = inject(AccessRequestService);
 
   #authUrl = this.#config.authUrl;
   #usersUrl = `${this.#authUrl}/users`;
 
-  #location = inject(NavigationTrackingService);
+  #location = inject(NavigationTracker);
 
   id = input.required<string>();
   #request = this.#accessRequestService.accessRequest;
@@ -169,7 +169,20 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #ivaTypePipe = inject(IvaTypePipe);
   #datePipe = inject(CommonDatePipe);
 
-  selectedIvaIdRadioButton = model<string | undefined>(undefined);
+  /**
+   * The IVA selected in the radio group. Whenever the IVAs have loaded, it is
+   * preset to the IVA of the request or to the best IVA of the user.
+   */
+  selectedIvaIdRadioButton = linkedSignal<boolean, string | undefined>({
+    source: () => !this.ivasAreLoading() && !this.ivasError() && this.ivas().length > 0,
+    computation: (loaded, previous) =>
+      loaded ? this.request()?.iva_id || this.#findBestIvaId() : previous?.value,
+  });
+
+  /**
+   * The IVA selection, bound to the radio group
+   */
+  protected ivaField = form(this.selectedIvaIdRadioButton);
 
   #pendingEdits = new Set<keyof AccessRequest>();
 
@@ -203,6 +216,13 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   );
 
   /**
+   * The external ID with a zero-width space before the `@`, so that it can wrap there.
+   */
+  protected userExtIdText = computed(() =>
+    this.userExtId.value()?.split('@', 2).join('\u200B@'),
+  );
+
+  /**
    * Get the IVA associated with the access request.
    */
   associatedIva: Signal<Iva | undefined> = computed(() => {
@@ -221,12 +241,6 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
       this.#notificationService.showError('Error fetching verification addresses.');
-    }
-  });
-
-  #ivasLoadedEffect = effect(() => {
-    if (!this.ivasAreLoading() && !this.ivasError() && this.ivas().length) {
-      this.#preSelectIvaRadioButton();
     }
   });
 
@@ -434,15 +448,6 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
     });
     this.goBack();
   };
-
-  /**
-   * Pre-select the radio button for the IVA that best matches
-   * (the IVA that is already selected or the best option otherwise)
-   */
-  #preSelectIvaRadioButton(): void {
-    const ivaId = this.request()?.iva_id;
-    this.selectedIvaIdRadioButton.set(ivaId || this.#findBestIvaId());
-  }
 
   /**
    * Get the "best" IVA for a changeable access request.

@@ -32,13 +32,13 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>Name, email, or LS ID of user</mat-label>
-              <input matInput type="text" [(ngModel)]="idStrings" />
+              <input matInput type="text" [formField]="filterForm.idStrings" />
             </mat-form-field>
             <button
               mat-icon-button
               aria-label="Remove filter for user name, email, and LS ID"
-              [class.invisible]="!this.idStrings()"
-              (click)="this.idStrings.set('')"
+              [class.invisible]="!filterForm.idStrings().value()"
+              (click)="filterForm.idStrings().value.set('')"
               data-umami-event="User Manager Filters User Details Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
@@ -47,13 +47,13 @@
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
               <mat-label>
-                @if (roles()?.length) {
+                @if (filterForm.roles().value().length) {
                   Roles
                 } @else {
                   Any role
                 }
               </mat-label>
-              <mat-select matInput [(ngModel)]="roles" multiple>
+              <mat-select matInput [formField]="filterForm.roles" multiple>
                 <mat-select-trigger>
                   {{ roleSelection() }}
                 </mat-select-trigger>
@@ -66,15 +66,15 @@
             <button
               mat-icon-button
               aria-label="Remove filter for user role"
-              [class.invisible]="!this.roles() || this.roles()?.length === 0"
-              (click)="this.roles.set(undefined)"
+              [class.invisible]="!filterForm.roles().value().length"
+              (click)="filterForm.roles().value.set([])"
               data-umami-event="User Manager Filters User Role Clear Clicked"
             >
               <mat-icon fontIcon="cancel"></mat-icon>
             </button>
           </div>
           <div class="flex min-w-96 grow items-center gap-2 pe-12 pb-2.5 xl:pe-0">
-            <mat-button-toggle-group class="grow" [(ngModel)]="status" value="all">
+            <mat-button-toggle-group class="grow" [formField]="filterForm.status">
               <mat-button-toggle value="all" class="grow"
                 >All accounts</mat-button-toggle
               >

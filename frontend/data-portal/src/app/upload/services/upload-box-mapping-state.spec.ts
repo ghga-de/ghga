@@ -4,16 +4,13 @@
  * @license Apache-2.0
  */
 
-import {
-  MappingSnapshot,
-  UploadBoxMappingStateService,
-} from './upload-box-mapping-state';
+import { MappingSnapshot, UploadBoxMappingStore } from './upload-box-mapping-state';
 
-describe('UploadBoxMappingStateService', () => {
-  let service: UploadBoxMappingStateService;
+describe('UploadBoxMappingStore', () => {
+  let service: UploadBoxMappingStore;
 
   beforeEach(() => {
-    service = new UploadBoxMappingStateService();
+    service = new UploadBoxMappingStore();
   });
 
   it('should return undefined for boxes without a saved snapshot', () => {

@@ -10,7 +10,7 @@ import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { UploadBoxManagerFilterComponent } from './upload-box-manager-filter';
+import { UploadBoxManagerFilter } from './upload-box-manager-filter';
 
 const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
   id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68009',
@@ -53,20 +53,20 @@ const mockUploadBoxService = {
   },
 };
 
-describe('UploadBoxManagerFilterComponent', () => {
-  let component: UploadBoxManagerFilterComponent;
-  let fixture: ComponentFixture<UploadBoxManagerFilterComponent>;
+describe('UploadBoxManagerFilter', () => {
+  let component: UploadBoxManagerFilter;
+  let fixture: ComponentFixture<UploadBoxManagerFilter>;
   let uploadBoxService: typeof mockUploadBoxService;
 
   beforeEach(async () => {
     mockUploadBoxService.setUploadBoxes([TEST_UPLOAD_BOX]);
     mockUploadBoxService.setUploadBoxesFilter.mockClear();
     await TestBed.configureTestingModule({
-      imports: [UploadBoxManagerFilterComponent],
+      imports: [UploadBoxManagerFilter],
       providers: [{ provide: UploadBoxService, useValue: mockUploadBoxService }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UploadBoxManagerFilterComponent);
+    fixture = TestBed.createComponent(UploadBoxManagerFilter);
     component = fixture.componentInstance;
     uploadBoxService = TestBed.inject(
       UploadBoxService,
@@ -88,7 +88,6 @@ describe('UploadBoxManagerFilterComponent', () => {
 
   it('should hide filter controls when no upload boxes are loaded', async () => {
     uploadBoxService.setUploadBoxes([]);
-    fixture.detectChanges();
     await fixture.whenStable();
 
     const filterButton = screen.queryByRole('button', {
@@ -135,7 +134,7 @@ describe('UploadBoxManagerFilterComponent', () => {
   });
 
   it('should set the filter after selecting a location', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All locations' });
+    const combobox = screen.getByRole('combobox', { name: 'Location' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();
@@ -149,5 +148,32 @@ describe('UploadBoxManagerFilterComponent', () => {
       state: 'not_archived',
       location: 'HD02',
     });
+  });
+
+  it('should clear the filter with the remove buttons', async () => {
+    const textbox = screen.getByRole('textbox', { name: 'Upload box title' });
+    await userEvent.type(textbox, 'Upload Box');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for upload box title' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for upload box state' }),
+    );
+    await fixture.whenStable();
+
+    const filter = uploadBoxService.setUploadBoxesFilter.mock.lastCall![0];
+    expect(filter.title).toBeFalsy();
+    expect(filter.state).toBeUndefined();
+    expect(filter.location).toBeUndefined();
+    expect(textbox).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'State' })).toHaveTextContent(
+      'All states',
+    );
+  });
+
+  it('should show "All locations" under its label while no value is chosen', () => {
+    expect(screen.getByRole('combobox', { name: 'Location' })).toHaveTextContent(
+      'All locations',
+    );
   });
 });

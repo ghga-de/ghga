@@ -6,16 +6,16 @@
 
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { PyodideOutput } from '@app/tools/models/pyodide';
 import { SchemapackOutputStatus } from '@app/tools/models/status-text';
-import { PyodideService } from '@app/tools/services/pyodide';
+import { PyodideLoader } from '@app/tools/services/pyodide';
 import { MetadataValidationService } from '@app/tools/services/validator';
 import { firstValueFrom } from 'rxjs';
 import { FormatSchemapackErrorPipe } from '../../pipes/schemapack-error-pipe';
-import { StatusTextBoxComponent } from '../status-text-box/status-text-box';
+import { StatusTextBox } from '../status-text-box/status-text-box';
 
 const PLAYGROUND_SCHEMA_PYODIDE_PATH = '/playground/schema.yaml';
 const PLAYGROUND_JSON_PYODIDE_PATH = '/playground/data.json';
@@ -31,18 +31,20 @@ const PLAYGROUND_DEMO_JSON_VALUE =
   templateUrl: './schemapack-playground.html',
   imports: [
     MatButtonModule,
-    FormsModule,
+    FormField,
     MatIconModule,
     FormatSchemapackErrorPipe,
-    StatusTextBoxComponent,
+    StatusTextBox,
   ],
 })
-export class SchemapackPlaygroundComponent {
+export class SchemapackPlayground {
   #validationService = inject(MetadataValidationService);
-  #pyodideService = inject(PyodideService);
+  #pyodideService = inject(PyodideLoader);
   #http = inject(HttpClient);
   schemaYaml = signal<string>('');
   jsonData = signal<string>('');
+  protected schemaField = form(this.schemaYaml);
+  protected dataField = form(this.jsonData);
   defaultSchema = '';
   isStatusError = signal<boolean>(false);
   showSpinner = signal<boolean>(false);

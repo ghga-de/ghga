@@ -8,7 +8,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
 import { AuthService } from '@app/auth/services/auth';
 import { ConfigService } from '@app/shared/services/config';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { volatileCacheContext } from '@app/shared/utils/http-cache';
 import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
 import { Observable, tap } from 'rxjs';
@@ -30,7 +30,7 @@ export class AccessRequestService {
   #http = inject(HttpClient);
   #auth = inject(AuthService);
   #httpCache = inject(HttpCacheManager);
-  #notification = inject(NotificationService);
+  #notification = inject(Notifier);
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #config = inject(ConfigService);
 
@@ -472,7 +472,8 @@ export class AccessRequestService {
    * @param datasetId - the dataset ID
    * @returns the composite key
    */
-  #grantKey = (userId: string, datasetId: string): string => `${userId} ${datasetId}`;
+  #grantKey = (userId: string, datasetId: string): string =>
+    `${userId}\u0000${datasetId}`;
 
   /**
    * Aggregate the current access state across all grants of the same user and

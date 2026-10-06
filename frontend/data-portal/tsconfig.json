@@ -26,7 +26,8 @@
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
     "strictStandalone": true,
-    "strictTemplates": true
+    "strictTemplates": true,
+    "strictUnclaimedEventNames": true
   },
   "files": [],
   "references": [

@@ -26,8 +26,8 @@ import {
   Facet,
 } from '@app/metadata/models/search-results';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
-import { FacetExpansionPanelComponent } from '@app/metadata/ui/facet-expansion-panel/facet-expansion-panel';
-import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { FacetExpansionPanel } from '@app/metadata/ui/facet-expansion-panel/facet-expansion-panel';
+import { Stencil } from '@app/shared/ui/stencil/stencil/stencil';
 import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text';
 
 /**
@@ -36,7 +36,7 @@ import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text
 @Component({
   selector: 'app-metadata-browser-filter',
   imports: [
-    FacetExpansionPanelComponent,
+    FacetExpansionPanel,
     MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
@@ -45,13 +45,13 @@ import { highlightMatchingText } from '@app/shared/utils/highlight-matching-text
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    StencilComponent,
+    Stencil,
     MatAccordion,
     FormField,
   ],
   templateUrl: './metadata-browser-filter.html',
 })
-export class MetadataBrowserFilterComponent implements OnInit {
+export class MetadataBrowserFilter implements OnInit {
   #className = 'EmbeddedDataset';
 
   #route = inject(ActivatedRoute);

@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, viewChild } from '@angular/core';
 
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,9 +19,16 @@ import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
-import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog';
+import { CodeCreationDialog } from '../code-creation-dialog/code-creation-dialog';
+
+/**
+ * A table row: an IVA, marked when another account has the same name and email as its user.
+ */
+interface IvaRow extends UserWithIva {
+  warn: boolean;
+}
 
 /**
  * IVA Manager List component.
@@ -46,25 +53,33 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
   templateUrl: './iva-manager-list.html',
   styleUrl: './iva-manager-list.scss',
 })
-export class IvaManagerListComponent {
+export class IvaManagerList {
   #dialog = inject(MatDialog);
   #confirm = inject(ConfirmationService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #ivaService = inject(IvaService);
   #ivaTypePipe = inject(IvaTypePipe);
 
   #ivas = this.#ivaService.allIvas;
-  ambiguousUserIds = this.#ivaService.ambiguousUserIds;
+  #ambiguousUserIds = this.#ivaService.ambiguousUserIds;
 
   ivas = this.#ivaService.allIvasFiltered;
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
 
-  source = new MatTableDataSource<UserWithIva>([]);
+  #rows = computed<IvaRow[]>(() => {
+    const ambiguousUserIds = this.#ambiguousUserIds();
+    return this.ivas().map((iva) => ({
+      ...iva,
+      warn: ambiguousUserIds.has(iva.user_id),
+    }));
+  });
+
+  source = new MatTableDataSource<IvaRow>([]);
 
   #duplicateUsers = new Set<string>(); // user IDs where name and email are ambiguous
 
-  #updateSourceEffect = effect(() => (this.source.data = this.ivas()));
+  #updateSourceEffect = effect(() => (this.source.data = this.#rows()));
 
   #ivaSortingAccessor = (iva: UserWithIva, key: string) => {
     switch (key) {
@@ -185,7 +200,7 @@ export class IvaManagerListComponent {
     this.#ivaService.createCodeForIva(iva.id).subscribe({
       next: (code) => {
         this.#notify.showSuccess('Verification code has been created');
-        const dialogRef = this.#dialog.open(CodeCreationDialogComponent, {
+        const dialogRef = this.#dialog.open(CodeCreationDialog, {
           data: { ...iva, code },
         });
         dialogRef.afterClosed().subscribe((doConfirm) => {

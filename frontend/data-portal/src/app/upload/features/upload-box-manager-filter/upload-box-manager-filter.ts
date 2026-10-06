@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, model, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,7 +23,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
 @Component({
   selector: 'app-upload-box-manager-filter',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatInputModule,
     MatButtonModule,
@@ -33,7 +33,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   ],
   templateUrl: './upload-box-manager-filter.html',
 })
-export class UploadBoxManagerFilterComponent {
+export class UploadBoxManagerFilter {
   #uploadBoxService = inject(UploadBoxService);
 
   #filter = this.#uploadBoxService.uploadBoxesFilter;
@@ -42,22 +42,25 @@ export class UploadBoxManagerFilterComponent {
   displayFilters = signal(false);
 
   /**
-   * The model for upload-box filter properties.
+   * The filter form, starting from the current filter.
    */
-  title = model<string | undefined>(this.#filter().title);
-  state = model<UploadBoxStateFilter | undefined>(
-    this.#filter().state ?? 'not_archived',
+  protected filterForm = form(
+    signal({
+      title: this.#filter().title ?? '',
+      state: (this.#filter().state ?? 'not_archived') as UploadBoxStateFilter | '',
+      location: this.#filter().location ?? '',
+    }),
   );
-  location = model<string | undefined>(this.#filter().location);
 
   /**
    * Communicate filter changes to the upload box service.
    */
   #filterEffect = effect(() => {
+    const { title, state, location } = this.filterForm().value();
     this.#uploadBoxService.setUploadBoxesFilter({
-      title: this.title(),
-      state: this.state(),
-      location: this.location(),
+      title: title || undefined,
+      state: state || undefined,
+      location: location || undefined,
     });
   });
 

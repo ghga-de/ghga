@@ -46,7 +46,7 @@ graders:
 
 cases:
   new-component:
-    description: A new component and its spec, where the portal's existing code keeps the class suffix and detectChanges that new code drops.
+    description: A new component and its spec, where the code at the pinned commit still keeps the class suffix and detectChanges that new code drops.
     tags: [write]
     prompt: |
       In the data portal, add a component that summarises a dataset's files: it takes the list of files as an input and shows how many there are and their total size. Put it in a new folder under src/app/metadata/features/, next to the other features there, and write its unit test. When you are done, list the files you wrote.

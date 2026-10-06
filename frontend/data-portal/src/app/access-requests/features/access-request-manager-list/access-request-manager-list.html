@@ -15,8 +15,8 @@
           Ticket ID
         </th>
         <td mat-cell *matCellDef="let ar">
-          @if (ticketUrl().get(ar.id)) {
-            <a [href]="ticketUrl().get(ar.id)">{{ ar.ticket_id }}</a>
+          @if (ar.ticketUrl) {
+            <a [href]="ar.ticketUrl">{{ ar.ticket_id }}</a>
           } @else {
             {{ ar.ticket_id }}
           }
@@ -97,10 +97,9 @@
           Access
         </th>
         <td mat-cell class="capitalize" *matCellDef="let ar">
-          @let grant = grantState().get(ar.id);
-          @if (grant) {
-            <span class="{{ grant | AccessGrantStatusClassPipe }}">{{
-              accessLabels[grant]
+          @if (ar.grant) {
+            <span class="{{ ar.grant | AccessGrantStatusClassPipe }}">{{
+              ar.grantLabel
             }}</span>
           } @else {
             <span class="text-gray-500">None</span>

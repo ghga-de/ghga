@@ -12,8 +12,8 @@ import { uploadBox1FileUploads, uploadBoxes, uploadGrants } from '@app/../mocks/
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { UserService } from '@app/auth/services/user';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import {
   DEFAULT_UPLOADS_PAGE_SIZE,
@@ -24,8 +24,8 @@ import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
-import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
-import { UploadBoxManagerDetailComponent } from './upload-box-manager-detail';
+import { UploadBoxMapping } from '../upload-box-mapping/upload-box-mapping';
+import { UploadBoxManagerDetail } from './upload-box-manager-detail';
 
 const TEST_BOX = uploadBoxes.boxes[0];
 
@@ -202,26 +202,26 @@ const mockNotificationService = {
   showWarning: vitest.fn(),
 };
 
-describe('UploadBoxManagerDetailComponent', () => {
-  let component: UploadBoxManagerDetailComponent;
-  let fixture: ComponentFixture<UploadBoxManagerDetailComponent>;
+describe('UploadBoxManagerDetail', () => {
+  let component: UploadBoxManagerDetail;
+  let fixture: ComponentFixture<UploadBoxManagerDetail>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UploadBoxManagerDetailComponent],
+      imports: [UploadBoxManagerDetail],
       providers: [
         provideRouter([]),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: UserService, useClass: MockUserService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
+        { provide: Notifier, useValue: mockNotificationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
       ],
     })
-      .overrideComponent(UploadBoxMappingComponent, {
+      .overrideComponent(UploadBoxMapping, {
         set: {
           providers: [{ provide: MetadataService, useClass: MockMetadataService }],
         },
@@ -231,7 +231,7 @@ describe('UploadBoxManagerDetailComponent', () => {
     uploadBoxService = TestBed.inject(
       UploadBoxService,
     ) as unknown as MockUploadBoxService;
-    fixture = TestBed.createComponent(UploadBoxManagerDetailComponent);
+    fixture = TestBed.createComponent(UploadBoxManagerDetail);
     component = fixture.componentInstance;
   });
 

@@ -13,7 +13,7 @@ import {
   MatDialogRef,
 } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadGrant } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
@@ -25,15 +25,15 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   imports: [MatButton, MatDialogActions, MatDialogModule, MatIconModule],
   templateUrl: './upload-grant-revocation-dialog.html',
 })
-export class UploadGrantRevocationDialogComponent {
-  #dialogRef = inject(MatDialogRef<UploadGrantRevocationDialogComponent, boolean>);
+export class UploadGrantRevocationDialog {
+  #dialogRef = inject(MatDialogRef<UploadGrantRevocationDialog, boolean>);
 
   protected data = inject<{ grant: UploadGrant; boxTitle?: string; boxState?: string }>(
     MAT_DIALOG_DATA,
   );
 
   #uploadBoxService = inject(UploadBoxService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   #isProcessing = signal(false);
 

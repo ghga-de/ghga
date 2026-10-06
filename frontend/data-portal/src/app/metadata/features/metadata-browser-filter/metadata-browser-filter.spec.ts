@@ -13,7 +13,7 @@ import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { searchResults } from '../../../../mocks/data';
-import { MetadataBrowserFilterComponent } from './metadata-browser-filter';
+import { MetadataBrowserFilter } from './metadata-browser-filter';
 
 /**
  * Mock the metadata service as needed for the metadata browser filter
@@ -30,14 +30,14 @@ class MockMetadataSearchService {
   facets = () => {};
   query = () => undefined;
 }
-describe('MetadataBrowserFilterComponent', () => {
-  let component: MetadataBrowserFilterComponent;
-  let fixture: ComponentFixture<MetadataBrowserFilterComponent>;
+describe('MetadataBrowserFilter', () => {
+  let component: MetadataBrowserFilter;
+  let fixture: ComponentFixture<MetadataBrowserFilter>;
   let router: Router;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MetadataBrowserFilterComponent],
+      imports: [MetadataBrowserFilter],
       providers: [
         RouterModule,
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
@@ -47,7 +47,7 @@ describe('MetadataBrowserFilterComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(MetadataBrowserFilterComponent);
+    fixture = TestBed.createComponent(MetadataBrowserFilter);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
     await fixture.whenStable();
@@ -62,7 +62,6 @@ describe('MetadataBrowserFilterComponent', () => {
     const routerSpy = vitest.spyOn(router, 'navigate');
     await userEvent.type(searchInput, 'test query');
     await userEvent.type(searchInput, '{Enter}');
-    fixture.detectChanges();
     await fixture.whenStable();
     expect(routerSpy).toHaveBeenCalledWith(
       [],
@@ -78,7 +77,6 @@ describe('MetadataBrowserFilterComponent', () => {
     });
     searchInput.focus();
     await userEvent.keyboard('opt');
-    fixture.detectChanges();
     await fixture.whenStable();
     const autoCompleteOptions = screen.getAllByRole('option');
     expect(autoCompleteOptions.length).toBe(9);

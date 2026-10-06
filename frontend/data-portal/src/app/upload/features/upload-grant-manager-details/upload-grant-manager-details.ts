@@ -23,15 +23,15 @@ import { RouterLink } from '@angular/router';
 import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
 import { ResearchDataUploadBox, UploadBoxStateClass } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
-import { UploadGrantRevocationDialogComponent } from '../upload-grant-revocation-dialog/upload-grant-revocation-dialog';
+import { UploadGrantRevocationDialog } from '../upload-grant-revocation-dialog/upload-grant-revocation-dialog';
 
 /**
  * Upload Grant Manager Details component.
@@ -49,16 +49,16 @@ import { UploadGrantRevocationDialogComponent } from '../upload-grant-revocation
     DatePipe,
     IvaTypePipe,
     IvaStatePipe,
-    ExternalLinkDirective,
+    ExternalLink,
   ],
   templateUrl: './upload-grant-manager-details.html',
 })
-export class UploadGrantManagerDetailsComponent implements OnInit {
+export class UploadGrantManagerDetails implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   readonly periodTimeZone = DEFAULT_TIME_ZONE;
   readonly stateClass = UploadBoxStateClass;
 
-  #location = inject(NavigationTrackingService);
+  #location = inject(NavigationTracker);
   #uploadBoxService = inject(UploadBoxService);
   #ivaService = inject(IvaService);
   #dialog = inject(MatDialog);
@@ -204,7 +204,7 @@ export class UploadGrantManagerDetailsComponent implements OnInit {
   revokeGrant(): void {
     const grant = this.grant();
     if (!grant) return;
-    const ref = this.#dialog.open(UploadGrantRevocationDialogComponent, {
+    const ref = this.#dialog.open(UploadGrantRevocationDialog, {
       data: { grant, boxTitle: this.box()?.title, boxState: this.box()?.state },
     });
 

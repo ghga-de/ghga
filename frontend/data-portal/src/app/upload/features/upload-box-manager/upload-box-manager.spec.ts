@@ -7,12 +7,12 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of } from 'rxjs';
-import { UploadBoxManagerComponent } from './upload-box-manager';
+import { UploadBoxManager } from './upload-box-manager';
 
 const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
   id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68009',
@@ -74,9 +74,9 @@ const mockNotificationService = {
   showSuccess: vitest.fn(),
 };
 
-describe('UploadBoxManagerComponent', () => {
-  let component: UploadBoxManagerComponent;
-  let fixture: ComponentFixture<UploadBoxManagerComponent>;
+describe('UploadBoxManager', () => {
+  let component: UploadBoxManager;
+  let fixture: ComponentFixture<UploadBoxManager>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
@@ -84,15 +84,15 @@ describe('UploadBoxManagerComponent', () => {
     mockNotificationService.showSuccess.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [UploadBoxManagerComponent],
+      imports: [UploadBoxManager],
       providers: [
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: MatDialog, useValue: mockDialog },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UploadBoxManagerComponent);
+    fixture = TestBed.createComponent(UploadBoxManager);
     uploadBoxService = TestBed.inject(
       UploadBoxService,
     ) as unknown as MockUploadBoxService;
@@ -125,7 +125,6 @@ describe('UploadBoxManagerComponent', () => {
 
   it('should show filters when upload boxes are loaded', async () => {
     uploadBoxService.setUploadBoxes([TEST_UPLOAD_BOX]);
-    fixture.detectChanges();
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;

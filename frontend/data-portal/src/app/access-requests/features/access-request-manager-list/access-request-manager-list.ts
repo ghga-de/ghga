@@ -40,6 +40,16 @@ import {
 } from '@app/shared/utils/date-formats';
 
 /**
+ * A table row: an access request with its ticket URL and the aggregated grant
+ * state, labelled as on the access request details page.
+ */
+interface AccessRequestRow extends AccessRequest {
+  ticketUrl: string | null;
+  grant: AccessGrantStatus | undefined;
+  grantLabel: string | undefined;
+}
+
+/**
  * Access Request Manager List component.
  *
  * This component lists all the access requests of all users
@@ -62,7 +72,7 @@ import {
   providers: [CommonDatePipe, providePaginatorIntl('Access requests per page')],
   templateUrl: './access-request-manager-list.html',
 })
-export class AccessRequestManagerListComponent implements AfterViewInit {
+export class AccessRequestManagerList implements AfterViewInit {
   #config = inject(ConfigService);
   #baseTicketUrl = this.#config.helpdeskTicketUrl;
 
@@ -110,43 +120,33 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
   });
 
   /**
-   * Map from access request ID to the aggregated current grant state of the
-   * corresponding user and dataset (undefined if there is no matching grant).
+   * The table rows: each access request with its ticket URL, and with the
+   * aggregated current grant state of its user and dataset unless the grant
+   * column is hidden (undefined if there is no matching grant).
    */
-  grantState = computed<Map<string, AccessGrantStatus | undefined>>(
-    () =>
-      new Map(
-        this.accessRequests().map((ar) => [
-          ar.id,
-          this.#ars.grantStateFor(ar.user_id, ar.dataset_id),
-        ]),
-      ),
-  );
+  #rows = computed<AccessRequestRow[]>(() => {
+    const pendingOnly = this.pendingOnly();
+    return this.accessRequests().map((ar) => {
+      const grant = pendingOnly
+        ? undefined
+        : this.#ars.grantStateFor(ar.user_id, ar.dataset_id);
+      return {
+        ...ar,
+        ticketUrl: ar.ticket_id ? this.#baseTicketUrl + ar.ticket_id : null,
+        grant,
+        grantLabel: grant && AccessGrantStateLabel[grant],
+      };
+    });
+  });
 
-  /**
-   * User-facing labels for the aggregated grant state shown in the "Access"
-   * column, shared with the access request details page.
-   */
-  accessLabels = AccessGrantStateLabel;
-
-  source = new MatTableDataSource<AccessRequest>([]);
+  source = new MatTableDataSource<AccessRequestRow>([]);
 
   periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
   periodTimeZone = DEFAULT_TIME_ZONE;
 
-  ticketUrl = computed<Map<string, string | null>>(
-    () =>
-      new Map(
-        this.accessRequests().map((ar) => [
-          ar.id,
-          ar.ticket_id ? this.#baseTicketUrl + ar.ticket_id : null,
-        ]),
-      ),
-  );
+  #updateSourceEffect = effect(() => (this.source.data = this.#rows()));
 
-  #updateSourceEffect = effect(() => (this.source.data = this.accessRequests()));
-
-  #accessRequestSortingAccessor = (ar: AccessRequest, key: string) => {
+  #accessRequestSortingAccessor = (ar: AccessRequestRow, key: string) => {
     switch (key) {
       case 'ticket':
         return ar.ticket_id || '';
@@ -161,9 +161,7 @@ export class AccessRequestManagerListComponent implements AfterViewInit {
         return `${rank}:${ar.access_starts}-${ar.access_ends})`;
       case 'grant':
         const grantRank =
-          { active: 0, waiting: 1, expired: 2 }[
-            this.#ars.grantStateFor(ar.user_id, ar.dataset_id) as string
-          ] ?? 3;
+          { active: 0, waiting: 1, expired: 2 }[ar.grant as string] ?? 3;
         return `${grantRank}:${ar.access_ends})`;
       case 'period':
         return `${ar.access_starts}-${ar.access_ends})`;

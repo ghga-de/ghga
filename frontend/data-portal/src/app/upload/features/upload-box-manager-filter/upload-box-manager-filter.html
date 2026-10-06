@@ -28,28 +28,22 @@
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
                 <mat-label>Upload box title</mat-label>
-                <input matInput type="text" [(ngModel)]="title" />
+                <input matInput type="text" [formField]="filterForm.title" />
               </mat-form-field>
               <button
                 mat-icon-button
                 aria-label="Remove filter for upload box title"
-                [class.invisible]="!this.title()"
-                (click)="this.title.set('')"
+                [class.invisible]="!filterForm.title().value()"
+                (click)="filterForm.title().value.set('')"
               >
                 <mat-icon fontIcon="cancel"></mat-icon>
               </button>
             </div>
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>
-                  @if (state()) {
-                    State
-                  } @else {
-                    All states
-                  }
-                </mat-label>
-                <mat-select [(ngModel)]="state">
-                  <mat-option [value]="undefined">All states</mat-option>
+                <mat-label>State</mat-label>
+                <mat-select [formField]="filterForm.state">
+                  <mat-option value="">All states</mat-option>
                   @for (opt of stateOptions; track opt.value) {
                     <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                   }
@@ -58,23 +52,17 @@
               <button
                 mat-icon-button
                 aria-label="Remove filter for upload box state"
-                [class.invisible]="!this.state()"
-                (click)="this.state.set(undefined)"
+                [class.invisible]="!filterForm.state().value()"
+                (click)="filterForm.state().value.set('')"
               >
                 <mat-icon fontIcon="cancel"></mat-icon>
               </button>
             </div>
             <div class="flex items-baseline gap-2">
               <mat-form-field class="grow">
-                <mat-label>
-                  @if (location()) {
-                    Location
-                  } @else {
-                    All locations
-                  }
-                </mat-label>
-                <mat-select [(ngModel)]="location">
-                  <mat-option [value]="undefined">All locations</mat-option>
+                <mat-label>Location</mat-label>
+                <mat-select [formField]="filterForm.location">
+                  <mat-option value="">All locations</mat-option>
                   @for (opt of locationOptions(); track opt.value) {
                     <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                   }
@@ -83,8 +71,8 @@
               <button
                 mat-icon-button
                 aria-label="Remove filter for upload box location"
-                [class.invisible]="!this.location()"
-                (click)="this.location.set(undefined)"
+                [class.invisible]="!filterForm.location().value()"
+                (click)="filterForm.location().value.set('')"
               >
                 <mat-icon fontIcon="cancel"></mat-icon>
               </button>

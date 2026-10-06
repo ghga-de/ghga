@@ -10,7 +10,7 @@ import { datasetDetails, datasetInformation } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { DatasetDetailsComponent } from './dataset-details';
+import { DatasetDetailsPage } from './dataset-details';
 
 /**
  * Mock the config service as needed by the dataset details component
@@ -82,13 +82,13 @@ class MockDatasetInformationService {
   loadDatasetInformation = () => undefined;
 }
 
-describe('DatasetDetailsComponent', () => {
-  let component: DatasetDetailsComponent;
-  let fixture: ComponentFixture<DatasetDetailsComponent>;
+describe('DatasetDetailsPage', () => {
+  let component: DatasetDetailsPage;
+  let fixture: ComponentFixture<DatasetDetailsPage>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DatasetDetailsComponent],
+      imports: [DatasetDetailsPage],
       providers: [
         { provide: ConfigService, useClass: MockConfigService },
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
@@ -99,14 +99,14 @@ describe('DatasetDetailsComponent', () => {
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     })
-      .overrideComponent(DatasetDetailsComponent, {
+      .overrideComponent(DatasetDetailsPage, {
         set: {
           providers: [{ provide: MetadataService, useClass: MockMetadataService }],
         },
       })
       .compileComponents();
 
-    fixture = TestBed.createComponent(DatasetDetailsComponent);
+    fixture = TestBed.createComponent(DatasetDetailsPage);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('id', datasetDetails.accession);
     await fixture.whenStable();

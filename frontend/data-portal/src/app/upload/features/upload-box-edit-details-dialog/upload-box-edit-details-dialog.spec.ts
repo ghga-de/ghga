@@ -7,13 +7,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { UploadBoxEditDetailsDialogComponent } from './upload-box-edit-details-dialog';
+import { UploadBoxEditDetailsDialog } from './upload-box-edit-details-dialog';
 
 const mockDialogRef = { close: vitest.fn() };
 const mockNotificationService = { showError: vitest.fn() };
@@ -47,26 +47,26 @@ class MockUploadBoxService {
  * @returns the created component fixture and the mocked service
  */
 async function createComponent(box: ResearchDataUploadBox = mockBox): Promise<{
-  fixture: ComponentFixture<UploadBoxEditDetailsDialogComponent>;
+  fixture: ComponentFixture<UploadBoxEditDetailsDialog>;
   service: MockUploadBoxService;
 }> {
   await TestBed.configureTestingModule({
-    imports: [UploadBoxEditDetailsDialogComponent],
+    imports: [UploadBoxEditDetailsDialog],
     providers: [
       { provide: MatDialogRef, useValue: mockDialogRef },
       { provide: MAT_DIALOG_DATA, useValue: { ...box } },
       { provide: UploadBoxService, useClass: MockUploadBoxService },
-      { provide: NotificationService, useValue: mockNotificationService },
+      { provide: Notifier, useValue: mockNotificationService },
     ],
   }).compileComponents();
 
   const service = TestBed.inject(UploadBoxService) as unknown as MockUploadBoxService;
-  const fixture = TestBed.createComponent(UploadBoxEditDetailsDialogComponent);
-  fixture.detectChanges();
+  const fixture = TestBed.createComponent(UploadBoxEditDetailsDialog);
+  await fixture.whenStable();
   return { fixture, service };
 }
 
-describe('UploadBoxEditDetailsDialogComponent', () => {
+describe('UploadBoxEditDetailsDialog', () => {
   beforeEach(() => {
     mockDialogRef.close.mockReset();
     mockNotificationService.showError.mockReset();
@@ -118,7 +118,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
     });
     await userEvent.clear(sizeInput);
     await userEvent.type(sizeInput, '1'); // below the 2 TiB already used
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(
       screen.getByText(/cannot be smaller than the currently used/i),
@@ -208,7 +208,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Changed');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(mockDialogRef.close).not.toHaveBeenCalled();
     expect(mockNotificationService.showError).toHaveBeenCalledWith(message);
@@ -227,7 +227,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
       await userEvent.clear(titleInput);
       await userEvent.type(titleInput, 'Changed');
       await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       expect(mockNotificationService.showError).toHaveBeenCalledWith(
         'An Upload Box with the same title already exists.',
@@ -246,7 +246,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Changed');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(mockNotificationService.showError).toHaveBeenCalledWith(
       'Upload Box could not be updated. Please try again.',

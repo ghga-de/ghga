@@ -7,7 +7,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AccessRequestManagerListComponent } from './access-request-manager-list';
+import { AccessRequestManagerList } from './access-request-manager-list';
 
 import { ActivatedRoute } from '@angular/router';
 import {
@@ -18,6 +18,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { accessRequests } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { ConfigService } from '@app/shared/services/config';
+import { screen } from '@testing-library/angular';
 
 /**
  * Mock the access request service as needed by the access request manager list component
@@ -44,17 +45,17 @@ class MockAccessRequestService {
  */
 
 const MockConfigService = {
-  helpdesk_url: 'https://helpdesk.test',
+  helpdeskTicketUrl: 'https://helpdesk.test/ticket/',
 };
 
-describe('AccessRequestManagerListComponent', () => {
-  let component: AccessRequestManagerListComponent;
-  let fixture: ComponentFixture<AccessRequestManagerListComponent>;
+describe('AccessRequestManagerList', () => {
+  let component: AccessRequestManagerList;
+  let fixture: ComponentFixture<AccessRequestManagerList>;
   let service: MockAccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessRequestManagerListComponent],
+      imports: [AccessRequestManagerList],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useValue: MockConfigService },
@@ -62,7 +63,7 @@ describe('AccessRequestManagerListComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessRequestManagerListComponent);
+    fixture = TestBed.createComponent(AccessRequestManagerList);
     component = fixture.componentInstance;
     service = TestBed.inject(
       AccessRequestService,
@@ -91,7 +92,6 @@ describe('AccessRequestManagerListComponent', () => {
       AccessGrantStatus.expired,
     );
     service.filter.set({ status: AccessRequestStatus.allowed });
-    fixture.detectChanges();
     await fixture.whenStable();
     expect(component.columns()).toContain('grant');
     const text = (fixture.nativeElement as HTMLElement).textContent;
@@ -108,10 +108,35 @@ describe('AccessRequestManagerListComponent', () => {
       AccessGrantStatus.waiting,
     );
     service.filter.set({ status: AccessRequestStatus.allowed });
-    fixture.detectChanges();
     await fixture.whenStable();
     const text = (fixture.nativeElement as HTMLElement).textContent;
     expect(text).toContain('upcoming');
     expect(text).not.toContain('waiting');
+  });
+
+  it('should link each ticket ID to its own ticket', () => {
+    const withTicket = accessRequests.filter((ar) => ar.ticket_id);
+    expect(withTicket).toHaveLength(5);
+    for (const ar of withTicket) {
+      const link = screen.getByRole('link', { name: ar.ticket_id! });
+      expect(link).toHaveAttribute(
+        'href',
+        `https://helpdesk.test/ticket/${ar.ticket_id}`,
+      );
+    }
+  });
+
+  it('should show no ticket link for a request without a ticket', () => {
+    const cells = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll(
+        'td.mat-column-ticket',
+      ),
+    ];
+    expect(cells).toHaveLength(accessRequests.length);
+    const withoutTicket = cells.filter((cell) => !cell.textContent?.trim());
+    expect(withoutTicket).toHaveLength(3);
+    for (const cell of withoutTicket) {
+      expect(cell.querySelector('a')).toBeNull();
+    }
   });
 });

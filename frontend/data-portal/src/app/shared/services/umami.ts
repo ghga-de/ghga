@@ -23,7 +23,7 @@ declare global {
  * This service creates an instance of the tracker and is injected in the root component of the app.
  */
 @Service()
-export class UmamiService {
+export class UmamiTracker {
   #config = inject(ConfigService);
   #router = inject(Router);
   #server_url = this.#config.umami_url;

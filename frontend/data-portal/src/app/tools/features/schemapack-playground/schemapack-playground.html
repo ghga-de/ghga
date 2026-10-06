@@ -48,7 +48,7 @@
         <h2 class="mb-3 text-2xl font-semibold text-slate-700">Schema (YAML)</h2>
         <textarea
           id="schemaInput"
-          [(ngModel)]="schemaYaml"
+          [formField]="schemaField"
           class="h-96 w-full rounded-lg border border-gray-300 p-4 font-mono text-sm shadow-inner focus:border-blue-500 focus:ring-blue-500"
           placeholder="Paste your YAML schema here..."
           aria-label="Paste your YAML schema here"
@@ -59,7 +59,7 @@
         <h2 class="mb-3 text-2xl font-semibold text-slate-700">Data (JSON)</h2>
         <textarea
           id="dataInput"
-          [(ngModel)]="jsonData"
+          [formField]="dataField"
           class="h-96 w-full rounded-lg border border-gray-300 p-4 font-mono text-sm shadow-inner focus:border-blue-500 focus:ring-blue-500"
           placeholder="Paste your JSON data here..."
           aria-label="Paste your JSON data here"
