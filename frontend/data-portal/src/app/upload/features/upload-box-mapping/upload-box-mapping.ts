@@ -382,7 +382,7 @@ export class UploadBoxMappingComponent implements OnInit {
 
   // Table rows
 
-  private readonly boxFileById = computed<Map<string, FileUploadWithAccession>>(() => {
+  readonly #boxFileById = computed<Map<string, FileUploadWithAccession>>(() => {
     return new Map(this.boxFiles().map((bf) => [bf.id, bf]));
   });
 
@@ -391,7 +391,7 @@ export class UploadBoxMappingComponent implements OnInit {
     const effective = this.effectiveMappings();
     const auto = this.autoMappings();
     const manual = this.manualMappings();
-    const byId = this.boxFileById();
+    const byId = this.#boxFileById();
 
     return this.metadataFiles().map((meta) => {
       const boxFileId = effective.get(meta.accession);

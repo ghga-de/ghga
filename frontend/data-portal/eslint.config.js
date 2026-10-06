@@ -68,7 +68,6 @@ export default tseslint.config(
         'error',
         { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
-      '@angular-eslint/prefer-on-push-component-change-detection': 'error',
       'local/require-file-header': 'error',
       'jsdoc/require-jsdoc': [
         'warn',

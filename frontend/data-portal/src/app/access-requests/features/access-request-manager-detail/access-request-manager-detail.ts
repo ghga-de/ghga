@@ -203,6 +203,13 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   );
 
   /**
+   * The external ID with a zero-width space before the `@`, so that it can wrap there.
+   */
+  protected userExtIdText = computed(() =>
+    this.userExtId.value()?.split('@', 2).join('\u200B@'),
+  );
+
+  /**
    * Get the IVA associated with the access request.
    */
   associatedIva: Signal<Iva | undefined> = computed(() => {

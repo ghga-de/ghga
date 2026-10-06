@@ -141,7 +141,7 @@ export class AuthService {
    * Initialize the authentication service
    */
   constructor() {
-    this.#oidcUserManager = new OidcUserManager(this.getOidcSettings());
+    this.#oidcUserManager = new OidcUserManager(this.#getOidcSettings());
 
     OidcLog.setLogger(console);
     OidcLog.setLevel(OidcLog.INFO); // set to DEBUG for more output
@@ -163,7 +163,7 @@ export class AuthService {
    * and transformed into a UserManagerSettings object.
    * @returns the settings as a UserManagerSettings object
    */
-  private getOidcSettings(): UserManagerSettings {
+  #getOidcSettings(): UserManagerSettings {
     const config = this.#config;
 
     const settings: UserManagerSettings = {

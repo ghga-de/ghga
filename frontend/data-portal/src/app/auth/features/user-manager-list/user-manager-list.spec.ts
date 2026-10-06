@@ -16,7 +16,10 @@ import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
+import { screen } from '@testing-library/angular';
 import { UserManagerListComponent } from './user-manager-list';
+
+const WARN_TITLE = 'There are multiple user accounts with this name and email address.';
 /**
  * Mock ConfigService for testing
  */
@@ -189,5 +192,23 @@ describe('UserManagerListComponent', () => {
     const mockUser = { id: '123', name: 'Test User' } as unknown as DisplayUser;
     component.viewDetails(mockUser);
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/user-manager', '123']);
+  });
+
+  it('should mark only the ambiguous users with a warning', () => {
+    const users: Partial<DisplayUser>[] = ['u1', 'u2', 'u3'].map((id) => ({
+      id,
+      email: `${id}@test.dev`,
+      roles: [],
+      displayName: `User ${id}`,
+      roleNames: [],
+      sortName: `User ${id}`,
+    }));
+    mockUserService.users.value.mockReturnValue(users as unknown as DisplayUser[]);
+    mockUserService.ambiguousUserIds.mockReturnValue(new Set(['u2']));
+    fixture.detectChanges();
+
+    const markers = screen.getAllByTitle(WARN_TITLE);
+    expect(markers).toHaveLength(1);
+    expect(markers[0].closest('tr')).toHaveTextContent('u2@test.dev');
   });
 });

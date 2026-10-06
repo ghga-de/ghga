@@ -9,6 +9,7 @@ import {
   AfterViewInit,
   Component,
   QueryList,
+  computed,
   ViewChild,
   ViewChildren,
   effect,
@@ -26,6 +27,13 @@ import { DisplayUser, UserService } from '@app/auth/services/user';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { UserExtIdPipe } from '@app/shared/pipes/user-ext-id-pipe';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
+
+/**
+ * A table row: a user, marked when another account has the same name and email.
+ */
+interface UserRow extends DisplayUser {
+  warn: boolean;
+}
 
 /**
  * User Manager List component.
@@ -54,14 +62,22 @@ export class UserManagerListComponent implements AfterViewInit {
   #userService = inject(UserService);
 
   #users = this.#userService.users;
-  ambiguousUserIds = this.#userService.ambiguousUserIds;
+  #ambiguousUserIds = this.#userService.ambiguousUserIds;
   users = this.#userService.usersFiltered;
   usersAreLoading = this.#users.isLoading;
   usersError = this.#users.error;
 
-  source = new MatTableDataSource<DisplayUser>([]);
+  #rows = computed<UserRow[]>(() => {
+    const ambiguousUserIds = this.#ambiguousUserIds();
+    return this.users().map((user) => ({
+      ...user,
+      warn: ambiguousUserIds.has(user.id),
+    }));
+  });
 
-  #updateSourceEffect = effect(() => (this.source.data = this.users()));
+  source = new MatTableDataSource<UserRow>([]);
+
+  #updateSourceEffect = effect(() => (this.source.data = this.#rows()));
 
   #userSortingAccessor = (user: DisplayUser, key: string) => {
     switch (key) {
