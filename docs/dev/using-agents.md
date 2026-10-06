@@ -81,4 +81,5 @@ The `testbed` skill loads once an agent works under `testbed/`: it places a new 
 
 ## Front end
 
-Two skills load once an agent works under `frontend/data-portal/`: `data-portal`, the portal's own conventions, and `angular-developer`, a pinned copy of Google's Angular skill; where the two disagree, `data-portal` wins.
+The `data-portal` skill loads once an agent works under `frontend/data-portal/` and holds where the portal differs from Google's Angular guidance and from its own older code.
+`/angular-developer` starts that guidance, a pinned copy of Google's skill; where the two disagree, `data-portal` wins.

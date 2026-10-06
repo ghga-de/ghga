@@ -5,8 +5,10 @@
 # data-portal works next to Google's angular-developer, and a run loads only the plugin
 # under test, so the suite runs twice, each against no skill: `both` loads the two skills,
 # `upstream` angular-developer alone. data-portal's gain is the score of `both` against
-# that of `upstream`. The cases are the points where the two skills disagree, or where the
-# portal's code would mislead an agent that copies it.
+# that of `upstream`. angular-developer is user-invoked since it tied in the first pass, so
+# a run is not offered it, and `upstream` measures it again only once that changes.
+# The cases are the points where the two skills disagree, or where the portal's code would
+# mislead an agent that copies it.
 # The sandbox of a run has no network, and the clone has no node_modules, so no case runs
 # pnpm: a case writes files, read through its Write calls, or names a command in its reply.
 # The expected values hold at the commit scripts/skill-eval-scaffold.sh pins.
