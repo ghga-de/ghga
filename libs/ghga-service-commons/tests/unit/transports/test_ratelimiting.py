@@ -95,10 +95,11 @@ async def test_concurrent_requests_are_spread_not_released_together():
 
     grants = await asyncio.gather(*(_acquired_at(budget, started) for _ in range(5)))
 
+    # Ensure spacing between calls is consistent within some tolerance
     assert grants == sorted(grants)
     for earlier, later in pairwise(grants):
         assert later - earlier == pytest.approx(_STEP, abs=_STEP)
-    assert grants[-1] >= 4 * _STEP * 0.75
+    assert grants[-1] >= 4 * _STEP
 
 
 async def test_no_pacing_configured_grants_immediately():
@@ -184,7 +185,7 @@ async def test_scopes_are_paced_independently():
         ("https://h/", "https://h/"),
     ],
 )
-def test_scope_is_origin_and_first_path_segment(url: str, scope: str):
+async def test_scope_is_origin_and_first_path_segment(url: str, scope: str):
     """Ensure a URL is keyed by origin and first path segment, the port only if given."""
     assert _scope_of(httpx2.URL(url)) == scope
 
