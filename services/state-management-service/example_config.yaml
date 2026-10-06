@@ -9,6 +9,7 @@ cors_exposed_headers: null
 db_permissions:
 - '*.*:rw'
 db_prefix: test_
+db_version_collection_suffix: DbVersions
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1

@@ -459,13 +459,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -1302,6 +1306,19 @@
           "description": "Path to service account token used by kube auth adapter.",
           "format": "path",
           "title": "Service Account Token Path",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "db_version_collection_suffix": {
+          "default": "DbVersions",
+          "description": "Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since a service restarting without them would migrate its current data again. Deleting such a collection by its name still works. An empty string turns the protection off.",
+          "examples": [
+            "DbVersions",
+            ""
+          ],
+          "title": "Db Version Collection Suffix",
           "type": [
             "string",
             "null"

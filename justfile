@@ -909,9 +909,8 @@ testbed-reset:
         sel=$($K get "$d" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
         $K wait --for=delete pod -l "$sel" --timeout=120s > /dev/null
     done
-    # Drop every service database: the suite's clean slate removes the migration
-    # bookkeeping, so a service restarting afterwards would re-run migrations over
-    # already-migrated data and crash-loop. Starting from empty avoids that.
+    # Drop every service database, migration records included, so each service
+    # migrates and re-seeds from empty.
     $K exec "$MPOD" -- mongosh --quiet --eval \
       'db.adminCommand({listDatabases:1}).databases
          .map(d => d.name)

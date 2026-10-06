@@ -50,6 +50,7 @@ for the full set of configurable values.
 | `config.vault_kube_role` | Vault role name used for Kubernetes authentication | `null` |
 | `config.vault_auth_mount_point` | Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. | `null` |
 | `config.service_account_token_path` | Path to service account token used by kube auth adapter. | `"/var/run/secrets/kubernetes.io/serviceaccount/token"` |
+| `config.db_version_collection_suffix` | Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since a service restarting without them would migrate its current data again. Deleting such a collection by its name still works. An empty string turns the protection off. | `"DbVersions"` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
 | `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
 | `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
@@ -126,7 +127,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |

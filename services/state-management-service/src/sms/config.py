@@ -79,6 +79,17 @@ class SmsConfig(VaultConfig):
             "*.*:*",
         ],
     )
+    db_version_collection_suffix: str = Field(
+        default="DbVersions",
+        description=(
+            "Collections whose name ends with this suffix hold a service's migration"
+            + " records and are skipped when deleting with the `*` collection wildcard,"
+            + " since a service restarting without them would migrate its current data"
+            + " again. Deleting such a collection by its name still works."
+            + " An empty string turns the protection off."
+        ),
+        examples=["DbVersions", ""],
+    )
     mongo_dsn: Secret[MongoDsn] = Field(
         default=...,
         examples=["mongodb://localhost:27017"],
