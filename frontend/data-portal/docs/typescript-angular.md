@@ -24,7 +24,7 @@ These are style rules, read when writing code, rather than the working rules in 
 
 - Always use standalone components over NgModules.
 - Must NOT set `standalone: true` inside Angular decorators.
-  It's the default in Angular v20+.
+  It's the default since Angular v19.
 - Do NOT set `changeDetection: ChangeDetectionStrategy.OnPush` explicitly.
   `OnPush` is the default in Angular v22+.
 - Use signals for state management.
@@ -42,7 +42,7 @@ These are style rules, read when writing code, rather than the working rules in 
 - Use `input()` and `output()` functions instead of decorators
 - Use `computed()` for derived state
 - Prefer inline templates for small components
-- Prefer Signal Forms (`@angular/forms/signals`) for new forms; when not using them, prefer reactive forms over template-driven forms
+- Use Signal Forms (`@angular/forms/signals`) for new forms, simple ones too; the template-driven forms in older code are not a model
 - Do NOT use `ngClass`, use `class` bindings instead
 - Do NOT use `ngStyle`, use `style` bindings instead
 
@@ -61,6 +61,7 @@ These are style rules, read when writing code, rather than the working rules in 
     This is wasteful, scales poorly (worse inside `@for`), and gets more pronounced under zoneless change detection.
     Signals and `computed()` are memoized: they recompute only when a dependency actually changes, and they let change detection update only what changed.
   - Exceptions: pure pipes (also memoized) are fine, and event handlers (e.g. `(click)="doThing()"`) are calls in response to user actions, not evaluated during change detection, so they are fine too.
+  - Reading a signal, `count()`, is no such call, and neither is the field state of a Signal Form, `form.email().invalid()`: both return a stored value.
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables
 - Do not assume globals like (`new Date()`) are available
