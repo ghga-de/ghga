@@ -146,7 +146,7 @@ class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
         transport: httpx2.AsyncBaseTransport,
         budget: RateBudget | None = None,
     ) -> None:
-        self._budget = budget if budget is not None else RateBudget(config)
+        self._budget = budget or RateBudget(config)
         self._transport = transport
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
