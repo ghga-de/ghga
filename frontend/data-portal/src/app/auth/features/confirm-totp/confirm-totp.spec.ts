@@ -104,6 +104,13 @@ describe('ConfirmTotp', () => {
     expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
   });
 
+  it('should not show a rejected character', async () => {
+    await enterCode('123');
+    const inputElement = await enterCode('123a');
+
+    expect(inputElement).toHaveValue('123');
+  });
+
   it('should clear verification error on input', async () => {
     (component as unknown as ConfirmTotpComponentInternals).verificationError.set(true);
     await fixture.whenStable();

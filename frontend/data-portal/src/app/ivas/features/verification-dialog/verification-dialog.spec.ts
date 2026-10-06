@@ -103,6 +103,13 @@ describe('VerificationDialog', () => {
     expect(onSubmitSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('should not show a rejected character', async () => {
+    await enterCode('AB1');
+    const inputElement = await enterCode('AB1-');
+
+    expect(inputElement).toHaveValue('AB1');
+  });
+
   it('should clear verification error when user types', async () => {
     (component as unknown as VerificationDialogInternals).verificationError.set(true);
 

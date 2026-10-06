@@ -18,13 +18,29 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '@app/auth/services/auth';
 import { Notifier } from '@app/shared/services/notification';
+import { NormalizeInput } from '@app/shared/ui/normalize-input/normalize-input';
+
+/**
+ * Keep only the first 6 digits of an entered TOTP code
+ * @param value - the raw text
+ * @returns the code as the form keeps it
+ */
+export function toTotpCode(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 6);
+}
 
 /**
  * TOTP confirmation page
  */
 @Component({
   selector: 'app-confirm-totp',
-  imports: [FormField, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [
+    FormField,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    NormalizeInput,
+  ],
   templateUrl: './confirm-totp.html',
   styleUrl: './confirm-totp.scss',
 })
@@ -32,12 +48,13 @@ export class ConfirmTotp {
   #notify = inject(Notifier);
   #authService = inject(AuthService);
 
+  protected toTotpCode = toTotpCode;
+
   /**
    * The form model, which keeps only the first 6 digits of an entered code.
    */
   protected totpModel = linkedSignal<{ code: string }>(() => ({ code: '' }), {
-    set: (model, rawSet) =>
-      rawSet({ ...model, code: model.code.replace(/\D/g, '').slice(0, 6) }),
+    set: (model, rawSet) => rawSet({ ...model, code: toTotpCode(model.code) }),
   });
 
   protected totpForm = form(this.totpModel, (schemaPath) => {

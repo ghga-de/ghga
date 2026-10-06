@@ -26,6 +26,19 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { IvaService } from '@app/ivas/services/iva';
 import { Notifier } from '@app/shared/services/notification';
+import { NormalizeInput } from '@app/shared/ui/normalize-input/normalize-input';
+
+/**
+ * Upper-case an entered IVA code and keep only its first 6 alphanumeric characters
+ * @param value - the raw text
+ * @returns the code as the form keeps it
+ */
+export function toIvaCode(value: string): string {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 6);
+}
 
 /**
  * Dialog for entering the IVA verification code
@@ -41,6 +54,7 @@ import { Notifier } from '@app/shared/services/notification';
     MatDialogTitle,
     MatDialogContent,
     MatDialogActions,
+    NormalizeInput,
   ],
   templateUrl: './verification-dialog.html',
 })
@@ -51,19 +65,14 @@ export class VerificationDialog {
   protected data = inject<{ id: string; address: string }>(MAT_DIALOG_DATA);
   protected address = computed(() => this.data.address);
 
+  protected toIvaCode = toIvaCode;
+
   /**
    * The form model, which upper-cases an entered code and keeps only its
    * first 6 alphanumeric characters.
    */
   protected codeModel = linkedSignal<{ code: string }>(() => ({ code: '' }), {
-    set: (model, rawSet) =>
-      rawSet({
-        ...model,
-        code: model.code
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, '')
-          .slice(0, 6),
-      }),
+    set: (model, rawSet) => rawSet({ ...model, code: toIvaCode(model.code) }),
   });
 
   protected codeForm = form(this.codeModel, (schemaPath) => {
