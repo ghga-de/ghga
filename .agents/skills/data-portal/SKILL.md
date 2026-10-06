@@ -7,7 +7,7 @@ paths: frontend/data-portal/**
 # Data portal
 
 `angular-developer` is Google's general Angular skill.
-This one holds where the portal differs from it, or from the portal's own older code; where the two disagree, this skill and the docs it links win.
+This one holds where the portal differs from it; where the two disagree, this skill and the docs it links win.
 
 ## Read first
 
@@ -24,12 +24,7 @@ This one holds where the portal differs from it, or from the portal's own older 
 - **Forms:** forms use Signal Forms (`@angular/forms/signals`), simple ones too.
 - **Template bindings:** no function or method call with an argument in a binding; derive the value in a `computed()` or a pure pipe, as `typescript-angular.md` says.
 - **Unit tests:** `@testing-library/angular` with role and text queries, as the Playwright tests use, not component harnesses.
+  A spec that routes passes `routes` to `render` instead of stubbing the router.
+- **Class names:** components and directives drop their suffix (`DatasetFiles` in `dataset-files.ts`); services keep `Service`, unless a name says better what the class does and clashes with no component, model or global (`Notifier`, `UploadBoxMappingStore`).
 - **Styles:** component styles are SCSS (`angular.json`), with Tailwind classes in the template.
 - **New projects and MCP setup:** not needed here; the `angular-cli` MCP server is configured in `.mcp.json`.
-
-## Where the portal's code is not the model
-
-Older code predates these rules; new code follows `angular-developer` here, even beside code that does not.
-
-- New classes drop the `Component` and `Service` suffix: `DatasetFiles` in `dataset-files.ts`.
-- New specs do not call `fixture.detectChanges()`; they await `fixture.whenStable()`, and route through the real router (Testing Library's `render` takes `routes`).
