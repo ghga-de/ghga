@@ -114,8 +114,7 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 - Claude Code and the Copilot CLI read `.mcp.json` only in the directory the session starts in and its parents, so `angular-cli` reaches a session started here or below, and not one started at the repo root.
   That is deliberate: the server is of no use to backend work.
   Start the session in this directory (the "frontend · data-portal" folder of `ghga.code-workspace`) when you want it.
-- Prefer `angular-cli` for Angular-specific tasks: project/workspace discovery, Angular best practices, Angular documentation and examples, and Angular-focused migrations.
-- Consult `angular-cli` before making assumptions about Angular APIs, templates, or CLI behavior.
+- Use `angular-cli` for workspace discovery, Angular documentation and examples, and migrations, and to check an Angular 22 API, template syntax or CLI behaviour you are not sure of.
 - For non-Angular libraries and tooling (for example Tailwind, Playwright, Vitest, RxJS), look up current docs when API behavior or recommended usage is uncertain, especially for version-sensitive questions.
   A docs server such as Context7 is personal configuration, not part of this repo.
 - If external guidance conflicts with repository conventions, prioritize `AGENTS.md`, `README.md`, relevant files in `docs/`, and existing code patterns in this repository.

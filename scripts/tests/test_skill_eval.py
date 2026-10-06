@@ -72,8 +72,9 @@ def test_expand_writes_cases_and_keeps_results(tmp_path):
     (tmp_path / "scripts").mkdir()
     (tmp_path / skill_eval.SCAFFOLD).write_text("#!/usr/bin/env bash\n")
 
-    evals = skill_eval.expand(tmp_path, "demo")
+    assert skill_eval.expand(tmp_path, "demo") == [skill]
 
+    evals = skill / "evals"
     assert sorted(p.name for p in evals.iterdir()) == ["results", "short"]
     case = yaml.safe_load((evals / "short/case.yaml").read_text())
     assert case == skill_eval.expand_cases(SUITE)["short"]
@@ -98,9 +99,9 @@ def test_expand_gives_a_case_with_a_patch_its_own_scaffold(tmp_path):
     skill.mkdir(parents=True)
     (skill / "evals.yaml").write_text(yaml.safe_dump(suite))
 
-    evals = skill_eval.expand(tmp_path, "demo")
+    skill_eval.expand(tmp_path, "demo")
 
-    case_dir = evals / "change"
+    case_dir = skill / "evals/change"
     assert (case_dir / "change.patch").read_text() == "diff --git a/x b/x\n"
     scaffold = case_dir / "scaffold.sh"
     assert not scaffold.is_symlink()
@@ -108,6 +109,39 @@ def test_expand_gives_a_case_with_a_patch_its_own_scaffold(tmp_path):
     assert scaffold.read_text().splitlines()[-1] == (
         f"exec bash {tmp_path / skill_eval.SCAFFOLD} {case_dir / 'change.patch'} fix/x"
     )
+
+
+def test_expand_writes_a_plugin_per_entry_of_plugins(tmp_path):
+    skills = tmp_path / ".agents/skills"
+    for name in ("demo", "other"):
+        (skills / name).mkdir(parents=True)
+        (skills / name / "SKILL.md").write_text(f"---\nname: {name}\n---\n")
+    suite = {**SUITE, "plugins": {"both": ["demo", "other"], "alone": ["other"]}}
+    (skills / "demo/evals.yaml").write_text(yaml.safe_dump(suite, sort_keys=False))
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / skill_eval.SCAFFOLD).write_text("#!/usr/bin/env bash\n")
+
+    targets = skill_eval.expand(tmp_path, "demo")
+
+    assert targets == [skills / "demo/evals/both", skills / "demo/evals/alone"]
+    both = targets[0]
+    manifest = json.loads((both / ".claude-plugin/plugin.json").read_text())
+    assert manifest["name"] == "demo-both"
+    assert sorted(p.name for p in (both / "skills").iterdir()) == ["demo", "other"]
+    assert (both / "skills/other/SKILL.md").read_text() == "---\nname: other\n---\n"
+    assert not (both / "skills/demo/evals.yaml").exists()
+    assert (both / "evals/short/case.yaml").exists()
+    assert [p.name for p in (targets[1] / "skills").iterdir()] == ["other"]
+
+
+def test_expand_rejects_a_plugin_with_an_unknown_skill(tmp_path):
+    skill = tmp_path / ".agents/skills/demo"
+    skill.mkdir(parents=True)
+    (skill / "evals.yaml").write_text(
+        yaml.safe_dump({**SUITE, "plugins": {"both": ["missing"]}})
+    )
+    with pytest.raises(ValueError, match="no skill 'missing'"):
+        skill_eval.expand(tmp_path, "demo")
 
 
 def test_collect_keeps_traces_and_removes_workspaces(tmp_path):
