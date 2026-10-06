@@ -154,7 +154,7 @@ prose *paths:
         mapfile -t files < <(
             { git diff --name-only --diff-filter=d "$(git merge-base origin/dev HEAD)"
               git ls-files --others --exclude-standard; } \
-            | grep -E '\.(md|py)$' | grep -Ev '^(docs/epics|deploy/charts)/' | sort -u)
+            | grep -E '\.(md|py)$' | grep -Ev '^(docs/epics|deploy/charts|\.agents/skills/angular-developer)/' | sort -u)
     fi
     [ ${#files[@]} -eq 0 ] && { echo "no changed Markdown or Python files"; exit 0; }
     vale --no-exit "${files[@]}"

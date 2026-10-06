@@ -6,7 +6,7 @@ How we work on the Angular data portal, on top of the repo-wide rules in the roo
 
 - Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
 - [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
-  Keep always-on rules here and move longer task procedures into skills, which live in `.agents/skills/<name>/SKILL.md` and are symlinked into `.claude/skills/`, where Claude Code reads them.
+  Keep always-on rules here and move longer task procedures into skills, which live in the root `.agents/skills/`, scoped to this directory by their `paths` field.
 - Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code loads it once it reads a file in this directory.
 
 ## Role and approach

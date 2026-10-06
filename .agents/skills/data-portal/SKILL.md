@@ -1,6 +1,7 @@
 ---
-name: angular-developer
-description: Use for Angular feature work, debugging, refactors, tests, or architecture questions in this repository. Applies Angular 22 and project conventions, and prefers MCP-backed Angular docs before making framework assumptions.
+name: data-portal
+description: Use first for any change in frontend/data-portal/. Holds the portal's own Angular conventions and test rules, and wins where angular-developer disagrees.
+paths: frontend/data-portal/**
 ---
 
 # Angular developer workflow for this repository
