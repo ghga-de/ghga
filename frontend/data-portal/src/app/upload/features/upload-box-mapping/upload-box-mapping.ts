@@ -16,7 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -149,7 +149,7 @@ function computeAutoMappings(
 @Component({
   selector: 'app-upload-box-mapping',
   imports: [
-    FormsModule,
+    FormField,
     MatAutocompleteModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -205,6 +205,9 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Text used to filter table rows */
   filterText = signal<string>('');
 
+  /** The filter input, bound to the filter text */
+  protected filterField = form(this.filterText);
+
   /**
    * Manual mappings: meta accession → box file ID.
    * A `null` value means the mapping was explicitly cleared.
@@ -216,6 +219,9 @@ export class UploadBoxMappingComponent implements OnInit {
 
   /** The current text value in the inline editor */
   inlineInputValue = signal<string>('');
+
+  /** The inline editor input, bound to its text value */
+  protected inlineInputField = form(this.inlineInputValue);
 
   /** Whether a mapping submission is in progress */
   isSubmitting = signal<boolean>(false);

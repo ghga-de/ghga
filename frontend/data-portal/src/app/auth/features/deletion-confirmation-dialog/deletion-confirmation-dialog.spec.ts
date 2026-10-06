@@ -77,4 +77,15 @@ describe('DeletionConfirmationDialogComponent', () => {
     button.click();
     expect(deleteSpy).toHaveBeenCalledWith(users[0].id);
   });
+
+  it('should keep the confirm button disabled until the email matches', async () => {
+    const button = screen.getByRole('button', { name: 'Confirm deletion' });
+    expect(button).toBeDisabled();
+    const input = screen.getByRole('textbox', { name: 'Confirm user email' });
+    await userEvent.type(input, 'doe@home.or');
+    expect(button).toBeDisabled();
+    await userEvent.clear(input);
+    await userEvent.type(input, ' doe@home.org ');
+    expect(button).toBeEnabled();
+  });
 });

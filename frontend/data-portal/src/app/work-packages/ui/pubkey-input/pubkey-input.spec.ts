@@ -4,9 +4,11 @@
  * @license Apache-2.0
  */
 
-import { signal } from '@angular/core';
+import { ApplicationRef, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { apply, form } from '@angular/forms/signals';
+import { apply, form, FormField } from '@angular/forms/signals';
+import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { PubkeyFieldComponent } from './pubkey-input';
 
 describe('PubkeyFieldComponent', () => {
@@ -194,6 +196,53 @@ MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI
           'Please do not paste your private key here!',
         );
       });
+    });
+  });
+
+  describe('as a form field', () => {
+    const VALID_KEY = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
+
+    /**
+     * A host that binds the input to a form with the key schema
+     */
+    @Component({
+      imports: [PubkeyFieldComponent, FormField],
+      template: '<app-pubkey-input [formField]="keyForm" />',
+    })
+    class HostComponent {
+      model = signal('');
+      keyForm = form(this.model, (path) => apply(path, PubkeyFieldComponent.schema));
+    }
+
+    let host: HostComponent;
+
+    beforeEach(async () => {
+      const hostFixture = TestBed.createComponent(HostComponent);
+      host = hostFixture.componentInstance;
+      await hostFixture.whenStable();
+    });
+
+    it('should pass the typed key to the form', async () => {
+      await userEvent.type(screen.getByRole('textbox'), VALID_KEY);
+      expect(host.model()).toBe(VALID_KEY);
+      expect(host.keyForm().valid()).toBe(true);
+      expect(screen.queryByText(/Base64 encoded Crypt4GH key\./)).toBeNull();
+    });
+
+    it('should show the validation message for an invalid key', async () => {
+      await userEvent.type(screen.getByRole('textbox'), 'not a key');
+      expect(host.model()).toBe('not a key');
+      expect(
+        await screen.findByText(
+          'This does not seem to be a Base64 encoded Crypt4GH key.',
+        ),
+      ).toBeVisible();
+    });
+
+    it('should show the value the form sets', async () => {
+      host.model.set(VALID_KEY);
+      await TestBed.inject(ApplicationRef).whenStable();
+      expect(screen.getByRole('textbox')).toHaveValue(VALID_KEY);
     });
   });
 });

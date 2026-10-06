@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, model, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -26,7 +26,7 @@ import { NotificationService } from '@app/shared/services/notification';
 @Component({
   selector: 'app-deletion-confirmation-dialog',
   imports: [
-    FormsModule,
+    FormField,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -45,10 +45,10 @@ export class DeletionConfirmationDialogComponent {
   #userService = inject(UserService);
   #notificationService = inject(NotificationService);
 
-  protected userInput = model<string | undefined>();
+  protected emailField = form(signal(''));
 
   protected disabled = computed(
-    () => this.userInput()?.trim() !== this.user.email || this.#isProcessing(),
+    () => this.emailField().value().trim() !== this.user.email || this.#isProcessing(),
   );
   #isProcessing = signal(false);
 
@@ -60,15 +60,6 @@ export class DeletionConfirmationDialogComponent {
    */
   get user(): DisplayUser {
     return this.data.user;
-  }
-
-  /**
-   * Handle input change event
-   * @param event The event object
-   */
-  onInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.userInput.set(input.value.trim());
   }
 
   /**

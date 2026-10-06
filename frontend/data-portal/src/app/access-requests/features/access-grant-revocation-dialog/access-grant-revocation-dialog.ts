@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, model, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -28,7 +28,7 @@ import { NotificationService } from '@app/shared/services/notification';
   imports: [
     MatIconModule,
     RouterModule,
-    FormsModule,
+    FormField,
     MatButton,
     MatDialogActions,
     MatDialogModule,
@@ -46,13 +46,12 @@ export class AccessGrantRevocationDialogComponent {
   #ars = inject(AccessRequestService);
   #notificationService = inject(NotificationService);
 
-  protected emailInput = model<string | undefined>();
-  protected datasetInput = model<string | undefined>();
+  protected confirmForm = form(signal({ email: '', dataset: '' }));
 
   protected disabled = computed(
     () =>
-      this.emailInput()?.trim() !== this.grant.user_email ||
-      this.datasetInput()?.trim() !== this.grant.dataset_id ||
+      this.confirmForm.email().value().trim() !== this.grant.user_email ||
+      this.confirmForm.dataset().value().trim() !== this.grant.dataset_id ||
       this.#isProcessing(),
   );
   #isProcessing = signal(false);
@@ -65,20 +64,6 @@ export class AccessGrantRevocationDialogComponent {
    */
   get grant(): AccessGrant {
     return this.data.grant;
-  }
-
-  /**
-   * Handle input change event
-   * @param event The event object
-   * @param type The type of input that was changed (for the user email or dataset ID)
-   */
-  onInput(event: Event, type: 'email' | 'dataset'): void {
-    const input = event.target as HTMLInputElement;
-    if (type === 'email') {
-      this.emailInput.set(input.value.trim());
-    } else {
-      this.datasetInput.set(input.value.trim());
-    }
   }
 
   /**

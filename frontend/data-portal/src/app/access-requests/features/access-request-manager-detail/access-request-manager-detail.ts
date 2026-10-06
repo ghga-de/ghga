@@ -17,7 +17,7 @@ import {
   signal,
   Signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -63,7 +63,7 @@ import { AccessRequestFieldEditComponent } from '../access-request-field-edit/ac
 @Component({
   selector: 'app-access-request-manager-dialog',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatButtonModule,
     MatRadioModule,
@@ -170,6 +170,11 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #datePipe = inject(CommonDatePipe);
 
   selectedIvaIdRadioButton = model<string | undefined>(undefined);
+
+  /**
+   * The IVA selection, bound to the radio group
+   */
+  protected ivaField = form(this.selectedIvaIdRadioButton);
 
   #pendingEdits = new Set<keyof AccessRequest>();
 

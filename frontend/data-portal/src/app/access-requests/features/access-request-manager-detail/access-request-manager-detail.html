@@ -211,8 +211,8 @@
                 }
               </label>
               <mat-radio-group
-                [(ngModel)]="selectedIvaIdRadioButton"
-                (ngModelChange)="saveIva()"
+                [formField]="ivaField"
+                (change)="saveIva()"
                 id="iva-selection-group"
               >
                 <div

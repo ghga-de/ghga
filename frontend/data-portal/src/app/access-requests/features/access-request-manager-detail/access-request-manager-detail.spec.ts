@@ -21,6 +21,8 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
+import { of } from 'rxjs';
 
 /**
  * Mock the IVA service as needed by the access request manager dialog component
@@ -158,5 +160,22 @@ describe('AccessRequestManagerDetailComponent', () => {
     expect(links).toHaveLength(2);
     const hrefs = links.map((link) => link.getAttribute('href'));
     expect(hrefs).toContain('/access-grant-manager/grant-ghga-8c4b9d5a1f0b');
+  });
+
+  it('should save the IVA that the data steward selects', async () => {
+    const updateRequest = vitest.fn(() => of(undefined));
+    Object.assign(TestBed.inject(AccessRequestService), { updateRequest });
+    const button = screen.getByRole('radio', {
+      name: 'Postal Address: c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
+    });
+
+    await userEvent.click(button);
+    await fixture.whenStable();
+
+    expect(button).toBeChecked();
+    expect(updateRequest).toHaveBeenCalledExactlyOnceWith(
+      '9409db13-e23e-433e-9afa-544d8f25b720',
+      { iva_id: allIvasOfDoe[2].id },
+    );
   });
 });

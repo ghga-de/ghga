@@ -85,4 +85,20 @@ describe('AccessGrantRevocationDialogComponent', () => {
     button.click();
     expect(revokeSpy).toHaveBeenCalledWith(accessGrants[0].id);
   });
+
+  it('should keep the confirm button disabled until both entries match', async () => {
+    const button = screen.getByRole('button', { name: 'Confirm revocation' });
+    expect(button).toBeDisabled();
+    await userEvent.type(
+      screen.getByPlaceholderText('Confirm email of user'),
+      'doe@home.org',
+    );
+    expect(button).toBeDisabled();
+    const datasetInput = screen.getByPlaceholderText('Confirm dataset accession');
+    await userEvent.type(datasetInput, 'GHGAD12345678901230');
+    expect(button).toBeDisabled();
+    await userEvent.clear(datasetInput);
+    await userEvent.type(datasetInput, ' GHGAD12345678901234 ');
+    expect(button).toBeEnabled();
+  });
 });

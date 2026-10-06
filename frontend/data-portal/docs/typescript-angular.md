@@ -44,7 +44,7 @@ JSDoc follows the [docstring rules](../../../docs/style.md#docstrings) of the Py
 - Use `input()` and `output()` functions instead of decorators
 - Use `computed()` for derived state
 - Put the template in a separate `.html` file; inline only a template of a few lines
-- Use Signal Forms (`@angular/forms/signals`) for new forms, simple ones too; the template-driven forms in older code are not a model
+- Use Signal Forms (`@angular/forms/signals`) for all forms, simple ones too
 - Do NOT use `ngClass`, use `class` bindings instead
 - Do NOT use `ngStyle`, use `style` bindings instead
 

@@ -5,9 +5,11 @@
  */
 
 import { Component, computed, input, model } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import {
+  form,
+  FormField,
   FormValueControl,
+  maxLength,
   schema,
   validate,
   ValidationError,
@@ -91,7 +93,7 @@ function validatePubKey(key: string): number {
  */
 @Component({
   selector: 'app-pubkey-input',
-  imports: [MatFormFieldModule, MatInputModule, FormsModule],
+  imports: [MatFormFieldModule, MatInputModule, FormField],
   templateUrl: './pubkey-input.html',
 })
 export class PubkeyFieldComponent implements FormValueControl<string> {
@@ -132,6 +134,9 @@ export class PubkeyFieldComponent implements FormValueControl<string> {
 
   /** Current value (required by FormValueControl) */
   value = model.required<string>();
+
+  /** The inner text field, bound to the value */
+  protected keyField = form(this.value, (path) => maxLength(path, 150));
 
   /** Validation errors from parent form */
   errors = input<readonly ValidationError.WithOptionalFieldTree[]>([]);

@@ -22,6 +22,8 @@ import {
   MappingSnapshot,
   UploadBoxMappingStateService,
 } from '@app/upload/services/upload-box-mapping-state';
+import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { UploadBoxMappingComponent } from './upload-box-mapping';
 import { UploadBoxMappingConfirmDialogComponent } from './upload-box-mapping-confirm-dialog';
@@ -518,5 +520,60 @@ describe('UploadBoxMappingComponent', () => {
     expect(mockNotificationService.showInfo).toHaveBeenCalledWith(
       'Manual mappings have been reset.',
     );
+  });
+
+  describe('with a committed mapped field', () => {
+    beforeEach(async () => {
+      await createComponent({
+        studyId: TEST_STUDY.id,
+        mappedField: 'alias',
+        manualMappings: [],
+      });
+    });
+
+    /**
+     * Get the button that opens the inline editor of a row
+     * @param alias - the alias of the metadata file in the row
+     * @returns the button, or null if the row is not shown
+     */
+    function editButton(alias: string) {
+      return screen.queryByRole('button', {
+        name: `Click to change mapping for ${alias}`,
+      });
+    }
+
+    it('should filter the rows by the typed text and clear the filter', async () => {
+      const filter = screen.getByRole('textbox', {
+        name: 'Filter by part of filename or extension',
+      });
+      await userEvent.type(filter, 'other');
+      await fixture.whenStable();
+
+      expect(editButton('other.fastq.gz')).toBeVisible();
+      expect(editButton('dup.fastq.gz')).toBeNull();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Clear filter' }));
+      await fixture.whenStable();
+
+      expect(filter).toHaveValue('');
+      expect(editButton('dup.fastq.gz')).toBeVisible();
+    });
+
+    it('should map a row to the box file typed in the inline editor', async () => {
+      await userEvent.click(editButton('dup.fastq.gz')!);
+      await fixture.whenStable();
+
+      const input = screen.getByRole('combobox', {
+        name: 'Map upload box file for dup.fastq.gz',
+      });
+      expect(input).toHaveValue('DUP.fastq.gz');
+
+      await userEvent.clear(input);
+      await userEvent.type(input, 'DUP.fastq.gz{Enter}');
+      await fixture.whenStable();
+
+      expect(component.manualMappings()).toEqual(new Map([['meta-3', 'file-3']]));
+      expect(component.editingMetaAccession()).toBeNull();
+    });
   });
 });

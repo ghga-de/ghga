@@ -6,7 +6,7 @@
 
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { PyodideOutput } from '@app/tools/models/pyodide';
@@ -31,7 +31,7 @@ const PLAYGROUND_DEMO_JSON_VALUE =
   templateUrl: './schemapack-playground.html',
   imports: [
     MatButtonModule,
-    FormsModule,
+    FormField,
     MatIconModule,
     FormatSchemapackErrorPipe,
     StatusTextBoxComponent,
@@ -43,6 +43,8 @@ export class SchemapackPlaygroundComponent {
   #http = inject(HttpClient);
   schemaYaml = signal<string>('');
   jsonData = signal<string>('');
+  protected schemaField = form(this.schemaYaml);
+  protected dataField = form(this.jsonData);
   defaultSchema = '';
   isStatusError = signal<boolean>(false);
   showSpinner = signal<boolean>(false);

@@ -14,7 +14,6 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -46,7 +45,6 @@ import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation
 @Component({
   selector: 'app-access-grant-manager-details',
   imports: [
-    FormsModule,
     MatCardModule,
     MatIconModule,
     MatInputModule,

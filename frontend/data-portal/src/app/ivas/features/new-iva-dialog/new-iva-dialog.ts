@@ -13,8 +13,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { FormField, form, maxLength, required } from '@angular/forms/signals';
+import { FormField, FormRoot, form, maxLength, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import {
@@ -40,8 +39,8 @@ import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
 @Component({
   selector: 'app-new-iva-dialog',
   imports: [
-    FormsModule,
     FormField,
+    FormRoot,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -67,11 +66,15 @@ export class NewIvaDialogComponent {
     value: '',
   });
 
-  protected ivaForm = form(this.model, (p) => {
-    required(p.type);
-    required(p.value);
-    maxLength(p.value, 500);
-  });
+  protected ivaForm = form(
+    this.model,
+    (p) => {
+      required(p.type);
+      required(p.value);
+      maxLength(p.value, 500);
+    },
+    { submission: { action: async () => this.#submit() } },
+  );
 
   protected submitDisabled = computed(() => !this.ivaForm().valid());
 
@@ -134,14 +137,6 @@ export class NewIvaDialogComponent {
   }
 
   /**
-   * Update the value in the model when the input changes
-   * @param value the new value entered by the user
-   */
-  onValueChange(value: string): void {
-    this.model.update((m) => ({ ...m, value }));
-  }
-
-  /**
    * Cancel the dialog
    */
   onCancel(): void {
@@ -151,7 +146,7 @@ export class NewIvaDialogComponent {
   /**
    * Complete the verification and pass the entered IVA data
    */
-  onSubmit(): void {
+  #submit(): void {
     const { type, value } = this.model();
     const trimmedValue = value?.trim();
     if (type && trimmedValue) {

@@ -21,7 +21,7 @@ This one holds where the portal differs from it, or from the portal's own older 
   Validate with the smallest check that covers the change, not `ng build` after every edit.
 - **Runtime config:** settings reach the app as `window.config`, which `run.js` writes to `public/config.js` from `data-portal.default.yaml`, and `ConfigService` (`src/app/shared/services/config.ts`) reads.
   A new setting goes into that YAML file, the `Config` interface and a `ConfigService` getter; there is no `src/environments` and no fetched `config.json`.
-- **Forms:** new forms use Signal Forms (`@angular/forms/signals`), simple ones too; the template-driven forms in older code are not a model.
+- **Forms:** forms use Signal Forms (`@angular/forms/signals`), simple ones too.
 - **Template bindings:** no function or method call with an argument in a binding; derive the value in a `computed()` or a pure pipe, as `typescript-angular.md` says.
 - **Unit tests:** `@testing-library/angular` with role and text queries, as the Playwright tests use, not component harnesses.
 - **Styles:** component styles are SCSS (`angular.json`), with Tailwind classes in the template.
