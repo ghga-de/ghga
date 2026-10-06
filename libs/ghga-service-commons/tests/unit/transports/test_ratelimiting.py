@@ -33,6 +33,8 @@ from ghga_service_commons.transports.ratelimiting import (
     _scope_of,
 )
 
+pytestmark = pytest.mark.asyncio()
+
 _REQUEST = httpx2.Request("GET", "http://test")
 _URL = _REQUEST.url
 
@@ -85,7 +87,6 @@ async def _acquired_at(
     return time.monotonic() - started
 
 
-@pytest.mark.asyncio
 async def test_concurrent_requests_are_spread_not_released_together():
     """Ensure concurrent callers get successive slots instead of all firing at once."""
     budget = _budget()
@@ -93,13 +94,13 @@ async def test_concurrent_requests_are_spread_not_released_together():
 
     grants = await asyncio.gather(*(_acquired_at(budget, started) for _ in range(5)))
 
+    # Ensure spacing between calls is consistent within some tolerance
     assert grants == sorted(grants)
     for earlier, later in pairwise(grants):
         assert later - earlier == pytest.approx(_STEP, abs=_STEP)
-    assert grants[-1] >= 4 * _STEP * 0.75
+    assert grants[-1] >= 4 * _STEP
 
 
-@pytest.mark.asyncio
 async def test_no_pacing_configured_grants_immediately():
     """Ensure the gate adds nothing when neither interval nor jitter is configured."""
     budget = _budget(min_request_interval=0.0)
@@ -110,7 +111,6 @@ async def test_no_pacing_configured_grants_immediately():
     assert time.monotonic() - started < _STEP
 
 
-@pytest.mark.asyncio
 async def test_default_config_alone_spreads_requests():
     """Ensure the defaults alone spread requests, guarding the jitter default."""
     budget = RateBudget(RateLimitingTransportConfig())
@@ -122,7 +122,6 @@ async def test_default_config_alone_spreads_requests():
     assert grants[-1] > 0.05
 
 
-@pytest.mark.asyncio
 async def test_penalty_arriving_mid_wait_requeues_the_waiter():
     """Ensure a request already waiting learns about a 429 that lands while it sleeps."""
     budget = _budget(min_request_interval=0.02)
@@ -138,7 +137,6 @@ async def test_penalty_arriving_mid_wait_requeues_the_waiter():
     assert time.monotonic() - started >= 0.15
 
 
-@pytest.mark.asyncio
 async def test_penalty_never_moves_backwards():
     """Ensure a smaller floor cannot shorten a longer one that is still in force."""
     budget = _unpaced_budget()
@@ -149,7 +147,6 @@ async def test_penalty_never_moves_backwards():
     assert _remaining_retry_after_wait(budget) == pytest.approx(30, abs=1)
 
 
-@pytest.mark.asyncio
 async def test_penalty_holds_back_only_its_own_scope():
     """Ensure a 429 from one service leaves the client's other services free."""
     budget = _unpaced_budget()
@@ -163,7 +160,6 @@ async def test_penalty_holds_back_only_its_own_scope():
     assert _remaining_retry_after_wait(budget, held) == pytest.approx(30, abs=1)
 
 
-@pytest.mark.asyncio
 async def test_scopes_are_paced_independently():
     """Ensure pacing spaces requests to one scope but not across scopes."""
     budget = _budget()
@@ -188,12 +184,11 @@ async def test_scopes_are_paced_independently():
         ("https://h/", "https://h/"),
     ],
 )
-def test_scope_is_origin_and_first_path_segment(url: str, scope: str):
+async def test_scope_is_origin_and_first_path_segment(url: str, scope: str):
     """Ensure a URL is keyed by origin and first path segment, the port only if given."""
     assert _scope_of(httpx2.URL(url)) == scope
 
 
-@pytest.mark.asyncio
 async def test_passes_through_non_429_response():
     """Ensure non-429 responses are returned and do not force a wait."""
     response = httpx2.Response(httpx2.codes.OK)
@@ -207,7 +202,6 @@ async def test_passes_through_non_429_response():
     assert _remaining_retry_after_wait(budget) == 0
 
 
-@pytest.mark.asyncio
 async def test_429_with_retry_after_forces_wait():
     """Ensure a 429 with a Retry-After forces a wait."""
     budget = _unpaced_budget()
@@ -220,7 +214,6 @@ async def test_429_with_retry_after_forces_wait():
     assert _remaining_retry_after_wait(budget) == pytest.approx(5, abs=1)
 
 
-@pytest.mark.asyncio
 async def test_429_without_retry_after_leaves_pacing_to_the_retry_layer():
     """Ensure a missing Retry-After header does not add any wait."""
     budget = _unpaced_budget()
@@ -233,7 +226,6 @@ async def test_429_without_retry_after_leaves_pacing_to_the_retry_layer():
     assert _remaining_retry_after_wait(budget) == 0
 
 
-@pytest.mark.asyncio
 async def test_budget_is_shared_when_injected():
     """Ensure two transports given the same budget actually share it."""
     budget = _budget()
@@ -248,7 +240,6 @@ async def test_budget_is_shared_when_injected():
     assert time.monotonic() - started >= _STEP * 0.75
 
 
-@pytest.mark.asyncio
 async def test_transport_builds_its_own_budget_when_none_is_given():
     """Ensure the transport still paces itself when used standalone."""
     ratelimiter = _ratelimiter(_mock_transport([httpx2.Response(200)]))
@@ -258,7 +249,6 @@ async def test_transport_builds_its_own_budget_when_none_is_given():
     assert isinstance(ratelimiter._budget, RateBudget)
 
 
-@pytest.mark.asyncio
 async def test_aclose_delegates_to_wrapped_transport():
     """Closing the rate limiting transport closes the transport it wraps."""
     transport = _mock_transport([])
@@ -268,7 +258,6 @@ async def test_aclose_delegates_to_wrapped_transport():
     transport.aclose.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_async_context_manager_closes_transport():
     """Exiting the async context manager closes the wrapped transport."""
     transport = _mock_transport([])
@@ -279,7 +268,6 @@ async def test_async_context_manager_closes_transport():
     transport.aclose.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_429_with_http_date_retry_after_is_honored():
     """Ensure a Retry-After given as an HTTP date is honored instead of crashing."""
     retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
@@ -295,7 +283,6 @@ async def test_429_with_http_date_retry_after_is_honored():
     assert _remaining_retry_after_wait(budget) == pytest.approx(30, abs=2)
 
 
-@pytest.mark.asyncio
 async def test_429_with_past_http_date_does_not_wait():
     """Ensure a Retry-After date that has already passed asks for no wait at all."""
     retry_at = datetime.now(timezone.utc) - timedelta(seconds=30)
@@ -311,7 +298,6 @@ async def test_429_with_past_http_date_does_not_wait():
     assert _remaining_retry_after_wait(budget) == 0
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("value", ["garbage", "", "inf", "nan"])
 async def test_429_with_unusable_retry_after_is_treated_as_absent(value: str):
     """Ensure unparsable and non-finite values are ignored rather than reaching the sleep."""
@@ -325,7 +311,6 @@ async def test_429_with_unusable_retry_after_is_treated_as_absent(value: str):
     assert _remaining_retry_after_wait(budget) == 0
 
 
-@pytest.mark.asyncio
 async def test_429_with_repeated_retry_after_takes_the_longest():
     """Ensure repeated Retry-After headers resolve to the longest wait, not to header order."""
     response = httpx2.Response(
@@ -340,7 +325,6 @@ async def test_429_with_repeated_retry_after_takes_the_longest():
     assert _remaining_retry_after_wait(budget) == pytest.approx(120, abs=1)
 
 
-@pytest.mark.asyncio
 async def test_429_with_repeated_retry_after_ignores_unusable_values():
     """Ensure a malformed duplicate cannot suppress a usable sibling."""
     response = httpx2.Response(
