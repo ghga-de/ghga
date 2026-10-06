@@ -152,14 +152,30 @@ jobs:
           kubectl config current-context > /dev/null 2>&1 || { echo "no cluster"; exit 0; }
           echo "::group::pods"; $K get pods -o wide; echo "::endgroup::"
           echo "::group::events"; $K get events --sort-by=.lastTimestamp | tail -60; echo "::endgroup::"
+          # the gateway logs every request, so its tail is gone long before the dump;
+          # its error answers say which route failed and why (e.g. ext_authz_error)
+          echo "::group::gateway responses >= 400"
+          $K logs -l gateway.envoyproxy.io/owning-gateway-name=ghga -c envoy --tail=-1 \
+            | jq -cR 'fromjson? | select(.response_code >= 400)
+                | {start_time, method, path: .["x-envoy-origin-path"], response_code,
+                   response_code_details, response_flags, upstream_cluster}' \
+            | tail -300 || true
+          echo "::endgroup::"
+          restarted=$($K get pods -o json | jq -r '.items[] | select(any(.status.containerStatuses[]?; .restartCount > 0)) | .metadata.name')
+          gateway=$($K get pods -l gateway.envoyproxy.io/owning-gateway-name=ghga -o name)
           for p in $($K get pods -o name); do
             echo "::group::logs $p"
-            $K logs "$p" --all-containers --tail=120 || true
+            # a restarted pod's log is kept whole: what it did while the suite ran
+            # is what matters, not only its last lines (the gateway's requests are
+            # in their own group above)
+            tail=120
+            if grep -qx "${p#pod/}" <<< "$restarted" && ! grep -qx "$p" <<< "$gateway"; then tail=-1; fi
+            $K logs "$p" --all-containers --tail=$tail || true
             echo "::endgroup::"
           done
           # a pod that crashed and recovered looks healthy above, but its 503 window
           # is what failed the suite — surface the crash, not just the recovery
-          for p in $($K get pods -o json | jq -r '.items[] | select(any(.status.containerStatuses[]?; .restartCount > 0)) | .metadata.name'); do
+          for p in $restarted; do
             echo "::group::previous logs + last state $p (restarted)"
             $K logs "$p" --previous --tail=120 || true
             $K get pod "$p" -o jsonpath='{range .status.containerStatuses[*]}{.name}: restarts={.restartCount} lastState={.lastState}{"\n"}{end}'
