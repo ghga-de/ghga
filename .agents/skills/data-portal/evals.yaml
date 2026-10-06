@@ -1,0 +1,191 @@
+# The eval suite of the data-portal skill (docs/agent-instructions.md#admitting-a-skill).
+# `just skill-eval data-portal` expands each case into evals/<plugin>/evals/<case>/case.yaml
+# for `claude plugin eval`. A case takes the execution fields below unless it sets its own,
+# and a grader given by name is one of the shared graders.
+# data-portal works next to Google's angular-developer, and a run loads only the plugin
+# under test, so the suite runs twice, each against no skill: `both` loads the two skills,
+# `upstream` angular-developer alone. data-portal's gain is the score of `both` against
+# that of `upstream`. The cases are the points where the two skills disagree, or where the
+# portal's code would mislead an agent that copies it.
+# The sandbox of a run has no network, and the clone has no node_modules, so no case runs
+# pnpm: a case writes files, read through its Write calls, or names a command in its reply.
+# The expected values hold at the commit scripts/skill-eval-scaffold.sh pins.
+
+plugins:
+  both: [data-portal, angular-developer]
+  upstream: [angular-developer]
+
+execution:
+  max_turns: 40
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Bash, Write, Edit, Skill]
+  # Neither arm loads AGENTS.md, which a session in the portal would: the root file at
+  # the start, the portal's once the agent reads a file there.
+  append_system_prompt: >-
+    You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
+    root and in the AGENTS.md of each area; read the root file and
+    frontend/data-portal/AGENTS.md before you start, as a session in the data portal loads
+    both. The clone is your working directory: work only there, since another checkout on
+    this machine is not the one under test. The clone has no node_modules and there is no
+    network, so pnpm, ng and the dev server cannot run here; do not install anything.
+
+graders:
+  # A grader on a tool sees its input as JSON, so a command starts after `"command":"`.
+  no-direct-uv:
+    type: tool_used
+    tool: Bash
+    input_match: '(^|[\s;&|(\x60"])uv\s'
+    min: 0
+    max: 0
+  skill-fired:
+    type: tool_used
+    tool: Skill
+    arm: with-only
+
+cases:
+  new-component:
+    description: A new component and its spec, where the portal's existing code keeps the class suffix and detectChanges that new code drops.
+    tags: [write]
+    prompt: |
+      In the data portal, add a component that summarises a dataset's files: it takes the list of files as an input and shows how many there are and their total size. Put it in a new folder under src/app/metadata/features/, next to the other features there, and write its unit test. When you are done, list the files you wrote.
+    graders:
+      - name: signal-input
+        type: tool_used
+        tool: Write
+        input_match: '"file_path":"[^"]*/metadata/features/[^"]*\.ts","content":"(?:[^"\\]|\\.)*\binput(?:\.required)?[<(]'
+      - name: file-headers
+        type: tool_used
+        tool: Write
+        input_match: '"file_path":"[^"]*\.ts","content":"(?:[^"\\]|\\.)*@copyright The GHGA Authors'
+        min: 2
+      - name: testing-library
+        type: tool_used
+        tool: Write
+        input_match: '"file_path":"[^"]*\.spec\.ts","content":"(?:[^"\\]|\\.)*@testing-library/angular'
+      - name: no-class-suffix
+        type: tool_used
+        tool: Write
+        input_match: 'export class \w+Component\b'
+        min: 0
+        max: 0
+      - name: no-detect-changes
+        type: tool_used
+        tool: Write
+        input_match: '\bdetectChanges\('
+        min: 0
+        max: 0
+      - name: no-harness
+        type: tool_used
+        tool: Write
+        input_match: 'Harness'
+        min: 0
+        max: 0
+      - name: no-standalone-or-onpush
+        type: tool_used
+        tool: Write
+        input_match: 'standalone:\s*true|ChangeDetectionStrategy'
+        min: 0
+        max: 0
+      - skill-fired
+      - no-direct-uv
+
+  targeted-test:
+    description: One spec run on its own, where angular-developer says `ng test`, which watches, and the portal forbids plain vitest and argument forwarding.
+    tags: [command]
+    prompt: |
+      I changed src/app/shared/utils/date-formats.ts in the data portal. Which exact command runs only its unit tests, date-formats.spec.ts, once and without watching? Give me the one command to paste.
+    graders:
+      - name: targeted-command
+        type: regex
+        pattern: 'pnpm ng test (?:--watch=false --include[ =]\S*date-formats|--include[ =]\S*date-formats\S* --watch=false)'
+      - name: no-plain-vitest-or-forwarding
+        type: llm
+        criteria: |
+          The command the reply gives to paste runs the Angular test builder through pnpm (`pnpm ng test` with `--watch=false` and `--include` naming date-formats.spec.ts). It is not plain `vitest` or `npx vitest`, not `npm`, not bare `ng test` without pnpm, and it does not forward arguments after a `--` separator. Mentioning a wrong command only to warn against it is fine.
+      - no-direct-uv
+
+  runtime-config:
+    description: A setting changed without a rebuild, which the portal reads from window.config, not from environment files or a fetched JSON.
+    tags: [write]
+    prompt: |
+      Add a maintenance banner to the data portal that operators switch on without rebuilding the image: a setting that is off by default, and a banner text in the same configuration that the app shows at the top of every page while the setting is on. Wire it through and list the files you changed.
+    graders:
+      - name: default-config
+        type: regex
+        target: {source: file, path: frontend/data-portal/data-portal.default.yaml}
+        pattern: '[Mm]aintenance'
+      - name: config-service
+        type: regex
+        target: {source: file, path: frontend/data-portal/src/app/shared/services/config.ts}
+        pattern: '[Mm]aintenance'
+      - name: no-build-time-or-fetched-config
+        type: tool_used
+        tool: Write
+        input_match: '/src/environments/|assets/config\.json|provideAppInitializer|APP_INITIALIZER'
+        min: 0
+        max: 0
+      - name: no-fetched-config-edit
+        type: tool_used
+        tool: Edit
+        input_match: 'assets/config\.json|provideAppInitializer|APP_INITIALIZER'
+        min: 0
+        max: 0
+      - skill-fired
+      - no-direct-uv
+
+  simple-form:
+    description: A small form, which angular-developer would build template-driven and the portal builds with Signal Forms.
+    tags: [write]
+    prompt: |
+      In the data portal, add a small contact form component under src/app/shared/ui/: a required email field that must hold an email address, a message field, and a send button that stays disabled until the form is valid. On send, the component emits the two values through an output. Write it and list the files you wrote.
+    graders:
+      - name: signal-forms
+        type: tool_used
+        tool: Write
+        input_match: '@angular/forms/signals'
+      - name: no-template-or-reactive-forms
+        type: tool_used
+        tool: Write
+        input_match: 'ngModel|\bFormsModule\b|ReactiveFormsModule|\bFormGroup\b|\bFormControl\b'
+        min: 0
+        max: 0
+      - skill-fired
+      - no-direct-uv
+
+  template-calls:
+    description: A list that formats each row, where the portal bans function calls with arguments in template bindings and angular-developer has no such rule.
+    tags: [write]
+    prompt: |
+      In the data portal, add a component under src/app/shared/ui/ that takes a list of files, each with a name and a size in bytes, and shows one row per file with its name and its size in readable units (such as 1.2 GB), plus a line above the list that says how many of the files are larger than 1 GB. Write it and list the files you wrote.
+    graders:
+      # A call with an argument inside an interpolation, a control-flow condition or a
+      # property binding; a signal read takes none, and a pipe is no call.
+      - name: no-calls-in-bindings
+        type: tool_used
+        tool: Write
+        input_match: '(?:\{\{|@if \(|@for \(|\]=\\")\s*[\w.]+\((?!\))'
+        min: 0
+        max: 0
+      - name: no-call-edits
+        type: tool_used
+        tool: Edit
+        input_match: '(?:\{\{|@if \(|@for \(|\]=\\")\s*[\w.]+\((?!\))'
+        min: 0
+        max: 0
+      - skill-fired
+      - no-direct-uv
+
+  dev-server:
+    description: The local dev server, which the portal starts through its launcher, not with ng serve or pnpm start.
+    tags: [command]
+    prompt: |
+      I want to look at the data portal in my browser with the mocked backend, to check a page I changed. Which command do I run, from where, and at which URL do I find the page?
+    graders:
+      - name: fe-dev
+        type: regex
+        pattern: 'just fe-dev|node run\.js --dev'
+      - name: launcher-not-serve
+        type: llm
+        criteria: |
+          The reply tells the user to start the portal with `just fe-dev` from the repo root (or `node run.js --dev` in frontend/data-portal) and to open http://localhost:8080. It does not tell them to run `ng serve`, `pnpm start` or `npm start`, nor to open port 4200. Mentioning one of those only to warn against it is fine.
+      - no-direct-uv

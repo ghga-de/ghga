@@ -172,19 +172,26 @@ SKILL_EVAL_MODEL := "claude-opus-5-5"
 skill-eval name *args: _guard
     #!/usr/bin/env bash
     set -euo pipefail
-    evals=$(uv run python scripts/skill_eval.py expand "{{name}}")
-    out="$evals/results/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+    # One run per plugin: the skill itself, or each entry of the suite's `plugins`.
+    mapfile -t targets < <(uv run python scripts/skill_eval.py expand "{{name}}")
+    stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
     # Each kept workspace holds a clone and a copied .venv, about 2.5 GB, until `collect`
     # removes it: a pass outgrows the container's /tmp, so the runner works on the disk.
     export TMPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/ghga-skill-eval"
     mkdir -p "$TMPDIR"
-    # The threshold is 0 so that only a run that breaks, not a low score, fails the recipe.
-    claude plugin eval ".agents/skills/{{name}}" --model "{{SKILL_EVAL_MODEL}}" \
-        --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
-        --concurrency 4 --max-cost-usd 20 --threshold 0 --keep-temp \
-        --output-dir "$out" {{args}} || status=$?
-    echo "== {{name}} on {{SKILL_EVAL_MODEL}}"
-    uv run python scripts/skill_eval.py collect "$out"
+    for target in "${targets[@]}"; do
+        pass=""
+        [[ "$target" == */evals/* ]] && pass="-${target##*/}"
+        out=".agents/skills/{{name}}/evals/results/$stamp$pass"
+        # The threshold is 0 so that only a run that breaks, not a low score, fails the
+        # recipe.
+        claude plugin eval "$target" --model "{{SKILL_EVAL_MODEL}}" \
+            --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
+            --concurrency 4 --max-cost-usd 20 --threshold 0 --keep-temp \
+            --output-dir "$out" {{args}} || status=$?
+        echo "== {{name}}$pass on {{SKILL_EVAL_MODEL}}"
+        uv run python scripts/skill_eval.py collect "$out"
+    done
     exit "${status:-0}"
 
 # The same check the service-docs pre-commit hook runs; `--check` writes nothing.

@@ -7,6 +7,9 @@ case with its scaffold script inside, so `expand` writes them to the gitignored
 A case with a `patch` gets a scaffold of its own instead, which runs the shared one with
 the patch and the case's `branch`, so the case starts with that change on that branch,
 off an `origin/dev` at the pin.
+A run loads only the plugin under test, so a suite that measures a skill next to another
+one lists `plugins`, each a set of skills: `expand` then writes a plugin per entry under
+evals/, with the cases inside, and the suite runs once per plugin, each against no skill.
 `collect` copies each run's trace into the results, removes the run's kept workspace, and
 prints the score and turns of each case with and without the skill.
 
@@ -71,8 +74,12 @@ def expand_cases(suite: dict) -> dict[str, dict]:
     return cases
 
 
-def expand(root: pathlib.Path, skill: str) -> pathlib.Path:
-    """Write the case directories of a skill's suite, keeping earlier results."""
+def expand(root: pathlib.Path, skill: str) -> list[pathlib.Path]:
+    """Write the case directories of a skill's suite, keeping earlier results.
+
+    Return the plugins to run the suite against: the skill's own directory, or one plugin
+    per entry of the suite's `plugins`.
+    """
     skill_dir = root / SKILLS / skill
     suite = yaml.safe_load((skill_dir / "evals.yaml").read_text(encoding="utf-8"))
     evals = skill_dir / "evals"
@@ -80,6 +87,35 @@ def expand(root: pathlib.Path, skill: str) -> pathlib.Path:
         for entry in evals.iterdir():
             if entry.name != "results":
                 shutil.rmtree(entry)
+    if "plugins" not in suite:
+        _write_cases(root, suite, evals)
+        return [skill_dir]
+    targets = []
+    for name, skills in suite["plugins"].items():
+        target = evals / name
+        (target / ".claude-plugin").mkdir(parents=True)
+        manifest = {"name": f"{skill}-{name}", "version": "0.0.0"}
+        (target / ".claude-plugin/plugin.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        (target / "skills").mkdir()
+        for each in skills:
+            if not (root / SKILLS / each / "SKILL.md").exists():
+                raise ValueError(f"plugin {name}: no skill {each!r}")
+            # A copy, not a symlink: a link to the skill whose evals/ holds the plugin is
+            # a cycle, which the runner does not follow.
+            shutil.copytree(
+                root / SKILLS / each,
+                target / "skills" / each,
+                ignore=shutil.ignore_patterns("evals", "evals.yaml"),
+            )
+        _write_cases(root, suite, target / "evals")
+        targets.append(target)
+    return targets
+
+
+def _write_cases(root: pathlib.Path, suite: dict, evals: pathlib.Path) -> None:
+    """Write one directory per case of a suite into evals, with its scaffold."""
     for name, case in expand_cases(suite).items():
         case_dir = evals / name
         case_dir.mkdir(parents=True)
@@ -105,7 +141,6 @@ def expand(root: pathlib.Path, skill: str) -> pathlib.Path:
             encoding="utf-8",
         )
         scaffold.chmod(0o755)
-    return evals
 
 
 def _mean(values: list[float]) -> str:
@@ -164,7 +199,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     if args.command == "expand":
-        print(expand(ROOT, args.skill).relative_to(ROOT))
+        for target in expand(ROOT, args.skill):
+            print(target.relative_to(ROOT))
     else:
         print(collect(args.results))
     return 0
