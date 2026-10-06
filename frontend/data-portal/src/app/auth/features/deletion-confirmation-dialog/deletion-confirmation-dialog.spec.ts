@@ -12,15 +12,24 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { users } from '@app/../mocks/data';
 import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
+import { Notifier } from '@app/shared/services/notification';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
+import { of } from 'rxjs';
 import { DeletionConfirmationDialog } from './deletion-confirmation-dialog';
 
 const MockConfigService = {
   auth_url: '/test/auth',
 };
 const MockUserService = {
-  deleteUser: vitest.fn(),
+  deleteUser: vitest.fn(() => of(null)),
+};
+
+// A real notifier opens snack bars in document.body, which the test runner
+// shares between spec files.
+const MockNotifier = {
+  showSuccess: vitest.fn(),
+  showError: vitest.fn(),
 };
 
 describe('DeletionConfirmationDialog', () => {
@@ -38,13 +47,18 @@ describe('DeletionConfirmationDialog', () => {
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: { user: users[0] } },
         { provide: MatDialogRef, useValue: dialogRef },
-        { provide: UserService, useValue: MockUserService },
         { provide: ConfigService, useValue: MockConfigService },
+        { provide: Notifier, useValue: MockNotifier },
         provideHttpClient(),
         provideHttpCache(),
       ],
-      teardown: { destroyAfterEach: false },
-    }).compileComponents();
+    })
+      // The component provides its own UserService, which would bypass a
+      // module-level mock and send a real request.
+      .overrideComponent(DeletionConfirmationDialog, {
+        set: { providers: [{ provide: UserService, useValue: MockUserService }] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(DeletionConfirmationDialog);
     component = fixture.componentInstance;
@@ -76,6 +90,8 @@ describe('DeletionConfirmationDialog', () => {
     expect(button).toHaveTextContent('Confirm deletion');
     button.click();
     expect(deleteSpy).toHaveBeenCalledWith(users[0].id);
+    expect(MockNotifier.showSuccess).toHaveBeenCalled();
+    expect(dialogRef.close).toHaveBeenCalledWith(true);
   });
 
   it('should keep the confirm button disabled until the email matches', async () => {
