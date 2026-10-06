@@ -51,7 +51,20 @@ export class VerificationDialogComponent {
   protected data = inject<{ id: string; address: string }>(MAT_DIALOG_DATA);
   protected address = computed(() => this.data.address);
 
-  protected codeModel = signal<{ code: string }>({ code: '' });
+  /**
+   * The form model, which upper-cases an entered code and keeps only its
+   * first 6 alphanumeric characters.
+   */
+  protected codeModel = linkedSignal<{ code: string }>(() => ({ code: '' }), {
+    set: (model, rawSet) =>
+      rawSet({
+        ...model,
+        code: model.code
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '')
+          .slice(0, 6),
+      }),
+  });
 
   protected codeForm = form(this.codeModel, (schemaPath) => {
     required(schemaPath.code);
@@ -78,18 +91,6 @@ export class VerificationDialogComponent {
   protected verificationError = linkedSignal<string, boolean>({
     source: () => this.codeForm.code().value(),
     computation: () => false,
-  });
-
-  /**
-   * Upper-case the entered code and keep only its first 6 alphanumeric characters.
-   */
-  #sanitizeCodeEffect = effect(() => {
-    const code = this.codeForm.code().value();
-    const sanitized = code
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, '')
-      .slice(0, 6);
-    if (sanitized !== code) this.codeForm.code().value.set(sanitized);
   });
 
   /**

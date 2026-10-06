@@ -10,6 +10,8 @@ import { AccessRequestFieldEditComponent } from './access-request-field-edit';
 
 import { accessRequests } from '@app/../mocks/data';
 import { ConfigService } from '@app/shared/services/config';
+import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 
 /**
  * Mock the config service as needed by the access request field edit component
@@ -38,5 +40,35 @@ describe('AccessRequestFieldComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('for the ticket ID', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('request', accessRequests[4]);
+      fixture.componentRef.setInput('name', 'ticket_id');
+      fixture.componentRef.setInput('label', 'Ticket ID');
+      await fixture.whenStable();
+      await userEvent.click(fixture.nativeElement.querySelector('.edit-button'));
+      await fixture.whenStable();
+    });
+
+    it('should strip the base URL from a pasted ticket link', async () => {
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.click(input);
+      await userEvent.paste('http:/helpdesk.test/ticket/GSI-1234');
+      await fixture.whenStable();
+
+      expect(input).toHaveValue('GSI-1234');
+    });
+
+    it('should keep a ticket ID without a link', async () => {
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'GSI-1234');
+      await fixture.whenStable();
+
+      expect(input).toHaveValue('GSI-1234');
+    });
   });
 });

@@ -32,8 +32,12 @@ export class ConfirmTotpComponent {
   #notify = inject(NotificationService);
   #authService = inject(AuthService);
 
-  protected totpModel = signal<{ code: string }>({
-    code: '',
+  /**
+   * The form model, which keeps only the first 6 digits of an entered code.
+   */
+  protected totpModel = linkedSignal<{ code: string }>(() => ({ code: '' }), {
+    set: (model, rawSet) =>
+      rawSet({ ...model, code: model.code.replace(/\D/g, '').slice(0, 6) }),
   });
 
   protected totpForm = form(this.totpModel, (schemaPath) => {
@@ -64,15 +68,6 @@ export class ConfirmTotpComponent {
       this.#isProcessing() ||
       this.totpForm.code().value() === this.#previousSubmission(),
   );
-
-  /**
-   * Keep only the first 6 digits of the entered code.
-   */
-  #sanitizeCodeEffect = effect(() => {
-    const code = this.totpForm.code().value();
-    const sanitized = code.replace(/\D/g, '').slice(0, 6);
-    if (sanitized !== code) this.totpForm.code().value.set(sanitized);
-  });
 
   /**
    * Submit automatically, but only once, as soon as a complete code was entered.

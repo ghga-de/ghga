@@ -12,7 +12,7 @@ import {
   effect,
   inject,
   input,
-  model,
+  linkedSignal,
   OnInit,
   signal,
   Signal,
@@ -169,7 +169,15 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #ivaTypePipe = inject(IvaTypePipe);
   #datePipe = inject(CommonDatePipe);
 
-  selectedIvaIdRadioButton = model<string | undefined>(undefined);
+  /**
+   * The IVA selected in the radio group. Whenever the IVAs have loaded, it is
+   * preset to the IVA of the request or to the best IVA of the user.
+   */
+  selectedIvaIdRadioButton = linkedSignal<boolean, string | undefined>({
+    source: () => !this.ivasAreLoading() && !this.ivasError() && this.ivas().length > 0,
+    computation: (loaded, previous) =>
+      loaded ? this.request()?.iva_id || this.#findBestIvaId() : previous?.value,
+  });
 
   /**
    * The IVA selection, bound to the radio group
@@ -233,12 +241,6 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
       this.#notificationService.showError('Error fetching verification addresses.');
-    }
-  });
-
-  #ivasLoadedEffect = effect(() => {
-    if (!this.ivasAreLoading() && !this.ivasError() && this.ivas().length) {
-      this.#preSelectIvaRadioButton();
     }
   });
 
@@ -446,15 +448,6 @@ export class AccessRequestManagerDetailComponent implements OnInit, HasPendingEd
     });
     this.goBack();
   };
-
-  /**
-   * Pre-select the radio button for the IVA that best matches
-   * (the IVA that is already selected or the best option otherwise)
-   */
-  #preSelectIvaRadioButton(): void {
-    const ivaId = this.request()?.iva_id;
-    this.selectedIvaIdRadioButton.set(ivaId || this.#findBestIvaId());
-  }
 
   /**
    * Get the "best" IVA for a changeable access request.

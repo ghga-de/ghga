@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { allIvasOfDoe } from '@app/../mocks/data';
@@ -31,7 +32,7 @@ class MockIvaService {
   loadUserIvas = () => undefined;
   userIvas = {
     value: () => allIvasOfDoe,
-    isLoading: () => false,
+    isLoading: signal(false),
     error: () => undefined,
   };
 }
@@ -177,5 +178,25 @@ describe('AccessRequestManagerDetailComponent', () => {
       '9409db13-e23e-433e-9afa-544d8f25b720',
       { iva_id: allIvasOfDoe[2].id },
     );
+  });
+
+  it('should preselect the best IVA again when the IVAs reload', async () => {
+    const postal = screen.getByRole('radio', {
+      name: 'Postal Address: c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
+    });
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => of(undefined),
+    });
+    await userEvent.click(postal);
+    await fixture.whenStable();
+    expect(postal).toBeChecked();
+
+    const ivas = (TestBed.inject(IvaService) as unknown as MockIvaService).userIvas;
+    ivas.isLoading.set(true);
+    await fixture.whenStable();
+    ivas.isLoading.set(false);
+    await fixture.whenStable();
+
+    expect(screen.getByRole('radio', { name: 'SMS: +441234567890004' })).toBeChecked();
   });
 });

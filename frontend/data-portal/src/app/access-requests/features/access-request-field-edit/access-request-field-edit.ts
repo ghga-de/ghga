@@ -10,6 +10,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   OnInit,
   output,
   signal,
@@ -61,7 +62,13 @@ export class AccessRequestFieldEditComponent implements OnInit {
 
   isOpen = signal<boolean>(false);
 
-  protected formModel = signal({ field: '' });
+  /**
+   * The form model. For a ticket ID, it removes a prefix taken from (parts of)
+   * the base ticket URL, so that a pasted ticket link becomes its ID.
+   */
+  protected formModel = linkedSignal(() => ({ field: '' }), {
+    set: (model, rawSet) => rawSet({ ...model, field: this.#ticketId(model.field) }),
+  });
 
   protected fieldForm = form(this.formModel, (p) => {
     validate(p.field, ({ value }) => {
@@ -87,18 +94,18 @@ export class AccessRequestFieldEditComponent implements OnInit {
   );
 
   /**
-   * If a ticket ID was entered prefixed with (parts of) the base ticket URL,
-   * remove that prefix.
+   * Remove a prefix taken from (parts of) the base ticket URL from a ticket ID
+   * @param value - the value entered into the field
+   * @returns the value without that prefix, or unchanged for other fields
    */
-  #normalizeTicketIdEffect = effect(() => {
-    if (this.name() !== 'ticket_id') return;
-    const value = this.formModel().field;
+  #ticketId(value: string): string {
+    if (this.name() !== 'ticket_id') return value;
     const baseUrl = this.#baseTicketUrl;
     const i = value.lastIndexOf('/');
-    if (baseUrl && i >= 0 && baseUrl.endsWith(value.substring(0, i + 1))) {
-      this.fieldForm.field().value.set(value.substring(i + 1));
-    }
-  });
+    return baseUrl && i >= 0 && baseUrl.endsWith(value.substring(0, i + 1))
+      ? value.substring(i + 1)
+      : value;
+  }
 
   /**
    * Notify the parent whenever the pending-edit state of this field changes.

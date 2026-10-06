@@ -7,7 +7,7 @@
 import { Component, WritableSignal, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { LogEntry, PyodideOutput } from '@app/tools/models/pyodide';
+import { PyodideOutput } from '@app/tools/models/pyodide';
 import { StepDetails, StepStatus } from '@app/tools/models/stepper';
 import { PyodideService } from '@app/tools/services/pyodide';
 import { MetadataValidationService } from '@app/tools/services/validator';
@@ -42,7 +42,7 @@ export class MetadataValidatorComponent {
   isDragOver: WritableSignal<boolean> = signal(false);
   fileName: WritableSignal<string> = signal('');
   jsonOutput: WritableSignal<string> = signal('Awaiting XLSX file...');
-  processLogEntries: WritableSignal<LogEntry[]> = signal([]);
+  processLogEntries = this.#pyodideService.getProcessLog;
   showLog: WritableSignal<boolean> = signal(false);
   processButtonEnabled: WritableSignal<boolean> = signal(false);
   validationOutputDetails: WritableSignal<string | null> = signal(null);
@@ -77,12 +77,11 @@ export class MetadataValidatorComponent {
     }
   });
 
-  // Effect to handle process log updates from the service
+  // Scroll to the bottom of the process log when it grows, after the DOM update
   #processLogEffect = effect(() => {
-    this.processLogEntries.set(this.#pyodideService.getProcessLog());
-    // Scroll to bottom of log if it's visible, ensure this runs after DOM update
+    this.processLogEntries();
     setTimeout(() => {
-      const logContainer = document.getElementById('processLog');
+      const logContainer = document.getElementById('processLogContainer');
       if (logContainer) {
         logContainer.scrollTop = logContainer.scrollHeight;
       }

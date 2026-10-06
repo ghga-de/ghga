@@ -266,6 +266,22 @@ describe('UploadGrantCreationComponent', () => {
             screen.getByRole('button', { name: /create upload grant/i }),
           ).toBeVisible();
         });
+
+        it('should reset the IVA selection when another user is selected', async () => {
+          component.selectUser(testUser2);
+          await fixture.whenStable();
+          expect(component.selectedIvaId()).toBeUndefined();
+          expect(component.ivaSelectionDone()).toBe(false);
+          expect(
+            screen.queryByRole('button', { name: /create upload grant/i }),
+          ).not.toBeInTheDocument();
+        });
+
+        it('should keep the IVA selection while the user stays the same', async () => {
+          component.selectUser(testUser);
+          await fixture.whenStable();
+          expect(component.selectedIvaId()).toBe(testIvas[0].id);
+        });
       });
     });
   });

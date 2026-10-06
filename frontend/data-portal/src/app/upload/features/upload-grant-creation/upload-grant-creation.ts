@@ -10,6 +10,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   OnInit,
   signal,
 } from '@angular/core';
@@ -93,10 +94,13 @@ export class UploadGrantCreationComponent implements OnInit {
   selectedUser = signal<DisplayUser | null>(null);
 
   /**
-   * The IVA ID selected for the grant.
+   * The IVA ID selected for the grant, reset when the selected user changes.
    * `undefined` means the user has not yet made a choice.
    */
-  selectedIvaId = signal<string | undefined>(undefined);
+  selectedIvaId = linkedSignal<DisplayUser | null, string | undefined>({
+    source: this.selectedUser,
+    computation: () => undefined,
+  });
 
   /** Whether the grant creation request is in flight. */
   isSubmitting = signal(false);
@@ -199,10 +203,9 @@ export class UploadGrantCreationComponent implements OnInit {
       this.datesForm().valid(),
   );
 
-  /** When the selected user changes, reload their IVAs and reset the IVA selection. */
+  /** When the selected user changes, load their IVAs. */
   #userChangedEffect = effect(() => {
     const user = this.selectedUser();
-    this.selectedIvaId.set(undefined);
     if (user) {
       this.#ivaService.loadUserIvas(user.id);
     }
