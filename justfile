@@ -764,10 +764,13 @@ up profile="": (demo-load profile)
     fi
     just demo-template
     echo "installing — this waits for every workload to become ready, a few minutes"
+    # The API server warns about every int32/int64 format in the Envoy Gateway CRDs,
+    # dozens of lines that say nothing about this install; the filter drops only those.
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
       ${extra[@]+"${extra[@]}"} \
-      --kube-context kind-ghga --wait --timeout 15m
+      --kube-context kind-ghga --wait --timeout 15m \
+      2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
 
@@ -848,7 +851,8 @@ testbed-up profile="": (demo-load profile)
       -f deploy/charts/ghga-demo/values-artifacts.yaml \
       -f deploy/charts/ghga-demo/values-testbed.yaml \
       ${extra[@]+"${extra[@]}"} \
-      --kube-context kind-ghga --wait --timeout 15m
+      --kube-context kind-ghga --wait --timeout 15m \
+      2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
 
 # The suite imports ghga-datasteward-kit and runs it and ghga-connector as CLIs, so both
