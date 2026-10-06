@@ -4,10 +4,9 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { render, RenderResult, screen } from '@testing-library/angular';
+
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
@@ -15,7 +14,6 @@ import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
-import { fakeActivatedRoute } from '../../../../mocks/route';
 import { SearchResultComponent } from '../search-result/search-result';
 import { SearchResultListComponent } from './search-result-list';
 
@@ -59,35 +57,40 @@ class MockIvaService {
 }
 
 describe('SearchResultListComponent', () => {
-  let component: SearchResultListComponent;
-  let fixture: ComponentFixture<SearchResultListComponent>;
+  let result: RenderResult<SearchResultListComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [SearchResultListComponent],
+    result = await render(SearchResultListComponent, {
       providers: [
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
         { provide: IvaService, useClass: MockIvaService },
       ],
-    })
-      .overrideComponent(SearchResultComponent, {
-        set: {
+      childComponentOverrides: [
+        {
+          component: SearchResultComponent,
           providers: [
-            { provide: ActivatedRoute, useValue: fakeActivatedRoute },
             { provide: AuthService, useClass: MockAuthService },
             { provide: AccessRequestService, useClass: MockAccessRequestService },
             { provide: MetadataService, useClass: MockMetadataService },
           ],
         },
-      })
-      .compileComponents();
-
-    fixture = TestBed.createComponent(SearchResultListComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      ],
+      routes: [],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should show a panel for every search result', () => {
+    for (const hit of searchResults.hits) {
+      const header = screen.getByRole('button', { name: new RegExp(`^${hit.id_}`) });
+      expect(header).toHaveAttribute('aria-expanded', 'false');
+    }
+  });
+
+  it('should show the paginator with the total number of results', () => {
+    expect(screen.getByText('1 – 10 of 26')).toBeInTheDocument();
   });
 });

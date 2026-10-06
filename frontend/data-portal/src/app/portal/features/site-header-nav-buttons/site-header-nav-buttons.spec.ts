@@ -4,10 +4,8 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { ActivatedRoute } from '@angular/router';
-import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AuthService } from '@app/auth/services/auth';
 import { SiteHeaderNavButtonsComponent } from './site-header-nav-buttons';
 
@@ -19,24 +17,30 @@ class MockAuthService {
 }
 
 describe('SiteHeaderNavButtonsComponent', () => {
-  let component: SiteHeaderNavButtonsComponent;
-  let fixture: ComponentFixture<SiteHeaderNavButtonsComponent>;
+  let result: RenderResult<SiteHeaderNavButtonsComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [SiteHeaderNavButtonsComponent],
-      providers: [
-        { provide: AuthService, useClass: MockAuthService },
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
-      ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(SiteHeaderNavButtonsComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    result = await render(SiteHeaderNavButtonsComponent, {
+      providers: [{ provide: AuthService, useClass: MockAuthService }],
+      routes: [],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should show the navigation links', () => {
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Browse Data' })).toHaveAttribute(
+      'href',
+      '/browse',
+    );
+  });
+
+  it('should show the admin menu for data stewards', () => {
+    expect(
+      screen.getByRole('button', { name: 'Administration menu' }),
+    ).toBeInTheDocument();
   });
 });

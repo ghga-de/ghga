@@ -5,11 +5,9 @@
  */
 
 import { Component } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { ActivatedRoute, RouterModule } from '@angular/router';
 import { searchResults } from '@app/../mocks/data';
-import { fakeActivatedRoute } from '@app/../mocks/route';
 import { ConfigService } from '@app/shared/services/config';
 import { MetadataSearchService } from '../../services/metadata-search';
 import { MetadataBrowserFilterComponent } from '../metadata-browser-filter/metadata-browser-filter';
@@ -45,7 +43,7 @@ class MockMetadataSearchService {
 class MockSearchResultListComponent {}
 
 /**
- * Mock SearchResultListComponent as needed for the metadata browser
+ * Mock MetadataBrowserFilterComponent as needed for the metadata browser
  */
 @Component({
   selector: 'app-metadata-browser-filter',
@@ -54,41 +52,41 @@ class MockSearchResultListComponent {}
 class MockMetadataBrowserFilterComponent {}
 
 describe('MetadataBrowserComponent', () => {
-  let component: MetadataBrowserComponent;
-  let fixture: ComponentFixture<MetadataBrowserComponent>;
+  let result: RenderResult<MetadataBrowserComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [MetadataBrowserComponent],
+    result = await render(MetadataBrowserComponent, {
       providers: [
         { provide: ConfigService, useClass: MockConfigService },
         { provide: MetadataSearchService, useClass: MockMetadataSearchService },
-        RouterModule,
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
-    })
-      .overrideComponent(MetadataBrowserComponent, {
-        remove: {
-          imports: [SearchResultListComponent, MetadataBrowserFilterComponent],
+      importOverrides: [
+        { replace: SearchResultListComponent, with: MockSearchResultListComponent },
+        {
+          replace: MetadataBrowserFilterComponent,
+          with: MockMetadataBrowserFilterComponent,
         },
-        add: {
-          imports: [MockSearchResultListComponent, MockMetadataBrowserFilterComponent],
-        },
-      })
-      .compileComponents();
-
-    fixture = TestBed.createComponent(MetadataBrowserComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      ],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should show the heading', () => {
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Browse Data' }),
+    ).toBeInTheDocument();
   });
 
   it('should show total datasets', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).toContain('26');
+    expect(screen.getByText('Total Datasets:')).toBeInTheDocument();
+    expect(screen.getByText('26')).toBeInTheDocument();
+  });
+
+  it('should show the filter and the search result list', () => {
+    expect(screen.getByText('Mock Metadata Browser Filter')).toBeInTheDocument();
+    expect(screen.getByText('Mock Search Result List')).toBeInTheDocument();
   });
 });

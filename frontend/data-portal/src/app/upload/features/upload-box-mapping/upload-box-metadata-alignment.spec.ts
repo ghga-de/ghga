@@ -5,9 +5,10 @@
  */
 
 import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { UploadBoxMetadataAlignmentComponent } from './upload-box-metadata-alignment';
 
@@ -73,63 +74,79 @@ class MockUploadBoxService {
 }
 
 /**
- * Build a fake file input change event whose file resolves to the given text.
- * @param text - the text content the file should yield
- * @returns a change event usable with onFileSelected
+ * Upload a metadata file with the given content through the file picker.
+ * @param container - the element the component was rendered into
+ * @param text - the text content of the uploaded file
  */
-function fileEvent(text: string): Event {
-  const file = {
-    name: 'metadata.json',
-    text: () => Promise.resolve(text),
-  } as unknown as File;
-  return { target: { files: [file], value: '' } } as unknown as Event;
+async function uploadMetadata(container: Element, text: string): Promise<void> {
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const file = new File([text], 'metadata.json', { type: 'application/json' });
+  await userEvent.upload(input, file);
 }
 
 describe('UploadBoxMetadataAlignmentComponent', () => {
+  let result: RenderResult<UploadBoxMetadataAlignmentComponent>;
   let component: UploadBoxMetadataAlignmentComponent;
-  let fixture: ComponentFixture<UploadBoxMetadataAlignmentComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [UploadBoxMetadataAlignmentComponent],
+    result = await render(UploadBoxMetadataAlignmentComponent, {
       providers: [{ provide: UploadBoxService, useClass: MockUploadBoxService }],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(UploadBoxMetadataAlignmentComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+    });
+    component = result.fixture.componentInstance;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(screen.getByRole('button', { name: /upload metadata file/i })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Alignment' })).toBeNull();
   });
 
   it('reports alignment for a valid metadata file', async () => {
-    await component.onFileSelected(fileEvent(JSON.stringify(VALID_METADATA)));
+    await uploadMetadata(result.container, JSON.stringify(VALID_METADATA));
+
+    expect(await screen.findByText('My study')).toBeVisible();
+    expect(screen.getByText('metadata.json')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Alignment' })).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: /choose a different file/i }),
+    ).toBeVisible();
+    expect(screen.getByText(/unmatched\.fastq\.gz/)).toBeVisible();
+    expect(screen.getByText('sample-2.fastq.gz')).toBeVisible();
 
     expect(component.parseError()).toBeUndefined();
     expect(component.uploadedMetadata()?.study.title).toBe('My study');
 
-    const result = component.alignment();
-    expect(result?.field).toBe('name');
-    expect(result?.matchCount).toBe(1);
-    expect(result?.unmatchedMetadata).toEqual([
+    const alignment = component.alignment();
+    expect(alignment?.field).toBe('name');
+    expect(alignment?.matchCount).toBe(1);
+    expect(alignment?.unmatchedMetadata).toEqual([
       { alias: 'alias-2', name: 'unmatched.fastq.gz' },
     ]);
-    expect(result?.unmatchedBoxFiles.map((f) => f.id)).toEqual(['file-2']);
+    expect(alignment?.unmatchedBoxFiles.map((f) => f.id)).toEqual(['file-2']);
   });
 
   it('reports an error for invalid JSON', async () => {
-    await component.onFileSelected(fileEvent('{ not json'));
+    await uploadMetadata(result.container, '{ not json');
+
+    expect(
+      await screen.findByText('The file does not contain valid JSON.'),
+    ).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Alignment' })).toBeNull();
 
     expect(component.uploadedMetadata()).toBeUndefined();
     expect(component.parseError()).toBe('The file does not contain valid JSON.');
   });
 
   it('reports an error for a metadata file with the wrong shape', async () => {
-    await component.onFileSelected(fileEvent(JSON.stringify({ studies: [] })));
+    await uploadMetadata(result.container, JSON.stringify({ studies: [] }));
+
+    expect(
+      await screen.findByRole('button', { name: /choose a different file/i }),
+    ).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Alignment' })).toBeNull();
 
     expect(component.uploadedMetadata()).toBeUndefined();
     expect(component.parseError()).toBeDefined();
+    expect(screen.getByText(component.parseError()!)).toBeVisible();
   });
 });

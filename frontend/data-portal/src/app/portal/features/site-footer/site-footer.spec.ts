@@ -4,27 +4,36 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
-import { fakeActivatedRoute } from '@app/../mocks/route';
+import { render, RenderResult, screen } from '@testing-library/angular';
+
 import { SiteFooterComponent } from './site-footer';
 
 describe('SiteFooterComponent', () => {
-  let component: SiteFooterComponent;
-  let fixture: ComponentFixture<SiteFooterComponent>;
+  let result: RenderResult<SiteFooterComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [SiteFooterComponent],
-      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(SiteFooterComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    result = await render(SiteFooterComponent, { routes: [] });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should contain the footer navigation with its links', () => {
+    const nav = screen.getByRole('navigation', { name: 'Footer navigation' });
+    expect(nav).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Data Portal Home Page' })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    expect(screen.getByRole('link', { name: 'Browse Data' })).toHaveAttribute(
+      'href',
+      '/browse',
+    );
+  });
+
+  it('should show the copyright notice for the current year', () => {
+    const year = new Date().getFullYear();
+    expect(screen.getByText(`©${year} GHGA. All Rights Reserved.`)).toBeInTheDocument();
   });
 });

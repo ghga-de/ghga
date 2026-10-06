@@ -62,7 +62,6 @@ describe('MetadataBrowserFilterComponent', () => {
     const routerSpy = vitest.spyOn(router, 'navigate');
     await userEvent.type(searchInput, 'test query');
     await userEvent.type(searchInput, '{Enter}');
-    fixture.detectChanges();
     await fixture.whenStable();
     expect(routerSpy).toHaveBeenCalledWith(
       [],
@@ -78,7 +77,6 @@ describe('MetadataBrowserFilterComponent', () => {
     });
     searchInput.focus();
     await userEvent.keyboard('opt');
-    fixture.detectChanges();
     await fixture.whenStable();
     const autoCompleteOptions = screen.getAllByRole('option');
     expect(autoCompleteOptions.length).toBe(9);

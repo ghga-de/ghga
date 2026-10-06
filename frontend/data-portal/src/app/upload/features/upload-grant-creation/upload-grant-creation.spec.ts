@@ -195,7 +195,6 @@ describe('UploadGrantCreationComponent', () => {
     beforeEach(async () => {
       userService.setUsers([testUser, testUser2]);
       component.searchQuery.set('john');
-      fixture.detectChanges();
       await fixture.whenStable();
     });
 
@@ -210,7 +209,6 @@ describe('UploadGrantCreationComponent', () => {
     describe('after selecting a user', () => {
       beforeEach(async () => {
         component.selectUser(testUser);
-        fixture.detectChanges();
         await fixture.whenStable();
       });
 
@@ -239,7 +237,6 @@ describe('UploadGrantCreationComponent', () => {
       describe('after clearing the user', () => {
         beforeEach(async () => {
           component.clearUser();
-          fixture.detectChanges();
           await fixture.whenStable();
         });
 
@@ -253,7 +250,6 @@ describe('UploadGrantCreationComponent', () => {
       describe('after selecting an IVA', () => {
         beforeEach(async () => {
           component.selectedIvaId.set(testIvas[0].id);
-          fixture.detectChanges();
           await fixture.whenStable();
         });
 

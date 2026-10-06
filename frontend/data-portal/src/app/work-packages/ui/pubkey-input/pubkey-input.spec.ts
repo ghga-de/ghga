@@ -26,7 +26,7 @@ describe('PubkeyFieldComponent', () => {
     // Initialize the value signal as required by FormValueControl
     component.value.set('');
 
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -42,17 +42,17 @@ describe('PubkeyFieldComponent', () => {
     expect(component.hintText()).toContain('so that we can encrypt your data.');
   });
 
-  it('should allow decrypt context in hint text', () => {
+  it('should allow decrypt context in hint text', async () => {
     fixture.componentRef.setInput('hintAction', 'decrypt');
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.hintText()).toContain('so that we can decrypt your data.');
   });
 
-  it('should prefer custom hint over generated hint text', () => {
+  it('should prefer custom hint over generated hint text', async () => {
     fixture.componentRef.setInput('hint', 'Custom key hint');
     fixture.componentRef.setInput('hintAction', 'decrypt');
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(component.hintText()).toBe('Custom key hint');
   });

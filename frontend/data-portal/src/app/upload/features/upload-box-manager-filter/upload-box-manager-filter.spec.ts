@@ -88,7 +88,6 @@ describe('UploadBoxManagerFilterComponent', () => {
 
   it('should hide filter controls when no upload boxes are loaded', async () => {
     uploadBoxService.setUploadBoxes([]);
-    fixture.detectChanges();
     await fixture.whenStable();
 
     const filterButton = screen.queryByRole('button', {

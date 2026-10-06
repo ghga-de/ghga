@@ -4,39 +4,29 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
 import { PageNotFoundComponent } from './page-not-found';
 
 describe('PageNotFoundComponent', () => {
-  let component: PageNotFoundComponent;
-  let fixture: ComponentFixture<PageNotFoundComponent>;
+  let result: RenderResult<PageNotFoundComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [PageNotFoundComponent],
-      providers: [],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(PageNotFoundComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    result = await render(PageNotFoundComponent);
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
   });
 
   it('should render the correct content in the <h1> tag', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const h1 = compiled.querySelector('h1');
-    expect(h1?.textContent).toBe('Page not found');
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent(/^Page not found$/);
   });
 
   it('should contain the correct description text', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const p = compiled.querySelector('p');
-    expect(p?.textContent).toContain(
+    const paragraph = screen.getByRole('paragraph');
+    expect(paragraph).toHaveTextContent(
       "Sorry, we can't seem to find the page you're looking for",
     );
   });

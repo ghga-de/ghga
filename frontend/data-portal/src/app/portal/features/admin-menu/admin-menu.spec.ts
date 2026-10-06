@@ -4,31 +4,36 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 
-import { ActivatedRoute } from '@angular/router';
 import { AdminMenuComponent } from './admin-menu';
 
-const fakeActivatedRoute = {
-  snapshot: { data: {}, url: [{ path: 'iva-manager' }] },
-} as ActivatedRoute;
-
 describe('AdminMenuComponent', () => {
-  let component: AdminMenuComponent;
-  let fixture: ComponentFixture<AdminMenuComponent>;
+  let result: RenderResult<AdminMenuComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AdminMenuComponent],
-      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(AdminMenuComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    result = await render(AdminMenuComponent, { routes: [] });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should show the administration menu button', () => {
+    const button = screen.getByRole('button', { name: 'Administration menu' });
+    expect(button).toHaveTextContent('Admin');
+  });
+
+  it('should open the menu with all items on click', async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Administration menu' }));
+    const items = await screen.findAllByRole('menuitem');
+    expect(items.map((item) => item.textContent?.trim())).toEqual([
+      'User Manager',
+      'IVA Manager',
+      'Access Request Manager',
+      'Access Grant Manager',
+      'Upload Box Manager',
+    ]);
   });
 });

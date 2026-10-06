@@ -4,12 +4,9 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { render, RenderResult, screen } from '@testing-library/angular';
 import { datasetSummary, searchResults } from '@app/../mocks/data';
-import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
@@ -35,56 +32,51 @@ class MockIvaService {
 }
 
 describe('DatasetSummaryComponent', () => {
-  let component: DatasetSummaryComponent;
-  let fixture: ComponentFixture<DatasetSummaryComponent>;
+  let result: RenderResult<DatasetSummaryComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [DatasetSummaryComponent],
+    result = await render(DatasetSummaryComponent, {
+      inputs: { hit: searchResults.hits.at(0)!, summary: datasetSummary },
       providers: [
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: AuthService, useClass: MockAuthService },
         { provide: IvaService, useClass: MockIvaService },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(DatasetSummaryComponent);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('hit', searchResults.hits.at(0));
-    fixture.componentRef.setInput('summary', datasetSummary);
-    await fixture.whenStable();
+      routes: [],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
   });
 
   it('should show accession and title', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).toContain('GHGAD12345678901234');
-    expect(text).toContain('Test dataset for details');
-    expect(text).toContain('EGA Dataset');
+    expect(screen.getByText('GHGAD12345678901234')).toBeInTheDocument();
+    expect(screen.getByText('Test dataset for details')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^EGA Dataset/ })).toHaveAttribute(
+      'href',
+      'https://ega-archive.org/datasets/EGAD12345678901',
+    );
+    expect(screen.getByText('EGA ID:')).toBeInTheDocument();
   });
 
   it('should not show ega details and button for empty string ega accession', async () => {
-    fixture.componentRef.setInput('hit', searchResults.hits.at(3));
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await result.rerender({
+      inputs: { hit: searchResults.hits.at(3)! },
+      partialUpdate: true,
+    });
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).not.toContain('EGA Dataset');
+    expect(screen.queryByRole('link', { name: /^EGA Dataset/ })).toBeNull();
+    expect(screen.queryByText('EGA ID:')).toBeNull();
   });
 
   it('should not show ega details and button for undefined ega accession', async () => {
-    fixture.componentRef.setInput('hit', searchResults.hits.at(4));
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await result.rerender({
+      inputs: { hit: searchResults.hits.at(4)! },
+      partialUpdate: true,
+    });
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).not.toContain('EGA Dataset');
+    expect(screen.queryByRole('link', { name: /^EGA Dataset/ })).toBeNull();
+    expect(screen.queryByText('EGA ID:')).toBeNull();
   });
 });

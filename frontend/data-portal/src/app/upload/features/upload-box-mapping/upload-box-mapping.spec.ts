@@ -204,9 +204,7 @@ describe('UploadBoxMappingComponent', () => {
     fixture = TestBed.createComponent(UploadBoxMappingComponent);
     fixture.componentRef.setInput('box', TEST_BOX);
     component = fixture.componentInstance;
-    fixture.detectChanges();
     await fixture.whenStable();
-    fixture.detectChanges();
   }
 
   beforeEach(async () => {
@@ -312,7 +310,6 @@ describe('UploadBoxMappingComponent', () => {
     mockDialog.open.mockReturnValueOnce({ afterClosed: () => of(false) });
 
     component.pendingMappedField.set('name');
-    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(mockDialog.open).toHaveBeenCalled();
@@ -322,7 +319,6 @@ describe('UploadBoxMappingComponent', () => {
 
     mockDialog.open.mockReturnValueOnce({ afterClosed: () => of(true) });
     component.pendingMappedField.set('name');
-    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(component.committedMappedField()).toBe('name');

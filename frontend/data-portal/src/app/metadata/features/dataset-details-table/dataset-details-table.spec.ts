@@ -33,10 +33,10 @@ describe('DatasetDetailsTableComponent', () => {
   let component: DatasetDetailsTableComponent;
   let fixture: ComponentFixture<DatasetDetailsTableComponent>;
 
-  const setInputs = () => {
+  const setInputs = async () => {
     fixture.componentRef.setInput('tableName', 'samples');
     fixture.componentRef.setInput('data', datasetDetails.samples);
-    fixture.detectChanges();
+    await fixture.whenStable();
   };
 
   const openExpansionPanel = async () => {
@@ -45,7 +45,6 @@ describe('DatasetDetailsTableComponent', () => {
       name: /List of samples \(\d+ total\)/,
     });
     header.click();
-    fixture.detectChanges();
     await fixture.whenStable();
   };
 
@@ -63,7 +62,6 @@ describe('DatasetDetailsTableComponent', () => {
     const input = getFilterInput();
     input.value = value;
     input.dispatchEvent(new Event('keyup')); // template uses (keyup)="applyFilter($event)"
-    fixture.detectChanges();
     await fixture.whenStable();
   };
 
@@ -85,7 +83,7 @@ describe('DatasetDetailsTableComponent', () => {
   });
 
   it('should render the correct header text in the UI for samples', async () => {
-    setInputs();
+    await setInputs();
 
     const headerEl = fixture.nativeElement.querySelector(
       'mat-expansion-panel-header',
@@ -95,7 +93,7 @@ describe('DatasetDetailsTableComponent', () => {
   });
 
   it('should render all rows initially, then filter rows in the UI by substring', async () => {
-    setInputs();
+    await setInputs();
     await openExpansionPanel();
 
     // initially: 3 rows rendered
@@ -112,7 +110,7 @@ describe('DatasetDetailsTableComponent', () => {
   });
 
   it('should trim + lowercase the filter value (verified via UI filtering)', async () => {
-    setInputs();
+    await setInputs();
     await openExpansionPanel();
 
     await typeIntoFilter('   TeSt TiSsUe 2   ');
@@ -123,7 +121,7 @@ describe('DatasetDetailsTableComponent', () => {
   });
 
   it('should reset UI filtering when filter is cleared', async () => {
-    setInputs();
+    await setInputs();
     await openExpansionPanel();
 
     await typeIntoFilter('01235');
@@ -134,7 +132,7 @@ describe('DatasetDetailsTableComponent', () => {
   });
 
   it('should show a clear button when filter has value and clear on click', async () => {
-    setInputs();
+    await setInputs();
     await openExpansionPanel();
 
     const getClearButton = (): HTMLButtonElement | null =>
@@ -146,7 +144,6 @@ describe('DatasetDetailsTableComponent', () => {
 
     // Type -> filter applies + button appears
     await typeIntoFilter('01235');
-    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(getClearButton()).not.toBeNull();
@@ -154,7 +151,6 @@ describe('DatasetDetailsTableComponent', () => {
 
     // Click -> filter cleared + all rows back + button hidden
     getClearButton()!.click();
-    fixture.detectChanges();
     await fixture.whenStable();
 
     const input = getFilterInput();
@@ -166,7 +162,6 @@ describe('DatasetDetailsTableComponent', () => {
   it('should show empty state and hide filter when input data is empty', async () => {
     fixture.componentRef.setInput('tableName', 'samples');
     fixture.componentRef.setInput('data', []);
-    fixture.detectChanges();
     await fixture.whenStable();
 
     // open panel to render lazy content
@@ -185,7 +180,7 @@ describe('DatasetDetailsTableComponent', () => {
   });
 
   it('should keep filter visible and show empty state when filtering yields no results', async () => {
-    setInputs();
+    await setInputs();
     await openExpansionPanel();
 
     // Type something that yields no matches
@@ -212,7 +207,6 @@ describe('DatasetDetailsTableComponent', () => {
 
     // Clicking clear restores all rows
     clearBtn!.click();
-    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(getFilterInput().value).toBe('');

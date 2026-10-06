@@ -136,25 +136,25 @@ describe('UserUploadGrantsListComponent', () => {
 
   it('should show a loading indicator while grants are loading', async () => {
     uploadBoxService.setLoading(true);
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(document.querySelector('[role="loader"]')).toBeTruthy();
   });
 
   it('should show an error message when grant loading fails', async () => {
     uploadBoxService.setError(new Error('backend error'));
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(screen.getByText(/error retrieving.*upload boxes/i)).toBeVisible();
   });
 
   it('should show an empty message when no open grants exist', async () => {
     uploadBoxService.setGrants([]);
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(screen.getByText(/no.*open Research Data Upload Boxes/i)).toBeVisible();
   });
 
   it('should render the box title for an open grant', async () => {
     uploadBoxService.setGrants([openGrant]);
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(screen.getByText('Test Upload Box')).toBeVisible();
   });
 
@@ -166,7 +166,7 @@ describe('UserUploadGrantsListComponent', () => {
       box_title: 'Locked Box',
     };
     uploadBoxService.setGrants([openGrant, lockedGrant]);
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(screen.getByText('Test Upload Box')).toBeVisible();
     expect(screen.queryByText('Locked Box')).not.toBeInTheDocument();
   });
@@ -179,14 +179,14 @@ describe('UserUploadGrantsListComponent', () => {
     };
 
     uploadBoxService.setGrants([openGrant, duplicateGrantForSameBox]);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(screen.getAllByText('Test Upload Box')).toHaveLength(1);
   });
 
   it('should open upload token dialog when Create token is clicked', async () => {
     uploadBoxService.setGrants([openGrant]);
-    fixture.detectChanges();
+    await fixture.whenStable();
     const btn = screen.getByRole('button', { name: /create an upload token/i });
     btn.click();
     expect(mockDialog.open).toHaveBeenCalledWith(
@@ -202,7 +202,7 @@ describe('UserUploadGrantsListComponent', () => {
   it('should open a confirmation dialog when Submit is clicked', async () => {
     mockConfirmationService.confirm.mockImplementation(() => undefined);
     uploadBoxService.setGrants([openGrant]);
-    fixture.detectChanges();
+    await fixture.whenStable();
     screen.getByRole('button', { name: /submit this upload box/i }).click();
     expect(mockConfirmationService.confirm).toHaveBeenCalled();
   });
@@ -214,7 +214,7 @@ describe('UserUploadGrantsListComponent', () => {
       );
       uploadBoxService.lockUploadBox.mockReturnValue(of(undefined));
       uploadBoxService.setGrants([openGrant]);
-      fixture.detectChanges();
+      await fixture.whenStable();
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
     });
@@ -243,7 +243,7 @@ describe('UserUploadGrantsListComponent', () => {
         throwError(() => new Error('Server error')),
       );
       uploadBoxService.setGrants([openGrant]);
-      fixture.detectChanges();
+      await fixture.whenStable();
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
     });
@@ -284,7 +284,7 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm
         .mockImplementationOnce(({ callback }) => callback(true))
         .mockImplementationOnce(({ callback }) => callback(true));
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
@@ -329,7 +329,7 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm
         .mockImplementationOnce(({ callback }) => callback(true))
         .mockImplementationOnce(({ callback }) => callback(true));
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
@@ -360,7 +360,7 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm
         .mockImplementationOnce(({ callback }) => callback(true))
         .mockImplementationOnce(({ callback }) => callback(false));
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
@@ -387,7 +387,7 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm
         .mockImplementationOnce(({ callback }) => callback(true))
         .mockImplementationOnce(({ callback }) => callback(true));
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
@@ -414,7 +414,7 @@ describe('UserUploadGrantsListComponent', () => {
       mockConfirmationService.confirm.mockImplementationOnce(({ callback }) =>
         callback(true),
       );
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
@@ -433,7 +433,7 @@ describe('UserUploadGrantsListComponent', () => {
         callback(false),
       );
       uploadBoxService.setGrants([openGrant]);
-      fixture.detectChanges();
+      await fixture.whenStable();
       screen.getByRole('button', { name: /submit this upload box/i }).click();
       await fixture.whenStable();
     });

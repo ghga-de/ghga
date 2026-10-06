@@ -6,9 +6,8 @@
 
 import { Clipboard } from '@angular/cdk/clipboard';
 import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { By } from '@angular/platform-browser';
 import {
   AccessGrantStatus,
   AccessGrantWithIva,
@@ -18,7 +17,9 @@ import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
-import { of, throwError } from 'rxjs';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
+import { of, Subject, throwError } from 'rxjs';
 import { DownloadWorkPackageDialogComponent } from './download-work-package-dialog';
 
 const TEST_DATASET: DatasetWithExpiration = {
@@ -71,9 +72,11 @@ class MockIvaService {
   loadUserIvas = vitest.fn();
 }
 
+const VALID_PUBKEY = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=';
+
 describe('DownloadWorkPackageDialogComponent', () => {
+  let result: RenderResult<DownloadWorkPackageDialogComponent>;
   let component: DownloadWorkPackageDialogComponent;
-  let fixture: ComponentFixture<DownloadWorkPackageDialogComponent>;
   let workPackageService: WorkPackageService;
   let notificationService: NotificationService;
   let clipboard: Clipboard;
@@ -81,6 +84,30 @@ describe('DownloadWorkPackageDialogComponent', () => {
   const dialogRef = {
     close: vitest.fn(),
   };
+
+  /**
+   * Get the text area for the file IDs
+   * @returns the file IDs text area
+   */
+  function filesInput(): HTMLElement {
+    return screen.getByRole('textbox', { name: 'File IDs' });
+  }
+
+  /**
+   * Get the input field for the public key
+   * @returns the public key input field
+   */
+  function pubkeyInput(): HTMLElement {
+    return screen.getByRole('textbox', { name: 'Your public Crypt4GH key' });
+  }
+
+  /**
+   * Get the button that generates the download token
+   * @returns the generate button
+   */
+  function generateButton(): HTMLElement {
+    return screen.getByRole('button', { name: /generate download token/i });
+  }
 
   beforeEach(async () => {
     const wpServiceMock = {
@@ -101,8 +128,7 @@ describe('DownloadWorkPackageDialogComponent', () => {
       copy: vitest.fn(() => true),
     };
 
-    await TestBed.configureTestingModule({
-      imports: [DownloadWorkPackageDialogComponent],
+    result = await render(DownloadWorkPackageDialogComponent, {
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: TEST_GRANT },
         { provide: MatDialogRef, useValue: dialogRef },
@@ -111,79 +137,86 @@ describe('DownloadWorkPackageDialogComponent', () => {
         { provide: Clipboard, useValue: clipboardMock },
         { provide: IvaService, useClass: MockIvaService },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(DownloadWorkPackageDialogComponent);
-    component = fixture.componentInstance;
+    });
+    component = result.fixture.componentInstance;
     workPackageService = TestBed.inject(WorkPackageService);
     notificationService = TestBed.inject(NotificationService);
     clipboard = TestBed.inject(Clipboard);
     vitest.clearAllMocks();
-    fixture.detectChanges();
-    await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Create a Download Token' }),
+    ).toBeVisible();
   });
 
   describe('initialization', () => {
     it('should load grant data', () => {
       expect(component['grant']).toBe(TEST_GRANT);
       expect(component['iva']()).toBe(TEST_GRANT.iva);
+      expect(screen.getByText(/300 days left/)).toBeVisible();
     });
 
-    it('should show an error message when the IVA could not be loaded', () => {
+    it('should show an error message when the IVA could not be loaded', async () => {
+      expect(screen.queryByText('Could not load IVA')).toBeNull();
+
       const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
       ivaService.userIvas.error.set(new Error('Internal server error'));
-      fixture.detectChanges();
+      await result.fixture.whenStable();
 
-      expect(fixture.nativeElement.textContent).toContain('Could not load IVA');
+      expect(screen.getByText('Could not load IVA')).toBeVisible();
     });
 
     it('should load dataset from service', () => {
       const dataset = component['dataset']();
       expect(dataset).toBeDefined();
       expect(dataset?.id).toBe('GHGAD12345678901234');
+      expect(screen.getByText(/GHGAD12345678901234/)).toBeVisible();
+      expect(screen.getByText(/Test Dataset/)).toBeVisible();
     });
 
     it('should initialize form with empty values', () => {
       expect(component['model']().files).toBe('');
       expect(component['model']().pubkey).toBe('');
+      expect(filesInput()).toHaveValue('');
+      expect(pubkeyInput()).toHaveValue('');
     });
 
     it('should have form invalid initially', () => {
       expect(component['downloadForm']().valid()).toBe(false);
+      expect(generateButton()).toBeDisabled();
     });
   });
 
   describe('onClose', () => {
-    it('should close dialog', () => {
-      component.onClose();
+    it('should close dialog', async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }));
       expect(dialogRef.close).toHaveBeenCalled();
     });
   });
 
   describe('onCreateToken', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Set up valid form data
-      component['model'].set({
-        files: 'file1, file2',
-        pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-      });
-      fixture.detectChanges();
+      await userEvent.type(filesInput(), 'file1, file2');
+      await userEvent.type(pubkeyInput(), VALID_PUBKEY);
+      await result.fixture.whenStable();
     });
 
-    it('should not create token if form is invalid', () => {
-      component['model'].set({ files: '', pubkey: '' });
-      fixture.detectChanges();
+    it('should not create token if form is invalid', async () => {
+      await userEvent.clear(filesInput());
+      await userEvent.clear(pubkeyInput());
+      await result.fixture.whenStable();
 
+      expect(generateButton()).toBeDisabled();
       component.onCreateToken();
 
       expect(workPackageService.createWorkPackage).not.toHaveBeenCalled();
     });
 
-    it('should create work package with correct data', () => {
+    it('should create work package with correct data', async () => {
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
       ).mockReturnValue(
@@ -194,7 +227,7 @@ describe('DownloadWorkPackageDialogComponent', () => {
         }),
       );
 
-      component.onCreateToken();
+      await userEvent.click(generateButton());
 
       expect(workPackageService.createWorkPackage).toHaveBeenCalledWith({
         dataset_id: 'GHGAD12345678901234',
@@ -204,12 +237,9 @@ describe('DownloadWorkPackageDialogComponent', () => {
       });
     });
 
-    it('should create work package with null file_ids when files input is empty', () => {
-      component['model'].set({
-        files: '',
-        pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-      });
-      fixture.detectChanges();
+    it('should create work package with null file_ids when files input is empty', async () => {
+      await userEvent.clear(filesInput());
+      await result.fixture.whenStable();
 
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
@@ -221,7 +251,7 @@ describe('DownloadWorkPackageDialogComponent', () => {
         }),
       );
 
-      component.onCreateToken();
+      await userEvent.click(generateButton());
 
       expect(workPackageService.createWorkPackage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -230,25 +260,20 @@ describe('DownloadWorkPackageDialogComponent', () => {
       );
     });
 
-    it('should display loading message during token creation', () => {
+    it('should display loading message during token creation', async () => {
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
-      ).mockReturnValue(
-        of({
-          id: 'wp-123',
-          token: 'test-token-456',
-          expires: '2026-02-01T00:00:00Z',
-        }),
-      );
+      ).mockReturnValue(new Subject());
 
-      component.onCreateToken();
-      fixture.detectChanges();
+      await userEvent.click(generateButton());
+      await result.fixture.whenStable();
 
       // Verify the service was called (token creation initiated)
       expect(workPackageService.createWorkPackage).toHaveBeenCalled();
+      expect(screen.getByText('Creating your download token...')).toBeVisible();
     });
 
-    it('should display token on successful creation', () => {
+    it('should display token on successful creation', async () => {
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
       ).mockReturnValue(
@@ -259,56 +284,67 @@ describe('DownloadWorkPackageDialogComponent', () => {
         }),
       );
 
-      component.onCreateToken();
-      fixture.detectChanges();
+      await userEvent.click(generateButton());
+      await result.fixture.whenStable();
 
-      const tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
-      expect(tokenElement?.nativeElement.textContent).toContain(
-        'wp-123:test-token-456',
-      );
+      expect(screen.getByText('wp-123:test-token-456')).toBeVisible();
       expect(notificationService.showSuccess).not.toHaveBeenCalled();
     });
 
-    it('should display error message on token creation failure', () => {
+    it('should display error message on token creation failure', async () => {
       const error = new Error('Network error');
       (
         workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
       ).mockReturnValue(throwError(() => error));
 
-      component.onCreateToken();
-      fixture.detectChanges();
+      await userEvent.click(generateButton());
+      await result.fixture.whenStable();
 
-      const errorElement = fixture.debugElement.query(By.css('.text-red-600'));
-      expect(errorElement?.nativeElement.textContent).toContain('could not be created');
+      expect(screen.getByText(/could not be created/)).toBeVisible();
       expect(notificationService.showError).toHaveBeenCalled();
     });
   });
 
   describe('resetToken', () => {
-    it('should clear token and error state from view', () => {
+    it('should clear token and error state from view', async () => {
       component['token'].set('test-token');
       component['tokenError'].set('test-error');
       component['tokenIsLoading'].set(true);
-      fixture.detectChanges();
+      await result.fixture.whenStable();
 
       component.resetToken();
-      fixture.detectChanges();
+      await result.fixture.whenStable();
 
       // Verify token is no longer displayed
-      const tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
-      expect(tokenElement).toBeFalsy();
+      expect(screen.queryByText('test-token')).not.toBeInTheDocument();
 
       // Verify error is no longer displayed
-      const errorElement = fixture.debugElement.query(By.css('div.text-red-600'));
-      expect(errorElement).toBeFalsy();
+      expect(screen.queryByText('test-error')).not.toBeInTheDocument();
+
+      // Verify the form is shown again
+      expect(generateButton()).toBeVisible();
+    });
+
+    it('should clear the error from view when trying again', async () => {
+      component['tokenError'].set('test-error');
+      await result.fixture.whenStable();
+      expect(screen.getByText('test-error')).toBeVisible();
+
+      await userEvent.click(screen.getByRole('button', { name: 'try again' }));
+      await result.fixture.whenStable();
+
+      expect(screen.queryByText('test-error')).not.toBeInTheDocument();
     });
   });
 
   describe('copyToken', () => {
-    it('should copy token to clipboard and show notification', () => {
+    it('should copy token to clipboard and show notification', async () => {
       component['token'].set('test-token-123');
+      await result.fixture.whenStable();
 
-      component.copyToken();
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Copy token to clipboard' }),
+      );
 
       expect(clipboard.copy).toHaveBeenCalledWith('test-token-123');
       expect(notificationService.showSuccess).toHaveBeenCalledWith(
@@ -316,10 +352,13 @@ describe('DownloadWorkPackageDialogComponent', () => {
       );
     });
 
-    it('should not copy if token is empty', () => {
+    it('should not copy if token is empty', async () => {
       component['token'].set('');
-      fixture.detectChanges();
+      await result.fixture.whenStable();
 
+      expect(
+        screen.queryByRole('button', { name: 'Copy token to clipboard' }),
+      ).not.toBeInTheDocument();
       component.copyToken();
 
       expect(clipboard.copy).not.toHaveBeenCalled();
@@ -328,21 +367,21 @@ describe('DownloadWorkPackageDialogComponent', () => {
   });
 
   describe('form validation', () => {
-    it('should be invalid with empty pubkey', () => {
-      component['model'].set({ files: 'file1', pubkey: '' });
-      fixture.detectChanges();
+    it('should be invalid with empty pubkey', async () => {
+      await userEvent.type(filesInput(), 'file1');
+      await result.fixture.whenStable();
 
       expect(component['downloadForm']().valid()).toBe(false);
+      expect(generateButton()).toBeDisabled();
     });
 
-    it('should be valid with valid pubkey', () => {
-      component['model'].set({
-        files: 'file1',
-        pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-      });
-      fixture.detectChanges();
+    it('should be valid with valid pubkey', async () => {
+      await userEvent.type(filesInput(), 'file1');
+      await userEvent.type(pubkeyInput(), VALID_PUBKEY);
+      await result.fixture.whenStable();
 
       expect(component['downloadForm']().valid()).toBe(true);
+      expect(generateButton()).toBeEnabled();
     });
   });
 });

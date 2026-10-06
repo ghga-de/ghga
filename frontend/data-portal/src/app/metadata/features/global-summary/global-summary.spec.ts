@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
 import { GlobalSummaryComponent } from './global-summary';
 
@@ -23,57 +23,64 @@ class MockMetadataStatsService {
 }
 
 describe('GlobalStatsComponent', () => {
-  let component: GlobalSummaryComponent;
-  let fixture: ComponentFixture<GlobalSummaryComponent>;
+  let result: RenderResult<GlobalSummaryComponent>;
 
   beforeEach(async () => {
-    await TestBed.overrideComponent(GlobalSummaryComponent, {
-      set: {
-        providers: [
-          { provide: MetadataStatsService, useClass: MockMetadataStatsService },
-        ],
-      },
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(GlobalSummaryComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    result = await render(GlobalSummaryComponent, {
+      configureTestBed: (testBed) =>
+        testBed.overrideComponent(GlobalSummaryComponent, {
+          set: {
+            providers: [
+              { provide: MetadataStatsService, useClass: MockMetadataStatsService },
+            ],
+          },
+        }),
+    });
   });
 
   /**
-   * Check the text content of a card
-   * @param index the number of the card
+   * Check the text content of the card with the given title
+   * @param title the start of the card title
    * @param expected the text to check for
    */
-  function expectCardText(index: number, expected: string): void {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const cards = compiled.querySelectorAll('mat-card');
-    expect(cards.length).toBe(4);
-    const card = cards[index];
-    const text = card.textContent?.replace(/\s+/g, ' ') ?? '';
+  function expectCardText(title: string, expected: string): void {
+    const card = screen.getByText(title, { exact: false }).closest('mat-card');
+    expect(card).not.toBeNull();
+    const text = card!.textContent?.replace(/\s+/g, ' ') ?? '';
     expect(text).toContain(expected);
   }
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should show the statistics with a table for three of the cards', () => {
+    expect(screen.getByRole('heading', { name: 'Statistics' })).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(3);
+    for (const name of ['Experiments', 'Individuals', 'Files']) {
+      expect(screen.getByRole('table', { name })).toBeInTheDocument();
+    }
   });
 
   it('should properly show total datasets', () => {
-    expectCardText(0, 'Total datasets: 252');
+    expectCardText('Total datasets:', 'Total datasets: 252');
   });
 
   it('should properly show experiments', () => {
     expectCardText(
-      1,
+      'Experiments:',
       'Experiments: 1,400 ExperimentsCountPlatform150HiSeq test50Illumina test 6002',
     );
   });
 
   it('should properly show individuals', () => {
-    expectCardText(2, 'Individuals: 5,432 IndividualsCountSex1,935Female2,358Male');
+    expectCardText(
+      'Individuals:',
+      'Individuals: 5,432 IndividualsCountSex1,935Female2,358Male',
+    );
   });
 
   it('should properly aggregate file types', () => {
-    expectCardText(3, 'Files: 703 FilesCountFile Type462bam212fastq12txt17zip');
+    expectCardText('Files:', 'Files: 703 FilesCountFile Type462bam212fastq12txt17zip');
   });
 });

@@ -125,7 +125,6 @@ describe('UploadBoxManagerComponent', () => {
 
   it('should show filters when upload boxes are loaded', async () => {
     uploadBoxService.setUploadBoxes([TEST_UPLOAD_BOX]);
-    fixture.detectChanges();
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;

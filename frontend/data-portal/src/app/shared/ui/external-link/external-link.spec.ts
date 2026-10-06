@@ -4,55 +4,51 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { ExternalLinkDirective } from './external-link';
 
 /**
- * Test component to apply the directive
+ * Create an anchor with the directive applied
+ * @param content - the inner HTML of the anchor
+ * @param ariaLabel - an aria-label the anchor already has
+ * @returns the anchor element
  */
-@Component({
-  template: `
-    <a id="plain" appExtLink>Test Link</a>
-    <a id="with-elements" appExtLink><span class="icon"></span>GHGA Website</a>
-    <a id="with-aria" appExtLink aria-label="Custom Label">Docs</a>
-  `,
-  imports: [ExternalLinkDirective],
-})
-class TestComponent {}
+async function createLink(
+  content: string,
+  ariaLabel?: string,
+): Promise<HTMLAnchorElement> {
+  const fixture = TestBed.createDirective(ExternalLinkDirective, { tagName: 'a' });
+  const anchor = fixture.nativeElement as HTMLAnchorElement;
+  anchor.innerHTML = content;
+  if (ariaLabel) anchor.setAttribute('aria-label', ariaLabel);
+  await fixture.whenStable();
+  return anchor;
+}
 
 describe('ExternalLinkDirective', () => {
-  let fixture: ComponentFixture<TestComponent>;
-
-  beforeEach(async () => {
-    fixture = TestBed.createComponent(TestComponent);
-    await fixture.whenStable();
-    fixture.detectChanges();
-  });
-
-  it('should add target="_blank"', () => {
-    const anchor = fixture.nativeElement.querySelector('#plain');
+  it('should add target="_blank"', async () => {
+    const anchor = await createLink('Test Link');
     expect(anchor.getAttribute('target')).toBe('_blank');
   });
 
-  it('should set aria-label with (new tab)', () => {
-    const anchor = fixture.nativeElement.querySelector('#plain');
+  it('should set aria-label with (new tab)', async () => {
+    const anchor = await createLink('Test Link');
     expect(anchor.getAttribute('aria-label')).toBe('Test Link (new tab)');
   });
 
-  it('should add rel="noreferrer noopener"', () => {
-    const anchor = fixture.nativeElement.querySelector('#plain');
+  it('should add rel="noreferrer noopener"', async () => {
+    const anchor = await createLink('Test Link');
     expect(anchor.getAttribute('rel')).toBe('noreferrer noopener');
   });
 
-  it('should preserve existing child elements', () => {
-    const anchor = fixture.nativeElement.querySelector('#with-elements');
+  it('should preserve existing child elements', async () => {
+    const anchor = await createLink('<span class="icon"></span>GHGA Website');
     expect(anchor.querySelector('.icon')).not.toBeNull();
     expect(anchor.textContent).toContain('GHGA Website');
   });
 
-  it('should preserve existing aria-label', () => {
-    const anchor = fixture.nativeElement.querySelector('#with-aria');
+  it('should preserve existing aria-label', async () => {
+    const anchor = await createLink('Docs', 'Custom Label');
     expect(anchor.getAttribute('aria-label')).toBe('Custom Label');
   });
 });

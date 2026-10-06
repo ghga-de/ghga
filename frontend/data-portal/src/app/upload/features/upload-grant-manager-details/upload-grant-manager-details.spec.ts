@@ -5,15 +5,14 @@
  */
 
 import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
-
-import { ActivatedRoute } from '@angular/router';
 import { uploadBoxes, uploadGrants } from '@app/../mocks/data';
-import { fakeActivatedRoute } from '@app/../mocks/route';
 import { IvaService } from '@app/ivas/services/iva';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
 import { UploadGrantManagerDetailsComponent } from './upload-grant-manager-details';
 
@@ -58,56 +57,65 @@ class MockIvaService {
 }
 
 describe('UploadGrantManagerDetailsComponent', () => {
+  let result: RenderResult<UploadGrantManagerDetailsComponent>;
   let component: UploadGrantManagerDetailsComponent;
-  let fixture: ComponentFixture<UploadGrantManagerDetailsComponent>;
 
   beforeEach(async () => {
     mockNavigationService.back.mockReset();
     mockDialog.open.mockReset();
     mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
 
-    await TestBed.configureTestingModule({
-      imports: [UploadGrantManagerDetailsComponent],
+    result = await render(UploadGrantManagerDetailsComponent, {
       providers: [
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: IvaService, useClass: MockIvaService },
         { provide: NavigationTrackingService, useValue: mockNavigationService },
         { provide: MatDialog, useValue: mockDialog },
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(UploadGrantManagerDetailsComponent);
-    fixture.componentRef.setInput('boxId', testBox.id);
-    fixture.componentRef.setInput('grantId', testGrant.id);
-    component = fixture.componentInstance;
-
-    await fixture.whenStable();
+      inputs: { boxId: testBox.id, grantId: testGrant.id },
+      routes: [],
+    });
+    component = result.fixture.componentInstance;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Upload Grant Detail' }),
+    ).toBeVisible();
   });
 
   it('should resolve the grant from the box grants', () => {
     expect(component.grant()).toEqual(testGrant);
+    expect(
+      screen.getByRole('link', {
+        name: `${testGrant.user_title} ${testGrant.user_name}`,
+      }),
+    ).toHaveAttribute('href', `/user-manager/${testGrant.user_id}`);
   });
 
   it('should resolve the upload box', () => {
     expect(component.box()).toEqual(testBox);
+    expect(screen.getByRole('link', { name: testBox.title })).toHaveAttribute(
+      'href',
+      `/upload-box-manager/${testBox.id}`,
+    );
   });
 
   it('should include a Grant created entry in the audit log', () => {
     const log = component.sortedLog();
     expect(log.some((entry) => entry.status === 'Grant created')).toBe(true);
+    expect(screen.getByText('Grant created')).toBeVisible();
   });
 
-  it('should show an error message when the IVA could not be loaded', () => {
+  it('should show an error message when the IVA could not be loaded', async () => {
+    expect(screen.queryByText(/The IVA could not be loaded/)).toBeNull();
+
     const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
     ivaService.ivaError.set(new Error('Internal server error'));
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('The IVA could not be loaded');
+    expect(screen.getByText(/The IVA could not be loaded/)).toBeVisible();
   });
 
   describe('revokeGrant()', () => {
@@ -115,22 +123,28 @@ describe('UploadGrantManagerDetailsComponent', () => {
       mockNavigationService.back.mockReset();
     });
 
-    it('should navigate back to the upload box details after successful revocation', () => {
+    it('should navigate back to the upload box details after successful revocation', async () => {
       mockDialog.open.mockReturnValue({ afterClosed: () => of(true) });
 
-      component.revokeGrant();
+      await userEvent.click(
+        screen.getByRole('button', { name: /revoke upload grant/i }),
+      );
 
+      expect(mockDialog.open).toHaveBeenCalled();
       expect(mockNavigationService.back).toHaveBeenCalledWith([
         '/upload-box-manager',
         testBox.id,
       ]);
     });
 
-    it('should stay on the page when revocation is cancelled', () => {
+    it('should stay on the page when revocation is cancelled', async () => {
       mockDialog.open.mockReturnValue({ afterClosed: () => of(false) });
 
-      component.revokeGrant();
+      await userEvent.click(
+        screen.getByRole('button', { name: /revoke upload grant/i }),
+      );
 
+      expect(mockDialog.open).toHaveBeenCalled();
       expect(mockNavigationService.back).not.toHaveBeenCalled();
     });
   });

@@ -62,7 +62,7 @@ async function createComponent(box: ResearchDataUploadBox = mockBox): Promise<{
 
   const service = TestBed.inject(UploadBoxService) as unknown as MockUploadBoxService;
   const fixture = TestBed.createComponent(UploadBoxEditDetailsDialogComponent);
-  fixture.detectChanges();
+  await fixture.whenStable();
   return { fixture, service };
 }
 
@@ -118,7 +118,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
     });
     await userEvent.clear(sizeInput);
     await userEvent.type(sizeInput, '1'); // below the 2 TiB already used
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(
       screen.getByText(/cannot be smaller than the currently used/i),
@@ -208,7 +208,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Changed');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(mockDialogRef.close).not.toHaveBeenCalled();
     expect(mockNotificationService.showError).toHaveBeenCalledWith(message);
@@ -227,7 +227,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
       await userEvent.clear(titleInput);
       await userEvent.type(titleInput, 'Changed');
       await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-      fixture.detectChanges();
+      await fixture.whenStable();
 
       expect(mockNotificationService.showError).toHaveBeenCalledWith(
         'An Upload Box with the same title already exists.',
@@ -246,7 +246,7 @@ describe('UploadBoxEditDetailsDialogComponent', () => {
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, 'Changed');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(mockNotificationService.showError).toHaveBeenCalledWith(
       'Upload Box could not be updated. Please try again.',

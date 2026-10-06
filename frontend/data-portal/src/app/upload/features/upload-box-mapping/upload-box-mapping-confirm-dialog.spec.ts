@@ -33,7 +33,6 @@ describe('UploadBoxMappingConfirmDialogComponent', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(UploadBoxMappingConfirmDialogComponent);
-    fixture.detectChanges();
     await fixture.whenStable();
   }
 
@@ -71,7 +70,7 @@ describe('UploadBoxMappingConfirmDialogComponent', () => {
     expect(confirmButton).toBeDisabled();
 
     await userEvent.click(checkbox);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(confirmButton).toBeEnabled();
   });
@@ -98,7 +97,7 @@ describe('UploadBoxMappingConfirmDialogComponent', () => {
         name: /i understand this action cannot be undone/i,
       }),
     );
-    fixture.detectChanges();
+    await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: /confirm and archive/i }));
 
     expect(mockDialogRef.close).toHaveBeenCalledWith(true);

@@ -6,15 +6,16 @@
 
 import { Clipboard } from '@angular/cdk/clipboard';
 import { signal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { By } from '@angular/platform-browser';
 import { IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
 import { NotificationService } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { UploadWorkPackageDialogComponent } from './upload-work-package-dialog';
 
@@ -61,9 +62,11 @@ class MockIvaService {
   loadUserIvas = vitest.fn();
 }
 
+const VALID_PUBKEY = 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=';
+
 describe('UploadWorkPackageDialogComponent', () => {
+  let result: RenderResult<UploadWorkPackageDialogComponent>;
   let component: UploadWorkPackageDialogComponent;
-  let fixture: ComponentFixture<UploadWorkPackageDialogComponent>;
   let workPackageService: WorkPackageService;
   let notificationService: NotificationService;
   let clipboard: Clipboard;
@@ -72,6 +75,30 @@ describe('UploadWorkPackageDialogComponent', () => {
   const dialogRef = {
     close: vitest.fn(),
   };
+
+  /**
+   * Get the input field for the public key
+   * @returns the public key input field
+   */
+  function pubkeyInput(): HTMLElement {
+    return screen.getByRole('textbox', { name: 'Your public Crypt4GH key' });
+  }
+
+  /**
+   * Get the button that generates the upload token
+   * @returns the generate button
+   */
+  function generateButton(): HTMLElement {
+    return screen.getByRole('button', { name: /generate upload token/i });
+  }
+
+  /**
+   * Enter a valid public key into the form
+   */
+  async function enterValidPubkey(): Promise<void> {
+    await userEvent.type(pubkeyInput(), VALID_PUBKEY);
+    await result.fixture.whenStable();
+  }
 
   beforeEach(async () => {
     const wpServiceMock = {
@@ -87,8 +114,7 @@ describe('UploadWorkPackageDialogComponent', () => {
       copy: vitest.fn(() => true),
     };
 
-    await TestBed.configureTestingModule({
-      imports: [UploadWorkPackageDialogComponent],
+    result = await render(UploadWorkPackageDialogComponent, {
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: TEST_GRANT },
         { provide: MatDialogRef, useValue: dialogRef },
@@ -97,61 +123,66 @@ describe('UploadWorkPackageDialogComponent', () => {
         { provide: Clipboard, useValue: clipboardMock },
         { provide: IvaService, useClass: MockIvaService },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(UploadWorkPackageDialogComponent);
-    component = fixture.componentInstance;
+    });
+    component = result.fixture.componentInstance;
     workPackageService = TestBed.inject(WorkPackageService);
     notificationService = TestBed.inject(NotificationService);
     clipboard = TestBed.inject(Clipboard);
     ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
     vitest.clearAllMocks();
-    fixture.detectChanges();
-    await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Create an Upload Token' }),
+    ).toBeVisible();
   });
 
   it('should initialize with the selected grant', () => {
     expect(component['grant']).toBe(TEST_GRANT);
+    expect(screen.getByText(/Test Upload Box/)).toBeVisible();
   });
 
-  it('should show an error message when the IVA could not be loaded', () => {
+  it('should show an error message when the IVA could not be loaded', async () => {
+    expect(screen.queryByText('Could not load IVA')).toBeNull();
+
     ivaService.errorSignal.set(new Error('Internal server error'));
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('Could not load IVA');
+    expect(screen.getByText('Could not load IVA')).toBeVisible();
   });
 
-  it('should close dialog', () => {
-    component.onClose();
+  it('should close dialog', async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(dialogRef.close).toHaveBeenCalled();
   });
 
   it('should not create token if form is invalid', () => {
-    component['model'].set({ pubkey: '' });
-    fixture.detectChanges();
+    expect(pubkeyInput()).toHaveValue('');
+    expect(generateButton()).toBeDisabled();
 
     component.onCreateToken();
 
     expect(workPackageService.createWorkPackage).not.toHaveBeenCalled();
   });
 
-  it('should not create token if IVA is missing', () => {
+  it('should not create token if IVA is missing', async () => {
+    await enterValidPubkey();
     ivaService.ivasSignal.set([]);
-    component['model'].set({
-      pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-    });
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
+    expect(screen.getByText('Missing IVA')).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: /generate upload token/i }),
+    ).not.toBeInTheDocument();
     component.onCreateToken();
 
     expect(workPackageService.createWorkPackage).not.toHaveBeenCalled();
   });
 
-  it('should not create token if IVA is unverified', () => {
+  it('should not create token if IVA is unverified', async () => {
+    await enterValidPubkey();
     ivaService.ivasSignal.set([
       {
         id: 'iva-123',
@@ -161,21 +192,19 @@ describe('UploadWorkPackageDialogComponent', () => {
         state: IvaState.Unverified,
       },
     ]);
-    component['model'].set({
-      pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-    });
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
+    expect(screen.getByText('Unverified IVA:')).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: /generate upload token/i }),
+    ).not.toBeInTheDocument();
     component.onCreateToken();
 
     expect(workPackageService.createWorkPackage).not.toHaveBeenCalled();
   });
 
-  it('should create upload work package with correct request data', () => {
-    component['model'].set({
-      pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-    });
-    fixture.detectChanges();
+  it('should create upload work package with correct request data', async () => {
+    await enterValidPubkey();
 
     (
       workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
@@ -187,7 +216,7 @@ describe('UploadWorkPackageDialogComponent', () => {
       }),
     );
 
-    component.onCreateToken();
+    await userEvent.click(generateButton());
 
     expect(workPackageService.createWorkPackage).toHaveBeenCalledWith({
       type: 'upload',
@@ -196,11 +225,8 @@ describe('UploadWorkPackageDialogComponent', () => {
     });
   });
 
-  it('should display upload token on successful creation', () => {
-    component['model'].set({
-      pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-    });
-    fixture.detectChanges();
+  it('should display upload token on successful creation', async () => {
+    await enterValidPubkey();
 
     (
       workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
@@ -212,64 +238,67 @@ describe('UploadWorkPackageDialogComponent', () => {
       }),
     );
 
-    component.onCreateToken();
-    fixture.detectChanges();
+    await userEvent.click(generateButton());
+    await result.fixture.whenStable();
 
     // Verify token is displayed
-    const tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
-    expect(tokenElement?.nativeElement.textContent).toContain('wp-123:test-token-456');
+    expect(screen.getByText('wp-123:test-token-456')).toBeVisible();
   });
 
-  it('should display error message on token creation failure', () => {
-    component['model'].set({
-      pubkey: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=',
-    });
-    fixture.detectChanges();
+  it('should display error message on token creation failure', async () => {
+    await enterValidPubkey();
 
     const error = new Error('Network error');
     (
       workPackageService.createWorkPackage as ReturnType<typeof vitest.fn>
     ).mockReturnValue(throwError(() => error));
 
-    component.onCreateToken();
-    fixture.detectChanges();
+    await userEvent.click(generateButton());
+    await result.fixture.whenStable();
 
-    const errorElement = fixture.debugElement.query(By.css('.text-red-600'));
-    expect(errorElement?.nativeElement.textContent).toContain('could not be created');
+    expect(screen.getByText(/could not be created/)).toBeVisible();
     expect(notificationService.showError).toHaveBeenCalled();
   });
 
-  it('should clear token state from view on reset', () => {
+  it('should clear token state from view on reset', async () => {
     component['token'].set('test-token');
     component['tokenError'].set('test-error');
     component['tokenIsLoading'].set(true);
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
     component.resetToken();
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
     // Verify token is no longer displayed
-    const tokenElement = fixture.debugElement.query(By.css('span.text-green-900'));
-    expect(tokenElement).toBeFalsy();
+    expect(screen.queryByText('test-token')).not.toBeInTheDocument();
 
     // Verify error is no longer displayed
-    const errorElement = fixture.debugElement.query(By.css('div.text-red-600'));
-    expect(errorElement).toBeFalsy();
+    expect(screen.queryByText('test-error')).not.toBeInTheDocument();
+
+    // Verify the form is shown again
+    expect(generateButton()).toBeVisible();
   });
 
-  it('should not copy if token is empty', () => {
+  it('should not copy if token is empty', async () => {
     component['token'].set('');
-    fixture.detectChanges();
+    await result.fixture.whenStable();
 
+    expect(
+      screen.queryByRole('button', { name: 'Copy token to clipboard' }),
+    ).not.toBeInTheDocument();
     component.copyToken();
 
     expect(clipboard.copy).not.toHaveBeenCalled();
     expect(notificationService.showSuccess).not.toHaveBeenCalled();
   });
-  it('should copy token to clipboard and show notification', () => {
-    component['token'].set('test-token-123');
 
-    component.copyToken();
+  it('should copy token to clipboard and show notification', async () => {
+    component['token'].set('test-token-123');
+    await result.fixture.whenStable();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Copy token to clipboard' }),
+    );
 
     expect(clipboard.copy).toHaveBeenCalledWith('test-token-123');
     expect(notificationService.showSuccess).toHaveBeenCalledWith(

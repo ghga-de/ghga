@@ -4,23 +4,44 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
+
+import { NotificationService } from '@app/shared/services/notification';
 import { WithCopyButton } from './with-copy-button';
 
 describe('WithCopyButton', () => {
-  let component: WithCopyButton;
-  let fixture: ComponentFixture<WithCopyButton>;
+  let result: RenderResult<WithCopyButton>;
+  const mockNotificationService = { showInfo: vitest.fn() };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [WithCopyButton],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(WithCopyButton);
-    component = fixture.componentInstance;
+    mockNotificationService.showInfo.mockClear();
+    result = await render(WithCopyButton, {
+      inputs: { value: 'some-long-identifier' },
+      providers: [{ provide: NotificationService, useValue: mockNotificationService }],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+  });
+
+  it('should show the value with a copy button', async () => {
+    expect(screen.getByTitle('some-long-identifier')).toHaveTextContent(
+      'some-long-identifier',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Copy full text to clipboard' }),
+    );
+    expect(mockNotificationService.showInfo).toHaveBeenCalledWith(
+      'The full text has been copied to clipboard',
+      1000,
+    );
+  });
+
+  it('should show N/A without a value', async () => {
+    await result.rerender({ inputs: { value: '' }, partialUpdate: true });
+    expect(screen.getByText('N/A')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

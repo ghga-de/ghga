@@ -4,11 +4,15 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { metadataGlobalSummary } from '@app/../mocks/data';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen, within } from '@testing-library/angular';
+
+import { searchResults, studyData } from '@app/../mocks/data';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { ConfigService } from '@app/shared/services/config';
 import { StudyDetailsComponent } from './study-details';
@@ -18,61 +22,93 @@ import { StudyDetailsComponent } from './study-details';
  */
 class MockMetadataService {
   study = {
-    value: () => metadataGlobalSummary.resource_stats,
+    value: () => studyData,
     isLoading: () => false,
     error: () => undefined,
+    hasValue: () => true,
   };
+  loadStudy = vitest.fn();
 }
 
 const mockConfig = {
-  base_url: 'https://portal.test',
-  ars_url: 'test/ars',
-  auth_url: '/test/auth',
-  dins_url: '/test/dins',
-  mass_url: '/test/mass',
-  metldata_url: '/test/metldata',
-  rs_url: '/test/rs',
-  rts_url: '/test/rts',
-  wps_url: '/test/wps',
-  wkvs_url: null,
-  ribbon_text: 'Test ribbon text',
-  max_facet_options: 7,
-  access_upfront_max_days: 180,
-  access_grant_min_days: 7,
-  access_grant_max_days: 730,
-  access_grant_max_extend: 5,
-  default_access_duration_days: 365,
-  oidc_client_id: 'test-oidc-client-id',
-  oidc_redirect_url: 'test/redirect',
-  oidc_scope: 'some scope',
-  oidc_authority_url: 'https://login.test',
-  oidc_authorization_url: 'test/authorize',
-  oidc_token_url: 'test/token',
-  oidc_userinfo_url: 'test/userinfo',
-  oidc_use_discovery: true,
-  oidc_account_url: 'https://account.test',
+  massUrl: '/test/mass',
+  rtsUrl: '/test/rts',
 };
 
+const STUDY_ID = studyData.accession;
+
+const DATASETS_URL =
+  '/test/mass/search?class_name=EmbeddedDataset' +
+  `&filter_by=study.accession&value=${STUDY_ID}&limit=100`;
+
 describe('StudyDetailsComponent', () => {
-  let component: StudyDetailsComponent;
-  let fixture: ComponentFixture<StudyDetailsComponent>;
+  let result: RenderResult<StudyDetailsComponent>;
+  let httpMock: HttpTestingController;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [StudyDetailsComponent],
+    result = await render(StudyDetailsComponent, {
+      inputs: { id: STUDY_ID },
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: MetadataService, useClass: MockMetadataService },
         { provide: ConfigService, useValue: mockConfig },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(StudyDetailsComponent);
-    component = fixture.componentInstance;
+      configureTestBed: (testBed) =>
+        testBed.overrideComponent(StudyDetailsComponent, {
+          set: {
+            providers: [{ provide: MetadataService, useClass: MockMetadataService }],
+          },
+        }),
+      routes: [],
+    });
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  /**
+   * Answer the request for the datasets of the study
+   * @param hits the datasets to respond with
+   */
+  async function flushDatasets(hits = searchResults.hits.slice(0, 2)): Promise<void> {
+    httpMock.expectOne(DATASETS_URL).flush({ hits, count: hits.length });
+    await result.fixture.whenStable();
+  }
+
+  it('should create', async () => {
+    expect(result.fixture.componentInstance).toBeTruthy();
+    await flushDatasets();
+  });
+
+  it('should load the study with the given id', async () => {
+    const metadata = result.debugElement.injector.get(MetadataService);
+    expect(metadata.loadStudy).toHaveBeenCalledWith(STUDY_ID);
+    await flushDatasets();
+  });
+
+  it('should show the study details', async () => {
+    await flushDatasets();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Study Details' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Test Study' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Download Metadata/ })).toHaveAttribute(
+      'href',
+      `/test/rts/studies/${STUDY_ID}`,
+    );
+  });
+
+  it('should list the datasets of the study', async () => {
+    await flushDatasets();
+    const table = screen.getByRole('table', {
+      name: `Datasets belonging to study ${STUDY_ID}`,
+    });
+    const link = within(table).getByRole('link', { name: 'GHGAD12345678901235' });
+    expect(link).toHaveAttribute('href', '/dataset/GHGAD12345678901235');
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
   });
 });

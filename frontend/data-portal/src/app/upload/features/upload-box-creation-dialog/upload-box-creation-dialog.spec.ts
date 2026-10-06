@@ -54,7 +54,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     ) as unknown as MockUploadBoxService;
     fixture = TestBed.createComponent(UploadBoxCreationDialogComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create', () => {
@@ -96,7 +96,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
     await userEvent.type(sizeInput, '2.5');
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeEnabled();
   });
@@ -114,7 +114,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     await userEvent.type(descriptionInput, 'Description');
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
   });
@@ -136,7 +136,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
     await userEvent.type(sizeInput, '0.0009');
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
   });
@@ -158,7 +158,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     await userEvent.click(locationSelect);
     await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
     await userEvent.type(sizeInput, '1000000.0001');
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
   });
@@ -221,7 +221,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Heidelberg 2' }));
     await userEvent.type(sizeInput, '0.5');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(mockDialogRef.close).not.toHaveBeenCalled();
     expect(mockNotificationService.showError).toHaveBeenCalledWith(
@@ -254,7 +254,7 @@ describe('UploadBoxCreationDialogComponent', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Heidelberg 2' }));
     await userEvent.type(sizeInput, '0.5');
     await userEvent.click(screen.getByRole('button', { name: /^ok$/i }));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(mockDialogRef.close).not.toHaveBeenCalled();
     expect(mockNotificationService.showError).toHaveBeenCalledWith(

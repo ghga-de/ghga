@@ -134,7 +134,7 @@ describe('UploadGrantRevocationDialogComponent', () => {
     });
 
     it('should display the revocation error message in the template', async () => {
-      fixture.detectChanges();
+      await fixture.whenStable();
       expect(screen.getByText(/grant revocation failed/i)).toBeVisible();
     });
   });

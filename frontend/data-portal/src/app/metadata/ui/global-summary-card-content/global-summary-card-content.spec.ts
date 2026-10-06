@@ -37,9 +37,9 @@ describe('GlobalSummaryCardContentComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show the correct data', () => {
+  it('should show the correct data', async () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    fixture.detectChanges();
+    await fixture.whenStable();
     const item = compiled.getElementsByTagName('td');
     expect(item.length).toBe(2);
     expect(item[0].textContent).toBe('20');
@@ -51,9 +51,9 @@ describe('GlobalSummaryCardContentComponent', () => {
     expect(caption.textContent).toBe('Test');
   });
 
-  it('should show the correct table headers', () => {
+  it('should show the correct table headers', async () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    fixture.detectChanges();
+    await fixture.whenStable();
     const item = compiled.getElementsByTagName('th');
     expect(item.length).toBe(2);
     expect(item[0].textContent).toBe('Count');
