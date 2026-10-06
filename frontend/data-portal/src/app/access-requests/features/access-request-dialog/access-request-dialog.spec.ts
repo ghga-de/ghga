@@ -4,8 +4,6 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { provideNativeDateAdapter } from '@angular/material/core';
 import {
   MAT_DIALOG_DATA,
@@ -14,6 +12,7 @@ import {
 } from '@angular/material/dialog';
 import { ConfigService } from '@app/shared/services/config';
 import { localDateToContractIsoUtc } from '@app/shared/utils/date-formats';
+import { render, screen } from '@testing-library/angular';
 import { AccessRequestDialogComponent } from './access-request-dialog';
 
 const mockDialogRef = {
@@ -39,28 +38,29 @@ const mockConfig = {
 
 describe('AccessRequestDialogComponent', () => {
   let component: AccessRequestDialogComponent;
-  let fixture: ComponentFixture<AccessRequestDialogComponent>;
 
   beforeEach(async () => {
     mockDialogRef.close.mockReset();
-    await TestBed.configureTestingModule({
-      imports: [AccessRequestDialogComponent, MatDialogModule],
+    const { fixture } = await render(AccessRequestDialogComponent, {
+      imports: [MatDialogModule],
       providers: [
         provideNativeDateAdapter(),
         { provide: MatDialogRef, useValue: mockDialogRef },
         { provide: MAT_DIALOG_DATA, useValue: mockDialogData },
         { provide: ConfigService, useValue: mockConfig },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(AccessRequestDialogComponent);
+      inputs: { datasetID: 'GHGAD12345678901234' },
+    });
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('datasetID', 'GHGAD12345678901234');
-    await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Request access for dataset GHGAD12345678901234',
+      }),
+    ).toBeVisible();
   });
 
   it('should submit with ISO UTC dates based on service-contract day boundaries', () => {

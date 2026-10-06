@@ -4,33 +4,49 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
-import { ActivatedRoute } from '@angular/router';
-import { fakeActivatedRoute } from '@app/../mocks/route';
+import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { accessGrants } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { AccessGrantManagerListComponent } from './access-grant-manager-list';
 
+/**
+ * Stand-in for the access grant details page the list navigates to
+ */
+@Component({ template: '' })
+class GrantDetailsStubComponent {}
+
 describe('AccessGrantManagerListComponent', () => {
-  let component: AccessGrantManagerListComponent;
-  let fixture: ComponentFixture<AccessGrantManagerListComponent>;
+  let result: RenderResult<AccessGrantManagerListComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [],
+    result = await render(AccessGrantManagerListComponent, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(AccessGrantManagerListComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      routes: [
+        { path: 'access-grant-manager/:id', component: GrantDetailsStubComponent },
+      ],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+    expect(
+      screen.getAllByRole('link', { name: accessGrants[0].dataset_id })[0],
+    ).toHaveAttribute('href', `/dataset/${accessGrants[0].dataset_id}`);
+  });
+
+  it('should navigate to the details of a grant', async () => {
+    const [details] = screen.getAllByRole('button', { name: 'View user details' });
+    await userEvent.click(details);
+    await result.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe(
+      `/access-grant-manager/${accessGrants[0].id}`,
+    );
   });
 });

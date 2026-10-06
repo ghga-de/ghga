@@ -8,15 +8,44 @@ import { DatePipe as CommonDatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { allIvasOfDoe } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
-import { UserService } from '@app/auth/services/user';
+import { UserStatus } from '@app/auth/models/user';
+import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaService } from '@app/ivas/services/iva';
 import { NavigationTrackingService } from '@app/shared/services/navigation';
+import { render, RenderResult, screen } from '@testing-library/angular';
 import { UserManagerComponent } from '../user-manager/user-manager';
 import { UserManagerDetailComponent } from './user-manager-detail';
+
+const JOHN_DOE: DisplayUser = {
+  id: '123',
+  name: 'John Doe',
+  displayName: 'Dr. John Doe',
+  title: 'Dr.',
+  email: 'john@example.com',
+  ext_id: 'ext123',
+  roles: ['data_steward'],
+  roleNames: ['Data Steward'],
+  status: UserStatus.active,
+  registration_date: '2023-01-01',
+  sortName: 'Doe, John, Dr.',
+};
+
+// cast because the portal's user roles do not include data contributors
+const JANE_SMITH = {
+  id: '456',
+  name: 'Jane Smith',
+  displayName: 'Jane Smith',
+  email: 'jane.smith@example.com',
+  ext_id: 'ext456',
+  roles: ['data_contributor'],
+  roleNames: ['Data Contributor'],
+  status: UserStatus.active,
+  registration_date: '2023-01-02',
+  sortName: 'Smith, Jane',
+} as unknown as DisplayUser;
 
 /**
  * Mock the IVA service as needed by the user manager dialog component
@@ -32,62 +61,25 @@ class MockIvaService {
 }
 
 /**
- * Mock UserService for testing
+ * Mock UserService for testing, with signals that the tests can change
  */
 class MockUserService {
+  usersValue = signal<DisplayUser[]>([JOHN_DOE, JANE_SMITH]);
   users = {
-    value: vitest.fn(() => [
-      {
-        id: '123',
-        name: 'John Doe',
-        displayName: 'Dr. John Doe',
-        title: 'Dr.',
-        email: 'john@example.com',
-        ext_id: 'ext123',
-        roles: ['data_steward'],
-        roleNames: ['Data Steward'],
-        status: 'active',
-        registration_date: '2023-01-01',
-        sortName: 'Doe, John, Dr.',
-      },
-      {
-        id: '456',
-        name: 'Jane Smith',
-        displayName: 'Jane Smith',
-        email: 'jane.smith@example.com',
-        ext_id: 'ext456',
-        roles: ['data_contributor'],
-        roleNames: ['Data Contributor'],
-        status: 'active',
-        registration_date: '2023-01-02',
-        sortName: 'Smith, Jane',
-      },
-    ]),
-    isLoading: vitest.fn(() => false),
-    error: vitest.fn(() => null),
+    value: this.usersValue.asReadonly(),
+    isLoading: signal(false).asReadonly(),
+    error: signal(null).asReadonly(),
   };
   loadUsers = () => undefined;
 
+  userValue = signal<DisplayUser | undefined>(JOHN_DOE);
+  userError = signal<HttpErrorResponse | null>(null);
   user = {
-    value: vitest.fn(() => {
-      return {
-        id: '123',
-        name: 'John Doe',
-        displayName: 'Dr. John Doe',
-        title: 'Dr.',
-        email: 'john@example.com',
-        ext_id: 'ext123',
-        roles: ['data_steward'],
-        roleNames: ['Data Steward'],
-        status: 'active',
-        registration_date: '2023-01-01',
-        sortName: 'Doe, John, Dr.',
-      };
-    }),
-    isLoading: vitest.fn(() => false),
-    error: vitest.fn(() => null),
+    value: this.userValue.asReadonly(),
+    isLoading: signal(false).asReadonly(),
+    error: this.userError.asReadonly(),
   };
-  loadUser = () => undefined;
+  loadUser = vitest.fn();
   deleteUser = () => undefined;
   updateUser = () => undefined;
 
@@ -102,36 +94,30 @@ class MockUserService {
 }
 
 describe('UserManagerDetailComponent', () => {
+  let result: RenderResult<UserManagerDetailComponent>;
   let component: UserManagerDetailComponent;
   let fixture: ComponentFixture<UserManagerDetailComponent>;
   let navigation: NavigationTrackingService;
-  const mockUserService = new MockUserService();
+  let mockUserService: MockUserService;
 
   beforeEach(async () => {
-    const testBed = TestBed.configureTestingModule({
-      imports: [UserManagerDetailComponent],
+    mockUserService = new MockUserService();
+    result = await render(UserManagerDetailComponent, {
+      inputs: { id: 'doe@test.dev' },
       providers: [
-        provideRouter([
-          { path: 'user-manager/doe@test.dev', component: UserManagerDetailComponent },
-          { path: 'user-manager', component: UserManagerComponent },
-        ]),
         CommonDatePipe,
+        { provide: UserService, useValue: mockUserService },
         { provide: IvaService, useClass: MockIvaService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
       ],
-    }).overrideComponent(UserManagerDetailComponent, {
-      set: {
-        // the user service is provided at the component level
-        providers: [{ provide: UserService, useValue: mockUserService }],
-      },
+      routes: [
+        { path: 'user-manager/doe@test.dev', component: UserManagerDetailComponent },
+        { path: 'user-manager', component: UserManagerComponent },
+      ],
     });
-    await testBed.compileComponents();
-    navigation = testBed.inject(NavigationTrackingService);
-
-    fixture = TestBed.createComponent(UserManagerDetailComponent);
+    navigation = TestBed.inject(NavigationTrackingService);
+    fixture = result.fixture;
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('id', 'doe@test.dev');
-
     await fixture.whenStable();
   });
 
@@ -140,8 +126,6 @@ describe('UserManagerDetailComponent', () => {
   });
 
   it('should find and display user when ID matches', () => {
-    fixture.detectChanges();
-
     const user = component.user();
     expect(user).toBeDefined();
     expect(user?.name).toBe('John Doe');
@@ -156,87 +140,53 @@ describe('UserManagerDetailComponent', () => {
   });
 
   it('should render user details when user is found', () => {
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('User: Dr. John Doe');
-    expect(compiled.textContent).toContain('john@example.com');
-    expect(compiled.textContent).toContain('ext123');
-    expect(compiled.textContent).toContain('Data Steward');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'User: Dr. John Doe' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Dr.')).toBeInTheDocument();
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('john@example.com')).toBeInTheDocument();
+    expect(screen.getByText('ext123')).toBeInTheDocument();
+    expect(screen.getByText('Data Steward')).toBeInTheDocument();
   });
 
-  it('should show an error message when the IVAs could not be loaded', () => {
+  it('should show an error message when the IVAs could not be loaded', async () => {
     const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
     ivaService.ivaError.set(new Error('Internal server error'));
-    fixture.detectChanges();
+    await fixture.whenStable();
 
-    expect(fixture.nativeElement.textContent).toContain('The IVAs could not be loaded');
+    expect(screen.getByText(/The IVAs could\s+not be loaded/)).toBeInTheDocument();
   });
 
-  it('should show not found message when user is not found', () => {
-    // Create a new mock that returns empty array
-    const emptyMockUserService = {
-      user: {
-        value: vitest.fn(() => undefined),
-        isLoading: vitest.fn(() => false),
-        error: vitest.fn(() => new HttpErrorResponse({ status: 404 })),
-      },
-      users: {
-        value: vitest.fn(() => []),
-        isLoading: vitest.fn(() => false),
-        error: vitest.fn(() => null),
-      },
-      loadUser: () => undefined,
-      createUserFetcher: () => undefined,
-      filter: () => ({
-        idStrings: [],
-      }),
-    };
+  it('should show not found message when user is not found', async () => {
+    mockUserService.usersValue.set([]);
+    mockUserService.userValue.set(undefined);
+    mockUserService.userError.set(new HttpErrorResponse({ status: 404 }));
+    await result.rerender({ inputs: { id: 'error' }, partialUpdate: true });
+    await fixture.whenStable();
 
-    // Create a new component with the updated mock
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      imports: [UserManagerDetailComponent],
-      providers: [
-        { provide: IvaService, useClass: MockIvaService },
-        { provide: AccessRequestService, useClass: MockAccessRequestService },
-        { provide: UserService, useValue: emptyMockUserService },
-      ],
-    }).compileComponents();
-
-    const emptyFixture = TestBed.createComponent(UserManagerDetailComponent);
-    emptyFixture.componentRef.setInput('id', 'error');
-    emptyFixture.detectChanges();
-    const compiled = emptyFixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('The selected user could not be found');
+    expect(
+      screen.getByText('The selected user could not be found.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'User Details' }),
+    ).toBeInTheDocument();
   });
 
   it('should reload when id input changes', async () => {
-    const loadUserSpy = vitest.spyOn(mockUserService, 'loadUser');
-
-    fixture.detectChanges();
+    mockUserService.loadUser.mockClear();
     expect(component.user()?.id).toBe('123');
 
-    mockUserService.user.value = vitest.fn(() => ({
-      id: '456',
-      name: 'Jane Smith',
-      displayName: 'Jane Smith',
-      title: '',
-      email: 'jane.smith@example.com',
-      ext_id: 'ext456',
-      roles: ['data_contributor'],
-      roleNames: ['Data Contributor'],
-      status: 'active',
-      registration_date: '2023-01-02',
-      sortName: 'Smith, Jane',
-    }));
-
-    fixture.componentRef.setInput('id', '456');
-    fixture.detectChanges();
+    mockUserService.userValue.set(JANE_SMITH);
+    await result.rerender({ inputs: { id: '456' }, partialUpdate: true });
     await fixture.whenStable();
 
     // user 456 exists in users list mock -> loadUser should NOT be called
-    expect(loadUserSpy).not.toHaveBeenCalled();
+    expect(mockUserService.loadUser).not.toHaveBeenCalled();
     expect(component.user()?.id).toBe('456');
     expect(component.user()?.name).toBe('Jane Smith');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'User: Jane Smith' }),
+    ).toBeInTheDocument();
   });
 });

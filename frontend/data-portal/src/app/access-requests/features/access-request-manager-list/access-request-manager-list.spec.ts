@@ -92,7 +92,6 @@ describe('AccessRequestManagerListComponent', () => {
       AccessGrantStatus.expired,
     );
     service.filter.set({ status: AccessRequestStatus.allowed });
-    fixture.detectChanges();
     await fixture.whenStable();
     expect(component.columns()).toContain('grant');
     const text = (fixture.nativeElement as HTMLElement).textContent;
@@ -109,7 +108,6 @@ describe('AccessRequestManagerListComponent', () => {
       AccessGrantStatus.waiting,
     );
     service.filter.set({ status: AccessRequestStatus.allowed });
-    fixture.detectChanges();
     await fixture.whenStable();
     const text = (fixture.nativeElement as HTMLElement).textContent;
     expect(text).toContain('upcoming');

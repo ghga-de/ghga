@@ -4,15 +4,18 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { AccessRequestDurationEditComponent } from './access-request-duration-edit';
 
 import { accessRequests } from '@app/../mocks/data';
-import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
+import {
+  AccessRequest,
+  AccessRequestStatus,
+} from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config';
 import { localDateToContractIsoUtc } from '@app/shared/utils/date-formats';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
 interface DurationEditInternals {
   formModel: {
@@ -57,37 +60,33 @@ class MockConfigService {
 }
 
 describe('AccessRequestDurationEditComponent', () => {
+  let result: RenderResult<AccessRequestDurationEditComponent>;
   let component: AccessRequestDurationEditComponent;
-  let fixture: ComponentFixture<AccessRequestDurationEditComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    result = await render(AccessRequestDurationEditComponent, {
       providers: [
         provideNativeDateAdapter(),
         { provide: ConfigService, useClass: MockConfigService },
       ],
-      imports: [AccessRequestDurationEditComponent],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(AccessRequestDurationEditComponent);
-    fixture.componentRef.setInput('request', accessRequests[0]);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      inputs: { request: accessRequests[0] as AccessRequest },
+    });
+    component = result.fixture.componentInstance;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(screen.getByText('Access duration:')).toBeVisible();
   });
 
-  it('should emit ISO UTC date strings with service-contract day boundaries on save', () => {
+  it('should emit ISO UTC date strings with service-contract day boundaries on save', async () => {
     const request = {
       ...accessRequests[0],
       status: AccessRequestStatus.pending,
       access_starts: '2025-01-01T00:00:00.000Z',
       access_ends: '2025-01-08T23:59:59.999Z',
     };
-    fixture.componentRef.setInput('request', request);
-    fixture.detectChanges();
+    await result.rerender({ inputs: { request }, partialUpdate: true });
 
     const fromDate = new Date(2025, 7, 1);
     const untilDate = new Date(2025, 7, 8);
@@ -128,16 +127,16 @@ describe('AccessRequestDurationEditComponent', () => {
 
     component.open();
     component.onDateSelected(laterDate, false);
-    await fixture.whenStable();
+    await result.fixture.whenStable();
     expect(component.isModified()).toBe(true);
 
     component.cancel();
-    await fixture.whenStable();
+    await result.fixture.whenStable();
     expect(component.isModified()).toBe(false);
 
     component.open();
     component.onDateSelected(laterDate, false);
-    await fixture.whenStable();
+    await result.fixture.whenStable();
 
     expect(component.isModified()).toBe(true);
     expect(edits).toEqual([true, false, true]);

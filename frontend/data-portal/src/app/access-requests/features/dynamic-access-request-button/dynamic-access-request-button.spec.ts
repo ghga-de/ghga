@@ -93,10 +93,10 @@ describe('DynamicAccessRequestButtonComponent', () => {
   });
 
   describe('denied requests', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       accessRequestService.activeUserAccessGrants.set([]);
       accessRequestService.pendingUserAccessRequests.set([]);
-      fixture.detectChanges();
+      await fixture.whenStable();
     });
 
     it('should show the "Request Access" button', () => {
@@ -119,12 +119,12 @@ describe('DynamicAccessRequestButtonComponent', () => {
   });
 
   describe('pending requests', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       accessRequestService.activeUserAccessGrants.set([]);
       accessRequestService.pendingUserAccessRequests.set([
         { dataset_id: DATASET_ID } as never,
       ]);
-      fixture.detectChanges();
+      await fixture.whenStable();
     });
 
     it('should show the disabled "Pending Request" button', () => {
@@ -135,9 +135,9 @@ describe('DynamicAccessRequestButtonComponent', () => {
   });
 
   describe('allowed requests', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       accessRequestService.activeUserAccessGrants.set([TEST_GRANT]);
-      fixture.detectChanges();
+      await fixture.whenStable();
     });
 
     it('should show the "Download the Data" button', () => {
