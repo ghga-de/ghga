@@ -1,0 +1,306 @@
+# The eval suite of the testbed skill (docs/agent-instructions.md#admitting-a-skill).
+# `just skill-eval testbed` expands each case into evals/<case>/case.yaml for
+# `claude plugin eval`. A case takes the execution fields below unless it sets its own,
+# and a grader given by name is one of the shared graders.
+# The sandbox of a run has no network and no cluster, so no case runs the test bed: a case
+# writes files, read through its Write calls, or diagnoses a failure given in the prompt.
+# The skill's `paths` does not apply in a run: the runner loads it as a plugin skill and
+# offers it from the first turn, as a session that has read a file under testbed/ would.
+# The expected values hold at the commit scripts/skill-eval-scaffold.sh pins: features 400,
+# 410 and 420 hand the access grant for dataset A from one to the next, 503 empties the
+# claims repository and the access requests and grants dataset A again, and 504 uses that
+# grant.
+
+execution:
+  max_turns: 40
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Bash, Write, Edit, Skill]
+  # Neither arm loads AGENTS.md, which a session in the repo would. Runs guessed the main
+  # clone's path and worked there, without the case's patch, so the prompt keeps them in
+  # their own clone.
+  append_system_prompt: >-
+    You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
+    root and in the AGENTS.md of each area; read the root file before you start, as a
+    session here loads it. The clone is your working directory: work only there, since
+    another checkout on this machine is not the one under test. No kind cluster runs in
+    this session, so the test bed cannot run here.
+
+graders:
+  # A grader on a tool sees its input as JSON, so a command starts after `"command":"`.
+  no-direct-uv:
+    type: tool_used
+    tool: Bash
+    input_match: '(^|[\s;&|(\x60"])uv\s'
+    min: 0
+    max: 0
+  no-testbed-write:
+    type: tool_used
+    tool: Write
+    input_match: '"file_path":"[^"]*/testbed/'
+    min: 0
+    max: 0
+  no-testbed-edit:
+    type: tool_used
+    tool: Edit
+    input_match: '"file_path":"[^"]*/testbed/'
+    min: 0
+    max: 0
+  no-edit:
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+  no-write:
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+  skill-fired:
+    type: tool_used
+    tool: Skill
+    arm: with-only
+
+cases:
+  new-feature:
+    description: A cross-service flow that takes away state a later feature needs, so its place in the order matters.
+    tags: [write]
+    prompt: |
+      Write a test-bed feature for revoking a download access grant: the Data Steward revokes the grant Dr. John Doe holds for dataset A, and afterwards his download of dataset A's files with the GHGA connector is refused. Write the feature file and its step module, and reuse the shared steps where they fit. When you are done, list the files you wrote.
+    graders:
+      # The revoked grant must not be one a later feature still needs: 420 and 504 use it,
+      # and 503 clears the claims and access requests and grants it again, so the feature
+      # runs after 420 and not between 503 and 504.
+      # A new 503 sorts after 503_data_portal_..., into that gap.
+      - name: runs-after-420
+        type: tool_used
+        tool: Write
+        input_match: '"file_path":"[^"]*/testbed/features/(?:42[1-9]|4[3-9]\d|50[0-2]|50[5-9]|5[1-9]\d)_[a-z0-9_]+\.feature"'
+      - name: module-binds-feature
+        type: tool_used
+        tool: Write
+        input_match: '/testbed/steps/test_(\d{3})_[a-z0-9_]+\.py".*scenarios\(.{0,3}\.\./features/\1_[a-z0-9_]+\.feature'
+      - name: registered-tag
+        type: tool_used
+        tool: Write
+        input_match: '/testbed/features/[^"]+\.feature","content":"(?:[^"\\]|\\.)*@(?:ars|auth|users|download|wps|files|unhappy)\b'
+      - name: no-sleep-write
+        type: tool_used
+        tool: Write
+        input_match: '(?:time|asyncio)\.sleep\('
+        min: 0
+        max: 0
+      - name: no-sleep-edit
+        type: tool_used
+        tool: Edit
+        input_match: '(?:time|asyncio)\.sleep\('
+        min: 0
+        max: 0
+      - skill-fired
+      - no-direct-uv
+
+  portal-page:
+    description: A test of what one portal page renders, which belongs in the data portal's own Playwright tests.
+    tags: [level]
+    prompt: |
+      Add an end-to-end browser test that the dataset details page of the data portal shows the contact email of the dataset's data access committee. It only checks what the page renders for a dataset; nothing in the backend changes.
+    graders:
+      - name: portal-tests
+        type: llm
+        criteria: |
+          The reply puts the test in the data portal's own Playwright tests under frontend/data-portal/tests, which run against the MSW mocks, or says it belongs there; it does not add it to the integration test bed under testbed/.
+      - no-testbed-write
+      - no-testbed-edit
+      - no-direct-uv
+
+  member-level:
+    description: A test of one service's own handling, which belongs in that member's suite.
+    tags: [level]
+    prompt: |
+      I want a test for FIS receiving the same interrogation success report twice: the file has to stay "interrogated", and no second secret may be deposited with the EKSS. Put it where it belongs and run it.
+    graders:
+      - name: runs-member-suite
+        type: tool_used
+        tool: Bash
+        input_match: 'just test services/fis\b'
+      - name: member-suite
+        type: llm
+        criteria: |
+          The reply places the test in the FIS service's own test suite (services/fis/tests_fis), or points to an existing test there that already covers it, and not in the integration test bed under testbed/.
+      - no-testbed-write
+      - no-testbed-edit
+      - no-direct-uv
+
+  backend-timeout:
+    description: A step times out waiting for a state because the branch broke FIS; the fix is in FIS, and the rerun needs fresh pods and the earlier features.
+    tags: [debug]
+    branch: feat/fis-tidy-interrogation
+    patch: |
+      diff --git a/services/fis/src/fis/core/interrogation.py b/services/fis/src/fis/core/interrogation.py
+      --- a/services/fis/src/fis/core/interrogation.py
+      +++ b/services/fis/src/fis/core/interrogation.py
+      @@ -248,7 +248,7 @@
+                   # Update file state, size, and object ID
+                   updated_file = file.model_copy(deep=True)
+                   updated_file.state = "interrogated"
+      -            updated_file.state_updated = report.interrogated_at
+      +            updated_file.state_updated = report.interrogated_on
+                   updated_file.object_id = object_id
+                   updated_file.bucket_id = bucket_id
+                   updated_file.encrypted_size = encrypted_size
+    prompt: |
+      On this branch I tidied up FIS. I rebuilt the images with `just demo-images-mono`, deployed with `just testbed-up mono` and ran `just testbed`. Everything up to 200 passes, then 201 fails:
+
+      ```text
+      FAILED steps/test_201_user_file_upload.py::test_user_locks_the_upload_box_after_uploading_the_files[primary] - AssertionError: Timed out waiting for FIS file '0b9f2c71-5d3e-4a8e-9c1f-7e2b4a6d8f10' to be 'interrogated' in primary storage
+      ```
+
+      `just logs dhfs` repeats this every few seconds:
+
+      ```text
+      ERROR File 0b9f2c71-5d3e-4a8e-9c1f-7e2b4a6d8f10: The GHGA Central API returned an error response while submitting the file processing report. DHFS will try re-processing this file later. err_msg="The call to http://ghga-fis:8080/storages/primary/interrogation-reports failed with a status code of 500."
+      ```
+
+      Fix it, and tell me how to check the fix.
+    graders:
+      - name: fixed-in-fis
+        type: regex
+        target: {source: file, path: services/fis/src/fis/core/interrogation.py}
+        pattern: 'state = "interrogated"\n\s+updated_file\.state_updated = report\.interrogated_at\b'
+      - name: names-fis-logs
+        type: regex
+        pattern: 'just logs (?:ghga-)?fis\b'
+      - name: rerun
+        type: llm
+        criteria: |
+          The reply says how to check the fix: rebuild the image, get the pods running it (for example `just testbed-reset`, which recreates them; a redeploy alone does not restart pods on an unchanged image tag), and rerun the suite from its start or at least from 010 up to 201, because a reset drops the states the earlier features hand on to 201. Running 201 on its own after the reset fails the criterion.
+      - no-testbed-write
+      - no-testbed-edit
+      - skill-fired
+      - no-direct-uv
+
+  stale-cluster:
+    description: Services crash-loop on migrations after a restart; a reset fixes it, not a code change.
+    tags: [debug]
+    prompt: |
+      Yesterday a full `just testbed` run passed. This morning, after Docker restarted, `just testbed` stops at once:
+
+      ```text
+      error: not every deployment is available — `just logs` lists them:
+        ghga-wps 0/1
+        ghga-ifrs 0/1
+      ```
+
+      `just logs wps` ends with:
+
+      ```text
+      INFO hexkit.providers.mongodb.migrations._manager Database lock acquired
+      CRITICAL hexkit.providers.mongodb.migrations._manager Unable to apply DB version 3 (V3Migration)
+      Traceback (most recent call last):
+        ...
+      KeyError: 'id'
+
+      The above exception was the direct cause of the following exception:
+
+      Traceback (most recent call last):
+        ...
+      hexkit.providers.mongodb.migrations._manager.MigrationStepError: Unable to apply DB version 3 (V3Migration)
+      ```
+
+      Should I fix the V3 migration in WPS?
+    graders:
+      - name: proposes-reset
+        type: regex
+        pattern: 'just (?:testbed-reset|down)\b'
+      - name: not-the-migration
+        type: llm
+        criteria: |
+          The reply advises against changing the migration code, explains that the data no longer matches the migration records (the suite's clean slate removes them, so a restarted service re-runs its migrations over migrated data), and proposes `just testbed-reset`, or a fresh cluster with `just down`, before any code change.
+      - no-edit
+      - no-write
+      - skill-fired
+      - no-direct-uv
+
+  migration-bug:
+    description: Services crash-loop on a migration the branch broke; the crash outlives a reset, so the fix is in the migration.
+    tags: [debug]
+    branch: feat/wps-tidy-migrations
+    patch: |
+      diff --git a/services/work-package-service/src/wps/migrations/definitions/v3.py b/services/work-package-service/src/wps/migrations/definitions/v3.py
+      --- a/services/work-package-service/src/wps/migrations/definitions/v3.py
+      +++ b/services/work-package-service/src/wps/migrations/definitions/v3.py
+      @@ -39,7 +39,7 @@
+           async def apply(self):
+               """Perform the migration."""
+               config = Config()
+      -        datasets_collection = config.datasets_collection
+      +        datasets_collection = config.dataset_collection
+
+               async def rename_id_to_accession(doc: Document) -> Document:
+                   updated_files = []
+    prompt: |
+      On this branch I tidied up the WPS migrations. I rebuilt the images with `just demo-images-mono` and deployed with `just testbed-up mono`, which timed out waiting for the pods. `just testbed` then stops at once:
+
+      ```text
+      error: not every deployment is available — `just logs` lists them:
+        ghga-wps 0/1
+      ```
+
+      `just testbed-reset` did not help either; it ends with `error: ghga-wps did not become ready within 600s`. `just logs wps` ends with:
+
+      ```text
+      INFO hexkit.providers.mongodb.migrations._manager Database lock acquired
+      CRITICAL hexkit.providers.mongodb.migrations._manager Unable to apply DB version 3 (V3Migration)
+      Traceback (most recent call last):
+        ...
+      AttributeError: 'Config' object has no attribute 'dataset_collection'
+
+      The above exception was the direct cause of the following exception:
+
+      Traceback (most recent call last):
+        ...
+      hexkit.providers.mongodb.migrations._manager.MigrationStepError: Unable to apply DB version 3 (V3Migration)
+      ```
+
+      Fix it, and tell me how to check the fix.
+    graders:
+      - name: fixed-migration
+        type: regex
+        target: {source: file, path: services/work-package-service/src/wps/migrations/definitions/v3.py}
+        pattern: 'config = Config\(\)\n\s+datasets_collection = config\.datasets_collection\n\n\s+async def rename_id_to_accession'
+      - name: code-not-cluster
+        type: llm
+        criteria: |
+          The reply names the branch's change to the WPS V3 migration as the cause and fixes it there; it does not offer another `just testbed-reset` or a fresh cluster with `just down` as the fix. To check the fix it rebuilds the image and gets pods running it, for example with `just testbed-reset`.
+      - no-testbed-write
+      - no-testbed-edit
+      - skill-fired
+      - no-direct-uv
+
+  browser-step:
+    description: A Playwright locator timeout in a test-bed scenario; the trace comes before any selector change.
+    tags: [debug]
+    prompt: |
+      `just testbed -m frontend` fails in 503, while the scenario before it passed:
+
+      ```text
+      FAILED steps/test_503_data_portal_access_grants.py::test_requesting_access_via_dataset_browsing_page - playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.
+      Call log:
+        - waiting for get_by_role("button", name="Request Access")
+      ```
+
+      Fix the selector.
+    graders:
+      - name: records-trace
+        type: regex
+        pattern: 'TB_TRACE=(?:1|all)\b'
+      - name: opens-trace
+        type: regex
+        pattern: 'just testbed-trace'
+      - name: trace-first
+        type: llm
+        criteria: |
+          The reply does not change the selector on a guess: it asks for, or says how to record, a Playwright trace of the failing run before any edit, and says that an earlier test sharing the browser session can have left the page in another state.
+      - no-testbed-write
+      - no-testbed-edit
+      - skill-fired
+      - no-direct-uv
