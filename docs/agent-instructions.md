@@ -161,3 +161,15 @@ Two limits, because the instinct is always to add a line:
 `scripts/docs_check.py` ([ADR-0041](adrs/adr-0041-docs-linting.md)) fails when a `CLAUDE.md` is committed, the Copilot stub carries content of its own, or an instruction file sits at a path no tool reads.
 It fails, too, when a skill's `name` differs from its directory or leaves the specification's pattern, its description is missing or longer than 1024 characters, its frontmatter has a field not listed above, a relative link in it resolves to nothing, or its `.claude/skills/` symlink is missing or points elsewhere.
 It warns, without failing, about a description past 300 characters and a session past its budget, and it regenerates the [skill catalogue](agent-skills.md).
+
+## Not adopted
+
+Options considered and left out, with the signal to look again.
+
+- **Copilot code review.**
+  An automatic review of every PR needs Copilot Business or Enterprise, or premium requests paid by the org, and the team has neither.
+  Look again if the org gets Copilot.
+- **Usage telemetry.**
+  Claude Code can export OpenTelemetry events that name the skill behind each request, which would show the team's skill use for the quarterly review.
+  It needs a collector and an opt-in in each dev's `~/.claude/settings.json`, since committed settings would also export outside contributors' sessions.
+  Look again if the `/skill-doctor` reports leave the review guessing.
