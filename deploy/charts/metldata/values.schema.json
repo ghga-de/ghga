@@ -469,7 +469,6 @@
           "properties": {
             "path": {
               "type": "string",
-              "description": "Ready means the health endpoint answers. This default replaced a TCP check (`tcpSocket`); values that still set `readinessProbe.tcpSocket` must also set `httpGet: null`, or the probe gets two handlers and the API server rejects the pod",
               "default": "{{ .Values.healthEndpoint }}"
             },
             "port": {
