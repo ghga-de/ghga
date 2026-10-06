@@ -233,7 +233,9 @@ class MigrationManager:
         """
         init_start = time()
         async with self._lock_db():
-            if self._lock_acquired:
+            # Another instance may have initialized versioning since the caller read
+            # the records, so only an empty collection is initialized here
+            if self._lock_acquired and not await self._get_version_docs():
                 # Initialize db version collection
                 await self._record_migration(
                     version=1,
@@ -343,6 +345,11 @@ class MigrationManager:
         async with self._lock_db():
             if not self._lock_acquired:
                 return False
+
+            # Another instance may have migrated since the records were read above
+            version = _get_db_version_from_records(await self._get_version_docs())
+            if version == self.target_ver:
+                return True
 
             if version > self.target_ver:
                 self._backward = True

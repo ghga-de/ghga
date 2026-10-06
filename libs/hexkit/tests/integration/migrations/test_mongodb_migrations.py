@@ -17,7 +17,7 @@
 import time
 from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pymongo
 import pytest
@@ -645,6 +645,44 @@ async def test_version_in_backwards_migration_error(
     # The log carries the migration's own exception, not just the step that failed
     [record] = [r for r in caplog.records if r.getMessage() == msg]
     assert record.exc_info and isinstance(record.exc_info[1], RuntimeError)
+
+
+@pytest.mark.parametrize("stale_versions", [[], [1]], ids=["uninitialized", "v1"])
+async def test_stale_version_read(mongodb: MongoDbFixture, stale_versions: list[int]):
+    """Check that an instance acting on records read before another instance
+    migrated neither records a stale version nor migrates the data again.
+    """
+    config = make_migration_config(mongodb.config, migration_max_wait_sec=5)
+    client = mongodb.client
+    collection = client[config.db_name][TEST_COLL_NAME]
+    collection.insert_one({"_id": "item1", "length": 100})
+    migration_map = {2: V2BasicMigration}
+    await run_db_migrations(
+        config=config, target_version=2, migration_map=migration_map
+    )
+    version_coll = get_version_collection(client, config)
+    records = version_coll.find().to_list()
+    assert [record["version"] for record in records] == [1, 2]
+
+    # The first read returns what a concurrent instance saw before the migration
+    get_version_docs = MigrationManager._get_version_docs
+    reads = 0
+
+    async def stale_get_version_docs(self):
+        nonlocal reads
+        reads += 1
+        docs = await get_version_docs(self)
+        if reads == 1:
+            return [doc for doc in docs if doc["version"] in stale_versions]
+        return docs
+
+    with patch.object(MigrationManager, "_get_version_docs", stale_get_version_docs):
+        await run_db_migrations(
+            config=config, target_version=2, migration_map=migration_map
+        )
+
+    assert version_coll.find().to_list() == records
+    assert collection.find().to_list() == [{"_id": "Title: item1", "length": 100}]
 
 
 async def test_check_db_version_up_to_date(mongodb: MongoDbFixture):
