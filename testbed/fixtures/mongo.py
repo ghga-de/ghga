@@ -85,12 +85,14 @@ class MongoFixture(StateManager):
         db_name: str,
         collection_name: str,
         query: Mapping[str, Any] | None = None,
+        sloppy: bool = False,
         extend_mapping: bool = True,
     ) -> dict[str, Any] | None:
         documents = self.find_documents(
             db_name=db_name,
             collection_name=collection_name,
             query=query,
+            sloppy=sloppy,
             extend_mapping=extend_mapping,
         )
         return documents[0] if documents else None
@@ -224,7 +226,9 @@ class MongoFixture(StateManager):
         slept: float = 0
         while slept < timeout:
             if (
-                self.find_document(db_name, collection_name, query, extend_mapping)
+                self.find_document(
+                    db_name, collection_name, query, extend_mapping=extend_mapping
+                )
                 is None
             ):
                 return True
