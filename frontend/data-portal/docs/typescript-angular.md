@@ -1,9 +1,9 @@
-# TypeScript and Angular Best Practices
+# TypeScript and Angular best practices
 
 How we write TypeScript and Angular in the data portal.
 These are style rules, read when writing code, rather than the working rules in [AGENTS.md](../AGENTS.md).
 
-## TypeScript Best Practices
+## TypeScript best practices
 
 - Use strict type checking
 - Prefer type inference when the type is obvious
@@ -13,14 +13,15 @@ These are style rules, read when writing code, rather than the working rules in 
 
 ## Documentation
 
-- All functions, methods, and classes require JSDoc comments (enforced via eslint-plugin-jsdoc)
-- JSDoc must include `@param` for all parameters and `@returns` for non-void return types
-- JSDoc must include a description line for the function/method/class
+JSDoc follows the [docstring rules](../../../docs/style.md#docstrings) of the Python side.
+
+- All functions, methods, and classes require a JSDoc comment with a description line (enforced via eslint-plugin-jsdoc)
+- Add `@param` and `@returns` tags only where the signature does not explain the value
 - Keep JSDoc comments concise and meaningful - avoid redundancy with code that is self-explanatory
 - Empty constructors are exempt from JSDoc requirements
-- Arrow function expressions do not require JSDoc by linting rules, but should still include JSDoc when the function is not self-explanatory and needs deeper explanation
+- Arrow function expressions do not require JSDoc by linting rules; give one a JSDoc comment when it is not self-explanatory
 
-## Angular Best Practices
+## Angular best practices
 
 - Always use standalone components over NgModules.
 - Must NOT set `standalone: true` inside Angular decorators.
@@ -35,18 +36,34 @@ These are style rules, read when writing code, rather than the working rules in 
   - `NgOptimizedImage` does not work for inline base64 images.
 - Do NOT invent Angular APIs or CLI behaviors.
   When uncertain, call `search_documentation` and cite Angular guidance in the response.
+  That tool comes from the `angular-cli` MCP server, which reaches only a session started in `frontend/data-portal` (see [MCP tools](../AGENTS.md#mcp-tools)).
 
 ## Components
 
 - Keep components small and focused on a single responsibility
 - Use `input()` and `output()` functions instead of decorators
 - Use `computed()` for derived state
-- Prefer inline templates for small components
+- Put the template in a separate `.html` file; inline only a template of a few lines
 - Use Signal Forms (`@angular/forms/signals`) for new forms, simple ones too; the template-driven forms in older code are not a model
 - Do NOT use `ngClass`, use `class` bindings instead
 - Do NOT use `ngStyle`, use `style` bindings instead
 
-## State Management
+## Member visibility
+
+Each visibility keyword has one job:
+
+| Keyword     | Use                                                                                                 |
+| ----------- | --------------------------------------------------------------------------------------------------- |
+| `#name`     | Internal state and methods; JavaScript enforces it at run time                                      |
+| `private`   | Internal, where Angular forbids `#`: a signal query such as `viewChild()` that only the class reads |
+| `protected` | Members the template reads                                                                          |
+| public      | The class API: inputs, outputs, service methods                                                     |
+
+Since 22.2, Angular lets templates read `private` members, but we deliberately keep `protected` for them, as Angular's [style guide](https://angular.dev/style-guide) still recommends.
+TypeScript does not see template reads, so a `private` member that only the template reads looks unused, and templates cannot read `#` fields in any version.
+Revisit this if the portal turns on `isolatedDeclarations`, the setting that change was made for.
+
+## State management
 
 - Use signals for local component state
 - Use `computed()` for derived state
@@ -64,7 +81,6 @@ These are style rules, read when writing code, rather than the working rules in 
   - Reading a signal, `count()`, is no such call, and neither is the field state of a Signal Form, `form.email().invalid()`: both return a stored value.
 - Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
 - Use the async pipe to handle observables
-- Do not assume globals like (`new Date()`) are available
 
 ## Services
 

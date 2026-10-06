@@ -106,7 +106,7 @@ The data portal uses `pnpm` (not npm) for dependency installation and scripts.
 ## Visual inspection
 
 The dev server runs at **<http://localhost:8080>** (not the Angular default 4200) and must already be running (`just fe-dev`).
-[Visual Inspection for Agents](docs/visual-inspection.md) has the two browser modes and when the user has to share the page.
+[Visual inspection for agents](docs/visual-inspection.md) has the two browser modes and when the user has to share the page.
 
 ## MCP tools
 
@@ -143,9 +143,9 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 
 ## TypeScript and Angular style
 
-TypeScript, JSDoc, Angular, component, state, template and service conventions are in [TypeScript and Angular Best Practices](docs/typescript-angular.md).
+TypeScript, JSDoc, Angular, component, state, template and service conventions are in [TypeScript and Angular best practices](docs/typescript-angular.md).
 Read it before writing code.
 Further project-specific guidance:
 
-- [Accessibility and Semantics Best Practices](docs/a11y-semantics.md)
-- [Responsiveness Best Practices](docs/responsiveness.md)
+- [Accessibility and semantics best practices](docs/a11y-semantics.md)
+- [Responsiveness best practices](docs/responsiveness.md)

@@ -89,6 +89,9 @@ export default tseslint.config(
           contexts: ['FunctionDeclaration', 'MethodDefinition', 'ClassDeclaration'],
         },
       ],
+      // As in ruff's pep257 convention: tags only where the signature does not explain the value
+      'jsdoc/require-param': 'off',
+      'jsdoc/require-returns': 'off',
       ...boundaries.configs.strict.rules,
       'boundaries/dependencies': [
         2,

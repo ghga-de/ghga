@@ -13,17 +13,17 @@ It lives in the [GHGA monorepo](../../README.md) as a self-contained pnpm worksp
   - [Authentication](#authentication)
 - [Code scaffolding](#code-scaffolding)
 - [Building](#building)
-- [Package Manager](#package-manager)
+- [Package manager](#package-manager)
   - [Dependency overrides](#dependency-overrides)
-- [Linter, Commits, and Documentation](#linter-commits-and-documentation)
+- [Linter, commits, and documentation](#linter-commits-and-documentation)
   - [Ease of use](#ease-of-use)
 - [Automated tests](#automated-tests)
   - [Test levels](#test-levels)
   - [Unit-tests](#unit-tests)
-  - [End-to-End tests](#end-to-end-tests)
+  - [End-to-end tests](#end-to-end-tests)
     - [Issues relating to headed execution](#issues-relating-to-headed-execution)
 - [Analytics](#analytics)
-- [The Architecture Matrix](#the-architecture-matrix)
+- [The architecture matrix](#the-architecture-matrix)
 - [AI assisted coding](#ai-assisted-coding)
 - [References](#references)
 - [License](#license)
@@ -182,7 +182,7 @@ By default, the production build optimizes the application for performance and s
 
 Site verification files that shall be deployed at the root path in production can be specified in the `root_files` setting, using file names as properties and file contents as values.
 
-## Package Manager
+## Package manager
 
 This project uses pnpm to install dependencies, which is a replacement for the much slower npm.
 Run
@@ -210,11 +210,11 @@ Review such overrides from time to time and remove them once no longer necessary
 > They were removed after upgrading to `@compodoc/compodoc@2`, which resolves those dependencies to patched versions natively.
 
 > [!NOTE]
-> You should not have a `package-lock.json` but instead a `pnpm-lock.yaml`.
+> Keep the `pnpm-lock.yaml` and do not create a `package-lock.json`.
 > You can still use npm for running other commands or to install global packages but not to add dependencies or to install all dependencies.
-> Configuration of pnpm overrides should be done in `.pnpmfile.cjs` rather than in `package.json`.
+> Configure pnpm overrides in `.pnpmfile.cjs`, not in `package.json`.
 
-## Linter, Commits, and Documentation
+## Linter, commits, and documentation
 
 The repository is set up in such a way to only allow linted commits.
 That means commits are blocked if they cause linter errors (currently, warnings are accepted).
@@ -233,7 +233,7 @@ Formatting is not auto-fixed either: run `pnpm format` (or `just fe-format`).
 ### Ease of use
 
 For comfort, we are adding these shorthands: `pnpm lint`, `pnpm lf` (for `lint --fix`), and `pnpm run docs` (to build and serve the documentation; use `pnpm run docs` rather than `pnpm docs`, because pnpm has a built-in `docs` command that shadows the script).
-Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE should also show you these warnings in the code, and fixing (the auto-fixable ones) should be offered in the context menu on hover or via `Ctrl-.`.
+Apart from seeing the linter warnings when you (try to) commit or run the linter manually, your IDE also shows these warnings in the code, and offers to fix the auto-fixable ones in the context menu on hover or via `Ctrl-.`.
 
 > Note: when generating the docs, Compodoc prints a `Parse error: JSON5: invalid character '(' …` followed by `Routes parsing error, … trying to fix that later`.
 > This is a harmless Compodoc limitation with Angular's arrow-function lazy routes (`loadComponent: () => import(...)` and functional `canActivate` guards) in `src/app/app-routes.ts`: Compodoc recovers on its own and the routes page is still generated.
@@ -258,7 +258,7 @@ The two other levels each add something the level above cannot see, and each cos
 ### Unit-tests
 
 We are using [Vitest](https://vitest.dev/) for unit testing in this project.
-If possible, the queries and matchers from the [Testing Library](https://testing-library.com/) should be used.
+Use the queries and matchers from the [Testing Library](https://testing-library.com/) where possible.
 See the documentation for the [Angular Testing Library](https://testing-library.com/docs/angular-testing-library/intro/) and [jest-dom](https://testing-library.com/docs/ecosystem-jest-dom/).
 Note that jest-dom also supports Vitest, not just Jest.
 
@@ -273,7 +273,7 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 Use `pnpm test` / `pnpm test:ui` instead.
 See also [this issue](https://github.com/angular/angular-cli/issues/31734).
 
-### End-to-End tests
+### End-to-end tests
 
 We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project.
 See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
@@ -372,10 +372,10 @@ Note that a headed run is rarely the shortest way to see what a failing test saw
 ## Analytics
 
 This SPA uses Umami for event tracking.
-Every clickable item has a property `data-umami-event` that is globally unique and which should clearly identify both the action and the environment it is occurring in.
+Every clickable item has a property `data-umami-event` that is globally unique and which must clearly identify both the action and the environment it is occurring in.
 Furthermore, there's a limit of 50 characters for these event names - otherwise they will be ignored by the backend.
 
-## The Architecture Matrix
+## The architecture matrix
 
 This application is built as a modularized frontend monolith (a "modulith") using vertical slices and layers as module boundaries, which are enforced using the linter.
 
@@ -410,7 +410,7 @@ To create a clean architecture, the following rules are checked when importing m
 
 This project is best supported in VS Code with GitHub Copilot, but tools like Claude Code can also be used.
 
-- `AGENTS.md` is the entrypoint for AI-specific instructions; agents should also follow this `README` and relevant guidance in `docs/`.
+- `AGENTS.md` is the entrypoint for AI-specific instructions; agents must also follow this `README` and relevant guidance in `docs/`.
 - If you use the Angular CLI MCP server integration (for example via Copilot Chat tools), it can help with Angular-specific guidance and code generation.
 - After updating Angular dependencies, it can be useful to run `MCP: Reset Cached Tools` once so the MCP tool metadata is refreshed for the new Angular/CLI version.
 - Keep `AGENTS.md` up to date when you change major tooling (Angular, Angular Material, Tailwind, testing/build scripts), so AI-assisted changes stay consistent with project conventions.
