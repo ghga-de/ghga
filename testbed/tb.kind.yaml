@@ -13,7 +13,7 @@ data_portal_url: http://localhost
 
 # MailHog and the lox24 mock are not gateway-routed; the run recipe port-forwards them
 mail_url: http://localhost:8025
-lox24_mock_url: http://localhost:8080
+lox24_mock_url: http://localhost:18080
 
 # route-name deltas vs the legacy compose paths
 dlq_url: dlqs

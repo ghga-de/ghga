@@ -985,7 +985,8 @@ testbed *args:
     mkdir -p /tmp/submission /tmp/connector
     $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
     PF1=$!
-    $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &
+    # 18080, not the mock's own 8080, which `just fe-dev` serves the portal on
+    $K port-forward svc/ghga-lox24-mock 18080:8080 > /dev/null 2>&1 &
     PF2=$!
     # MinIO needs no forward: kind publishes its S3 node port on the host's 9000
     # (deploy/kind-config.yaml), which is the authority the pre-signed URLs carry —
