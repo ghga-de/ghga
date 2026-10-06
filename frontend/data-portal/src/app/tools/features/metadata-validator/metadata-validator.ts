@@ -54,10 +54,19 @@ export class MetadataValidator {
   #pyodideStatusEffect = effect(() => {
     const isReady = this.#pyodideService.isPyodideInitialized();
     const isLoading = this.#pyodideService.isPyodideLoading();
+    const failedPackages = this.#pyodideService.failedPackages();
 
     if (isLoading) {
       this.#updateStatus('Loading Pyodide runtime...', false, true);
       this.#resetStepStatus();
+    } else if (isReady && failedPackages.length) {
+      this.#updateStatus(
+        `Could not load ${failedPackages.join(' and ')}. The process log below says why.`,
+        true,
+        false,
+      );
+      this.processButtonEnabled.set(false);
+      this.showLog.set(true);
     } else if (isReady) {
       this.#updateStatus('ghga-transpiler ready.', false, false);
       this.#resetStepStatus();
@@ -197,8 +206,11 @@ export class MetadataValidator {
       const msg = `File "${file.name}" loaded. Ready to transpile.`;
       this.#updateStatus(msg, false, false);
       this.#setStepStatus(0, 'succeeded');
-      // Enable button only if Pyodide is initialized and a file is loaded
-      this.processButtonEnabled.set(this.#pyodideService.isPyodideInitialized());
+      // Enable button only if Pyodide and its packages are loaded and a file is loaded
+      this.processButtonEnabled.set(
+        this.#pyodideService.isPyodideInitialized() &&
+          !this.#pyodideService.failedPackages().length,
+      );
       this.jsonOutput.set('Ready for transpilation...'); // Update pre tag
     };
 

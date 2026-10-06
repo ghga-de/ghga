@@ -49,6 +49,28 @@ interface PyodideRuntime {
 type LoadPyodide = (options: { indexURL: string }) => Promise<PyodideRuntime>;
 
 /**
+ * Explain why a package could not be installed.
+ *
+ * micropip downloads packages from pypi.org and files.pythonhosted.org in the browser,
+ * so a failed download usually means that a browser extension or a network filter
+ * blocks one of these sites; the bare error does not say so.
+ * @param packageName - the package that could not be installed
+ * @param error - the message of the error micropip raised
+ * @returns the message to show to the user
+ */
+export function installFailureMessage(packageName: string, error: string): string {
+  if (/NetworkError|Failed to fetch|AbortError/.test(error)) {
+    return (
+      `Could not download the Python package ${packageName}.` +
+      ' A browser extension such as NoScript or an ad blocker, or a network filter,' +
+      ' may block pypi.org or files.pythonhosted.org.' +
+      ' Allow both sites for this page and reload it.'
+    );
+  }
+  return `Failed to install the Python package ${packageName}: ${error}`;
+}
+
+/**
  * This service handles the initialization of Pyodide,
  * loading necessary packages, and serves as a basis for running our Python scripts in their own services (like Transpiler and ValidatorService).
  */
@@ -58,12 +80,15 @@ export class PyodideLoader {
   #pyodideLoading: WritableSignal<boolean> = signal(false);
   #pyodideInitialized: WritableSignal<boolean> = signal(false);
   #processLog: WritableSignal<LogEntry[]> = signal([]);
+  #failedPackages = signal<string[]>([]);
   #micropip: MicropipModule | null = null;
   #http = inject(HttpClient);
 
   readonly isPyodideInitialized = this.#pyodideInitialized.asReadonly();
   readonly getProcessLog = this.#processLog.asReadonly();
   readonly isPyodideLoading = this.#pyodideLoading.asReadonly();
+  /** The packages that could not be installed */
+  readonly failedPackages = this.#failedPackages.asReadonly();
 
   constructor() {
     this.#initPyodide();
@@ -107,7 +132,9 @@ export class PyodideLoader {
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        this.log(`Failed to install package ${packageName}: ${message}`, 'error');
+        this.#failedPackages.update((names) => [...names, packageName]);
+        this.log(installFailureMessage(packageName, message), 'error');
+        this.log(`Failed to install package ${packageName}: ${message}`, 'debug');
       });
   }
 

@@ -21,6 +21,7 @@ class MockPyodideService {
   isPyodideLoading = signal(false);
   processLog = signal<LogEntry[]>([]);
   getProcessLog = this.processLog.asReadonly();
+  failedPackages = signal<string[]>([]);
 }
 
 describe('MetadataValidator', () => {
@@ -60,5 +61,21 @@ describe('MetadataValidator', () => {
     await fixture.whenStable();
     expect(screen.getByText('Loading packages')).toBeInTheDocument();
     expect(screen.getByText('Validation failed')).toHaveClass('text-red-500');
+  });
+
+  it('should report packages that could not be loaded and show the log', async () => {
+    pyodide.failedPackages.set(['ghga-transpiler']);
+    await fixture.whenStable();
+
+    expect(
+      screen.getByText(
+        'Could not load ghga-transpiler. The process log below says why.',
+        { selector: '#statusText' },
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Hide Log' })).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: 'Transpile and Validate' }),
+    ).toBeDisabled();
   });
 });
