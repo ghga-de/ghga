@@ -39,7 +39,7 @@ class RateLimitingTransportConfig(BaseSettings):
     min_request_interval: NonNegativeFloat = Field(
         default=0.0,
         description="Minimum number of seconds between requests from one client."
-        + "If left at 0 some jitter is still added to pace concurrent requests.",
+        + " If left at 0 some jitter is still added to pace concurrent requests.",
     )
     per_request_jitter: NonNegativeFloat = Field(
         default=0.05,
