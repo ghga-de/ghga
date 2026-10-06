@@ -303,12 +303,16 @@
           "type": "boolean",
           "description": "Render a container readinessProbe from this block (minus `enabled`)"
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "description": "Ready means the health endpoint answers. This default replaced a TCP check (`tcpSocket`); values that still set `readinessProbe.tcpSocket` must also set `httpGet: null`, or the probe gets two handlers and the API server rejects the pod"
+            },
             "port": {
-              "type": "number"
+              "type": ["string", "number"]
             }
           }
         },

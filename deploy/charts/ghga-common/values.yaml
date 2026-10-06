@@ -126,6 +126,9 @@ exports:
 
     # Ready means answering on the health endpoint, not just accepting connections:
     # a service that crashes once its dependencies fail still opens its port first.
+    # This replaced a `tcpSocket` default. Values that set `readinessProbe.tcpSocket`
+    # themselves must add `httpGet: null`, or the probe gets two handlers and the
+    # API server rejects the pod.
     readinessProbe:
       enabled: false
       httpGet:

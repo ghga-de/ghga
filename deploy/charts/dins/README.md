@@ -123,7 +123,7 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.path` | Ready means the health endpoint answers. This default replaced a TCP check (`tcpSocket`); values that still set `readinessProbe.tcpSocket` must also set `httpGet: null`, or the probe gets two handlers and the API server rejects the pod | `"{{ .Values.healthEndpoint }}"` |
 | `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
