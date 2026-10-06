@@ -95,13 +95,11 @@ cases:
     prompt: |
       I changed src/app/shared/utils/date-formats.ts in the data portal. Which exact command runs only its unit tests, date-formats.spec.ts, once and without watching? Give me the one command to paste.
     graders:
+      # No judge on top: in the first pass the Haiku judge failed 7 of 12 replies that
+      # gave this command and named plain vitest or `--` only to warn against them.
       - name: targeted-command
         type: regex
         pattern: 'pnpm ng test (?:--watch=false --include[ =]\S*date-formats|--include[ =]\S*date-formats\S* --watch=false)'
-      - name: no-plain-vitest-or-forwarding
-        type: llm
-        criteria: |
-          The command the reply gives to paste runs the Angular test builder through pnpm (`pnpm ng test` with `--watch=false` and `--include` naming date-formats.spec.ts). It is not plain `vitest` or `npx vitest`, not `npm`, not bare `ng test` without pnpm, and it does not forward arguments after a `--` separator. Mentioning a wrong command only to warn against it is fine.
       - no-direct-uv
 
   runtime-config:
