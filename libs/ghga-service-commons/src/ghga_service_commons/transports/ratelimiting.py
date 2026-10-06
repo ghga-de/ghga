@@ -76,7 +76,7 @@ class RateBudget:
     """Request pacing budget shared by every route of one client.
 
     Requests take a slot and wait for it, so they spread out instead of all going at
-    once. A 429 pushes a shared floor forward.
+    once.
     """
 
     def __init__(self, config: RateLimitingTransportConfig) -> None:
