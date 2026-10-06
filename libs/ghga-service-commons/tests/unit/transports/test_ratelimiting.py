@@ -30,9 +30,11 @@ from ghga_service_commons.transports.config import RateLimitingTransportConfig
 from ghga_service_commons.transports.ratelimiting import (
     AsyncRateLimitingTransport,
     RateBudget,
+    _scope_of,
 )
 
 _REQUEST = httpx2.Request("GET", "http://test")
+_URL = _REQUEST.url
 
 # Pinning the jitter to zero makes the interval the whole spacing, so timing is exact.
 _STEP = 0.02
@@ -70,14 +72,16 @@ def _ratelimiter(
     )
 
 
-def _remaining_retry_after_wait(budget: RateBudget) -> float:
-    """Seconds the budget is still holding every route back."""
-    return max(0.0, budget._floor - time.monotonic())
+def _remaining_retry_after_wait(budget: RateBudget, url: httpx2.URL = _URL) -> float:
+    """Seconds the budget is still holding back the scope of the given URL."""
+    return max(0.0, budget._scopes[_scope_of(url)].floor - time.monotonic())
 
 
-async def _acquired_at(budget: RateBudget, started: float) -> float:
+async def _acquired_at(
+    budget: RateBudget, started: float, url: httpx2.URL = _URL
+) -> float:
     """Acquire a slot and report how far into the run it was granted."""
-    await budget.acquire()
+    await budget.acquire(url)
     return time.monotonic() - started
 
 
@@ -122,14 +126,14 @@ async def test_default_config_alone_spreads_requests():
 async def test_penalty_arriving_mid_wait_requeues_the_waiter():
     """Ensure a request already waiting learns about a 429 that lands while it sleeps."""
     budget = _budget(min_request_interval=0.02)
-    await budget.acquire()  # take the first slot so the next one has to wait
+    await budget.acquire(_URL)  # take the first slot so the next one has to wait
 
     async def penalize_shortly() -> None:
         await asyncio.sleep(0.01)
-        await budget.update_floor(0.15)
+        await budget.update_floor(_URL, 0.15)
 
     started = time.monotonic()
-    await asyncio.gather(budget.acquire(), penalize_shortly())
+    await asyncio.gather(budget.acquire(_URL), penalize_shortly())
 
     assert time.monotonic() - started >= 0.15
 
@@ -139,10 +143,54 @@ async def test_penalty_never_moves_backwards():
     """Ensure a smaller floor cannot shorten a longer one that is still in force."""
     budget = _unpaced_budget()
 
-    await budget.update_floor(30)
-    await budget.update_floor(1)
+    await budget.update_floor(_URL, 30)
+    await budget.update_floor(_URL, 1)
 
     assert _remaining_retry_after_wait(budget) == pytest.approx(30, abs=1)
+
+
+@pytest.mark.asyncio
+async def test_penalty_holds_back_only_its_own_scope():
+    """Ensure a 429 from one service leaves the client's other services free."""
+    budget = _unpaced_budget()
+    await budget.update_floor(httpx2.URL("http://test/upload/a"), 30)
+
+    started = time.monotonic()
+    await budget.acquire(httpx2.URL("http://test/download/b"))
+
+    assert time.monotonic() - started < _STEP
+    held = httpx2.URL("http://test/upload/b")
+    assert _remaining_retry_after_wait(budget, held) == pytest.approx(30, abs=1)
+
+
+@pytest.mark.asyncio
+async def test_scopes_are_paced_independently():
+    """Ensure pacing spaces requests to one scope but not across scopes."""
+    budget = _budget()
+    started = time.monotonic()
+
+    first_upload, second_upload, download = await asyncio.gather(
+        _acquired_at(budget, started, httpx2.URL("http://test/upload/a")),
+        _acquired_at(budget, started, httpx2.URL("http://test/upload/b")),
+        _acquired_at(budget, started, httpx2.URL("http://test/download/a")),
+    )
+
+    assert second_upload - first_upload >= _STEP * 0.75
+    assert download < _STEP * 0.75
+
+
+@pytest.mark.parametrize(
+    "url, scope",
+    [
+        ("https://H/upload/boxes/1?x=1", "https://h/upload"),
+        ("http://u:p@h:8080/x/y", "http://h:8080/x"),
+        ("https://h", "https://h/"),
+        ("https://h/", "https://h/"),
+    ],
+)
+def test_scope_is_origin_and_first_path_segment(url: str, scope: str):
+    """Ensure a URL is keyed by origin and first path segment, the port only if given."""
+    assert _scope_of(httpx2.URL(url)) == scope
 
 
 @pytest.mark.asyncio

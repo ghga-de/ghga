@@ -19,7 +19,9 @@ import asyncio
 import math
 import random
 import time
+from collections import defaultdict
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from logging import getLogger
@@ -72,31 +74,46 @@ def _retry_after_seconds(headers: httpx2.Headers) -> float:
     return max(waits, default=0.0)
 
 
+def _scope_of(url: httpx2.URL) -> str:
+    """Key a URL by origin and first path segment, e.g. `https://data.ghga.de/upload`."""
+    first_segment = url.path.lstrip("/").split("/", 1)[0]
+    port = "" if url.port is None else f":{url.port}"
+    return f"{url.scheme}://{url.host}{port}/{first_segment}"
+
+
+@dataclass
+class _ScopeState:
+    """Pacing and Retry-After state of one scope."""
+
+    next_slot: float = 0.0
+    floor: float = 0.0
+
+
 class RateBudget:
     """Request pacing budget shared by every route of one client.
 
-    Requests take a slot and wait for it, so they spread out instead of all going at
-    once.
+    Each scope (origin plus first path segment) gets its own slots and Retry-After
+    floor, so a 429 from one service does not hold back the others.
     """
 
     def __init__(self, config: RateLimitingTransportConfig) -> None:
         self._lock = asyncio.Lock()
         self._interval = config.min_request_interval
         self._jitter = config.per_request_jitter
-        self._next_slot = 0.0
-        self._floor = 0.0
+        self._scopes: defaultdict[str, _ScopeState] = defaultdict(_ScopeState)
 
     def _spacing(self) -> float:
         """Compute how far away two slots are."""
         return self._interval + random.uniform(0, self._jitter)  # noqa: S311
 
-    async def acquire(self) -> None:
-        """Wait until this request may go out."""
+    async def acquire(self, url: httpx2.URL) -> None:
+        """Wait until a request to this URL may go out."""
+        state = self._scopes[_scope_of(url)]
         while True:
             async with self._lock:
                 now = time.monotonic()
-                current_slot = max(now, self._next_slot, self._floor)
-                self._next_slot = current_slot + self._spacing()
+                current_slot = max(now, state.next_slot, state.floor)
+                state.next_slot = current_slot + self._spacing()
                 delay = current_slot - now
             if delay > 0:
                 log.debug("Waiting %.3f s for the next slot.", delay)
@@ -104,14 +121,16 @@ class RateBudget:
             async with self._lock:
                 # If a Retry-After moved the floor beyond the current slot
                 # in the meantime, do an extra round to get a new slot
-                if time.monotonic() >= self._floor:
+                if time.monotonic() >= state.floor:
                     return
 
-    async def update_floor(self, retry_after: float) -> None:
-        """Update the Retry-After floor."""
+    async def update_floor(self, url: httpx2.URL, retry_after: float) -> None:
+        """Hold back this URL's scope for `retry_after` seconds."""
+        scope = _scope_of(url)
+        state = self._scopes[scope]
         async with self._lock:
-            self._floor = max(self._floor, time.monotonic() + retry_after)
-        log.info("Received retry after response: %.3f s.", retry_after)
+            state.floor = max(state.floor, time.monotonic() + retry_after)
+        log.info("Received retry after response for %s: %.3f s.", scope, retry_after)
 
 
 class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
@@ -131,15 +150,15 @@ class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
         self._transport = transport
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
-        """Wait for a slot, then delegate. A 429 holds the whole budget back."""
-        await self._budget.acquire()
+        """Wait for a slot, then delegate. A 429 holds back its scope."""
+        await self._budget.acquire(request.url)
         # Strictly pass request as non kwarg arg to work around Otel httpx
         # instrumentation trying to extract from arg[0]
         response = await self._transport.handle_async_request(request)
         if response.status_code == 429 and (
             retry_after := _retry_after_seconds(response.headers)
         ):
-            await self._budget.update_floor(retry_after)
+            await self._budget.update_floor(request.url, retry_after)
         return response
 
     async def aclose(self) -> None:  # noqa: D102

@@ -33,8 +33,8 @@ for the full set of configurable values.
 | `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
 | `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
 | `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.min_request_interval` | Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests. | `0.0` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.05` |
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
