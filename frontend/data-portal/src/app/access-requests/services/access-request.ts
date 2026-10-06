@@ -472,7 +472,8 @@ export class AccessRequestService {
    * @param datasetId - the dataset ID
    * @returns the composite key
    */
-  #grantKey = (userId: string, datasetId: string): string => `${userId} ${datasetId}`;
+  #grantKey = (userId: string, datasetId: string): string =>
+    `${userId}\u0000${datasetId}`;
 
   /**
    * Aggregate the current access state across all grants of the same user and
