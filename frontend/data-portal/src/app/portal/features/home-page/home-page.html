@@ -39,6 +39,7 @@
   </div>
 </section>
 @defer (on idle) {
+  <!-- Once @boundary is stable, wrap this in one, so failing stats leave the rest of the home page usable. -->
   <app-global-stats />
 }
 <section>

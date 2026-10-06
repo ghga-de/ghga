@@ -289,6 +289,7 @@
       >
 
       <div class="grid grid-cols-1 gap-2 overflow-x-auto *:min-w-128">
+        <!-- Once @boundary is stable, wrap each table in one, so a table that fails to render leaves the rest of the dataset page usable. -->
         <app-dataset-details-table
           tableName="experiments"
           [data]="experiments()"

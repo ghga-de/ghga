@@ -11,7 +11,7 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { computed, inject, Service, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { RedirectCommand, Router } from '@angular/router';
 import { ConfigService } from '@app/shared/services/config';
 import { NotificationService } from '@app/shared/services/notification';
 import type { OidcMetadata, UserManagerSettings } from 'oidc-client-ts';
@@ -216,21 +216,21 @@ export class AuthService {
   }
 
   /**
-   * Navigate back to the home page if no child routes are present
-   * @returns always false to prevent the route from being accessed
+   * Deny access to a route, redirecting to the home page if no route is shown yet
+   * @returns false to stay on the current route, or a redirect to the home page
    */
-  #guardBack(): boolean {
+  #guardBack(): false | RedirectCommand {
     if (!this.#router.routerState.root.children.length) {
-      this.#router.navigate(['/']);
+      return new RedirectCommand(this.#router.parseUrl('/'));
     }
     return false;
   }
 
   /**
    * This method can be used as a guard for the OAuth callback route.
-   * @returns true if the route is accessible
+   * @returns true if the route is accessible, or a redirect
    */
-  async guardCallback(): Promise<boolean> {
+  async guardCallback(): Promise<boolean | RedirectCommand> {
     let oidcUser: OidcUser | undefined;
     let message: string | undefined;
     if (await this.#oidcUserManager.getUser()) {
@@ -284,9 +284,9 @@ export class AuthService {
 
   /**
    * This method can be used as a guard for the registration route.
-   * @returns true if the route is accessible
+   * @returns true if the route is accessible, or a redirect
    */
-  async guardRegister(): Promise<boolean> {
+  async guardRegister(): Promise<boolean | RedirectCommand> {
     switch (await this.#determineSessionState()) {
       case 'LoggedIn':
       case 'NeedsRegistration':
@@ -299,9 +299,9 @@ export class AuthService {
 
   /**
    * This method can be used as a guard for the TOTP setup route.
-   * @returns true if the route is accessible
+   * @returns true if the route is accessible, or a redirect
    */
-  async guardSetupTotp(): Promise<boolean> {
+  async guardSetupTotp(): Promise<boolean | RedirectCommand> {
     switch (await this.#determineSessionState()) {
       case 'Registered':
       case 'NeedsTotpToken':
@@ -316,9 +316,9 @@ export class AuthService {
 
   /**
    * This method can be used as a guard for the TOTP confirmation route.
-   * @returns true if the route is accessible
+   * @returns true if the route is accessible, or a redirect
    */
-  async guardConfirmTotp(): Promise<boolean> {
+  async guardConfirmTotp(): Promise<boolean | RedirectCommand> {
     switch (await this.#determineSessionState()) {
       case 'NewTotpToken':
       case 'HasTotpToken':
@@ -330,9 +330,9 @@ export class AuthService {
 
   /**
    * This method can be used as a guard for all routes that need an authenticated user.
-   * @returns true if the route is accessible
+   * @returns true if the route is accessible, or a redirect
    */
-  async guardAuthenticated(): Promise<boolean> {
+  async guardAuthenticated(): Promise<boolean | RedirectCommand> {
     const state = await this.#determineSessionState();
     if (state === 'Authenticated') return true;
     this.#notify.showWarning('Please login to continue the requested action.');
@@ -341,9 +341,9 @@ export class AuthService {
 
   /**
    * This method can be used as a guard for all routes available only to data stewards.
-   * @returns true if the route is accessible
+   * @returns true if the route is accessible, or a redirect
    */
-  async guardDataSteward(): Promise<boolean> {
+  async guardDataSteward(): Promise<boolean | RedirectCommand> {
     const state = await this.#determineSessionState();
     if (state === 'Authenticated' && this.roles().includes('data_steward')) return true;
     this.#notify.showWarning(
