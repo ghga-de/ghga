@@ -8,6 +8,7 @@ metadata:
   source: https://github.com/angular/skills/tree/22.2.x/angular-developer
   commit: ac6c42b96038359bb21e12fe962da88256efe243
 paths: frontend/**
+disable-model-invocation: true
 ---
 
 # Angular Developer Guidelines

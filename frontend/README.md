@@ -7,4 +7,4 @@ It uses the **JS toolchain** (`pnpm` workspace, Vitest, Playwright) with its **o
 - Built and served as a static SPA (static-web-server) behind the edge.
 - Local AAI defaults to `mock-oauth2-server` ([ADR-0029](../docs/adrs/adr-0029-local-aai-generic-oidc.md)); prod points at Life Science Login.
 
-> Two root skills apply here: `data-portal`, the portal's own conventions, which comes first, and Google's `angular-developer`, a pinned copy ([skill catalogue](../docs/agent-skills.md)).
+> The root skill `data-portal` holds the portal's own conventions and loads when an agent works here; Google's `angular-developer`, a pinned copy, is started with `/angular-developer` ([skill catalogue](../docs/agent-skills.md)).

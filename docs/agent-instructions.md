@@ -84,7 +84,7 @@ The [skill catalogue](agent-skills.md) is generated from the frontmatter and lis
 The frontmatter holds the fields of the [specification](https://agentskills.io/specification): `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
 Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable` and `paths` are allowed, since they only narrow when a skill loads and the other tools ignore them without harm.
 
-A third-party skill, such as Google's `angular-developer`, is a pinned copy in the root `.agents/skills/`, with its source and full commit SHA in `metadata` and a `paths` field of ours.
+A third-party skill, such as Google's `angular-developer`, is a pinned copy in the root `.agents/skills/`, with its source and full commit SHA in `metadata` and our own `paths` and invocation fields.
 Nothing else in it is edited, so a newer copy replaces it whole; the Angular one moves to the branch of [angular/skills](https://github.com/angular/skills) that matches the portal's Angular version when the portal upgrades.
 The Markdown lint and `just prose` skip it.
 Where it disagrees with our docs, a skill of ours names the difference and takes priority, as `data-portal` does.
