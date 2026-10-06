@@ -175,6 +175,11 @@ secretGen:
 # API at /api/auth; the gateway consults it for every protected route.
 auth-adapter:
   enabled: true
+  # Ready only while the health endpoint answers, so `helm --wait` waits for each
+  # REST pod to serve and a crash between checks takes it out of the Service again.
+  # Every alias serving HTTP repeats this line; the consumers, NOS, NS, IFRS and the
+  # DHFS instances have no port to probe.
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   nameOverride: auth-adapter
   # the private internal signing key (+ TOTP key) from the secret-gen Job
   envVarsSecret: ghga-auth-keys-priv
@@ -229,6 +234,7 @@ auth-adapter:
 # The user registry / claims / access APIs.
 auth-rest:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   nameOverride: auth-rest
   # the portal's auth_url — compose routes /api/auth to the users instance
   apiBasePath: /api/auth
@@ -258,6 +264,7 @@ auth-rest:
 # data-steward seeding, which the claims API applies at startup.
 auth-claims:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   nameOverride: auth-claims
   envVarsSecret: ghga-auth-keys-pub
   config:
@@ -283,6 +290,7 @@ auth-claims:
 
 wkvs:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   envVarsSecret: ghga-wkvs-keys
   config:
     service_instance_id: rest.1
@@ -305,6 +313,7 @@ wkvs:
 
 data-portal:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   httpRoute:
     enabled: true
     port: 8080
@@ -326,6 +335,7 @@ data-portal:
 
 ekss:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   config:
     host: 0.0.0.0
     port: 8080
@@ -347,6 +357,7 @@ ekss:
 dcs:
   serviceName: dcs
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-dcs-keys
   httpRoute:
@@ -378,6 +389,7 @@ dcs:
 ucs:
   serviceName: ucs
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-ucs-keys
   httpRoute:
@@ -406,6 +418,7 @@ ucs:
 fis:
   serviceName: fis
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-fis-keys
   httpRoute:
@@ -448,6 +461,7 @@ ifrs:
 
 pcs:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-pcs-keys
   httpRoute:
@@ -463,6 +477,7 @@ pcs:
 wps:
   serviceName: wps
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-wps-keys
   httpRoute:
@@ -479,6 +494,7 @@ wps:
 rs:
   serviceName: rs
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-rs-keys
   httpRoute:
@@ -495,6 +511,7 @@ rs:
 
 metldata:
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-metldata-keys
   httpRoute:
@@ -515,6 +532,7 @@ metldata:
 rts:
   serviceName: rts
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   httpRoute:
     enabled: true
@@ -530,6 +548,7 @@ rts:
 ars:
   serviceName: ars
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-ars-keys
   httpRoute:
@@ -546,6 +565,7 @@ ars:
 mass:
   serviceName: mass
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   httpRoute:
     enabled: true
@@ -560,6 +580,7 @@ mass:
 dins:
   serviceName: dins
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   httpRoute:
     enabled: true
@@ -612,6 +633,7 @@ nos:
 dlqs:
   serviceName: dlqs
   enabled: true
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-dlqs-keys
   httpRoute:
@@ -628,6 +650,7 @@ dlqs:
 # 'sms' to extAuth.targetRoutes)
 sms:
   enabled: false
+  readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
   apiBasePathPrefix: /api
   envVarsSecret: ghga-sms-keys
   httpRoute:
