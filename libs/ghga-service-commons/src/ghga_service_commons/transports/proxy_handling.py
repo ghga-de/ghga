@@ -22,20 +22,19 @@ Hosts excluded via NO_PROXY are kept as `None` mounts, which tells httpx2 to con
 directly to them.
 """
 
-from httpx2 import AsyncBaseTransport, Limits, _utils
+from httpx2 import AsyncBaseTransport, _utils
 
 from .config import CompositeConfig
 from .factory import (
     BaseTransportFactory,
     CompositeTransportFactory,
-    _resolve_base_transport_factory,
+    default_base_transport_factory,
 )
 from .ratelimiting import RateBudget
 
 
 def ratelimiting_retry_proxies(
     config: CompositeConfig,
-    limits: Limits | None = None,
     *,
     make_base_transport: BaseTransportFactory | None = None,
     budget: RateBudget | None = None,
@@ -51,7 +50,7 @@ def ratelimiting_retry_proxies(
     if not trust_env:
         return {}
 
-    factory = _resolve_base_transport_factory(None, limits, make_base_transport)
+    factory = make_base_transport or default_base_transport_factory()
     return {
         key: None
         if url is None

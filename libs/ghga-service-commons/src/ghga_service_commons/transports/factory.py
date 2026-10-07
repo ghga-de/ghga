@@ -82,44 +82,13 @@ def fixed_base_transport_factory(
     return lambda _: transport
 
 
-def _resolve_base_transport_factory(
-    base_transport: AsyncBaseTransport | None,
-    limits: Limits | None,
-    make_base_transport: BaseTransportFactory | None,
-) -> BaseTransportFactory:
-    """Let's higher level code pass arguments through and defer the decision on which factory is used.
-
-    `make_base_transport` takes priority and raises if any of the other options is provided.
-    `base_transport` raises if `limits` are also provided. It also ignores proxy setting, as those can't
-    be applied to an already created transport.
-    If neither `make_base_transport` nor `base_transport` is provided, a default factory applying `limits` is returned.
-    """
-    if make_base_transport:
-        if base_transport or limits:
-            raise ValueError(
-                "Drop `base_transport` and `limits` and apply them inside `make_base_transport`."
-                " `make_base_transport` takes priority and creates a possibly conflicting transport factory."
-            )
-        return make_base_transport
-    if base_transport:
-        if limits:
-            raise ValueError(
-                "`limits` are ignored when `base_transport` is given. Apply them directly"
-                " to `base_transport` instead."
-            )
-        return fixed_base_transport_factory(base_transport)
-    return default_base_transport_factory(limits)
-
-
 class CompositeTransportFactory:
     """Produces different flavors of httpx2.AsyncHTTPTransports and takes care of wrapping them in the correct order."""
 
     @classmethod
-    def _create_common_transport_layers(  # noqa: PLR0913
+    def _create_common_transport_layers(
         cls,
         config: CompositeConfig,
-        base_transport: AsyncBaseTransport | None = None,
-        limits: Limits | None = None,
         *,
         make_base_transport: BaseTransportFactory | None = None,
         proxy: str | None = None,
@@ -127,24 +96,20 @@ class CompositeTransportFactory:
     ):
         """Creates wrapped transports reused between different factory methods.
 
-        The base transport options are resolved by `_resolve_base_transport_factory` and
-        the result is built for `proxy`. Passing `budget` paces requests across
-        routes.
+        If `make_base_transport` is not provided, a default factory using default
+        limits is used.
+        Passing `budget` paces requests across routes.
         """
-        factory = _resolve_base_transport_factory(
-            base_transport, limits, make_base_transport
-        )
+        factory = make_base_transport or default_base_transport_factory()
         ratelimiting_transport = AsyncRateLimitingTransport(
             config=config, transport=factory(proxy), budget=budget
         )
         return AsyncRetryTransport(config=config, transport=ratelimiting_transport)
 
     @classmethod
-    def create_ratelimiting_retry_transport(  # noqa: PLR0913
+    def create_ratelimiting_retry_transport(
         cls,
         config: CompositeConfig,
-        base_transport: AsyncBaseTransport | None = None,
-        limits: Limits | None = None,
         *,
         make_base_transport: BaseTransportFactory | None = None,
         proxy: str | None = None,
@@ -156,8 +121,6 @@ class CompositeTransportFactory:
         """
         return cls._create_common_transport_layers(
             config,
-            base_transport=base_transport,
-            limits=limits,
             make_base_transport=make_base_transport,
             proxy=proxy,
             budget=budget,
