@@ -165,11 +165,12 @@ jobs:
           gateway=$($K get pods -l gateway.envoyproxy.io/owning-gateway-name=ghga -o name)
           for p in $($K get pods -o name); do
             echo "::group::logs $p"
-            # a restarted pod's log is kept whole: what it did while the suite ran
-            # is what matters, not only its last lines (the gateway's requests are
-            # in their own group above)
+            # a restarted pod's log is kept up to 5000 lines: what it did while the
+            # suite ran is what matters, not only its last lines, but a pod looping
+            # on errors must not flood the dump (the gateway's requests are in their
+            # own group above)
             tail=120
-            if grep -qx "${p#pod/}" <<< "$restarted" && ! grep -qx "$p" <<< "$gateway"; then tail=-1; fi
+            if grep -qx "${p#pod/}" <<< "$restarted" && ! grep -qx "$p" <<< "$gateway"; then tail=5000; fi
             $K logs "$p" --all-containers --tail=$tail || true
             echo "::endgroup::"
           done
