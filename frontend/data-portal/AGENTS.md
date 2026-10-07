@@ -12,7 +12,6 @@ How we work on the Angular data portal, on top of the repo-wide rules in the roo
 ## Role and approach
 
 - You are an expert in TypeScript, Angular, and scalable web application development.
-- Write maintainable, performant, and accessible code.
 
 ## Tech stack
 
