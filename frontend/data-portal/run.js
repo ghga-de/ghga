@@ -29,34 +29,46 @@ const WITH_OIDC = args.includes('--with-oidc');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// The platform version of a checkout without git or a ghga/ tag
+const FALLBACK_VERSION = '0.0.0+dev';
+
 /**
- * Derive the platform version from the checkout this script runs in.
+ * Turn `git describe` output into a semver platform version.
  *
  * A copy of scripts/platform_version.py, which this script cannot import;
  * docs/releases.md defines the format.
  *
- * @returns {string} The version, e.g. 15.3.1-rc.8+dev.71.44594f5.
+ * @param {string} described - e.g. ghga/15.3.1-rc.8-71-g44594f5-dirty
+ * @returns {string} The version, e.g. 15.3.1-rc.8+dev.71.44594f5.dirty.
  */
-function checkoutVersion() {
-  const fallback = '0.0.0+dev';
-  let described;
-  try {
-    described = execFileSync(
-      'git',
-      ['describe', '--tags', '--match', 'ghga/*', '--dirty', '--abbrev=7'],
-      { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
-    ).trim();
-  } catch {
-    return fallback;
-  }
+export function fromDescribe(described) {
   const match = described.match(
     /^ghga\/(?<tag>.+?)(?:-(?<count>\d+)-g(?<sha>[0-9a-f]+))?(?<dirty>-dirty)?$/,
   );
-  if (!match) return fallback;
+  if (!match) return FALLBACK_VERSION;
   const { tag, count, sha, dirty } = match.groups;
   const build = count ? ['dev', count, sha] : [];
   if (dirty) build.push('dirty');
   return build.length ? `${tag}+${build.join('.')}` : tag;
+}
+
+/**
+ * Derive the platform version from the checkout this script runs in.
+ *
+ * @returns {string} The version, e.g. 15.3.1-rc.8+dev.71.44594f5.
+ */
+function checkoutVersion() {
+  try {
+    return fromDescribe(
+      execFileSync(
+        'git',
+        ['describe', '--tags', '--match', 'ghga/*', '--dirty', '--abbrev=7'],
+        { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+      ).trim(),
+    );
+  } catch {
+    return FALLBACK_VERSION;
+  }
 }
 
 /**
@@ -94,7 +106,7 @@ function setVersion(settings) {
  * @param {string} filePath - Path to the .env file.
  * @returns {Object} Parsed key-value pairs.
  */
-function parseEnvFile(filePath) {
+export function parseEnvFile(filePath) {
   let content;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -528,4 +540,7 @@ async function main() {
   );
 }
 
-await main();
+// Start only when run as a script, so run.test.js can import the functions above
+if (path.resolve(process.argv[1] ?? '') === __filename) {
+  await main();
+}
