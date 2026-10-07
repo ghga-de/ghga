@@ -43,14 +43,33 @@ The platform version continues the 15.3 series the charts already carry; the fir
 A `ghga/X.Y.Z` tag builds **all** images from the tagged commit, with no affected-only shortcut; layer caching keeps unchanged members cheap.
 Charts are packaged in the same run and stamped with the same version.
 
+The tag is the only place the platform version is kept: platform-lane members declare the placeholder `0.0.0`, and CI rejects any other ([ADR-0046](adrs/adr-0046-platform-version-from-tags.md)).
 Images embed internal libraries from workspace source at that commit, never from PyPI.
 `scripts/stamp_platform_version.py` stamps the version after dependencies are installed, so `uv.lock` and member `pyproject.toml` files stay untouched:
 
-- The member's dist-info `Version:` becomes the platform version, which services report through `importlib.metadata`.
-- Other workspace libraries in the image get a PEP 440 local suffix, `8.6.0+ghga.17.0.0`: constraints still match, SBOM metadata stays coherent, and PyPI rejects local versions.
+- Every workspace member in the image that declares `0.0.0` gets the platform version as its dist-info `Version:`, which services report through `importlib.metadata`.
+  In a member's image that is the member and the platform-lane libraries it uses, such as `metldata`; in the mono image, every platform-lane member.
+- PyPI-lane libraries in the image get a PEP 440 local suffix, `8.6.0+ghga.17.0.0`: constraints still match, SBOM metadata stays coherent, and PyPI rejects local versions.
 - OCI labels `org.opencontainers.image.version` and `.revision`, and the `GHGA_PLATFORM_VERSION` environment variable, carry the version and commit.
 
-Local builds take the same path with `0.0.0+dev.g<sha>`, so a local build matches a release build.
+### Versions outside a release
+
+Anything not built from a `ghga/` tag derives the platform version from its checkout, by `git describe --tags --match 'ghga/*' --dirty --abbrev=7`:
+
+| Checkout | Version |
+|---|---|
+| at a tag | `15.3.1`, `15.3.1-rc.8` |
+| N commits after a tag | `15.3.1-rc.8+dev.71.44594f5` |
+| with local changes | `.dirty` appended to the build part, or `15.3.1+dirty` at a tag |
+| no git, no `.git` or no `ghga/` tag | `0.0.0+dev` |
+
+The count and the SHA are build metadata, so the version still sorts as the tag it follows.
+The SHA comes without git's `g` and pastes into `git show`; git lengthens it where 7 characters would be ambiguous.
+`dev` is not merged back after a release, so until the next candidate it describes itself from the last one.
+
+`just image` and `just image-mono` pass the derived version and commit as build arguments, so a local image is stamped like a release image.
+`ghga-datasteward-kit` run from a clone sends the derived version in its User-Agent, and `run.js` shows it in the front end's ribbon under `just fe-dev`.
+The CD builds of `dev-images.yaml` use `0.0.0-dev.<run>.<attempt>` instead ([ADR-0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md)).
 
 `ghga-datasteward-kit` is not published: stewards run `git clone -b ghga/X.Y.Z` and `uv run ghga-datasteward-kit`, and `uv.lock` at the tag gives the tested combination.
 
@@ -149,4 +168,4 @@ The same command prints a candidate's notes, compared with the previous tag, can
 
 ## Open at cutover
 
-Listed with the other cutover leftovers in the [runbook §7](migration/runbook.md#7-cutover-checklist): platform-lane member versions are to be fixed at `0.0.0`, with stamping supplying the real one; `ghga-datasteward-kit` pins `requires-python` to the workspace baseline; and `auth-km-jobs` moves to `services/`.
+Listed with the other cutover leftovers in the [runbook §7](migration/runbook.md#7-cutover-checklist): `ghga-datasteward-kit` pins `requires-python` to the workspace baseline, and `auth-km-jobs` moves to `services/`.

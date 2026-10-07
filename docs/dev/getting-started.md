@@ -30,7 +30,8 @@ The [architecture overview](../architecture/overview.md) and the [journeys](../a
 - **`docs/`** holds the architecture documents, the ADRs, the conventions and the epics.
 
 Every directory under `libs/`, `services/` and `tools/` is a member of one `uv` workspace.
-A member is a Python package with its own `pyproject.toml`, `src/`, `tests/` and version.
+A member is a Python package with its own `pyproject.toml`, `src/` and `tests/`.
+Only a PyPI-lane member has a version of its own; the others declare `0.0.0` and take the platform version at build ([ADR-0046](../adrs/adr-0046-platform-version-from-tags.md)).
 Members use the internal libraries from source, and one `uv.lock` pins the whole workspace, so `dev` is always integrated ([ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 The `[tool.ghga]` table in a member's `pyproject.toml` says what it builds and on which lane it is released ([conventions](../conventions.md#toolghga-capability-markers)).
 The ruff, mypy and pytest configuration lives once, in the root `pyproject.toml`.

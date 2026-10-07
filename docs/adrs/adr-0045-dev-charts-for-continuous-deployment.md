@@ -2,7 +2,7 @@
 status: accepted
 date: 2026-10-01
 tags: [deploy, release]
-related: [ADR-0027, ADR-0037, ADR-0038]
+related: [ADR-0027, ADR-0037, ADR-0038, ADR-0046]
 ---
 
 # ADR-0045 — Publish dev charts on the mono image for continuous deployment
