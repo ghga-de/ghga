@@ -6,6 +6,7 @@ exports:
     global:
       imageRegistry: ""
       imagePullSecrets: []
+      localImageIds: {}
 
     commandPrefix: /usr/local/bin/
     commandStyle: shell

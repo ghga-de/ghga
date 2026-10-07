@@ -442,3 +442,18 @@ def test_probes_render_one_handler(rendered_chart):
     assert "httpGet" not in container["readinessProbe"]
     assert container["livenessProbe"]["httpGet"] == {"path": "/health", "port": "http"}
     assert "tcpSocket" not in container["livenessProbe"]
+
+
+def test_local_image_id_annotates_only_its_own_image(rendered_chart):
+    """A Deployment gets the ID of its own image from global.localImageIds, so a
+    rebuilt local image changes the pod spec; an image not listed adds nothing.
+    """
+    with_ids = rendered_chart("common.yaml", "local_image_ids.yaml")
+    annotations = with_ids["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+    assert annotations["local-image-id"] == "sha256:1111"
+
+    without_ids = rendered_chart("common.yaml")
+    annotations = without_ids["Deployment"]["spec"]["template"]["metadata"][
+        "annotations"
+    ]
+    assert "local-image-id" not in annotations
