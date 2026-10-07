@@ -7,7 +7,7 @@
 #
 # PACKAGE          = the workspace member's distribution name
 # EXECUTABLE       = the member's console script, exposed as the ENTRYPOINT
-# PLATFORM_VERSION = stamped onto the environment (ADR-0027); default marks dev builds
+# PLATFORM_VERSION = stamped onto the environment (ADR-0027, ADR-0046); default marks dev builds
 # VARIANT          = single (default, one member per image) | mono (all Python members
 #                    in one venv; demo, CI and dev cluster only, PACKAGE is ignored) —
 #                    `just demo-images-mono`
@@ -79,9 +79,11 @@ FROM workspace AS venv-mono
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --all-packages
 
-# No stamping: the script rewrites the version of exactly ONE released member, which is
-# meaningless for an image carrying all of them. GHGA_PLATFORM_VERSION is still set below,
-# so the runtime reports the platform version; only the dist-info rewrite is skipped.
+ARG PLATFORM_VERSION=0.0.0+dev
+# Stamped like a release image, so every service reports the dev version rather than the
+# 0.0.0 its pyproject declares; there is no single released member to check for.
+RUN /app/.venv/bin/python /stamp_platform_version.py --version "${PLATFORM_VERSION}"
+
 # The entrypoint is a placeholder — the charts always render `command: [<executable>]`
 # (commandStyle=exec), so ENTRYPOINT is never what starts a service here.
 RUN ln -s /app/.venv/bin/python /app/entrypoint && test -e /app/entrypoint
