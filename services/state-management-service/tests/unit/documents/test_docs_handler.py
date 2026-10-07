@@ -283,3 +283,49 @@ async def test_collection_not_found_error():
     with pytest.raises(DocsHandler.NamespaceNotFoundError):
         docs_handler = DocsHandler(config=get_config(), docs_dao=docs_dao)
         await docs_handler.get(db_name=TEST_DB, collection=ALLOPS, criteria={})
+
+
+@pytest.mark.parametrize("db_name", ["*", TEST_DB])
+@pytest.mark.asyncio()
+async def test_wildcard_deletion_keeps_version_collections(db_name: str):
+    """Test that the collection wildcard skips the migration records."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+    config = get_config()
+    config = config.model_copy(update={"db_permissions": ["*.*:rw"]})
+    docs_handler = DocsHandler(config=config, docs_dao=docs_dao)
+
+    docs_dao.get_db_map_for_prefix.return_value = {
+        TEST_DB: [ALLOPS, "authDbVersions"],
+    }
+    await docs_handler.delete(db_name=db_name, collection="*", criteria={})
+    assert docs_dao.delete.call_args_list == [
+        call(db_name=f"{config.db_prefix}{TEST_DB}", collection=ALLOPS, criteria={}),
+    ]
+    docs_dao.delete.reset_mock()
+
+    # A database holding nothing but migration records is left alone
+    docs_dao.get_db_map_for_prefix.return_value = {TEST_DB: ["authDbVersions"]}
+    await docs_handler.delete(db_name=db_name, collection="*", criteria={})
+    docs_dao.delete.assert_not_awaited()
+
+    # Naming the collection still deletes from it
+    await docs_handler.delete(db_name=TEST_DB, collection="authDbVersions", criteria={})
+    docs_dao.delete.assert_awaited_once_with(
+        db_name=f"{config.db_prefix}{TEST_DB}", collection="authDbVersions", criteria={}
+    )
+
+
+@pytest.mark.asyncio()
+async def test_wildcard_deletion_without_version_suffix():
+    """Test that an empty suffix lets the wildcard delete the migration records."""
+    docs_dao = AsyncMock(spec=DocsDaoPort)
+    config = get_config().model_copy(
+        update={"db_permissions": ["*.*:rw"], "db_version_collection_suffix": ""}
+    )
+    docs_handler = DocsHandler(config=config, docs_dao=docs_dao)
+
+    docs_dao.get_db_map_for_prefix.return_value = {TEST_DB: ["authDbVersions"]}
+    await docs_handler.delete(db_name=TEST_DB, collection="*", criteria={})
+    docs_dao.delete.assert_awaited_once_with(
+        db_name=f"{config.db_prefix}{TEST_DB}", collection="authDbVersions", criteria={}
+    )

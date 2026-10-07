@@ -764,22 +764,42 @@ up profile="": (demo-load profile)
     fi
     just demo-template
     echo "installing — this waits for every workload to become ready, a few minutes"
+    # The API server warns about every int32/int64 format in the Envoy Gateway CRDs,
+    # dozens of lines that say nothing about this install; the filter drops only those.
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
       ${extra[@]+"${extra[@]}"} \
-      --kube-context kind-ghga --wait --timeout 15m
+      --kube-context kind-ghga --wait --timeout 15m \
+      2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
 
 # `helm --wait` covers the release's own workloads, but the gateway's pod is created by
 # the Envoy operator from the Gateway resource — outside the release — so it needs its
-# own condition. Without both gates a fresh cluster answers the first request before
-# anything is listening: the services fail fast when Kafka is not yet up
-# (KafkaConnectionError), and though Kubernetes restarts them, a suite that starts
-# immediately runs against the crash-loop window.
-# Block until the gateway is programmed, i.e. the platform actually serves.
+# own condition. And a Ready pod can still crash: the services fail fast when Kafka is
+# not yet up (KafkaConnectionError), and a suite that starts immediately runs against
+# the crash-loop window. So after the gateway is programmed, this polls the DRS health
+# check, the suite's first request, until it answers 200; it passes ext-authz, so that
+# proves routing and the auth adapter work end to end.
 wait-ready:
-    kubectl --context kind-ghga wait --for=condition=Programmed gateway/ghga --timeout=5m
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    $K wait --for=condition=Programmed gateway/ghga --timeout=5m
+    url=http://localhost/api/ga4gh/drs/v1/health
+    deadline=$((SECONDS + 120))
+    until code=$(curl -s -o /dev/null -w '%{http_code}' "$url"); [ "$code" = 200 ]; do
+        if [ "$SECONDS" -ge "$deadline" ]; then
+            echo "error: $url still answers $code after 2 min; the gateway logged:" >&2
+            $K logs -l gateway.envoyproxy.io/owning-gateway-name=ghga -c envoy --tail=500 \
+              | jq -rR 'fromjson? | select(.["x-envoy-origin-path"] == "/api/ga4gh/drs/v1/health")
+                  | "\(.start_time) \(.response_code) \(.response_code_details) \(.response_flags)"' \
+              | tail -3 >&2
+            echo "ext_authz_error means the auth adapter failed: see 'just logs auth-adapter'" >&2
+            exit 1
+        fi
+        sleep 2
+    done
 
 # Delete the kind cluster (the images on its node go with it; the docker store keeps them).
 down:
@@ -831,7 +851,8 @@ testbed-up profile="": (demo-load profile)
       -f deploy/charts/ghga-demo/values-artifacts.yaml \
       -f deploy/charts/ghga-demo/values-testbed.yaml \
       ${extra[@]+"${extra[@]}"} \
-      --kube-context kind-ghga --wait --timeout 15m
+      --kube-context kind-ghga --wait --timeout 15m \
+      2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
 
 # The suite imports ghga-datasteward-kit and runs it and ghga-connector as CLIs, so both
@@ -909,9 +930,8 @@ testbed-reset:
         sel=$($K get "$d" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
         $K wait --for=delete pod -l "$sel" --timeout=120s > /dev/null
     done
-    # Drop every service database: the suite's clean slate removes the migration
-    # bookkeeping, so a service restarting afterwards would re-run migrations over
-    # already-migrated data and crash-loop. Starting from empty avoids that.
+    # Drop every service database, migration records included, so each service
+    # migrates and re-seeds from empty.
     $K exec "$MPOD" -- mongosh --quiet --eval \
       'db.adminCommand({listDatabases:1}).databases
          .map(d => d.name)
@@ -969,7 +989,8 @@ testbed *args:
     mkdir -p /tmp/submission /tmp/connector
     $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
     PF1=$!
-    $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &
+    # 18080, not the mock's own 8080, which `just fe-dev` serves the portal on
+    $K port-forward svc/ghga-lox24-mock 18080:8080 > /dev/null 2>&1 &
     PF2=$!
     # MinIO needs no forward: kind publishes its S3 node port on the host's 9000
     # (deploy/kind-config.yaml), which is the authority the pre-signed URLs carry —

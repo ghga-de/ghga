@@ -303,12 +303,15 @@
           "type": "boolean",
           "description": "Render a container readinessProbe from this block (minus `enabled`)"
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string"
+            },
             "port": {
-              "type": "number"
+              "type": ["string", "number"]
             }
           }
         },

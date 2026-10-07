@@ -115,6 +115,7 @@ class DocsHandler(DocsHandlerPort):
 
     def __init__(self, *, config: Config, docs_dao: DocsDaoPort):
         self._prefix = config.db_prefix
+        self._version_suffix = config.db_version_collection_suffix
         self._permissions = Permissions(permissions=config.db_permissions)
         self._docs_dao = docs_dao
 
@@ -231,6 +232,10 @@ class DocsHandler(DocsHandlerPort):
             log.error(error, extra={"documents": documents}, exc_info=True)
             raise error from err
 
+    def _is_version_collection(self, collection: str) -> bool:
+        """Tell whether the collection holds a service's migration records."""
+        return bool(self._version_suffix) and collection.endswith(self._version_suffix)
+
     async def _delete(self, db_name: str, collection: str, criteria: Criteria) -> None:
         """Delete documents satisfying the criteria. Called by the public delete method."""
         if not self._permissions.can_write(db_name, collection):
@@ -254,7 +259,8 @@ class DocsHandler(DocsHandlerPort):
         collections is deleted. If a db is specified but the collection is a wildcard,
         all collections in that db are deleted. However, deleting data from a specific
         collection in all databases is not allowed in order to prevent accidental data
-        loss.
+        loss. The collection wildcard skips the services' migration records, which are
+        only deleted when the collection is named.
 
         No error is raised if the db or collection does not exist.
 
@@ -282,7 +288,12 @@ class DocsHandler(DocsHandlerPort):
             )
 
             # Make a list of tuples representing the (db, collection)s to delete
-            to_delete = [(db, collection) for db in db_map for collection in db_map[db]]
+            to_delete = [
+                (db, coll)
+                for db in db_map
+                for coll in db_map[db]
+                if not self._is_version_collection(coll)
+            ]
         elif db_name == "*":
             error = ValueError(
                 "Cannot use wildcard for db_name with specific collection"
@@ -291,7 +302,7 @@ class DocsHandler(DocsHandlerPort):
             raise error
 
         parsed_criteria = self._parse_criteria(criteria)
-        if to_delete:
+        if collection == "*":
             log.debug("Iteratively deleting data from these collections: %s", to_delete)
             for db, coll in to_delete:
                 with suppress(PermissionError):

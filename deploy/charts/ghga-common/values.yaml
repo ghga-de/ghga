@@ -124,10 +124,14 @@ exports:
       initialDelaySeconds: 30
       periodSeconds: 15
 
+    # Ready means answering on the health endpoint, not just accepting connections:
+    # a service that crashes once its dependencies fail still opens its port first.
+    # Values that set another handler, such as `tcpSocket`, replace this `httpGet`.
     readinessProbe:
       enabled: false
-      tcpSocket:
-        port: 8080
+      httpGet:
+        path: "{{ .Values.healthEndpoint }}"
+        port: http
       initialDelaySeconds: 30
       periodSeconds: 15
 

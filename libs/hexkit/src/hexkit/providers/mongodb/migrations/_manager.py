@@ -229,18 +229,21 @@ class MigrationManager:
     async def _initialize_versioning(self) -> bool:
         """Create and acquire the DB lock, then add the versioning collection.
 
-        Returns `True` if setup was performed, else `False`.
+        Returns `True` if versioning is set up once the lock is held, whether by this
+        instance or another one, and `False` if the lock could not be acquired.
         """
         init_start = time()
         async with self._lock_db():
-            if self._lock_acquired:
-                # Initialize db version collection
+            if not self._lock_acquired:
+                return False
+            # Another instance may have initialized versioning since the caller read
+            # the records, so only an empty collection is initialized here
+            if not await self._get_version_docs():
                 await self._record_migration(
                     version=1,
                     total_duration_ms=duration_in_ms(time() - init_start),
                 )
-                return True
-        return False
+        return True
 
     def _get_version_sequence(self, *, current_ver: int) -> list[int]:
         """Return an ordered list of the version migrations to apply/unapply"""
@@ -310,7 +313,7 @@ class MigrationManager:
                 migration_class=migration_cls,
                 backward=self._backward,
             )
-            log.critical(error)
+            log.critical(error, exc_info=True)
             raise error from exc
 
     async def _migrate_db(self) -> bool:
@@ -329,11 +332,12 @@ class MigrationManager:
                 init_complete = await self._initialize_versioning()
             except BaseException as exc:
                 error = DbVersioningInitError()
-                log.critical(error)
+                log.critical(error, exc_info=True)
                 raise error from exc
             if not init_complete:
                 return False
-            version = 1
+            # The records are past version 1 if another instance initialized first
+            version = _get_db_version_from_records(await self._get_version_docs())
 
         if version == self.target_ver:
             # DB is up to date, run service
@@ -343,6 +347,11 @@ class MigrationManager:
         async with self._lock_db():
             if not self._lock_acquired:
                 return False
+
+            # Another instance may have migrated since the records were read above
+            version = _get_db_version_from_records(await self._get_version_docs())
+            if version == self.target_ver:
+                return True
 
             if version > self.target_ver:
                 self._backward = True
