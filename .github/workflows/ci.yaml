@@ -350,6 +350,10 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+      - name: Assert every member declares the version its lane allows
+        # Platform-lane members declare 0.0.0, and no PyPI-lane member depends on one
+        # (ADR-0046).
+        run: uv run -q --script scripts/pypi_members.py --check-versions
       - name: Assert every changed lane member declares an unpublished version
         run: |
           set -euo pipefail
