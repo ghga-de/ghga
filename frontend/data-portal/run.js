@@ -25,6 +25,19 @@ const args = process.argv.slice(1);
 const DEV = args.includes('--dev');
 const WITH_BACKEND = args.includes('--with-backend');
 const WITH_OIDC = args.includes('--with-oidc');
+const MODE = { dev: DEV, withBackend: WITH_BACKEND, withOidc: WITH_OIDC };
+
+// Settings the server needs and the browser must not see
+const SERVER_KEYS = [
+  'host',
+  'port',
+  'ssl',
+  'ssl_cert',
+  'ssl_key',
+  'log_level',
+  'basic_auth',
+  'root_files',
+];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -185,43 +198,112 @@ function readSettings() {
     if (e.code !== 'ENOENT') throw e; // ignore non-existing file
   }
 
-  // Merge the default and specific settings
-  const settings = { ...defaultSettings, ...specificSettings };
+  // Merge the default and specific settings, then let the environment override them
+  return applyEnv(
+    { ...defaultSettings, ...specificSettings },
+    process.env,
+    parseEnvFile(DOTENV_PATH),
+  );
+}
 
-  // Override settings with environment variables or .env file variables
-  // (the env var name must be fully lower case or upper case, but not mixed)
-  // Process environment takes precedence over .env file, both override YAML settings.
-  const dotenv = parseEnvFile(DOTENV_PATH);
+/**
+ * Override settings with environment variables or .env file variables.
+ *
+ * A variable is named after the app and the setting, fully lower or fully upper case
+ * (`data_portal_port` or `DATA_PORTAL_PORT`, not mixed). The process environment takes
+ * precedence over the .env file. A value is converted to the type of the setting it
+ * overrides: JSON for an object, `true` (any case) for a boolean, a float for a number.
+ *
+ * @param {Object} settings - The settings to override, changed in place.
+ * @param {Object} env - The process environment.
+ * @param {Object} dotenv - The variables of the .env file.
+ * @returns {Object} The settings.
+ */
+export function applyEnv(settings, env, dotenv) {
   const prefix = NAME.replaceAll('-', '_');
-  for (const key in settings) {
-    if (!settings.hasOwnProperty(key)) continue;
+  for (const key of Object.keys(settings)) {
     const envVarName = `${prefix}_${key}`;
     const value = settings[key];
     let envVarValue =
-      process.env[envVarName] ??
-      process.env[envVarName.toUpperCase()] ??
+      env[envVarName] ??
+      env[envVarName.toUpperCase()] ??
       dotenv[envVarName] ??
       dotenv[envVarName.toUpperCase()];
     if (envVarValue === undefined) continue;
-    const isObject = typeof value === 'object' && value !== null;
-    if (isObject) {
+    if (typeof value === 'object' && value !== null) {
       envVarValue = JSON.parse(envVarValue);
-    } else {
-      const isBoolean = typeof value === 'boolean';
-      if (isBoolean) {
-        envVarValue = envVarValue.toLowerCase() === 'true';
-      } else {
-        const isNumber = typeof value === 'number';
-        if (isNumber) {
-          envVarValue = parseFloat(envVarValue);
-        }
-      }
+    } else if (typeof value === 'boolean') {
+      envVarValue = envVarValue.toLowerCase() === 'true';
+    } else if (typeof value === 'number') {
+      envVarValue = parseFloat(envVarValue);
     }
-
     settings[key] = envVarValue;
   }
-
   return settings;
+}
+
+/**
+ * Adapt the settings to the mode the launcher runs in.
+ *
+ * With a backend or OIDC, a missing or local base URL is replaced by the staging
+ * backend; OIDC also needs HTTPS on port 443.
+ *
+ * @param {Object} settings - The settings, changed in place.
+ * @param {{dev: boolean, withBackend: boolean, withOidc: boolean}} mode - The mode.
+ * @returns {{message: string, adapted: boolean}} What the launcher runs, for the log,
+ *   and whether a setting was changed.
+ */
+export function adaptSettings(settings, { dev, withBackend, withOidc }) {
+  if (!dev) return { message: 'Running in production mode', adapted: false };
+  let message = 'Running in development mode';
+  let adapted = false;
+  if (withBackend || withOidc) {
+    const baseUrl = settings.base_url;
+    if (
+      !baseUrl ||
+      baseUrl.startsWith('http://127.') ||
+      baseUrl.startsWith('http://localhost')
+    ) {
+      settings.base_url = DEFAULT_BACKEND;
+      adapted = true;
+    }
+  }
+  if (withBackend) {
+    const baseUrl = settings.base_url;
+    message += ` with ${baseUrl.split('://')[1] || baseUrl} as backend`;
+  } else {
+    message += ' with mock API';
+  }
+  if (withOidc) {
+    message += ' and authentication via OIDC';
+    if (settings.port !== 443 || !settings.ssl) {
+      settings.port = 443;
+      settings.ssl = true;
+      adapted = true;
+    }
+  } else {
+    message += ' and mock authentication';
+  }
+  return { message, adapted };
+}
+
+/**
+ * The settings the browser gets as `window.config`.
+ *
+ * @param {Object} settings - All settings.
+ * @param {{dev: boolean, withBackend: boolean, withOidc: boolean}} mode - The mode.
+ * @returns {Object} The settings without the server-only ones, plus the mock flags in
+ *   development.
+ */
+export function browserConfig(settings, { dev, withBackend, withOidc }) {
+  const config = Object.fromEntries(
+    Object.entries(settings).filter(([key]) => !SERVER_KEYS.includes(key)),
+  );
+  if (dev) {
+    config.mock_api = !withBackend;
+    config.mock_oidc = !withOidc;
+  }
+  return config;
 }
 
 /**
@@ -236,12 +318,12 @@ function getBrowserDir(distDir) {
 }
 
 /**
- * Write the settings into the config file in the appropriate output directory.
+ * Write the browser config into the config file in the appropriate output directory.
  *
- * @param {Object} settings - The configuration settings to write.
+ * @param {Object} config - The browser config to write.
  * @throws {Error} If the output directory does not exist.
  */
-function writeSettings(settings) {
+function writeSettings(config) {
   const outputDir = DEV ? 'public' : getBrowserDir('dist');
 
   // Ensure the output directory exists
@@ -250,7 +332,7 @@ function writeSettings(settings) {
   }
 
   const configPath = path.join(outputDir, 'config.js');
-  const configScript = `window.config = ${JSON.stringify(settings)};`;
+  const configScript = `window.config = ${JSON.stringify(config)};`;
   fs.writeFileSync(configPath, configScript, 'utf8');
 }
 
@@ -449,8 +531,10 @@ async function main() {
   }
 
   const settings = readSettings();
+  setVersion(settings);
+  const { message, adapted } = adaptSettings(settings, MODE);
 
-  let {
+  const {
     host,
     port,
     ssl,
@@ -462,41 +546,7 @@ async function main() {
     root_files: rootFiles,
   } = settings;
 
-  setVersion(settings);
-
-  let msg = 'Running';
-  let adapted = false;
-  if (DEV) {
-    msg += ' in development mode';
-    if (WITH_BACKEND || WITH_OIDC) {
-      if (
-        !baseUrl ||
-        baseUrl.startsWith('http://127.') ||
-        baseUrl.startsWith('http://localhost')
-      ) {
-        settings.base_url = baseUrl = DEFAULT_BACKEND;
-        adapted = true;
-      }
-    }
-    if (WITH_BACKEND) {
-      msg += ` with ${baseUrl.split('://')[1] || baseUrl} as backend`;
-    } else {
-      msg += ' with mock API';
-    }
-    if (WITH_OIDC) {
-      msg += ' and authentication via OIDC';
-      if (settings.port !== 443 || !settings.ssl) {
-        settings.port = port = 443;
-        settings.ssl = ssl = true;
-        adapted = true;
-      }
-    } else {
-      msg += ' and mock authentication';
-    }
-  } else {
-    msg += ' in production mode';
-  }
-  console.log(msg);
+  console.log(message);
   console.log(`Runtime settings${adapted ? ' (adapted)' : ''}:`);
 
   console.table(settings);
@@ -510,21 +560,7 @@ async function main() {
     process.exit(1);
   }
 
-  delete settings.host;
-  delete settings.port;
-  delete settings.ssl;
-  delete settings.ssl_cert;
-  delete settings.ssl_key;
-  delete settings.log_level;
-  delete settings.basic_auth;
-  delete settings.root_files;
-
-  if (DEV) {
-    settings.mock_api = !WITH_BACKEND;
-    settings.mock_oidc = !WITH_OIDC;
-  }
-
-  writeSettings(settings);
+  writeSettings(browserConfig(settings, MODE));
 
   addRootFiles(rootFiles);
 
