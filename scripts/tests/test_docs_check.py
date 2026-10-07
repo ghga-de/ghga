@@ -632,6 +632,91 @@ def test_skill_symlink_must_not_be_a_copy(agents):
     ]
 
 
+def _rule(repo: Path, rel: str, fields: str = "paths: ['**/pyproject.toml']\n") -> None:
+    """Write a rule file and link it from the root AGENTS.md."""
+    (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+    (repo / rel).write_text(f"---\n{fields}---\n\n# Rule\n" if fields else "# Rule\n")
+    with (repo / "AGENTS.md").open("a") as agents_md:
+        agents_md.write(f"\nRead [the rule]({rel}).\n")
+
+
+def _rule_problems(repo: Path) -> list[str]:
+    _stage(repo)
+    return docs_check.check_rules(repo, docs_check._tracked(repo))
+
+
+def test_conforming_rules(agents):
+    """A rule with `paths`, linked from an AGENTS.md, reports nothing."""
+    _rule(agents, ".claude/rules/pyproject.md")
+    _rule(agents, ".claude/rules/libs/schemas.md", "paths: libs/schemas/**, x/**\n")
+    assert _rule_problems(agents) == []
+
+
+def test_rule_linked_from_a_nested_agents_file(agents):
+    """The link may come from the area file, relative to it."""
+    (agents / ".claude/rules").mkdir(parents=True)
+    (agents / ".claude/rules/schemas.md").write_text("---\npaths: libs/s/**\n---\n")
+    (agents / "libs/AGENTS.md").write_text("[rule](../.claude/rules/schemas.md)\n")
+    assert _rule_problems(agents) == []
+
+
+@pytest.mark.parametrize(
+    "fields,expected",
+    [
+        ("", "needs `paths`; a rule for every session belongs in AGENTS.md"),
+        ("paths: []\n", "needs `paths`; a rule for every session belongs in AGENTS.md"),
+        ("paths: a/**\ndescription: x\n", "unknown field 'description'"),
+    ],
+)
+def test_rule_frontmatter(agents, fields, expected):
+    """Without `paths` a rule loads in every session, like an AGENTS.md line."""
+    _rule(agents, ".claude/rules/topic.md", fields)
+    assert _rule_problems(agents) == [f".claude/rules/topic.md: {expected}"]
+
+
+def test_rule_placement_links_and_pointer(agents):
+    """Rules sit at the root, are shared, resolve their links, and are linked."""
+    _rule(agents, "libs/.claude/rules/nested.md")
+    _rule(agents, ".claude/rules/mine.local.md")
+    (agents / ".claude/rules/lost.md").write_text(
+        "---\npaths: a/**\n---\n\n[gone](../../docs/gone.md)\n"
+    )
+    assert _rule_problems(agents) == [
+        ".claude/rules/lost.md: link to ../../docs/gone.md, which does not exist",
+        ".claude/rules/lost.md: no AGENTS.md links it, so only Claude Code"
+        " and VS Code see it",
+        ".claude/rules/mine.local.md: a personal rule is never committed",
+        "libs/.claude/rules/nested.md: shared rules sit in the root .claude/rules/",
+    ]
+
+
+@pytest.mark.parametrize(
+    "lines,problems,warnings",
+    [
+        (150, [], []),
+        (151, [], ["libs/AGENTS.md: 151 lines; keep it under 150"]),
+        (200, [], ["libs/AGENTS.md: 200 lines; keep it under 150"]),
+        (201, ["libs/AGENTS.md: 201 lines; at most 200"], []),
+    ],
+)
+def test_instruction_file_length(agents, lines, problems, warnings):
+    """Past 150 lines an AGENTS.md or rule warns; past 200 it fails."""
+    (agents / "libs/AGENTS.md").write_text("line\n" * lines)
+    _stage(agents)
+    assert docs_check.check_lengths(agents, docs_check._tracked(agents)) == (
+        problems,
+        warnings,
+    )
+
+
+def test_rule_length_is_checked(agents):
+    """A rule file has the same line target, frontmatter included."""
+    _rule(agents, ".claude/rules/long.md", "paths: a/**\n" + "# x\n" * 200)
+    _stage(agents)
+    problems, _ = docs_check.check_lengths(agents, docs_check._tracked(agents))
+    assert problems == [".claude/rules/long.md: 205 lines; at most 200"]
+
+
 def _budgets(repo: Path) -> dict[str, tuple[int, int]]:
     _stage(repo)
     tracked = docs_check._tracked(repo)

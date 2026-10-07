@@ -2,13 +2,14 @@
 """Check the ADRs and the epics, and the references to them, across the tree (ADR-0041).
 
 Without arguments it checks both sets: ADR file names, frontmatter, headings and
-supersession, epic names and shape, the shape of the instruction files and skills for
-coding agents, and every reference in the tracked text files. It then regenerates the
-ADR index in docs/README.md, the epic index in docs/epics/README.md and the skill
-catalogue in docs/agent-skills.md, and fails when that changed a file, so the fix is to
-stage the result. A session's context budget over its ceiling is a warning, which leaves
-the exit code alone; `--budget` prints every session's figures. With `--refs` it checks
-only the references in the files given.
+supersession, epic names and shape, the shape and length of the instruction files,
+rules and skills for coding agents, and every reference in the tracked text files. It
+then regenerates the ADR index in docs/README.md, the epic index in docs/epics/README.md
+and the skill catalogue in docs/agent-skills.md, and fails when that changed a file, so
+the fix is to stage the result. A session's context budget over its ceiling, or an
+instruction file past its line target, is a warning, which leaves the exit code alone;
+`--budget` prints every session's figures. With `--refs` it checks only the references
+in the files given.
 
 The rules are the ones in docs/style.md, docs/epics/README.md and
 docs/agent-instructions.md; a change to one needs a change to the other.
@@ -124,6 +125,17 @@ SKILL_FIELDS = (
     "user-invocable",
     "paths",
 )
+# Rule files, which Claude Code and VS Code load once the agent reads or edits a file
+# matching their `paths`, hold a rule for a kind of file no directory scopes. A rule
+# without `paths` loads in every session, so it belongs in an AGENTS.md; each rule is
+# linked from one, so the tools that read no rule files find it too. Personal rules
+# are *.local.md and gitignored.
+RULE_PATH = re.compile(r"^(?:(.+)/)?\.claude/rules/(.+\.md)$")
+RULE_FIELDS = ("paths",)
+# Agents follow a long instruction file less reliably; Claude Code's docs say under
+# 200 lines, and ours aim at 150.
+LINES_WARN = 150
+LINES_MAX = 200
 LINK = re.compile(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)")
 LINK_EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|#)")
 
@@ -693,7 +705,7 @@ def _body_links(body: str) -> list[str]:
     return targets
 
 
-def _skill_paths(value: object) -> list[str] | None:
+def _globs(value: object) -> list[str] | None:
     """Return `paths` as a list of globs; None when it is neither a string nor a list."""
     if isinstance(value, str):  # Claude Code also takes a comma-separated string
         return [p.strip() for p in value.split(",") if p.strip()]
@@ -735,7 +747,7 @@ def _skill_meta(skill: Skill, meta: dict, directory: str) -> tuple[list, list]:
     skill.by_model = meta.get("disable-model-invocation") is not True
     skill.by_user = meta.get("user-invocable") is not False
     if "paths" in meta:
-        paths = _skill_paths(meta["paths"])
+        paths = _globs(meta["paths"])
         if not paths:
             problems.append(f"{rel}: paths must be a glob or a list of globs")
         else:
@@ -801,6 +813,74 @@ def check_skill_links(root: pathlib.Path, tracked: list[str]) -> list[str]:
     return sorted(problems)
 
 
+def _linked_from_agents(root: pathlib.Path, tracked: list[str]) -> set[str]:
+    """Return the paths, relative to the root, that some AGENTS.md links."""
+    linked = set()
+    for rel in tracked:
+        if pathlib.PurePosixPath(rel).name != "AGENTS.md":
+            continue
+        if (text := _stub_text(root, rel)) is not None:
+            base = pathlib.PurePosixPath(rel).parent
+            linked |= {os.path.normpath(base / t) for t in _body_links(text) if t}
+    return linked
+
+
+def check_rules(root: pathlib.Path, tracked: list[str]) -> list[str]:
+    """Report a rule outside the root .claude/rules/, without `paths`, or unlinked.
+
+    Links in a rule must resolve, as in a skill.
+    """
+    linked, problems = _linked_from_agents(root, tracked), []
+    for rel in tracked:
+        if (
+            not (match := RULE_PATH.match(rel))
+            or (text := _stub_text(root, rel)) is None
+        ):
+            continue
+        if match.group(1):
+            problems.append(f"{rel}: shared rules sit in the root .claude/rules/")
+            continue
+        if rel.endswith(".local.md"):
+            problems.append(f"{rel}: a personal rule is never committed")
+            continue
+        meta, body = _split(text)
+        if meta is None or "" in meta or not _globs(meta.get("paths")):
+            problems.append(
+                f"{rel}: needs `paths`; a rule for every session belongs in AGENTS.md"
+            )
+        else:
+            problems += [
+                f"{rel}: unknown field '{k}'" for k in meta if k not in RULE_FIELDS
+            ]
+        base = (root / rel).parent
+        problems += [
+            f"{rel}: link to {target}, which does not exist"
+            for target in _body_links(body)
+            if target and not (base / target).exists()
+        ]
+        if rel not in linked:
+            problems.append(
+                f"{rel}: no AGENTS.md links it, so only Claude Code and VS Code see it"
+            )
+    return sorted(problems)
+
+
+def check_lengths(root: pathlib.Path, tracked: list[str]) -> tuple[list, list]:
+    """Fail an AGENTS.md or rule file past 200 lines, and warn past 150."""
+    problems, warnings = [], []
+    for rel in tracked:
+        if pathlib.PurePosixPath(rel).name != "AGENTS.md" and not RULE_PATH.match(rel):
+            continue
+        if (text := _stub_text(root, rel)) is None:
+            continue
+        lines = len(text.splitlines())
+        if lines > LINES_MAX:
+            problems.append(f"{rel}: {lines} lines; at most {LINES_MAX}")
+        elif lines > LINES_WARN:
+            warnings.append(f"{rel}: {lines} lines; keep it under {LINES_WARN}")
+    return problems, warnings
+
+
 def _within(path: str, base: str) -> bool:
     """Whether a directory is the base or below it; "" is the root."""
     return not base or path == base or path.startswith(f"{base}/")
@@ -838,7 +918,8 @@ def context_budget(
     """Estimate the always-on context of a root session and of each area session.
 
     An area is a directory with an AGENTS.md or its own skills; its session also
-    carries every AGENTS.md above it.
+    carries every AGENTS.md above it. Rule files are left out: each has `paths`, so it
+    loads only once the agent reads or edits a matching file.
     """
     agents = {
         rel.removesuffix("AGENTS.md").rstrip("/"): rel
@@ -951,6 +1032,10 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         tracked = _tracked(root)
         skills, skill_problems, warnings = load_skills(root, tracked)
         problems += skill_problems + check_skill_links(root, tracked)
+        problems += check_rules(root, tracked)
+        length_problems, length_warnings = check_lengths(root, tracked)
+        problems += length_problems
+        warnings += length_warnings
         budgets = context_budget(root, tracked, skills)
         warnings += budget_warnings(budgets)
         if args.budget:

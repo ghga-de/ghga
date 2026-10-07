@@ -108,7 +108,7 @@ An epic specification records the plan as its epic started, so do not update it 
 
 ## Python best practices
 
-- The root `pyproject.toml` is the single source of truth for ruff/mypy/pytest configuration, never add per-member tool config.
+- Before editing any `pyproject.toml`, read [its rule](.claude/rules/pyproject.md).
 - The patterns a service follows are in [services/AGENTS.md](services/AGENTS.md), the release lane a library is on in [libs/AGENTS.md](libs/AGENTS.md).
 
 ## AI agent integration
