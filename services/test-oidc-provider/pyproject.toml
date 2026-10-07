@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "test-oidc-provider"
-version = "2.2.0"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Test OpenID Connect provider"
 license = "Apache-2.0"
 dependencies = [

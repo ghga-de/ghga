@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "ars"
-version = "8.0.3"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Access Request Service - a service for managing requests for access to GHGA datasets."
 license = "Apache-2.0"
 dependencies = [

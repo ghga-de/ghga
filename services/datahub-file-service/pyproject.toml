@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dhfs"
-version = "4.1.0"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Data Hub File Service - a service enabling file inspection and re-encryption at Data Hubs"
 license = "Apache-2.0"
 dependencies = [

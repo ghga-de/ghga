@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "rs"
-version = "5.0.3"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "GHGA Registry Service - a service for ingesting and archiving metadata from data submitters."
 license = "Apache-2.0"
 dependencies = [

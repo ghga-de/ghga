@@ -3,7 +3,7 @@ requires = ["setuptools>=80.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
-version = "0.2.1"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 name = "auth-km-jobs"
 description = "GHGA Auth Key Management Jobs - refreshes signing keys and re-encrypts secrets used by GHGA; runs as a Kubernetes Job, either regularly or on demand."
 license = "Apache-2.0"

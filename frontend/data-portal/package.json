@@ -1,6 +1,6 @@
 {
   "name": "data-portal",
-  "version": "2.5.16",
+  "version": "0.0.0",
   "license": "Apache-2.0",
   "description": "GHGA Data Portal - the web front end for browsing metadata, submitting and uploading datasets, requesting access to, and downloading GHGA-hosted data.",
   "scripts": {
