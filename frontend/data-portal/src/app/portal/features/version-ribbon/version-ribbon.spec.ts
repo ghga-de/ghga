@@ -45,3 +45,21 @@ describe('VersionRibbon', () => {
     expect(result.container.textContent).toBe('');
   });
 });
+
+describe('VersionRibbon with build metadata', () => {
+  it('should show the build metadata on a second line', async () => {
+    const result = await render(VersionRibbon, {
+      providers: [
+        {
+          provide: ConfigService,
+          useValue: { ribbonText: 'Dev v15.3.1-rc.8+dev.62.93cb037' },
+        },
+      ],
+    });
+    const lines = [...result.container.querySelectorAll('aside span')];
+    expect(lines.map((line) => line.textContent)).toEqual([
+      'Dev v15.3.1-rc.8',
+      '+dev.62.93cb037',
+    ]);
+  });
+});
