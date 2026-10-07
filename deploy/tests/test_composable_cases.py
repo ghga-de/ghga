@@ -423,3 +423,22 @@ def test_vault_single_template_applies_to_job_and_cronjob(rendered_chart, expect
     assert strip(cronjob_annotations) == strip(deployment_annotations)
     assert cronjob_container["command"] == deployment_command
     assert cronjob_container["args"] == deployment_args
+
+
+def test_probes_render_one_handler(rendered_chart):
+    """A probe whose values add a handler next to the default renders only the added
+    one, since the API server rejects a probe with two handlers.
+    """
+    manifests = rendered_chart("probes_default.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["readinessProbe"]["httpGet"] == {"path": "/health", "port": "http"}
+    assert "tcpSocket" not in container["readinessProbe"]
+    assert container["livenessProbe"]["tcpSocket"] == {"port": 8080}
+    assert "httpGet" not in container["livenessProbe"]
+
+    manifests = rendered_chart("probes_other_handler.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["readinessProbe"]["tcpSocket"] == {"port": 8080}
+    assert "httpGet" not in container["readinessProbe"]
+    assert container["livenessProbe"]["httpGet"] == {"path": "/health", "port": "http"}
+    assert "tcpSocket" not in container["livenessProbe"]

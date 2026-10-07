@@ -89,13 +89,13 @@ spec:
           ports: {{- include "ghga-common.container-ports" . | nindent 12 }}
           {{- end }}
           {{- if and .Values.readinessProbe.enabled (omit .Values.readinessProbe "enabled") }}
-          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+          readinessProbe: {{- include "ghga-common.container-probe" (dict "probe" .Values.readinessProbe "handler" "httpGet" "context" $) | nindent 12 }}
           {{- end }}
           {{- if and .Values.livenessProbe.enabled (omit .Values.livenessProbe "enabled") }}
-          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+          livenessProbe: {{- include "ghga-common.container-probe" (dict "probe" .Values.livenessProbe "handler" "tcpSocket" "context" $) | nindent 12 }}
           {{- end }}
           {{- if and .Values.startupProbe.enabled (omit .Values.startupProbe "enabled") }}
-          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
+          startupProbe: {{- include "ghga-common.container-probe" (dict "probe" .Values.startupProbe "handler" "tcpSocket" "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}

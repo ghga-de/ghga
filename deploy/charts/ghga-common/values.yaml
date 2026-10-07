@@ -126,8 +126,7 @@ exports:
 
     # Ready means answering on the health endpoint, not just accepting connections:
     # a service that crashes once its dependencies fail still opens its port first.
-    # A probe takes one handler, so values that check a TCP port instead set
-    # `httpGet: null` next to their `tcpSocket`.
+    # Values that set another handler, such as `tcpSocket`, replace this `httpGet`.
     readinessProbe:
       enabled: false
       httpGet:
