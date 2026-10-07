@@ -515,13 +515,15 @@ class UserRegistry(UserRegistryPort):
         if iva.state not in (IvaState.CODE_REQUESTED, IvaState.CODE_CREATED):
             raise self.IvaUnexpectedStateError(iva_id=iva_id, state=iva.state)
         code = generate_code()
+        # one clock reading, so the code is valid for exactly the configured days
+        now = now_utc_ms_prec()
         await self.update_iva(
             iva,
             state=IvaState.CODE_CREATED,
             verification_code_hash=hash_code(code),
             verification_attempts=0,
-            verification_until=now_utc_ms_prec()
-            + timedelta(days=self._max_iva_code_validity_days),
+            changed=now,
+            verification_until=now + timedelta(days=self._max_iva_code_validity_days),
         )
         return code
 
