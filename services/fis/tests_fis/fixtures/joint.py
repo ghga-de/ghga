@@ -33,6 +33,7 @@ from fis.ports.outbound.dao import FileDao
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.transports import fixed_base_transport_factory
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -76,8 +77,7 @@ async def joint_fixture(
     async with (
         prepare_core(
             config=config,
-            http_base_transport=ekss.as_transport(),
-            http_mount_env_proxies=False,
+            http_make_base_transport=fixed_base_transport_factory(ekss.as_transport()),
         ) as interrogation_handler,
         prepare_rest_app(config=config, core_override=interrogation_handler) as app,
         prepare_event_subscriber(
