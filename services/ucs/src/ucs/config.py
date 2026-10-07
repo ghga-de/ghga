@@ -44,6 +44,8 @@ class Config(
     PublicKeyConfig,
     UploadDaoConfig,
     MongoKafkaConfig,
+    # UCS runs no DB migrations yet, so these settings have no effect until the
+    # first one; keeping them spares deployments a config change at that point.
     MigrationConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,
