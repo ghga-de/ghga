@@ -163,6 +163,7 @@ For the click-through equivalent, the Kubernetes extension (`ms-kubernetes-tools
 ### Image profiles
 
 Building and loading are separate steps: the build lands in the local docker store and survives `just down`, the load copies into the kind node and does not.
+After a rebuild, `just up` or `just testbed-up` is enough: both restart exactly the pods whose image changed, and leave the others running.
 
 | profile | build | what you get |
 |---|---|---|
