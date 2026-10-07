@@ -14,8 +14,10 @@
 #
 # The member charts are published alongside, for continuous deployment of `dev` to a
 # cluster: generated with --mono, so every Python member runs the platform image, and
-# pinned to the digests built here. Each run has one version (the version job), so a CD
-# tool following the semver range >=0.0.0-0 rolls out every merge in order (ADR-0045).
+# pinned to the digests built here. Each run has one version (the version job): a dev
+# release after the highest ghga/ tag on dev, numbered by run. Tags only get added and run
+# numbers only rise, so in semver every run sorts above the last, and a CD tool following
+# the range >=0.0.0-0 rolls out every merge in order (ADR-0045).
 #
 # Publishing is deliberately independent of ci.yaml: merges are already gated by PR CI,
 # and :dev makes no greenness promise beyond that. PLATFORM_VERSION is the run's dev
