@@ -53,11 +53,13 @@ ARG PACKAGE
 # Convention: an image member's console script is named like its distribution,
 # so the entrypoint defaults to the package name (see ADR-0033).
 ARG EXECUTABLE=${PACKAGE}
-ARG PLATFORM_VERSION=0.0.0+dev
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --package "${PACKAGE}"
 
+# Declared only here, so a new version, which local builds get per commit, keeps the
+# cached sync above.
+ARG PLATFORM_VERSION=0.0.0+dev
 # Stamp AFTER dependency resolution: uv.lock and member pyprojects stay untouched.
 RUN /app/.venv/bin/python /stamp_platform_version.py \
         --version "${PLATFORM_VERSION}" --package "${PACKAGE}"
@@ -73,7 +75,6 @@ RUN ln -s "/app/.venv/bin/${EXECUTABLE}" /app/entrypoint && test -e /app/entrypo
 # and their console scripts do not collide (ADR-0033 names each after its distribution).
 # NOT a release artifact: production keeps one image per member.
 FROM workspace AS venv-mono
-ARG PLATFORM_VERSION=0.0.0+dev
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --all-packages

@@ -6,7 +6,7 @@
  * Syntax: run.js [--dev [--with-backend] [--with-oidc]]
  */
 
-import { spawnSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { Resolver } from 'dns/promises';
 import fs from 'fs';
 import * as yaml from 'js-yaml';
@@ -30,14 +30,50 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Derive the platform version from the checkout this script runs in.
+ *
+ * A copy of scripts/platform_version.py, which this script cannot import;
+ * docs/releases.md defines the format.
+ *
+ * @returns {string} The version, e.g. 15.3.1-rc.8+dev.71.44594f5.
+ */
+function checkoutVersion() {
+  const fallback = '0.0.0+dev';
+  let described;
+  try {
+    described = execFileSync(
+      'git',
+      ['describe', '--tags', '--match', 'ghga/*', '--dirty', '--abbrev=7'],
+      { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+  } catch {
+    return fallback;
+  }
+  const match = described.match(
+    /^ghga\/(?<tag>.+?)(?:-(?<count>\d+)-g(?<sha>[0-9a-f]+))?(?<dirty>-dirty)?$/,
+  );
+  if (!match) return fallback;
+  const { tag, count, sha, dirty } = match.groups;
+  const build = count ? ['dev', count, sha] : [];
+  if (dirty) build.push('dirty');
+  return build.length ? `${tag}+${build.join('.')}` : tag;
+}
+
+/**
  * Inject the version from package.json into the settings.
+ *
+ * package.json declares the placeholder 0.0.0 (ADR-0046), which the image build
+ * replaces with the platform version; outside an image, the checkout gives it.
  */
 function setVersion(settings) {
   const packageJsonPath = path.join(__dirname, 'package.json');
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  const version = packageJson.version;
+  let version = packageJson.version;
   if (!version) {
     throw new Error(`Version not found in ${packageJsonPath}`);
+  }
+  if (version === '0.0.0') {
+    version = checkoutVersion();
   }
   const ribbonText = settings.ribbon_text;
   if (ribbonText && ribbonText.includes('$v')) {
