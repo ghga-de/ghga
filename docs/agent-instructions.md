@@ -3,7 +3,7 @@
 Where guidance for coding agents lives and what belongs in each file.
 The decision behind it is [ADR-0042](adrs/adr-0042-agent-instruction-files.md); how to write the text is in the [writing style](style.md), and what the format itself guarantees is at [agents.md](https://agents.md).
 
-## The four kinds of file
+## Kinds of file
 
 | File | Holds | Written for | Loaded |
 |---|---|---|---|
@@ -11,6 +11,7 @@ The decision behind it is [ADR-0042](adrs/adr-0042-agent-instruction-files.md); 
 | `README.md` | what the thing is, how to install and run it; published, so it stands alone | humans first, agents read it too | on demand |
 | `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves | both, written once | on demand, when a task touches them |
 | `.agents/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
+| `.claude/rules/` | a rule no directory scopes | agents first, like `AGENTS.md` | when the agent reads or edits a file its `paths` match |
 
 How a file is written depends on who reads it.
 Who has to follow it is a separate question, answered in [Keeping them true](#keeping-them-true).
@@ -61,11 +62,22 @@ The references are asymmetric.
 `AGENTS.md` links the README freely — that is what keeps it short.
 A README links back once at most: a line telling a human contributor that the file governs agents and is to be kept current.
 
+## Rule files
+
+An `AGENTS.md` scopes its rules by directory, which fits most of them.
+A rule about a kind of file found in several areas, such as every `pyproject.toml`, or about one member inside an area, such as `ghga-event-schemas`, goes into `.claude/rules/<topic>.md` instead.
+Its `paths` frontmatter, a list of globs, makes Claude Code and VS Code load it once the agent reads or edits a matching file.
+
+- Every rule has `paths`: one without it loads in every session and belongs in an `AGENTS.md`.
+- The `AGENTS.md` that would otherwise hold the rule keeps one line linking it, so the tools that read no rule files find it on demand.
+- Area rules stay in `AGENTS.md`: every tool reads that, and only two read rule files.
+- Personal rules are `*.local.md` in the same directory and gitignored ([dev/using-agents.md](dev/using-agents.md#personal-setup)).
+
 ## Placement
 
 - A passage belongs in the root file only if it holds for every area.
   Anything narrower moves down, with a pointer left where an agent would still look for it; anything needed only while doing one named task moves into a skill.
-- Aim at 100 to 150 lines per file.
+- Keep a file under 200 lines, ideally under 150.
   Past that, agents read it less reliably and every line dilutes the ones around it.
 - Everything an agent needs is reachable from an `AGENTS.md`.
   A document nothing links is read in under a tenth of sessions, so a new one either earns a pointer or is not worth writing.
@@ -127,6 +139,7 @@ The budget for what the repo puts into a session before any task, at characters 
 | any | the skill descriptions alone | 1.5k tokens |
 
 The last ceiling leaves room for personal skills: Claude Code gives the skill listing 1% of the context window and drops descriptions past it.
+Rule files are not counted, since each loads only with a matching file.
 `just docs-check --budget` prints each session's figures.
 
 A root skill's eval suite is one file, `.agents/skills/<name>/evals.yaml`, and `just skill-eval <name>` expands it into the case directories `claude plugin eval` reads and runs it.
@@ -166,7 +179,8 @@ Two limits, because the instinct is always to add a line:
 
 `scripts/docs_check.py` ([ADR-0041](adrs/adr-0041-docs-linting.md)) fails when a `CLAUDE.md` is committed, the Copilot stub carries content of its own, or an instruction file sits at a path no tool reads.
 It fails, too, when a skill's `name` differs from its directory or leaves the specification's pattern, its description is missing or longer than 1024 characters, its frontmatter has a field not listed above, a relative link in it resolves to nothing, or its `.claude/skills/` symlink is missing or points elsewhere.
-It warns, without failing, about a description past 300 characters and a session past its budget, and it regenerates the [skill catalogue](agent-skills.md).
+It fails on a rule file outside the root `.claude/rules/`, without `paths`, or linked from no `AGENTS.md`, and on an `AGENTS.md` or rule file past 200 lines.
+It warns, without failing, about a file past 150 lines, a description past 300 characters and a session past its budget, and it regenerates the [skill catalogue](agent-skills.md).
 
 ## Not adopted
 

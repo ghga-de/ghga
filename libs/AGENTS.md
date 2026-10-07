@@ -17,5 +17,4 @@ The repo-wide rules are in the root [AGENTS.md](../AGENTS.md), what the director
 Consumers import these from source, so one `uv.lock` resolves them and a change lands in every consumer at once ([ADR-0026](../docs/adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 Editing a `libs/` member therefore means running `just affected` and testing every consumer, not only the member's own suite.
 
-An event schema is a contract two services agree on, so changing `ghga-event-schemas` changes a wire format.
-Read [docs/architecture/metadata-and-file-journeys.md](../docs/architecture/metadata-and-file-journeys.md) first: it is how metadata and files flow across the platform, and it says which services a schema sits between.
+Before changing `ghga-event-schemas`, read [its rule](../.claude/rules/event-schemas.md): an event schema is a wire format two services agree on.

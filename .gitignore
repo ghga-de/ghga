@@ -47,6 +47,7 @@ claude-backup/
 !/.claude/agents/
 !/.claude/commands/
 !/.claude/output-styles/
+!/.claude/rules/
 # leave out every local claude settings
 **/.claude/settings.local.json
 # and personal instructions: a committed CLAUDE.local.md would switch AGENTS.md off

@@ -8,6 +8,7 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 
 - **Instructions:** `AGENTS.md` at the root and one per area; an agent reads the root file at the start and an area's file once it works there ([agent-instructions.md](../agent-instructions.md#areas)).
   There is no `CLAUDE.md`: Claude Code reads `AGENTS.md` itself, from v2.1.277 on.
+  A few rules in `.claude/rules/` load in Claude Code and VS Code once the agent reads or edits a file they match, such as a `pyproject.toml` ([agent-instructions.md](../agent-instructions.md#rule-files)).
 - **Skills:** task procedures in `.agents/skills/`, listed with where each applies in the [skill catalogue](../agent-skills.md); `/skills` in Claude Code lists the ones your session can use.
 - **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), checks at session start that you run in the dev container and that the git hooks are installed.
   Guards stop edits to generated files, `uv` on the host and commands that skip the git hooks, and an edit to lint configuration asks you first.
