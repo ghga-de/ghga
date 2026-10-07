@@ -295,9 +295,13 @@ def mock_apis(monkeypatch) -> MockApis:
         mocks.wkvs, mocks.work_package, mocks.download, mocks.upload, mocks.storage
     )
 
-    def mock_mounts(config, limits=None):
+    def mock_mounts(config, make_base_transport=None):
         """Stand in for `ratelimiting_retry_proxies`."""
-        return {"all://": MockApiTransport(served, MOCKED_BASE_URLS, limits=limits)}
+        return {
+            "all://": MockApiTransport(
+                served, MOCKED_BASE_URLS, make_base_transport=make_base_transport
+            )
+        }
 
     monkeypatch.setattr(
         "ghga_connector.core.client.ratelimiting_retry_proxies", mock_mounts

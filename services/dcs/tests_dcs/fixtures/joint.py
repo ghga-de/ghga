@@ -53,6 +53,7 @@ from ghga_event_schemas.pydantic_ import (
     FileRegisteredForDownload,
 )
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.transports import fixed_base_transport_factory
 from ghga_service_commons.utils import utc_dates
 from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
@@ -149,8 +150,7 @@ async def joint_fixture(
     async with (
         prepare_core(
             config=config,
-            http_base_transport=ekss.as_transport(),
-            http_mount_env_proxies=False,
+            http_make_base_transport=fixed_base_transport_factory(ekss.as_transport()),
         ) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
         prepare_event_subscriber(
