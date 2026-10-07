@@ -5,10 +5,17 @@ import sys
 from pathlib import Path
 
 import pytest
+from packaging.version import Version
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from platform_version import FALLBACK, from_describe, platform_version
+from platform_version import (
+    FALLBACK,
+    _precedence,
+    cd_version,
+    from_describe,
+    platform_version,
+)
 
 
 @pytest.mark.parametrize(
@@ -56,3 +63,38 @@ def test_checkout(tmp_path):
 
 def test_no_repo(tmp_path):
     assert platform_version(tmp_path) == FALLBACK
+
+
+@pytest.mark.parametrize(
+    "tags, expected",
+    [
+        (["ghga/15.3.1-rc.8"], "15.3.1-rc.8.dev.19401"),
+        (["ghga/15.3.1-rc.9", "ghga/15.3.1-rc.10"], "15.3.1-rc.10.dev.19401"),
+        (["ghga/15.3.1-rc.8", "ghga/15.3.1"], "15.3.2-dev.19401"),
+        (["ghga/15.4.0-rc.1", "ghga/15.3.2"], "15.4.0-rc.1.dev.19401"),
+        (["ghga/15.10.0", "ghga/15.9.0"], "15.10.1-dev.19401"),
+        (["ghga/not-a-version", "other/1.0.0"], "0.0.0-dev.19401"),
+        ([], "0.0.0-dev.19401"),
+    ],
+)
+def test_cd_version(tags, expected):
+    """The highest tag by semver, not by text; a final tag moves on to the next patch."""
+    assert cd_version(tags, 19401) == expected
+
+
+@pytest.mark.parametrize(
+    "older, newer",
+    [
+        (["ghga/15.3.1-rc.8"], ["ghga/15.3.1-rc.8", "ghga/15.3.1"]),
+        (["ghga/15.3.1-rc.8", "ghga/15.3.1"], ["ghga/15.3.1", "ghga/15.4.0-rc.1"]),
+        (["ghga/15.4.0-rc.1"], ["ghga/15.4.0-rc.1", "ghga/15.3.2"]),
+    ],
+)
+def test_cd_version_rises(older, newer):
+    """A later run that sees more tags, hotfixes included, sorts higher in both schemes.
+
+    The CD tool orders by semver, FIS's check of the DHFS version by PEP 440.
+    """
+    old, new = cd_version(older, 100), cd_version(newer, 200)
+    assert _precedence(new) > _precedence(old)
+    assert Version(new) > Version(old)

@@ -69,7 +69,7 @@ The SHA comes without git's `g` and pastes into `git show`; git lengthens it whe
 
 `just image` and `just image-mono` pass the derived version and commit as build arguments, so a local image is stamped like a release image.
 `ghga-datasteward-kit` run from a clone sends the derived version in its User-Agent, and `run.js` shows it in the front end's ribbon under `just fe-dev`.
-The CD builds of `dev-images.yaml` use `0.0.0-dev.<run>.<attempt>` instead ([ADR-0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md)).
+The CD builds of `dev-images.yaml` use a dev release after the highest `ghga/` tag the merge contains instead, numbered run number × 100 + attempt: `15.3.1-rc.8.dev.19401` for run 194, attempt 1, or `15.3.2-dev.19401` after a final tag (`scripts/platform_version.py --cd`, [ADR-0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md)).
 
 `ghga-datasteward-kit` is not published: stewards run `git clone -b ghga/X.Y.Z` and `uv run ghga-datasteward-kit`, and `uv.lock` at the tag gives the tested combination.
 

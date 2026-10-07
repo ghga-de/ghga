@@ -56,18 +56,27 @@ env:
 jobs:
   # The one version both the image tag and the charts carry. Computed once: "Re-run
   # failed jobs" never re-runs a job that succeeded, so its output survives, while a
-  # re-run job reading run_attempt itself would get a new one. Numbers, not the SHA:
-  # semver compares numeric prerelease fields numerically, so the newest merge, or a
-  # full re-run of it, is always the highest version. run_number restarts at 1 if this
-  # workflow is renamed or recreated; raise the 0.0.0 base then.
+  # re-run job reading run_attempt itself would get a new one. A dev release after the
+  # highest ghga/ tag on dev, e.g. 15.3.1-rc.8.dev.19401 for run 194, attempt 1
+  # (ADR-0045, ADR-0046): the tag says where dev stands, and the run number makes the
+  # newest merge, or a full re-run of it, the highest version. One number rather than
+  # <run>.<attempt> keeps it valid PEP 440, which the services' stamped metadata and
+  # FIS's check of the DHFS version need; attempts stay below 100. run_number restarts
+  # at 1 if this workflow is renamed or recreated; add an offset to it then.
   version:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0 # every tag the merge contains; blobs are not needed
+          filter: blob:none
       - id: version
-        run: echo "version=0.0.0-dev.${{ github.run_number }}.${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+        run: |
+          number=$(( ${{ github.run_number }} * 100 + ${{ github.run_attempt }} ))
+          echo "version=$(python3 scripts/platform_version.py --cd "$number")" >> "$GITHUB_OUTPUT"
 
   publish:
     needs: version

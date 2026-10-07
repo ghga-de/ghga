@@ -54,7 +54,7 @@ def _dev_run(tmp_path, monkeypatch, digests: dict) -> None:
         sys,
         "argv",
         [
-            *("create_charts.py", "--version", "0.0.0-dev.1.1", "--mono"),
+            *("create_charts.py", "--version", "0.0.0-dev.101", "--mono"),
             *("--chart-registry", "ghcr.io/ghga-de/ghga/charts", "--chart-suffix", ""),
             *("--digests", str(digests_file), "--require-digests"),
         ],

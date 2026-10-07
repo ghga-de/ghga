@@ -419,9 +419,10 @@ fis:
     mongo_dsn: mongodb://ghga-mongodb:27017
     ekss_api_url: http://ghga-ekss:8080
     # everything here is built from one commit (lockstep, ADR-0027) and carries
-    # the dev version stamp, which no ">2.0.0"-style gate accepts; the DHFS
+    # whatever version that build derived (ADR-0046), down to 0.0.0+dev without
+    # tags, or a dev release, which PEP 440 sorts below its release; the DHFS
     # compatibility check is meaningful for real data-hub installs, not here
-    dhfs_version_constraint: ">=0.0.0"
+    dhfs_version_constraint: ">=0.0.0.dev0"
 
 ifrs:
   enabled: true

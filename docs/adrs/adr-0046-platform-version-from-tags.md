@@ -39,7 +39,8 @@ They are bumped by hand in some pull requests, and they surface wherever nothing
 - **Any other build** derives the version from `git describe --tags --match 'ghga/*'` and turns it into semver.
   At a tag it is that tag's version (`15.3.1-rc.8`); after one, the commits since it and the abbreviated SHA follow as build metadata (`15.3.1-rc.8+dev.64.e50c714`); local changes add `.dirty`.
   Without git or a matching tag it is `0.0.0+dev`.
-- **CD builds** keep the `0.0.0-dev.<run>.<attempt>` of [ADR-0045](adr-0045-dev-charts-for-continuous-deployment.md): a cluster's CD tool needs a version that rises with every merge, which build metadata does not give.
+- **CD builds** are a dev release after the highest tag, numbered by run (`15.3.1-rc.8.dev.19401`, [ADR-0045](adr-0045-dev-charts-for-continuous-deployment.md)): a cluster's CD tool needs a version that rises with every merge, which build metadata does not give.
+  Every version is valid semver and valid PEP 440, since it ends up in Python package metadata.
 
 [Releases](../releases.md#platform-lane) defines the format and where it is applied.
 
