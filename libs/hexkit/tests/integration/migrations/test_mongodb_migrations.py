@@ -676,11 +676,17 @@ async def test_stale_version_read(mongodb: MongoDbFixture, stale_versions: list[
             return [doc for doc in docs if doc["version"] in stale_versions]
         return docs
 
-    with patch.object(MigrationManager, "_get_version_docs", stale_get_version_docs):
+    sleep = AsyncMock()
+    with (
+        patch.object(MigrationManager, "_get_version_docs", stale_get_version_docs),
+        patch("hexkit.providers.mongodb.migrations._manager.sleep", sleep),
+    ):
         await run_db_migrations(
             config=config, target_version=2, migration_map=migration_map
         )
 
+    # The instance finds the migrated records on its first pass, without waiting
+    sleep.assert_not_awaited()
     assert version_coll.find().to_list() == records
     assert collection.find().to_list() == [{"_id": "Title: item1", "length": 100}]
 
