@@ -15,21 +15,22 @@
 
 """Contains common configuration for different composite async httpx2 Transports."""
 
-from pydantic import Field, NonNegativeFloat, NonNegativeInt, PositiveInt
+from pydantic import Field, NonNegativeFloat, NonNegativeInt
 from pydantic_settings import BaseSettings
 
 
 class RateLimitingTransportConfig(BaseSettings):
-    """Configuration options for a rate limiting HTTPTransport."""
+    """Configuration for a rate limiting HTTPTransport."""
 
-    per_request_jitter: NonNegativeFloat = Field(
+    min_request_interval: NonNegativeFloat = Field(
         default=0.0,
-        description="Max amount of jitter (in seconds) to add to each request.",
+        description="Minimum number of seconds between requests to one host and first"
+        + " path segment. If left at 0 some jitter is still added to pace concurrent"
+        + " requests.",
     )
-    retry_after_applicable_for_num_requests: PositiveInt = Field(
-        default=1,
-        description="Amount of requests after which the stored delay from a 429 response is ignored again. "
-        + "Can be useful to adjust if concurrent requests are fired in quick succession.",
+    per_request_jitter: NonNegativeFloat = Field(
+        default=0.05,
+        description="Max amount of jitter (in seconds) to add to each request.",
     )
 
 

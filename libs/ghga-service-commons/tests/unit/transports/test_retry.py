@@ -26,10 +26,18 @@ from tenacity import AsyncRetrying, RetryCallState, RetryError
 from ghga_service_commons.transports.config import RetryTransportConfig
 from ghga_service_commons.transports.retry import (
     AsyncRetryTransport,
+    _default_wait_strategy,
     _log_before_attempt,
     _log_retry_stats,
-    wait_exponential_ignore_429,
 )
+
+
+def _wait_strategy(max_backoff: int = 60):
+    """Build the wait strategy the retry transport actually uses."""
+    return _default_wait_strategy(
+        RetryTransportConfig(client_exponential_backoff_max=max_backoff)
+    )
+
 
 LOGGER_NAME = "ghga_service_commons.transports.retry"
 RETRYABLE_STATUS_CODE = 503
@@ -215,10 +223,9 @@ async def test_raises_retry_error_when_not_reraising():
 
 @pytest.mark.asyncio
 async def test_retried_responses_are_closed():
-    """Ensure discarded responses from retried attempts are closed, the returned one is not.
+    """Ensure retried responses are closed and the returned one is not.
 
-    Each retried response holds a connection from the pool until it is read or closed,
-    so all but the final, returned response must be closed to avoid leaking connections.
+    Each holds a pool connection until read or closed, so leaving them open leaks.
     """
     responses = [
         _TrackedResponse(RETRYABLE_STATUS_CODE),
@@ -294,27 +301,17 @@ async def test_async_context_manager_closes_transport():
     transport.aclose.assert_awaited_once()
 
 
-def test_wait_strategy_ignores_429_without_should_wait():
-    """Ensure a 429 lacking the Should-Wait header skips the backoff entirely."""
-    wait = wait_exponential_ignore_429(max=60)
+def test_wait_strategy_treats_429_like_any_other_retryable_status():
+    """Ensure a 429 gets the ordinary backoff, since the layer below holds the Retry-After."""
+    wait = _wait_strategy()
     state = _retry_state(result=httpx2.Response(429), attempt_number=3)
 
-    assert wait(state) == 0
-
-
-def test_wait_strategy_backs_off_for_429_with_should_wait():
-    """Ensure a 429 carrying the Should-Wait header falls back to exponential backoff."""
-    wait = wait_exponential_ignore_429(max=60)
-    state = _retry_state(
-        result=httpx2.Response(429, headers={"Should-Wait": "true"}), attempt_number=2
-    )
-
-    assert wait(state) == 2
+    assert wait(state) == 4
 
 
 def test_wait_strategy_backs_off_for_other_status():
     """Ensure non-429 responses use the regular exponential backoff."""
-    wait = wait_exponential_ignore_429(max=60)
+    wait = _wait_strategy()
     state = _retry_state(result=httpx2.Response(503), attempt_number=3)
 
     assert wait(state) == 4
@@ -322,7 +319,7 @@ def test_wait_strategy_backs_off_for_other_status():
 
 def test_wait_strategy_caps_at_max():
     """Ensure the computed backoff never exceeds the configured maximum."""
-    wait = wait_exponential_ignore_429(max=5)
+    wait = _wait_strategy(5)
     state = _retry_state(result=httpx2.Response(503), attempt_number=10)
 
     assert wait(state) == 5
@@ -330,7 +327,7 @@ def test_wait_strategy_caps_at_max():
 
 def test_wait_strategy_handles_failed_outcome():
     """Ensure a failed outcome is backed off without inspecting a result."""
-    wait = wait_exponential_ignore_429(max=60)
+    wait = _wait_strategy()
     state = _retry_state(exception=httpx2.ConnectError("boom"), attempt_number=1)
 
     assert wait(state) == 1
