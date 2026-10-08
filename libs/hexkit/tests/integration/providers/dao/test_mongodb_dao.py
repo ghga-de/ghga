@@ -1135,7 +1135,7 @@ async def test_dao_insert_many_ordered(mongodb: MongoDbFixture):
             await dao.get_by_id(last.id)
 
 
-@pytest.mark.parametrize("method", ["insert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
 async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
     """Test that a batch with a repeated ID is rejected before any write."""
     async with counted_dao(mongodb) as (dao, counter):
@@ -1147,10 +1147,46 @@ async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
         assert counter.writes == []
 
 
-@pytest.mark.parametrize("method", ["insert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
 async def test_dao_batch_empty(method: str, mongodb: MongoDbFixture):
     """Test that an empty batch sends no command and raises nothing."""
     async with counted_dao(mongodb) as (dao, counter):
         await getattr(dao, method)([])
 
         assert counter.writes == []
+
+
+async def test_dao_upsert_many(mongodb: MongoDbFixture):
+    """Test that upsert_many creates and replaces resources in one write command."""
+    async with counted_dao(mongodb) as (dao, counter):
+        existing = ExampleDto(field_a="before")
+        await dao.insert(existing)
+        changed = existing.model_copy(update={"field_a": "after"})
+        new = ExampleDto(field_a="new")
+        counter.writes.clear()
+
+        await dao.upsert_many([changed, new])
+
+        assert counter.writes == ["update"]
+        assert await dao.get_by_id(existing.id) == changed
+        assert await dao.get_by_id(new.id) == new
+
+
+async def test_dao_upsert_many_unique_index_ordered(mongodb: MongoDbFixture):
+    """Test that upsert_many reports a unique-index clash and, when ordered, stops."""
+    async with counted_dao(mongodb, unique_field_a=True) as (dao, _):
+        await dao.insert(ExampleDto(field_a="taken"))
+        first = ExampleDto(field_a="first")
+        clashing = ExampleDto(field_a="taken")
+        last = ExampleDto(field_a="last")
+
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.upsert_many([first, clashing, last], ordered=True)
+
+        assert list(caught.value.errors) == [clashing.id]
+        error = caught.value.errors[clashing.id]
+        assert isinstance(error, UniqueConstraintViolationError)
+        assert caught.value.not_attempted == (last.id,)
+        assert await dao.get_by_id(first.id) == first
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(last.id)
