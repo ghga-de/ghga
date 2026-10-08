@@ -1,6 +1,6 @@
 ---
 name: epic-plan
-description: Turn an epic specification into a refinable implementation plan, a claude.ai artifact with one story per unit, comments on every point, a pick per decision and a Refine button. Private unless the user asks for public. Run as /epic-plan <epic> [public].
+description: Turn an epic specification into a refinable implementation plan, a private claude.ai artifact with one story per unit, comments on every point, a pick per decision and a Refine button. Run as /epic-plan <epic>.
 disable-model-invocation: true
 compatibility: Claude Code with claude.ai artifacts (the Artifact, ArtifactComments and ArtifactData tools).
 ---
@@ -14,15 +14,13 @@ How to act on a refine request is in [references/refine-loop.md](references/refi
 
 ## Visibility
 
-- **Private is the default.**
-  A published artifact is private to its owner; publish it as it is when the user states no preference.
-- **Public on request.**
-  You cannot change sharing yourself, so:
-  - Before publishing, check that the plan holds nothing confidential, as the epic template asks.
-  - Declare no capability that blocks public sharing, such as `assets` or `mcp`; the template uses neither.
-  - After publishing, tell the user to turn on link or organization access in the page's Share menu.
-  - Tell them what visitors get: everyone reads the plan, and commenting and picking need Contributor access.
-  - Advise sharing at Contributor level or below: only editors can send to Claude, so the owner then stays the only one who can wake the session.
+- **Always private.**
+  Publish the plan as a private artifact, and offer no public or shared variant, even when asked.
+  Sharing is the user's decision, made in the page's Share menu on claude.ai.
+- **If the user asks about sharing**, name what it exposes before they decide:
+  - Everyone they share it with reads the plan, and with Contributor access also comments and picks.
+  - A refine reads those comments into this session, which has the repository and its tools; the session treats them as data, but they remain text from other people.
+  - Editors can send to Claude, and every comment sent to Claude starts this session's automatic reply before any check of the sender.
 
 ## Steps
 
@@ -53,7 +51,7 @@ How to act on a refine request is in [references/refine-loop.md](references/refi
 
 9. **Check once:** ArtifactComments `read`, and ArtifactData `list` on `preferences` and on `comments`, must all answer.
    ArtifactComments `watch` without a URL must show the artifact with auto-replies armed, or Refine cannot reach the session.
-10. **Report** the link, the open decisions and the visibility in a few lines.
+10. **Report** the link and the open decisions in a few lines, and say that the page is private.
 
 ## Traps
 
