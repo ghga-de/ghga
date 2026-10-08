@@ -680,6 +680,12 @@ class BaseInMemDao(Generic[DTO]):
         """
         await self._write_each(dtos, self.upsert)
 
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Delete resources by ID, ignoring the ones that do not exist."""
+        for id_ in dict.fromkeys(ids):
+            with suppress(ResourceNotFoundError):
+                await self.delete(id_)
+
 
 def new_mock_dao_class(
     *, dto_model: type[DTO], id_field: str, handle_mql: bool = True
