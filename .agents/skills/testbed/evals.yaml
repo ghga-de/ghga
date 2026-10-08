@@ -172,7 +172,7 @@ cases:
       - name: rerun
         type: llm
         criteria: |
-          The reply says how to check the fix: rebuild the image, get the pods running it (for example `just testbed-reset`, which recreates them; a redeploy alone does not restart pods on an unchanged image tag), and rerun the suite from its start or at least from 010 up to 201, because a reset drops the states the earlier features hand on to 201. Running 201 on its own after the reset fails the criterion.
+          The reply says how to check the fix: rebuild the image, get the pods running it (for example `just testbed-up mono`, which restarts the pods whose image changed; `just testbed-reset` also recreates them but drops every state), and rerun the suite from its start or at least from 010 up to 201, because the failed run left the 2xx state half done. Running 201 on its own fails the criterion.
       - no-testbed-write
       - no-testbed-edit
       - skill-fired
@@ -214,7 +214,7 @@ cases:
       - name: not-the-migration
         type: llm
         criteria: |
-          The reply advises against changing the migration code, explains that the data no longer matches the migration records (the suite's clean slate removes them, so a restarted service re-runs its migrations over migrated data), and proposes `just testbed-reset`, or a fresh cluster with `just down`, before any code change.
+          The reply advises against changing the migration code, explains that the data no longer matches the migration records, so the restarted service re-runs its migrations over migrated data, and proposes `just testbed-reset`, or a fresh cluster with `just down`, before any code change.
       - no-edit
       - no-write
       - skill-fired
@@ -270,7 +270,7 @@ cases:
       - name: code-not-cluster
         type: llm
         criteria: |
-          The reply names the branch's change to the WPS V3 migration as the cause and fixes it there; it does not offer another `just testbed-reset` or a fresh cluster with `just down` as the fix. To check the fix it rebuilds the image and gets pods running it, for example with `just testbed-reset`.
+          The reply names the branch's change to the WPS V3 migration as the cause and fixes it there; it does not offer another `just testbed-reset` or a fresh cluster with `just down` as the fix. To check the fix it rebuilds the image and gets pods running it, for example with `just testbed-up mono` or `just testbed-reset`.
       - no-testbed-write
       - no-testbed-edit
       - skill-fired
