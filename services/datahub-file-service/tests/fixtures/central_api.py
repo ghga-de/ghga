@@ -39,6 +39,7 @@ from dhfs.adapters.outbound.central import (
 )
 from dhfs.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
 from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.transports import fixed_base_transport_factory
 
 ResponseHandler = Callable[[httpx2.Request], httpx2.Response]
 
@@ -171,6 +172,7 @@ async def get_mocked_httpx_client(
     `central_api` while leaving all other traffic untouched.
     """
     async with get_configured_httpx_client(
-        config=config, base_transport=central_api.as_transport()
+        config=config,
+        make_base_transport=fixed_base_transport_factory(central_api.as_transport()),
     ) as client:
         yield client

@@ -23,7 +23,9 @@ from ghga_datasteward_kit import __version__
 from ghga_datasteward_kit.s3_upload.config import LegacyConfig
 from ghga_service_commons.transports import (
     AsyncRetryTransport,
+    BaseTransportFactory,
     CompositeTransportFactory,
+    default_base_transport_factory,
     ratelimiting_retry_proxies,
 )
 
@@ -41,23 +43,29 @@ class RequestConfigurator:
     def configure(
         cls,
         config: LegacyConfig,
-        base_transport: httpx2.AsyncBaseTransport | None = None,
+        make_base_transport: BaseTransportFactory | None = None,
     ):
         """Set timeout in seconds
 
-        `base_transport` replaces the innermost transport that actually performs the
-        request. It is meant for tests, which can supply a mock transport that still
-        gets exercised through the rate limiting and retry layers.
+        `make_base_transport` builds the innermost transport that actually performs the
+        request, by default one sized for the configured parallel transfers. It is meant
+        for tests, which can supply a mock transport that still gets exercised through
+        the rate limiting and retry layers.
         """
         cls.timeout = config.client_timeout
         limits = httpx2.Limits(
             max_connections=config.client_max_parallel_transfers,
             max_keepalive_connections=config.client_max_parallel_transfers,
         )
-        cls.transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config, base_transport=base_transport, limits=limits
+        make_base_transport = make_base_transport or default_base_transport_factory(
+            limits
         )
-        cls.mounts = ratelimiting_retry_proxies(config, limits)
+        cls.transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config, make_base_transport=make_base_transport
+        )
+        cls.mounts = ratelimiting_retry_proxies(
+            config, make_base_transport=make_base_transport
+        )
         # silence httpx2 messages on each request due to setting global level info before
         logging.getLogger("httpx2").setLevel(logging.WARNING)
 

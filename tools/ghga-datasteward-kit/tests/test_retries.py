@@ -20,6 +20,7 @@ from tenacity import RetryError
 
 from ghga_datasteward_kit.s3_upload import LegacyConfig
 from ghga_datasteward_kit.s3_upload.http_client import RequestConfigurator, httpx_client
+from ghga_service_commons.transports import fixed_base_transport_factory
 from tests.fixtures.config import legacy_config_fixture  # noqa: F401
 from tests.fixtures.mock_api import (
     ApiMock,
@@ -46,7 +47,10 @@ def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> MockedE
     """
     api_mock = ApiMock()
     endpoint = api_mock.add(method="GET", path=PATH, handler=handler)
-    RequestConfigurator.configure(config, base_transport=api_mock.as_transport())
+    RequestConfigurator.configure(
+        config,
+        make_base_transport=fixed_base_transport_factory(api_mock.as_transport()),
+    )
     return endpoint
 
 

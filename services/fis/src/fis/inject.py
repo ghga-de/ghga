@@ -19,7 +19,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
-import httpx2
 from fastapi import FastAPI
 
 from fis.adapters.inbound.event_sub import OutboxSubTranslator
@@ -34,6 +33,7 @@ from fis.config import Config
 from fis.constants import AUTH_CHECK_CLAIMS
 from fis.core.interrogation import InterrogationHandler, InterrogationHandlerPort
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from ghga_service_commons.transports import BaseTransportFactory
 from hexkit.providers.akafka import (
     ComboTranslator,
     KafkaEventPublisher,
@@ -68,15 +68,12 @@ async def get_persistent_publisher(
 async def prepare_core(
     *,
     config: Config,
-    http_base_transport: httpx2.AsyncBaseTransport | None = None,
-    http_mount_env_proxies: bool = True,
+    http_make_base_transport: BaseTransportFactory | None = None,
 ) -> AsyncGenerator[InterrogationHandlerPort]:
     """Constructs and initializes all core components and their outbound dependencies.
 
-    `http_base_transport` is handed to the outbound HTTP client, which lets tests
-    serve the Secrets API from a mock instead of the network. Replacing the network
-    layer rules out the env proxies, so such callers also pass
-    `http_mount_env_proxies=False`.
+    `http_make_base_transport` is handed to the outbound HTTP client, which lets tests
+    serve the Secrets API from a mock instead of the network.
     """
     async with (
         MongoDbDaoFactory.construct(config=config) as dao_factory,
@@ -85,8 +82,7 @@ async def prepare_core(
         ) as persistent_publisher,
         get_configured_httpx_client(
             config=config,
-            base_transport=http_base_transport,
-            mount_env_proxies=http_mount_env_proxies,
+            make_base_transport=http_make_base_transport,
         ) as httpx_client,
     ):
         file_dao = await get_file_dao(dao_factory=dao_factory)

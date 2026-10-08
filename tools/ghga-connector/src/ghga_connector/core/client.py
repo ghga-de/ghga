@@ -24,22 +24,23 @@ from ghga_connector.constants import KEEPALIVE_EXPIRY, POOL_HEADROOM, TIMEOUT
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
     AsyncRetryTransport,
+    BaseTransportFactory,
     CompositeTransportFactory,
+    default_base_transport_factory,
     ratelimiting_retry_proxies,
 )
 
 
 def get_ratelimiting_retry_transport(
-    base_transport: httpx2.AsyncBaseTransport | None = None,
-    limits: httpx2.Limits | None = None,
+    make_base_transport: BaseTransportFactory | None = None,
 ) -> AsyncRetryTransport:
     """Construct an async rate-limiting retry transport.
 
-    The `base_transport` parameter can be used for testing to inject, for example,
+    The `make_base_transport` parameter can be used for testing to inject, for example,
     an httpx2.ASGITransport pointing to a FastAPI app.
     """
     return CompositeTransportFactory.create_ratelimiting_retry_transport(
-        get_config(), base_transport=base_transport, limits=limits
+        get_config(), make_base_transport=make_base_transport
     )
 
 
@@ -61,8 +62,11 @@ async def async_client(*, purpose: Literal["upload", "download"]):
         max_keepalive_connections=max_concurrent_parts + POOL_HEADROOM,
         keepalive_expiry=KEEPALIVE_EXPIRY,
     )
-    transport = get_ratelimiting_retry_transport(limits=limits)
-    proxies = ratelimiting_retry_proxies(config=config, limits=limits)
+    make_base_transport = default_base_transport_factory(limits)
+    transport = get_ratelimiting_retry_transport(make_base_transport)
+    proxies = ratelimiting_retry_proxies(
+        config=config, make_base_transport=make_base_transport
+    )
     async with httpx2.AsyncClient(
         timeout=TIMEOUT, transport=transport, mounts=proxies
     ) as client:

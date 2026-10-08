@@ -28,7 +28,7 @@ dependencies = [
     "hexkit[s3] >=9.0.0",
     "ghga-transpiler >=2.1.2, <3",
     "metldata >=4.2.1, <5",
-    "ghga-service-commons[transports,crypt] >=8.0.0, <9",
+    "ghga-service-commons[transports,crypt] >=9.0.0, <10",
 ]
 
 [project.urls]

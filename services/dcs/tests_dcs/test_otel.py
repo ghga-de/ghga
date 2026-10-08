@@ -31,6 +31,7 @@ from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
 from dcs.adapters.outbound.http.secrets import SecretsClient
 from dcs.inject import get_persistent_publisher
 from ghga_event_schemas.pydantic_ import FileInternallyRegistered
+from ghga_service_commons.transports import fixed_base_transport_factory
 from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
     otel_provider_fixture,
@@ -251,7 +252,8 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     ekss = EkssApiMock(config=config)
 
     async with get_configured_httpx_client(
-        config=config, base_transport=ekss.as_transport(), mount_env_proxies=False
+        config=config,
+        make_base_transport=fixed_base_transport_factory(ekss.as_transport()),
     ) as client:
         # the instrumentor targets httpx2, but upstream annotates (un)instrument_client
         # against httpx 0.x client types, so a real httpx2 client never matches
