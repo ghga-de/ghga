@@ -1135,7 +1135,7 @@ async def test_dao_insert_many_ordered(mongodb: MongoDbFixture):
             await dao.get_by_id(last.id)
 
 
-@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
 async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
     """Test that a batch with a repeated ID is rejected before any write."""
     async with counted_dao(mongodb) as (dao, counter):
@@ -1147,7 +1147,7 @@ async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
         assert counter.writes == []
 
 
-@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
 async def test_dao_batch_empty(method: str, mongodb: MongoDbFixture):
     """Test that an empty batch sends no command and raises nothing."""
     async with counted_dao(mongodb) as (dao, counter):
@@ -1190,3 +1190,54 @@ async def test_dao_upsert_many_unique_index_ordered(mongodb: MongoDbFixture):
         assert await dao.get_by_id(first.id) == first
         with pytest.raises(ResourceNotFoundError):
             await dao.get_by_id(last.id)
+
+
+async def test_dao_update_many(mongodb: MongoDbFixture):
+    """Test that update_many replaces existing resources in one write command and
+    reports the missing ones.
+    """
+    async with counted_dao(mongodb) as (dao, counter):
+        stored = [ExampleDto(field_a="one"), ExampleDto(field_a="two")]
+        for dto in stored:
+            await dao.insert(dto)
+        changed = [dto.model_copy(update={"field_b": 7}) for dto in stored]
+        missing = ExampleDto(field_a="missing")
+        counter.writes.clear()
+
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.update_many([changed[0], missing, changed[1]])
+
+        # The lookup that names the missing ID reads; it does not write
+        assert counter.writes == ["update"]
+        assert list(caught.value.errors) == [missing.id]
+        assert isinstance(caught.value.errors[missing.id], ResourceNotFoundError)
+        for dto in changed:
+            assert await dao.get_by_id(dto.id) == dto
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(missing.id)
+
+
+async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
+    """Test that an ordered update_many stops at a unique-index clash but not at a
+    missing resource, and reports both kinds of failure.
+    """
+    async with counted_dao(mongodb, unique_field_a=True) as (dao, _):
+        taken = ExampleDto(field_a="taken")
+        target = ExampleDto(field_a="target")
+        last = ExampleDto(field_a="last")
+        for dto in (taken, target, last):
+            await dao.insert(dto)
+        missing = ExampleDto(field_a="missing")
+        clashing = target.model_copy(update={"field_a": "taken"})
+        last_changed = last.model_copy(update={"field_b": 7})
+
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.update_many([missing, clashing, last_changed], ordered=True)
+
+        assert set(caught.value.errors) == {missing.id, target.id}
+        assert isinstance(caught.value.errors[missing.id], ResourceNotFoundError)
+        error = caught.value.errors[target.id]
+        assert isinstance(error, UniqueConstraintViolationError)
+        assert caught.value.not_attempted == (last.id,)
+        assert await dao.get_by_id(target.id) == target
+        assert await dao.get_by_id(last.id) == last

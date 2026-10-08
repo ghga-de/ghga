@@ -612,6 +612,56 @@ class MongoDbDao(Generic[Dto]):
         if failures:
             raise failures
 
+    async def _existing_ids(
+        self, ids: Collection[ID], extra: Mapping[str, Any]
+    ) -> set[ID]:
+        """Return which of the IDs belong to stored documents that also match `extra`."""
+        with translate_pymongo_errors():
+            cursor = self._collection.find(
+                {"_id": {"$in": list(ids)}, **extra}, projection={"_id": True}
+            )
+            return {document["_id"] async for document in cursor}
+
+    async def _replace_existing(
+        self,
+        documents: list[dict[str, Any]],
+        extra: Mapping[str, Any],
+        *,
+        ordered: bool,
+    ) -> None:
+        """Replace the documents that exist and match `extra`, and name the others.
+
+        A replacement that matches nothing is no write error, and the bulk result only
+        counts matches, so a lookup after the write names the missing IDs. A resource
+        created in between is therefore not reported, although it was not replaced.
+
+        Raises:
+            BatchOperationError: when some documents were missing or failed.
+        """
+        if not documents:
+            return
+        matched, failures = await self._bulk_replace(
+            documents, extra, upsert=False, ordered=ordered
+        )
+        errors = dict(failures.errors) if failures else {}
+        skipped = failures.not_attempted if failures else ()
+        ids = [document["_id"] for document in documents]
+        attempted = [id_ for id_ in ids if id_ not in errors and id_ not in skipped]
+        if matched < len(attempted):
+            missing = set(attempted) - await self._existing_ids(attempted, extra)
+            errors |= {id_: ResourceNotFoundError(id_=id_) for id_ in missing}
+        if errors:
+            raise BatchOperationError(errors=errors, not_attempted=skipped)
+
+    async def update_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Replace several existing resources in one call, matched by their IDs.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        await self._replace_existing(self._batch_documents(dtos), {}, ordered=ordered)
+
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
     """A MongoDB-based provider implementing the DaoFactoryProtocol."""

@@ -71,6 +71,11 @@ from hexkit.providers.mongokafka.config import MongoKafkaConfig
 
 log = logging.getLogger(__name__)
 
+# Matches documents that are not soft-deleted, including ones without outbox metadata
+NOT_DELETED: dict[str, Any] = {
+    "$or": [{"__metadata__": {"$exists": False}}, {"__metadata__.deleted": False}]
+}
+
 
 class ResourceDeletedError(RuntimeError):
     """Raised when trying to interact with a resource that has been deleted."""
@@ -625,6 +630,22 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         """
         try:
             await self._dao.upsert_many(dtos, ordered=ordered)
+        except BatchOperationError as error:
+            await self._publish_written(dtos, error)
+            raise
+        await self._publish_written(dtos, None)
+
+    async def update_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Replace several existing resources in one call and publish each one written.
+
+        Tombstones stay as they are, and their IDs count as missing, as in `update`.
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        documents = self._dao._batch_documents(dtos)
+        try:
+            await self._dao._replace_existing(documents, NOT_DELETED, ordered=ordered)
         except BatchOperationError as error:
             await self._publish_written(dtos, error)
             raise
