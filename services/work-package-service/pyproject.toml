@@ -25,7 +25,7 @@ description = "Work Package Service - a service for authorizing downloads of dat
 license = "Apache-2.0"
 dependencies = [
     "ghga-event-schemas~=13.0.0",
-    "ghga-service-commons[api,auth,crypt]>=8.0",
+    "ghga-service-commons[api,auth,crypt]>=9.0, <10",
     "hexkit[akafka,mongodb,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=8.4",
     "typer>=0.26",
 ]
