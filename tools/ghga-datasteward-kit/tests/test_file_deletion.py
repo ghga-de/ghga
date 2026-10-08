@@ -23,9 +23,20 @@ import pytest
 from ghga_datasteward_kit.cli.file import delete_file
 from ghga_datasteward_kit.config import FileDeletionConfig
 from ghga_datasteward_kit.utils import DELETION_TOKEN, load_config_yaml
-from tests.fixtures.mock_api import ApiMock, respond
+from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
+from tests.fixtures.mock_api import serve_httpx2_from
 
 CONFIG_PATH = Path(__file__).parent / "fixtures" / "file_deletion_config.yaml"
+
+
+class FileDeletionApiMock(MockApi):
+    """A mock of the endpoint the kit sends file deletion requests to."""
+
+    def __init__(self, config: FileDeletionConfig) -> None:
+        super().__init__(config.file_deletion_baseurl)
+        self.on_delete_file: ResponseHandler = respond(202)
+        endpoint = config.file_deletion_endpoint.strip("/")
+        self.route("DELETE", f"/{endpoint}/{{file_id}}", "on_delete_file")
 
 
 @pytest.mark.parametrize("file_id", ["exists", "fake"])
@@ -48,13 +59,9 @@ def test_pcs_call(caplog, monkeypatch, tmp_path, file_id: str):
             f"Deletion request to '{url}' failed with response code {status_code}."
         )
 
-    api_mock = ApiMock()
-    api_mock.add(
-        method="DELETE",
-        path=f"/{endpoint}/{file_id}",
-        handler=respond(status_code),
-    )
-    api_mock.patch_httpx(monkeypatch)
+    deletion_api = FileDeletionApiMock(config)
+    deletion_api.on_delete_file = respond(status_code)
+    serve_httpx2_from(monkeypatch, deletion_api.as_transport())
 
     caplog.clear()
     with monkeypatch.context() as patch:
@@ -64,6 +71,9 @@ def test_pcs_call(caplog, monkeypatch, tmp_path, file_id: str):
         DELETION_TOKEN.save_token_and_hash()
 
         delete_file(file_id=file_id, config_path=CONFIG_PATH)
+
+        [request] = deletion_api.requests
+        assert request.url == url
 
         assert len(caplog.messages) == 1
         assert message in caplog.messages
