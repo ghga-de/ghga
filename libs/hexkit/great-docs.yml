@@ -293,6 +293,7 @@ reference:
       - protocols.dao.MultipleHitsFoundError
       - protocols.dao.NoHitsFoundError
       - protocols.dao.DbTimeoutError
+      - protocols.dao.BatchOperationError
 
   - title: Protocols — Storage
     desc: Ports for key-value and object storage
