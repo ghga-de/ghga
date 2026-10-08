@@ -23,7 +23,7 @@ import pytest
 import pytest_asyncio
 from pydantic import BaseModel, Field
 
-from hexkit.protocols.dao import Dao
+from hexkit.protocols.dao import BatchOperationError, Dao
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import (
     MongoDbFixture,
@@ -355,3 +355,46 @@ async def test_also_on_non_mql(
     await dao.insert(BIKE_PARTS)
     nomql_results = [x.title async for x in dao.find_all(filter_=filter_)]
     assert nomql_results == inmem_results, "Non-MQL Mock DAO results not as expected"
+
+
+NEW_ITEM = InventoryItem(
+    title="new",
+    count=1,
+    other_data=OtherData(sold_last_week=0, next_restock=DATE1),
+)
+
+
+async def batch_outcome(dao, method: str, args: list, kwargs: dict[str, Any]):
+    """Run a batch method and return its failures and the stored items afterwards."""
+    failures = None
+    try:
+        await getattr(dao, method)(*args, **kwargs)
+    except BatchOperationError as error:
+        failures = (
+            {id_: type(err) for id_, err in error.errors.items()},
+            error.not_attempted,
+        )
+    stored = [item.model_dump() async for item in dao.find_all(filter_={})]
+    return failures, sorted(stored, key=lambda item: item["title"])
+
+
+@pytest.mark.parametrize(
+    "method, args, kwargs",
+    [
+        ("insert_many", [[NEW_ITEM, APPLES]], {}),
+        ("insert_many", [[APPLES, NEW_ITEM]], {"ordered": True}),
+        ("insert_many", [[]], {}),
+    ],
+)
+async def test_batch_methods(
+    method: str,
+    args: list,
+    kwargs: dict[str, Any],
+    mock_item_dao: BaseInMemDao[InventoryItem],
+    real_item_dao: InventoryItemDao,
+):
+    """Test that a batch method fails and writes the same in memory as in MongoDB."""
+    expected = await batch_outcome(real_item_dao, method, args, kwargs)
+    observed = await batch_outcome(mock_item_dao, method, args, kwargs)
+
+    assert observed == expected

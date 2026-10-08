@@ -75,7 +75,7 @@ async def test_add_book():
     assert await book_dao.get_by_id("b1") == book_dao.latest
 ```
 
-The mock DAO implements the [CRUD and find operations](../protocols/dao.qmd#crud-operations) of the `Dao` protocol, including pagination and sorting in `find_all()`, and raises the same errors as the MongoDB provider.
+The mock DAO implements the [CRUD](../protocols/dao.qmd#crud-operations), [batch](../protocols/dao.qmd#batch-operations) and find operations of the `Dao` protocol, including pagination and sorting in `find_all()`, and raises the same errors as the MongoDB provider.
 It converts DTOs to documents with the MongoDB provider's own functions, so the stored form matches what the MongoDB DAO would write.
 
 Two attributes help with test setup and assertions:
@@ -98,6 +98,7 @@ Other edge cases, such as ordering values of different types, may behave differe
 - **No factory:** the mock DAO does not implement `DaoFactoryProtocol`.
   Inject DAO instances directly, or wrap the class in a small factory of your own.
 - **No indexes:** `insert()` only checks for a duplicate ID, so it never raises a `UniqueConstraintViolationError`.
+  A batch operation, too, can only fail on its IDs.
 - **No transactions:** `with_transaction()` raises `NotImplementedError`.
 - **No publishing:** `publish_pending()` and `republish()` are `AsyncMock` objects, so the mock DAO can replace a [`DaoPublisher`](../protocols/daopublisher.qmd), but it publishes no events.
   A test can still assert that these methods were called.
