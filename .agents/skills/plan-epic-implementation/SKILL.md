@@ -1,6 +1,6 @@
 ---
-name: epic-plan
-description: Turn an epic specification into a refinable implementation plan, a private claude.ai artifact with one story per unit, comments on every point, a pick per decision and a Refine button. Run as /epic-plan <epic>.
+name: plan-epic-implementation
+description: Turn an epic specification into a refinable implementation plan, a private claude.ai artifact with one story per unit, comments on every point, a pick per decision and a Refine button. Run as /plan-epic-implementation <epic>.
 disable-model-invocation: true
 compatibility: Claude Code with claude.ai artifacts (the Artifact, ArtifactComments and ArtifactData tools).
 ---

@@ -1,6 +1,6 @@
 # Refine loop
 
-How to act on a refine request for a plan that the epic-plan skill built.
+How to act on a refine request for a plan that the plan-epic-implementation skill built.
 
 ## Where comments live
 
