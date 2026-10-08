@@ -124,7 +124,8 @@ Nothing enforces the branch names or the merge commit, and branches already in f
 
 How a release runs end to end is in [releases.md](releases.md).
 
-- Every member keeps its own semver (in `pyproject.toml` / `Chart.yaml` / `package.json`).
+- PyPI-lane members keep their own semver in `pyproject.toml`.
+  Platform-lane members declare `0.0.0` and take the platform version from the `ghga/X.Y.Z` tag at build ([ADR-0046](adrs/adr-0046-platform-version-from-tags.md)).
 - A pushed git tag **`name/x.y.z`** releases only that component; CI asserts the tag matches the member's version at HEAD ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
 - A pushed git tag **`packages/x.y.z`** releases every PyPI-lane member the index is behind on, dependencies first; the version is a label naming no member ([ADR-0027](adrs/adr-0027-versioning-and-release-by-tag.md)).
 - Wheels publish to **PyPI**, rehearsed on **TestPyPI** first, both by trusted publishing.

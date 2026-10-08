@@ -58,6 +58,7 @@ Follows directly from the mocking philosophy above; see [Automated tests](README
 
 - **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, cache invalidation, state transitions, rendering and event wiring.
   Services are tested against `HttpTestingController`, components against mocked services.
+- **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
 - **E2E tests in this repo** (Playwright, `tests`): a **smoke layer**, despite the name.
   They stop at the network boundary, since the MSW mocks serve them too, but they boot the real app in a real browser with the real services and interceptors.
   Use them for assembly and wiring, not for behaviour.

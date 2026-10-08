@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ifrs"
-version = "7.4.0"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Internal File Registry Service - This service acts as a registry for the internal location and representation of files."
 license = "Apache-2.0"
 readme = "README.md"

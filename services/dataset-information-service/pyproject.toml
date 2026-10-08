@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dins"
-version = "7.0.2"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Dataset Information Service - Providing public metadata about files registered with the Internal File Registry"
 license = "Apache-2.0"
 dependencies = [

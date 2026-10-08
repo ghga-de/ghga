@@ -570,15 +570,19 @@ demo-template:
 # `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
 # attestations needs a docker-container buildx builder, which these `docker build`
 # recipes cannot provide (see ADR-0037).
+# Both stamp the version derived from the checkout (ADR-0046); a `--build-arg` in `flags`
+# comes later on the command line and overrides it.
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
+    version="$(python3 scripts/platform_version.py)"
     if [ -f "{{target}}/package.json" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
+        docker build -f "{{target}}/Dockerfile" --build-arg PLATFORM_VERSION="$version" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
-        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" --build-arg PLATFORM_VERSION="$version" \
+            --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
     fi
 
 # One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
@@ -586,7 +590,9 @@ image target tag='local' *flags: check-members
 # see the mono stage in docker/Dockerfile for why this is demo/CI only.
 # Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
 image-mono tag='local' *flags: check-members
-    docker build -f docker/Dockerfile --build-arg VARIANT=mono {{flags}} \
+    docker build -f docker/Dockerfile --build-arg VARIANT=mono \
+      --build-arg PLATFORM_VERSION="$(python3 scripts/platform_version.py)" \
+      --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" {{flags}} \
       -t {{image_registry}}/platform:{{tag}} .
 
 # uv finds workspace members by glob (`libs/*`, `services/*`, `tools/*`) and refuses any

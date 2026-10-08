@@ -76,7 +76,8 @@ Repo→destination mapping for the import is the source of truth in [scripts/mig
 ### 3.2 Python: uv workspace & dependency model — [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md)
 
 - The repo is **one `uv` workspace**.
-  Each lib/service/tool is a workspace **member** with its own `pyproject.toml` and **its own version**.
+  Each lib/service/tool is a workspace **member** with its own `pyproject.toml`.
+  A PyPI-lane member carries **its own version**; a platform-lane member declares `0.0.0` and takes the platform version at build ([ADR-0046](../adrs/adr-0046-platform-version-from-tags.md)).
 - Internal libraries are consumed **from source**: a consuming member declares `[tool.uv.sources]` with `hexkit = { workspace = true }` (etc.).
   There is **one `uv.lock`**, so exactly one resolved version of every package exists across the whole repo.
   That is what makes "HEAD always integrated" literally true.

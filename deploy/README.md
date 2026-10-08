@@ -9,8 +9,8 @@ helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version 
 
 Release charts are not per-merge: they're stamped and pushed as OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via [release.yaml](../.github/workflows/release.yaml), ADR-0027), so a release chart version always matches a released set of images.
 
-Every merge to `dev` also publishes the member charts to `oci://ghcr.io/ghga-de/ghga/charts` as `0.0.0-dev.<run number>.<attempt>`, on the mono image and pinned to its digest, for continuous deployment of `dev` ([dev-images.yaml](../.github/workflows/dev-images.yaml), ADR-0045).
-Dev charts are pushed without the `-chart` suffix, and Helm skips prereleases unless told otherwise, so install one by path and exact version: `helm install wps oci://ghcr.io/ghga-de/ghga/charts/wps --version 0.0.0-dev.N.A`.
+Every merge to `dev` also publishes the member charts to `oci://ghcr.io/ghga-de/ghga/charts` as a dev release, e.g. `15.3.1-rc.8.dev.19401`, on the mono image and pinned to its digest, for continuous deployment of `dev` ([dev-images.yaml](../.github/workflows/dev-images.yaml), ADR-0045).
+Dev charts are pushed without the `-chart` suffix, and Helm skips prereleases unless told otherwise, so install one by path and exact version: `helm install wps oci://ghcr.io/ghga-de/ghga/charts/wps --version 15.3.1-rc.8.dev.19401`.
 
 Layout:
 

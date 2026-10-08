@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "4.1.1"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 license = "Apache-2.0"
 dependencies = [

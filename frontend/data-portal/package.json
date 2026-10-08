@@ -1,6 +1,6 @@
 {
   "name": "data-portal",
-  "version": "2.5.16",
+  "version": "0.0.0",
   "license": "Apache-2.0",
   "description": "GHGA Data Portal - the web front end for browsing metadata, submitting and uploading datasets, requesting access to, and downloading GHGA-hosted data.",
   "scripts": {
@@ -15,7 +15,8 @@
     "lf": "ng lint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "ng test --watch=false",
+    "test": "ng test --watch=false && pnpm test:run",
+    "test:run": "node --test run.test.js",
     "test:watch": "ng test",
     "test:ui": "ng test --ui --runner-config vitest.ui.config.ts",
     "e2e": "playwright test --project chromium",

@@ -8,7 +8,8 @@ The repo-wide rules are in the root [AGENTS.md](../AGENTS.md), what the director
 
 - `libs/*` defaults to the **PyPI lane**: a pushed `name/x.y.z` tag publishes the wheel, rehearsed on TestPyPI first.
   A member deviates only by writing its own `[tool.ghga]` marker — `metldata` is on the platform lane with an image, `ghga-event-schemas` on no lane at all ([conventions](../docs/conventions.md#toolghga-capability-markers)).
-- Every member keeps its own semver in its `pyproject.toml`, and CI asserts the tag matches the version at HEAD ([ADR-0027](../docs/adrs/adr-0027-versioning-and-release-by-tag.md)).
+- Every PyPI-lane member keeps its own semver in its `pyproject.toml`, and CI asserts the tag matches the version at HEAD ([ADR-0027](../docs/adrs/adr-0027-versioning-and-release-by-tag.md)).
+  `metldata`, on the platform lane, declares `0.0.0` and takes the platform version at build ([ADR-0046](../docs/adrs/adr-0046-platform-version-from-tags.md)).
 - Keep `requires-python` **broad**, for external PyPI users rather than for this workspace.
   The published-combo gate tests the member the way an external consumer gets it, on every version the floor allows: `just published-combo <member> <python>`.
 

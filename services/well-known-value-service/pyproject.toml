@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "wkvs"
-version = "3.0.2"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Well-Known-Value-Service - Provides access to common values via API"
 license = "Apache-2.0"
 dependencies = [

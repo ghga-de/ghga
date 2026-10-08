@@ -20,7 +20,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "auth-service"
-version = "10.0.2"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Authentication adapter and services used for the GHGA data portal"
 license = "Apache-2.0"
 dependencies = [

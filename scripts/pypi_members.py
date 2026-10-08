@@ -29,6 +29,7 @@ Usage (`uv run --script`, so the PEP 723 block above resolves):
     uv run --script scripts/pypi_members.py --candidates        # unreleased versions
     uv run --script scripts/pypi_members.py --plan              # ordered plan + errors
     uv run --script scripts/pypi_members.py --plan --target hexkit   # that member alone
+    uv run --script scripts/pypi_members.py --check-versions    # declared versions per lane
 
 """
 
@@ -54,6 +55,9 @@ TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 
 # Directory defaults for the release lane (ADR-0033).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
+
+# What a platform-lane member declares; the build stamps the platform version (ADR-0046)
+PLACEHOLDER = "0.0.0"
 
 # A cell only runs tests, so formatting tools excluded
 NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit")
@@ -273,6 +277,75 @@ def pypi_members(member_paths: list[str] | None = None) -> list[Member]:
                 )
             )
     return members
+
+
+def _python_lanes() -> list[tuple[pathlib.Path, dict, str]]:
+    """Every Python member's folder, `[project]` table and release lane."""
+    found = []
+    for root in ("libs", "tools", "services"):
+        directory = ROOT / root
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.iterdir()):
+            manifest = path / "pyproject.toml"
+            if manifest.is_file():
+                member_pyproject = tomllib.loads(manifest.read_text())
+                ghga_markers = member_pyproject.get("tool", {}).get("ghga", {})
+                found.append(
+                    (path, member_pyproject["project"], _lane(root, ghga_markers))
+                )
+    return found
+
+
+def version_errors() -> list[str]:
+    """Checks the versions each lane requires its members to declare (ADR-0046).
+
+    A platform-lane member must declare the placeholder, since only a `ghga/` tag
+    names a platform version. A PyPI-lane member must not depend on a platform-lane
+    member, or its published wheel would require the placeholder.
+    """
+    members = _python_lanes()
+    declared = [
+        (path.relative_to(ROOT), project.get("version", ""))
+        for path, project, lane in members
+        if lane == "platform"
+    ] + [
+        (
+            manifest.relative_to(ROOT),
+            json.loads(manifest.read_text()).get("version", ""),
+        )
+        for manifest in sorted((ROOT / "frontend").glob("*/package.json"))
+    ]
+    errors = [
+        f"{path} is on the platform lane and declares {version!r}; declare"
+        f" {PLACEHOLDER!r}, the build stamps the platform version (ADR-0046)"
+        for path, version in declared
+        if version != PLACEHOLDER
+    ]
+
+    platform = {
+        _canonical(project["name"])
+        for _, project, lane in members
+        if lane == "platform"
+    }
+    for _, project, lane in members:
+        if lane != "pypi":
+            continue
+        specs = [
+            *project.get("dependencies", []),
+            *(
+                s
+                for extra in project.get("optional-dependencies", {}).values()
+                for s in extra
+            ),
+        ]
+        errors.extend(
+            f"{project['name']} is on the PyPI lane and depends on {dependency},"
+            f" which is on the platform lane and declares {PLACEHOLDER!r}"
+            for dependency in (_canonical(_requirement_name(s)) for s in specs)
+            if dependency in platform
+        )
+    return errors
 
 
 def matrix_cells(members: list[Member]) -> list[dict]:
@@ -599,9 +672,9 @@ def _reject_ignored_flags(
     # Both shape the test matrix, so only the cell output and --members read them. The
     # plan in particular always asks the index about every lane member, because the
     # closure check has to see candidates outside whatever the caller narrowed to.
-    if (args.plan or args.candidates or args.dev_requirements) and (
-        args.paths or args.check_pypi
-    ):
+    if (
+        args.plan or args.candidates or args.dev_requirements or args.check_versions
+    ) and (args.paths or args.check_pypi):
         parser.error(
             "--paths and --check-pypi only apply to the default cells or --members"
         )
@@ -628,6 +701,11 @@ def main(argv: list[str] | None = None) -> int:
         help="emit members whose declared version is ahead of the index",
     )
     mode.add_argument(
+        "--check-versions",
+        action="store_true",
+        help="fail when a member declares a version its lane does not allow",
+    )
+    mode.add_argument(
         "--plan",
         action="store_true",
         help="emit the release plan: ordered members, paths, skips and errors",
@@ -649,6 +727,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.dev_requirements:
         print("\n".join(dev_requirements()))
         return 0
+    if args.check_versions:
+        errors = version_errors()
+        for error in errors:
+            print(f"error: {error}", file=sys.stderr)
+        return 1 if errors else 0
     if args.plan:
         print(json.dumps(release_plan(args.target)))
         return 0

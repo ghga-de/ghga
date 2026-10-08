@@ -239,7 +239,7 @@ wheels = [
 
 [[package]]
 name = "ars"
-version = "8.0.3"
+version = "0.0.0"
 source = { editable = "services/access-request-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -378,7 +378,7 @@ wheels = [
 
 [[package]]
 name = "auth-km-jobs"
-version = "0.2.1"
+version = "0.0.0"
 source = { editable = "tools/auth-km-jobs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -418,7 +418,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "auth-service"
-version = "10.0.2"
+version = "0.0.0"
 source = { editable = "services/auth-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -1140,7 +1140,7 @@ wheels = [
 
 [[package]]
 name = "dcs"
-version = "10.3.0"
+version = "0.0.0"
 source = { editable = "services/dcs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -1209,7 +1209,7 @@ wheels = [
 
 [[package]]
 name = "dhfs"
-version = "4.1.0"
+version = "0.0.0"
 source = { editable = "services/datahub-file-service" }
 dependencies = [
     { name = "async-lru" },
@@ -1230,7 +1230,7 @@ requires-dist = [
 
 [[package]]
 name = "dins"
-version = "7.0.2"
+version = "0.0.0"
 source = { editable = "services/dataset-information-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -1258,7 +1258,7 @@ wheels = [
 
 [[package]]
 name = "dlqs"
-version = "4.1.1"
+version = "0.0.0"
 source = { editable = "services/dlq-service" }
 dependencies = [
     { name = "ghga-service-commons", extra = ["api"] },
@@ -1316,7 +1316,7 @@ wheels = [
 
 [[package]]
 name = "ekss"
-version = "5.3.0"
+version = "0.0.0"
 source = { editable = "services/ekss" }
 dependencies = [
     { name = "crypt4gh" },
@@ -1407,7 +1407,7 @@ wheels = [
 
 [[package]]
 name = "fis"
-version = "12.1.0"
+version = "0.0.0"
 source = { editable = "services/fis" }
 dependencies = [
     { name = "crypt4gh" },
@@ -1490,7 +1490,7 @@ requires-dist = [
 
 [[package]]
 name = "ghga-datasteward-kit"
-version = "5.4.2"
+version = "0.0.0"
 source = { editable = "tools/ghga-datasteward-kit" }
 dependencies = [
     { name = "crypt4gh" },
@@ -2153,7 +2153,7 @@ wheels = [
 
 [[package]]
 name = "ifrs"
-version = "7.4.0"
+version = "0.0.0"
 source = { editable = "services/ifrs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -3021,7 +3021,7 @@ wheels = [
 
 [[package]]
 name = "mass"
-version = "7.0.2"
+version = "0.0.0"
 source = { editable = "services/mass" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -3061,7 +3061,7 @@ wheels = [
 
 [[package]]
 name = "metldata"
-version = "4.2.1"
+version = "0.0.0"
 source = { editable = "libs/metldata" }
 dependencies = [
     { name = "cryptography" },
@@ -3240,7 +3240,7 @@ wheels = [
 
 [[package]]
 name = "nos"
-version = "9.0.1"
+version = "0.0.0"
 source = { editable = "services/notification-orchestration-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -3288,7 +3288,7 @@ wheels = [
 
 [[package]]
 name = "ns"
-version = "7.0.1"
+version = "0.0.0"
 source = { editable = "services/notification-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -3729,7 +3729,7 @@ wheels = [
 
 [[package]]
 name = "pcs"
-version = "6.4.0"
+version = "0.0.0"
 source = { editable = "services/pcs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -4736,7 +4736,7 @@ wheels = [
 
 [[package]]
 name = "rs"
-version = "5.0.3"
+version = "0.0.0"
 source = { editable = "services/ghga-registry-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -4755,7 +4755,7 @@ requires-dist = [
 
 [[package]]
 name = "rts"
-version = "3.0.1"
+version = "0.0.0"
 source = { editable = "services/reverse-transpiler-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
@@ -4948,7 +4948,7 @@ wheels = [
 
 [[package]]
 name = "sms"
-version = "5.0.0"
+version = "0.0.0"
 source = { editable = "services/state-management-service" }
 dependencies = [
     { name = "ghga-service-commons", extra = ["api"] },
@@ -5233,7 +5233,7 @@ wheels = [
 
 [[package]]
 name = "test-oidc-provider"
-version = "2.2.0"
+version = "0.0.0"
 source = { editable = "services/test-oidc-provider" }
 dependencies = [
     { name = "ghga-service-commons", extra = ["api", "auth"] },
@@ -5377,7 +5377,7 @@ wheels = [
 
 [[package]]
 name = "ucs"
-version = "16.0.0"
+version = "0.0.0"
 source = { editable = "services/ucs" }
 dependencies = [
     { name = "crypt4gh" },
@@ -5752,7 +5752,7 @@ wheels = [
 
 [[package]]
 name = "wkvs"
-version = "3.0.2"
+version = "0.0.0"
 source = { editable = "services/well-known-value-service" }
 dependencies = [
     { name = "ghga-service-commons", extra = ["api"] },
@@ -5769,7 +5769,7 @@ requires-dist = [
 
 [[package]]
 name = "wps"
-version = "11.1.1"
+version = "0.0.0"
 source = { editable = "services/work-package-service" }
 dependencies = [
     { name = "ghga-event-schemas" },
