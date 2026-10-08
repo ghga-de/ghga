@@ -22,19 +22,29 @@ path in the class `__init__` using `route`:
     class TestApiMock(MockApi):
         def __init__(self, base_url: str) -> None:
             super().__init__(base_url)
-            self.on_delete_item: ResponseHandler = delete_item
+            self.on_delete_item: ResponseHandler = respond(204)
             self.route("DELETE", "/items/{item_id}", "on_delete_item")
 
-A test can change an endpoint response by overwriting the handler.
+A test can change an endpoint response by overwriting the handler, such as
+`test_api.on_delete_item = respond(404)`.
 """
 
+import copy
 import re
 from collections.abc import Awaitable, Callable
+from typing import Any
 from urllib.parse import unquote
 
 import httpx2
 
-__all__ = ["MockApi", "MockSetupError", "NotMockedError", "ResponseHandler"]
+__all__ = [
+    "MockApi",
+    "MockSetupError",
+    "NotMockedError",
+    "ResponseHandler",
+    "fail_to_connect",
+    "respond",
+]
 
 ResponseHandler = Callable[
     [httpx2.Request], httpx2.Response | Awaitable[httpx2.Response]
@@ -135,3 +145,34 @@ class MockApi:
             if request.method == method and pattern.fullmatch(url.path):
                 return getattr(self, handler)
         return None
+
+
+def respond(
+    status_code: int = 200,
+    *,
+    json: Any = None,
+    content: bytes | str | None = None,
+    headers: dict[str, str] | None = None,
+) -> ResponseHandler:
+    """Create a handler answering every request with the configured response."""
+    if json is not None and content is not None:
+        raise MockSetupError(
+            "respond() takes `json` or `content` as the body, not both"
+        )
+    # deepcopy, so handler changes don't cause unexpected side effects
+    json = copy.deepcopy(json)
+    headers = dict(headers) if headers is not None else None
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(status_code, json=json, content=content, headers=headers)
+
+    return handler
+
+
+def fail_to_connect(reason: str = "All connection attempts failed") -> ResponseHandler:
+    """Create a handler making the API look unreachable."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        raise httpx2.ConnectError(reason, request=request)
+
+    return handler
