@@ -36,23 +36,22 @@ One service's own logic, DAO or API belongs in that member's tests, run with `ju
 Read the first failure: the features after it fail on states it never set.
 
 1. **"not every deployment is available"** at the start: `just logs` lists the deployments, `just logs <service>` follows one.
-   A `MigrationStepError` there after a restart is no code bug: the suite's clean slate removes the migration records, so a restarted service re-runs its migrations over migrated data.
-   Run `just testbed-reset`, and do not touch the migration.
-   It is a code bug when the branch changed that migration, or when the service still fails after the reset, which runs every migration over empty databases.
+   A `MigrationStepError` there means the data and the migration records disagree, or the branch broke that migration.
+   Run `just testbed-reset` first, which drops every database and runs every migration from empty, and do not touch the migration.
+   It is a code bug when the branch changed that migration, or when the service still fails after the reset.
    `just testbed-up` on such a cluster waits its 15 minutes for the same pods and fails, so reset first.
 2. **A step timed out waiting for a state:** the wait names the service that owns the state.
    Run `just logs` for it and for the services before it in the flow; uploads pass the connector, UCS, DHFS, FIS and EKSS, downloads WPS, WKVS and DCS, metadata DSKit, metldata and MASS.
    Fix the cause, and never raise the timeout: the upload waits already allow 60 s against the 2 s DHFS poll.
-   To check the fix, rebuild the image, recreate the pods (3), rerun from the start (4), and watch `just logs <service>` for the error to go.
-3. **The old behaviour after a rebuild:** images are tagged `:local` with `IfNotPresent`, so `just testbed-up` loads them but restarts no pod.
-   `just testbed-reset` recreates the pods.
+   To check the fix, rebuild the image and deploy it (3), rerun from the start (4), and watch `just logs <service>` for the error to go.
+3. **After a rebuild:** `just testbed-up` loads the `:local` images and restarts exactly the pods whose image changed, keeping the state, so it needs no reset.
+   A pod still on the old build runs an image the build did not touch; `just image <member>` or `just image-mono` rebuilds it.
 4. **"The expected state … has not yet been set":** the feature ran without the ones before it.
    `just testbed-reset` drops every database, the states included, so after it run the suite from the start, or every feature from 010 up to yours, never one feature alone.
 5. **A locator timeout in a browser step:** record a trace before you touch a selector, `TB_TRACE=1` for the failed tests or `TB_TRACE=all` when the failing test's own trace looks innocent, since the browser session is shared and an earlier test may be the cause.
    `just testbed-trace <name>` serves it on port 9323.
    For a fault in what the portal renders, `playwright-cli` on the live portal is cheaper than reading a trace, but it cannot see the run's browser session; setup in [references/playwright-cli.md](references/playwright-cli.md).
-6. **Feature 110 fails while `just fe-dev` runs:** the dev server holds port 8080, so the lox24 port-forward fails without a message; stop the dev server.
-7. **EKSS-backed steps fail after Vault restarted:** dev-mode Vault forgets the secrets EKSS stored, so a scoped run of a later feature such as 420 fails; run from 010.
+6. **EKSS-backed steps fail after Vault restarted:** dev-mode Vault forgets the secrets EKSS stored, so a scoped run of a later feature such as 420 fails; run from 010.
 
 When a reset does not help, start over with `just down` and `just testbed-up mono`.
 Only one worktree runs the test bed at a time, since all share one kind cluster.

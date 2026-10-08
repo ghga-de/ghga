@@ -33,6 +33,12 @@ spec:
         {{- if .Values.podAnnotations }}
         {{- .Values.podAnnotations | toYaml | nindent 8 }}
         {{- end }}
+        {{- /* A rebuilt local image keeps its tag, so without the image ID the spec
+             would not change and the pods would keep running the old build. Jobs and
+             CronJobs need none: their pods are created anew and get the current image. */}}
+        {{- with index (.Values.global.localImageIds | default dict) (include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart)) }}
+        local-image-id: {{ . | quote }}
+        {{- end }}
         {{- if .Values.vaultAgent.enabled }}
         {{- if .Values.vaultAgent.singleTemplate }}
         {{- include "ghga-common.vaultAgentAnnotationsSingleTemplate" . | nindent 8 }}

@@ -701,6 +701,14 @@ demo-load profile="" reclaim="false": cluster
     fi
     echo "loaded $loaded image(s) into the kind node ($already already there)"
 
+# Read from the node, not the docker store: CI's reclaim drops the docker copies, and the
+# docker image ID differs from containerd's anyway.
+# Print the node's ID for every `:local` image, as JSON keyed by image reference.
+[private]
+_local-image-ids:
+    @docker exec ghga-control-plane crictl images -o json \
+      | jq -c '[.images[] | .id as $id | .repoTags[] | select(endswith(":local")) | {key: ., value: $id}] | from_entries'
+
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
 docker-prune:
@@ -769,6 +777,7 @@ up profile="": (demo-load profile)
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
       ${extra[@]+"${extra[@]}"} \
+      --set-json "global.localImageIds=$(just _local-image-ids)" \
       --kube-context kind-ghga --wait --timeout 15m \
       2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
@@ -851,6 +860,7 @@ testbed-up profile="": (demo-load profile)
       -f deploy/charts/ghga-demo/values-artifacts.yaml \
       -f deploy/charts/ghga-demo/values-testbed.yaml \
       ${extra[@]+"${extra[@]}"} \
+      --set-json "global.localImageIds=$(just _local-image-ids)" \
       --kube-context kind-ghga --wait --timeout 15m \
       2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
