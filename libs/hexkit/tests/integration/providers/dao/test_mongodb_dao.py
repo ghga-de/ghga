@@ -17,14 +17,18 @@
 """Test the MongoDB-based DAO factory provider."""
 
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
+from pymongo import AsyncMongoClient, monitoring
 
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
     InvalidMappingError,
     MultipleHitsFoundError,
@@ -35,7 +39,7 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
     UUID4Field,
 )
-from hexkit.providers.mongodb import MongoDbIndex
+from hexkit.providers.mongodb import MongoDbDaoFactory, MongoDbIndex
 from hexkit.providers.mongodb.testutils import (
     MongoDbFixture,
     mongodb_container_fixture,  # noqa: F401
@@ -1030,3 +1034,123 @@ async def test_dao_find_all_to_list(mongodb: MongoDbFixture):
 
     # Check that calling to_list() again returns an empty list
     assert await result.to_list() == []
+
+
+class WriteCounter(monitoring.CommandListener):
+    """Records the write commands a MongoDB client sends."""
+
+    def __init__(self) -> None:
+        self.writes: list[str] = []
+
+    def started(self, event: monitoring.CommandStartedEvent) -> None:
+        """Record a write command when it starts."""
+        if event.command_name in ("insert", "update", "delete"):
+            self.writes.append(event.command_name)
+
+    def succeeded(self, event: monitoring.CommandSucceededEvent) -> None:
+        """Ignore finished commands."""
+
+    def failed(self, event: monitoring.CommandFailedEvent) -> None:
+        """Ignore failed commands."""
+
+
+@asynccontextmanager
+async def counted_dao(
+    mongodb: MongoDbFixture, *, unique_field_a: bool = False
+) -> AsyncIterator[tuple[Dao[ExampleDto], WriteCounter]]:
+    """Yield an ExampleDto DAO whose client counts the write commands it sends."""
+    counter = WriteCounter()
+    client: AsyncMongoClient = AsyncMongoClient(
+        str(mongodb.config.mongo_dsn.get_secret_value()),
+        uuidRepresentation="standard",
+        tz_aware=True,
+        event_listeners=[counter],
+    )
+    try:
+        factory = MongoDbDaoFactory(config=mongodb.config, client=client)
+        indexes = (
+            [MongoDbIndex(fields="field_a", properties={"unique": True})]
+            if unique_field_a
+            else None
+        )
+        dao = await factory.get_dao(
+            name="example", dto_model=ExampleDto, id_field="id", indexes=indexes
+        )
+        yield dao, counter
+    finally:
+        await client.close()
+
+
+async def test_dao_insert_many(mongodb: MongoDbFixture):
+    """Test that insert_many creates the new resources in one write command and
+    reports an existing ID.
+    """
+    async with counted_dao(mongodb) as (dao, counter):
+        existing = ExampleDto(field_a="existing")
+        await dao.insert(existing)
+        batch = [ExampleDto(field_a="new 1"), existing, ExampleDto(field_a="new 2")]
+        counter.writes.clear()
+
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.insert_many(batch)
+
+        assert counter.writes == ["insert"]
+        assert list(caught.value.errors) == [existing.id]
+        assert isinstance(caught.value.errors[existing.id], ResourceAlreadyExistsError)
+        assert caught.value.not_attempted == ()
+        for dto in batch:
+            assert await dao.get_by_id(dto.id) == dto
+
+
+async def test_dao_insert_many_unique_index(mongodb: MongoDbFixture):
+    """Test that insert_many reports a clash with another unique index for that ID."""
+    async with counted_dao(mongodb, unique_field_a=True) as (dao, _):
+        await dao.insert(ExampleDto(field_a="taken"))
+        clashing = ExampleDto(field_a="taken")
+        fine = ExampleDto(field_a="free")
+
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.insert_many([clashing, fine])
+
+        assert list(caught.value.errors) == [clashing.id]
+        error = caught.value.errors[clashing.id]
+        assert isinstance(error, UniqueConstraintViolationError)
+        assert await dao.get_by_id(fine.id) == fine
+
+
+async def test_dao_insert_many_ordered(mongodb: MongoDbFixture):
+    """Test that an ordered insert_many stops at its first failure."""
+    async with counted_dao(mongodb) as (dao, _):
+        existing = ExampleDto(field_a="existing")
+        await dao.insert(existing)
+        first, last = ExampleDto(field_a="first"), ExampleDto(field_a="last")
+
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.insert_many([first, existing, last], ordered=True)
+
+        assert list(caught.value.errors) == [existing.id]
+        assert caught.value.not_attempted == (last.id,)
+        assert await dao.get_by_id(first.id) == first
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(last.id)
+
+
+@pytest.mark.parametrize("method", ["insert_many"])
+async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
+    """Test that a batch with a repeated ID is rejected before any write."""
+    async with counted_dao(mongodb) as (dao, counter):
+        dto = ExampleDto()
+
+        with pytest.raises(ValueError, match=str(dto.id)):
+            await getattr(dao, method)([dto, ExampleDto(), dto])
+
+        assert counter.writes == []
+
+
+@pytest.mark.parametrize("method", ["insert_many"])
+async def test_dao_batch_empty(method: str, mongodb: MongoDbFixture):
+    """Test that an empty batch sends no command and raises nothing."""
+    async with counted_dao(mongodb) as (dao, counter):
+        await getattr(dao, method)([])
+
+        assert counter.writes == []

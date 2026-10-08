@@ -21,9 +21,11 @@ import pytest
 from pydantic import BaseModel
 
 from hexkit.protocols.dao import (
+    BatchOperationError,
     InvalidMappingError,
     NoHitsFoundError,
     PreconditionFailedError,
+    ResourceAlreadyExistsError,
     ResourceNotFoundError,
 )
 from hexkit.providers.testing import MockDAOEmptyError, new_mock_dao_class
@@ -890,3 +892,65 @@ async def test_nested_id_sort_matches_mongodb():
         2,
         3,
     ]
+
+
+WRENCH = InventoryItem(title="Wrench", count=12)
+CANDLE = InventoryItem(title="Candle", count=100)
+HAMMER = InventoryItem(title="Hammer", count=3)
+
+
+async def stored_titles(dao) -> list[str]:
+    """Return the titles of all stored items, in insertion order."""
+    return [item.title async for item in dao.find_all(filter_={})]
+
+
+async def test_insert_many():
+    """Test that insert_many creates the new items and collects the existing IDs."""
+    dao = DaoClass()
+    await dao.insert(CANDLE)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER])
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert isinstance(caught.value.errors["Candle"], ResourceAlreadyExistsError)
+    assert caught.value.not_attempted == ()
+    assert await stored_titles(dao) == ["Candle", "Wrench", "Hammer"]
+
+
+async def test_insert_many_ordered():
+    """Test that an ordered insert_many stops at the first existing ID."""
+    dao = DaoClass()
+    await dao.insert(CANDLE)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER], ordered=True)
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert caught.value.not_attempted == ("Hammer",)
+    assert await stored_titles(dao) == ["Candle", "Wrench"]
+
+
+@pytest.mark.parametrize("method", ["insert_many"])
+async def test_batch_rejects_duplicate_ids(method: str):
+    """Test that a batch with a repeated ID is rejected before anything is written."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    changed = WRENCH.model_copy(update={"count": 1})
+
+    with pytest.raises(ValueError, match="Hammer"):
+        await getattr(dao, method)([HAMMER, changed, HAMMER])
+
+    assert await stored_titles(dao) == ["Wrench"]
+    assert (await dao.get_by_id("Wrench")).count == 12
+
+
+@pytest.mark.parametrize("method", ["insert_many"])
+async def test_batch_with_empty_input(method: str):
+    """Test that an empty batch changes nothing and raises nothing."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+
+    await getattr(dao, method)([])
+
+    assert await stored_titles(dao) == ["Wrench"]

@@ -44,6 +44,7 @@ from hexkit.protocols.dao import (
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
+    ensure_distinct_ids,
     resolve_filter,
 )
 from hexkit.providers.mongodb.config import MongoDbConfig
@@ -541,6 +542,33 @@ class MongoDbDao(Generic[Dto]):
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue", {})  # type: ignore
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
+
+    def _batch_documents(self, dtos: Collection[Dto]) -> list[dict[str, Any]]:
+        """Convert a batch of DTOs into documents, rejecting duplicate IDs.
+
+        Raises:
+            ValueError: when two DTOs share an ID.
+        """
+        documents = [self._dto_to_document(dto) for dto in dtos]
+        ensure_distinct_ids(document["_id"] for document in documents)
+        return documents
+
+    async def insert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create several resources in one call.
+
+        Please see the `Dao` protocol for the arguments and the errors.
+        """
+        documents = self._batch_documents(dtos)
+        if not documents:
+            return
+        with translate_pymongo_errors():
+            try:
+                await self._collection.insert_many(documents, ordered=ordered)
+            except BulkWriteError as error:
+                ids = [document["_id"] for document in documents]
+                raise _errors_from_bulk_write(error, ids, ordered=ordered) from error
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
