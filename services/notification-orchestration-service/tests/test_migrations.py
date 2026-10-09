@@ -24,15 +24,22 @@ import pytest
 from ghga_event_schemas.pydantic_ import AccessRequestDetails, User
 from hexkit.providers.mongodb.migrations import (
     MigrationConfig,
-    MigrationDefinition,
-    MigrationStepError,
+    MigrationManager,
 )
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from nos.migrations import run_db_migrations
+from nos.migrations import MIGRATION_MAP
 from tests.fixtures.config import get_config
 from tests.fixtures.utils import make_access_request
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 async def test_migration_v2(mongodb: MongoDbFixture):
@@ -129,32 +136,3 @@ async def test_migration_v2(mongodb: MongoDbFixture):
         assert reversed_user["_id"] == str(user.user_id)
         assert reversed_user["name"] == user.name
         assert reversed_user["email"] == user.email
-
-
-class MigrationRan(Exception):
-    """Raised by `StubMigration` to show that it was run."""
-
-
-class StubMigration(MigrationDefinition):
-    """A stand-in for the service's V2 migration that only signals it was run."""
-
-    version = 2
-
-    async def apply(self):
-        """Signal that this migration, not the service's own, was run."""
-        raise MigrationRan()
-
-
-async def test_given_migration_map_is_used(mongodb: MongoDbFixture):
-    """Test that `run_db_migrations` runs the migration map passed to it."""
-    config = MigrationConfig(
-        mongo_dsn=mongodb.config.mongo_dsn,
-        db_name=mongodb.config.db_name,
-        db_version_collection="testDbVersions",
-        migration_wait_sec=1,
-    )
-    with pytest.raises(MigrationStepError) as exc_info:
-        await run_db_migrations(
-            config=config, target_version=2, migration_map={2: StubMigration}
-        )
-    assert isinstance(exc_info.value.__cause__, MigrationRan)

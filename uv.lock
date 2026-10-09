@@ -427,6 +427,7 @@ dependencies = [
     { name = "phonenumbers" },
     { name = "pynacl" },
     { name = "pyotp" },
+    { name = "typer" },
 ]
 
 [package.metadata]
@@ -437,6 +438,7 @@ requires-dist = [
     { name = "phonenumbers", specifier = ">=9,<10" },
     { name = "pynacl", specifier = ">=1.6,<2" },
     { name = "pyotp", specifier = ">=2.9,<3" },
+    { name = "typer", specifier = ">=0.25" },
 ]
 
 [[package]]

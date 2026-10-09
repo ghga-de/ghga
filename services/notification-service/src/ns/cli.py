@@ -15,7 +15,22 @@
 
 """Entrypoint of the package"""
 
-from nos.cli import cli
+import asyncio
 
-if __name__ == "__main__":
-    cli()
+import typer
+
+from ns.main import consume_events, migrate_db
+
+cli = typer.Typer()
+
+
+@cli.command(name="consume-events")
+def sync_consume_events(run_forever: bool = True):
+    """Run an event consumer listening to the configured topics."""
+    asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())

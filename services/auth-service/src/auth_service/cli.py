@@ -13,9 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Command line interface of the service"""
 
-from nos.cli import cli
+import asyncio
 
-if __name__ == "__main__":
-    cli()
+import typer
+
+from auth_service.main import migrate_db, run
+
+cli = typer.Typer()
+
+
+@cli.command(name="run-rest")
+def sync_run_rest():
+    """Run the REST APIs set in `provide_apis`, and the event consumer if `run_consumer`."""
+    run()
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())
