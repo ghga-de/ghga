@@ -39,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: wps
