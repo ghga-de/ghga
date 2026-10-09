@@ -1,0 +1,1519 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>GHGA Kafka Cascades</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;600;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root {
+    --bg: #E9EAE6;
+    --panel: #F7F8F5;
+    --canvas: #FDFDFB;
+    --sunk: #DEE0DA;
+    --raised: #FFFFFF;
+    --ink: #1A1E1B;
+    --ink-soft: #57605A;
+    --ink-faint: #868F88;
+    --rule: #C4CAC3;
+    --rule-soft: #DCE0DA;
+    --plain: #2E4257;
+    --outbox: #0D6B66;
+    --persist: #7A4E12;
+    --hot: #A8452A;
+    --hot-wash: #F2DFD8;
+    --term: #8A938C;
+    --f-ui: 'Epilogue', 'Helvetica Neue', Arial, sans-serif;
+    --f-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121512; --panel: #1A1E1A; --canvas: #0E110E; --sunk: #0A0D0A;
+      --raised: #222822; --ink: #E0E5DF; --ink-soft: #99A399; --ink-faint: #727C73;
+      --rule: #2D342D; --rule-soft: #232A23;
+      --plain: #A3B7CC; --outbox: #52BFB6; --persist: #D9A862;
+      --hot: #E08567; --hot-wash: #2C1813; --term: #6D766E;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121512; --panel: #1A1E1A; --canvas: #0E110E; --sunk: #0A0D0A;
+    --raised: #222822; --ink: #E0E5DF; --ink-soft: #99A399; --ink-faint: #727C73;
+    --rule: #2D342D; --rule-soft: #232A23;
+    --plain: #A3B7CC; --outbox: #52BFB6; --persist: #D9A862;
+    --hot: #E08567; --hot-wash: #2C1813; --term: #6D766E;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--f-ui); font-size: 15px; line-height: 1.5;
+    padding-inline: 18px; padding-block: 0 52px;
+  }
+  .wrap { max-width: 1500px; margin: 0 auto; }
+  .kicker {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); margin: 0;
+  }
+
+  header.top { padding-block: 32px 16px; border-bottom: 2px solid var(--ink); }
+  header.top h1 {
+    font-weight: 800; font-size: clamp(30px, 5vw, 46px); line-height: 1.0;
+    letter-spacing: -.03em; margin: 10px 0 0; text-wrap: balance;
+  }
+  header.top .sub { margin: 12px 0 0; max-width: 74ch; color: var(--ink-soft); font-size: 16px; }
+  header.top .sub b { color: var(--ink); font-weight: 600; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 18px; align-items: center; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    border: 1px solid var(--rule); background: var(--panel);
+    padding: 4px 9px; border-radius: 3px; white-space: nowrap;
+  }
+  .chip i { width: 9px; height: 9px; flex: none; border-radius: 2px; }
+  .chip.k-plain i { background: var(--plain); }
+  .chip.k-outbox i { background: var(--outbox); }
+  .chip.k-persist i { background: var(--persist); }
+  .chip.k-http i { background: transparent; border: 1.5px dashed var(--ink-faint); border-radius: 2px; }
+  .chip.k-term i { background: transparent; border: 1.5px dashed var(--term); border-radius: 50%; }
+  .chip .note { color: var(--ink-faint); font-weight: 400; }
+
+  .tool { display: grid; grid-template-columns: 286px minmax(0, 1fr); gap: 16px; margin-top: 20px; }
+  @media (max-width: 980px) { .tool { grid-template-columns: 1fr; } }
+
+  /* ---------- rail ---------- */
+  .rail {
+    border: 1px solid var(--rule); background: var(--panel);
+    max-height: 760px; overflow-y: auto; align-self: start;
+  }
+  .rail-head {
+    padding: 11px 13px; border-bottom: 1px solid var(--rule); background: var(--sunk);
+    position: sticky; top: 0; z-index: 2;
+  }
+  .rail-head p { margin: 0; }
+  .rail-head .cnt { font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint); margin-top: 3px; }
+  .lane { border-bottom: 1px solid var(--rule-soft); }
+  .lane:last-child { border-bottom: 0; }
+  .lane > h3 {
+    margin: 0; padding: 9px 13px 5px;
+    font-family: var(--f-mono); font-size: 9.5px; font-weight: 600;
+    letter-spacing: .17em; text-transform: uppercase; color: var(--ink-faint);
+  }
+  button.ep {
+    display: block; width: 100%; text-align: left; border: 0; border-left: 3px solid transparent;
+    background: transparent; color: inherit; font: inherit; cursor: pointer;
+    padding: 7px 13px 9px; border-top: 1px solid var(--rule-soft);
+  }
+  button.ep:first-of-type { border-top: 0; }
+  button.ep:hover { background: var(--raised); }
+  button.ep:focus-visible { outline: 2px solid var(--hot); outline-offset: -2px; }
+  button.ep[aria-current="true"] { background: var(--hot-wash); border-left-color: var(--hot); }
+  button.ep .actor {
+    font-family: var(--f-mono); font-size: 9px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-faint); display: block;
+  }
+  button.ep[aria-current="true"] .actor { color: var(--hot); }
+  button.ep .call {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    display: block; margin-top: 3px; word-break: break-word; line-height: 1.4;
+  }
+
+  /* ---------- stage ---------- */
+  .stage { border: 1px solid var(--rule); background: var(--panel); min-width: 0; }
+  .stage-head { padding: 16px 18px 14px; border-bottom: 1px solid var(--rule); }
+  .stage-head h2 {
+    font-weight: 800; font-size: clamp(18px, 2.2vw, 24px); letter-spacing: -.02em;
+    margin: 8px 0 0; text-wrap: balance;
+  }
+  .route {
+    font-family: var(--f-mono); font-size: 11.5px; margin: 9px 0 0; color: var(--ink-soft);
+    display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline;
+  }
+  .route .arr { color: var(--ink-faint); }
+  .route .tgt { color: var(--ink); font-weight: 500; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
+    padding: 9px 18px; background: var(--sunk); border-bottom: 1px solid var(--rule);
+  }
+  .bar button {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+    padding: 4px 10px; border-radius: 3px; cursor: pointer;
+  }
+  .bar button:hover { background: var(--raised); }
+  .bar button:focus-visible { outline: 2px solid var(--hot); outline-offset: 1px; }
+  .bar .spacer { flex: 1 1 auto; }
+  .bar .hint {
+    font-family: var(--f-mono); font-size: 10px; color: var(--ink-faint); white-space: nowrap;
+  }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px; }
+  .stat {
+    font-family: var(--f-mono); font-size: 10px; border: 1px solid var(--rule);
+    background: var(--panel); padding: 3px 8px; border-radius: 3px; color: var(--ink-soft);
+  }
+  .stat b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---------- canvas ---------- */
+  .canvas-holder { background: var(--canvas); position: relative; }
+  svg.space { display: block; width: 100%; height: 680px; touch-action: none; cursor: grab; }
+  svg.space.dragging { cursor: grabbing; }
+  @media (max-width: 980px) { svg.space { height: 520px; } }
+  svg.space text { font-family: var(--f-mono); }
+  .dot-grid { fill: var(--rule-soft); }
+
+  .lk { fill: none; stroke: var(--rule); stroke-width: 1.4; }
+  .lk.k-plain   { stroke: var(--plain);   stroke-opacity: .5; }
+  .lk.k-outbox  { stroke: var(--outbox);  stroke-opacity: .55; }
+  .lk.k-persist { stroke: var(--persist); stroke-opacity: .55; }
+  .lk.k-http    { stroke: var(--ink-faint); stroke-dasharray: 5 4; stroke-opacity: .7; }
+  .lk.on-path   { stroke-width: 2.6; stroke-opacity: 1; }
+
+  .pill-bg { fill: var(--canvas); stroke-width: 1; }
+  .pill-bg.k-plain   { stroke: var(--plain); }
+  .pill-bg.k-outbox  { stroke: var(--outbox); }
+  .pill-bg.k-persist { stroke: var(--persist); }
+  .pill-bg.k-http    { stroke: var(--ink-faint); stroke-dasharray: 4 3; }
+  .pill-tp { font-size: 10px; font-weight: 600; }
+  .pill-tp.k-plain { fill: var(--plain); }
+  .pill-tp.k-outbox { fill: var(--outbox); }
+  .pill-tp.k-persist { fill: var(--persist); }
+  .pill-tp.k-http { fill: var(--ink-soft); }
+  .pill-ty { font-size: 9.5px; fill: var(--ink-soft); }
+
+  .nbox { fill: var(--panel); stroke: var(--rule); stroke-width: 1.2; }
+  .nbox.term { stroke-dasharray: 4 3; stroke: var(--term); }
+  .nbox.sel { stroke: var(--hot); stroke-width: 2.2; }
+  .nstripe.k-plain   { fill: var(--plain); }
+  .nstripe.k-outbox  { fill: var(--outbox); }
+  .nstripe.k-persist { fill: var(--persist); }
+  .nstripe.k-http    { fill: var(--ink-faint); }
+  .nstripe.k-root    { fill: var(--hot); }
+  .nsvc { font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .nsvc.dim { fill: var(--ink-soft); }
+  .nact { font-size: 10px; fill: var(--ink-soft); }
+  .node { cursor: pointer; }
+  .node:focus { outline: none; }
+  .node:focus-visible .nbox { stroke: var(--hot); stroke-width: 2.2; }
+  .tog-c { fill: var(--panel); stroke: var(--ink-soft); stroke-width: 1.3; }
+  .tog-t { font-size: 10px; font-weight: 600; fill: var(--ink); text-anchor: middle; }
+  .endcap { fill: none; stroke: var(--term); stroke-width: 1.3; }
+
+  /* ---------- inspector ---------- */
+  .insp { border-top: 1px solid var(--rule); padding: 14px 18px 16px; background: var(--panel); }
+  .insp-top { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: baseline; }
+  .insp h3 {
+    font-family: var(--f-mono); font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.01em;
+  }
+  .insp .full { font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint); }
+  .insp .via { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .insp .via .chip { font-size: 10px; }
+  .insp .body { margin: 11px 0 0; font-size: 14.5px; color: var(--ink-soft); max-width: 86ch; }
+  .insp .body b { color: var(--ink); font-weight: 600; }
+  .insp .body .m { font-family: var(--f-mono); font-size: .88em; }
+  .insp .cond {
+    margin: 9px 0 0; font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint);
+    max-width: 92ch; padding-left: 11px; border-left: 2px solid var(--rule);
+  }
+
+  /* ---------- notes ---------- */
+  section.notes { margin-top: 42px; }
+  section.notes h2 {
+    font-weight: 800; font-size: clamp(20px, 2.4vw, 26px); letter-spacing: -.02em; margin: 10px 0 0;
+  }
+  .note-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-top: 18px;
+  }
+  .note-grid article { background: var(--panel); padding: 15px 16px 17px; }
+  .note-grid h3 {
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 9px; font-weight: 600;
+  }
+  .note-grid p { margin: 0 0 9px; font-size: 14px; color: var(--ink-soft); }
+  .note-grid p:last-child { margin-bottom: 0; }
+  .note-grid b { color: var(--ink); font-weight: 600; }
+  code, .m { font-family: var(--f-mono); font-size: .88em; }
+  code { background: var(--sunk); padding: .1em .32em; border-radius: 2px; }
+
+  .tbl-scroll { overflow-x: auto; border: 1px solid var(--rule); margin-top: 18px; }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; background: var(--panel); }
+  th, td {
+    text-align: left; padding: 9px 13px; border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--f-mono); font-size: 11.5px; vertical-align: top; line-height: 1.45;
+  }
+  thead th {
+    font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint);
+    background: var(--sunk); border-bottom: 1.5px solid var(--ink); font-weight: 600;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.tp { font-weight: 600; }
+  td.none { color: var(--term); }
+
+  footer {
+    margin-top: 44px; padding-top: 15px; border-top: 2px solid var(--ink);
+    font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-faint);
+    display: flex; flex-wrap: wrap; gap: 6px 22px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="kicker">GHGA · event topology · 23 topics · 22 entrypoints</p>
+    <h1>Kafka Cascades Map</h1>
+    <p class="sub">A map of nearly all Kafka event cascades in GHGA. Pick an entrypoint, then <b>click a node</b> to bring it to
+      the anchor, or <b>click its circle</b> to fold that branch away — the clicked node holds still while
+      everything else reflows around it. Drag to pan, scroll to zoom.</p>
+    <div class="legend">
+      <span class="chip k-plain"><i></i>plain <span class="note">KafkaEventPublisher</span></span>
+      <span class="chip k-outbox"><i></i>outbox <span class="note">MongoKafkaDaoPublisher · upserted/deleted</span></span>
+      <span class="chip k-persist"><i></i>persisted <span class="note">PersistentKafkaPublisher · replayable</span></span>
+      <span class="chip k-http"><i></i>HTTP <span class="note">synchronous hop, no event</span></span>
+      <span class="chip k-term"><i></i>terminal <span class="note">no in-repo subscriber</span></span>
+    </div>
+  </header>
+
+  <div class="tool">
+    <nav class="rail" aria-label="Entrypoints">
+      <div class="rail-head">
+        <p class="kicker">Entrypoints</p>
+        <p class="cnt" id="ep-count"></p>
+      </div>
+      <div id="rail-body"></div>
+    </nav>
+
+    <main class="stage">
+      <div class="stage-head">
+        <p class="kicker" id="st-lane"></p>
+        <h2 id="st-title"></h2>
+        <p class="route" id="st-route"></p>
+      </div>
+      <div class="bar">
+        <button type="button" id="b-fit">Fit</button>
+        <button type="button" id="b-in">Zoom +</button>
+        <button type="button" id="b-out">Zoom &minus;</button>
+        <button type="button" id="b-expand">Unfold all</button>
+        <button type="button" id="b-collapse">Fold to first hop</button>
+        <span class="hint">opens at a readable scale — drag right for deeper hops, or Fit for the whole shape</span>
+        <span class="spacer"></span>
+        <span class="stats" id="st-stats"></span>
+      </div>
+      <div class="canvas-holder">
+        <svg class="space" id="svg" role="application"
+             aria-label="Spacetree of the Kafka event cascade for the selected entrypoint. Use arrow keys to move between nodes and Enter to fold or unfold a branch."></svg>
+      </div>
+      <div class="insp" id="insp" aria-live="polite">
+        <div class="insp-top">
+          <h3 id="i-svc"></h3>
+          <span class="full" id="i-full"></span>
+        </div>
+        <div class="via" id="i-via"></div>
+        <p class="body" id="i-body"></p>
+        <p class="cond" id="i-cond"></p>
+      </div>
+    </main>
+  </div>
+
+  <section class="notes">
+    <p class="kicker">Reading the spacetree</p>
+    <h2>What this draws, and what it leaves out</h2>
+    <div class="note-grid">
+      <article>
+        <h3>Nodes are consumers, edges are events</h3>
+        <p>A node is a service <b>reacting</b>; the pill on the edge into it is the event that woke it.
+          The node's left stripe repeats that edge's colour, so a branch's publish mechanism is readable
+          at any zoom.</p>
+        <p>The root node is the service that publishes first, in <b>the accent colour</b>. Its own box carries
+          no pill because nothing published to reach it — a person or a CLI did.</p>
+      </article>
+      <article>
+        <h3>The DLQ edge is universal</h3>
+        <p>Every node here can also fail. On an unhandled exception hexkit publishes the event to
+          <code>dlq</code> with its type unchanged, and the DLQ service stores it. Drawing that from each node
+          would double every tree, so it is its own entrypoint: <b>DLQS · process next event</b>.</p>
+        <p>The retry topic is <code>retry-&lt;service_name&gt;</code>
+          (<span class="m">hexkit/providers/akafka/provider/eventsub.py:498</span>).</p>
+      </article>
+      <article>
+        <h3>Excluded: actions with no event</h3>
+        <p>Omitted on purpose: every <code>GET</code> and <code>/health</code>;
+          <span class="m">datasteward-kit metadata submit|transform</span> (file-system event store only);
+          <span class="m">files upload</span> (S3 only); <span class="m">ghga-connector decrypt</span>;
+          DCS <span class="m">/objects/{id}/envelopes</span>; the auth-service claim and grant routes;
+          IVA <span class="m">create-code</span> and <span class="m">delete-iva</span>; and every
+          work-package route.</p>
+        <p>Also gone: <span class="m">files ingest-upload-metadata</span>, now a dead command.</p>
+      </article>
+      <article>
+        <h3>Excluded: the state management service</h3>
+        <p>SMS exposes <span class="m">POST /events/</span>, which can publish any payload to any topic. It is
+          a test fixture — its own README says it must never be deployed to production — so it is not an
+          entrypoint here.</p>
+      </article>
+      <article>
+        <h3>One quirk in the type names</h3>
+        <p>metldata's <code>artifacts</code> topic uses <span class="m">upserted</span> /
+          <span class="m">deleted</span> — hexkit's hardcoded outbox type names — but it is published with a
+          plain <code>KafkaEventPublisher</code> and consumed with <code>EventSubscriberProtocol</code>. It is
+          drawn as <b>plain</b>, because that is what it is.</p>
+      </article>
+      <article>
+        <h3>Where a branch ends</h3>
+        <p>A dashed node publishes an event that nothing currently subscribes to:
+          <code>studies</code>, <code>audit-records</code>, <code>downloads</code>,
+          <code>file-deletions</code>, <code>staged-files</code>.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="notes">
+    <p class="kicker">Reference</p>
+    <h2>Every topic, its producer, and who listens</h2>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Topic</th><th scope="col">Class</th><th scope="col">Event types</th>
+            <th scope="col">Producer</th><th scope="col">Subscribers</th>
+          </tr>
+        </thead>
+        <tbody id="topic-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>Last Updated 2026-10-09</span>
+    <span>Topics and types: deploy/charts/*/values.yaml</span>
+    <span>Publishers and subscribers: adapters/outbound/event_pub.py, adapters/inbound/event_sub.py, inject.py</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var P = "plain", O = "outbox", S = "persist", H = "http";
+  function e(topic, type, kind) { return { tp: topic, ty: type, k: kind }; }
+  function http(label) { return { tp: label, ty: "synchronous call", k: H }; }
+
+  var SVC = {
+    MASS: "metadata search & access service",
+    RS: "ghga-registry-service",
+    WPS: "work-package-service",
+    DINS: "dataset-information-service",
+    ARS: "access-request-service",
+    AUTH: "auth-service",
+    RTS: "reverse-transpiler-service",
+    UCS: "upload-controller-service",
+    FIS: "file-ingest-service",
+    IFRS: "internal-file-registry-service",
+    DCS: "download-controller-service",
+    PCS: "purge-controller-service",
+    NOS: "notification-orchestration-service",
+    NS: "notification-service",
+    DLQS: "dlq-service",
+    metldata: "metadata ETL & artifact loader",
+    CLI: "operational command",
+    "—": "published, nothing subscribes",
+    "(suppressed)": "the event that does not fire"
+  };
+
+  // ---- reusable sub-cascades (fresh objects per call) ---------------------
+  function internalRegistration() {
+    return [
+      { e: e("internal-registrations", "internal_file_registered", S), s: "UCS",
+        a: "FileUpload → <b>archived</b>; object dropped from the inbox",
+        kids: [
+          { e: e("file-uploads", "upserted", O), s: "FIS",
+            a: "refreshes its view of the upload", term: true },
+          { e: e("file-uploads", "upserted", O), s: "IFRS",
+            a: "ignored — state is no longer <span class='m'>awaiting_archival</span>", term: true }
+        ] },
+      { e: e("internal-registrations", "internal_file_registered", S), s: "DCS",
+        a: "registers the DRS object in <span class='m'>drs_objects</span>",
+        kids: [
+          { e: e("downloads", "drs_object_registered", S), s: "—",
+            a: "published for downstream reporting", term: true }
+        ] },
+      { e: e("internal-registrations", "internal_file_registered", S), s: "DINS",
+        a: "merges with the accession map into <span class='m'>file_information</span>",
+        cond: "no accession map yet → parked in pendingFileInfo", term: true }
+    ];
+  }
+
+  function boxEcho(reason) {
+    return {
+      e: e("file-upload-boxes", "upserted", O), s: "RS",
+      a: "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+      cond: reason,
+      kids: [
+        { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
+          a: "upserts <span class='m'>uploadBoxes</span>, used for upload work packages", term: true }
+      ]
+    };
+  }
+
+  function auditLeaf() {
+    return { e: e("audit-records", "audit_record_logged", S), s: "—",
+      a: "append-only stewardship record", term: true };
+  }
+
+  function nosEmail(which) {
+    return { e: e("notifications", "email_notification", P), s: "NS",
+      a: "renders and sends the email" + (which ? " — " + which : ""), term: true };
+  }
+
+  // ---- flows -------------------------------------------------------------
+  var FLOWS = [
+    {
+      id: "load", lane: "Metadata", actor: "DS Kit", call: "datasteward-kit load",
+      title: "A data steward loads transformed metadata",
+      target: "metldata · POST /rpc/load-artifacts",
+      root: {
+        s: "metldata", a: "upserts artifact resources, then publishes three ways",
+        cond: "events fire only for (embedded_public · EmbeddedDataset) and for publishable_artifacts",
+        kids: [
+          { e: e("searchable-resources", "searchable_resource_upserted", P), s: "MASS",
+            a: "upserts the resource into <span class='m'>mass.EmbeddedDataset</span>", term: true },
+          { e: e("searchable-resources", "searchable_resource_upserted", P), s: "RS",
+            a: "LEGACY: extracts the embedded study, tracks every file accession",
+            kids: [
+              { e: e("studies", "upserted", O), s: "—",
+                a: "fires on first insert of each study", term: true },
+              { e: e("accession-maps", "— none —", O), s: "(suppressed)",
+                a: "<b>no event</b>: <span class='m'>dto_to_event</span> returns None while " +
+                   "<span class='m'>file_id</span> is null", term: true }
+            ] },
+          { e: e("metadata-datasets", "dataset_created", P), s: "WPS",
+            a: "upserts <span class='m'>datasets</span> with <span class='m'>files[].accession</span>",
+            cond: "ignored if the dataset stage maps to no WorkPackageType", term: true },
+          { e: e("metadata-datasets", "dataset_created", P), s: "DINS",
+            a: "upserts <span class='m'>datasetFileAccessions</span>", term: true },
+          { e: e("metadata-datasets", "dataset_created", P), s: "ARS",
+            a: "upserts <span class='m'>datasets</span> — title and DAC only, files discarded", term: true },
+          { e: e("artifacts", "upserted", P), s: "RTS",
+            a: "rebuilds the .xlsx workbook into GridFS",
+            cond: "only for keys matching added_accessions:{study}", term: true },
+          { e: e("metadata-datasets", "dataset_deleted", P), s: "WPS",
+            a: "deletes the dataset row",
+            cond: "this and the next five edges fire only when a resource disappears from the load",
+            term: true },
+          { e: e("metadata-datasets", "dataset_deleted", P), s: "DINS",
+            a: "deletes the <span class='m'>datasetFileAccessions</span> row", term: true },
+          { e: e("metadata-datasets", "dataset_deleted", P), s: "ARS",
+            a: "deletes the dataset, force-denies pending access requests", term: true },
+          { e: e("metadata-datasets", "dataset_deleted", P), s: "AUTH",
+            a: "<b>deletes every controlled-access claim</b> for that dataset", term: true },
+          { e: e("searchable-resources", "searchable_resource_deleted", P), s: "MASS",
+            a: "removes the resource from the search index", term: true },
+          { e: e("searchable-resources", "searchable_resource_deleted", P), s: "RS",
+            a: "removes the legacy resource", term: true },
+          { e: e("artifacts", "deleted", P), s: "RTS",
+            a: "deletes the stored metadata and workbook", term: true }
+        ]
+      }
+    },
+    {
+      id: "box-create", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "POST /upload-boxes",
+      title: "A data steward creates an upload box",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "creates the ResearchDataUploadBox, then calls UCS",
+        kids: [
+          { e: http("UCS · POST /boxes"), s: "UCS", a: "creates the FileUploadBox",
+            kids: [ boxEcho("box created") ] },
+          { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
+            a: "upserts <span class='m'>uploadBoxes</span>", term: true },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "box-archive", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "PATCH /upload-boxes/{box_id}  (archive)",
+      title: "A data steward archives an upload box",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "sets the box state to archived, then calls UCS",
+        kids: [
+          { e: http("UCS · PATCH /boxes/{id}"), s: "UCS",
+            a: "each FileUpload → <b>awaiting_archival</b>",
+            kids: [
+              { e: e("file-uploads", "upserted", O), s: "IFRS",
+                a: "copies the object to permanent storage, writes <span class='m'>file_metadata</span>",
+                cond: "acts only on state awaiting_archival",
+                kids: internalRegistration() },
+              { e: e("file-uploads", "upserted", O), s: "FIS",
+                a: "refreshes its view of the upload", term: true },
+              boxEcho("box state changed")
+            ] },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "box-update", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "PATCH /upload-boxes/{box_id}  (retitle · resize · lock · unlock)",
+      title: "A data steward changes a box without archiving it",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "persists the change",
+        kids: [
+          { e: http("UCS · PATCH /boxes/{id}"), s: "UCS",
+            a: "applies the new size or lock state",
+            cond: "skipped for a title/description-only change",
+            kids: [ boxEcho("box size or lock state changed") ] },
+          { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
+            a: "upserts <span class='m'>uploadBoxes</span>", term: true },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "box-delete", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "DELETE /upload-boxes/{box_id}",
+      title: "A data steward deletes an upload box",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "deletes the RDUB and its accession mappings, then calls UCS",
+        kids: [
+          { e: http("UCS · DELETE /boxes/{id}"), s: "UCS",
+            a: "deletes every FileUpload, then the box",
+            kids: [
+              { e: e("file-uploads", "deleted", O), s: "FIS", a: "drops the upload", term: true },
+              { e: e("file-uploads", "deleted", O), s: "IFRS",
+                a: "logged and ignored — archived files are purged through PCS, not here", term: true },
+              { e: e("file-upload-boxes", "deleted", O), s: "RS",
+                a: "logged only, to avoid a race with RS's own deletion", term: true }
+            ] },
+          { e: e("accession-maps", "deleted", O), s: "WPS",
+            a: "deletes the <span class='m'>accessionMaps</span> row", term: true },
+          { e: e("accession-maps", "deleted", O), s: "DINS",
+            a: "deletes the <span class='m'>fileAccessionMaps</span> row",
+            cond: "file_information is left in place", term: true },
+          { e: e("research-data-upload-boxes", "deleted", O), s: "WPS",
+            a: "deletes the <span class='m'>uploadBoxes</span> row", term: true },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "accession-map", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "POST /upload-boxes/{box_id}/file-ids",
+      title: "A data steward submits an accession map",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "writes <span class='m'>fileAccessions</span> rows and bumps the box version",
+        kids: [
+          { e: e("accession-maps", "upserted", O), s: "WPS",
+            a: "upserts <span class='m'>accessionMaps</span> — without this no download work order token " +
+               "can be issued", term: true },
+          { e: e("accession-maps", "upserted", O), s: "DINS",
+            a: "upserts <span class='m'>fileAccessionMaps</span>, then merges any waiting " +
+               "<span class='m'>pendingFileInfo</span> into <span class='m'>file_information</span>",
+            term: true },
+          { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
+            a: "upserts the new box version", term: true },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "requeue", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "POST /upload-boxes/{box_id}/requeue  ·  /uploads/{file_id}/requeue",
+      title: "A data steward requeues failed uploads",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "calls UCS for one file or for every failed file in the box",
+        kids: [
+          { e: http("UCS · POST /rpc/boxes/{id}/…/requeue"), s: "UCS",
+            a: "FileUpload → <b>inbox</b>",
+            kids: [
+              { e: e("file-uploads", "upserted", O), s: "FIS",
+                a: "picks the file up again for interrogation", term: true },
+              { e: e("file-uploads", "upserted", O), s: "IFRS",
+                a: "ignored — not <span class='m'>awaiting_archival</span>", term: true }
+            ] },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "upload-delete", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "DELETE /upload-boxes/{box_id}/uploads/{file_id}",
+      title: "A data steward removes a single file upload",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "calls UCS to remove the upload",
+        kids: [
+          { e: http("UCS · DELETE /boxes/{id}/uploads/{file_id}"), s: "UCS",
+            a: "removes the FileUpload and its inbox object",
+            kids: [
+              { e: e("file-uploads", "deleted", O), s: "FIS", a: "drops the upload", term: true },
+              { e: e("file-uploads", "deleted", O), s: "IFRS", a: "logged and ignored", term: true },
+              boxEcho("file count and size changed")
+            ] },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "upload-grant", lane: "Upload boxes", actor: "Data Portal · steward",
+      call: "POST /upload-grants  ·  DELETE /upload-grants/{grant_id}",
+      title: "A data steward grants or revokes upload access",
+      target: "ghga-registry-service",
+      root: {
+        s: "RS", a: "calls the auth service, then logs the action",
+        kids: [
+          { e: http("auth-service · upload-access grants"), s: "AUTH",
+            a: "stores or revokes the claim — <b>no event published</b>", term: true },
+          auditLeaf()
+        ]
+      }
+    },
+    {
+      id: "connector-upload", lane: "Upload boxes", actor: "Connector · submitter",
+      call: "ghga-connector batch-upload  ·  ubox",
+      title: "A data submitter uploads files into a box",
+      target: "UCS · file upload API (with a WPS work order token)",
+      root: {
+        s: "UCS", a: "creates the FileUpload, serves part URLs, then completes it",
+        cond: "part-URL requests themselves publish nothing",
+        kids: [
+          { e: e("file-uploads", "upserted", O), s: "FIS",
+            a: "lists the file as awaiting interrogation", term: true },
+          { e: e("file-uploads", "upserted", O), s: "IFRS",
+            a: "ignored at every state before <span class='m'>awaiting_archival</span>", term: true },
+          boxEcho("file count and size changed")
+        ]
+      }
+    },
+    {
+      id: "interrogate", lane: "Interrogation", actor: "Data Hub · DHFS",
+      call: "dhfs interrogate",
+      title: "A data hub submits an interrogation report",
+      target: "FIS · POST /storages/{alias}/interrogation-reports",
+      root: {
+        s: "FIS", a: "validates the report and publishes the verdict",
+        cond: "a success moves the upload to 'interrogated' — archival waits for the box to be archived",
+        kids: [
+          { e: e("interrogations", "file_interrogation_success", S), s: "UCS",
+            a: "FileUpload → <b>interrogated</b>, inbox object removed",
+            cond: "stale or non-inbox reports are dropped",
+            kids: [
+              { e: e("file-uploads", "upserted", O), s: "FIS",
+                a: "refreshes its view of the upload", term: true },
+              { e: e("file-uploads", "upserted", O), s: "IFRS",
+                a: "ignored — not yet <span class='m'>awaiting_archival</span>", term: true }
+            ] },
+          { e: e("interrogations", "file_interrogation_failed", S), s: "UCS",
+            a: "FileUpload → <b>failed_interrogation</b>, awaiting a requeue",
+            kids: [
+              { e: e("file-uploads", "upserted", O), s: "FIS",
+                a: "refreshes its view of the upload", term: true },
+              { e: e("file-uploads", "upserted", O), s: "IFRS", a: "ignored", term: true }
+            ] }
+        ]
+      }
+    },
+    {
+      id: "download", lane: "Download", actor: "Connector · requester",
+      call: "ghga-connector download",
+      title: "A data requester downloads a file",
+      target: "DCS · GET /objects/{accession} (with a WPS work order token)",
+      root: {
+        s: "DCS", a: "resolves the work order token's <span class='m'>file_id</span> to a DRS object",
+        cond: "the two branches are mutually exclusive; GET /objects/{id}/envelopes publishes nothing",
+        kids: [
+          { e: e("staging-requests", "unstaged_download_requested", P), s: "IFRS",
+            a: "copies the object from permanent storage into the download bucket",
+            cond: "taken when the object is not staged; DCS answers 202 and the client retries",
+            kids: [
+              { e: e("staged-files", "internal_file_staged", P), s: "—",
+                a: "announced but unsubscribed — the client's retry is what completes the download",
+                term: true }
+            ] },
+          { e: e("downloads", "drs_object_served", S), s: "—",
+            a: "access time updated, download accounted for",
+            cond: "taken when the object is already staged", term: true }
+        ]
+      }
+    },
+    {
+      id: "purge", lane: "Deletion", actor: "DS Kit",
+      call: "datasteward-kit files delete-file",
+      title: "A data steward purges a file",
+      target: "PCS · DELETE /files/{file_id}",
+      root: {
+        s: "PCS", a: "publishes a deletion request and nothing else",
+        kids: [
+          { e: e("purges", "file_deletion_requested", S), s: "IFRS",
+            a: "deletes the permanent object and <span class='m'>file_metadata</span>",
+            kids: [
+              { e: e("file-deletions", "internal_file_deleted", S), s: "—",
+                a: "published for downstream reporting", term: true }
+            ] },
+          { e: e("purges", "file_deletion_requested", S), s: "DCS",
+            a: "deletes the DRS object, the staged copy and the EKSS secret",
+            kids: [
+              { e: e("file-deletions", "drs_object_deleted", S), s: "—",
+                a: "published for downstream reporting", term: true }
+            ] },
+          { e: e("purges", "file_deletion_requested", S), s: "UCS",
+            a: "FileUpload → <b>cancelled</b>, inbox object removed",
+            cond: "already-cancelled or failed uploads are skipped",
+            kids: [
+              { e: e("file-uploads", "upserted", O), s: "FIS", a: "refreshes its view", term: true },
+              { e: e("file-uploads", "upserted", O), s: "IFRS", a: "ignored", term: true },
+              boxEcho("file count and size changed")
+            ] },
+          { e: e("purges", "file_deletion_requested", S), s: "DINS",
+            a: "deletes <span class='m'>file_information</span> for the mapped accession",
+            cond: "no accession map for the file ID → logged and skipped", term: true }
+        ]
+      }
+    },
+    {
+      id: "user-write", lane: "Identity & access", actor: "Data Portal · user",
+      call: "POST /users  ·  PUT /users/{id}  ·  PATCH /users/{id}",
+      title: "A user registers or changes their account",
+      target: "auth-service · user registry",
+      root: {
+        s: "AUTH", a: "writes the user record",
+        cond: "the user DAO is an outbox with autopublish, so any write publishes",
+        kids: [
+          { e: e("users", "upserted", O), s: "NOS",
+            a: "upserts its user copy; compares old and new details",
+            kids: [ nosEmail("re-registration notice, only if details changed") ] }
+        ]
+      }
+    },
+    {
+      id: "user-delete", lane: "Identity & access", actor: "Data Portal · steward",
+      call: "DELETE /users/{id}",
+      title: "A user account is deleted",
+      target: "auth-service · user registry",
+      root: {
+        s: "AUTH", a: "deletes the user record",
+        kids: [
+          { e: e("users", "deleted", O), s: "NOS",
+            a: "deletes its user copy — no notification", term: true }
+        ]
+      }
+    },
+    {
+      id: "iva-code", lane: "Identity & access", actor: "Data Portal · user",
+      call: "POST /rpc/ivas/{iva_id}/request-code",
+      title: "A user requests an IVA verification code",
+      target: "auth-service · user registry",
+      root: {
+        s: "AUTH", a: "moves the IVA to code-requested and asks for transmission",
+        cond: "the only entrypoint that publishes two different types on one topic in a single call",
+        kids: [
+          { e: e("ivas", "iva_send_code", P), s: "NOS",
+            a: "sends the code over the IVA's own channel",
+            kids: [
+              { e: e("notifications", "sms_notification", P), s: "NS",
+                a: "sends the SMS", cond: "SMS-type IVAs only", term: true }
+            ] },
+          { e: e("ivas", "iva_state_changed", P), s: "NOS",
+            a: "notifies the user and the data stewards of the state change",
+            kids: [ nosEmail("code requested") ] }
+        ]
+      }
+    },
+    {
+      id: "iva-state", lane: "Identity & access", actor: "Data Portal · user or steward",
+      call: "POST /rpc/ivas/{iva_id}/code-transmitted · /validate-code · /unverify",
+      title: "An IVA changes state",
+      target: "auth-service · user registry",
+      root: {
+        s: "AUTH", a: "persists the new IVA state",
+        cond: "create-code and DELETE /ivas/{id} publish nothing and are absent on purpose",
+        kids: [
+          { e: e("ivas", "iva_state_changed", P), s: "NOS",
+            a: "selects the notification for the new state",
+            kids: [ nosEmail("transmitted, verified or unverified") ] }
+        ]
+      }
+    },
+    {
+      id: "totp", lane: "Identity & access", actor: "Data Portal · user",
+      call: "POST /rpc/verify-totp",
+      title: "A user verifies a newly created TOTP token",
+      target: "auth-service · auth adapter",
+      root: {
+        s: "AUTH", a: "accepts the code, resets verified IVAs, stores the token",
+        cond: "only when the session state is NEW_TOTP_TOKEN",
+        kids: [
+          { e: e("ivas", "iva_state_changed", P), s: "NOS",
+            a: "handles the all-IVAs-reset case (key <span class='m'>all-{user_id}</span>)",
+            kids: [ nosEmail("all IVAs invalidated") ] },
+          { e: e("auth", "second_factor_recreated", P), s: "NOS",
+            a: "warns the user their second factor was replaced",
+            cond: "only if a TOTP token already existed",
+            kids: [ nosEmail("second factor recreated") ] }
+        ]
+      }
+    },
+    {
+      id: "access-request", lane: "Identity & access", actor: "Data Portal · requester",
+      call: "POST /access-requests",
+      title: "A data requester asks for dataset access",
+      target: "access-request-service",
+      root: {
+        s: "ARS", a: "inserts the access request",
+        kids: [
+          { e: e("access-requests", "upserted", O), s: "NOS",
+            a: "stores the request and emits the created-notifications",
+            kids: [
+              nosEmail("confirmation to the requester"),
+              { e: e("notifications", "email_notification", P), s: "NS",
+                a: "sends the notice to central data stewardship", term: true }
+            ] }
+        ]
+      }
+    },
+    {
+      id: "access-decide", lane: "Identity & access", actor: "Data Portal · steward",
+      call: "PATCH /access-requests/{access_request_id}",
+      title: "A data steward allows, denies or edits an access request",
+      target: "access-request-service",
+      root: {
+        s: "ARS", a: "updates the request's status or fields",
+        cond: "same topic and type as creation — NOS routes on the status inside the payload",
+        kids: [
+          { e: e("access-requests", "upserted", O), s: "NOS",
+            a: "picks the allowed or denied notification from the new status",
+            kids: [
+              nosEmail("outcome to the requester"),
+              { e: e("notifications", "email_notification", P), s: "NS",
+                a: "sends the confirmation to the data steward", term: true }
+            ] },
+          { e: http("auth-service · download-access grant"), s: "AUTH",
+            a: "stores the controlled-access claim — <b>no event published</b>",
+            cond: "allowed requests only", term: true }
+        ]
+      }
+    },
+    {
+      id: "dlq-process", lane: "Operational", actor: "Ops · DLQ service",
+      call: "POST /{service}/{topic}",
+      title: "An operator requeues a dead-lettered event",
+      target: "dlq-service",
+      root: {
+        s: "DLQS", a: "republishes the stored event under its original type and key",
+        kids: [
+          { e: e("retry-&lt;service_name&gt;", "&lt;original type&gt;", P), s: "that service",
+            a: "re-consumes the event; the rest of its cascade follows as normal",
+            cond: "only that one service subscribes to its own retry topic", term: true },
+          { e: e("dlq", "&lt;original type&gt;", P), s: "DLQS",
+            a: "the reverse edge — every node in every tree here can land back in the queue",
+            cond: "requires kafka_enable_dlq; a second failure returns it to the DLQ", term: true }
+        ]
+      }
+    },
+    {
+      id: "republish", lane: "Operational", actor: "Ops · CLI",
+      call: "&lt;service&gt; publish-events [--all]",
+      title: "An operator replays a service's stored events",
+      target: "ars · dcs · fis · ifrs · pcs · rs · ucs",
+      root: {
+        s: "CLI", a: "publishes pending or all stored events for one service",
+        cond: "without --all only pending events go out: outbox docs with __metadata__.published false",
+        kids: [
+          { e: e("&lt;that service's topics&gt;", "upserted / deleted", O), s: "its subscribers",
+            a: "outbox DAOs — RS boxes, accession maps and studies; UCS uploads and boxes; ARS requests",
+            cond: "a document whose dto_to_event returns None is marked published without an event",
+            term: true },
+          { e: e("&lt;that service's topics&gt;", "&lt;original type&gt;", S), s: "its subscribers",
+            a: "persisted publishers — PCS purges, FIS interrogations, IFRS registrations and deletions, " +
+               "DCS downloads and deletions, RS audit records", term: true }
+        ]
+      }
+    }
+  ];
+
+  var TOPICS = [
+    ["metadata-datasets", P, "dataset_created · dataset_deleted", "metldata", "WPS, DINS, ARS, AUTH (deleted only)"],
+    ["searchable-resources", P, "searchable_resource_upserted · _deleted", "metldata", "MASS, RS"],
+    ["artifacts", P, "upserted · deleted", "metldata", "RTS"],
+    ["studies", O, "upserted · deleted", "RS", null],
+    ["accession-maps", O, "upserted · deleted", "RS", "WPS, DINS"],
+    ["audit-records", S, "audit_record_logged", "RS", null],
+    ["research-data-upload-boxes", O, "upserted · deleted", "RS", "WPS"],
+    ["file-upload-boxes", O, "upserted · deleted", "UCS", "RS"],
+    ["file-uploads", O, "upserted · deleted", "UCS", "FIS, IFRS"],
+    ["interrogations", S, "file_interrogation_success · _failed", "FIS", "UCS"],
+    ["internal-registrations", S, "internal_file_registered", "IFRS", "UCS, DCS, DINS"],
+    ["staged-files", P, "internal_file_staged", "IFRS", null],
+    ["staging-requests", P, "unstaged_download_requested", "DCS", "IFRS"],
+    ["downloads", S, "drs_object_registered · drs_object_served", "DCS", null],
+    ["file-deletions", S, "internal_file_deleted (IFRS) · drs_object_deleted (DCS)", "IFRS, DCS", null],
+    ["purges", S, "file_deletion_requested", "PCS", "IFRS, UCS, DCS, DINS"],
+    ["users", O, "upserted · deleted", "AUTH", "NOS"],
+    ["ivas", P, "iva_state_changed · iva_send_code", "AUTH", "NOS"],
+    ["auth", P, "second_factor_recreated", "AUTH", "NOS"],
+    ["access-requests", O, "upserted · deleted", "ARS", "NOS"],
+    ["notifications", P, "email_notification · sms_notification", "NOS", "NS"],
+    ["dlq", P, "(the original event's type)", "every DLQ-enabled service", "DLQS"],
+    ["retry-&lt;service&gt;", P, "(the original event's type)", "DLQS", "that one service"]
+  ];
+
+  var KIND_LABEL = { plain: "plain", outbox: "outbox", persist: "persisted", http: "HTTP" };
+
+  // ---- geometry ----------------------------------------------------------
+  // Node boxes are a fixed width but a variable height: the action text wraps to as
+  // many lines as it needs, so nothing is ever elided. Row spacing therefore comes
+  // from each pair's actual heights (see layout.separation), and column spacing from
+  // the widest edge pill at each depth (see assignColumns) so no pill can slide
+  // under a node box.
+  var NODE_W = 264, TOG_R = 8.5, TOG_DX = 12;
+  var SVC_PX = 13, ACT_PX = 10, ACT_LH = 14;
+  var PAD_X = 14, TOP_PAD = 9, BOT_PAD = 11, SVC_H = 17;
+  var ROW_GAP = 16, GROUP_GAP = 28;      // vertical breathing room
+  var PILL_PAD = 8, PILL_GAP = 22;       // horizontal clearance either side of a pill
+  var OUT = NODE_W + TOG_DX + TOG_R;     // where a link leaves its parent
+
+  // text measurement, exact once the webfont lands
+  var mctx = document.createElement("canvas").getContext("2d");
+  function measure(text, px, weight) {
+    mctx.font = (weight || 400) + " " + px + "px 'IBM Plex Mono', monospace";
+    return mctx.measureText(text).width;
+  }
+  function stripTags(html) {
+    var d = document.createElement("div");
+    d.innerHTML = html;
+    return d.textContent || "";
+  }
+  function clip(text, px, maxW) {
+    if (measure(text, px) <= maxW) return text;
+    var lo = 0, hi = text.length;
+    while (lo < hi) {
+      var mid = (lo + hi + 1) >> 1;
+      if (measure(text.slice(0, mid) + "…", px) <= maxW) lo = mid; else hi = mid - 1;
+    }
+    return text.slice(0, lo) + "…";
+  }
+  // Greedy wrap with no line cap: the box grows instead of the text being cut.
+  // A single word longer than the line is hard-broken rather than clipped.
+  function wrapAll(text, px, maxW) {
+    var words = String(text).split(/\s+/).filter(Boolean), out = [], line = "";
+    function hardBreak(word) {
+      while (measure(word, px) > maxW) {
+        var lo = 1, hi = word.length;
+        while (lo < hi) {
+          var mid = (lo + hi + 1) >> 1;
+          if (measure(word.slice(0, mid), px) <= maxW) lo = mid; else hi = mid - 1;
+        }
+        out.push(word.slice(0, lo));
+        word = word.slice(lo);
+      }
+      return word;
+    }
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (measure(w, px) > maxW) {
+        if (line) { out.push(line); line = ""; }
+        line = hardBreak(w);
+        continue;
+      }
+      var next = line ? line + " " + w : w;
+      if (measure(next, px) > maxW) { out.push(line); line = w; }
+      else line = next;
+    }
+    if (line) out.push(line);
+    return out.length ? out : [""];
+  }
+
+  function pillWidth(ed) {
+    var tp = unesc(ed.tp), ty = unesc(ed.ty);
+    return Math.max(measure(tp, 10, 600), measure(ty, 9.5)) + PILL_PAD * 2;
+  }
+  function unesc(s) { return String(s).replace(/&lt;/g, "<").replace(/&gt;/g, ">"); }
+
+  // Measure every node once per render and cache its wrapped lines and height.
+  function measureNodes(nodes) {
+    var inner = NODE_W - PAD_X * 2;
+    nodes.forEach(function (d) {
+      d.__lines = wrapAll(stripTags(d.data.a), ACT_PX, inner);
+      d.__h = TOP_PAD + SVC_H + d.__lines.length * ACT_LH + BOT_PAD;
+      if (d.__h < 50) d.__h = 50;
+    });
+  }
+
+  // Depth columns sized to the widest pill arriving at that depth.
+  function assignColumns(nodes) {
+    var maxDepth = 0, widest = {};
+    nodes.forEach(function (d) {
+      if (d.depth > maxDepth) maxDepth = d.depth;
+      if (d.data.e) {
+        var w = pillWidth(d.data.e);
+        if (!(d.depth in widest) || w > widest[d.depth]) widest[d.depth] = w;
+      }
+    });
+    var x = [0];
+    for (var i = 1; i <= maxDepth; i++) {
+      x[i] = x[i - 1] + OUT + PILL_GAP + (widest[i] || 60) + PILL_GAP;
+    }
+    nodes.forEach(function (d) { d.y = x[d.depth]; });
+    return x[maxDepth] + NODE_W;
+  }
+
+  // ---- svg scaffolding ---------------------------------------------------
+  var svg = d3.select("#svg");
+  var defs = svg.append("defs");
+  var pat = defs.append("pattern")
+    .attr("id", "dotgrid").attr("width", 24).attr("height", 24)
+    .attr("patternUnits", "userSpaceOnUse");
+  pat.append("circle").attr("cx", 1.2).attr("cy", 1.2).attr("r", 1.2).attr("class", "dot-grid");
+  svg.append("rect").attr("class", "grid-bg")
+    .attr("x", 0).attr("y", 0).attr("width", "100%").attr("height", "100%")
+    .attr("fill", "url(#dotgrid)");
+
+  var view = svg.append("g").attr("class", "view");
+  var gLinks = view.append("g");
+  var gPills = view.append("g");
+  var gNodes = view.append("g");
+
+  var zoom = d3.zoom().scaleExtent([0.2, 1.8])
+    .on("start", function () { svg.classed("dragging", true); })
+    .on("end", function () { svg.classed("dragging", false); })
+    .on("zoom", function (ev) {
+      view.attr("transform", ev.transform);
+      pat.attr("patternTransform",
+        "translate(" + ev.transform.x + "," + ev.transform.y + ") scale(" + ev.transform.k + ")");
+    });
+  svg.call(zoom);
+
+  var root = null, flow = null, selected = null;
+  var dur = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 480;
+
+  function size() {
+    var n = svg.node();
+    return { w: n.clientWidth || 900, h: n.clientHeight || 600 };
+  }
+
+  // nodeSize([1, 1]) makes separation() return raw pixels, so adjacent rows are
+  // spaced by their own two half-heights plus a gap. Depth spacing is overwritten
+  // by assignColumns().
+  var layout = d3.tree().nodeSize([1, 1])
+    .separation(function (a, b) {
+      var ha = a.__h || 50, hb = b.__h || 50;
+      return ha / 2 + hb / 2 + (a.parent === b.parent ? ROW_GAP : GROUP_GAP);
+    });
+
+  function kindOf(d) { return d.data.e ? d.data.e.k : "root"; }
+
+  function toggle(d) {
+    if (d.children) { d._kids = d.children; d.children = null; }
+    else if (d._kids) { d.children = d._kids; d._kids = null; }
+  }
+  function collapseAll(d, keepDepth) {
+    if (d.children) {
+      if (d.depth >= keepDepth) { d._kids = d.children; d.children = null; }
+      else (d._kids || d.children).forEach(function (c) { collapseAll(c, keepDepth); });
+    } else if (d._kids && d.depth < keepDepth) {
+      d.children = d._kids; d._kids = null;
+      d.children.forEach(function (c) { collapseAll(c, keepDepth); });
+    }
+  }
+  function expandAll(d) {
+    if (d._kids) { d.children = d._kids; d._kids = null; }
+    (d.children || []).forEach(expandAll);
+  }
+
+  function linkPath(s, t) {
+    var x0 = s.y + OUT, y0 = s.x;
+    var x1 = t.y, y1 = t.x;
+    var mx = x0 + (x1 - x0) * 0.5;
+    return "M" + x0 + "," + y0 + "C" + mx + "," + y0 + " " + mx + "," + y1 + " " + x1 + "," + y1;
+  }
+
+  function pathToRoot(d) {
+    var ids = {}, n = d;
+    while (n) { ids[n.__id] = 1; n = n.parent; }
+    return ids;
+  }
+
+  function inspect(d, skipRender) {
+    selected = d;
+    var name = d.data.s;
+    document.getElementById("i-svc").textContent = name;
+    document.getElementById("i-full").textContent = SVC[name] || "";
+    var via = document.getElementById("i-via");
+    via.innerHTML = "";
+    if (d.data.e) {
+      var c = document.createElement("span");
+      c.className = "chip k-" + d.data.e.k;
+      c.innerHTML = "<i></i>" + d.data.e.tp + " &nbsp;▸&nbsp; " + d.data.e.ty +
+        " &nbsp;·&nbsp; " + KIND_LABEL[d.data.e.k];
+      via.appendChild(c);
+    } else {
+      var r = document.createElement("span");
+      r.className = "chip";
+      r.innerHTML = "<i style='background:var(--hot)'></i>first publisher — reached by " +
+        (flow ? flow.actor : "an operator") + ", not by an event";
+      via.appendChild(r);
+    }
+    if (d.data.term) {
+      var t = document.createElement("span");
+      t.className = "chip k-term";
+      t.innerHTML = "<i></i>terminal — nothing in this repo subscribes";
+      via.appendChild(t);
+    }
+    var kids = (d.children || d._kids || []).length;
+    if (kids) {
+      var k = document.createElement("span");
+      k.className = "chip";
+      k.innerHTML = "<i style='background:var(--ink-faint)'></i>publishes " + kids +
+        (kids === 1 ? " event" : " events") + (d.children ? "" : " — folded");
+      via.appendChild(k);
+    }
+    document.getElementById("i-body").innerHTML = d.data.a;
+    var cond = document.getElementById("i-cond");
+    cond.textContent = d.data.cond || "";
+    cond.style.display = d.data.cond ? "" : "none";
+    if (!skipRender) render();
+  }
+
+  // ---- render ------------------------------------------------------------
+  function render(anchorNode, anchorScreen) {
+    var nodes = root.descendants();
+    measureNodes(nodes);          // heights must exist before separation() runs
+    layout(root);
+    assignColumns(nodes);         // then widen the columns to fit their pills
+    var links = root.links();
+    var onPath = selected ? pathToRoot(selected) : {};
+
+    var nodeSel = gNodes.selectAll("g.node").data(nodes, function (d) { return d.__id; });
+
+    var enter = nodeSel.enter().append("g")
+      .attr("class", "node")
+      .attr("tabindex", 0)
+      .attr("transform", function (d) {
+        var p = d.parent || d;
+        return "translate(" + p.y + "," + p.x + ")";
+      })
+      .on("click", function (ev, d) { ev.stopPropagation(); focusNode(d); })
+      .on("keydown", function (ev, d) { onKey(ev, d); });
+
+    enter.append("rect").attr("class", "nbox").attr("x", 0).attr("rx", 3);
+    enter.append("rect").attr("class", "nstripe").attr("x", 0).attr("width", 4);
+    enter.append("text").attr("class", "nsvc").attr("x", PAD_X);
+    enter.append("text").attr("class", "nact").attr("x", PAD_X);
+    enter.append("path").attr("class", "endcap");
+    var tog = enter.append("g").attr("class", "tog")
+      .on("click", function (ev, d) {
+        ev.stopPropagation();
+        var scr = screenOf(d);
+        toggle(d);
+        inspect(d, true);
+        render(d, scr);
+      });
+    tog.append("circle").attr("class", "tog-c").attr("r", TOG_R);
+    tog.append("text").attr("class", "tog-t").attr("dy", 3.4);
+
+    var all = enter.merge(nodeSel);
+
+    all.select("rect.nbox")
+      .attr("class", function (d) {
+        return "nbox" + (d.data.term ? " term" : "") + (d === selected ? " sel" : "");
+      })
+      .attr("y", function (d) { return -d.__h / 2; })
+      .attr("width", NODE_W)
+      .attr("height", function (d) { return d.__h; });
+    all.select("rect.nstripe")
+      .attr("class", function (d) { return "nstripe k-" + kindOf(d); })
+      .attr("y", function (d) { return -d.__h / 2; })
+      .attr("height", function (d) { return d.__h; });
+    all.select("text.nsvc")
+      .attr("class", function (d) {
+        return "nsvc" + (d.data.s === "—" || d.data.s === "(suppressed)" ? " dim" : "");
+      })
+      .attr("y", function (d) { return -d.__h / 2 + TOP_PAD + SVC_PX; })
+      .text(function (d) { return clip(d.data.s, SVC_PX, NODE_W - PAD_X * 2); });
+    all.select("text.nact").each(function (d) {
+      var t = d3.select(this);
+      var y0 = -d.__h / 2 + TOP_PAD + SVC_H + ACT_PX + 1;
+      t.attr("y", y0);
+      var sp = t.selectAll("tspan").data(d.__lines);
+      sp.enter().append("tspan").merge(sp)
+        .attr("x", PAD_X)
+        .attr("y", function (_, i) { return y0 + i * ACT_LH; })
+        .text(function (s) { return s; });
+      sp.exit().remove();
+    });
+    all.select("path.endcap")
+      .attr("d", function (d) {
+        if ((d.children || d._kids || []).length) return null;
+        var x = NODE_W + 6;
+        return "M" + x + ",-7 L" + x + ",7";
+      });
+    all.select("g.tog")
+      .attr("transform", "translate(" + OUT + ",0)")
+      .attr("display", function (d) {
+        return (d.children || d._kids || []).length ? null : "none";
+      });
+    all.select("text.tog-t").text(function (d) {
+      return d.children ? "−" : String((d._kids || []).length);
+    });
+    all.attr("aria-label", function (d) {
+      return d.data.s + ". " + stripTags(d.data.a) +
+        (d.data.e ? ". Reached by " + d.data.e.tp + " " + d.data.e.ty : "") +
+        ((d.children || d._kids || []).length
+          ? ". " + (d.children ? "Unfolded" : "Folded") + ", " +
+            (d.children || d._kids).length + " children." : ". Leaf.");
+    });
+
+    all.transition().duration(dur)
+      .attr("transform", function (d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+    nodeSel.exit().transition().duration(dur)
+      .attr("transform", function (d) {
+        var p = d.parent || d;
+        return "translate(" + p.y + "," + p.x + ")";
+      })
+      .style("opacity", 0).remove();
+
+    // links
+    var linkSel = gLinks.selectAll("path.lk").data(links, function (d) { return d.target.__id; });
+    var lEnter = linkSel.enter().append("path")
+      .attr("class", function (d) { return "lk k-" + kindOf(d.target); })
+      .attr("d", function (d) {
+        var p = d.source.parent || d.source;
+        return linkPath({ x: p.x, y: p.y }, { x: p.x, y: p.y + NODE_W });
+      })
+      .style("opacity", 0);
+    lEnter.merge(linkSel)
+      .attr("class", function (d) {
+        return "lk k-" + kindOf(d.target) + (onPath[d.target.__id] ? " on-path" : "");
+      })
+      .transition().duration(dur)
+      .style("opacity", 1)
+      .attr("d", function (d) { return linkPath(d.source, d.target); });
+    linkSel.exit().transition().duration(dur).style("opacity", 0).remove();
+
+    // edge pills
+    var pillSel = gPills.selectAll("g.pill").data(links, function (d) { return d.target.__id; });
+    var pEnter = pillSel.enter().append("g").attr("class", "pill").style("opacity", 0);
+    pEnter.append("rect").attr("class", "pill-bg").attr("rx", 3);
+    pEnter.append("text").attr("class", "pill-tp").attr("x", PILL_PAD).attr("y", -2);
+    pEnter.append("text").attr("class", "pill-ty").attr("x", PILL_PAD).attr("y", 10);
+
+    var pAll = pEnter.merge(pillSel);
+    pAll.each(function (d) {
+      var ed = d.target.data.e;
+      var w = pillWidth(ed);
+      var g = d3.select(this);
+      g.select("rect.pill-bg")
+        .attr("class", "pill-bg k-" + ed.k)
+        .attr("x", 0).attr("y", -14).attr("width", w).attr("height", 28);
+      g.select("text.pill-tp").attr("class", "pill-tp k-" + ed.k).text(unesc(ed.tp));
+      g.select("text.pill-ty").text(unesc(ed.ty));
+      d.__pw = w;
+    });
+    pAll.transition().duration(dur)
+      .style("opacity", 1)
+      .attr("transform", function (d) {
+        var x0 = d.source.y + OUT, x1 = d.target.y;
+        var x = x0 + (x1 - x0 - d.__pw) / 2;
+        return "translate(" + x + "," + d.target.x + ")";
+      });
+    pillSel.exit().transition().duration(dur).style("opacity", 0).remove();
+
+    if (anchorNode && anchorScreen) {
+      var now = screenOf(anchorNode);
+      var t = d3.zoomTransform(svg.node());
+      svg.transition().duration(dur)
+        .call(zoom.transform,
+          t.translate((anchorScreen.x - now.x) / t.k, (anchorScreen.y - now.y) / t.k));
+    }
+    updateStats();
+  }
+
+  function screenOf(d) {
+    var t = d3.zoomTransform(svg.node());
+    return { x: t.applyX(d.y), y: t.applyY(d.x) };
+  }
+
+  function focusNode(d) {
+    inspect(d);
+    var s = size();
+    var t = d3.zoomTransform(svg.node());
+    var tx = Math.max(60, s.w * 0.17) - d.y * t.k;
+    var ty = s.h / 2 - d.x * t.k;
+    svg.transition().duration(dur)
+      .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(t.k));
+  }
+
+  function onKey(ev, d) {
+    var next = null;
+    if (ev.key === "ArrowLeft") next = d.parent;
+    else if (ev.key === "ArrowRight") {
+      if (!d.children && d._kids) { toggle(d); inspect(d, true); render(); ev.preventDefault(); return; }
+      next = d.children && d.children[0];
+    } else if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+      var sibs = d.parent ? d.parent.children : [d];
+      var i = sibs.indexOf(d) + (ev.key === "ArrowDown" ? 1 : -1);
+      next = sibs[i];
+    } else if (ev.key === "Enter" || ev.key === " ") {
+      if ((d.children || d._kids || []).length) {
+        var scr = screenOf(d); toggle(d); inspect(d, true); render(d, scr);
+      }
+      ev.preventDefault(); return;
+    } else return;
+    if (next) {
+      ev.preventDefault();
+      focusNode(next);
+      gNodes.selectAll("g.node").filter(function (n) { return n === next; }).node().focus();
+    }
+  }
+
+  // minK keeps the labels readable: a tree too big to fit is left-anchored and
+  // panned rather than shrunk into illegibility. The Fit button passes a low floor
+  // for a true overview.
+  function fit(minK) {
+    var nodes = root.descendants();
+    var minX = d3.min(nodes, function (d) { return d.x - d.__h / 2; }) - 20;
+    var maxX = d3.max(nodes, function (d) { return d.x + d.__h / 2; }) + 20;
+    var maxY = d3.max(nodes, function (d) { return d.y; }) + NODE_W + 40;
+    var spanX = Math.max(1, maxX - minX);
+    var s = size();
+    var k = Math.min(1.05, (s.w - 48) / Math.max(1, maxY), (s.h - 36) / spanX);
+    k = Math.max(minK == null ? 0.85 : minK, Math.min(k, 1.05));
+    var tx = maxY * k <= s.w - 48 ? (s.w - maxY * k) / 2 : 24;
+    var ty = spanX * k <= s.h - 36
+      ? (s.h - spanX * k) / 2 - minX * k
+      : s.h / 2 - root.x * k;
+    svg.transition().duration(dur)
+      .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
+  }
+
+  function updateStats() {
+    var all = root.descendants();
+    var events = 0, svcs = {}, depth = 0, folded = 0;
+    function walk(n, d) {
+      if (d > depth) depth = d;
+      if (n.data.e && n.data.e.k !== "http") events++;
+      var nm = n.data.s;
+      if (nm && nm.length <= 6 && nm !== "—" && nm !== "CLI") svcs[nm] = 1;
+      if (n._kids) folded++;
+      (n.children || n._kids || []).forEach(function (c) { walk(c, d + 1); });
+    }
+    walk(root, 0);
+    var box = document.getElementById("st-stats");
+    box.innerHTML = "";
+    var rows = [["events", events], ["services", Object.keys(svcs).length], ["depth", depth]];
+    if (folded) rows.push(["folded branches", folded]);
+    rows.forEach(function (p) {
+      var sp = document.createElement("span");
+      sp.className = "stat";
+      sp.innerHTML = "<b>" + p[1] + "</b> " + p[0];
+      box.appendChild(sp);
+    });
+  }
+
+  // ---- flow selection ----------------------------------------------------
+  var uid = 0;
+  function select(f, btn) {
+    flow = f;
+    document.querySelectorAll("button.ep").forEach(function (b) {
+      b.setAttribute("aria-current", b === btn ? "true" : "false");
+    });
+    document.getElementById("st-lane").textContent = f.lane + " · " + f.actor;
+    document.getElementById("st-title").textContent = f.title;
+    var route = document.getElementById("st-route");
+    route.innerHTML = "";
+    var a = document.createElement("span"); a.innerHTML = f.call; route.appendChild(a);
+    var b2 = document.createElement("span"); b2.className = "arr"; b2.textContent = "→";
+    route.appendChild(b2);
+    var c = document.createElement("span"); c.className = "tgt"; c.textContent = f.target;
+    route.appendChild(c);
+
+    gNodes.selectAll("*").remove();
+    gLinks.selectAll("*").remove();
+    gPills.selectAll("*").remove();
+
+    root = d3.hierarchy(f.root, function (d) { return d.kids; });
+    root.descendants().forEach(function (d) { d.__id = "n" + (uid++); });
+    selected = root;
+    inspect(root, true);
+    render();
+    fit(0.85);
+  }
+
+  // ---- rail --------------------------------------------------------------
+  var rail = document.getElementById("rail-body");
+  var lanes = [];
+  FLOWS.forEach(function (f) { if (lanes.indexOf(f.lane) < 0) lanes.push(f.lane); });
+  var firstBtn = null;
+  lanes.forEach(function (lane) {
+    var g = document.createElement("div");
+    g.className = "lane";
+    var h = document.createElement("h3"); h.textContent = lane; g.appendChild(h);
+    FLOWS.filter(function (f) { return f.lane === lane; }).forEach(function (f) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "ep"; b.setAttribute("aria-current", "false");
+      var ac = document.createElement("span"); ac.className = "actor"; ac.textContent = f.actor;
+      var cl = document.createElement("span"); cl.className = "call"; cl.innerHTML = f.call;
+      b.appendChild(ac); b.appendChild(cl);
+      b.addEventListener("click", function () { select(f, b); });
+      g.appendChild(b);
+      if (!firstBtn) firstBtn = b;
+    });
+    rail.appendChild(g);
+  });
+  document.getElementById("ep-count").textContent =
+    FLOWS.length + " actions that publish · " + lanes.length + " lanes";
+
+  document.getElementById("b-fit").addEventListener("click", function () { fit(0.22); });
+  document.getElementById("b-in").addEventListener("click", function () {
+    svg.transition().duration(220).call(zoom.scaleBy, 1.3);
+  });
+  document.getElementById("b-out").addEventListener("click", function () {
+    svg.transition().duration(220).call(zoom.scaleBy, 1 / 1.3);
+  });
+  document.getElementById("b-expand").addEventListener("click", function () {
+    expandAll(root); render(); fit(0.85);
+  });
+  document.getElementById("b-collapse").addEventListener("click", function () {
+    collapseAll(root, 1); render(); fit(0.85);
+  });
+
+  // ---- topic table -------------------------------------------------------
+  var rows = document.getElementById("topic-rows");
+  TOPICS.forEach(function (t) {
+    var tr = document.createElement("tr");
+    function td(cls, html) {
+      var c = document.createElement("td");
+      if (cls) c.className = cls;
+      c.innerHTML = html;
+      return c;
+    }
+    tr.appendChild(td("tp", t[0]));
+    tr.appendChild(td(null, "<span class='chip k-" + t[1] + "'><i></i>" + KIND_LABEL[t[1]] + "</span>"));
+    tr.appendChild(td(null, t[2]));
+    tr.appendChild(td(null, t[3]));
+    tr.appendChild(td(t[4] ? null : "none", t[4] || "none in this repo"));
+    rows.appendChild(tr);
+  });
+
+  select(FLOWS[0], firstBtn);
+
+  // re-measure once the webfont is in, then refit
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { render(); fit(0.85); });
+  }
+  var rt;
+  window.addEventListener("resize", function () {
+    clearTimeout(rt); rt = setTimeout(function () { fit(0.85); }, 180);
+  });
+})();
+</script>
+
+</body></html>
