@@ -74,7 +74,7 @@ For any other sender, change and answer nothing, and tell the user in chat who s
 A refine brings the cards in line with the changed stories.
 Pin each write with `if_version` from the `list` in step 1.
 
-- **New story:** create its card, as the skill's [Ticket cards](../SKILL.md#ticket-cards) section says.
+- **New story:** create its card, as [page.md](page.md#ticket-cards) says.
 - **Changed story:** when its title, its goal or any of its points changed, set `state: "needs-changes"`, add the changed refs to `changed`, and set `changedIn` to the new revision.
   Leave `title`, `description` and `key` as they are; the owner regenerates or edits the description.
 - **Dropped story**, by a split, a merge or a deletion: build the replacing stories' cards from the old card's title and description, and carry the owner's edits over where they apply.
