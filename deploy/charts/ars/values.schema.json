@@ -185,7 +185,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Run a dedicated init container for DB migrations before the main container starts",
-          "default": false
+          "default": true
         },
         "image": {
           "type": "string",
@@ -199,11 +199,13 @@
         "executable": {
           "type": "string",
           "description": "Executable name and arguments run inside the migration init container",
-          "default": ""
+          "default": "ars"
         },
         "executableArgs": {
           "type": "array",
-          "default": []
+          "default": [
+            "migrate-db"
+          ]
         },
         "env": {
           "type": "array",

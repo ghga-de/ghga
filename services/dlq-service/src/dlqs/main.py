@@ -24,9 +24,10 @@ import logging
 
 from dlqs.config import Config
 from dlqs.inject import prepare_dlq_subscriber, prepare_rest_app
-from dlqs.migrations import run_db_migrations
+from dlqs.migrations import MIGRATION_MAP
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ async def run_rest_app():
     config = Config()
     configure_logging(config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     if config.kafka_max_message_size < 16_000_000:
         log.warning(
@@ -56,7 +57,17 @@ async def consume_events(run_forever: bool = True):
     config = Config()
     configure_logging(config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_dlq_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
+
+
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    configure_logging(config=config)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

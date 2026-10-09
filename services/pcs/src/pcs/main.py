@@ -18,9 +18,10 @@
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
 from pcs.config import Config
 from pcs.inject import get_persistent_publisher, prepare_rest_app
-from pcs.migrations import run_db_migrations
+from pcs.migrations import MIGRATION_MAP
 
 DB_VERSION = 2
 
@@ -35,7 +36,7 @@ async def run_rest_app():
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -47,10 +48,20 @@ async def publish_events(*, all: bool = False):
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with get_persistent_publisher(config=config) as persistent_publisher:
         if all:
             await persistent_publisher.republish()
         else:
             await persistent_publisher.publish_pending()
+
+
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    configure_logging(config=config)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

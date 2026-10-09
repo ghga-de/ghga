@@ -9,6 +9,11 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: dlqs-consumer
 
+migrationInitContainer:
+  executable: dlqs
+  executableArgs:
+  - migrate-db
+
 config:
   token_hashes: []
   mongo_dsn:

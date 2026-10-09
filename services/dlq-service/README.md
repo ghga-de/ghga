@@ -18,6 +18,7 @@ The executable `dlqs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `consume-events` runs an event consumer listening to the configured topics
+- `migrate-db` runs the database migrations
 
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 

@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-from pcs.main import publish_events, run_rest_app
+from pcs.main import migrate_db, publish_events, run_rest_app
 
 cli = typer.Typer()
 
@@ -39,3 +39,9 @@ def sync_run_publish_events(
 ):
     """Publish pending events."""
     asyncio.run(publish_events(all=all))
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())
