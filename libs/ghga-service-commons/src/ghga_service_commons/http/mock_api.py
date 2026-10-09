@@ -41,6 +41,7 @@ from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 from urllib.parse import unquote
 
+import httpcore2
 import httpx2
 
 __all__ = [
@@ -49,6 +50,7 @@ __all__ = [
     "NotMockedError",
     "ResponseHandler",
     "fail_to_connect",
+    "instrumentable",
     "respond",
     "serve",
 ]
@@ -209,6 +211,60 @@ def _answered(response: object, request: httpx2.Request) -> httpx2.Response:
             f" {type(response).__name__}, not an httpx2.Response"
         )
     return response
+
+
+def instrumentable(transport: httpx2.MockTransport) -> httpx2.AsyncHTTPTransport:
+    """Wrapper for transports to correctly deal with non-test code instrumentation.
+
+    This is needed to correctly record OTel spans in tests that use the custom mock transports.
+    """
+    wrapped = httpx2.AsyncHTTPTransport()
+    wrapped._pool = _MockPool(transport)  # type: ignore[assignment]
+    return wrapped
+
+
+class _MockPool:
+    """Stand-in for httpcore2's connection pool, answering from a mock transport."""
+
+    def __init__(self, transport: httpx2.MockTransport) -> None:
+        self._transport = transport
+
+    async def handle_async_request(
+        self, request: httpcore2.Request
+    ) -> httpcore2.Response:
+        """Rebuild `request` for httpx2, answer it, and hand the answer back."""
+        stream: Any = request.stream
+        body = b"".join([chunk async for chunk in stream])
+        url = request.url
+        rebuilt = httpx2.Request(
+            request.method.decode(),
+            httpx2.URL(
+                scheme=url.scheme.decode(),
+                host=url.host.decode(),
+                port=url.port,
+                raw_path=url.target,
+            ),
+            headers=request.headers,
+            content=body,
+            extensions=request.extensions,
+        )
+        response = await self._transport.handle_async_request(rebuilt)
+        # Passed on still encoded, as its Content-Encoding header says
+        raw: Any = response.stream
+        content = b"".join([chunk async for chunk in raw])
+        return httpcore2.Response(
+            response.status_code, headers=response.headers.raw, content=content
+        )
+
+    async def __aenter__(self) -> "_MockPool":
+        """Enter as httpx2's transport enters its pool."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Leave as httpx2's transport leaves its pool."""
+
+    async def aclose(self) -> None:
+        """Nothing to close: no connections were opened."""
 
 
 def respond(
