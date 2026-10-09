@@ -20,8 +20,8 @@ import httpx2
 import pytest
 
 from dhfs.ports.outbound.s3 import S3ClientPort
+from ghga_service_commons.http.mock_api import fail_to_connect, respond
 from hexkit.providers.s3.testutils import temp_file_object
-from tests.fixtures.central_api import fail_to_connect, respond
 from tests.fixtures.joint import JointFixture
 
 pytestmark = pytest.mark.asyncio()
