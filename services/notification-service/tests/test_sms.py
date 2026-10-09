@@ -21,6 +21,7 @@ from uuid import UUID
 
 import pytest
 
+from ghga_service_commons.http.mock_api import respond
 from hexkit.correlation import correlation_id_var
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -32,6 +33,7 @@ from tests.fixtures.config import get_config
 from tests.fixtures.joint import (
     JointFixture,
 )
+from tests.fixtures.lox24 import SENT_SMS_UUID
 from tests.fixtures.utils import make_sms_notification
 
 pytestmark = pytest.mark.asyncio()
@@ -116,7 +118,6 @@ def correlation_id_fixture():
 async def test_sms_notification(joint_fixture: JointFixture):
     """Basic test"""
     assert not joint_fixture.config.kafka_enable_dlq
-    joint_fixture.lox24.expected_json = expected_sms_payload(joint_fixture)
     notification_event = make_sms_notification(SAMPLE_SMS_NOTIFICATION)
 
     await joint_fixture.kafka.publish_event(
@@ -128,12 +129,11 @@ async def test_sms_notification(joint_fixture: JointFixture):
 
     await joint_fixture.event_subscriber.run(forever=False)
     joint_fixture.lox24.validate_requests()
-    requests_made = joint_fixture.lox24.requests
-    assert len(requests_made) == 1
-    request = requests_made[0]
+    [request] = joint_fixture.lox24.requests
     assert request.headers["host"] == "api.lox24.eu"
     assert request.method == "POST"
     request_data = json.loads(request.content.decode())
+    assert request_data == expected_sms_payload(joint_fixture)
     assert request_data["phone"] == SAMPLE_SMS_NOTIFICATION["phone"]
     assert request_data["text"] == SAMPLE_SMS_NOTIFICATION["text"]
     assert request_data["sender_id"] == joint_fixture.config.lox24_sender_id
@@ -178,8 +178,9 @@ async def test_failures(
     """Test that in case of a failure no SMS is sent"""
     assert not joint_fixture.config.kafka_enable_dlq
 
-    joint_fixture.lox24.status_code = response["status_code"]
-    joint_fixture.lox24.expected_json = expected_sms_payload(joint_fixture)
+    joint_fixture.lox24.on_send_sms = respond(
+        response["status_code"], json={"uuid": SENT_SMS_UUID}
+    )
     notification_event = make_sms_notification(SAMPLE_SMS_NOTIFICATION)
 
     await joint_fixture.kafka.publish_event(
@@ -195,7 +196,8 @@ async def test_failures(
             await joint_fixture.event_subscriber.run(forever=False)
     else:
         await joint_fixture.event_subscriber.run(forever=False)
-    # Assert a request has been made
-    assert len(joint_fixture.lox24.requests) == 1
+    # Assert a request has been made, and what it carried
+    [request] = joint_fixture.lox24.requests
+    assert json.loads(request.content) == expected_sms_payload(joint_fixture)
 
     joint_fixture.lox24.validate_requests()
