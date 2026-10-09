@@ -2041,19 +2041,6 @@
             "null"
           ]
         },
-        "run_consumer": {
-          "default": false,
-          "description": "Whether the service should run as an event consumer",
-          "examples": [
-            "false",
-            "true"
-          ],
-          "title": "Run Consumer",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
         "add_as_data_stewards": {
           "default": [],
           "description": "A list of of data stewards to seed the claims repository with. All other data steward claims will be removed. This is only used with the claims API.",

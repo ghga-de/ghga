@@ -24,6 +24,22 @@ from ns.main import consume_events, migrate_db
 cli = typer.Typer()
 
 
+@cli.callback(invoke_without_command=True)
+def require_command(ctx: typer.Context):
+    """Run the notification service or migrate its database."""
+    # Deployments that still start the bare executable must fail visibly
+    # rather than start a service that skips the migrations.
+    if ctx.invoked_subcommand is None:
+        typer.echo(
+            "ns needs a command, it no longer runs without one."
+            " Start the service with `ns consume-events`, and run"
+            " `ns migrate-db` before it, for instance in an init container.\n",
+            err=True,
+        )
+        typer.echo(ctx.get_help(), err=True)
+        raise typer.Exit(code=2)
+
+
 @cli.command(name="consume-events")
 def sync_consume_events(run_forever: bool = True):
     """Run an event consumer listening to the configured topics."""

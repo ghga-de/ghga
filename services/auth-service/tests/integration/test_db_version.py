@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test that the service starts only on a database at `DB_VERSION`."""
+"""Test that the entry points start only on a database at `DB_VERSION`."""
 
 import pytest
 
@@ -35,9 +35,9 @@ def empty_database(mongodb: MongoDbFixture):
 
 
 @pytest.fixture(name="config")
-def config_fixture(mongodb: MongoDbFixture) -> Config:
-    """A service config on the test database."""
-    return Config(
+def config_fixture(mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch) -> Config:
+    """A service config on the test database, used by the entry points."""
+    config = Config(
         mongo_dsn=mongodb.config.mongo_dsn,
         db_name=mongodb.config.db_name,
         kafka_servers=["kafka:9092"],
@@ -45,19 +45,29 @@ def config_fixture(mongodb: MongoDbFixture) -> Config:
         migration_wait_sec=2,
         db_version_collection="authDbVersions",
     )
-
-
-@pytest.mark.parametrize("auth_adapter", [False, True])
-async def test_run_parallel_refuses_unmigrated_db(config: Config, auth_adapter: bool):
-    """The service stops before its work when the database is not migrated."""
-    with pytest.raises(DbVersionMismatchError):
-        await main.run_parallel(auth_adapter, run_consumer=True, config=config)
-
-
-async def test_migrate_db_reaches_db_version(
-    config: Config, monkeypatch: pytest.MonkeyPatch
-):
-    """`migrate_db` brings an empty database to the version the service checks."""
+    monkeypatch.setattr(main, "Config", lambda: config)
     monkeypatch.setattr(main, "configure_logging", lambda config: None)
-    await main.migrate_db(config=config)
+    return config
+
+
+@pytest.mark.parametrize("apis", [["ext_auth"], ["users"], ["claims", "access"]])
+async def test_run_rest_app_refuses_unmigrated_db(
+    config: Config, apis: list[str], monkeypatch: pytest.MonkeyPatch
+):
+    """The REST apps stop before their work when the database is not migrated."""
+    config = config.model_copy(update={"provide_apis": apis})
+    monkeypatch.setattr(main, "Config", lambda: config)
+    with pytest.raises(DbVersionMismatchError):
+        await main.run_rest_app()
+
+
+async def test_consume_events_refuses_unmigrated_db(config: Config):
+    """The consumer stops before its work when the database is not migrated."""
+    with pytest.raises(DbVersionMismatchError):
+        await main.consume_events(run_forever=False)
+
+
+async def test_migrate_db_reaches_db_version(config: Config):
+    """`migrate_db` brings an empty database to the version the entry points check."""
+    await main.migrate_db()
     await check_db_version(config=config, target_version=main.DB_VERSION)
