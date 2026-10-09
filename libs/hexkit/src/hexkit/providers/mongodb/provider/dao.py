@@ -19,18 +19,20 @@
 Utilities for testing are located in `../testutils.py`.
 """
 
-from collections.abc import AsyncIterator, Callable, Collection, Mapping
+from collections.abc import AsyncIterator, Callable, Collection, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any, Generic, Literal, TypeAlias
 
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import BulkWriteError, DuplicateKeyError
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
+    DaoError,
     DaoFactoryProtocol,
     Dto,
     FindResult,
@@ -117,6 +119,39 @@ async def get_single_hit(
         return dto
 
     raise MultipleHitsFoundError(filter_=mapping)
+
+
+# MongoDB's error code for a write that clashes with a unique index
+DUPLICATE_KEY_ERROR = 11000
+
+
+def _errors_from_bulk_write(
+    error: BulkWriteError, ids: Sequence[ID], *, ordered: bool
+) -> BatchOperationError:
+    """Key the failures of a bulk write by the IDs of the resources that failed.
+
+    `ids` holds the ID of each operation in the order the batch sent them.
+
+    Raises:
+        DaoError: when the batch hit a write concern error, which no single resource
+            caused.
+    """
+    if error.details.get("writeConcernErrors"):
+        raise DaoError(str(error)) from error
+    errors: dict[ID, DaoError] = {}
+    for failure in error.details["writeErrors"]:
+        id_, key_value = ids[failure["index"]], failure.get("keyValue")
+        if failure["code"] != DUPLICATE_KEY_ERROR:
+            # Document validation, size limits and other errors of one document
+            errors[id_] = DaoError(failure["errmsg"])
+        elif key_value is None or list(key_value) == ["_id"]:
+            # Without keyValue the clashing index is unknown; insert assumes the ID too
+            errors[id_] = ResourceAlreadyExistsError(id_=id_)
+        else:
+            errors[id_] = UniqueConstraintViolationError(unique_fields=key_value)
+    # An ordered batch stops at its only failure and skips everything after it
+    stop = error.details["writeErrors"][0]["index"] if ordered else len(ids)
+    return BatchOperationError(errors=errors, not_attempted=ids[stop + 1 :])
 
 
 FieldName: TypeAlias = str

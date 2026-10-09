@@ -24,8 +24,10 @@ import pytest
 from pydantic import UUID4, BaseModel
 from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 
+from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
     MAPPING_DEPRECATION_MESSAGE,
+    BatchOperationError,
     Dao,
     DaoError,
     DaoFactoryProtocol,
@@ -34,7 +36,9 @@ from hexkit.protocols.dao import (
     IndexBase,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    ResourceNotFoundError,
     UUID4Field,
+    ensure_distinct_ids,
 )
 from hexkit.providers.mongodb import (
     MongoDbConfig,
@@ -239,3 +243,24 @@ async def test_find_errors_accept_deprecated_mapping(
 
     assert str(from_mapping) == str(from_filter)
     assert "{'count': '1'}" in str(from_filter)
+
+
+async def test_batch_operation_error():
+    """Test that BatchOperationError keeps the failures and the skipped IDs."""
+    errors: dict[ID, DaoError] = {"a": ResourceNotFoundError(id_="a")}
+
+    error = BatchOperationError(errors=errors, not_attempted=["b", "c"])
+
+    assert error.errors == errors
+    assert error.not_attempted == ("b", "c")
+    assert str(error) == "1 resource(s) of the batch failed: ['a']"
+    assert BatchOperationError(errors=errors).not_attempted == ()
+
+
+async def test_ensure_distinct_ids():
+    """Test that ensure_distinct_ids names each repeated ID once."""
+    ensure_distinct_ids(["a", "b", 1])
+    ensure_distinct_ids([])
+
+    with pytest.raises(ValueError, match=r"more than once: \['a', 1\]$"):
+        ensure_distinct_ids(["a", 1, "b", "a", 1, "a"])
