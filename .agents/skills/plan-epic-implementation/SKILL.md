@@ -127,7 +127,7 @@ The page renders the cards from its store, one document per story at `tickets/<s
 - **Comments live in the page's store.**
   A point's button opens a thread panel under the point, so every viewer sees each thread where it belongs.
   Each person's comments sit in their own document, `comments/<user id>`, which the access rules let only them and the owner write, so authorship cannot be forged.
-  The claude.ai comment channel only notifies the session, through `sendToClaude` from the Refine button and "Comment and ask Claude"; leave its comment box and markers unused, since they detached or hid threads.
+  The claude.ai comment channel only notifies the session, through `sendToClaude` from the Refine button and "Comment and ask Claude"; leave its comment box and markers unused, since they detach or hide threads.
 - **Only the owner's requests run.**
   Refine, Regenerate and "Comment and ask Claude" appear for the owner alone, and the session acts on a claude.ai trigger only when its attribution names the owner, as [references/refine-loop.md](references/refine-loop.md) says.
 - **A question changes nothing but its thread.**
