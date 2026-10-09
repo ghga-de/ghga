@@ -59,7 +59,7 @@ Follows directly from the mocking philosophy above; see [Automated tests](README
 - **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, cache invalidation, state transitions, rendering and event wiring.
   Services are tested against `HttpTestingController`, components against mocked services.
 - **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
-- **E2E tests in this repo** (Playwright, `tests`): a **smoke layer**, despite the name.
+- **E2E tests here** (Playwright, `tests`): a **smoke layer**, despite the name.
   They stop at the network boundary, since the MSW mocks serve them too, but they boot the real app in a real browser with the real services and interceptors.
   Use them for assembly and wiring, not for behaviour.
   Keep them few and cheap.
@@ -122,12 +122,10 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 ## Execution policy
 
 - For code changes, run the smallest relevant validation first (targeted tests/lint/typecheck where possible), then run `pnpm test` as the default unit-test check.
-- Prefer project scripts/tasks over ad-hoc commands.
 
 ## Generated artifacts
 
-- Never manually edit generated output directories: `out-tsc/`, `playwright-report/`, and `test-results/`.
-- Regenerate these artifacts using the appropriate scripts/commands instead.
+- Never edit the generated output directories `out-tsc/`, `playwright-report/` and `test-results/` by hand; rerun the script that produces them.
 
 ## Required file headers
 
