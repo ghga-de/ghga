@@ -1098,7 +1098,10 @@ dl.facts dd { margin: 0; }
 
   function askPending(root) {
     if (!root.askedClaude || Date.now() - Date.parse(root.createdAt) > STALE_MS) return false;
-    return !pageComments.some(function (c) { return c.thread === root.id && c.byClaude && c.createdAt > root.createdAt; });
+    // Claude answers in the asker's own document, which no other viewer can write
+    return !pageComments.some(function (c) {
+      return c.thread === root.id && c.byClaude && c.owner === root.owner && c.createdAt > root.createdAt;
+    });
   }
 
   function workingEl(text) {
