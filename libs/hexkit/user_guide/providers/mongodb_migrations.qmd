@@ -163,7 +163,8 @@ If one of them is not reversible, the backward migration fails with an error —
 ## Running Migrations at Startup
 
 Migrations are not run by a separate deployment step but by the service itself: every instance executes the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd) *before* starting its actual work (consuming events, serving requests, etc.).
-The manager is an async context manager; `migrate_or_wait()` does the work:
+To ensure this prerequisite is met, we highly recommend exposing the migration as its own entrypoint command and running that from an `init` container if using Kubernetes.
+We typically define a function like `run_db_migrations()` from the example below and call that from the aforementioned dedicated top-level function:
 
 ```python
 from hexkit.providers.mongodb.migrations import MigrationManager
@@ -175,12 +176,37 @@ DB_VERSION = 3  # the database version this service release expects
 MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
 
 
-async def run_db_migrations():
-    """Call this before the service begins its main execution loop."""
-    config = Config()
+async def run_db_migrations(
+    *,
+    config: MigrationConfig,
+    target_version: int,
+    migration_map: MigrationMap | None = None,
+):
+    """Run all migrations.
+    Args
+    - `config`: Config containing mongo_dsn string and DB versioning collection name
+    - `target_version`: Which version the db needs to be at for this version of the service
+    - `migration_map`: Mapping of version to migration definition. Defaults to `MIGRATION_MAP`.
+    `migration_map` can be specified for testing, but may be left unspecified for production.
+    """
+    migration_map = migration_map or MIGRATION_MAP
 
-    async with MigrationManager(config, DB_VERSION, MIGRATION_MAP) as mm:
+    async with MigrationManager(
+        config=config,
+        target_version=target_version,
+        migration_map=migration_map,
+    ) as mm:
         await mm.migrate_or_wait()
+
+# Then, exposed as an entrypoint command that gets called before the service's
+#  main logic is initiated:
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
+    await run_db_migrations(config=config, target_version=DB_VERSION)
+    # Success allows the orchestration layer to initiate the service, failure blocks it.
 ```
 
 The `migration_map` gathers all known migration definitions, keyed by the version each one migrates *to*.
