@@ -23,7 +23,6 @@ from uuid import uuid4
 
 import httpx2
 import pytest
-from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor
 from opentelemetry.trace import SpanKind
 
 from dcs import main
@@ -31,6 +30,7 @@ from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
 from dcs.adapters.outbound.http.secrets import SecretsClient
 from dcs.inject import get_persistent_publisher
 from ghga_event_schemas.pydantic_ import FileInternallyRegistered
+from ghga_service_commons.http.mock_api import instrumentable
 from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
     otel_provider_fixture,
@@ -238,33 +238,26 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     otel,  # first, so OpenTelemetry is configured before the fixtures below
     populated_fixture: PopulatedFixture,
 ):
-    """The outbound EKSS call is autoinstrumented at the client level.
+    """The outbound EKSS call records the autoinstrumented httpx2 client span.
 
-    The global httpx2 autoinstrumentation only wraps the real network transport, which
-    the HTTP mock swaps out - so the test above cannot see the outbound span. Here the
-    client instance is instrumented directly, the same wrapping hexkit's
-    autoinstrumentation applies to the real transport in production, which lets the
-    span surface even against the mock.
+    Autoinstrumentation only wraps real transports, so the mock is served through the
+    opt-in `instrumentable` one.
     """
     config = populated_fixture.joint_fixture.config
     receiver_public_key = base64.b64encode(b"test-public-key").decode()
     ekss = EkssApiMock(config=config)
 
     async with get_configured_httpx_client(
-        config=config, base_transport=ekss.as_transport(), mount_env_proxies=False
+        config=config,
+        base_transport=instrumentable(ekss.as_transport()),
+        mount_env_proxies=False,
     ) as client:
-        # the instrumentor targets httpx2, but upstream annotates (un)instrument_client
-        # against httpx 0.x client types, so a real httpx2 client never matches
-        HTTPX2ClientInstrumentor.instrument_client(client)  # type: ignore[arg-type]
-        try:
-            secrets_client = SecretsClient(config=config, httpx_client=client)
+        secrets_client = SecretsClient(config=config, httpx_client=client)
 
-            otel.reset()
-            envelope = await secrets_client.get_envelope(
-                secret_id=SECRET_ID, receiver_public_key=receiver_public_key
-            )
-        finally:
-            HTTPX2ClientInstrumentor.uninstrument_client(client)  # type: ignore[arg-type]
+        otel.reset()
+        envelope = await secrets_client.get_envelope(
+            secret_id=SECRET_ID, receiver_public_key=receiver_public_key
+        )
 
     assert envelope  # the mocked EKSS really answered
 
