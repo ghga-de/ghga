@@ -11,6 +11,8 @@ Each workspace member has its own `pyproject.toml`; the root one also configures
   A change to the root check tables changes every member's checks, so the hook asks before it.
 - **Internal libraries come from source:** a dependency on a workspace member is also listed under `[tool.uv.sources]` with `{ workspace = true }` ([internal dependencies](../../docs/conventions.md#internal-dependencies)).
 - **After a dependency change, run `just lock`** and commit `uv.lock` with the change.
+- **The version depends on the lane:** a platform-lane member declares `0.0.0`, which CI enforces, and takes the platform version from the `ghga/X.Y.Z` tag at build ([ADR-0046](../../docs/adrs/adr-0046-platform-version-from-tags.md)).
+  A PyPI-lane member keeps its own semver, which its `name/x.y.z` tag must match ([versioning](../../docs/conventions.md#versioning--releases)).
 - **`[tool.ghga]` says what the member ships**: release lane, image, wheel, CLI, deployment roles ([capability markers](../../docs/conventions.md#toolghga-capability-markers)).
   Write a marker only where the member deviates from its directory's default.
   The chart generator reads it, so run `just charts` after changing `image`, `executable` or `roles`.
