@@ -39,11 +39,12 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
-  executable: ""
-  executableArgs: []
+  executable: ars
+  executableArgs:
+  - migrate-db
   env: []
   resources: {}
   volumeMounts: []

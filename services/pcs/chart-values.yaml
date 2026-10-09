@@ -9,6 +9,11 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: pcs-rest
 
+migrationInitContainer:
+  executable: pcs
+  executableArgs:
+  - migrate-db
+
 config:
   host: 0.0.0.0
   mongo_dsn:
