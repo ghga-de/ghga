@@ -22,6 +22,7 @@ from uuid import uuid4
 
 import pytest
 
+from ghga_service_commons.http.mock_api import respond
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
@@ -490,6 +491,7 @@ async def test_patch_access_request_status(
 
     # check that access has been granted
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{SOME_IVA_ID}/datasets/DS001"
@@ -583,6 +585,7 @@ async def test_patch_access_request_with_another_iva(
 
     # check that access has been granted using the other IVA
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{another_iva}/datasets/DS001"
@@ -900,6 +903,7 @@ async def test_patch_everything_when_allowing_request(
 
     # check that access has been granted using the new IVA
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{new_iva}/datasets/DS001"
@@ -1040,7 +1044,7 @@ async def test_get_own_access_grants(
     user_id = GRANT_DATA["user_id"]
 
     # mock getting the access grants of the user
-    access_grants.grants = [BASE_GRANT_DATA]
+    access_grants.on_get_grants = respond(200, json=[BASE_GRANT_DATA])
 
     # get own access grants as user without specifying a user ID
     response = await client.get("/access-grants", headers=auth_headers_doe)
@@ -1048,6 +1052,7 @@ async def test_get_own_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
+    assert access_grants.last_request is not None
     assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
 
     # get own access grants specifying a user ID
@@ -1072,7 +1077,7 @@ async def test_get_other_access_grants(
     user_id = GRANT_DATA["user_id"]
 
     # mock getting the access grants
-    access_grants.grants = [BASE_GRANT_DATA]
+    access_grants.on_get_grants = respond(200, json=[BASE_GRANT_DATA])
 
     # get access grants of a specific user as data steward
     response = await client.get(
@@ -1082,6 +1087,7 @@ async def test_get_other_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
+    assert access_grants.last_request is not None
     assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
 
     # get access grants of all users
@@ -1108,7 +1114,7 @@ async def test_get_filtered_access_grants(
     query = f"user_id={user_id}&iva_id={iva_id}&dataset_id={dataset_id}&valid=true"
 
     # mock getting the filtered access grant list
-    access_grants.grants = [BASE_GRANT_DATA]
+    access_grants.on_get_grants = respond(200, json=[BASE_GRANT_DATA])
 
     # get filtered access grant list
     response = await client.get(
@@ -1119,6 +1125,7 @@ async def test_get_filtered_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
+    assert access_grants.last_request is not None
     assert dict(access_grants.last_request.url.params) == {
         "user_id": user_id,
         "iva_id": iva_id,
@@ -1153,7 +1160,7 @@ async def test_get_access_grants_with_invalid_claims(
     """Test that getting access grants when claims repository returns invalid data."""
     client = rest.rest_client
 
-    access_grants.grants = {"foo": "bar"}
+    access_grants.on_get_grants = respond(200, json={"foo": "bar"})
 
     # test getting access grants when there is a downstream schema mismatch
     response = await client.get(
@@ -1172,9 +1179,9 @@ async def test_get_access_grants_with_missing_dataset(
     """Test that if a grant is missing its dataset we get an error."""
     client = rest.rest_client
 
-    access_grants.grants = [
-        {**BASE_GRANT_DATA, "dataset_id": "non-existing-dataset-id"}
-    ]
+    access_grants.on_get_grants = respond(
+        200, json=[{**BASE_GRANT_DATA, "dataset_id": "non-existing-dataset-id"}]
+    )
 
     # test getting access grants when the corresponding dataset is not found
     # (this should not crash the service, but log and return an error
@@ -1208,6 +1215,7 @@ async def test_revoke_existing_access_grant(
 
     # check that the grant has been revoked upstream
     revoke_request = access_grants.last_request
+    assert revoke_request is not None
     assert revoke_request.method == "DELETE"
     assert str(revoke_request.url) == f"http://access/grants/{grant_id}"
 
@@ -1223,7 +1231,7 @@ async def test_revoke_non_existing_access_grant(
     grant_id = GRANT_DATA["id"]
 
     # mock revoking an access grant that does not exist
-    access_grants.revoke_grant_status_code = 404
+    access_grants.on_revoke_grant = respond(404)
 
     response = await client.delete(
         f"/access-grants/{grant_id}",
