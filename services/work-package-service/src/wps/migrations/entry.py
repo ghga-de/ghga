@@ -22,7 +22,7 @@ from hexkit.providers.mongodb.migrations import (
 )
 from wps.migrations import V2Migration, V3Migration
 
-MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
+MIGRATION_MAP: MigrationMap = {2: V2Migration, 3: V3Migration}
 
 
 async def run_db_migrations(
@@ -38,11 +38,11 @@ async def run_db_migrations(
     - `migration_map`: Mapping of version to migration definition. Defaults to `MIGRATION_MAP`.
     `migration_map` can be specified for testing, but may be left unspecified for production.
     """
-    migration_map = migration_map or MIGRATION_MAP  # type: ignore[assignment]
+    migration_map = migration_map or MIGRATION_MAP
 
     async with MigrationManager(
         config=config,
         target_version=target_version,
-        migration_map=MIGRATION_MAP,  # type: ignore[arg-type]
+        migration_map=migration_map,
     ) as mm:
         await mm.migrate_or_wait()

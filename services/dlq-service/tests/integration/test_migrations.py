@@ -23,6 +23,11 @@ from uuid import UUID, uuid4
 import pytest
 
 from dlqs.migrations import run_db_migrations
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationDefinition,
+    MigrationStepError,
+)
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests.fixtures.config import get_config
 
@@ -101,3 +106,32 @@ async def test_v2_migration(mongodb: MongoDbFixture):
     # Retrieve the reverted data
     reverted_events = collection.find({}).sort("_id").to_list()
     assert reverted_events == expected_reverted_events
+
+
+class MigrationRan(Exception):
+    """Raised by `StubMigration` to show that it was run."""
+
+
+class StubMigration(MigrationDefinition):
+    """A stand-in for the service's V2 migration that only signals it was run."""
+
+    version = 2
+
+    async def apply(self):
+        """Signal that this migration, not the service's own, was run."""
+        raise MigrationRan()
+
+
+async def test_given_migration_map_is_used(mongodb: MongoDbFixture):
+    """Test that `run_db_migrations` runs the migration map passed to it."""
+    config = MigrationConfig(
+        mongo_dsn=mongodb.config.mongo_dsn,
+        db_name=mongodb.config.db_name,
+        db_version_collection="testDbVersions",
+        migration_wait_sec=1,
+    )
+    with pytest.raises(MigrationStepError) as exc_info:
+        await run_db_migrations(
+            config=config, target_version=2, migration_map={2: StubMigration}
+        )
+    assert isinstance(exc_info.value.__cause__, MigrationRan)
