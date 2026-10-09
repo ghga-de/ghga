@@ -99,11 +99,11 @@ for the full set of configurable values.
 | `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
 | `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
-| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
+| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `true` |
 | `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
 | `migrationInitContainer.imagePullPolicy` | imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset | `null` |
-| `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `""` |
-| `migrationInitContainer.executableArgs` |  | `[]` |
+| `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `"ars"` |
+| `migrationInitContainer.executableArgs` |  | `["migrate-db"]` |
 | `migrationInitContainer.env` | Extra env vars for just the migration init container | `[]` |
 | `migrationInitContainer.resources` |  | `{}` |
 | `migrationInitContainer.volumeMounts` | Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets) | `[]` |

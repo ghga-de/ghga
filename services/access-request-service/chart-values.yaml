@@ -9,6 +9,11 @@ mongodb:
 
 serviceName: ars-consumer
 
+migrationInitContainer:
+  executable: ars
+  executableArgs:
+  - migrate-db
+
 # Those values are directly injected into the service's configuration
 config:
   auth_key: '{}'
