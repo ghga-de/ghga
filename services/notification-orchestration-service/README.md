@@ -10,7 +10,11 @@ The Notification Orchestration Service (NOS) uses data harvested from events pub
 
 ## Usage
 
-The executable `nos` starts the service and takes no command.
+The executable `nos` takes one of these commands, and fails without one:
+
+- `consume-events` runs an event consumer listening to the configured topics
+- `migrate-db` runs the database migrations
+
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration

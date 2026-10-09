@@ -30,13 +30,14 @@ dependencies = [
     "pynacl>=1.6,<2",
     "pyotp>=2.9,<3",
     "phonenumbers>=9,<10",
+    "typer>=0.25",
 ]
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
-auth-service = "auth_service.__main__:run"
+auth-service = "auth_service.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = [

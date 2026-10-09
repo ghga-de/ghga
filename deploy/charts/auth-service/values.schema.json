@@ -104,7 +104,9 @@
     },
     "executableArgs": {
       "type": "array",
-      "default": []
+      "default": [
+        "run-rest"
+      ]
     },
     "deployment": {
       "type": "object",
@@ -245,7 +247,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Run a dedicated init container for DB migrations before the main container starts",
-          "default": false
+          "default": true
         },
         "image": {
           "type": "string",
@@ -259,11 +261,13 @@
         "executable": {
           "type": "string",
           "description": "Executable name and arguments run inside the migration init container",
-          "default": ""
+          "default": "auth-service"
         },
         "executableArgs": {
           "type": "array",
-          "default": []
+          "default": [
+            "migrate-db"
+          ]
         },
         "env": {
           "type": "array",
@@ -2034,19 +2038,6 @@
           "title": "Provide APIs",
           "type": [
             "array",
-            "null"
-          ]
-        },
-        "run_consumer": {
-          "default": false,
-          "description": "Whether the service should run as an event consumer",
-          "examples": [
-            "false",
-            "true"
-          ],
-          "title": "Run Consumer",
-          "type": [
-            "boolean",
             "null"
           ]
         },

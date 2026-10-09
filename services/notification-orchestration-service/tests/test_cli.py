@@ -13,9 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Test the command line interface."""
+
+from typer.testing import CliRunner
 
 from nos.cli import cli
 
-if __name__ == "__main__":
-    cli()
+
+def test_no_command_fails_with_explanation():
+    """Starting without a command fails and names the commands to use instead."""
+    result = CliRunner().invoke(cli, [])
+    assert result.exit_code == 2
+    assert "needs a command" in result.output
+    assert "nos consume-events" in result.output
+    assert "nos migrate-db" in result.output

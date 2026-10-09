@@ -36,7 +36,7 @@ extAuth:
   # allow-response scrubs Authorization/X-Authorization (empty value = header
   # removal in envoy), so their tokens would never arrive
   targetRoutes:
-    - auth-rest
+    - auth-users
     - dcs
     - ucs
     - rs
@@ -232,10 +232,10 @@ auth-adapter:
     oidc_client_id: ghga-client
 
 # The user registry / claims / access APIs.
-auth-rest:
+auth-users:
   enabled: true
   readinessProbe: {enabled: true, initialDelaySeconds: 0, periodSeconds: 2}
-  nameOverride: auth-rest
+  nameOverride: auth-users
   # the portal's auth_url — compose routes /api/auth to the users instance
   apiBasePath: /api/auth
   # verification only: the public half of the internal signing key
@@ -268,10 +268,6 @@ auth-claims:
   nameOverride: auth-claims
   envVarsSecret: ghga-auth-keys-pub
   config:
-    # also consumes dataset/user events: the claims repository revokes access
-    # grants when a dataset disappears (the reference deployment runs the
-    # users+access instance as a consumer too)
-    run_consumer: true
     provide_apis: ["claims", "access"]
     kafka_servers: ["ghga-kafka:9092"]
     service_instance_id: "1"
@@ -287,6 +283,22 @@ auth-claims:
         email: data.steward@ghga.dev
         iva_type: Phone
         iva_value: "+4915112345678"
+
+# The claims repository's consumer of dataset events: it revokes access grants
+# when a dataset disappears.
+auth-consumer:
+  enabled: true
+  nameOverride: auth-consumer
+  # imports the auth service's routers, which require the public key
+  envVarsSecret: ghga-auth-keys-pub
+  executableArgs:
+  - consume-events
+  service:
+    enabled: false
+  config:
+    kafka_servers: ["ghga-kafka:9092"]
+    service_instance_id: consumer.1
+    mongo_dsn: mongodb://ghga-mongodb:27017
 
 wkvs:
   enabled: true
@@ -329,7 +341,7 @@ data-portal:
 
 # ---- file + metadata path (compose test bed configs, adapted to the demo infra) ----------
 # Common substitutions: kafka -> ghga-kafka:9092, mongodb -> ghga-mongodb, the two
-# localstack hubs -> the single ghga-minio, ums -> ghga-auth-rest, ekss -> ghga-ekss.
+# localstack hubs -> the single ghga-minio, ums -> ghga-auth-users, ekss -> ghga-ekss.
 # Routes take the prod base paths from each member's chart-values, prefixed with /api.
 # Topic wiring comes from each chart's _topics (prod values), not repeated here.
 

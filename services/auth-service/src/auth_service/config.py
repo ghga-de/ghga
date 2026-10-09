@@ -118,12 +118,6 @@ class Config(
         examples=['["ext_auth"]', '["users"]', '["claims", "access"]'],
     )
 
-    run_consumer: bool = Field(
-        default=False,
-        description="Whether the service should run as an event consumer",
-        examples=["false", "true"],
-    )
-
     add_as_data_stewards: list[UserWithIVA] = Field(
         default=[],
         description="A list of of data stewards to seed the claims repository with."

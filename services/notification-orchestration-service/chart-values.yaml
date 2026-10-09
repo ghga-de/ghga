@@ -13,6 +13,11 @@ service:
 containerPorts:
   http: null
 
+migrationInitContainer:
+  executable: nos
+  executableArgs:
+  - migrate-db
+
 config:
   central_data_stewardship_email: helpdesk@ghga.de
   helpdesk_email: helpdesk@ghga.de
@@ -21,7 +26,8 @@ config:
   migration_wait_sec: 10
 
 
-executableArgs: []
+executableArgs:
+- consume-events
 
 _topics:
   accessRequestEvents:

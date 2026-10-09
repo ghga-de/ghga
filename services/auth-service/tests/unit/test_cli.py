@@ -13,9 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package"""
+"""Test the command line interface."""
 
-from nos.cli import cli
+from typer.testing import CliRunner
 
-if __name__ == "__main__":
-    cli()
+from auth_service.cli import cli
+
+
+def test_no_command_fails_with_explanation():
+    """Starting without a command fails and names the commands to use instead."""
+    result = CliRunner().invoke(cli, [])
+    assert result.exit_code == 2
+    assert "needs a command" in result.output
+    assert "auth-service run-rest" in result.output
+    assert "auth-service migrate-db" in result.output

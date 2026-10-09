@@ -8,6 +8,11 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: auth-service
 
+migrationInitContainer:
+  executable: auth-service
+  executableArgs:
+  - migrate-db
+
 config:
   mongo_dsn:
   host: 0.0.0.0
@@ -15,7 +20,8 @@ config:
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
 
-executableArgs: []
+executableArgs:
+- run-rest
 
 _topics:
   authEvents:

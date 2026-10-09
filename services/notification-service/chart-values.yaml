@@ -13,6 +13,11 @@ service:
 containerPorts:
   http: null
 
+migrationInitContainer:
+  executable: ns
+  executableArgs:
+  - migrate-db
+
 config:
   mongo_dsn:
   from_address: test@test.com
@@ -42,7 +47,8 @@ config:
   db_version_collection: "nsDbVersions"
   migration_wait_sec: 10
 
-executableArgs: []
+executableArgs:
+- consume-events
 
 _topics:
   notificationEvent:

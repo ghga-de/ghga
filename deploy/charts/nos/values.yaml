@@ -11,7 +11,8 @@ global:
 commandPrefix: ''
 commandStyle: exec
 executable: nos
-executableArgs: []
+executableArgs:
+- consume-events
 deployment:
   enabled: true
 job:
@@ -38,11 +39,12 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
-  executable: ""
-  executableArgs: []
+  executable: nos
+  executableArgs:
+  - migrate-db
   env: []
   resources: {}
   volumeMounts: []
