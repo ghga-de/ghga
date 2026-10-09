@@ -141,6 +141,7 @@ The batch operations apply a write to many resources in one call, which the Mong
 | Operation | Description | Fails per resource with |
 | --------- | ----------- | ----------------------- |
 | `insert_many(dtos)` | Create new resources. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
+| `update_many(dtos)` | Replace existing resources, matched by their IDs. | `ResourceNotFoundError`, `UniqueConstraintViolationError` |
 | `upsert_many(dtos)` | Create or replace resources, matched by their IDs. | `UniqueConstraintViolationError` |
 
 A batch is not atomic.
@@ -157,12 +158,16 @@ except BatchOperationError as error:
 
 By default, every resource in a batch is attempted.
 Pass `ordered=True` to stop at the first failure instead; `error.not_attempted` then lists the IDs after it, in input order.
+A missing resource never stops an ordered `update_many`, because the database does not count it as a failed write.
 
 Every batch also follows these rules:
 
 - No two DTOs in a batch may share an ID.
   Such a batch raises `ValueError` before anything is written.
 - An empty batch writes nothing and raises nothing.
+
+`update_many` names the missing IDs with one lookup after its write.
+A resource that another writer creates in between is therefore not reported as missing, although the batch did not update it.
 
 ## Finding Resources
 

@@ -931,7 +931,7 @@ async def test_insert_many_ordered():
     assert await stored_titles(dao) == ["Candle", "Wrench"]
 
 
-@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
 async def test_batch_rejects_duplicate_ids(method: str):
     """Test that a batch with a repeated ID is rejected before anything is written."""
     dao = DaoClass()
@@ -945,7 +945,7 @@ async def test_batch_rejects_duplicate_ids(method: str):
     assert (await dao.get_by_id("Wrench")).count == 12
 
 
-@pytest.mark.parametrize("method", ["insert_many", "upsert_many"])
+@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
 async def test_batch_with_empty_input(method: str):
     """Test that an empty batch changes nothing and raises nothing."""
     dao = DaoClass()
@@ -954,6 +954,29 @@ async def test_batch_with_empty_input(method: str):
     await getattr(dao, method)([])
 
     assert await stored_titles(dao) == ["Wrench"]
+
+
+async def test_update_many():
+    """Test that update_many replaces the existing items and collects missing IDs."""
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    await dao.insert(CANDLE)
+    changed = [
+        WRENCH.model_copy(update={"count": 1}),
+        HAMMER,
+        CANDLE.model_copy(update={"count": 2}),
+    ]
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.update_many(changed, ordered=True)
+
+    # A missing resource never stops a batch, even an ordered one
+    assert list(caught.value.errors) == ["Hammer"]
+    assert isinstance(caught.value.errors["Hammer"], ResourceNotFoundError)
+    assert caught.value.not_attempted == ()
+    assert (await dao.get_by_id("Wrench")).count == 1
+    assert (await dao.get_by_id("Candle")).count == 2
+    assert await stored_titles(dao) == ["Wrench", "Candle"]
 
 
 async def test_upsert_many():
