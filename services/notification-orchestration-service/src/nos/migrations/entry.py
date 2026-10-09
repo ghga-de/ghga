@@ -13,38 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module containing controller function for DB migrations"""
+"""The migration map: the definition that migrates the database to each version."""
 
-from hexkit.providers.mongodb.migrations import (
-    MigrationConfig,
-    MigrationManager,
-    MigrationMap,
-)
+from hexkit.providers.mongodb.migrations import MigrationMap
 from nos.migrations.definitions import V2Migration
 
-MIGRATION_MAP = {2: V2Migration}
-
-
-async def run_db_migrations(
-    *,
-    config: MigrationConfig,
-    target_version: int,
-    migration_map: MigrationMap | None = None,
-):
-    """Run all migrations.
-
-    Args
-    - `config`: Config containing mongo_dsn string and DB versioning collection name
-    - `target_version`: Which version the db needs to be at for this version of the service
-    - `migration_map`: Mapping of version to migration definition. Defaults to `MIGRATION_MAP`.
-
-    `migration_map` can be specified for testing, but may be left unspecified for production.
-    """
-    migration_map = migration_map or MIGRATION_MAP
-
-    async with MigrationManager(
-        config=config,
-        target_version=target_version,
-        migration_map=migration_map,
-    ) as mm:
-        await mm.migrate_or_wait()
+MIGRATION_MAP: MigrationMap = {2: V2Migration}

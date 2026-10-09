@@ -13,17 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Entrypoint of the package."""
+"""Entrypoint of the package"""
 
-import asyncio
-
-from nos.main import consume_events
-
-
-def run():
-    """Run the service."""
-    asyncio.run(consume_events(run_forever=True))
-
+from nos.cli import cli
 
 if __name__ == "__main__":
-    run()
+    cli()

@@ -34,7 +34,11 @@ Because email clients like Outlook, Gmail, etc. have differences in the way they
 
 ## Usage
 
-The executable `ns` starts the service and takes no command.
+The executable `ns` takes one of these commands:
+
+- `consume-events` runs an event consumer listening to the configured topics
+- `migrate-db` runs the database migrations
+
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration

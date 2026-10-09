@@ -51,7 +51,11 @@ If no API is specified, then only a health endpoint is provided.
 
 ## Usage
 
-The executable `auth-service` starts the service and takes no command.
+The executable `auth-service` takes one of these commands:
+
+- `run-rest` runs the REST APIs set in `provide_apis`, and the event consumer if `run_consumer` is set
+- `migrate-db` runs the database migrations
+
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
