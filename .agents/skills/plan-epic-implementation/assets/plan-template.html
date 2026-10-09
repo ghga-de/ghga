@@ -799,7 +799,7 @@ dl.facts dd { margin: 0; }
     renderPicks();
   }
 
-  function save(d) {
+  function savePick(d) {
     var value = picks[d] || null;
     pendingPicks[d] = (pendingPicks[d] || 0) + 1;
     note(d, "Saving…");
@@ -857,7 +857,7 @@ dl.facts dd { margin: 0; }
         var d = t.name.slice(5);
         picks[d] = validOption(d, t.value);
         renderPicks();
-        save(d);
+        savePick(d);
       });
       document.addEventListener("click", function (ev) {
         var b = ev.target && ev.target.closest ? ev.target.closest("button.clear") : null;
@@ -865,7 +865,7 @@ dl.facts dd { margin: 0; }
         var d = b.getAttribute("data-decision");
         picks[d] = null;
         renderPicks();
-        save(d);
+        savePick(d);
       });
     });
   }, function () {});
