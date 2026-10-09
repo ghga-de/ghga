@@ -62,7 +62,9 @@ The `id` of a point is its ref in lower case with dashes for dots, such as `s1-3
 4. **Shared contract:** the rules every story follows, so the stories state only what differs.
 5. **Stories:** one per unit the epic adds (a function, an endpoint, an event), plus groundwork first.
    Plan no release story, since releasing is the developer's job once the changes are merged.
-   For a PyPI-lane member (`release = "pypi"` under `[tool.ghga]`), put its version bump in the first story, so the first branch carries it.
+   A member's lane is its `[tool.ghga]` marker or, without one, its directory's default, as the [capability markers](../../../docs/conventions.md#toolghga-capability-markers) say.
+   Put a PyPI-lane member's version bump in the first story, so the first branch carries it.
+   A platform-lane member declares `0.0.0` and gets no bump, since the `ghga/X.Y.Z` tag sets its version at build ([ADR-0046](../../../docs/adrs/adr-0046-platform-version-from-tags.md)).
    Each story must pass `just lint` and its member's tests on its own, so implementers that a type change forces go into the same story.
    Give each story its dependencies and the decisions it touches, then numbered changes, acceptance criteria, tests by file, and docs.
    - Give no time or size estimates; the dependencies and the story order carry the planning.
@@ -70,7 +72,7 @@ The `id` of a point is its ref in lower case with dashes for dots, such as `s1-3
      Describe trivial changes, and longer ones, in words.
 6. **Delivery, risks and limits, out of scope.**
    Name pull requests, branches and commits by the [conventions](../../../docs/conventions.md#names-branches-prs-commits).
-   Under "After the merge", point out what the release may need to coordinate, such as consumers that pin the member's version or dependencies that must be released first.
+   Under "After the merge", point out what the release may need to coordinate, such as consumers that pin the member's version, dependencies that must be released first, or a change operators must act on, which makes the next platform release a major one.
 7. **Build the page:** copy the template into the scratchpad and replace every `FILL` marker, keeping the styles and the script.
    Give every point its ref from [Refs](#refs) in `data-point` and `id`.
 8. **Publish** with the Artifact tool, icon `plan`, a one-sentence description and these capabilities:
