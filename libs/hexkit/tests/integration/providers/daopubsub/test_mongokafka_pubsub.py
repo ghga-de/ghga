@@ -16,8 +16,10 @@
 
 """Test the DAO pub/sub functionality based on the mongokafka/kafka providers."""
 
+import logging
 import uuid
-from collections.abc import Generator
+from collections.abc import AsyncIterator, Callable, Generator
+from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -34,6 +36,7 @@ from hexkit.correlation import (
     set_new_correlation_id,
 )
 from hexkit.protocols.dao import (
+    BatchOperationError,
     InvalidMappingError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
@@ -41,6 +44,7 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
     UUID4Field,
 )
+from hexkit.protocols.daopub import DaoPublisher
 from hexkit.protocols.daosub import DaoSubscriberProtocol, DtoValidationError
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from hexkit.providers.akafka import (
@@ -1245,3 +1249,90 @@ async def test_find_all_to_list(mongo_kafka: MongoKafkaFixture):
         assert isinstance(items, list)
         assert items == dtos
         assert await result.total_count() == 3
+
+
+@asynccontextmanager
+async def example_publisher(
+    mongo_kafka: MongoKafkaFixture,
+    dto_to_event: Callable[[ExampleDto], dict[str, Any] | None] = lambda dto: (
+        dto.model_dump()
+    ),
+) -> AsyncIterator[DaoPublisher[ExampleDto]]:
+    """Yield a DAO publisher for ExampleDto resources on the example topic."""
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        yield await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=dto_to_event,
+            event_topic=EXAMPLE_TOPIC,
+        )
+
+
+def change_event(dto: ExampleDto) -> ExpectedEvent:
+    """The change event the publisher sends for the given resource."""
+    return ExpectedEvent(
+        payload=dto.model_dump(), type_=CHANGE_EVENT_TYPE, key=str(dto.id)
+    )
+
+
+async def test_insert_many_publishes_written(mongo_kafka: MongoKafkaFixture):
+    """Test that insert_many publishes events only for the resources it created, and
+    that a tombstoned ID counts as existing.
+    """
+    async with example_publisher(mongo_kafka) as dao:
+        existing, tombstoned = ExampleDto(), ExampleDto()
+        await dao.insert(existing)
+        await dao.insert(tombstoned)
+        await dao.delete(tombstoned.id)
+        first, last = ExampleDto(), ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(first), change_event(last)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.insert_many([first, existing, tombstoned, last])
+
+        assert set(caught.value.errors) == {existing.id, tombstoned.id}
+        for error in caught.value.errors.values():
+            assert isinstance(error, ResourceAlreadyExistsError)
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(tombstoned.id)
+
+
+async def test_insert_many_publishes_best_effort(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a failed publish is logged, does not fail the batch call, and is sent
+    later by publish_pending.
+    """
+    fail = True
+
+    def dto_to_event(dto: ExampleDto) -> dict[str, Any]:
+        nonlocal fail
+        if dto.field_a == "fails once" and fail:
+            fail = False
+            raise RuntimeError("cannot build the event")
+        return dto.model_dump()
+
+    async with example_publisher(mongo_kafka, dto_to_event) as dao:
+        first = ExampleDto()
+        failing = ExampleDto(field_a="fails once")
+        last = ExampleDto()
+
+        with caplog.at_level(logging.WARNING):
+            async with mongo_kafka.kafka.expect_events(
+                events=[change_event(first), change_event(last)],
+                in_topic=EXAMPLE_TOPIC,
+            ):
+                await dao.insert_many([first, failing, last])
+
+        assert f"Could not publish the event for {failing.id}" in caplog.text
+        assert await dao.get_by_id(failing.id) == failing
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(failing)], in_topic=EXAMPLE_TOPIC
+        ):
+            await dao.publish_pending()

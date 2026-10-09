@@ -23,4 +23,7 @@ In-memory providers implement `KeyValueStoreProtocol` for lightweight test setup
 
 Available variants are `InMemBytesKeyValueStore`, `InMemStrKeyValueStore`, `InMemJsonKeyValueStore`, and `InMemDtoKeyValueStore`.
 
+For DAOs, `new_mock_dao_class()` builds an in-memory DAO class that mimics the MongoDB provider, batch operations included.
+It has no indexes besides the ID, so it never raises `UniqueConstraintViolationError`; a batch can only fail on IDs there.
+
 API reference: [hexkit.providers.testing](../../reference/index.qmd#provider-in-memory-testing)

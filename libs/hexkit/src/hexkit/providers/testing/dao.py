@@ -15,7 +15,7 @@
 
 """A mock (in-memory) DAO"""
 
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
 from contextlib import AbstractAsyncContextManager, suppress
 from copy import deepcopy
 from functools import partial
@@ -26,12 +26,15 @@ from pydantic import BaseModel
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
+    DaoError,
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    ensure_distinct_ids,
     resolve_filter,
 )
 from hexkit.providers.mongodb.provider import (
@@ -591,6 +594,47 @@ class BaseInMemDao(Generic[DTO]):
         """Upsert a resource."""
         dto_id = getattr(dto, self._id_field)
         self.resources[dto_id] = self._serialize(dto)
+
+    async def _write_each(
+        self,
+        dtos: Collection[DTO],
+        write: Callable[[DTO], Awaitable[None]],
+        *,
+        expected: type[DaoError],
+        stop: bool,
+    ) -> None:
+        """Write the DTOs one by one, collecting `expected` errors per ID.
+
+        With `stop`, the first expected error ends the batch, like a write error in an
+        ordered MongoDB bulk write.
+        """
+        dtos = list(dtos)
+        ids = [getattr(dto, self._id_field) for dto in dtos]
+        ensure_distinct_ids(ids)
+        errors: dict[ID, DaoError] = {}
+        for position, dto in enumerate(dtos):
+            try:
+                await write(dto)
+            except expected as error:
+                errors[ids[position]] = error
+                if stop:
+                    skipped = ids[position + 1 :]
+                    raise BatchOperationError(
+                        errors=errors, not_attempted=skipped
+                    ) from error
+        if errors:
+            raise BatchOperationError(errors=errors)
+
+    async def insert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Insert resources one by one, collecting failures as MongoDB does.
+
+        This DAO has no unique indexes, so the only failure is an existing ID.
+        """
+        await self._write_each(
+            dtos, self.insert, expected=ResourceAlreadyExistsError, stop=ordered
+        )
 
 
 def new_mock_dao_class(
