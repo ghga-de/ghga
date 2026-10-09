@@ -29,6 +29,7 @@ from httpx2 import AsyncHTTPTransport
 from ghga_service_commons.transports.config import CompositeConfig
 from ghga_service_commons.transports.factory import (
     CompositeTransportFactory,
+    fixed_base_transport_factory,
     get_ssl_verify,
 )
 from ghga_service_commons.transports.ratelimiting import AsyncRateLimitingTransport
@@ -148,7 +149,7 @@ def test_create_ratelimiting_retry_transport_uses_custom_base():
     base = AsyncHTTPTransport()
 
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        CompositeConfig(), base_transport=base
+        CompositeConfig(), make_base_transport=fixed_base_transport_factory(base)
     )
 
     ratelimiting = transport._transport
