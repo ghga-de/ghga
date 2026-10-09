@@ -1021,6 +1021,7 @@ dl.facts dd { margin: 0; }
   var ownExists = false;
   var askTimer = null;
   var viewerIsOwner = false;
+  var commentsSynced = false;
 
   function pointEl(ref) { return document.querySelector('[data-point="' + CSS.escape(ref) + '"]'); }
 
@@ -1266,6 +1267,8 @@ dl.facts dd { margin: 0; }
   function save(ref, threadId, textarea, note, toClaude) {
     var text = textarea.value.trim();
     if (!text) { note("Write a comment first."); return; }
+    // Until the server confirms whether the viewer's document exists, a set could replace it
+    if (!ownExists && !commentsSynced) { note("Comments are still loading. Try again in a moment."); return; }
     if (writing) return;
     writing = true;
     note("Saving…");
@@ -1709,7 +1712,10 @@ dl.facts dd { margin: 0; }
       }, function () {});
       store.collection("comments").limit(1000).onSnapshot(function (snap) {
         pageComments = readComments(snap);
-        ownExists = snap.docs.some(function (doc) { return doc.id === viewerId; });
+        if (!(snap.metadata && snap.metadata.fromCache)) commentsSynced = true;
+        var hasOwn = snap.docs.some(function (doc) { return doc.id === viewerId; });
+        // A cached snapshot without the document must not turn the next write into a replacing set
+        if (hasOwn || !(snap.metadata && snap.metadata.fromCache)) ownExists = hasOwn;
         if (!askTimer && pageComments.some(function (c) { return c.askedClaude; })) {
           // Re-render now and then, so an ask past its time limit frees its button again
           askTimer = setInterval(function () { if (!document.hidden) renderAll(); }, 60000);
