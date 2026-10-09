@@ -15,6 +15,20 @@ How to act on refine requests, questions and Regenerate requests for a plan that
   A Regenerate request sets `regenerate.pending` on its ticket card to `true`, and only Claude clears it.
   The page frees each after 30 minutes without an answer.
 
+## Size limit
+
+The store holds at most 256 KiB per document, so each person's comments share that limit, and Claude's replies count against the owner's.
+The owner's document therefore fills first; a plan with 17 threads over 13 revisions uses about 18 KiB of it.
+When a comment would pass the limit, the page says so and keeps the comment form open, but nothing frees space yet.
+Two ways to free it, to build once a plan gets close:
+
+- **Archive at refine time:** once the owner's document passes about 200 KiB, Claude moves the resolved threads into an archive document that the page shows read-only.
+  It keeps the history, and costs a refine-loop step, an access rule and an archive view.
+- **One document per comment**, at `comments/<user id>/<comment id>`: the per-person limit disappears, since a `{self}` rule also covers the paths below it.
+  It costs a new store layout and moving the comments of existing plans.
+
+Clearing resolved threads from the page is not one of them: it drops the only record of why a decision went the way it did, and reaches only the viewer's own document.
+
 ## Triggers
 
 - **The Refine button.**
