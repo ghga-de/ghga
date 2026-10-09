@@ -18,7 +18,8 @@
 import pytest
 
 from dcs.constants import DCS_PERSISTED_EVENTS_COLLECTION, DRS_OBJECTS_COLLECTION
-from dcs.migrations import run_db_migrations
+from dcs.migrations import MIGRATION_MAP
+from hexkit.providers.mongodb.migrations import MigrationConfig, MigrationManager
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests_dcs.fixtures.config import get_config
 from tests_dcs.migrations.v3_test_data import (
@@ -29,6 +30,14 @@ from tests_dcs.migrations.v3_test_data import (
 )
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 async def test_v3_migration(mongodb: MongoDbFixture):

@@ -36,6 +36,8 @@ log = logging.getLogger(__name__)
 # Collection names defined as constants
 FIS_PERSISTED_EVENTS = "fisPersistedEvents"
 INGESTED_FILES = "ingestedFiles"
+# The v1 outbox collection; the config field that could rename it no longer exists
+FILE_VALIDATIONS = "fileValidations"
 
 
 class V2Migration(MigrationDefinition):
@@ -53,8 +55,7 @@ class V2Migration(MigrationDefinition):
     async def apply(self):
         """Perform the migration."""
         config = Config()
-        outbox_collection_name = config.file_validations_collection
-        file_validations_collection = self._db[outbox_collection_name]
+        file_validations_collection = self._db[FILE_VALIDATIONS]
         ingested_files_collection = self._db[INGESTED_FILES]
         persisted_events_collection = self._db[FIS_PERSISTED_EVENTS]
 

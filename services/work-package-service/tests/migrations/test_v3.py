@@ -19,11 +19,21 @@ from copy import deepcopy
 
 import pytest
 
+from hexkit.providers.mongodb.migrations import MigrationConfig, MigrationManager
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from tests.fixtures import fixture_config  # noqa: F401
-from wps.migrations import run_db_migrations
+from wps.migrations import MIGRATION_MAP
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
+
 
 TEST_DATASET = {
     "_id": "GHGAD74914788657848",

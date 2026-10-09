@@ -23,11 +23,20 @@ from uuid import UUID, uuid1, uuid4
 import pytest
 from tests_ifrs.fixtures.config import get_config
 
+from hexkit.providers.mongodb.migrations import MigrationConfig, MigrationManager
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
-from ifrs.migrations import run_db_migrations
+from ifrs.migrations import MIGRATION_MAP
 
 pytestmark = pytest.mark.asyncio
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 async def test_v2_migration(mongodb: MongoDbFixture):
