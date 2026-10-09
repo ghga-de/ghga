@@ -711,7 +711,7 @@ async def test_check_db_version_mismatch(mongodb: MongoDbFixture):
     config = make_migration_config(mongodb.config)
 
     # No migrations have been run yet, so the recorded version is effectively 0
-    with pytest.raises(DbVersionMismatchError):
+    with pytest.raises(DbVersionMismatchError, match="Run the migrations"):
         await check_db_version(config=config, target_version=2)
 
     # Run a migration to get the DB to version 2
@@ -721,9 +721,10 @@ async def test_check_db_version_mismatch(mongodb: MongoDbFixture):
     )
 
     # Make sure we get an error if DB is behind
-    with pytest.raises(DbVersionMismatchError):
+    with pytest.raises(DbVersionMismatchError, match="Run the migrations") as error:
         await check_db_version(config=config, target_version=3)
+    assert (error.value.db_version, error.value.target_version) == (2, 3)
 
     # Make sure we also get an error if the DB is ahead
-    with pytest.raises(DbVersionMismatchError):
+    with pytest.raises(DbVersionMismatchError, match="newer release"):
         await check_db_version(config=config, target_version=1)
