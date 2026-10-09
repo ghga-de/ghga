@@ -22,10 +22,11 @@ from dcs.inject import (
     prepare_event_subscriber,
     prepare_rest_app,
 )
-from dcs.migrations import run_db_migrations
+from dcs.migrations import MIGRATION_MAP
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
 
 DB_VERSION = 3
 
@@ -39,6 +40,7 @@ async def run_rest_app():
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -49,6 +51,7 @@ async def consume_events(run_forever: bool = True):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
@@ -59,6 +62,7 @@ async def run_download_bucket_cleaner(remove_dangling_objects: bool = False):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_cleaner(config=config) as bucket_cleaner:
         await bucket_cleaner.cleanup_download_buckets(
@@ -72,6 +76,7 @@ async def publish_events(*, all: bool = False):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
+    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with get_persistent_publisher(config=config) as persistent_publisher:
         if all:
@@ -84,4 +89,7 @@ async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()
     configure_logging(config=config)
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

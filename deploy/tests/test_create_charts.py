@@ -10,7 +10,12 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import create_charts
-from create_charts import MONO_IMAGE, derived_values, image_name
+from create_charts import (
+    MONO_IMAGE,
+    compose_member_values,
+    derived_values,
+    image_name,
+)
 
 PYTHON_MEMBER = {"package": "wps", "kind": "python"}
 FRONTEND_MEMBER = {"package": "data-portal", "kind": "frontend"}
@@ -38,6 +43,34 @@ def test_mono_keeps_the_member_executable():
         "repository": f"ghga-de/ghga/{MONO_IMAGE}",
     }
     assert values["executable"] == "wps"
+
+
+MIGRATION_COMMAND = (
+    "migrationInitContainer:\n  executable: wps\n  executableArgs:\n  - migrate-db\n"
+)
+
+
+@pytest.mark.parametrize(
+    "chart_values, enabled",
+    [
+        (MIGRATION_COMMAND, True),
+        (MIGRATION_COMMAND + "  enabled: false\n", False),
+        ("apiBasePath: /wps/\n", False),
+    ],
+)
+def test_migration_command_enables_the_init_container(
+    tmp_path, monkeypatch, chart_values, enabled
+):
+    """A member naming its migration command runs it unless it opts out."""
+    monkeypatch.setattr(create_charts, "REPO_ROOT", tmp_path)
+    (tmp_path / "wps").mkdir()
+    (tmp_path / "wps" / "chart-values.yaml").write_text(chart_values)
+    defaults = {"migrationInitContainer": {"enabled": False, "executableArgs": []}}
+
+    values, _ = compose_member_values(
+        {**PYTHON_MEMBER, "path": "wps"}, "ghcr.io/ghga-de/ghga", defaults
+    )
+    assert values["migrationInitContainer"]["enabled"] is enabled
 
 
 def _dev_run(tmp_path, monkeypatch, digests: dict) -> None:
