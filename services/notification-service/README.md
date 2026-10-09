@@ -34,7 +34,7 @@ Because email clients like Outlook, Gmail, etc. have differences in the way they
 
 ## Usage
 
-The executable `ns` takes one of these commands:
+The executable `ns` takes one of these commands, and fails without one:
 
 - `consume-events` runs an event consumer listening to the configured topics
 - `migrate-db` runs the database migrations

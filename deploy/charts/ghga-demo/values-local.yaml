@@ -27,7 +27,18 @@ auth-claims:
       cpu: 750m
       memory: 768Mi
 
-auth-rest:
+auth-consumer:
+  image:
+    tag: local
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 750m
+      memory: 768Mi
+
+auth-users:
   image:
     tag: local
   resources:

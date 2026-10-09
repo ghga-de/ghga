@@ -51,7 +51,7 @@ auth-adapter:
     oidc_issuer: https://test-aai.ghga.dev
     oidc_client_id: ""
 
-auth-rest:
+auth-users:
   config:
     oidc_authority_url: http://ghga-test-oidc-provider:8080/
     oidc_userinfo_endpoint: http://ghga-test-oidc-provider:8080/userinfo

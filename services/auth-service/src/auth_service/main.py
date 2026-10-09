@@ -13,20 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Top-level functions for the service"""
+"""Entrypoints to prepare and run the application."""
 
-import asyncio
 import importlib
 import logging
 
+from auth_service.config import Config
 from auth_service.migrations import MIGRATION_MAP
 from ghga_service_commons.api import run_server
-from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
-
-from .config import CONFIG, Config
 
 log = logging.getLogger(__name__)
 
@@ -34,69 +31,54 @@ DB_VERSION = 2
 
 
 def import_prepare_module(auth_adapter: bool):
-    """Import the prepare module.
+    """Import the prepare module of the auth adapter or of the auth service.
 
-    This should only be imported once we know which service should be run.
+    Only the module of the service being run may be imported: the auth service's
+    routers check at import that the configured key is a public one, while the
+    auth adapter is configured with the private key.
     """
-    package = "auth_service"
-    if auth_adapter:
-        package += ".auth_adapter"
+    package = "auth_service.auth_adapter" if auth_adapter else "auth_service"
     return importlib.import_module(f"{package}.prepare")
 
 
-async def consume_events(auth_adapter: bool, config: Config = CONFIG):
-    """Run an event consumer listening to the configured topic."""
-    prepare_event_subscriber = import_prepare_module(
-        auth_adapter
-    ).prepare_event_subscriber
-
-    async with prepare_event_subscriber(config=config) as event_subscriber:
-        await event_subscriber.run()
-
-
-async def run_parallel(
-    auth_adapter: bool, run_consumer: bool = False, config: Config = CONFIG
-):
-    """Run REST API(s) and consumer in parallel.
-
-    When no API is specified, only the health endpoint will be available.
-    """
-    await check_db_version(config=config, target_version=DB_VERSION)
-    prepare_rest_app = import_prepare_module(auth_adapter).prepare_rest_app
-
-    async with prepare_rest_app(config=config) as app:
-        service_runner = run_server(app=app, config=config)
-        if run_consumer:
-            event_consumer = consume_events(auth_adapter=auth_adapter, config=config)
-            await asyncio.gather(service_runner, event_consumer)
-        else:
-            await service_runner
-
-
-def run(config: Config = CONFIG):
-    """Run the auth service"""
+async def run_rest_app() -> None:
+    """Run the HTTP REST APIs set in `provide_apis`."""
+    config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    assert_tz_is_utc()
     apis = config.provide_apis
-    run_consumer = config.run_consumer
+    if not apis:
+        raise ValueError("provide_apis must name at least one API")
     auth_adapter = "ext_auth" in apis
     if auth_adapter and len(apis) > 1:
         raise ValueError("ext_auth cannot be combined with other APIs")
-    service_name = "Auth Adapter" if auth_adapter else "Auth Service"
-    components = [f"{api} API" for api in apis]
-    if run_consumer:
-        components.append("event consumer")
-    if not components:
-        raise ValueError("must specify an API or run as event consumer")
-    service_name_and_components = f"{service_name} with {' and '.join(components)}"
-    log.info(f"Starting {service_name_and_components}")
-    asyncio.run(run_parallel(auth_adapter, run_consumer, config=config))
+    log.info("Starting the %s API", " and ".join(apis))
+    await check_db_version(config=config, target_version=DB_VERSION)
+
+    prepare_rest_app = import_prepare_module(auth_adapter).prepare_rest_app
+    async with prepare_rest_app(config=config) as app:
+        await run_server(app=app, config=config)
 
 
-async def migrate_db(config: Config = CONFIG) -> None:
-    """Run database migrations as a one-off command."""
+async def consume_events(run_forever: bool = True) -> None:
+    """Run an event consumer listening to the configured topic."""
+    config = Config()
     configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
+    await check_db_version(config=config, target_version=DB_VERSION)
+
+    prepare_event_subscriber = import_prepare_module(
+        auth_adapter=False
+    ).prepare_event_subscriber
+    async with prepare_event_subscriber(config=config) as event_subscriber:
+        await event_subscriber.run(forever=run_forever)
+
+
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
     async with MigrationManager(
         config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
     ) as mm:

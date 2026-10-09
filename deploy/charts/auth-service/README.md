@@ -102,7 +102,6 @@ for the full set of configurable values.
 | `config.allow_read_paths` | paths that are public or use their own authentication mechanism | `["/.well-known/*", "/service-logo.png"]` |
 | `config.allow_write_paths` | paths for writing that use their own authentication mechanism | `[]` |
 | `config.provide_apis` | Which REST APIs should be provided. | `[]` |
-| `config.run_consumer` | Whether the service should run as an event consumer | `false` |
 | `config.add_as_data_stewards` | A list of of data stewards to seed the claims repository with. All other data steward claims will be removed. This is only used with the claims API. | `[]` |
 | `config.oidc_authority_url` | external OIDC authority URL used by the auth adapter | `"https://login.aai.lifescience-ri.eu/oidc/"` |
 | `config.oidc_issuer` | external OIDC issuer for access tokens used by the auth adapter (URL format with or without end slash, determined using OIDC discovery if empty) | `"https://login.aai.lifescience-ri.eu/oidc/"` |
