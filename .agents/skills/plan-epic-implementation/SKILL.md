@@ -27,7 +27,7 @@ How to act on a refine request is in [references/refine-loop.md](references/refi
 ## Refs
 
 Every plan uses the same refs, so a ref names the same kind of point in every plan.
-Use no other prefix, and number each one from 1 in page order on the first publish.
+Use no other prefix, and number each one from 1 in page order on the first publish; groundwork is the one exception, as `S0`.
 
 | Section | Ref | Example |
 |---|---|---|
