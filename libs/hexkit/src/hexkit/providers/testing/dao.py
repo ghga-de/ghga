@@ -636,6 +636,18 @@ class BaseInMemDao(Generic[DTO]):
             dtos, self.insert, expected=ResourceAlreadyExistsError, stop=ordered
         )
 
+    async def upsert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Upsert resources one by one.
+
+        Without unique indexes an upsert cannot fail here, so `ordered` changes nothing.
+        """
+        dtos = list(dtos)
+        ensure_distinct_ids(getattr(dto, self._id_field) for dto in dtos)
+        for dto in dtos:
+            await self.upsert(dto)
+
 
 def new_mock_dao_class(
     *, dto_model: type[DTO], id_field: str, handle_mql: bool = True

@@ -615,6 +615,21 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise
         await self._publish_written(dtos, None)
 
+    async def upsert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create or replace several resources in one call and publish each one written.
+
+        A tombstone left by a publisher deletion is replaced, as in `upsert`. Please see
+        the `Dao` protocol for the arguments and the errors.
+        """
+        try:
+            await self._dao.upsert_many(dtos, ordered=ordered)
+        except BatchOperationError as error:
+            await self._publish_written(dtos, error)
+            raise
+        await self._publish_written(dtos, None)
+
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
         correlation_id = document.get("__metadata__", {}).get("correlation_id", "")
