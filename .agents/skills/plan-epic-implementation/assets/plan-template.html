@@ -1019,6 +1019,7 @@ dl.facts dd { margin: 0; }
   var panels = {};
   var writing = false;
   var ownExists = false;
+  var ownBytes = 0;
   var askTimer = null;
   var viewerIsOwner = false;
   var commentsSynced = false;
@@ -1240,9 +1241,25 @@ dl.facts dd { margin: 0; }
     });
   }
 
-  function writeError(err) {
+  // The store answers invalid_argument both to a write the access rules refuse and to a
+  // document over its 256 KiB limit, so the size of the written document tells them apart.
+  // JSON only approximates the store's own count, hence the margin.
+  var DOC_LIMIT = 256 * 1024;
+
+  function byteLength(value) {
+    return new TextEncoder().encode(JSON.stringify(value)).length;
+  }
+
+  function writeError(err, bytesAfter) {
     var code = err && err.code;
-    if (code === "invalid_argument") { canWrite = false; renderAll(); return "Not saved: your access lets you read comments here, not add them."; }
+    if (code === "invalid_argument") {
+      if ((bytesAfter || 0) > DOC_LIMIT * 0.9) return "Not saved: your comments have reached the store's limit of 256 KiB per person.";
+      // The rules always let the owner write, so only another viewer can be refused
+      if (viewerIsOwner) return "Not saved. Try again.";
+      canWrite = false;
+      renderAll();
+      return "Not saved: your access lets you read comments here, not add them.";
+    }
     if (code === "quota_exceeded") return "Not saved: the page's comment store is full.";
     if (code === "resource_exhausted") return "Not saved: too many changes at once. Try again in a moment.";
     return "Not saved. Try again.";
@@ -1288,7 +1305,7 @@ dl.facts dd { margin: 0; }
       if (threadId && panels[ref]) { panels[ref].replyTo = null; panels[ref].replyForm.hidden = true; }
     }, function (err) {
       writing = false;
-      note(writeError(err));
+      note(writeError(err, ownBytes + byteLength(patch)));
     });
   }
 
@@ -1716,6 +1733,7 @@ dl.facts dd { margin: 0; }
         var hasOwn = snap.docs.some(function (doc) { return doc.id === viewerId; });
         // A cached snapshot without the document must not turn the next write into a replacing set
         if (hasOwn || !(snap.metadata && snap.metadata.fromCache)) ownExists = hasOwn;
+        snap.docs.forEach(function (doc) { if (doc.id === viewerId) ownBytes = byteLength(doc.data()); });
         if (!askTimer && pageComments.some(function (c) { return c.askedClaude; })) {
           // Re-render now and then, so an ask past its time limit frees its button again
           askTimer = setInterval(function () { if (!document.hidden) renderAll(); }, 60000);
