@@ -64,13 +64,13 @@ The service requires the following configuration parameters:
   - <a id="properties/client_retry_status_codes/items"></a>**Items** *(integer)*: Minimum: `0`.
 - <a id="properties/client_reraise_from_retry_error"></a>**`client_reraise_from_retry_error`** *(boolean)*: Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is.
   Default: `true`.
-- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request.
+- <a id="properties/min_request_interval"></a>**`min_request_interval`** *(number)*: Minimum number of seconds between requests to one host and first path segment.
+  If left at 0 some jitter is still added to pace concurrent requests.
   Minimum: `0`.
   Default: `0.0`.
-- <a id="properties/retry_after_applicable_for_num_requests"></a>**`retry_after_applicable_for_num_requests`** *(integer)*: Amount of requests after which the stored delay from a 429 response is ignored again.
-  Can be useful to adjust if concurrent requests are fired in quick succession.
-  Exclusive minimum: `0`.
-  Default: `1`.
+- <a id="properties/per_request_jitter"></a>**`per_request_jitter`** *(number)*: Max amount of jitter (in seconds) to add to each request.
+  Minimum: `0`.
+  Default: `0.05`.
 - <a id="properties/http_request_timeout_seconds"></a>**`http_request_timeout_seconds`** *(number)*: Request timeout setting in seconds.
   Default: `60.0`.
 - <a id="properties/ekss_base_url"></a>**`ekss_base_url`** *(string, required)*: URL containing host and port of the EKSS endpoint to retrieve personalized envelope from.
