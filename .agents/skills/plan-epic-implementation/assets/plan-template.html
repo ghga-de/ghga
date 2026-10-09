@@ -1,0 +1,1773 @@
+<title>FILL: Code Name Plan</title>
+<!-- Built by the plan-epic-implementation skill. Fill the FILL markers; keep the styles and the script as they are. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column with a sticky contents rail on the left; every numbered point is a comment target */
+:root {
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --ink: #1b2220;
+  --muted: #56635e;
+  --rule: #d5ddd9;
+  --hover: #eaf0ed;
+  --accent: #a3302a;
+  --accent-soft: #f6e2df;
+  --code: #e9eeec;
+  --ok: #2b664a;
+  --ok-soft: #dfeee6;
+  --on-accent: #ffffff;
+  --shadow: rgba(27, 34, 32, 0.14);
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: 2.4rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131816;
+    --surface: #1a201e;
+    --ink: #e4eae7;
+    --muted: #9aa8a2;
+    --rule: #2d3633;
+    --hover: #222a27;
+    --accent: #f08277;
+    --accent-soft: #3b201d;
+    --code: #222a27;
+    --ok: #7cc9a0;
+    --ok-soft: #1c3127;
+    --on-accent: #1a0e0c;
+    --shadow: rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131816;
+  --surface: #1a201e;
+  --ink: #e4eae7;
+  --muted: #9aa8a2;
+  --rule: #2d3633;
+  --hover: #222a27;
+  --accent: #f08277;
+  --accent-soft: #3b201d;
+  --code: #222a27;
+  --ok: #7cc9a0;
+  --ok-soft: #1c3127;
+  --on-accent: #1a0e0c;
+  --shadow: rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  padding-inline: 16px;
+  padding-block: 0 4rem;
+}
+.page {
+  max-width: 1160px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 3rem;
+}
+@media (max-width: 960px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+
+nav.toc {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+  align-self: start;
+  padding-block: 2.5rem 0;
+  font-size: var(--step--1);
+}
+nav.toc p, .label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+nav.toc p { margin: 0 0 0.75rem; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+nav.toc ol ol { padding-left: 0.8rem; margin-top: 0.35rem; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+
+main { min-width: 0; max-width: 48rem; }
+
+header.top { padding-block: 2.5rem 1.5rem; border-bottom: 1px solid var(--rule); }
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+}
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: var(--step-2); font-weight: 700; margin-block: 0 1rem; }
+h3 { font-size: var(--step-1); font-weight: 600; }
+h4 {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 1.25rem 0 0.4rem;
+}
+.lede { font-size: var(--step-1); color: var(--muted); margin: 0.75rem 0 1.25rem; max-width: 42rem; }
+
+dl.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+  font-size: var(--step--1);
+}
+dl.meta div { min-width: 0; }
+dl.meta dt { color: var(--muted); font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+dl.meta dd { margin: 0.15rem 0 0; overflow-wrap: anywhere; }
+
+section { padding-block: 2.25rem 0.25rem; scroll-margin-top: 1rem; }
+section + section { border-top: 1px solid var(--rule); margin-top: 2rem; }
+p { margin: 0 0 0.9rem; }
+ul, ol { margin: 0 0 1rem; padding-left: 1.25rem; }
+a { color: var(--accent); }
+strong { font-weight: 600; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: var(--code);
+  padding: 0.08em 0.3em;
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+pre {
+  background: var(--code);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0.5rem 0 0.25rem;
+}
+pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+.howto {
+  display: none;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 0.6rem 0.9rem;
+  border-radius: 0 6px 6px 0;
+  margin: 1.25rem 0 0;
+  font-size: 0.95rem;
+}
+.can-comment .howto { display: block; }
+.howto svg { vertical-align: -0.15em; }
+
+/* Points: ref label, text, comment button */
+ul.points { list-style: none; padding: 0; margin: 0 0 0.5rem; display: grid; gap: 0.15rem; }
+.points > .pt {
+  display: grid;
+  grid-template-columns: 3.6rem minmax(0, 1fr) auto;
+  gap: 0 0.6rem;
+  align-items: start;
+  padding: 0.4rem 0.4rem 0.4rem 0.3rem;
+  border-radius: 5px;
+}
+.pt > .ref, .ref {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding-top: 0.2rem;
+  white-space: nowrap;
+}
+.pt > .txt { min-width: 0; }
+.pt > .txt > p:last-child { margin-bottom: 0; }
+.can-comment .pt:hover, .can-comment .pt:focus-within { background: var(--hover); }
+
+.head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 0.6rem;
+  align-items: start;
+  border-radius: 5px;
+  padding: 0.3rem 0.4rem 0.3rem 0;
+}
+.can-comment .head:hover, .can-comment .head:focus-within { background: var(--hover); }
+
+button.cmt {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0.45;
+  padding: 0 0.3rem;
+}
+.cmt-count { font-family: var(--mono); font-size: 0.72rem; font-weight: 600; }
+.cmt-count:empty { display: none; }
+button.cmt.has-any { opacity: 0.9; color: var(--accent); border-color: var(--accent); }
+button.cmt.has-open { opacity: 1; color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+button.cmt[aria-expanded="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--accent-soft); }
+.can-comment button.cmt { display: inline-flex; }
+[data-point]:hover > button.cmt:not(.has-open), [data-point]:hover .slot > button.cmt:not(.has-open),
+[data-point]:focus-within button.cmt:not(.has-open), button.cmt:not(.has-open):focus-visible { opacity: 1; color: var(--accent); border-color: var(--accent); }
+@media (hover: none) { button.cmt { opacity: 0.85; } }
+
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0 0.35rem;
+  margin-right: 0.35rem;
+  vertical-align: 0.1em;
+}
+.tag.d { color: var(--accent); border-color: var(--accent); }
+
+/* Decisions */
+.decision { margin-block: 0 2rem; }
+.decision .q { color: var(--muted); margin: 0.3rem 0 0.6rem; }
+.table-wrap { overflow-x: auto; margin: 0 0 1rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--rule); }
+tr:last-child td { border-bottom: none; }
+th {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  background: var(--bg);
+}
+td.opt { white-space: nowrap; }
+td.opt .slot { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+td.opt .ref { padding: 0; }
+table.options td:nth-child(2) { min-width: 18rem; }
+table.options td:nth-child(3) { min-width: 13rem; }
+tr.rec td { background: var(--ok-soft); }
+.can-comment tr.pt:hover td { background: var(--hover); }
+.pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ok);
+  border: 1px solid var(--ok);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  white-space: nowrap;
+}
+
+/* Refine bar and back-to-top */
+.refine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-top: 1.25rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.refine-btn {
+  font-family: var(--body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.refine-btn:disabled { background: var(--code); border-color: var(--rule); color: var(--muted); cursor: not-allowed; }
+.refine-text { flex: 1 1 16rem; min-width: 0; margin: 0; font-size: var(--step--1); color: var(--muted); }
+.refine-text #refine-picks { color: var(--ink); }
+.to-top {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  box-shadow: 0 2px 10px var(--shadow);
+  cursor: pointer;
+}
+.to-top:hover, .to-top:focus-visible { color: var(--accent); border-color: var(--accent); }
+
+/* Page comments: threads kept in the page's store and shown under their point */
+.points > .pt > .threads-host { grid-column: 2 / -1; }
+.head > .threads-host { grid-column: 1 / -1; }
+tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
+.threads {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95rem;
+}
+.thread { display: grid; gap: 0.5rem; }
+.thread + .thread, .resolved-threads { border-top: 1px solid var(--rule); padding-top: 0.75rem; }
+.msg.reply { margin-left: 0.9rem; padding-left: 0.75rem; border-left: 2px solid var(--rule); }
+.msg-meta { margin: 0; font-size: var(--step--1); color: var(--muted); }
+.msg-meta .who { color: var(--ink); font-weight: 600; }
+.msg-text { margin: 0.15rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thread.resolved .msg-text { color: var(--muted); }
+.thread-actions, .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.threads .empty { margin: 0; color: var(--muted); font-size: var(--step--1); }
+.resolved-threads > summary { cursor: pointer; color: var(--muted); font-size: var(--step--1); }
+.resolved-threads[open] > summary { margin-bottom: 0.6rem; }
+.threads form { display: grid; gap: 0.4rem; }
+.threads .form-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.threads textarea {
+  width: 100%;
+  min-height: 3.5rem;
+  resize: vertical;
+  font-family: var(--body);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 0.4rem 0.55rem;
+}
+.btn-primary, .btn-secondary {
+  font-family: var(--body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+}
+.btn-primary { color: var(--on-accent); background: var(--accent); border: 1px solid var(--accent); }
+.btn-secondary { color: var(--ink); background: var(--surface); border: 1px solid var(--rule); }
+.btn-secondary:hover { color: var(--accent); border-color: var(--accent); }
+.btn-link { font: inherit; font-size: var(--step--1); color: var(--accent); background: none; border: none; padding: 0; text-decoration: underline; cursor: pointer; }
+.form-note { font-size: var(--step--1); color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Comment overview under the header */
+.overview { margin-top: 0.75rem; padding: 0 0.9rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+.overview > summary { cursor: pointer; padding: 0.55rem 0; font-weight: 600; font-size: 0.95rem; }
+.overview[open] > summary { border-bottom: 1px solid var(--rule); margin-bottom: 0.6rem; }
+.ov-list { list-style: none; padding: 0; margin: 0 0 0.6rem; display: grid; gap: 0.5rem; }
+.ov-list > li { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr); gap: 0.05rem 0.6rem; }
+.ov-list a { text-decoration: none; }
+.ov-list .ref { color: var(--accent); padding-top: 0.15rem; }
+.ov-text { min-width: 0; overflow-wrap: anywhere; }
+.ov-meta { grid-column: 2; font-size: var(--step--1); color: var(--muted); }
+.overview .empty { margin: 0 0 0.6rem; color: var(--muted); font-size: var(--step--1); }
+.ov-resolved { margin-bottom: 0.6rem; }
+.ov-resolved > summary { cursor: pointer; color: var(--muted); font-size: var(--step--1); margin-bottom: 0.4rem; }
+[data-point] { scroll-margin-top: 1rem; }
+
+/* Claude at work, and the last refine's changes */
+.spinner {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: 0.4rem;
+  vertical-align: -0.1em;
+  border: 2px solid var(--rule);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-color: var(--accent); } }
+.claude-working { margin: 0; font-size: var(--step--1); color: var(--accent); }
+.threads .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
+.changes { margin-top: 0.75rem; padding: 0 0.9rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+.changes > summary { cursor: pointer; padding: 0.55rem 0; font-weight: 600; font-size: 0.95rem; }
+.changes[open] > summary { border-bottom: 1px solid var(--rule); margin-bottom: 0.6rem; }
+.changes p { margin: 0 0 0.5rem; font-size: var(--step--1); color: var(--muted); }
+.changes ul { margin: 0 0 0.75rem; padding-left: 1.1rem; font-size: 0.95rem; }
+.changes li { margin-bottom: 0.3rem; }
+.changes li .ref { padding: 0; margin-right: 0.3rem; color: var(--accent); }
+
+/* Decision picks */
+.pick {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+}
+.can-pick .pick { display: inline-flex; }
+.pick input { accent-color: var(--accent); width: 1rem; height: 1rem; margin: 0; cursor: pointer; }
+.pick input:disabled, .pick input:disabled + span { cursor: not-allowed; opacity: 0.6; }
+tr.picked td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+tr.picked .pick { color: var(--accent); font-weight: 600; }
+.pick-status { display: none; font-size: var(--step--1); color: var(--muted); margin: -0.4rem 0 0; }
+.can-pick .pick-status { display: block; }
+.pick-status .pick-text { color: var(--ink); }
+button.clear {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.pick-hint { display: none; }
+.can-pick .pick-hint { display: inline; }
+
+/* Story order strip */
+.flow {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.6rem 1.4rem;
+  margin: 0 0 0.75rem;
+  position: relative;
+}
+.flow .col { display: grid; gap: 0.5rem; align-content: center; position: relative; }
+.flow .col + .col::before {
+  content: "→";
+  position: absolute;
+  left: -1.05rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.flow a {
+  display: block;
+  text-decoration: none;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+}
+.flow a:hover, .flow a:focus-visible { border-color: var(--accent); }
+.flow a .ref { display: block; padding: 0; }
+.flow a code { background: none; padding: 0; }
+@media (max-width: 640px) {
+  .flow { grid-auto-flow: row; gap: 1.4rem; }
+  .flow .col + .col::before { content: "↓"; left: 50%; top: -1.2rem; transform: translateX(-50%); }
+}
+
+/* Stories */
+article.story {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1rem 1.1rem 0.75rem;
+  margin: 0 0 1.5rem;
+  scroll-margin-top: 1rem;
+}
+.story .head h3 { margin: 0.1rem 0 0.4rem; }
+.story .head .ref { display: block; color: var(--accent); padding: 0; }
+dl.facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin: 0 0 0.5rem; font-size: var(--step--1); }
+dl.facts div { display: flex; gap: 0.4rem; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; }
+.goal { margin: 0; }
+
+/* Ticket cards: one YouTrack ticket per story, filled from the page's store */
+.ticket {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.25rem 0 0.5rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.ticket.is-flagged { border-color: var(--accent); }
+.ticket-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.75rem; }
+.ticket-head h4 { margin: 0; }
+.ticket-state {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  white-space: nowrap;
+}
+.ticket-notice {
+  margin: 0;
+  font-size: var(--step--1);
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 5px 5px 0;
+}
+.ticket-field { display: grid; gap: 0.25rem; min-width: 0; }
+.ticket-label-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.3rem 0.5rem; }
+.ticket-field label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ticket input, .ticket textarea {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--body);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 0.35rem 0.55rem;
+}
+.ticket input.ticket-key { width: 10rem; max-width: 100%; font-family: var(--mono); font-size: 0.85rem; }
+.ticket textarea { min-height: 12rem; resize: vertical; font-family: var(--mono); font-size: 0.8rem; line-height: 1.5; }
+.ticket input[readonly], .ticket textarea[readonly] { background: var(--code); }
+.ticket [aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.ticket .copy { font-size: var(--step--1); padding: 0.15rem 0.6rem; }
+.ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.ticket-actions .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.orphan-tickets { margin-top: 1.5rem; }
+.orphan-tickets > p { color: var(--muted); }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="page">
+  <!-- FILL: one link per section; nest the stories. -->
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#gaps">Gaps in the epic</a></li>
+      <li><a href="#decisions">Decisions</a></li>
+      <li><a href="#contract">Shared contract</a></li>
+      <li><a href="#stories">Stories</a>
+        <ol>
+          <li><a href="#s1">FILL: S1 First unit</a></li>
+        </ol>
+      </li>
+      <li><a href="#delivery">Delivery</a></li>
+      <li><a href="#risks">Risks and limits</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="top">
+      <p class="eyebrow">FILL: Epic NNNN · Implementation plan</p>
+      <h1 id="top-heading" tabindex="-1">FILL: Code Name</h1>
+      <p class="lede">FILL: one sentence on what the epic adds and why.</p>
+      <!-- FILL: a PyPI-lane member with its version; any other with its lane, such as "platform lane". -->
+      <dl class="meta">
+        <div><dt>Member</dt><dd>FILL: <code>libs/example</code> 1.0.0</dd></div>
+        <div><dt>Spec</dt><dd>FILL: <code>docs/epics/epic-NNNN-code-name.md</code></dd></div>
+        <div><dt>Revision</dt><dd>1 · FILL: YYYY-MM-DD</dd></div>
+      </dl>
+      <div class="refine" id="refine" hidden>
+        <button type="button" class="refine-btn" id="refine-btn" disabled>Refine plan</button>
+        <p class="refine-text"><span id="refine-picks"></span> <span class="spinner" id="refine-spinner" aria-hidden="true" hidden></span><span id="refine-state">Checking for a Claude session…</span></p>
+      </div>
+      <p class="howto">Every numbered point takes comments. Press <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 3h11v7.5H7l-3 2.5v-2.5H2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg> beside a point to read its comments or add one; a filled button counts the open threads there. Cite refs such as <code>S1.2</code> when a comment spans several points.</p>
+      <details class="overview" id="comment-overview" hidden>
+        <summary><span id="overview-title">Comments</span></summary>
+        <div id="overview-list"></div>
+      </details>
+      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. -->
+      <details class="changes" id="refine-changes" hidden>
+        <summary>What changed in revision N</summary>
+        <p>Refined from revision N-1.</p>
+        <ul>
+          <li><span class="ref">S1.2</span> FILL: one-line recap of the change.</li>
+        </ul>
+      </details>
+    </header>
+
+    <section id="gaps">
+      <h2>Gaps in the epic</h2>
+      <p>What the epic leaves out, leaves open or gets wrong against the current code. Each gap says what the plan does about it: a decision, a rule or a story detail further down.</p>
+      <ul class="points">
+        <!-- FILL: one li per gap, tagged with its kind: Left out, Left open, Contradicted or Unverifiable. Say what the epic says or omits, what the code does, why it matters and what the plan does about it, with refs. Tag "d" links a decision. -->
+        <li class="pt" data-point="G1" id="g1"><span class="ref">G1</span><div class="txt"><span class="tag">Left open</span><span class="tag d">D1</span>FILL</div></li>
+        <li class="pt" data-point="G2" id="g2"><span class="ref">G2</span><div class="txt"><span class="tag">Left out</span>FILL</div></li>
+      </ul>
+    </section>
+
+    <section id="decisions">
+      <h2>Decisions</h2>
+      <p>Each table lists what an option changes and what it costs the code that uses it. Where only one way fits, the table offers that way or another you name in a comment. The recommended option is shaded, and the stories below assume it until a pick says otherwise.<span class="pick-hint"> Use <strong>Pick</strong> in each table to record your preference; it saves at once, and only you can change your own picks.</span></p>
+
+      <!-- FILL: one block per decision, binary as in D2 where only one way fits. Radio name "pick-Dn", ids "pick-dn-x", status id "status-dn". -->
+      <div class="decision" id="d1">
+        <div class="head" data-point="D1">
+          <div>
+            <span class="ref">D1</span>
+            <h3>FILL: the question</h3>
+            <p class="q">FILL: why the epic leaves it open. Touches S1.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="options">
+            <thead><tr><th>Option</th><th>Change</th><th>Cost for consumers</th></tr></thead>
+            <tbody>
+              <tr class="pt rec" data-point="D1.A" id="d1-a">
+                <td class="opt"><div class="slot"><span class="ref">D1.A</span><span class="pill">Recommended</span><label class="pick" for="pick-d1-a"><input type="radio" name="pick-D1" value="A" id="pick-d1-a"><span class="pick-label">Pick</span></label></div></td>
+                <td>FILL: the concrete change.</td>
+                <td>FILL: measured cost for consumers.</td>
+              </tr>
+              <tr class="pt" data-point="D1.B" id="d1-b">
+                <td class="opt"><div class="slot"><span class="ref">D1.B</span><label class="pick" for="pick-d1-b"><input type="radio" name="pick-D1" value="B" id="pick-d1-b"><span class="pick-label">Pick</span></label></div></td>
+                <td>FILL</td>
+                <td>FILL</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="pick-status" id="status-d1" aria-live="polite"><span class="pick-text">Loading your pick…</span> <span class="pick-note"></span> <button type="button" class="clear" data-decision="D1" hidden>Clear pick</button></p>
+      </div>
+
+      <div class="decision" id="d2">
+        <div class="head" data-point="D2">
+          <div>
+            <span class="ref">D2</span>
+            <h3>FILL: the question, naming the one way</h3>
+            <p class="q">FILL: what the epic leaves open, and why only one way fits. Touches S1.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="options">
+            <thead><tr><th>Option</th><th>Change</th><th>Cost for consumers</th></tr></thead>
+            <tbody>
+              <tr class="pt rec" data-point="D2.A" id="d2-a">
+                <td class="opt"><div class="slot"><span class="ref">D2.A</span><span class="pill">Recommended</span><label class="pick" for="pick-d2-a"><input type="radio" name="pick-D2" value="A" id="pick-d2-a"><span class="pick-label">Pick</span></label></div></td>
+                <td>FILL: the one way.</td>
+                <td>FILL: measured cost for consumers.</td>
+              </tr>
+              <tr class="pt" data-point="D2.B" id="d2-b">
+                <td class="opt"><div class="slot"><span class="ref">D2.B</span><label class="pick" for="pick-d2-b"><input type="radio" name="pick-D2" value="B" id="pick-d2-b"><span class="pick-label">Pick</span></label></div></td>
+                <td>Another way, which you name in a comment on D2.B.</td>
+                <td>Set by that way.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="pick-status" id="status-d2" aria-live="polite"><span class="pick-text">Loading your pick…</span> <span class="pick-note"></span> <button type="button" class="clear" data-decision="D2" hidden>Clear pick</button></p>
+      </div>
+    </section>
+
+    <section id="contract">
+      <h2>Shared contract</h2>
+      <p>Rules every story follows, so the stories only state what differs.</p>
+      <ul class="points">
+        <li class="pt" data-point="C1" id="c1"><span class="ref">C1</span><div class="txt">FILL: e.g. each story passes the checks on its own after merge.</div></li>
+      </ul>
+    </section>
+
+    <section id="stories">
+      <h2>Stories</h2>
+      <p>FILL: one story per unit the epic adds, plus groundwork before them. Say what fixes the order.</p>
+      <!-- FILL: one column per step of the order; stories that can be built side by side share a column. -->
+      <div class="flow" aria-label="Story order">
+        <div class="col"><a href="#s1"><span class="ref">S1</span>FILL: First unit</a></div>
+      </div>
+      <p class="label" style="margin-bottom:1.5rem">FILL: the dependencies in one line</p>
+
+      <!-- FILL: one article per story; refs run on across its sections (S1.1, S1.2, …). A PyPI-lane member's version bump goes in the first story. The script adds each story's ticket card from the page's store, so write no card here. -->
+      <article class="story" id="s1">
+        <div class="head" data-point="S1">
+          <div>
+            <span class="ref">S1</span>
+            <h3>FILL: story title</h3>
+            <dl class="facts"><div><dt>Depends on</dt><dd>FILL: the stories it needs, or nothing</dd></div><div><dt>Decisions</dt><dd>FILL: D1</dd></div></dl>
+            <p class="goal">FILL: one sentence goal.</p>
+          </div>
+        </div>
+        <h4>Changes</h4>
+        <ul class="points">
+          <li class="pt" data-point="S1.1" id="s1-1"><span class="ref">S1.1</span><div class="txt"><p>FILL: file and change.</p><pre><code>FILL: the planned code, escaped for HTML. Keep this block only for a change of 3 to 20 lines that handles something non-trivial.</code></pre></div></li>
+        </ul>
+        <h4>Acceptance criteria</h4>
+        <ul class="points">
+          <li class="pt" data-point="S1.2" id="s1-2"><span class="ref">S1.2</span><div class="txt">FILL: observable behaviour.</div></li>
+        </ul>
+        <h4>Tests</h4>
+        <ul class="points">
+          <li class="pt" data-point="S1.3" id="s1-3"><span class="ref">S1.3</span><div class="txt">FILL: test file and the criteria it covers.</div></li>
+        </ul>
+        <h4>Docs</h4>
+        <ul class="points">
+          <li class="pt" data-point="S1.4" id="s1-4"><span class="ref">S1.4</span><div class="txt">FILL: doc page and section.</div></li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="delivery">
+      <h2>Delivery</h2>
+      <ul class="points">
+        <li class="pt" data-point="P1" id="p1"><span class="ref">P1</span><div class="txt">FILL: pull requests, branches, titles and merge commits by docs/conventions.md.</div></li>
+      </ul>
+      <h4>After the merge</h4>
+      <ul class="points">
+        <li class="pt" data-point="P2" id="p2"><span class="ref">P2</span><div class="txt">FILL: what the release may need to coordinate once the changes have landed, such as consumers that pin the member's version.</div></li>
+      </ul>
+    </section>
+
+    <section id="risks">
+      <h2>Risks and limits</h2>
+      <ul class="points">
+        <li class="pt" data-point="R1" id="r1"><span class="ref">R1</span><div class="txt"><strong>FILL.</strong> FILL</div></li>
+      </ul>
+      <h4>Not in this plan</h4>
+      <ul class="points">
+        <li class="pt" data-point="X1" id="x1"><span class="ref">X1</span><div class="txt">FILL</div></li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<button type="button" class="to-top" id="to-top" aria-label="Back to top" hidden>↑ Top</button>
+
+<script>
+(function () {
+  var ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 3h11v7.5H7l-3 2.5v-2.5H2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+
+  function addButtons() {
+    var points = document.querySelectorAll("[data-point]");
+    for (var i = 0; i < points.length; i++) {
+      var el = points[i];
+      if (el.getAttribute("data-has-btn")) continue;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cmt";
+      b.title = "Comment on " + el.getAttribute("data-point");
+      b.setAttribute("aria-label", b.title);
+      b.setAttribute("aria-expanded", "false");
+      b.innerHTML = ICON + '<span class="cmt-count"></span>';
+      (el.querySelector(".slot") || el).appendChild(b);
+      el.setAttribute("data-has-btn", "1");
+    }
+  }
+
+  // Back to top: shown once the header has scrolled away
+  var toTop = document.getElementById("to-top");
+  function syncToTop() { toTop.hidden = window.scrollY < 480; }
+  window.addEventListener("scroll", syncToTop, { passive: true });
+  syncToTop();
+  toTop.addEventListener("click", function () {
+    window.scrollTo(0, 0);
+    try { document.getElementById("top-heading").focus({ preventScroll: true }); } catch (e) {}
+  });
+
+  if (!window.claude || typeof window.claude.use !== "function") return;
+
+  // Decision picks: each viewer keeps one document, preferences/<their id>.
+  var DECISIONS = Array.prototype.slice.call(document.querySelectorAll('input[name^="pick-"]'))
+    .map(function (r) { return r.name.slice(5); })
+    .filter(function (d, i, all) { return all.indexOf(d) === i; });
+  var picks = {};
+  var prefRef = null;
+  var prefExists = false;
+  var pendingPicks = {};
+  var writes = Promise.resolve();
+  var pickingOff = false;
+
+  function statusEl(d) { return document.getElementById("status-" + d.toLowerCase()); }
+  function note(d, text) { statusEl(d).querySelector(".pick-note").textContent = text; }
+
+  function validOption(d, value) {
+    if (typeof value !== "string") return null;
+    var radios = document.querySelectorAll('input[name="pick-' + d + '"]');
+    for (var i = 0; i < radios.length; i++) if (radios[i].value === value) return value;
+    return null;
+  }
+
+  function renderPicks() {
+    DECISIONS.forEach(function (d) {
+      var chosen = picks[d] || null;
+      var radios = document.querySelectorAll('input[name="pick-' + d + '"]');
+      for (var i = 0; i < radios.length; i++) {
+        var r = radios[i];
+        r.checked = r.value === chosen;
+        r.closest("tr").classList.toggle("picked", r.checked);
+        r.parentNode.querySelector(".pick-label").textContent = r.checked ? "Your pick" : "Pick";
+      }
+      var st = statusEl(d);
+      st.querySelector(".pick-text").textContent = chosen ? "Your pick: " + d + "." + chosen + "." : "No pick yet.";
+      st.querySelector(".clear").hidden = !chosen || pickingOff;
+    });
+    document.getElementById("refine-picks").textContent = "Your picks: " + pickSummary() + ".";
+  }
+
+  function pickSummary() {
+    return DECISIONS.map(function (d) { return picks[d] ? d + "." + picks[d] : d + " not picked"; }).join(", ");
+  }
+
+  function disablePicking(text) {
+    pickingOff = true;
+    var radios = document.querySelectorAll('input[name^="pick-"]');
+    for (var i = 0; i < radios.length; i++) radios[i].disabled = true;
+    DECISIONS.forEach(function (d) { note(d, text); });
+    renderPicks();
+  }
+
+  function savePick(d) {
+    var value = picks[d] || null;
+    pendingPicks[d] = (pendingPicks[d] || 0) + 1;
+    note(d, "Saving…");
+    // One write at a time; each changes only its own decision, and a failure never blocks the next
+    writes = writes.then(function () {
+      var write;
+      if (prefExists) {
+        var patch = { updatedAt: new Date().toISOString() };
+        patch[d] = value;
+        write = prefRef.update(patch);
+      } else {
+        var body = { updatedAt: new Date().toISOString() };
+        DECISIONS.forEach(function (k) { body[k] = picks[k] || null; });
+        write = prefRef.set(body);
+      }
+      return write.then(function () {
+        prefExists = true;
+        pendingPicks[d] -= 1;
+        note(d, value ? "Saved." : "Cleared.");
+      }, function (err) {
+        pendingPicks[d] -= 1;
+        var code = (err && err.code) || "unknown";
+        if (window.console) console.warn("Pick for " + d + " not saved:", err);
+        if (code === "invalid_argument") {
+          disablePicking("Not saved: your access lets you read the decisions but not pick.");
+        } else if (["revoked", "not_granted", "capability_disabled", "capability_removed"].indexOf(code) !== -1) {
+          disablePicking("Not saved: picking is not available in this view (" + code + ").");
+        } else {
+          note(d, "Not saved (" + code + "). Pick again to retry.");
+        }
+      });
+    });
+  }
+
+  Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function (caps) {
+    var db = caps[0], user = caps[1];
+    if (!db || !user) return null;
+    return user.id().then(function (uid) {
+      if (!uid) return;
+      try { prefRef = db.doc("preferences/" + uid); } catch (e) { return; }
+      document.documentElement.classList.add("can-pick");
+      prefRef.onSnapshot(function (snap) {
+        // A cached first snapshot without the document says nothing yet
+        if (!snap.exists && snap.metadata && snap.metadata.fromCache) return;
+        prefExists = snap.exists;
+        var data = (snap.exists && snap.data()) || {};
+        DECISIONS.forEach(function (d) { if (!pendingPicks[d]) picks[d] = validOption(d, data[d]); });
+        renderPicks();
+      }, function () {
+        disablePicking("Picking is not available in this view.");
+      });
+      document.addEventListener("change", function (ev) {
+        var t = ev.target;
+        if (!t || t.type !== "radio" || !t.name || t.name.indexOf("pick-") !== 0 || pickingOff) return;
+        var d = t.name.slice(5);
+        picks[d] = validOption(d, t.value);
+        renderPicks();
+        savePick(d);
+      });
+      document.addEventListener("click", function (ev) {
+        var b = ev.target && ev.target.closest ? ev.target.closest("button.clear") : null;
+        if (!b || pickingOff) return;
+        var d = b.getAttribute("data-decision");
+        picks[d] = null;
+        renderPicks();
+        savePick(d);
+      });
+    });
+  }, function () {});
+
+  // Refine: posts one comment at the top and sends it to the Claude session watching this plan
+  var refineBox = document.getElementById("refine");
+  var refineBtn = document.getElementById("refine-btn");
+  var refineState = document.getElementById("refine-state");
+  var sending = false;
+  var STALE_MS = 30 * 60 * 1000;
+  var refinePending = null;
+  var READY = "Sends the open comments and your picks to Claude, which publishes a refined version here.";
+  var REASONS = {
+    writers_only: "Only editors of this plan can ask Claude to refine it.",
+    no_session: "No Claude session is watching this plan right now. Open the session that made it, then press again.",
+    off: "Asking Claude from this page is off here."
+  };
+
+  function refineBusy() {
+    return !!refinePending && Date.now() - Date.parse(refinePending.sentAt) < STALE_MS;
+  }
+
+  function showRefineBusy() {
+    var busy = refineBusy();
+    document.getElementById("refine-spinner").hidden = !busy;
+    if (busy) {
+      refineBtn.disabled = true;
+      refineState.textContent = "Claude is refining the plan, sent " + when(refinePending.sentAt) + ". This page updates when the new version is published.";
+    }
+    return busy;
+  }
+
+  function checkRefine(comments) {
+    if (sending || showRefineBusy() || typeof comments.canSendToClaude !== "function") return;
+    // The session matches the sender by ID and the busy state lives in the store, so
+    // Refine waits for both; the status snapshot checks again once they are set
+    if (!store || !viewerId) {
+      refineBtn.disabled = true;
+      return;
+    }
+    comments.canSendToClaude().then(function (state) {
+      if (sending) return;
+      refineBtn.disabled = state !== "available";
+      refineState.textContent = state === "available" ? READY : (REASONS[state] || REASONS.off);
+    }, function () {
+      if (sending) return;
+      refineBtn.disabled = true;
+      refineState.textContent = REASONS.off;
+    });
+  }
+
+  function refine(comments) {
+    if (sending || !store || !viewerId) return;
+    sending = true;
+    refineBtn.disabled = true;
+    refineState.textContent = "Sending…";
+    var text = "Refine this plan: address the open comments and my decision picks (" + pickSummary() + "). Sent by " + viewerId + ".";
+    var sentAt = new Date().toISOString();
+    var status = store.doc("status/refine");
+    status.set({ pending: true, sentAt: sentAt, by: viewerId }).catch(function () {}).then(function () {
+      return comments.anchorFor(refineBox);
+    }).then(function (anchor) {
+      return comments.sendToClaude({ anchor: anchor, text: text });
+    }).then(function () {
+      sending = false;
+      refinePending = refinePending || { pending: true, sentAt: sentAt };
+      showRefineBusy();
+    }, function (err) {
+      sending = false;
+      refinePending = null;
+      document.getElementById("refine-spinner").hidden = true;
+      if (status) status.set({ pending: false, failedAt: new Date().toISOString() }).catch(function () {});
+      var code = err && err.code;
+      var msg = {
+        consent_required: "Not sent: allow this page to comment for you, then press again.",
+        forbidden: "Not sent: commenting from this page is off for you here.",
+        claude_unavailable: "Not sent: no Claude session could receive it.",
+        rate_limited: "Not sent: wait a moment, then press again."
+      }[code] || "Not sent. Press again to retry.";
+      refineState.textContent = msg;
+      refineBtn.disabled = code === "forbidden";
+    });
+  }
+
+  // Page comments: each one is a document in comments/, shown under its point for every
+  // viewer. A thread is a root comment (thread: null) plus the replies naming its id.
+  var store = null;
+  var viewer = null;
+  var viewerId = null;
+  var canWrite = false;
+  var claudeComments = null;
+  var pageComments = [];
+  var names = {};
+  var panels = {};
+  var writing = false;
+  var ownExists = false;
+  var ownBytes = 0;
+  var askTimer = null;
+  var viewerIsOwner = false;
+  var commentsSynced = false;
+
+  function pointEl(ref) { return document.querySelector('[data-point="' + CSS.escape(ref) + '"]'); }
+
+  // Each person's comments sit in their own document, comments/<their id>, which the
+  // access rules let only them (and the owner) write, so the document names the author
+  function readComments(snap) {
+    var list = [];
+    snap.docs.forEach(function (doc) {
+      var items = (doc.data() || {}).items;
+      if (!items || typeof items !== "object") return;
+      Object.keys(items).forEach(function (id) {
+        var d = items[id] || {};
+        if (typeof d.point !== "string" || typeof d.text !== "string" || !d.text.trim() || !pointEl(d.point)) return;
+        list.push({
+          id: id,
+          owner: doc.id,
+          point: d.point,
+          text: d.text.slice(0, 4000),
+          thread: typeof d.thread === "string" ? d.thread : null,
+          byClaude: d.byClaude === true,
+          askedClaude: d.askedClaude === true,
+          createdAt: typeof d.createdAt === "string" ? d.createdAt : "",
+          resolved: d.resolved === true
+        });
+      });
+    });
+    return list.sort(function (a, b) { return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0; });
+  }
+
+  function threadsFor(ref) {
+    return pageComments.filter(function (c) { return c.point === ref && !c.thread; }).map(function (root) {
+      return { root: root, replies: pageComments.filter(function (c) { return c.thread === root.id; }) };
+    });
+  }
+
+  // Claude replies through the owner's document, so the owner sees those as Claude;
+  // any other byClaude item names the account it was written through, so a forged one shows whose it is
+  function authorLabel(c) {
+    if (c.byClaude && viewerIsOwner && c.owner === viewerId) return "Claude";
+    var name = names[c.owner] || "Someone";
+    return c.byClaude ? "Claude, via " + name : name;
+  }
+
+  function when(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function messageEl(c, isReply) {
+    var msg = el("div", isReply ? "msg reply" : "msg");
+    var meta = el("p", "msg-meta");
+    meta.appendChild(el("span", "who", authorLabel(c)));
+    var time = el("time", "", when(c.createdAt));
+    time.setAttribute("datetime", c.createdAt);
+    meta.appendChild(document.createTextNode(" · "));
+    meta.appendChild(time);
+    msg.appendChild(meta);
+    msg.appendChild(el("p", "msg-text", c.text));
+    return msg;
+  }
+
+  function askPending(root) {
+    if (!root.askedClaude || Date.now() - Date.parse(root.createdAt) > STALE_MS) return false;
+    // Claude answers in the asker's own document, which no other viewer can write
+    return !pageComments.some(function (c) {
+      return c.thread === root.id && c.byClaude && c.owner === root.owner && c.createdAt > root.createdAt;
+    });
+  }
+
+  function workingEl(text) {
+    var line = el("p", "claude-working");
+    var spin = el("span", "spinner");
+    spin.setAttribute("aria-hidden", "true");
+    line.appendChild(spin);
+    line.appendChild(document.createTextNode(text));
+    return line;
+  }
+
+  function threadEl(t) {
+    var art = el("article", t.root.resolved ? "thread resolved" : "thread");
+    art.setAttribute("data-thread", t.root.id);
+    [t.root].concat(t.replies).forEach(function (c, i) { art.appendChild(messageEl(c, i > 0)); });
+    if (askPending(t.root)) art.appendChild(workingEl("Claude is answering…"));
+    if (canWrite) {
+      var actions = el("div", "thread-actions");
+      var reply = el("button", "btn-link", "Reply");
+      reply.type = "button";
+      reply.setAttribute("data-act", "reply");
+      var resolve = el("button", "btn-link", t.root.resolved ? "Reopen" : "Resolve");
+      resolve.type = "button";
+      resolve.setAttribute("data-act", t.root.resolved ? "reopen" : "resolve");
+      actions.appendChild(reply);
+      if (t.root.owner === viewerId || viewerIsOwner) actions.appendChild(resolve);
+      art.appendChild(actions);
+    }
+    return art;
+  }
+
+  function updateBadges() {
+    var open = {}, any = {};
+    pageComments.forEach(function (c) {
+      if (c.thread) return;
+      any[c.point] = (any[c.point] || 0) + 1;
+      if (!c.resolved) open[c.point] = (open[c.point] || 0) + 1;
+    });
+    var buttons = document.querySelectorAll("[data-point] button.cmt");
+    for (var i = 0; i < buttons.length; i++) {
+      var btn = buttons[i], ref = btn.closest("[data-point]").getAttribute("data-point"), n = open[ref] || 0;
+      btn.querySelector(".cmt-count").textContent = n ? String(n) : "";
+      btn.classList.toggle("has-open", n > 0);
+      btn.classList.toggle("has-any", !n && (any[ref] || 0) > 0);
+      btn.title = n ? ref + ": " + n + " open comment thread" + (n > 1 ? "s" : "") : any[ref] ? ref + ": resolved comments" : "Comment on " + ref;
+      btn.setAttribute("aria-label", btn.title);
+      btn.setAttribute("aria-expanded", panels[ref] ? "true" : "false");
+    }
+  }
+
+  function renderPanel(ref) {
+    var p = panels[ref];
+    if (!p) return;
+    p.panel.appendChild(p.replyForm);
+    p.list.textContent = "";
+    var threads = threadsFor(ref);
+    var open = threads.filter(function (t) { return !t.root.resolved; });
+    var done = threads.filter(function (t) { return t.root.resolved; });
+    if (!open.length) p.list.appendChild(el("p", "empty", done.length ? "No open comments on " + ref + "." : "No comments on " + ref + " yet."));
+    open.forEach(function (t) { p.list.appendChild(threadEl(t)); });
+    if (done.length) {
+      var details = el("details", "resolved-threads");
+      details.open = p.showResolved;
+      details.addEventListener("toggle", function () { p.showResolved = details.open; });
+      details.appendChild(el("summary", "", done.length + " resolved thread" + (done.length > 1 ? "s" : "")));
+      done.forEach(function (t) { details.appendChild(threadEl(t)); });
+      p.list.appendChild(details);
+    }
+    var target = p.replyTo && p.list.querySelector('[data-thread="' + CSS.escape(p.replyTo) + '"]');
+    if (target) target.appendChild(p.replyForm);
+    else { p.replyTo = null; p.replyForm.hidden = true; }
+    p.newForm.hidden = !canWrite;
+    var ask = p.newForm.querySelector('[value="claude"]');
+    var busy = threads.some(function (t) { return askPending(t.root); });
+    ask.disabled = busy;
+    ask.title = busy ? "Claude is still answering a question on " + ref + "." : "";
+  }
+
+  function renderAll() {
+    updateBadges();
+    Object.keys(panels).forEach(renderPanel);
+    renderOverview();
+  }
+
+  // Overview: every thread on the page, in page order, each linking to its point
+  var showResolvedOverview = false;
+
+  function overviewItem(c) {
+    var item = el("li");
+    var target = pointEl(c.point);
+    var link = el("a");
+    link.href = "#" + (target.id || (target.closest("[id]") || {}).id || "");
+    link.setAttribute("data-goto", c.point);
+    link.appendChild(el("span", "ref", c.point));
+    item.appendChild(link);
+    item.appendChild(el("span", "ov-text", c.text.length > 140 ? c.text.slice(0, 140) + "…" : c.text));
+    var replies = pageComments.filter(function (r) { return r.thread === c.id; }).length;
+    var meta = authorLabel(c) + " · " + when(c.createdAt);
+    if (replies) meta += " · " + replies + (replies > 1 ? " replies" : " reply");
+    if (askPending(c)) meta += " · Claude is answering…";
+    item.appendChild(el("span", "ov-meta", meta));
+    return item;
+  }
+
+  function overviewList(roots) {
+    var list = el("ol", "ov-list");
+    roots.forEach(function (c) { list.appendChild(overviewItem(c)); });
+    return list;
+  }
+
+  function renderOverview() {
+    var box = document.getElementById("overview-list");
+    if (!box) return;
+    var order = {};
+    var points = document.querySelectorAll("[data-point]");
+    for (var i = 0; i < points.length; i++) order[points[i].getAttribute("data-point")] = i;
+    var roots = pageComments.filter(function (c) { return !c.thread; }).sort(function (a, b) {
+      return (order[a.point] - order[b.point]) || (a.createdAt < b.createdAt ? -1 : 1);
+    });
+    var open = roots.filter(function (c) { return !c.resolved; });
+    var done = roots.filter(function (c) { return c.resolved; });
+    document.getElementById("overview-title").textContent = "Comments · " +
+      (open.length ? open.length + " open thread" + (open.length > 1 ? "s" : "") : "no open threads") +
+      (done.length ? " · " + done.length + " resolved" : "");
+    box.textContent = "";
+    box.appendChild(open.length ? overviewList(open) : el("p", "empty", "No open comments."));
+    if (done.length) {
+      var details = el("details", "ov-resolved");
+      details.open = showResolvedOverview;
+      details.addEventListener("toggle", function () { showResolvedOverview = details.open; });
+      details.appendChild(el("summary", "", done.length + " resolved thread" + (done.length > 1 ? "s" : "")));
+      details.appendChild(overviewList(done));
+      box.appendChild(details);
+    }
+  }
+
+  function refreshNames() {
+    var ids = pageComments.map(function (c) { return c.owner; }).filter(function (id, i, all) {
+      return id && all.indexOf(id) === i;
+    });
+    if (!ids.length || !viewer) return;
+    viewer.profiles(ids).then(function (profiles) {
+      ids.forEach(function (id) { names[id] = (profiles[id] && profiles[id].name) || ""; });
+      renderAll();
+    });
+  }
+
+  // The store answers invalid_argument both to a write the access rules refuse and to a
+  // document over its 256 KiB limit, so the size of the written document tells them apart.
+  // JSON only approximates the store's own count, hence the margin.
+  var DOC_LIMIT = 256 * 1024;
+
+  function byteLength(value) {
+    return new TextEncoder().encode(JSON.stringify(value)).length;
+  }
+
+  function writeError(err, bytesAfter) {
+    var code = err && err.code;
+    if (code === "invalid_argument") {
+      if ((bytesAfter || 0) > DOC_LIMIT * 0.9) return "Not saved: your comments have reached the store's limit of 256 KiB per person.";
+      // The rules always let the owner write, so only another viewer can be refused
+      if (viewerIsOwner) return "Not saved. Try again.";
+      canWrite = false;
+      renderAll();
+      return "Not saved: your access lets you read comments here, not add them.";
+    }
+    if (code === "quota_exceeded") return "Not saved: the page's comment store is full.";
+    if (code === "resource_exhausted") return "Not saved: too many changes at once. Try again in a moment.";
+    return "Not saved. Try again.";
+  }
+
+  function askClaude(ref, id, text, note) {
+    if (!claudeComments) { note("Saved. Asking Claude is not available here."); return; }
+    note("Saved. Asking Claude…");
+    claudeComments.anchorFor(pointEl(ref)).then(function (anchor) {
+      return claudeComments.sendToClaude({ anchor: anchor, text: "Question on " + ref + " (page comment " + id + " in comments/" + viewerId + "): " + text.slice(0, 3500) });
+    }).then(function () {
+      note("Saved and sent to Claude; the answer appears in this thread.");
+    }, function (err) {
+      note(err && err.code === "claude_unavailable" ? "Saved, but no Claude session could receive it." : "Saved, but not sent to Claude.");
+      // Nothing is on its way, so the thread must not wait for an answer
+      var patch = { items: {} };
+      patch.items[id] = { askedClaude: false };
+      store.doc("comments/" + viewerId).update(patch).catch(function () {});
+    });
+  }
+
+  function save(ref, threadId, textarea, note, toClaude) {
+    var text = textarea.value.trim();
+    if (!text) { note("Write a comment first."); return; }
+    // Until the server confirms whether the viewer's document exists, a set could replace it
+    if (!ownExists && !commentsSynced) { note("Comments are still loading. Try again in a moment."); return; }
+    if (writing) return;
+    writing = true;
+    note("Saving…");
+    var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    var item = { point: ref, thread: threadId, text: text, createdAt: new Date().toISOString() };
+    if (!threadId) item.resolved = false;
+    if (toClaude) item.askedClaude = true;
+    var patch = { items: {} };
+    patch.items[id] = item;
+    var own = store.doc("comments/" + viewerId);
+    (ownExists ? own.update(patch) : own.set(patch)).then(function () {
+      writing = false;
+      ownExists = true;
+      textarea.value = "";
+      if (toClaude) askClaude(ref, threadId || id, text, note);
+      else note("");
+      if (threadId && panels[ref]) { panels[ref].replyTo = null; panels[ref].replyForm.hidden = true; }
+    }, function (err) {
+      writing = false;
+      note(writeError(err, ownBytes + byteLength(patch)));
+    });
+  }
+
+  function panelMarkup(ref) {
+    var id = ref.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return '<div class="thread-list"></div>' +
+      '<form class="reply-form" hidden><label class="sr-only" for="reply-' + id + '">Reply</label>' +
+      '<textarea id="reply-' + id + '" rows="2" maxlength="4000" placeholder="Reply"></textarea>' +
+      '<div class="form-actions"><button type="submit" class="btn-primary">Reply</button>' +
+      '<button type="button" class="btn-link" data-act="cancel-reply">Cancel</button>' +
+      '<span class="form-note" aria-live="polite"></span></div></form>' +
+      '<form class="new-form"><label class="form-label" for="new-' + id + '">New comment on ' + ref + '</label>' +
+      '<textarea id="new-' + id + '" rows="3" maxlength="4000"></textarea>' +
+      '<div class="form-actions"><button type="submit" class="btn-primary" value="plain">Comment</button>' +
+      '<button type="submit" class="btn-secondary" value="claude" hidden>Comment and ask Claude</button>' +
+      '<span class="form-note" aria-live="polite"></span></div></form>';
+  }
+
+  function togglePanel(point) {
+    var ref = point.getAttribute("data-point");
+    if (panels[ref]) {
+      panels[ref].host.remove();
+      delete panels[ref];
+      updateBadges();
+      return;
+    }
+    var host, cell;
+    if (point.tagName === "TR") {
+      host = el("tr", "thread-row");
+      cell = el("td");
+      cell.colSpan = point.children.length;
+      host.appendChild(cell);
+      point.parentNode.insertBefore(host, point.nextSibling);
+    } else {
+      host = cell = el("div", "threads-host");
+      point.appendChild(host);
+    }
+    var panel = el("div", "threads");
+    panel.innerHTML = panelMarkup(ref);
+    cell.appendChild(panel);
+    var p = panels[ref] = {
+      host: host, panel: panel, list: panel.querySelector(".thread-list"),
+      replyForm: panel.querySelector(".reply-form"), newForm: panel.querySelector(".new-form"),
+      replyTo: null, showResolved: false
+    };
+    var newNote = function (t) { p.newForm.querySelector(".form-note").textContent = t; };
+    var replyNote = function (t) { p.replyForm.querySelector(".form-note").textContent = t; };
+    p.newForm.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      save(ref, null, p.newForm.querySelector("textarea"), newNote, !!ev.submitter && ev.submitter.value === "claude");
+    });
+    p.replyForm.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if (p.replyTo) save(ref, p.replyTo, p.replyForm.querySelector("textarea"), replyNote, false);
+    });
+    panel.addEventListener("click", function (ev) {
+      var act = ev.target.getAttribute && ev.target.getAttribute("data-act");
+      var thread = ev.target.closest && ev.target.closest("[data-thread]");
+      if (act === "cancel-reply") { p.replyTo = null; p.replyForm.hidden = true; return; }
+      if (!thread) return;
+      var tid = thread.getAttribute("data-thread");
+      if (act === "reply") {
+        p.replyTo = tid;
+        replyNote("");
+        thread.appendChild(p.replyForm);
+        p.replyForm.hidden = false;
+        p.replyForm.querySelector("textarea").focus();
+      } else if (act === "resolve" || act === "reopen") {
+        var root = pageComments.filter(function (c) { return c.id === tid; })[0];
+        if (!root) return;
+        var patch = { items: {} };
+        patch.items[tid] = { resolved: act === "resolve", resolvedBy: viewerId, resolvedAt: new Date().toISOString() };
+        store.doc("comments/" + root.owner).update(patch).catch(function (err) { newNote(writeError(err)); });
+      }
+    });
+    if (claudeComments && canWrite && typeof claudeComments.canSendToClaude === "function") {
+      claudeComments.canSendToClaude().then(function (state) {
+        p.newForm.querySelector('[value="claude"]').hidden = state !== "available";
+      }, function () {});
+    }
+    renderPanel(ref);
+    updateBadges();
+    if (canWrite && !threadsFor(ref).length) p.newForm.querySelector("textarea").focus();
+  }
+
+  // Ticket cards: one YouTrack ticket per story, kept in tickets/<story ref>. Claude
+  // writes them; the owner edits them, files the ticket and enters its key.
+  var KEY_PATTERN = /^[A-Z]+-\d+$/;
+  var renderTickets = function () {};
+
+  function startTickets() {
+    var tickets = {};
+    var cards = {};
+    var orphans = null;
+    var regenTimer = null;
+
+    function storyFor(ref) {
+      var head = document.querySelector('article.story > .head[data-point="' + CSS.escape(ref) + '"]');
+      return head ? head.parentNode : null;
+    }
+
+    function readTicket(doc) {
+      var d = doc.data() || {};
+      var refs = function (v) { return Array.isArray(v) ? v.filter(function (s) { return typeof s === "string"; }) : []; };
+      var regen = d.regenerate && typeof d.regenerate === "object" ? d.regenerate : {};
+      return {
+        ref: doc.id,
+        title: typeof d.title === "string" ? d.title : "",
+        description: typeof d.description === "string" ? d.description : "",
+        key: typeof d.key === "string" && KEY_PATTERN.test(d.key) ? d.key : null,
+        state: d.state === "needs-changes" || d.state === "confirm-delete" ? d.state : "current",
+        changed: refs(d.changed),
+        replacedBy: refs(d.replacedBy),
+        changedIn: typeof d.changedIn === "number" ? d.changedIn : null,
+        regenSentAt: regen.pending === true && typeof regen.sentAt === "string" ? regen.sentAt : null
+      };
+    }
+
+    function regenerating(t) {
+      return !!t.regenSentAt && Date.now() - Date.parse(t.regenSentAt) < STALE_MS;
+    }
+
+    function ticketError(err) {
+      return {
+        invalid_argument: "Not saved: this card may have been deleted. Reload the page.",
+        quota_exceeded: "Not saved: the page's store is full.",
+        resource_exhausted: "Not saved: too many changes at once. Try again in a moment."
+      }[err && err.code] || "Not saved. Try again.";
+    }
+
+    function field(c, name, labelText, tag, copyLabel) {
+      var box = el("div", "ticket-field");
+      var row = el("div", "ticket-label-row");
+      var label = el("label", "", labelText);
+      var input = el(tag, name === "key" ? "ticket-key" : "");
+      input.id = "ticket-" + name + "-" + c.ref.toLowerCase();
+      label.htmlFor = input.id;
+      if (tag === "input") input.type = "text";
+      row.appendChild(label);
+      if (copyLabel) {
+        var copy = el("button", "btn-secondary copy", copyLabel);
+        copy.type = "button";
+        copy.addEventListener("click", function () { copyField(c, input, name); });
+        row.appendChild(copy);
+      }
+      box.appendChild(row);
+      box.appendChild(input);
+      input.addEventListener("input", function () { input.dataset.dirty = "1"; });
+      input.addEventListener("change", function () { saveField(c, name, input); });
+      c.root.appendChild(box);
+      return input;
+    }
+
+    function buildCard(ref) {
+      var c = { ref: ref, writes: Promise.resolve() };
+      c.root = el("section", "ticket");
+      c.root.setAttribute("aria-label", "Ticket for " + ref);
+      var head = el("div", "ticket-head");
+      c.heading = el("h4", "", "Ticket");
+      c.pill = el("span", "ticket-state");
+      head.appendChild(c.heading);
+      head.appendChild(c.pill);
+      c.root.appendChild(head);
+      c.notice = el("p", "ticket-notice");
+      c.root.appendChild(c.notice);
+      c.key = field(c, "key", "YouTrack key", "input", null);
+      c.key.placeholder = "GSI-1234";
+      c.key.autocomplete = "off";
+      c.key.spellcheck = false;
+      c.title = field(c, "title", "Title", "input", "Copy");
+      c.title.maxLength = 500;
+      c.desc = field(c, "description", "Description", "textarea", "Copy Markdown");
+      c.desc.rows = 12;
+      c.desc.maxLength = 20000;
+      c.working = el("div");
+      c.root.appendChild(c.working);
+      c.actions = el("div", "ticket-actions");
+      c.regen = el("button", "btn-primary", "Regenerate description");
+      c.regen.type = "button";
+      c.regen.addEventListener("click", function () { regenerate(c); });
+      c.del = el("button", "btn-secondary", "Delete card");
+      c.del.type = "button";
+      c.del.addEventListener("click", function () { deleteCard(c); });
+      c.note = el("span", "form-note");
+      c.note.setAttribute("aria-live", "polite");
+      c.actions.appendChild(c.regen);
+      c.actions.appendChild(c.del);
+      c.actions.appendChild(c.note);
+      c.root.appendChild(c.actions);
+      c.say = function (text) {
+        c.note.textContent = text;
+        if (text) c.actions.hidden = false;
+      };
+      return c;
+    }
+
+    // The viewer lets the page write to the clipboard only from the click itself;
+    // where it refuses, the text stays selected for the viewer's own copy
+    function copyField(c, input, name) {
+      var done = name === "title" ? "Title copied." : "Description copied as Markdown.";
+      var fallback = function () {
+        input.focus();
+        input.select();
+        c.say("Copying is blocked here: press Ctrl+C or ⌘C to copy the selected text.");
+      };
+      try {
+        navigator.clipboard.writeText(input.value).then(function () { c.say(done); }, fallback);
+      } catch (e) {
+        fallback();
+      }
+    }
+
+    function saveField(c, name, input) {
+      var t = tickets[c.ref];
+      if (!t || !viewerIsOwner || input.readOnly) return;
+      var patch = { updatedAt: new Date().toISOString() };
+      var sent = input.value;
+      if (name === "key") {
+        sent = input.value = input.value.trim().toUpperCase();
+        if (sent && !KEY_PATTERN.test(sent)) {
+          input.setAttribute("aria-invalid", "true");
+          c.say("Not saved: a YouTrack key looks like GSI-1234.");
+          return;
+        }
+        input.removeAttribute("aria-invalid");
+        patch.key = sent || null;
+      } else {
+        patch[name] = sent;
+        patch.edited = true;
+        // Editing a flagged description settles it, as a regenerate would
+        if (name === "description" && t.state === "needs-changes") {
+          patch.state = "current";
+          patch.changed = [];
+        }
+      }
+      c.say("Saving…");
+      c.writes = c.writes.then(function () {
+        return store.doc("tickets/" + c.ref).update(patch).then(function () {
+          if (input.value === sent) delete input.dataset.dirty;
+          c.say("Saved.");
+        }, function (err) {
+          c.say(ticketError(err));
+        });
+      });
+    }
+
+    function regenerate(c) {
+      var t = tickets[c.ref];
+      if (!t || regenerating(t) || !claudeComments || !viewerIsOwner) return;
+      var doc = store.doc("tickets/" + c.ref);
+      var sentAt = new Date().toISOString();
+      c.regen.disabled = true;
+      c.say("Sending…");
+      c.writes = c.writes.then(function () {
+        return doc.update({ regenerate: { pending: true, sentAt: sentAt, by: viewerId } });
+      }).then(function () {
+        return claudeComments.anchorFor(c.root);
+      }).then(function (anchor) {
+        return claudeComments.sendToClaude({ anchor: anchor, text: "Regenerate the ticket description for " + c.ref + " (tickets/" + c.ref + "). Sent by " + viewerId + "." });
+      }).then(function () {
+        c.say("");
+      }, function (err) {
+        c.regen.disabled = false;
+        c.say({
+          consent_required: "Not sent: allow this page to comment for you, then press again.",
+          claude_unavailable: "Not sent: no Claude session could receive it.",
+          rate_limited: "Not sent: wait a moment, then press again."
+        }[err && err.code] || "Not sent. Press again to retry.");
+        // Nothing is on its way, so the card must not wait for an answer
+        return doc.update({ regenerate: { pending: false, failedAt: new Date().toISOString() } }).catch(function () {});
+      });
+    }
+
+    function deleteCard(c) {
+      if (!viewerIsOwner) return;
+      c.del.disabled = true;
+      c.say("Deleting…");
+      c.writes = c.writes.then(function () {
+        return store.doc("tickets/" + c.ref).delete().then(null, function () {
+          c.del.disabled = false;
+          c.say("Not deleted. Try again.");
+        });
+      });
+    }
+
+    function noticeFor(t, orphan) {
+      var rev = t.changedIn ? " in revision " + t.changedIn : "";
+      if (t.state === "confirm-delete" || orphan) {
+        var dropped = "The plan dropped this story" + rev + (t.replacedBy.length ? ", replaced by " + t.replacedBy.join(", ") : "") + ".";
+        if (!viewerIsOwner) return dropped;
+        return dropped + " Changes on this card did not carry over: copy what you still need, then delete the card." +
+          (t.key ? " Close or relink " + t.key + " in YouTrack." : "");
+      }
+      if (t.state === "needs-changes") {
+        var changed = "The story changed" + rev + (t.changed.length ? ": " + t.changed.join(", ") : "") + ".";
+        if (!viewerIsOwner) return changed + " This ticket text is out of date.";
+        return changed + " Regenerate the description or edit it; either clears this mark." +
+          (t.key ? " Then update " + t.key + " in YouTrack." : "");
+      }
+      return "";
+    }
+
+    // Never overwrite what the owner is typing; their own save writes it back
+    function setValue(input, value) {
+      if (document.activeElement === input || input.dataset.dirty) return;
+      if (input.value !== value) input.value = value;
+    }
+
+    function showIssue(story, key) {
+      var facts = story && story.querySelector(".head dl.facts");
+      if (!facts) return;
+      var item = facts.querySelector("[data-issue]");
+      if (!key) {
+        if (item) item.remove();
+        return;
+      }
+      if (!item) {
+        item = el("div");
+        item.setAttribute("data-issue", "");
+        item.appendChild(el("dt", "", "Issue"));
+        item.appendChild(el("dd"));
+        facts.appendChild(item);
+      }
+      item.lastChild.textContent = key;
+    }
+
+    // A card whose story is gone has no story to sit in, so it waits at the end of Stories
+    function orphanBox() {
+      if (!orphans) {
+        orphans = el("div", "orphan-tickets");
+        orphans.appendChild(el("h3", "", "Ticket cards pending deletion"));
+        orphans.appendChild(el("p", "", "Their stories have left the plan."));
+        document.getElementById("stories").appendChild(orphans);
+      }
+      return orphans;
+    }
+
+    function renderCard(t) {
+      var c = cards[t.ref] || (cards[t.ref] = buildCard(t.ref));
+      var story = storyFor(t.ref);
+      var host = story || orphanBox();
+      if (c.root.parentNode !== host) host.appendChild(c.root);
+      var busy = regenerating(t);
+      var flag = t.state === "confirm-delete" || !story ? "Confirm deletion" : t.state === "needs-changes" ? "Needs changes" : "";
+      c.heading.textContent = story ? "Ticket" : "Ticket for " + t.ref;
+      c.pill.textContent = flag;
+      c.pill.hidden = !flag;
+      c.root.classList.toggle("is-flagged", !!flag);
+      c.notice.textContent = noticeFor(t, !story);
+      c.notice.hidden = !c.notice.textContent;
+      setValue(c.key, t.key || "");
+      setValue(c.title, t.title);
+      setValue(c.desc, t.description);
+      c.key.readOnly = c.title.readOnly = !viewerIsOwner;
+      c.desc.readOnly = !viewerIsOwner || busy;
+      c.working.textContent = "";
+      if (busy) c.working.appendChild(workingEl("Claude is regenerating the description, sent " + when(t.regenSentAt) + "."));
+      c.working.hidden = !busy;
+      c.regen.hidden = !(viewerIsOwner && claudeComments && story && t.state === "needs-changes");
+      c.regen.disabled = busy;
+      c.del.hidden = !(viewerIsOwner && (t.state === "confirm-delete" || !story));
+      c.actions.hidden = c.regen.hidden && c.del.hidden && !c.note.textContent;
+      showIssue(story, t.key);
+    }
+
+    renderTickets = function () {
+      Object.keys(cards).forEach(function (ref) {
+        if (tickets[ref]) return;
+        cards[ref].root.remove();
+        showIssue(storyFor(ref), null);
+        delete cards[ref];
+      });
+      Object.keys(tickets).forEach(function (ref) { renderCard(tickets[ref]); });
+      if (orphans) orphans.hidden = !orphans.querySelector(".ticket");
+    };
+
+    store.collection("tickets").limit(200).onSnapshot(function (snap) {
+      tickets = {};
+      snap.docs.forEach(function (doc) {
+        if (/^S\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc);
+      });
+      renderTickets();
+      if (!regenTimer && Object.keys(tickets).some(function (ref) { return tickets[ref].regenSentAt; })) {
+        // Re-render now and then, so a request past its time limit frees its button again
+        regenTimer = setInterval(function () { if (!document.hidden) renderTickets(); }, 60000);
+      }
+    }, function () {});
+  }
+
+  Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function (caps) {
+    if (!caps[0] || !caps[1]) return null;
+    store = caps[0];
+    viewer = caps[1];
+    return Promise.all([viewer.id(), viewer.can("data.write"), viewer.isOwner()]).then(function (facts) {
+      viewerId = facts[0];
+      canWrite = !!viewerId && facts[1] !== false;
+      viewerIsOwner = facts[2] === true;
+      addButtons();
+      document.documentElement.classList.add("can-comment");
+      startTickets();
+      document.addEventListener("click", function (ev) {
+        var btn = ev.target && ev.target.closest ? ev.target.closest("button.cmt") : null;
+        var point = btn ? btn.closest("[data-point]") : null;
+        if (point) togglePanel(point);
+      });
+      var overview = document.getElementById("comment-overview");
+      overview.hidden = false;
+      overview.addEventListener("click", function (ev) {
+        var link = ev.target && ev.target.closest ? ev.target.closest("a[data-goto]") : null;
+        var ref = link ? link.getAttribute("data-goto") : null;
+        var point = ref ? pointEl(ref) : null;
+        if (!point) return;
+        ev.preventDefault();
+        if (!panels[ref]) togglePanel(point);
+        point.scrollIntoView({ block: "start" });
+      });
+      store.doc("status/refine").onSnapshot(function (snap) {
+        var d = snap.exists ? snap.data() : null;
+        refinePending = d && d.pending === true && typeof d.sentAt === "string" ? d : null;
+        if (!showRefineBusy() && claudeComments) checkRefine(claudeComments);
+      }, function () {});
+      store.collection("comments").limit(1000).onSnapshot(function (snap) {
+        pageComments = readComments(snap);
+        if (!(snap.metadata && snap.metadata.fromCache)) commentsSynced = true;
+        var hasOwn = snap.docs.some(function (doc) { return doc.id === viewerId; });
+        // A cached snapshot without the document must not turn the next write into a replacing set
+        if (hasOwn || !(snap.metadata && snap.metadata.fromCache)) ownExists = hasOwn;
+        snap.docs.forEach(function (doc) { if (doc.id === viewerId) ownBytes = byteLength(doc.data()); });
+        if (!askTimer && pageComments.some(function (c) { return c.askedClaude; })) {
+          // Re-render now and then, so an ask past its time limit frees its button again
+          askTimer = setInterval(function () { if (!document.hidden) renderAll(); }, 60000);
+        }
+        renderAll();
+        refreshNames();
+      }, function () {});
+    });
+  }, function () {});
+
+  // Only the owner gets Refine and "Comment and ask Claude": both wake the owner's session.
+  // The session checks the sender too, since an editor can send through claude.ai itself.
+  Promise.all([window.claude.use("comments"), window.claude.use("user")]).then(function (caps) {
+    var comments = caps[0], user = caps[1];
+    if (!comments || !user) return null;
+    return user.isOwner().then(function (owner) {
+      if (!owner) return;
+      refineBox.hidden = false;
+      checkRefine(comments);
+      // The session list is learned asynchronously, so re-check while the page is in view
+      setInterval(function () { if (!document.hidden) checkRefine(comments); }, 20000);
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) checkRefine(comments); });
+      window.addEventListener("focus", function () { checkRefine(comments); });
+      refineBtn.addEventListener("click", function () { refine(comments); });
+      claudeComments = comments;
+      renderTickets();
+    });
+  }, function () {});
+})();
+</script>
