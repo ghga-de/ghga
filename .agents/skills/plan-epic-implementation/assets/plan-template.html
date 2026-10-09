@@ -431,6 +431,7 @@ tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
 .changes p { margin: 0 0 0.5rem; font-size: var(--step--1); color: var(--muted); }
 .changes ul { margin: 0 0 0.75rem; padding-left: 1.1rem; font-size: 0.95rem; }
 .changes li { margin-bottom: 0.3rem; }
+.changes li .ref { padding: 0; margin-right: 0.3rem; color: var(--accent); }
 
 /* Decision picks */
 .pick {
@@ -527,7 +528,7 @@ dl.facts dd { margin: 0; }
   <nav class="toc" aria-label="Contents">
     <p>Contents</p>
     <ol>
-      <li><a href="#findings">What the code adds</a></li>
+      <li><a href="#gaps">Gaps in the epic</a></li>
       <li><a href="#decisions">Decisions</a></li>
       <li><a href="#contract">Shared contract</a></li>
       <li><a href="#stories">Stories</a>
@@ -560,31 +561,31 @@ dl.facts dd { margin: 0; }
         <summary><span id="overview-title">Comments</span></summary>
         <div id="overview-list"></div>
       </details>
-      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list the changes by ref, one line each. -->
+      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. -->
       <details class="changes" id="refine-changes" hidden>
         <summary>What changed in revision N</summary>
         <p>Refined from revision N-1.</p>
         <ul>
-          <li>FILL</li>
+          <li><span class="ref">S1.2</span> FILL: one-line recap of the change.</li>
         </ul>
       </details>
     </header>
 
-    <section id="findings">
-      <h2>What the code adds to the epic</h2>
-      <p>Facts from the current source that the epic does not state. Each one explains a rule, a story detail or a decision further down.</p>
+    <section id="gaps">
+      <h2>Gaps in the epic</h2>
+      <p>What the epic leaves out, leaves open or gets wrong against the current code. Each gap says what the plan does about it: a decision, a rule or a story detail further down.</p>
       <ul class="points">
-        <!-- FILL: one li per finding. Say what the code does, why it matters and what the plan does about it, with refs. Tag "d" links a decision. -->
-        <li class="pt" data-point="F1" id="f1"><span class="ref">F1</span><div class="txt"><span class="tag d">D1</span>FILL</div></li>
-        <li class="pt" data-point="F2" id="f2"><span class="ref">F2</span><div class="txt"><span class="tag">Typing</span>FILL</div></li>
+        <!-- FILL: one li per gap, tagged with its kind: Left out, Left open, Contradicted or Unverifiable. Say what the epic says or omits, what the code does, why it matters and what the plan does about it, with refs. Tag "d" links a decision. -->
+        <li class="pt" data-point="G1" id="g1"><span class="ref">G1</span><div class="txt"><span class="tag">Left open</span><span class="tag d">D1</span>FILL</div></li>
+        <li class="pt" data-point="G2" id="g2"><span class="ref">G2</span><div class="txt"><span class="tag">Left out</span>FILL</div></li>
       </ul>
     </section>
 
     <section id="decisions">
       <h2>Decisions</h2>
-      <p>Each table lists what an option changes and what it costs the code that uses it. The recommended option is shaded, and the stories below assume it until a pick says otherwise.<span class="pick-hint"> Use <strong>Pick</strong> in each table to record your preference; it saves at once, and only you can change your own picks.</span></p>
+      <p>Each table lists what an option changes and what it costs the code that uses it. Where only one way fits, the table offers that way or another you name in a comment. The recommended option is shaded, and the stories below assume it until a pick says otherwise.<span class="pick-hint"> Use <strong>Pick</strong> in each table to record your preference; it saves at once, and only you can change your own picks.</span></p>
 
-      <!-- FILL: one block per decision. Radio name "pick-Dn", ids "pick-dn-x", status id "status-dn". -->
+      <!-- FILL: one block per decision, binary as in D2 where only one way fits. Radio name "pick-Dn", ids "pick-dn-x", status id "status-dn". -->
       <div class="decision" id="d1">
         <div class="head" data-point="D1">
           <div>
@@ -612,6 +613,34 @@ dl.facts dd { margin: 0; }
         </div>
         <p class="pick-status" id="status-d1" aria-live="polite"><span class="pick-text">Loading your pick…</span> <span class="pick-note"></span> <button type="button" class="clear" data-decision="D1" hidden>Clear pick</button></p>
       </div>
+
+      <div class="decision" id="d2">
+        <div class="head" data-point="D2">
+          <div>
+            <span class="ref">D2</span>
+            <h3>FILL: the question, naming the one way</h3>
+            <p class="q">FILL: what the epic leaves open, and why only one way fits. Touches S1.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="options">
+            <thead><tr><th>Option</th><th>Change</th><th>Cost for consumers</th></tr></thead>
+            <tbody>
+              <tr class="pt rec" data-point="D2.A" id="d2-a">
+                <td class="opt"><div class="slot"><span class="ref">D2.A</span><span class="pill">Recommended</span><label class="pick" for="pick-d2-a"><input type="radio" name="pick-D2" value="A" id="pick-d2-a"><span class="pick-label">Pick</span></label></div></td>
+                <td>FILL: the one way.</td>
+                <td>FILL: measured cost for consumers.</td>
+              </tr>
+              <tr class="pt" data-point="D2.B" id="d2-b">
+                <td class="opt"><div class="slot"><span class="ref">D2.B</span><label class="pick" for="pick-d2-b"><input type="radio" name="pick-D2" value="B" id="pick-d2-b"><span class="pick-label">Pick</span></label></div></td>
+                <td>Another way, which you name in a comment on D2.B.</td>
+                <td>Set by that way.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="pick-status" id="status-d2" aria-live="polite"><span class="pick-text">Loading your pick…</span> <span class="pick-note"></span> <button type="button" class="clear" data-decision="D2" hidden>Clear pick</button></p>
+      </div>
     </section>
 
     <section id="contract">
@@ -624,14 +653,14 @@ dl.facts dd { margin: 0; }
 
     <section id="stories">
       <h2>Stories</h2>
-      <p>FILL: one story per unit the epic adds, plus groundwork before them and the release after them. Say what fixes the order.</p>
+      <p>FILL: one story per unit the epic adds, plus groundwork before them. Say what fixes the order.</p>
       <div class="flow" aria-label="Story order">
         <div class="col"><a href="#s0"><span class="ref">S0</span>Groundwork</a></div>
         <div class="col"><a href="#s1"><span class="ref">S1</span>First unit</a></div>
       </div>
       <p class="label" style="margin-bottom:1.5rem">FILL: the dependencies in one line</p>
 
-      <!-- FILL: one article per story; refs run on across its sections (S1.1, S1.2, …). -->
+      <!-- FILL: one article per story; refs run on across its sections (S1.1, S1.2, …). A PyPI-lane member's version bump goes in the first story. -->
       <article class="story" id="s1">
         <div class="head" data-point="S1">
           <div>
@@ -664,6 +693,10 @@ dl.facts dd { margin: 0; }
       <h2>Delivery</h2>
       <ul class="points">
         <li class="pt" data-point="P1" id="p1"><span class="ref">P1</span><div class="txt">FILL: pull requests, branches, titles and merge commits by docs/conventions.md.</div></li>
+      </ul>
+      <h4>After the merge</h4>
+      <ul class="points">
+        <li class="pt" data-point="P2" id="p2"><span class="ref">P2</span><div class="txt">FILL: what the release may need to coordinate once the changes have landed, such as consumers that pin the member's version.</div></li>
       </ul>
     </section>
 
@@ -960,8 +993,10 @@ dl.facts dd { margin: 0; }
     });
   }
 
-  // A reply by Claude names the account it was written through, so a forged one shows whose it is
+  // Claude replies through the owner's document, so the owner sees those as Claude;
+  // any other byClaude item names the account it was written through, so a forged one shows whose it is
   function authorLabel(c) {
+    if (c.byClaude && viewerIsOwner && c.owner === viewerId) return "Claude";
     var name = names[c.owner] || "Someone";
     return c.byClaude ? "Claude, via " + name : name;
   }

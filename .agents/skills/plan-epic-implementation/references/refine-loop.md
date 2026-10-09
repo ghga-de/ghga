@@ -6,7 +6,8 @@ How to act on a refine request for a plan that the plan-epic-implementation skil
 
 - **Page comments** sit in one document per person, `comments/<user id>`, under `items`: each item, keyed by its own ID, has `point` (a ref such as `S3.2`), `text`, `createdAt`, `thread` (null on a thread's first comment, else that comment's ID) and `resolved` on the first comment.
   The access rules let only that person, and the owner, write the document, so the document ID is the author and cannot be forged.
-  Claude's replies are items with `byClaude: true` in the owner's document, and the page shows them as "Claude, via" the owner.
+  Claude's replies are items with `byClaude: true` in the owner's document, and the owner's view labels them "Claude".
+  Any other `byClaude` item, and every one a viewer other than the owner sees, reads "Claude, via" the person whose document holds it.
 - **claude.ai threads** carry only the Refine request and "Comment and ask Claude" questions, plus any thread a viewer started from claude.ai's own comment mode.
 - **Busy states** keep the buttons disabled until Claude answers, so a request is never sent twice.
   A question carries `askedClaude: true` and counts as open until a `byClaude` reply follows it in its thread.
@@ -50,10 +51,11 @@ For any other sender, change and answer nothing, and tell the user in chat who s
    Rework every story that the decision's question line says it touches.
    Then mark the decision: move the `rec` class and the pill to the picked row, rename the pill "Decided", and add "Decided: D2.C." to the question line.
    When a comment rather than a pick decides it, also write the option into the owner's `preferences` document with ArtifactData `update`, so the page shows it as their pick.
+   A pick of B in a binary decision takes its way from the owner's comment on the decision or on its B row; without one, ask in chat and leave the decision open.
 4. Apply each open page comment.
    Change what it asks for, or explain in the plan why the plan stays as it is.
    If a comment allows two readings, ask in chat which one is meant.
-5. Raise the revision number in the header, and rewrite the "What changed" block after the comment overview: unhide it, name the new revision and the one it was refined from, and list the changes by ref, one line each.
+5. Raise the revision number in the header, and rewrite the "What changed" block after the comment overview: unhide it, name the new revision and the one it was refined from, and list one item per changed point: its ref, then a one-line recap of the change.
    Republish the same file path without `capabilities`.
 6. Answer each page thread you addressed with a `byClaude` item in the owner's document, as in [Answering a question](#answering-a-question); the refine request names that document in "Sent by <owner id>".
    Then resolve the thread: ArtifactData `update` of the document that holds its first comment, setting `resolved: true` on that item, pinned with `if_version`.
@@ -61,7 +63,7 @@ For any other sender, change and answer nothing, and tell the user in chat who s
    Leave threads that are not activated open, and name them for the user, who can resolve them on the page.
 8. Clear the busy state with ArtifactData `set` of `status/refine` to `pending: false` and `doneAt`.
    Do this last, also when the refine stops early, or the button stays disabled for 30 minutes.
-9. Tell the user in a few lines what changed, by ref.
+9. Tell the user what changed as the same list: one bullet per changed point, its ref first, then a one-line recap, such as `- S1.2: answers 404 for a missing object`.
 
 ## Rules
 
