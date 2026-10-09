@@ -519,6 +519,68 @@ dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; }
 .goal { margin: 0; }
 
+/* Ticket cards: one YouTrack ticket per story, filled from the page's store */
+.ticket {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.25rem 0 0.5rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.ticket.is-flagged { border-color: var(--accent); }
+.ticket-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.75rem; }
+.ticket-head h4 { margin: 0; }
+.ticket-state {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  white-space: nowrap;
+}
+.ticket-notice {
+  margin: 0;
+  font-size: var(--step--1);
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 5px 5px 0;
+}
+.ticket-field { display: grid; gap: 0.25rem; min-width: 0; }
+.ticket-label-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.3rem 0.5rem; }
+.ticket-field label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ticket input, .ticket textarea {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--body);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 0.35rem 0.55rem;
+}
+.ticket input.ticket-key { width: 10rem; max-width: 100%; font-family: var(--mono); font-size: 0.85rem; }
+.ticket textarea { min-height: 12rem; resize: vertical; font-family: var(--mono); font-size: 0.8rem; line-height: 1.5; }
+.ticket input[readonly], .ticket textarea[readonly] { background: var(--code); }
+.ticket [aria-invalid="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.ticket .copy { font-size: var(--step--1); padding: 0.15rem 0.6rem; }
+.ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.ticket-actions .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.orphan-tickets { margin-top: 1.5rem; }
+.orphan-tickets > p { color: var(--muted); }
+
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 </style>
@@ -661,7 +723,7 @@ dl.facts dd { margin: 0; }
       </div>
       <p class="label" style="margin-bottom:1.5rem">FILL: the dependencies in one line</p>
 
-      <!-- FILL: one article per story; refs run on across its sections (S1.1, S1.2, …). A PyPI-lane member's version bump goes in the first story. -->
+      <!-- FILL: one article per story; refs run on across its sections (S1.1, S1.2, …). A PyPI-lane member's version bump goes in the first story. The script adds each story's ticket card from the page's store, so write no card here. -->
       <article class="story" id="s1">
         <div class="head" data-point="S1">
           <div>
@@ -1309,6 +1371,310 @@ dl.facts dd { margin: 0; }
     if (canWrite && !threadsFor(ref).length) p.newForm.querySelector("textarea").focus();
   }
 
+  // Ticket cards: one YouTrack ticket per story, kept in tickets/<story ref>. Claude
+  // writes them; the owner edits them, files the ticket and enters its key.
+  var KEY_PATTERN = /^[A-Z]+-\d+$/;
+  var renderTickets = function () {};
+
+  function startTickets() {
+    var tickets = {};
+    var cards = {};
+    var orphans = null;
+    var regenTimer = null;
+
+    function storyFor(ref) {
+      var head = document.querySelector('article.story > .head[data-point="' + CSS.escape(ref) + '"]');
+      return head ? head.parentNode : null;
+    }
+
+    function readTicket(doc) {
+      var d = doc.data() || {};
+      var refs = function (v) { return Array.isArray(v) ? v.filter(function (s) { return typeof s === "string"; }) : []; };
+      var regen = d.regenerate && typeof d.regenerate === "object" ? d.regenerate : {};
+      return {
+        ref: doc.id,
+        title: typeof d.title === "string" ? d.title : "",
+        description: typeof d.description === "string" ? d.description : "",
+        key: typeof d.key === "string" && KEY_PATTERN.test(d.key) ? d.key : null,
+        state: d.state === "needs-changes" || d.state === "confirm-delete" ? d.state : "current",
+        changed: refs(d.changed),
+        replacedBy: refs(d.replacedBy),
+        changedIn: typeof d.changedIn === "number" ? d.changedIn : null,
+        regenSentAt: regen.pending === true && typeof regen.sentAt === "string" ? regen.sentAt : null
+      };
+    }
+
+    function regenerating(t) {
+      return !!t.regenSentAt && Date.now() - Date.parse(t.regenSentAt) < STALE_MS;
+    }
+
+    function ticketError(err) {
+      return {
+        invalid_argument: "Not saved: this card may have been deleted. Reload the page.",
+        quota_exceeded: "Not saved: the page's store is full.",
+        resource_exhausted: "Not saved: too many changes at once. Try again in a moment."
+      }[err && err.code] || "Not saved. Try again.";
+    }
+
+    function field(c, name, labelText, tag, copyLabel) {
+      var box = el("div", "ticket-field");
+      var row = el("div", "ticket-label-row");
+      var label = el("label", "", labelText);
+      var input = el(tag, name === "key" ? "ticket-key" : "");
+      input.id = "ticket-" + name + "-" + c.ref.toLowerCase();
+      label.htmlFor = input.id;
+      if (tag === "input") input.type = "text";
+      row.appendChild(label);
+      if (copyLabel) {
+        var copy = el("button", "btn-secondary copy", copyLabel);
+        copy.type = "button";
+        copy.addEventListener("click", function () { copyField(c, input, name); });
+        row.appendChild(copy);
+      }
+      box.appendChild(row);
+      box.appendChild(input);
+      input.addEventListener("input", function () { input.dataset.dirty = "1"; });
+      input.addEventListener("change", function () { saveField(c, name, input); });
+      c.root.appendChild(box);
+      return input;
+    }
+
+    function buildCard(ref) {
+      var c = { ref: ref, writes: Promise.resolve() };
+      c.root = el("section", "ticket");
+      c.root.setAttribute("aria-label", "Ticket for " + ref);
+      var head = el("div", "ticket-head");
+      c.heading = el("h4", "", "Ticket");
+      c.pill = el("span", "ticket-state");
+      head.appendChild(c.heading);
+      head.appendChild(c.pill);
+      c.root.appendChild(head);
+      c.notice = el("p", "ticket-notice");
+      c.root.appendChild(c.notice);
+      c.key = field(c, "key", "YouTrack key", "input", null);
+      c.key.placeholder = "GSI-1234";
+      c.key.autocomplete = "off";
+      c.key.spellcheck = false;
+      c.title = field(c, "title", "Title", "input", "Copy");
+      c.title.maxLength = 500;
+      c.desc = field(c, "description", "Description", "textarea", "Copy Markdown");
+      c.desc.rows = 12;
+      c.desc.maxLength = 20000;
+      c.working = el("div");
+      c.root.appendChild(c.working);
+      c.actions = el("div", "ticket-actions");
+      c.regen = el("button", "btn-primary", "Regenerate description");
+      c.regen.type = "button";
+      c.regen.addEventListener("click", function () { regenerate(c); });
+      c.del = el("button", "btn-secondary", "Delete card");
+      c.del.type = "button";
+      c.del.addEventListener("click", function () { deleteCard(c); });
+      c.note = el("span", "form-note");
+      c.note.setAttribute("aria-live", "polite");
+      c.actions.appendChild(c.regen);
+      c.actions.appendChild(c.del);
+      c.actions.appendChild(c.note);
+      c.root.appendChild(c.actions);
+      c.say = function (text) {
+        c.note.textContent = text;
+        if (text) c.actions.hidden = false;
+      };
+      return c;
+    }
+
+    // The viewer lets the page write to the clipboard only from the click itself;
+    // where it refuses, the text stays selected for the viewer's own copy
+    function copyField(c, input, name) {
+      var done = name === "title" ? "Title copied." : "Description copied as Markdown.";
+      var fallback = function () {
+        input.focus();
+        input.select();
+        c.say("Copying is blocked here: press Ctrl+C or ⌘C to copy the selected text.");
+      };
+      try {
+        navigator.clipboard.writeText(input.value).then(function () { c.say(done); }, fallback);
+      } catch (e) {
+        fallback();
+      }
+    }
+
+    function saveField(c, name, input) {
+      var t = tickets[c.ref];
+      if (!t || !viewerIsOwner || input.readOnly) return;
+      var patch = { updatedAt: new Date().toISOString() };
+      var sent = input.value;
+      if (name === "key") {
+        sent = input.value = input.value.trim().toUpperCase();
+        if (sent && !KEY_PATTERN.test(sent)) {
+          input.setAttribute("aria-invalid", "true");
+          c.say("Not saved: a YouTrack key looks like GSI-1234.");
+          return;
+        }
+        input.removeAttribute("aria-invalid");
+        patch.key = sent || null;
+      } else {
+        patch[name] = sent;
+        patch.edited = true;
+        // Editing a flagged description settles it, as a regenerate would
+        if (name === "description" && t.state === "needs-changes") {
+          patch.state = "current";
+          patch.changed = [];
+        }
+      }
+      c.say("Saving…");
+      c.writes = c.writes.then(function () {
+        return store.doc("tickets/" + c.ref).update(patch).then(function () {
+          if (input.value === sent) delete input.dataset.dirty;
+          c.say("Saved.");
+        }, function (err) {
+          c.say(ticketError(err));
+        });
+      });
+    }
+
+    function regenerate(c) {
+      var t = tickets[c.ref];
+      if (!t || regenerating(t) || !claudeComments || !viewerIsOwner) return;
+      var doc = store.doc("tickets/" + c.ref);
+      var sentAt = new Date().toISOString();
+      c.regen.disabled = true;
+      c.say("Sending…");
+      c.writes = c.writes.then(function () {
+        return doc.update({ regenerate: { pending: true, sentAt: sentAt, by: viewerId } });
+      }).then(function () {
+        return claudeComments.anchorFor(c.root);
+      }).then(function (anchor) {
+        return claudeComments.sendToClaude({ anchor: anchor, text: "Regenerate the ticket description for " + c.ref + " (tickets/" + c.ref + "). Sent by " + viewerId + "." });
+      }).then(function () {
+        c.say("");
+      }, function (err) {
+        c.regen.disabled = false;
+        c.say({
+          consent_required: "Not sent: allow this page to comment for you, then press again.",
+          claude_unavailable: "Not sent: no Claude session could receive it.",
+          rate_limited: "Not sent: wait a moment, then press again."
+        }[err && err.code] || "Not sent. Press again to retry.");
+        // Nothing is on its way, so the card must not wait for an answer
+        return doc.update({ regenerate: { pending: false, failedAt: new Date().toISOString() } }).catch(function () {});
+      });
+    }
+
+    function deleteCard(c) {
+      if (!viewerIsOwner) return;
+      c.del.disabled = true;
+      c.say("Deleting…");
+      c.writes = c.writes.then(function () {
+        return store.doc("tickets/" + c.ref).delete().then(null, function () {
+          c.del.disabled = false;
+          c.say("Not deleted. Try again.");
+        });
+      });
+    }
+
+    function noticeFor(t, orphan) {
+      var rev = t.changedIn ? " in revision " + t.changedIn : "";
+      if (t.state === "confirm-delete" || orphan) {
+        var dropped = "The plan dropped this story" + rev + (t.replacedBy.length ? ", replaced by " + t.replacedBy.join(", ") : "") + ".";
+        if (!viewerIsOwner) return dropped;
+        return dropped + " Changes on this card did not carry over: copy what you still need, then delete the card." +
+          (t.key ? " Close or relink " + t.key + " in YouTrack." : "");
+      }
+      if (t.state === "needs-changes") {
+        var changed = "The story changed" + rev + (t.changed.length ? ": " + t.changed.join(", ") : "") + ".";
+        if (!viewerIsOwner) return changed + " This ticket text is out of date.";
+        return changed + " Regenerate the description or edit it; either clears this mark." +
+          (t.key ? " Then update " + t.key + " in YouTrack." : "");
+      }
+      return "";
+    }
+
+    // Never overwrite what the owner is typing; their own save writes it back
+    function setValue(input, value) {
+      if (document.activeElement === input || input.dataset.dirty) return;
+      if (input.value !== value) input.value = value;
+    }
+
+    function showIssue(story, key) {
+      var facts = story && story.querySelector(".head dl.facts");
+      if (!facts) return;
+      var item = facts.querySelector("[data-issue]");
+      if (!key) {
+        if (item) item.remove();
+        return;
+      }
+      if (!item) {
+        item = el("div");
+        item.setAttribute("data-issue", "");
+        item.appendChild(el("dt", "", "Issue"));
+        item.appendChild(el("dd"));
+        facts.appendChild(item);
+      }
+      item.lastChild.textContent = key;
+    }
+
+    // A card whose story is gone has no story to sit in, so it waits at the end of Stories
+    function orphanBox() {
+      if (!orphans) {
+        orphans = el("div", "orphan-tickets");
+        orphans.appendChild(el("h3", "", "Ticket cards pending deletion"));
+        orphans.appendChild(el("p", "", "Their stories have left the plan."));
+        document.getElementById("stories").appendChild(orphans);
+      }
+      return orphans;
+    }
+
+    function renderCard(t) {
+      var c = cards[t.ref] || (cards[t.ref] = buildCard(t.ref));
+      var story = storyFor(t.ref);
+      var host = story || orphanBox();
+      if (c.root.parentNode !== host) host.appendChild(c.root);
+      var busy = regenerating(t);
+      var flag = t.state === "confirm-delete" || !story ? "Confirm deletion" : t.state === "needs-changes" ? "Needs changes" : "";
+      c.heading.textContent = story ? "Ticket" : "Ticket for " + t.ref;
+      c.pill.textContent = flag;
+      c.pill.hidden = !flag;
+      c.root.classList.toggle("is-flagged", !!flag);
+      c.notice.textContent = noticeFor(t, !story);
+      c.notice.hidden = !c.notice.textContent;
+      setValue(c.key, t.key || "");
+      setValue(c.title, t.title);
+      setValue(c.desc, t.description);
+      c.key.readOnly = c.title.readOnly = !viewerIsOwner;
+      c.desc.readOnly = !viewerIsOwner || busy;
+      c.working.textContent = "";
+      if (busy) c.working.appendChild(workingEl("Claude is regenerating the description, sent " + when(t.regenSentAt) + "."));
+      c.working.hidden = !busy;
+      c.regen.hidden = !(viewerIsOwner && claudeComments && story && t.state === "needs-changes");
+      c.regen.disabled = busy;
+      c.del.hidden = !(viewerIsOwner && (t.state === "confirm-delete" || !story));
+      c.actions.hidden = c.regen.hidden && c.del.hidden && !c.note.textContent;
+      showIssue(story, t.key);
+    }
+
+    renderTickets = function () {
+      Object.keys(cards).forEach(function (ref) {
+        if (tickets[ref]) return;
+        cards[ref].root.remove();
+        showIssue(storyFor(ref), null);
+        delete cards[ref];
+      });
+      Object.keys(tickets).forEach(function (ref) { renderCard(tickets[ref]); });
+      if (orphans) orphans.hidden = !orphans.querySelector(".ticket");
+    };
+
+    store.collection("tickets").limit(200).onSnapshot(function (snap) {
+      tickets = {};
+      snap.docs.forEach(function (doc) {
+        if (/^S\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc);
+      });
+      renderTickets();
+      if (!regenTimer && Object.keys(tickets).some(function (ref) { return tickets[ref].regenSentAt; })) {
+        // Re-render now and then, so a request past its time limit frees its button again
+        regenTimer = setInterval(function () { if (!document.hidden) renderTickets(); }, 60000);
+      }
+    }, function () {});
+  }
+
   Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function (caps) {
     if (!caps[0] || !caps[1]) return null;
     store = caps[0];
@@ -1319,6 +1685,7 @@ dl.facts dd { margin: 0; }
       viewerIsOwner = facts[2] === true;
       addButtons();
       document.documentElement.classList.add("can-comment");
+      startTickets();
       document.addEventListener("click", function (ev) {
         var btn = ev.target && ev.target.closest ? ev.target.closest("button.cmt") : null;
         var point = btn ? btn.closest("[data-point]") : null;
@@ -1368,6 +1735,7 @@ dl.facts dd { margin: 0; }
       window.addEventListener("focus", function () { checkRefine(comments); });
       refineBtn.addEventListener("click", function () { refine(comments); });
       claudeComments = comments;
+      renderTickets();
     });
   }, function () {});
 })();
