@@ -962,6 +962,12 @@ dl.facts dd { margin: 0; }
 
   function checkRefine(comments) {
     if (sending || showRefineBusy() || typeof comments.canSendToClaude !== "function") return;
+    // The session matches the sender by ID and the busy state lives in the store, so
+    // Refine waits for both; the status snapshot checks again once they are set
+    if (!store || !viewerId) {
+      refineBtn.disabled = true;
+      return;
+    }
     comments.canSendToClaude().then(function (state) {
       if (sending) return;
       refineBtn.disabled = state !== "available";
@@ -974,15 +980,14 @@ dl.facts dd { margin: 0; }
   }
 
   function refine(comments) {
-    if (sending) return;
+    if (sending || !store || !viewerId) return;
     sending = true;
     refineBtn.disabled = true;
     refineState.textContent = "Sending…";
-    var text = "Refine this plan: address the open comments and my decision picks (" + pickSummary() + "). Sent by " + (viewerId || "an unknown viewer") + ".";
+    var text = "Refine this plan: address the open comments and my decision picks (" + pickSummary() + "). Sent by " + viewerId + ".";
     var sentAt = new Date().toISOString();
-    var status = store ? store.doc("status/refine") : null;
-    var marked = status ? status.set({ pending: true, sentAt: sentAt, by: viewerId }).catch(function () {}) : Promise.resolve();
-    marked.then(function () {
+    var status = store.doc("status/refine");
+    status.set({ pending: true, sentAt: sentAt, by: viewerId }).catch(function () {}).then(function () {
       return comments.anchorFor(refineBox);
     }).then(function (anchor) {
       return comments.sendToClaude({ anchor: anchor, text: text });
