@@ -25,13 +25,19 @@ path in the class `__init__` using `route`:
             self.on_delete_item: ResponseHandler = respond(204)
             self.route("DELETE", "/items/{item_id}", "on_delete_item")
 
-A test can change an endpoint response by overwriting the handler, such as
-`test_api.on_delete_item = respond(404)`.
+A test can change an endpoint response by overwriting the handler:
+
+    test_api = TestApiMock(config.test_api_url)
+    test_api.on_delete_item = respond(404)
+    client = httpx2.AsyncClient(transport=test_api.as_transport())
+
+`serve` puts several mocks behind one client.
+A request that no route serves raises `NotMockedError`.
 """
 
 import copy
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 from urllib.parse import unquote
 
@@ -44,6 +50,7 @@ __all__ = [
     "ResponseHandler",
     "fail_to_connect",
     "respond",
+    "serve",
 ]
 
 ResponseHandler = Callable[
@@ -136,6 +143,10 @@ class MockApi:
             return None
         return self.requests[-1]
 
+    def as_transport(self) -> httpx2.MockTransport:
+        """A transport answering from this mock, for sync and async clients."""
+        return serve(self)
+
     def _handler_for(self, request: httpx2.Request) -> ResponseHandler | None:
         """The current handler of the route serving `request`, if any."""
         url, base = request.url, self.base_url
@@ -145,6 +156,59 @@ class MockApi:
             if request.method == method and pattern.fullmatch(url.path):
                 return getattr(self, handler)
         return None
+
+
+def serve(*mocks: MockApi) -> httpx2.MockTransport:
+    """Create a transport answering from one or multiple `mocks`, for sync and async clients.
+
+    A request hits the first matching mock that contains a route for it.
+    """
+
+    def answer(request: httpx2.Request) -> Any:
+        for mock in mocks:
+            handler = mock._handler_for(request)
+            if handler is not None:
+                mock.requests.append(request)
+                return handler(request)
+        raise NotMockedError(f"No mock serves {request.method} {request.url}")
+
+    return _MockTransport(answer)
+
+
+class _MockTransport(httpx2.MockTransport):
+    """Custom flavour of a MockTransport with some special handling for the mock setup."""
+
+    def handle_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Answer a sync client, which cannot await an async handler's answer."""
+        request.read()
+        response = self.handler(request)
+        if isinstance(response, Awaitable):
+            if isinstance(response, Coroutine):
+                response.close()  # nothing will await it, so Python would warn
+            raise MockSetupError(
+                f"The handler answering {request.method} {request.url} is async, but"
+                " the call was made by a synchronous client. Use an async client, or a"
+                " handler that is not async."
+            )
+        return _answered(response, request)
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        """Answer an async client, awaiting the answer of an async handler."""
+        await request.aread()
+        response = self.handler(request)
+        if isinstance(response, Awaitable):
+            response = await response
+        return _answered(response, request)
+
+
+def _answered(response: object, request: httpx2.Request) -> httpx2.Response:
+    """Returns the response a handler answered `request` with."""
+    if not isinstance(response, httpx2.Response):
+        raise MockSetupError(
+            f"The handler answering {request.method} {request.url} returned"
+            f" {type(response).__name__}, not an httpx2.Response"
+        )
+    return response
 
 
 def respond(
