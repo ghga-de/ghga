@@ -207,6 +207,8 @@ from hexkit.providers.mongodb.migrations import check_db_version
 await check_db_version(config=config, target_version=3)
 ```
 
+The error's message says whether the database is behind, so the migrations have to run first, or ahead, migrated for a newer release of the service; its `db_version` and `target_version` attributes carry both numbers.
+
 ## Helpers for the hexkit v6 Upgrade
 
 With hexkit v6, the MongoDB provider switched from storing UUIDs and datetimes as strings to MongoDB's native BSON types (see [How DTOs Map to Documents](mongodb.qmd#how-dtos-map-to-documents)).
