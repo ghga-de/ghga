@@ -12,13 +12,15 @@ This page says where each part of it comes from, so the next reader can check it
 ## Opening the page
 
 Open the file in a real browser; it is one self-contained page and needs no server.
-From the dev container, serve the directory and open the forwarded link:
+From the dev container, serve the directory:
 
 ```shell
 python3 -m http.server 8000 --directory docs/architecture
 ```
 
-VS Code has no HTML preview of its own, and Microsoft's Live Preview extension (`ms-vscode.live-server`) does not render this page in its embedded tab; its "open in external browser" action does.
+Then open `http://localhost:8000/kafka-cascade-map.html` in VS Code's integrated browser or in your own; VS Code forwards the port.
+The integrated browser runs on the host, so it refuses the container's `file://` path as outside a trusted folder.
+Microsoft's Live Preview extension (`ms-vscode.live-server`) shows a blank page in its embedded tab; its "open in external browser" action works.
 Either way the page needs network access: it loads d3 from cdnjs and its fonts from Google.
 When d3 cannot be fetched the page says so where the diagram would be, and still draws its header, legend and topic table; the fonts need no such guard, since they fall back to the stack beside them.
 No formatter or linter covers it: prettier is scoped to `frontend/data-portal`, so `just fmt` leaves `docs/**/*.html` alone.
