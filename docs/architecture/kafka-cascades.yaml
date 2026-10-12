@@ -1,0 +1,773 @@
+# The topology drawn by kafka-cascade-map.html, which scripts/kafka_map.py generates
+# from this file. Edit this file, then run `just kafka-map`.
+# kafka-cascade-map.md says where each part comes from and how to check it.
+#
+# services:  short name → full service name, as the page spells it out.
+# fragments: sub-cascades used by more than one flow; {{param}} is filled at each `use`.
+# flows:     one entrypoint each. `root` is the service that publishes first; every node
+#            below it is a service reacting, and its `event` is the edge that woke it.
+#            A node takes event, service, action, condition, terminal, children;
+#            `- use: name` or `- use: {fragment: name, <param>: value}` splices a
+#            fragment into a children list. An event is a Kafka edge
+#            {topic, type, class} with class plain, outbox or persisted, or an HTTP hop
+#            {http: label}. `action` and `condition` may hold inline HTML.
+# topics:    the reference table; omit subscribers when nothing in the repo subscribes.
+
+updated: 2026-10-09
+
+services:
+  MASS: metadata search & access service
+  RS: ghga-registry-service
+  WPS: work-package-service
+  DINS: dataset-information-service
+  ARS: access-request-service
+  AUTH: auth-service
+  RTS: reverse-transpiler-service
+  UCS: upload-controller-service
+  FIS: file-ingest-service
+  IFRS: internal-file-registry-service
+  DCS: download-controller-service
+  PCS: purge-controller-service
+  NOS: notification-orchestration-service
+  NS: notification-service
+  DLQS: dlq-service
+  metldata: metadata ETL & artifact loader
+  CLI: operational command
+  —: published, nothing subscribes
+  (suppressed): the event that does not fire
+  that service: the one service the retry topic belongs to
+  its subscribers: whichever services subscribe to those topics
+fragments:
+  internal_registration:
+    nodes:
+    - event: {topic: internal-registrations, type: internal_file_registered, class: persisted}
+      service: UCS
+      action: FileUpload → <b>archived</b>; object dropped from the inbox
+      children:
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: FIS
+        action: refreshes its view of the upload
+        terminal: true
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: IFRS
+        action: ignored — state is no longer <span class='m'>awaiting_archival</span>
+        terminal: true
+    - event: {topic: internal-registrations, type: internal_file_registered, class: persisted}
+      service: DCS
+      action: registers the DRS object in <span class='m'>drs_objects</span>
+      children:
+      - event: {topic: downloads, type: drs_object_registered, class: persisted}
+        service: —
+        action: published for downstream reporting
+        terminal: true
+    - event: {topic: internal-registrations, type: internal_file_registered, class: persisted}
+      service: DINS
+      action: merges with the accession map into <span class='m'>file_information</span>
+      condition: no accession map yet → parked in pendingFileInfo
+      terminal: true
+  box_echo:
+    params: [reason]
+    nodes:
+    - event: {topic: file-upload-boxes, type: upserted, class: outbox}
+      service: RS
+      action: upserts the FileUploadBox onto its parent ResearchDataUploadBox
+      condition: '{{reason}}'
+      children:
+      - event: {topic: research-data-upload-boxes, type: upserted, class: outbox}
+        service: WPS
+        action: upserts <span class='m'>uploadBoxes</span>, used for upload work packages
+        terminal: true
+  audit_leaf:
+    nodes:
+    - event: {topic: audit-records, type: audit_record_logged, class: persisted}
+      service: —
+      action: append-only stewardship record
+      terminal: true
+  nos_email:
+    params: [which]
+    nodes:
+    - event: {topic: notifications, type: email_notification, class: plain}
+      service: NS
+      action: renders and sends the email — {{which}}
+      terminal: true
+flows:
+- id: load
+  lane: Metadata
+  actor: DS Kit
+  call: datasteward-kit load
+  title: A data steward loads transformed metadata
+  target: metldata · POST /rpc/load-artifacts
+  root:
+    service: metldata
+    action: upserts artifact resources, then publishes three ways
+    condition: events fire only for (embedded_public · EmbeddedDataset) and for publishable_artifacts
+    children:
+    - event: {topic: searchable-resources, type: searchable_resource_upserted, class: plain}
+      service: MASS
+      action: upserts the resource into <span class='m'>mass.EmbeddedDataset</span>
+      terminal: true
+    - event: {topic: searchable-resources, type: searchable_resource_upserted, class: plain}
+      service: RS
+      action: 'LEGACY: extracts the embedded study, tracks every file accession'
+      children:
+      - event: {topic: studies, type: upserted, class: outbox}
+        service: —
+        action: fires on first insert of each study
+        terminal: true
+      - event: {topic: accession-maps, type: — none —, class: outbox}
+        service: (suppressed)
+        action: '<b>no event</b>: <span class=''m''>dto_to_event</span> returns None while <span class=''m''>file_id</span> is null'
+        terminal: true
+    - event: {topic: metadata-datasets, type: dataset_created, class: plain}
+      service: WPS
+      action: upserts <span class='m'>datasets</span> with <span class='m'>files[].accession</span>
+      condition: ignored if the dataset stage maps to no WorkPackageType
+      terminal: true
+    - event: {topic: metadata-datasets, type: dataset_created, class: plain}
+      service: DINS
+      action: upserts <span class='m'>datasetFileAccessions</span>
+      terminal: true
+    - event: {topic: metadata-datasets, type: dataset_created, class: plain}
+      service: ARS
+      action: upserts <span class='m'>datasets</span> — title and DAC only, files discarded
+      terminal: true
+    - event: {topic: artifacts, type: upserted, class: plain}
+      service: RTS
+      action: rebuilds the .xlsx workbook into GridFS
+      condition: only for keys matching added_accessions:{study}
+      terminal: true
+    - event: {topic: metadata-datasets, type: dataset_deleted, class: plain}
+      service: WPS
+      action: deletes the dataset row
+      condition: this and the next five edges fire only when a resource disappears from the load
+      terminal: true
+    - event: {topic: metadata-datasets, type: dataset_deleted, class: plain}
+      service: DINS
+      action: deletes the <span class='m'>datasetFileAccessions</span> row
+      terminal: true
+    - event: {topic: metadata-datasets, type: dataset_deleted, class: plain}
+      service: ARS
+      action: deletes the dataset, force-denies pending access requests
+      terminal: true
+    - event: {topic: metadata-datasets, type: dataset_deleted, class: plain}
+      service: AUTH
+      action: <b>deletes every controlled-access claim</b> for that dataset
+      terminal: true
+    - event: {topic: searchable-resources, type: searchable_resource_deleted, class: plain}
+      service: MASS
+      action: removes the resource from the search index
+      terminal: true
+    - event: {topic: searchable-resources, type: searchable_resource_deleted, class: plain}
+      service: RS
+      action: removes the legacy resource
+      terminal: true
+    - event: {topic: artifacts, type: deleted, class: plain}
+      service: RTS
+      action: deletes the stored metadata and workbook
+      terminal: true
+- id: box-create
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: POST /upload-boxes
+  title: A data steward creates an upload box
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: creates the ResearchDataUploadBox, then calls UCS
+    children:
+    - event: {http: UCS · POST /boxes}
+      service: UCS
+      action: creates the FileUploadBox
+      children:
+      - use: {fragment: box_echo, reason: box created}
+    - event: {topic: research-data-upload-boxes, type: upserted, class: outbox}
+      service: WPS
+      action: upserts <span class='m'>uploadBoxes</span>
+      terminal: true
+    - use: audit_leaf
+- id: box-archive
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: PATCH /upload-boxes/{box_id}  (archive)
+  title: A data steward archives an upload box
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: sets the box state to archived, then calls UCS
+    children:
+    - event: {http: 'UCS · PATCH /boxes/{id}'}
+      service: UCS
+      action: each FileUpload → <b>awaiting_archival</b>
+      children:
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: IFRS
+        action: copies the object to permanent storage, writes <span class='m'>file_metadata</span>
+        condition: acts only on state awaiting_archival
+        children:
+        - use: internal_registration
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: FIS
+        action: refreshes its view of the upload
+        terminal: true
+      - use: {fragment: box_echo, reason: box state changed}
+    - use: audit_leaf
+- id: box-update
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: PATCH /upload-boxes/{box_id}  (retitle · resize · lock · unlock)
+  title: A data steward changes a box without archiving it
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: persists the change
+    children:
+    - event: {http: 'UCS · PATCH /boxes/{id}'}
+      service: UCS
+      action: applies the new size or lock state
+      condition: skipped for a title/description-only change
+      children:
+      - use: {fragment: box_echo, reason: box size or lock state changed}
+    - event: {topic: research-data-upload-boxes, type: upserted, class: outbox}
+      service: WPS
+      action: upserts <span class='m'>uploadBoxes</span>
+      terminal: true
+    - use: audit_leaf
+- id: box-delete
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: DELETE /upload-boxes/{box_id}
+  title: A data steward deletes an upload box
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: deletes the RDUB and its accession mappings, then calls UCS
+    children:
+    - event: {http: 'UCS · DELETE /boxes/{id}'}
+      service: UCS
+      action: deletes every FileUpload, then the box
+      children:
+      - event: {topic: file-uploads, type: deleted, class: outbox}
+        service: FIS
+        action: drops the upload
+        terminal: true
+      - event: {topic: file-uploads, type: deleted, class: outbox}
+        service: IFRS
+        action: logged and ignored — archived files are purged through PCS, not here
+        terminal: true
+      - event: {topic: file-upload-boxes, type: deleted, class: outbox}
+        service: RS
+        action: logged only, to avoid a race with RS's own deletion
+        terminal: true
+    - event: {topic: accession-maps, type: deleted, class: outbox}
+      service: WPS
+      action: deletes the <span class='m'>accessionMaps</span> row
+      terminal: true
+    - event: {topic: accession-maps, type: deleted, class: outbox}
+      service: DINS
+      action: deletes the <span class='m'>fileAccessionMaps</span> row
+      condition: file_information is left in place
+      terminal: true
+    - event: {topic: research-data-upload-boxes, type: deleted, class: outbox}
+      service: WPS
+      action: deletes the <span class='m'>uploadBoxes</span> row
+      terminal: true
+    - use: audit_leaf
+- id: accession-map
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: POST /upload-boxes/{box_id}/file-ids
+  title: A data steward submits an accession map
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: writes <span class='m'>fileAccessions</span> rows and bumps the box version
+    children:
+    - event: {topic: accession-maps, type: upserted, class: outbox}
+      service: WPS
+      action: upserts <span class='m'>accessionMaps</span> — without this no download work order token can be issued
+      terminal: true
+    - event: {topic: accession-maps, type: upserted, class: outbox}
+      service: DINS
+      action: upserts <span class='m'>fileAccessionMaps</span>, then merges any waiting <span class='m'>pendingFileInfo</span> into <span class='m'>file_information</span>
+      terminal: true
+    - event: {topic: research-data-upload-boxes, type: upserted, class: outbox}
+      service: WPS
+      action: upserts the new box version
+      terminal: true
+    - use: audit_leaf
+- id: requeue
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: POST /upload-boxes/{box_id}/requeue  ·  /uploads/{file_id}/requeue
+  title: A data steward requeues failed uploads
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: calls UCS for one file or for every failed file in the box
+    children:
+    - event: {http: 'UCS · POST /rpc/boxes/{id}/…/requeue'}
+      service: UCS
+      action: FileUpload → <b>inbox</b>
+      children:
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: FIS
+        action: picks the file up again for interrogation
+        terminal: true
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: IFRS
+        action: ignored — not <span class='m'>awaiting_archival</span>
+        terminal: true
+    - use: audit_leaf
+- id: upload-delete
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: DELETE /upload-boxes/{box_id}/uploads/{file_id}
+  title: A data steward removes a single file upload
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: calls UCS to remove the upload
+    children:
+    - event: {http: 'UCS · DELETE /boxes/{id}/uploads/{file_id}'}
+      service: UCS
+      action: removes the FileUpload and its inbox object
+      children:
+      - event: {topic: file-uploads, type: deleted, class: outbox}
+        service: FIS
+        action: drops the upload
+        terminal: true
+      - event: {topic: file-uploads, type: deleted, class: outbox}
+        service: IFRS
+        action: logged and ignored
+        terminal: true
+      - use: {fragment: box_echo, reason: file count and size changed}
+    - use: audit_leaf
+- id: upload-grant
+  lane: Upload boxes
+  actor: Data Portal · steward
+  call: POST /upload-grants  ·  DELETE /upload-grants/{grant_id}
+  title: A data steward grants or revokes upload access
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: calls the auth service, then logs the action
+    children:
+    - event: {http: auth-service · upload-access grants}
+      service: AUTH
+      action: stores or revokes the claim — <b>no event published</b>
+      terminal: true
+    - use: audit_leaf
+- id: connector-upload
+  lane: Upload boxes
+  actor: Connector · submitter
+  call: ghga-connector batch-upload  ·  ubox
+  title: A data submitter uploads files into a box
+  target: UCS · file upload API (with a WPS work order token)
+  root:
+    service: UCS
+    action: creates the FileUpload, serves part URLs, then completes it
+    condition: part-URL requests themselves publish nothing
+    children:
+    - event: {topic: file-uploads, type: upserted, class: outbox}
+      service: FIS
+      action: lists the file as awaiting interrogation
+      terminal: true
+    - event: {topic: file-uploads, type: upserted, class: outbox}
+      service: IFRS
+      action: ignored at every state before <span class='m'>awaiting_archival</span>
+      terminal: true
+    - use: {fragment: box_echo, reason: file count and size changed}
+- id: interrogate
+  lane: Interrogation
+  actor: Data Hub · DHFS
+  call: dhfs interrogate
+  title: A data hub submits an interrogation report
+  target: FIS · POST /storages/{alias}/interrogation-reports
+  root:
+    service: FIS
+    action: validates the report and publishes the verdict
+    condition: a success moves the upload to 'interrogated' — archival waits for the box to be archived
+    children:
+    - event: {topic: interrogations, type: file_interrogation_success, class: persisted}
+      service: UCS
+      action: FileUpload → <b>interrogated</b>, inbox object removed
+      condition: stale or non-inbox reports are dropped
+      children:
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: FIS
+        action: refreshes its view of the upload
+        terminal: true
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: IFRS
+        action: ignored — not yet <span class='m'>awaiting_archival</span>
+        terminal: true
+    - event: {topic: interrogations, type: file_interrogation_failed, class: persisted}
+      service: UCS
+      action: FileUpload → <b>failed_interrogation</b>, awaiting a requeue
+      children:
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: FIS
+        action: refreshes its view of the upload
+        terminal: true
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: IFRS
+        action: ignored
+        terminal: true
+- id: download
+  lane: Download
+  actor: Connector · requester
+  call: ghga-connector download
+  title: A data requester downloads a file
+  target: DCS · GET /objects/{accession} (with a WPS work order token)
+  root:
+    service: DCS
+    action: resolves the work order token's <span class='m'>file_id</span> to a DRS object
+    condition: the two branches are mutually exclusive; GET /objects/{id}/envelopes publishes nothing
+    children:
+    - event: {topic: staging-requests, type: unstaged_download_requested, class: plain}
+      service: IFRS
+      action: copies the object from permanent storage into the download bucket
+      condition: taken when the object is not staged; DCS answers 202 and the client retries
+      children:
+      - event: {topic: staged-files, type: internal_file_staged, class: plain}
+        service: —
+        action: announced but unsubscribed — the client's retry is what completes the download
+        terminal: true
+    - event: {topic: downloads, type: drs_object_served, class: persisted}
+      service: —
+      action: access time updated, download accounted for
+      condition: taken when the object is already staged
+      terminal: true
+- id: purge
+  lane: Deletion
+  actor: DS Kit
+  call: datasteward-kit files delete-file
+  title: A data steward purges a file
+  target: PCS · DELETE /files/{file_id}
+  root:
+    service: PCS
+    action: publishes a deletion request and nothing else
+    children:
+    - event: {topic: purges, type: file_deletion_requested, class: persisted}
+      service: IFRS
+      action: deletes the permanent object and <span class='m'>file_metadata</span>
+      children:
+      - event: {topic: file-deletions, type: internal_file_deleted, class: persisted}
+        service: —
+        action: published for downstream reporting
+        terminal: true
+    - event: {topic: purges, type: file_deletion_requested, class: persisted}
+      service: DCS
+      action: deletes the DRS object, the staged copy and the EKSS secret
+      children:
+      - event: {topic: file-deletions, type: drs_object_deleted, class: persisted}
+        service: —
+        action: published for downstream reporting
+        terminal: true
+    - event: {topic: purges, type: file_deletion_requested, class: persisted}
+      service: UCS
+      action: FileUpload → <b>cancelled</b>, inbox object removed
+      condition: already-cancelled or failed uploads are skipped
+      children:
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: FIS
+        action: refreshes its view
+        terminal: true
+      - event: {topic: file-uploads, type: upserted, class: outbox}
+        service: IFRS
+        action: ignored
+        terminal: true
+      - use: {fragment: box_echo, reason: file count and size changed}
+    - event: {topic: purges, type: file_deletion_requested, class: persisted}
+      service: DINS
+      action: deletes <span class='m'>file_information</span> for the mapped accession
+      condition: no accession map for the file ID → logged and skipped
+      terminal: true
+- id: user-write
+  lane: Identity & access
+  actor: Data Portal · user
+  call: POST /users  ·  PUT /users/{id}  ·  PATCH /users/{id}
+  title: A user registers or changes their account
+  target: auth-service · user registry
+  root:
+    service: AUTH
+    action: writes the user record
+    condition: the user DAO is an outbox with autopublish, so any write publishes
+    children:
+    - event: {topic: users, type: upserted, class: outbox}
+      service: NOS
+      action: upserts its user copy; compares old and new details
+      children:
+      - use: {fragment: nos_email, which: 're-registration notice, only if details changed'}
+- id: user-delete
+  lane: Identity & access
+  actor: Data Portal · steward
+  call: DELETE /users/{id}
+  title: A user account is deleted
+  target: auth-service · user registry
+  root:
+    service: AUTH
+    action: deletes the user record
+    children:
+    - event: {topic: users, type: deleted, class: outbox}
+      service: NOS
+      action: deletes its user copy — no notification
+      terminal: true
+- id: iva-code
+  lane: Identity & access
+  actor: Data Portal · user
+  call: POST /rpc/ivas/{iva_id}/request-code
+  title: A user requests an IVA verification code
+  target: auth-service · user registry
+  root:
+    service: AUTH
+    action: moves the IVA to code-requested and asks for transmission
+    condition: the only entrypoint that publishes two different types on one topic in a single call
+    children:
+    - event: {topic: ivas, type: iva_send_code, class: plain}
+      service: NOS
+      action: sends the code over the IVA's own channel
+      children:
+      - event: {topic: notifications, type: sms_notification, class: plain}
+        service: NS
+        action: sends the SMS
+        condition: SMS-type IVAs only
+        terminal: true
+    - event: {topic: ivas, type: iva_state_changed, class: plain}
+      service: NOS
+      action: notifies the user and the data stewards of the state change
+      children:
+      - use: {fragment: nos_email, which: code requested}
+- id: iva-state
+  lane: Identity & access
+  actor: Data Portal · user or steward
+  call: POST /rpc/ivas/{iva_id}/code-transmitted · /validate-code · /unverify
+  title: An IVA changes state
+  target: auth-service · user registry
+  root:
+    service: AUTH
+    action: persists the new IVA state
+    condition: create-code and DELETE /ivas/{id} publish nothing and are absent on purpose
+    children:
+    - event: {topic: ivas, type: iva_state_changed, class: plain}
+      service: NOS
+      action: selects the notification for the new state
+      children:
+      - use: {fragment: nos_email, which: 'transmitted, verified or unverified'}
+- id: totp
+  lane: Identity & access
+  actor: Data Portal · user
+  call: POST /rpc/verify-totp
+  title: A user verifies a newly created TOTP token
+  target: auth-service · auth adapter
+  root:
+    service: AUTH
+    action: accepts the code, resets verified IVAs, stores the token
+    condition: only when the session state is NEW_TOTP_TOKEN
+    children:
+    - event: {topic: ivas, type: iva_state_changed, class: plain}
+      service: NOS
+      action: handles the all-IVAs-reset case (key <span class='m'>all-{user_id}</span>)
+      children:
+      - use: {fragment: nos_email, which: all IVAs invalidated}
+    - event: {topic: auth, type: second_factor_recreated, class: plain}
+      service: NOS
+      action: warns the user their second factor was replaced
+      condition: only if a TOTP token already existed
+      children:
+      - use: {fragment: nos_email, which: second factor recreated}
+- id: access-request
+  lane: Identity & access
+  actor: Data Portal · requester
+  call: POST /access-requests
+  title: A data requester asks for dataset access
+  target: access-request-service
+  root:
+    service: ARS
+    action: inserts the access request
+    children:
+    - event: {topic: access-requests, type: upserted, class: outbox}
+      service: NOS
+      action: stores the request and emits the created-notifications
+      children:
+      - use: {fragment: nos_email, which: confirmation to the requester}
+      - event: {topic: notifications, type: email_notification, class: plain}
+        service: NS
+        action: sends the notice to central data stewardship
+        terminal: true
+- id: access-decide
+  lane: Identity & access
+  actor: Data Portal · steward
+  call: PATCH /access-requests/{access_request_id}
+  title: A data steward allows, denies or edits an access request
+  target: access-request-service
+  root:
+    service: ARS
+    action: updates the request's status or fields
+    condition: same topic and type as creation — NOS routes on the status inside the payload
+    children:
+    - event: {topic: access-requests, type: upserted, class: outbox}
+      service: NOS
+      action: picks the allowed or denied notification from the new status
+      children:
+      - use: {fragment: nos_email, which: outcome to the requester}
+      - event: {topic: notifications, type: email_notification, class: plain}
+        service: NS
+        action: sends the confirmation to the data steward
+        terminal: true
+    - event: {http: auth-service · download-access grant}
+      service: AUTH
+      action: stores the controlled-access claim — <b>no event published</b>
+      condition: allowed requests only
+      terminal: true
+- id: dlq-process
+  lane: Operational
+  actor: Ops · DLQ service
+  call: POST /{service}/{topic}
+  title: An operator requeues a dead-lettered event
+  target: dlq-service
+  root:
+    service: DLQS
+    action: republishes the stored event under its original type and key
+    children:
+    - event: {topic: retry-&lt;service_name&gt;, type: '&lt;original type&gt;', class: plain}
+      service: that service
+      action: re-consumes the event; the rest of its cascade follows as normal
+      condition: only that one service subscribes to its own retry topic
+      terminal: true
+    - event: {topic: dlq, type: '&lt;original type&gt;', class: plain}
+      service: DLQS
+      action: the reverse edge — every node in every tree here can land back in the queue
+      condition: requires kafka_enable_dlq; a second failure returns it to the DLQ
+      terminal: true
+- id: republish
+  lane: Operational
+  actor: Ops · CLI
+  call: '&lt;service&gt; publish-events [--all]'
+  title: An operator replays a service's stored events
+  target: ars · dcs · fis · ifrs · pcs · rs · ucs
+  root:
+    service: CLI
+    action: publishes pending or all stored events for one service
+    condition: 'without --all only pending events go out: outbox docs with __metadata__.published false'
+    children:
+    - event: {topic: '&lt;that service''s topics&gt;', type: upserted / deleted, class: outbox}
+      service: its subscribers
+      action: outbox DAOs — RS boxes, accession maps and studies; UCS uploads and boxes; ARS requests
+      condition: a document whose dto_to_event returns None is marked published without an event
+      terminal: true
+    - event: {topic: '&lt;that service''s topics&gt;', type: '&lt;original type&gt;', class: persisted}
+      service: its subscribers
+      action: persisted publishers — PCS purges, FIS interrogations, IFRS registrations and deletions, DCS downloads and deletions, RS audit records
+      terminal: true
+topics:
+- topic: metadata-datasets
+  class: plain
+  types: dataset_created · dataset_deleted
+  producer: metldata
+  subscribers: WPS, DINS, ARS, AUTH (deleted only)
+- topic: searchable-resources
+  class: plain
+  types: searchable_resource_upserted · _deleted
+  producer: metldata
+  subscribers: MASS, RS
+- topic: artifacts
+  class: plain
+  types: upserted · deleted
+  producer: metldata
+  subscribers: RTS
+- topic: studies
+  class: outbox
+  types: upserted · deleted
+  producer: RS
+- topic: accession-maps
+  class: outbox
+  types: upserted · deleted
+  producer: RS
+  subscribers: WPS, DINS
+- topic: audit-records
+  class: persisted
+  types: audit_record_logged
+  producer: RS
+- topic: research-data-upload-boxes
+  class: outbox
+  types: upserted · deleted
+  producer: RS
+  subscribers: WPS
+- topic: file-upload-boxes
+  class: outbox
+  types: upserted · deleted
+  producer: UCS
+  subscribers: RS
+- topic: file-uploads
+  class: outbox
+  types: upserted · deleted
+  producer: UCS
+  subscribers: FIS, IFRS
+- topic: interrogations
+  class: persisted
+  types: file_interrogation_success · _failed
+  producer: FIS
+  subscribers: UCS
+- topic: internal-registrations
+  class: persisted
+  types: internal_file_registered
+  producer: IFRS
+  subscribers: UCS, DCS, DINS
+- topic: staged-files
+  class: plain
+  types: internal_file_staged
+  producer: IFRS
+- topic: staging-requests
+  class: plain
+  types: unstaged_download_requested
+  producer: DCS
+  subscribers: IFRS
+- topic: downloads
+  class: persisted
+  types: drs_object_registered · drs_object_served
+  producer: DCS
+- topic: file-deletions
+  class: persisted
+  types: internal_file_deleted (IFRS) · drs_object_deleted (DCS)
+  producer: IFRS, DCS
+- topic: purges
+  class: persisted
+  types: file_deletion_requested
+  producer: PCS
+  subscribers: IFRS, UCS, DCS, DINS
+- topic: users
+  class: outbox
+  types: upserted · deleted
+  producer: AUTH
+  subscribers: NOS
+- topic: ivas
+  class: plain
+  types: iva_state_changed · iva_send_code
+  producer: AUTH
+  subscribers: NOS
+- topic: auth
+  class: plain
+  types: second_factor_recreated
+  producer: AUTH
+  subscribers: NOS
+- topic: access-requests
+  class: outbox
+  types: upserted · deleted
+  producer: ARS
+  subscribers: NOS
+- topic: notifications
+  class: plain
+  types: email_notification · sms_notification
+  producer: NOS
+  subscribers: NS
+- topic: dlq
+  class: plain
+  types: (the original event's type)
+  producer: every DLQ-enabled service
+  subscribers: DLQS
+- topic: retry-&lt;service&gt;
+  class: plain
+  types: (the original event's type)
+  producer: DLQS
+  subscribers: that one service

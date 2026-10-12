@@ -123,6 +123,18 @@ repos:
         require_serial: true
         entry: uv run python scripts/docs_check.py
 
+      # ---- Kafka cascades map --------------------------------------------------------------
+      # Writes the YAML topology into the map page and fails when that changed the page,
+      # so the fix is to stage it. The page's own styles and drawing code are hand-edited,
+      # so a change to it alone runs the hook too, to catch an edit inside the markers.
+      - id: kafka-map
+        name: Kafka cascades map data
+        language: system
+        files: ^(docs/architecture/kafka-cascade(s\.yaml|-map\.html)$|scripts/kafka_map\.py$)
+        pass_filenames: false
+        require_serial: true
+        entry: uv run python scripts/kafka_map.py
+
       - id: docs-refs
         name: ADR and epic references
         language: system

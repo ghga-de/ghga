@@ -267,7 +267,7 @@
 
 <div class="wrap">
   <header class="top">
-    <p class="kicker">GHGA · event topology · 23 topics · 22 entrypoints</p>
+    <p class="kicker" id="topology"></p>
     <h1>Kafka Cascades Map</h1>
     <p class="sub">A map of nearly all Kafka event cascades in GHGA. Pick an entrypoint, then <b>click a node</b> to bring it to
       the anchor, or <b>click its circle</b> to fold that branch away — the clicked node holds still while
@@ -391,7 +391,7 @@
   </section>
 
   <footer>
-    <span>Last Updated 2026-10-09</span>
+    <span id="updated"></span>
     <span>Topics and types: deploy/charts/*/values.yaml</span>
     <span>Publishers and subscribers: adapters/outbound/event_pub.py, adapters/inbound/event_sub.py, inject.py</span>
   </footer>
@@ -401,574 +401,1084 @@
 (function () {
   "use strict";
 
-  var P = "plain", O = "outbox", S = "persist", H = "http";
-  function e(topic, type, kind) { return { tp: topic, ty: type, k: kind }; }
-  function http(label) { return { tp: label, ty: "synchronous call", k: H }; }
+  // kafka-map-data:start
+  // Generated from docs/architecture/kafka-cascades.yaml by scripts/kafka_map.py.
+  // Edit the YAML and run `just kafka-map`; do not edit this block.
+  var META = { "updated": "2026-10-09", "topics": 23, "entrypoints": 22 };
 
   var SVC = {
-    MASS: "metadata search & access service",
-    RS: "ghga-registry-service",
-    WPS: "work-package-service",
-    DINS: "dataset-information-service",
-    ARS: "access-request-service",
-    AUTH: "auth-service",
-    RTS: "reverse-transpiler-service",
-    UCS: "upload-controller-service",
-    FIS: "file-ingest-service",
-    IFRS: "internal-file-registry-service",
-    DCS: "download-controller-service",
-    PCS: "purge-controller-service",
-    NOS: "notification-orchestration-service",
-    NS: "notification-service",
-    DLQS: "dlq-service",
-    metldata: "metadata ETL & artifact loader",
-    CLI: "operational command",
+    "MASS": "metadata search & access service",
+    "RS": "ghga-registry-service",
+    "WPS": "work-package-service",
+    "DINS": "dataset-information-service",
+    "ARS": "access-request-service",
+    "AUTH": "auth-service",
+    "RTS": "reverse-transpiler-service",
+    "UCS": "upload-controller-service",
+    "FIS": "file-ingest-service",
+    "IFRS": "internal-file-registry-service",
+    "DCS": "download-controller-service",
+    "PCS": "purge-controller-service",
+    "NOS": "notification-orchestration-service",
+    "NS": "notification-service",
+    "DLQS": "dlq-service",
+    "metldata": "metadata ETL & artifact loader",
+    "CLI": "operational command",
     "—": "published, nothing subscribes",
-    "(suppressed)": "the event that does not fire"
+    "(suppressed)": "the event that does not fire",
+    "that service": "the one service the retry topic belongs to",
+    "its subscribers": "whichever services subscribe to those topics"
   };
 
-  // ---- reusable sub-cascades (fresh objects per call) ---------------------
-  function internalRegistration() {
-    return [
-      { e: e("internal-registrations", "internal_file_registered", S), s: "UCS",
-        a: "FileUpload → <b>archived</b>; object dropped from the inbox",
-        kids: [
-          { e: e("file-uploads", "upserted", O), s: "FIS",
-            a: "refreshes its view of the upload", term: true },
-          { e: e("file-uploads", "upserted", O), s: "IFRS",
-            a: "ignored — state is no longer <span class='m'>awaiting_archival</span>", term: true }
-        ] },
-      { e: e("internal-registrations", "internal_file_registered", S), s: "DCS",
-        a: "registers the DRS object in <span class='m'>drs_objects</span>",
-        kids: [
-          { e: e("downloads", "drs_object_registered", S), s: "—",
-            a: "published for downstream reporting", term: true }
-        ] },
-      { e: e("internal-registrations", "internal_file_registered", S), s: "DINS",
-        a: "merges with the accession map into <span class='m'>file_information</span>",
-        cond: "no accession map yet → parked in pendingFileInfo", term: true }
-    ];
-  }
-
-  function boxEcho(reason) {
-    return {
-      e: e("file-upload-boxes", "upserted", O), s: "RS",
-      a: "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
-      cond: reason,
-      kids: [
-        { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
-          a: "upserts <span class='m'>uploadBoxes</span>, used for upload work packages", term: true }
-      ]
-    };
-  }
-
-  function auditLeaf() {
-    return { e: e("audit-records", "audit_record_logged", S), s: "—",
-      a: "append-only stewardship record", term: true };
-  }
-
-  function nosEmail(which) {
-    return { e: e("notifications", "email_notification", P), s: "NS",
-      a: "renders and sends the email" + (which ? " — " + which : ""), term: true };
-  }
-
-  // ---- flows -------------------------------------------------------------
   var FLOWS = [
     {
-      id: "load", lane: "Metadata", actor: "DS Kit", call: "datasteward-kit load",
-      title: "A data steward loads transformed metadata",
-      target: "metldata · POST /rpc/load-artifacts",
-      root: {
-        s: "metldata", a: "upserts artifact resources, then publishes three ways",
-        cond: "events fire only for (embedded_public · EmbeddedDataset) and for publishable_artifacts",
-        kids: [
-          { e: e("searchable-resources", "searchable_resource_upserted", P), s: "MASS",
-            a: "upserts the resource into <span class='m'>mass.EmbeddedDataset</span>", term: true },
-          { e: e("searchable-resources", "searchable_resource_upserted", P), s: "RS",
-            a: "LEGACY: extracts the embedded study, tracks every file accession",
-            kids: [
-              { e: e("studies", "upserted", O), s: "—",
-                a: "fires on first insert of each study", term: true },
-              { e: e("accession-maps", "— none —", O), s: "(suppressed)",
-                a: "<b>no event</b>: <span class='m'>dto_to_event</span> returns None while " +
-                   "<span class='m'>file_id</span> is null", term: true }
-            ] },
-          { e: e("metadata-datasets", "dataset_created", P), s: "WPS",
-            a: "upserts <span class='m'>datasets</span> with <span class='m'>files[].accession</span>",
-            cond: "ignored if the dataset stage maps to no WorkPackageType", term: true },
-          { e: e("metadata-datasets", "dataset_created", P), s: "DINS",
-            a: "upserts <span class='m'>datasetFileAccessions</span>", term: true },
-          { e: e("metadata-datasets", "dataset_created", P), s: "ARS",
-            a: "upserts <span class='m'>datasets</span> — title and DAC only, files discarded", term: true },
-          { e: e("artifacts", "upserted", P), s: "RTS",
-            a: "rebuilds the .xlsx workbook into GridFS",
-            cond: "only for keys matching added_accessions:{study}", term: true },
-          { e: e("metadata-datasets", "dataset_deleted", P), s: "WPS",
-            a: "deletes the dataset row",
-            cond: "this and the next five edges fire only when a resource disappears from the load",
-            term: true },
-          { e: e("metadata-datasets", "dataset_deleted", P), s: "DINS",
-            a: "deletes the <span class='m'>datasetFileAccessions</span> row", term: true },
-          { e: e("metadata-datasets", "dataset_deleted", P), s: "ARS",
-            a: "deletes the dataset, force-denies pending access requests", term: true },
-          { e: e("metadata-datasets", "dataset_deleted", P), s: "AUTH",
-            a: "<b>deletes every controlled-access claim</b> for that dataset", term: true },
-          { e: e("searchable-resources", "searchable_resource_deleted", P), s: "MASS",
-            a: "removes the resource from the search index", term: true },
-          { e: e("searchable-resources", "searchable_resource_deleted", P), s: "RS",
-            a: "removes the legacy resource", term: true },
-          { e: e("artifacts", "deleted", P), s: "RTS",
-            a: "deletes the stored metadata and workbook", term: true }
+      "id": "load",
+      "lane": "Metadata",
+      "actor": "DS Kit",
+      "call": "datasteward-kit load",
+      "title": "A data steward loads transformed metadata",
+      "target": "metldata · POST /rpc/load-artifacts",
+      "root": {
+        "s": "metldata",
+        "a": "upserts artifact resources, then publishes three ways",
+        "cond": "events fire only for (embedded_public · EmbeddedDataset) and for publishable_artifacts",
+        "kids": [
+          {
+            "e": { "tp": "searchable-resources", "ty": "searchable_resource_upserted", "k": "plain" },
+            "s": "MASS",
+            "a": "upserts the resource into <span class='m'>mass.EmbeddedDataset</span>",
+            "term": true
+          },
+          {
+            "e": { "tp": "searchable-resources", "ty": "searchable_resource_upserted", "k": "plain" },
+            "s": "RS",
+            "a": "LEGACY: extracts the embedded study, tracks every file accession",
+            "kids": [
+              {
+                "e": { "tp": "studies", "ty": "upserted", "k": "outbox" },
+                "s": "—",
+                "a": "fires on first insert of each study",
+                "term": true
+              },
+              {
+                "e": { "tp": "accession-maps", "ty": "— none —", "k": "outbox" },
+                "s": "(suppressed)",
+                "a": "<b>no event</b>: <span class='m'>dto_to_event</span> returns None while <span class='m'>file_id</span> is null",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_created", "k": "plain" },
+            "s": "WPS",
+            "a": "upserts <span class='m'>datasets</span> with <span class='m'>files[].accession</span>",
+            "cond": "ignored if the dataset stage maps to no WorkPackageType",
+            "term": true
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_created", "k": "plain" },
+            "s": "DINS",
+            "a": "upserts <span class='m'>datasetFileAccessions</span>",
+            "term": true
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_created", "k": "plain" },
+            "s": "ARS",
+            "a": "upserts <span class='m'>datasets</span> — title and DAC only, files discarded",
+            "term": true
+          },
+          {
+            "e": { "tp": "artifacts", "ty": "upserted", "k": "plain" },
+            "s": "RTS",
+            "a": "rebuilds the .xlsx workbook into GridFS",
+            "cond": "only for keys matching added_accessions:{study}",
+            "term": true
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_deleted", "k": "plain" },
+            "s": "WPS",
+            "a": "deletes the dataset row",
+            "cond": "this and the next five edges fire only when a resource disappears from the load",
+            "term": true
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_deleted", "k": "plain" },
+            "s": "DINS",
+            "a": "deletes the <span class='m'>datasetFileAccessions</span> row",
+            "term": true
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_deleted", "k": "plain" },
+            "s": "ARS",
+            "a": "deletes the dataset, force-denies pending access requests",
+            "term": true
+          },
+          {
+            "e": { "tp": "metadata-datasets", "ty": "dataset_deleted", "k": "plain" },
+            "s": "AUTH",
+            "a": "<b>deletes every controlled-access claim</b> for that dataset",
+            "term": true
+          },
+          {
+            "e": { "tp": "searchable-resources", "ty": "searchable_resource_deleted", "k": "plain" },
+            "s": "MASS",
+            "a": "removes the resource from the search index",
+            "term": true
+          },
+          {
+            "e": { "tp": "searchable-resources", "ty": "searchable_resource_deleted", "k": "plain" },
+            "s": "RS",
+            "a": "removes the legacy resource",
+            "term": true
+          },
+          {
+            "e": { "tp": "artifacts", "ty": "deleted", "k": "plain" },
+            "s": "RTS",
+            "a": "deletes the stored metadata and workbook",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "box-create", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "POST /upload-boxes",
-      title: "A data steward creates an upload box",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "creates the ResearchDataUploadBox, then calls UCS",
-        kids: [
-          { e: http("UCS · POST /boxes"), s: "UCS", a: "creates the FileUploadBox",
-            kids: [ boxEcho("box created") ] },
-          { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
-            a: "upserts <span class='m'>uploadBoxes</span>", term: true },
-          auditLeaf()
+      "id": "box-create",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "POST /upload-boxes",
+      "title": "A data steward creates an upload box",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "creates the ResearchDataUploadBox, then calls UCS",
+        "kids": [
+          {
+            "e": { "tp": "UCS · POST /boxes", "ty": "synchronous call", "k": "http" },
+            "s": "UCS",
+            "a": "creates the FileUploadBox",
+            "kids": [
+              {
+                "e": { "tp": "file-upload-boxes", "ty": "upserted", "k": "outbox" },
+                "s": "RS",
+                "a": "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+                "cond": "box created",
+                "kids": [
+                  {
+                    "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+                    "s": "WPS",
+                    "a": "upserts <span class='m'>uploadBoxes</span>, used for upload work packages",
+                    "term": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+            "s": "WPS",
+            "a": "upserts <span class='m'>uploadBoxes</span>",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "box-archive", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "PATCH /upload-boxes/{box_id}  (archive)",
-      title: "A data steward archives an upload box",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "sets the box state to archived, then calls UCS",
-        kids: [
-          { e: http("UCS · PATCH /boxes/{id}"), s: "UCS",
-            a: "each FileUpload → <b>awaiting_archival</b>",
-            kids: [
-              { e: e("file-uploads", "upserted", O), s: "IFRS",
-                a: "copies the object to permanent storage, writes <span class='m'>file_metadata</span>",
-                cond: "acts only on state awaiting_archival",
-                kids: internalRegistration() },
-              { e: e("file-uploads", "upserted", O), s: "FIS",
-                a: "refreshes its view of the upload", term: true },
-              boxEcho("box state changed")
-            ] },
-          auditLeaf()
+      "id": "box-archive",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "PATCH /upload-boxes/{box_id}  (archive)",
+      "title": "A data steward archives an upload box",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "sets the box state to archived, then calls UCS",
+        "kids": [
+          {
+            "e": { "tp": "UCS · PATCH /boxes/{id}", "ty": "synchronous call", "k": "http" },
+            "s": "UCS",
+            "a": "each FileUpload → <b>awaiting_archival</b>",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "copies the object to permanent storage, writes <span class='m'>file_metadata</span>",
+                "cond": "acts only on state awaiting_archival",
+                "kids": [
+                  {
+                    "e": { "tp": "internal-registrations", "ty": "internal_file_registered", "k": "persist" },
+                    "s": "UCS",
+                    "a": "FileUpload → <b>archived</b>; object dropped from the inbox",
+                    "kids": [
+                      {
+                        "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                        "s": "FIS",
+                        "a": "refreshes its view of the upload",
+                        "term": true
+                      },
+                      {
+                        "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                        "s": "IFRS",
+                        "a": "ignored — state is no longer <span class='m'>awaiting_archival</span>",
+                        "term": true
+                      }
+                    ]
+                  },
+                  {
+                    "e": { "tp": "internal-registrations", "ty": "internal_file_registered", "k": "persist" },
+                    "s": "DCS",
+                    "a": "registers the DRS object in <span class='m'>drs_objects</span>",
+                    "kids": [
+                      {
+                        "e": { "tp": "downloads", "ty": "drs_object_registered", "k": "persist" },
+                        "s": "—",
+                        "a": "published for downstream reporting",
+                        "term": true
+                      }
+                    ]
+                  },
+                  {
+                    "e": { "tp": "internal-registrations", "ty": "internal_file_registered", "k": "persist" },
+                    "s": "DINS",
+                    "a": "merges with the accession map into <span class='m'>file_information</span>",
+                    "cond": "no accession map yet → parked in pendingFileInfo",
+                    "term": true
+                  }
+                ]
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "FIS",
+                "a": "refreshes its view of the upload",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-upload-boxes", "ty": "upserted", "k": "outbox" },
+                "s": "RS",
+                "a": "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+                "cond": "box state changed",
+                "kids": [
+                  {
+                    "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+                    "s": "WPS",
+                    "a": "upserts <span class='m'>uploadBoxes</span>, used for upload work packages",
+                    "term": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "box-update", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "PATCH /upload-boxes/{box_id}  (retitle · resize · lock · unlock)",
-      title: "A data steward changes a box without archiving it",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "persists the change",
-        kids: [
-          { e: http("UCS · PATCH /boxes/{id}"), s: "UCS",
-            a: "applies the new size or lock state",
-            cond: "skipped for a title/description-only change",
-            kids: [ boxEcho("box size or lock state changed") ] },
-          { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
-            a: "upserts <span class='m'>uploadBoxes</span>", term: true },
-          auditLeaf()
+      "id": "box-update",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "PATCH /upload-boxes/{box_id}  (retitle · resize · lock · unlock)",
+      "title": "A data steward changes a box without archiving it",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "persists the change",
+        "kids": [
+          {
+            "e": { "tp": "UCS · PATCH /boxes/{id}", "ty": "synchronous call", "k": "http" },
+            "s": "UCS",
+            "a": "applies the new size or lock state",
+            "cond": "skipped for a title/description-only change",
+            "kids": [
+              {
+                "e": { "tp": "file-upload-boxes", "ty": "upserted", "k": "outbox" },
+                "s": "RS",
+                "a": "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+                "cond": "box size or lock state changed",
+                "kids": [
+                  {
+                    "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+                    "s": "WPS",
+                    "a": "upserts <span class='m'>uploadBoxes</span>, used for upload work packages",
+                    "term": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+            "s": "WPS",
+            "a": "upserts <span class='m'>uploadBoxes</span>",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "box-delete", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "DELETE /upload-boxes/{box_id}",
-      title: "A data steward deletes an upload box",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "deletes the RDUB and its accession mappings, then calls UCS",
-        kids: [
-          { e: http("UCS · DELETE /boxes/{id}"), s: "UCS",
-            a: "deletes every FileUpload, then the box",
-            kids: [
-              { e: e("file-uploads", "deleted", O), s: "FIS", a: "drops the upload", term: true },
-              { e: e("file-uploads", "deleted", O), s: "IFRS",
-                a: "logged and ignored — archived files are purged through PCS, not here", term: true },
-              { e: e("file-upload-boxes", "deleted", O), s: "RS",
-                a: "logged only, to avoid a race with RS's own deletion", term: true }
-            ] },
-          { e: e("accession-maps", "deleted", O), s: "WPS",
-            a: "deletes the <span class='m'>accessionMaps</span> row", term: true },
-          { e: e("accession-maps", "deleted", O), s: "DINS",
-            a: "deletes the <span class='m'>fileAccessionMaps</span> row",
-            cond: "file_information is left in place", term: true },
-          { e: e("research-data-upload-boxes", "deleted", O), s: "WPS",
-            a: "deletes the <span class='m'>uploadBoxes</span> row", term: true },
-          auditLeaf()
+      "id": "box-delete",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "DELETE /upload-boxes/{box_id}",
+      "title": "A data steward deletes an upload box",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "deletes the RDUB and its accession mappings, then calls UCS",
+        "kids": [
+          {
+            "e": { "tp": "UCS · DELETE /boxes/{id}", "ty": "synchronous call", "k": "http" },
+            "s": "UCS",
+            "a": "deletes every FileUpload, then the box",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "deleted", "k": "outbox" },
+                "s": "FIS",
+                "a": "drops the upload",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "deleted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "logged and ignored — archived files are purged through PCS, not here",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-upload-boxes", "ty": "deleted", "k": "outbox" },
+                "s": "RS",
+                "a": "logged only, to avoid a race with RS's own deletion",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "accession-maps", "ty": "deleted", "k": "outbox" },
+            "s": "WPS",
+            "a": "deletes the <span class='m'>accessionMaps</span> row",
+            "term": true
+          },
+          {
+            "e": { "tp": "accession-maps", "ty": "deleted", "k": "outbox" },
+            "s": "DINS",
+            "a": "deletes the <span class='m'>fileAccessionMaps</span> row",
+            "cond": "file_information is left in place",
+            "term": true
+          },
+          {
+            "e": { "tp": "research-data-upload-boxes", "ty": "deleted", "k": "outbox" },
+            "s": "WPS",
+            "a": "deletes the <span class='m'>uploadBoxes</span> row",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "accession-map", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "POST /upload-boxes/{box_id}/file-ids",
-      title: "A data steward submits an accession map",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "writes <span class='m'>fileAccessions</span> rows and bumps the box version",
-        kids: [
-          { e: e("accession-maps", "upserted", O), s: "WPS",
-            a: "upserts <span class='m'>accessionMaps</span> — without this no download work order token " +
-               "can be issued", term: true },
-          { e: e("accession-maps", "upserted", O), s: "DINS",
-            a: "upserts <span class='m'>fileAccessionMaps</span>, then merges any waiting " +
-               "<span class='m'>pendingFileInfo</span> into <span class='m'>file_information</span>",
-            term: true },
-          { e: e("research-data-upload-boxes", "upserted", O), s: "WPS",
-            a: "upserts the new box version", term: true },
-          auditLeaf()
+      "id": "accession-map",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "POST /upload-boxes/{box_id}/file-ids",
+      "title": "A data steward submits an accession map",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "writes <span class='m'>fileAccessions</span> rows and bumps the box version",
+        "kids": [
+          {
+            "e": { "tp": "accession-maps", "ty": "upserted", "k": "outbox" },
+            "s": "WPS",
+            "a": "upserts <span class='m'>accessionMaps</span> — without this no download work order token can be issued",
+            "term": true
+          },
+          {
+            "e": { "tp": "accession-maps", "ty": "upserted", "k": "outbox" },
+            "s": "DINS",
+            "a": "upserts <span class='m'>fileAccessionMaps</span>, then merges any waiting <span class='m'>pendingFileInfo</span> into <span class='m'>file_information</span>",
+            "term": true
+          },
+          {
+            "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+            "s": "WPS",
+            "a": "upserts the new box version",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "requeue", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "POST /upload-boxes/{box_id}/requeue  ·  /uploads/{file_id}/requeue",
-      title: "A data steward requeues failed uploads",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "calls UCS for one file or for every failed file in the box",
-        kids: [
-          { e: http("UCS · POST /rpc/boxes/{id}/…/requeue"), s: "UCS",
-            a: "FileUpload → <b>inbox</b>",
-            kids: [
-              { e: e("file-uploads", "upserted", O), s: "FIS",
-                a: "picks the file up again for interrogation", term: true },
-              { e: e("file-uploads", "upserted", O), s: "IFRS",
-                a: "ignored — not <span class='m'>awaiting_archival</span>", term: true }
-            ] },
-          auditLeaf()
+      "id": "requeue",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "POST /upload-boxes/{box_id}/requeue  ·  /uploads/{file_id}/requeue",
+      "title": "A data steward requeues failed uploads",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "calls UCS for one file or for every failed file in the box",
+        "kids": [
+          {
+            "e": { "tp": "UCS · POST /rpc/boxes/{id}/…/requeue", "ty": "synchronous call", "k": "http" },
+            "s": "UCS",
+            "a": "FileUpload → <b>inbox</b>",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "FIS",
+                "a": "picks the file up again for interrogation",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "ignored — not <span class='m'>awaiting_archival</span>",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "upload-delete", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "DELETE /upload-boxes/{box_id}/uploads/{file_id}",
-      title: "A data steward removes a single file upload",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "calls UCS to remove the upload",
-        kids: [
-          { e: http("UCS · DELETE /boxes/{id}/uploads/{file_id}"), s: "UCS",
-            a: "removes the FileUpload and its inbox object",
-            kids: [
-              { e: e("file-uploads", "deleted", O), s: "FIS", a: "drops the upload", term: true },
-              { e: e("file-uploads", "deleted", O), s: "IFRS", a: "logged and ignored", term: true },
-              boxEcho("file count and size changed")
-            ] },
-          auditLeaf()
+      "id": "upload-delete",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "DELETE /upload-boxes/{box_id}/uploads/{file_id}",
+      "title": "A data steward removes a single file upload",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "calls UCS to remove the upload",
+        "kids": [
+          {
+            "e": { "tp": "UCS · DELETE /boxes/{id}/uploads/{file_id}", "ty": "synchronous call", "k": "http" },
+            "s": "UCS",
+            "a": "removes the FileUpload and its inbox object",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "deleted", "k": "outbox" },
+                "s": "FIS",
+                "a": "drops the upload",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "deleted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "logged and ignored",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-upload-boxes", "ty": "upserted", "k": "outbox" },
+                "s": "RS",
+                "a": "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+                "cond": "file count and size changed",
+                "kids": [
+                  {
+                    "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+                    "s": "WPS",
+                    "a": "upserts <span class='m'>uploadBoxes</span>, used for upload work packages",
+                    "term": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "upload-grant", lane: "Upload boxes", actor: "Data Portal · steward",
-      call: "POST /upload-grants  ·  DELETE /upload-grants/{grant_id}",
-      title: "A data steward grants or revokes upload access",
-      target: "ghga-registry-service",
-      root: {
-        s: "RS", a: "calls the auth service, then logs the action",
-        kids: [
-          { e: http("auth-service · upload-access grants"), s: "AUTH",
-            a: "stores or revokes the claim — <b>no event published</b>", term: true },
-          auditLeaf()
+      "id": "upload-grant",
+      "lane": "Upload boxes",
+      "actor": "Data Portal · steward",
+      "call": "POST /upload-grants  ·  DELETE /upload-grants/{grant_id}",
+      "title": "A data steward grants or revokes upload access",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "calls the auth service, then logs the action",
+        "kids": [
+          {
+            "e": { "tp": "auth-service · upload-access grants", "ty": "synchronous call", "k": "http" },
+            "s": "AUTH",
+            "a": "stores or revokes the claim — <b>no event published</b>",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "connector-upload", lane: "Upload boxes", actor: "Connector · submitter",
-      call: "ghga-connector batch-upload  ·  ubox",
-      title: "A data submitter uploads files into a box",
-      target: "UCS · file upload API (with a WPS work order token)",
-      root: {
-        s: "UCS", a: "creates the FileUpload, serves part URLs, then completes it",
-        cond: "part-URL requests themselves publish nothing",
-        kids: [
-          { e: e("file-uploads", "upserted", O), s: "FIS",
-            a: "lists the file as awaiting interrogation", term: true },
-          { e: e("file-uploads", "upserted", O), s: "IFRS",
-            a: "ignored at every state before <span class='m'>awaiting_archival</span>", term: true },
-          boxEcho("file count and size changed")
+      "id": "connector-upload",
+      "lane": "Upload boxes",
+      "actor": "Connector · submitter",
+      "call": "ghga-connector batch-upload  ·  ubox",
+      "title": "A data submitter uploads files into a box",
+      "target": "UCS · file upload API (with a WPS work order token)",
+      "root": {
+        "s": "UCS",
+        "a": "creates the FileUpload, serves part URLs, then completes it",
+        "cond": "part-URL requests themselves publish nothing",
+        "kids": [
+          {
+            "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+            "s": "FIS",
+            "a": "lists the file as awaiting interrogation",
+            "term": true
+          },
+          {
+            "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+            "s": "IFRS",
+            "a": "ignored at every state before <span class='m'>awaiting_archival</span>",
+            "term": true
+          },
+          {
+            "e": { "tp": "file-upload-boxes", "ty": "upserted", "k": "outbox" },
+            "s": "RS",
+            "a": "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+            "cond": "file count and size changed",
+            "kids": [
+              {
+                "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+                "s": "WPS",
+                "a": "upserts <span class='m'>uploadBoxes</span>, used for upload work packages",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "interrogate", lane: "Interrogation", actor: "Data Hub · DHFS",
-      call: "dhfs interrogate",
-      title: "A data hub submits an interrogation report",
-      target: "FIS · POST /storages/{alias}/interrogation-reports",
-      root: {
-        s: "FIS", a: "validates the report and publishes the verdict",
-        cond: "a success moves the upload to 'interrogated' — archival waits for the box to be archived",
-        kids: [
-          { e: e("interrogations", "file_interrogation_success", S), s: "UCS",
-            a: "FileUpload → <b>interrogated</b>, inbox object removed",
-            cond: "stale or non-inbox reports are dropped",
-            kids: [
-              { e: e("file-uploads", "upserted", O), s: "FIS",
-                a: "refreshes its view of the upload", term: true },
-              { e: e("file-uploads", "upserted", O), s: "IFRS",
-                a: "ignored — not yet <span class='m'>awaiting_archival</span>", term: true }
-            ] },
-          { e: e("interrogations", "file_interrogation_failed", S), s: "UCS",
-            a: "FileUpload → <b>failed_interrogation</b>, awaiting a requeue",
-            kids: [
-              { e: e("file-uploads", "upserted", O), s: "FIS",
-                a: "refreshes its view of the upload", term: true },
-              { e: e("file-uploads", "upserted", O), s: "IFRS", a: "ignored", term: true }
-            ] }
+      "id": "interrogate",
+      "lane": "Interrogation",
+      "actor": "Data Hub · DHFS",
+      "call": "dhfs interrogate",
+      "title": "A data hub submits an interrogation report",
+      "target": "FIS · POST /storages/{alias}/interrogation-reports",
+      "root": {
+        "s": "FIS",
+        "a": "validates the report and publishes the verdict",
+        "cond": "a success moves the upload to 'interrogated' — archival waits for the box to be archived",
+        "kids": [
+          {
+            "e": { "tp": "interrogations", "ty": "file_interrogation_success", "k": "persist" },
+            "s": "UCS",
+            "a": "FileUpload → <b>interrogated</b>, inbox object removed",
+            "cond": "stale or non-inbox reports are dropped",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "FIS",
+                "a": "refreshes its view of the upload",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "ignored — not yet <span class='m'>awaiting_archival</span>",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "interrogations", "ty": "file_interrogation_failed", "k": "persist" },
+            "s": "UCS",
+            "a": "FileUpload → <b>failed_interrogation</b>, awaiting a requeue",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "FIS",
+                "a": "refreshes its view of the upload",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "ignored",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "download", lane: "Download", actor: "Connector · requester",
-      call: "ghga-connector download",
-      title: "A data requester downloads a file",
-      target: "DCS · GET /objects/{accession} (with a WPS work order token)",
-      root: {
-        s: "DCS", a: "resolves the work order token's <span class='m'>file_id</span> to a DRS object",
-        cond: "the two branches are mutually exclusive; GET /objects/{id}/envelopes publishes nothing",
-        kids: [
-          { e: e("staging-requests", "unstaged_download_requested", P), s: "IFRS",
-            a: "copies the object from permanent storage into the download bucket",
-            cond: "taken when the object is not staged; DCS answers 202 and the client retries",
-            kids: [
-              { e: e("staged-files", "internal_file_staged", P), s: "—",
-                a: "announced but unsubscribed — the client's retry is what completes the download",
-                term: true }
-            ] },
-          { e: e("downloads", "drs_object_served", S), s: "—",
-            a: "access time updated, download accounted for",
-            cond: "taken when the object is already staged", term: true }
+      "id": "download",
+      "lane": "Download",
+      "actor": "Connector · requester",
+      "call": "ghga-connector download",
+      "title": "A data requester downloads a file",
+      "target": "DCS · GET /objects/{accession} (with a WPS work order token)",
+      "root": {
+        "s": "DCS",
+        "a": "resolves the work order token's <span class='m'>file_id</span> to a DRS object",
+        "cond": "the two branches are mutually exclusive; GET /objects/{id}/envelopes publishes nothing",
+        "kids": [
+          {
+            "e": { "tp": "staging-requests", "ty": "unstaged_download_requested", "k": "plain" },
+            "s": "IFRS",
+            "a": "copies the object from permanent storage into the download bucket",
+            "cond": "taken when the object is not staged; DCS answers 202 and the client retries",
+            "kids": [
+              {
+                "e": { "tp": "staged-files", "ty": "internal_file_staged", "k": "plain" },
+                "s": "—",
+                "a": "announced but unsubscribed — the client's retry is what completes the download",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "downloads", "ty": "drs_object_served", "k": "persist" },
+            "s": "—",
+            "a": "access time updated, download accounted for",
+            "cond": "taken when the object is already staged",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "purge", lane: "Deletion", actor: "DS Kit",
-      call: "datasteward-kit files delete-file",
-      title: "A data steward purges a file",
-      target: "PCS · DELETE /files/{file_id}",
-      root: {
-        s: "PCS", a: "publishes a deletion request and nothing else",
-        kids: [
-          { e: e("purges", "file_deletion_requested", S), s: "IFRS",
-            a: "deletes the permanent object and <span class='m'>file_metadata</span>",
-            kids: [
-              { e: e("file-deletions", "internal_file_deleted", S), s: "—",
-                a: "published for downstream reporting", term: true }
-            ] },
-          { e: e("purges", "file_deletion_requested", S), s: "DCS",
-            a: "deletes the DRS object, the staged copy and the EKSS secret",
-            kids: [
-              { e: e("file-deletions", "drs_object_deleted", S), s: "—",
-                a: "published for downstream reporting", term: true }
-            ] },
-          { e: e("purges", "file_deletion_requested", S), s: "UCS",
-            a: "FileUpload → <b>cancelled</b>, inbox object removed",
-            cond: "already-cancelled or failed uploads are skipped",
-            kids: [
-              { e: e("file-uploads", "upserted", O), s: "FIS", a: "refreshes its view", term: true },
-              { e: e("file-uploads", "upserted", O), s: "IFRS", a: "ignored", term: true },
-              boxEcho("file count and size changed")
-            ] },
-          { e: e("purges", "file_deletion_requested", S), s: "DINS",
-            a: "deletes <span class='m'>file_information</span> for the mapped accession",
-            cond: "no accession map for the file ID → logged and skipped", term: true }
+      "id": "purge",
+      "lane": "Deletion",
+      "actor": "DS Kit",
+      "call": "datasteward-kit files delete-file",
+      "title": "A data steward purges a file",
+      "target": "PCS · DELETE /files/{file_id}",
+      "root": {
+        "s": "PCS",
+        "a": "publishes a deletion request and nothing else",
+        "kids": [
+          {
+            "e": { "tp": "purges", "ty": "file_deletion_requested", "k": "persist" },
+            "s": "IFRS",
+            "a": "deletes the permanent object and <span class='m'>file_metadata</span>",
+            "kids": [
+              {
+                "e": { "tp": "file-deletions", "ty": "internal_file_deleted", "k": "persist" },
+                "s": "—",
+                "a": "published for downstream reporting",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "purges", "ty": "file_deletion_requested", "k": "persist" },
+            "s": "DCS",
+            "a": "deletes the DRS object, the staged copy and the EKSS secret",
+            "kids": [
+              {
+                "e": { "tp": "file-deletions", "ty": "drs_object_deleted", "k": "persist" },
+                "s": "—",
+                "a": "published for downstream reporting",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "purges", "ty": "file_deletion_requested", "k": "persist" },
+            "s": "UCS",
+            "a": "FileUpload → <b>cancelled</b>, inbox object removed",
+            "cond": "already-cancelled or failed uploads are skipped",
+            "kids": [
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "FIS",
+                "a": "refreshes its view",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-uploads", "ty": "upserted", "k": "outbox" },
+                "s": "IFRS",
+                "a": "ignored",
+                "term": true
+              },
+              {
+                "e": { "tp": "file-upload-boxes", "ty": "upserted", "k": "outbox" },
+                "s": "RS",
+                "a": "upserts the FileUploadBox onto its parent ResearchDataUploadBox",
+                "cond": "file count and size changed",
+                "kids": [
+                  {
+                    "e": { "tp": "research-data-upload-boxes", "ty": "upserted", "k": "outbox" },
+                    "s": "WPS",
+                    "a": "upserts <span class='m'>uploadBoxes</span>, used for upload work packages",
+                    "term": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "e": { "tp": "purges", "ty": "file_deletion_requested", "k": "persist" },
+            "s": "DINS",
+            "a": "deletes <span class='m'>file_information</span> for the mapped accession",
+            "cond": "no accession map for the file ID → logged and skipped",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "user-write", lane: "Identity & access", actor: "Data Portal · user",
-      call: "POST /users  ·  PUT /users/{id}  ·  PATCH /users/{id}",
-      title: "A user registers or changes their account",
-      target: "auth-service · user registry",
-      root: {
-        s: "AUTH", a: "writes the user record",
-        cond: "the user DAO is an outbox with autopublish, so any write publishes",
-        kids: [
-          { e: e("users", "upserted", O), s: "NOS",
-            a: "upserts its user copy; compares old and new details",
-            kids: [ nosEmail("re-registration notice, only if details changed") ] }
+      "id": "user-write",
+      "lane": "Identity & access",
+      "actor": "Data Portal · user",
+      "call": "POST /users  ·  PUT /users/{id}  ·  PATCH /users/{id}",
+      "title": "A user registers or changes their account",
+      "target": "auth-service · user registry",
+      "root": {
+        "s": "AUTH",
+        "a": "writes the user record",
+        "cond": "the user DAO is an outbox with autopublish, so any write publishes",
+        "kids": [
+          {
+            "e": { "tp": "users", "ty": "upserted", "k": "outbox" },
+            "s": "NOS",
+            "a": "upserts its user copy; compares old and new details",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — re-registration notice, only if details changed",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "user-delete", lane: "Identity & access", actor: "Data Portal · steward",
-      call: "DELETE /users/{id}",
-      title: "A user account is deleted",
-      target: "auth-service · user registry",
-      root: {
-        s: "AUTH", a: "deletes the user record",
-        kids: [
-          { e: e("users", "deleted", O), s: "NOS",
-            a: "deletes its user copy — no notification", term: true }
+      "id": "user-delete",
+      "lane": "Identity & access",
+      "actor": "Data Portal · steward",
+      "call": "DELETE /users/{id}",
+      "title": "A user account is deleted",
+      "target": "auth-service · user registry",
+      "root": {
+        "s": "AUTH",
+        "a": "deletes the user record",
+        "kids": [
+          {
+            "e": { "tp": "users", "ty": "deleted", "k": "outbox" },
+            "s": "NOS",
+            "a": "deletes its user copy — no notification",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "iva-code", lane: "Identity & access", actor: "Data Portal · user",
-      call: "POST /rpc/ivas/{iva_id}/request-code",
-      title: "A user requests an IVA verification code",
-      target: "auth-service · user registry",
-      root: {
-        s: "AUTH", a: "moves the IVA to code-requested and asks for transmission",
-        cond: "the only entrypoint that publishes two different types on one topic in a single call",
-        kids: [
-          { e: e("ivas", "iva_send_code", P), s: "NOS",
-            a: "sends the code over the IVA's own channel",
-            kids: [
-              { e: e("notifications", "sms_notification", P), s: "NS",
-                a: "sends the SMS", cond: "SMS-type IVAs only", term: true }
-            ] },
-          { e: e("ivas", "iva_state_changed", P), s: "NOS",
-            a: "notifies the user and the data stewards of the state change",
-            kids: [ nosEmail("code requested") ] }
+      "id": "iva-code",
+      "lane": "Identity & access",
+      "actor": "Data Portal · user",
+      "call": "POST /rpc/ivas/{iva_id}/request-code",
+      "title": "A user requests an IVA verification code",
+      "target": "auth-service · user registry",
+      "root": {
+        "s": "AUTH",
+        "a": "moves the IVA to code-requested and asks for transmission",
+        "cond": "the only entrypoint that publishes two different types on one topic in a single call",
+        "kids": [
+          {
+            "e": { "tp": "ivas", "ty": "iva_send_code", "k": "plain" },
+            "s": "NOS",
+            "a": "sends the code over the IVA's own channel",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "sms_notification", "k": "plain" },
+                "s": "NS",
+                "a": "sends the SMS",
+                "cond": "SMS-type IVAs only",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "ivas", "ty": "iva_state_changed", "k": "plain" },
+            "s": "NOS",
+            "a": "notifies the user and the data stewards of the state change",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — code requested",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "iva-state", lane: "Identity & access", actor: "Data Portal · user or steward",
-      call: "POST /rpc/ivas/{iva_id}/code-transmitted · /validate-code · /unverify",
-      title: "An IVA changes state",
-      target: "auth-service · user registry",
-      root: {
-        s: "AUTH", a: "persists the new IVA state",
-        cond: "create-code and DELETE /ivas/{id} publish nothing and are absent on purpose",
-        kids: [
-          { e: e("ivas", "iva_state_changed", P), s: "NOS",
-            a: "selects the notification for the new state",
-            kids: [ nosEmail("transmitted, verified or unverified") ] }
+      "id": "iva-state",
+      "lane": "Identity & access",
+      "actor": "Data Portal · user or steward",
+      "call": "POST /rpc/ivas/{iva_id}/code-transmitted · /validate-code · /unverify",
+      "title": "An IVA changes state",
+      "target": "auth-service · user registry",
+      "root": {
+        "s": "AUTH",
+        "a": "persists the new IVA state",
+        "cond": "create-code and DELETE /ivas/{id} publish nothing and are absent on purpose",
+        "kids": [
+          {
+            "e": { "tp": "ivas", "ty": "iva_state_changed", "k": "plain" },
+            "s": "NOS",
+            "a": "selects the notification for the new state",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — transmitted, verified or unverified",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "totp", lane: "Identity & access", actor: "Data Portal · user",
-      call: "POST /rpc/verify-totp",
-      title: "A user verifies a newly created TOTP token",
-      target: "auth-service · auth adapter",
-      root: {
-        s: "AUTH", a: "accepts the code, resets verified IVAs, stores the token",
-        cond: "only when the session state is NEW_TOTP_TOKEN",
-        kids: [
-          { e: e("ivas", "iva_state_changed", P), s: "NOS",
-            a: "handles the all-IVAs-reset case (key <span class='m'>all-{user_id}</span>)",
-            kids: [ nosEmail("all IVAs invalidated") ] },
-          { e: e("auth", "second_factor_recreated", P), s: "NOS",
-            a: "warns the user their second factor was replaced",
-            cond: "only if a TOTP token already existed",
-            kids: [ nosEmail("second factor recreated") ] }
+      "id": "totp",
+      "lane": "Identity & access",
+      "actor": "Data Portal · user",
+      "call": "POST /rpc/verify-totp",
+      "title": "A user verifies a newly created TOTP token",
+      "target": "auth-service · auth adapter",
+      "root": {
+        "s": "AUTH",
+        "a": "accepts the code, resets verified IVAs, stores the token",
+        "cond": "only when the session state is NEW_TOTP_TOKEN",
+        "kids": [
+          {
+            "e": { "tp": "ivas", "ty": "iva_state_changed", "k": "plain" },
+            "s": "NOS",
+            "a": "handles the all-IVAs-reset case (key <span class='m'>all-{user_id}</span>)",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — all IVAs invalidated",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "auth", "ty": "second_factor_recreated", "k": "plain" },
+            "s": "NOS",
+            "a": "warns the user their second factor was replaced",
+            "cond": "only if a TOTP token already existed",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — second factor recreated",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "access-request", lane: "Identity & access", actor: "Data Portal · requester",
-      call: "POST /access-requests",
-      title: "A data requester asks for dataset access",
-      target: "access-request-service",
-      root: {
-        s: "ARS", a: "inserts the access request",
-        kids: [
-          { e: e("access-requests", "upserted", O), s: "NOS",
-            a: "stores the request and emits the created-notifications",
-            kids: [
-              nosEmail("confirmation to the requester"),
-              { e: e("notifications", "email_notification", P), s: "NS",
-                a: "sends the notice to central data stewardship", term: true }
-            ] }
+      "id": "access-request",
+      "lane": "Identity & access",
+      "actor": "Data Portal · requester",
+      "call": "POST /access-requests",
+      "title": "A data requester asks for dataset access",
+      "target": "access-request-service",
+      "root": {
+        "s": "ARS",
+        "a": "inserts the access request",
+        "kids": [
+          {
+            "e": { "tp": "access-requests", "ty": "upserted", "k": "outbox" },
+            "s": "NOS",
+            "a": "stores the request and emits the created-notifications",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — confirmation to the requester",
+                "term": true
+              },
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "sends the notice to central data stewardship",
+                "term": true
+              }
+            ]
+          }
         ]
       }
     },
     {
-      id: "access-decide", lane: "Identity & access", actor: "Data Portal · steward",
-      call: "PATCH /access-requests/{access_request_id}",
-      title: "A data steward allows, denies or edits an access request",
-      target: "access-request-service",
-      root: {
-        s: "ARS", a: "updates the request's status or fields",
-        cond: "same topic and type as creation — NOS routes on the status inside the payload",
-        kids: [
-          { e: e("access-requests", "upserted", O), s: "NOS",
-            a: "picks the allowed or denied notification from the new status",
-            kids: [
-              nosEmail("outcome to the requester"),
-              { e: e("notifications", "email_notification", P), s: "NS",
-                a: "sends the confirmation to the data steward", term: true }
-            ] },
-          { e: http("auth-service · download-access grant"), s: "AUTH",
-            a: "stores the controlled-access claim — <b>no event published</b>",
-            cond: "allowed requests only", term: true }
+      "id": "access-decide",
+      "lane": "Identity & access",
+      "actor": "Data Portal · steward",
+      "call": "PATCH /access-requests/{access_request_id}",
+      "title": "A data steward allows, denies or edits an access request",
+      "target": "access-request-service",
+      "root": {
+        "s": "ARS",
+        "a": "updates the request's status or fields",
+        "cond": "same topic and type as creation — NOS routes on the status inside the payload",
+        "kids": [
+          {
+            "e": { "tp": "access-requests", "ty": "upserted", "k": "outbox" },
+            "s": "NOS",
+            "a": "picks the allowed or denied notification from the new status",
+            "kids": [
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "renders and sends the email — outcome to the requester",
+                "term": true
+              },
+              {
+                "e": { "tp": "notifications", "ty": "email_notification", "k": "plain" },
+                "s": "NS",
+                "a": "sends the confirmation to the data steward",
+                "term": true
+              }
+            ]
+          },
+          {
+            "e": { "tp": "auth-service · download-access grant", "ty": "synchronous call", "k": "http" },
+            "s": "AUTH",
+            "a": "stores the controlled-access claim — <b>no event published</b>",
+            "cond": "allowed requests only",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "dlq-process", lane: "Operational", actor: "Ops · DLQ service",
-      call: "POST /{service}/{topic}",
-      title: "An operator requeues a dead-lettered event",
-      target: "dlq-service",
-      root: {
-        s: "DLQS", a: "republishes the stored event under its original type and key",
-        kids: [
-          { e: e("retry-&lt;service_name&gt;", "&lt;original type&gt;", P), s: "that service",
-            a: "re-consumes the event; the rest of its cascade follows as normal",
-            cond: "only that one service subscribes to its own retry topic", term: true },
-          { e: e("dlq", "&lt;original type&gt;", P), s: "DLQS",
-            a: "the reverse edge — every node in every tree here can land back in the queue",
-            cond: "requires kafka_enable_dlq; a second failure returns it to the DLQ", term: true }
+      "id": "dlq-process",
+      "lane": "Operational",
+      "actor": "Ops · DLQ service",
+      "call": "POST /{service}/{topic}",
+      "title": "An operator requeues a dead-lettered event",
+      "target": "dlq-service",
+      "root": {
+        "s": "DLQS",
+        "a": "republishes the stored event under its original type and key",
+        "kids": [
+          {
+            "e": { "tp": "retry-&lt;service_name&gt;", "ty": "&lt;original type&gt;", "k": "plain" },
+            "s": "that service",
+            "a": "re-consumes the event; the rest of its cascade follows as normal",
+            "cond": "only that one service subscribes to its own retry topic",
+            "term": true
+          },
+          {
+            "e": { "tp": "dlq", "ty": "&lt;original type&gt;", "k": "plain" },
+            "s": "DLQS",
+            "a": "the reverse edge — every node in every tree here can land back in the queue",
+            "cond": "requires kafka_enable_dlq; a second failure returns it to the DLQ",
+            "term": true
+          }
         ]
       }
     },
     {
-      id: "republish", lane: "Operational", actor: "Ops · CLI",
-      call: "&lt;service&gt; publish-events [--all]",
-      title: "An operator replays a service's stored events",
-      target: "ars · dcs · fis · ifrs · pcs · rs · ucs",
-      root: {
-        s: "CLI", a: "publishes pending or all stored events for one service",
-        cond: "without --all only pending events go out: outbox docs with __metadata__.published false",
-        kids: [
-          { e: e("&lt;that service's topics&gt;", "upserted / deleted", O), s: "its subscribers",
-            a: "outbox DAOs — RS boxes, accession maps and studies; UCS uploads and boxes; ARS requests",
-            cond: "a document whose dto_to_event returns None is marked published without an event",
-            term: true },
-          { e: e("&lt;that service's topics&gt;", "&lt;original type&gt;", S), s: "its subscribers",
-            a: "persisted publishers — PCS purges, FIS interrogations, IFRS registrations and deletions, " +
-               "DCS downloads and deletions, RS audit records", term: true }
+      "id": "republish",
+      "lane": "Operational",
+      "actor": "Ops · CLI",
+      "call": "&lt;service&gt; publish-events [--all]",
+      "title": "An operator replays a service's stored events",
+      "target": "ars · dcs · fis · ifrs · pcs · rs · ucs",
+      "root": {
+        "s": "CLI",
+        "a": "publishes pending or all stored events for one service",
+        "cond": "without --all only pending events go out: outbox docs with __metadata__.published false",
+        "kids": [
+          {
+            "e": { "tp": "&lt;that service's topics&gt;", "ty": "upserted / deleted", "k": "outbox" },
+            "s": "its subscribers",
+            "a": "outbox DAOs — RS boxes, accession maps and studies; UCS uploads and boxes; ARS requests",
+            "cond": "a document whose dto_to_event returns None is marked published without an event",
+            "term": true
+          },
+          {
+            "e": { "tp": "&lt;that service's topics&gt;", "ty": "&lt;original type&gt;", "k": "persist" },
+            "s": "its subscribers",
+            "a": "persisted publishers — PCS purges, FIS interrogations, IFRS registrations and deletions, DCS downloads and deletions, RS audit records",
+            "term": true
+          }
         ]
       }
     }
   ];
 
   var TOPICS = [
-    ["metadata-datasets", P, "dataset_created · dataset_deleted", "metldata", "WPS, DINS, ARS, AUTH (deleted only)"],
-    ["searchable-resources", P, "searchable_resource_upserted · _deleted", "metldata", "MASS, RS"],
-    ["artifacts", P, "upserted · deleted", "metldata", "RTS"],
-    ["studies", O, "upserted · deleted", "RS", null],
-    ["accession-maps", O, "upserted · deleted", "RS", "WPS, DINS"],
-    ["audit-records", S, "audit_record_logged", "RS", null],
-    ["research-data-upload-boxes", O, "upserted · deleted", "RS", "WPS"],
-    ["file-upload-boxes", O, "upserted · deleted", "UCS", "RS"],
-    ["file-uploads", O, "upserted · deleted", "UCS", "FIS, IFRS"],
-    ["interrogations", S, "file_interrogation_success · _failed", "FIS", "UCS"],
-    ["internal-registrations", S, "internal_file_registered", "IFRS", "UCS, DCS, DINS"],
-    ["staged-files", P, "internal_file_staged", "IFRS", null],
-    ["staging-requests", P, "unstaged_download_requested", "DCS", "IFRS"],
-    ["downloads", S, "drs_object_registered · drs_object_served", "DCS", null],
-    ["file-deletions", S, "internal_file_deleted (IFRS) · drs_object_deleted (DCS)", "IFRS, DCS", null],
-    ["purges", S, "file_deletion_requested", "PCS", "IFRS, UCS, DCS, DINS"],
-    ["users", O, "upserted · deleted", "AUTH", "NOS"],
-    ["ivas", P, "iva_state_changed · iva_send_code", "AUTH", "NOS"],
-    ["auth", P, "second_factor_recreated", "AUTH", "NOS"],
-    ["access-requests", O, "upserted · deleted", "ARS", "NOS"],
-    ["notifications", P, "email_notification · sms_notification", "NOS", "NS"],
-    ["dlq", P, "(the original event's type)", "every DLQ-enabled service", "DLQS"],
-    ["retry-&lt;service&gt;", P, "(the original event's type)", "DLQS", "that one service"]
+    ["metadata-datasets", "plain", "dataset_created · dataset_deleted", "metldata", "WPS, DINS, ARS, AUTH (deleted only)"],
+    ["searchable-resources", "plain", "searchable_resource_upserted · _deleted", "metldata", "MASS, RS"],
+    ["artifacts", "plain", "upserted · deleted", "metldata", "RTS"],
+    ["studies", "outbox", "upserted · deleted", "RS", null],
+    ["accession-maps", "outbox", "upserted · deleted", "RS", "WPS, DINS"],
+    ["audit-records", "persist", "audit_record_logged", "RS", null],
+    ["research-data-upload-boxes", "outbox", "upserted · deleted", "RS", "WPS"],
+    ["file-upload-boxes", "outbox", "upserted · deleted", "UCS", "RS"],
+    ["file-uploads", "outbox", "upserted · deleted", "UCS", "FIS, IFRS"],
+    ["interrogations", "persist", "file_interrogation_success · _failed", "FIS", "UCS"],
+    ["internal-registrations", "persist", "internal_file_registered", "IFRS", "UCS, DCS, DINS"],
+    ["staged-files", "plain", "internal_file_staged", "IFRS", null],
+    ["staging-requests", "plain", "unstaged_download_requested", "DCS", "IFRS"],
+    ["downloads", "persist", "drs_object_registered · drs_object_served", "DCS", null],
+    ["file-deletions", "persist", "internal_file_deleted (IFRS) · drs_object_deleted (DCS)", "IFRS, DCS", null],
+    ["purges", "persist", "file_deletion_requested", "PCS", "IFRS, UCS, DCS, DINS"],
+    ["users", "outbox", "upserted · deleted", "AUTH", "NOS"],
+    ["ivas", "plain", "iva_state_changed · iva_send_code", "AUTH", "NOS"],
+    ["auth", "plain", "second_factor_recreated", "AUTH", "NOS"],
+    ["access-requests", "outbox", "upserted · deleted", "ARS", "NOS"],
+    ["notifications", "plain", "email_notification · sms_notification", "NOS", "NS"],
+    ["dlq", "plain", "(the original event's type)", "every DLQ-enabled service", "DLQS"],
+    ["retry-&lt;service&gt;", "plain", "(the original event's type)", "DLQS", "that one service"]
   ];
+  // kafka-map-data:end
 
   var KIND_LABEL = { plain: "plain", outbox: "outbox", persist: "persisted", http: "HTTP" };
 
@@ -1490,6 +2000,11 @@
   document.getElementById("b-collapse").addEventListener("click", function () {
     collapseAll(root, 1); render(); fit(0.85);
   });
+
+  // ---- counts and date, so the header cannot disagree with the data ------
+  document.getElementById("topology").textContent =
+    "GHGA · event topology · " + META.topics + " topics · " + META.entrypoints + " entrypoints";
+  document.getElementById("updated").textContent = "Last updated " + META.updated;
 
   // ---- topic table -------------------------------------------------------
   var rows = document.getElementById("topic-rows");
