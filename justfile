@@ -1016,6 +1016,31 @@ testbed *args:
     sleep 2
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
 
+# Run the suite against a deployment reached through its gateway alone, as a remote
+# cluster is: no kubectl, no port-forward, no /etc/hosts edit. The configuration holds
+# the URLs and database names; every secret comes from the environment, in the same
+# TB_* variables `testbed` harvests from the cluster, and a missing one fails here by
+# name instead of as a scenario timeout. The suite resets shared state, so run it
+# against one deployment only once at a time.
+# Run the testbed suite against a tb.*.yaml deployment without the kind prelude (e.g. `just testbed-remote testbed/tb.local-kind.yaml steps/test_001_health_check.py`).
+testbed-remote config *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export PATH="$PWD/.venv-testbed/bin:$PATH"
+    config="{{config}}"
+    [ -f "$config" ] || config="testbed/{{config}}"
+    [ -f "$config" ] || { echo "error: no such configuration: {{config}} (a tb.*.yaml path)" >&2; exit 1; }
+    missing=()
+    for var in TB_STATE_MANAGEMENT_TOKEN TB_PURGE_CONTROLLER_TOKEN TB_DLQ_TOKEN TB_UPLOAD_TOKEN \
+               TB_FIS_PUBKEY TB_USER_PRIVATE_CRYPT4GH_KEY TB_USER_PUBLIC_CRYPT4GH_KEY; do
+        [ -n "${!var:-}" ] || missing+=("$var")
+    done
+    [ ${#missing[@]} -eq 0 ] || { echo "error: not set in the environment: ${missing[*]}" >&2; exit 1; }
+    export TB_CONFIG_YAML="$(realpath "$config")"
+    # ghga-datasteward-kit reads the steward token from a file (dsk_token_path), not the environment
+    printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
+    cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
+
 # The name is matched loosely, so the `ghga-` prefix is optional and a substring is enough.
 # `just logs` with no argument lists the deployments and their ready counts.
 # Follow a service's logs, e.g. `just logs auth-adapter` (no argument lists them).
