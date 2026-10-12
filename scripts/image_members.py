@@ -18,7 +18,6 @@ Dockerfile's `test -e` guard enforces this at build time).
 
 import json
 import pathlib
-
 import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]

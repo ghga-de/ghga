@@ -15,7 +15,7 @@
 
 """Unit tests for the MongoDB migration tools"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
@@ -205,7 +205,7 @@ async def test_v6_uuid_datetime_conversion(
     expected_doc = {
         "_id": "item1",
         "some_uuid": test_uuid,
-        "some_datetime": expected_dt.astimezone(timezone.utc),
+        "some_datetime": expected_dt.astimezone(UTC),
     }
 
     # Define the migration

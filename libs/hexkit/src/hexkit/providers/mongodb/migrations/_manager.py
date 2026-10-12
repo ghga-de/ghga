@@ -18,7 +18,7 @@ import logging
 from asyncio import sleep
 from collections.abc import Mapping
 from contextlib import asynccontextmanager, suppress
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from time import perf_counter, time
 from typing import Literal
 
@@ -45,7 +45,7 @@ MigrationMap = Mapping[int, MigrationCls]
 
 def now_as_utc() -> datetime:
     """Return the current timestamp with UTC timezone"""
-    return datetime.now().astimezone(tz=timezone.utc)
+    return datetime.now().astimezone(tz=UTC)
 
 
 def duration_in_ms(duration: float) -> int:

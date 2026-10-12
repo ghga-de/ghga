@@ -56,10 +56,13 @@ docs = [
 # ----------------------------------------------------------------------------------------
 [tool.ruff]
 line-length = 88
-# monorepo: NO explicit target-version — members have different Python floors (libs
-# published to PyPI reach down to 3.9). Left unset, ruff infers the target per file
-# from the nearest [project] requires-python, so pyupgrade never suggests syntax a
-# member's floor cannot run.
+# Members have different Python floors, and ruff reads requires-python only from the
+# pyproject.toml holding its config, which here has no [project]. Left unset, every file
+# would get ruff's built-in default, which moves between ruff releases. So the lowest
+# floor is the target, and members above it, plus the code that runs on the workspace
+# interpreter (.python-version), get their own; scripts/tests/test_ruff_targets.py keeps
+# both in step with requires-python. testbed/ sets its own in testbed/.ruff.toml.
+target-version = "py311"
 # monorepo: point first-party detection at each member's src/ (was a single "src" per repo)
 src = ["libs/*/src", "services/*/src", "tools/*/src", "scripts"]
 exclude = [
@@ -70,6 +73,16 @@ exclude = [
     # real Python, and ruff >= 0.16 would otherwise format code blocks in markdown
     "docs/epics",
 ]
+
+[tool.ruff.per-file-target-version]
+"libs/ghga-event-schemas/**" = "py312"
+"libs/metldata/**" = "py312"
+"tools/ghga-datasteward-kit/**" = "py312"
+"services/**" = "py313"
+"tools/auth-km-jobs/**" = "py313"
+# not members: they run on the workspace interpreter
+"scripts/**" = "py313"
+"deploy/**" = "py313"
 
 [tool.ruff.lint]
 # --- ported verbatim from the template ---
@@ -85,6 +98,7 @@ ignore = [
     "PLR2004",                # magic-value comparison
     "D205", "D400", "D401", "D107", "D206", "D300",  # pydocstyle relaxations
     "UP040",                  # `type` statement (mypy support pending)
+    "UP046", "UP047",         # PEP 695 generics: rewrites public generics of published libs
     "PLC0206",                # dict value extraction without `.items()`
     "PLR0917",                # too many positional arguments (stable since ruff 0.16)
 ]

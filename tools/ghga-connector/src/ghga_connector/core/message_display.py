@@ -21,7 +21,7 @@ import enum
 import typer
 
 
-class MessageColors(str, enum.Enum):
+class MessageColors(enum.StrEnum):
     """
     Define commonly used colors for logging
     For a selection of valid colors see click.termui._ansi_colors:

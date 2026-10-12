@@ -32,7 +32,7 @@ from aiokafka.admin.config_resource import ConfigResource, ConfigResourceType
 try:
     from typing import Self
 except ImportError:  # Python < 3.11
-    from typing_extensions import Self
+    from typing import Self
 
 
 import pytest
