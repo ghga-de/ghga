@@ -54,6 +54,7 @@ jobs:
       python: ${{ steps.affected.outputs.python }}
       frontend: ${{ steps.affected.outputs.frontend }}
       images: ${{ steps.affected.outputs.images }}
+      image-builds: ${{ steps.affected.outputs.image-builds }}
       devcontainer: ${{ steps.affected.outputs.devcontainer }}
     steps:
       - uses: actions/checkout@v5
@@ -91,26 +92,30 @@ jobs:
           # from scripts/image_members.py, so a new image member is gated the day it
           # lands; the Python members all share docker/Dockerfile and are covered by
           # the one mono build (`just image-mono`, VARIANT=mono).
-          images=$(CHANGED="$changed" python3 -c "
+          # The matrix takes bare image names, so a skipped job's check is titled
+          # plainly; the build recipe for each is looked up in a separate map.
+          builds=$(CHANGED="$changed" python3 -c "
           import json, os, sys
           sys.path.insert(0, 'scripts')
           from image_members import image_members
           changed = set(os.environ['CHANGED'].split())
           unknown = not changed
-          out, mono = [], False
+          out, mono = {}, False
           for m in image_members():
               if not (unknown or m['dockerfile'] in changed):
                   continue
               if m['kind'] == 'python':
                   mono = True
               else:
-                  out.append({'image': m['package'], 'build': 'image ' + m['path']})
+                  out[m['package']] = 'image ' + m['path']
           if mono:
-              out.insert(0, {'image': 'platform', 'build': 'image-mono'})
+              out = {'platform': 'image-mono', **out}
           print(json.dumps(out))
           ")
-          echo "images: $images"
+          images=$(echo "$builds" | jq -c 'keys_unsorted')
+          echo "images: $builds"
           echo "images=$images" >> "$GITHUB_OUTPUT"
+          echo "image-builds=$builds" >> "$GITHUB_OUTPUT"
 
           # The dev container is not a workspace member, so affected_targets.py does not see
           # it; diff it directly off the same base. No usable base -> check it, matching the
@@ -279,16 +284,15 @@ jobs:
   # security-scan call), so the dockerfile / context / registry-name mapping is never
   # duplicated into a workflow. Nothing is pushed: no packages: write, no GHCR login.
   check-images:
-    name: build ${{ matrix.target.image }} (${{ contains(matrix.runner, 'arm') && 'arm64' || 'amd64' }})
     needs: discover
     if: ${{ needs.discover.outputs.images != '[]' }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        target: ${{ fromJSON(needs.discover.outputs.images) }}
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runner }}
+        image: ${{ fromJSON(needs.discover.outputs.images) }}
+        arch: [amd64, arm64]
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
     steps:
@@ -309,8 +313,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # --pull is the point of the check: resolve the base against the registry instead
       # of whatever manifest the runner happens to have cached. The tag is throwaway.
-      - name: Build ${{ matrix.target.image }}
-        run: just ${{ matrix.target.build }} ci --pull
+      - name: Build ${{ matrix.image }}
+        run: just ${{ fromJSON(needs.discover.outputs.image-builds)[matrix.image] }} ci --pull
 
   # THE check to require in branch protection ("Protected Main" ruleset -> require status
   # checks -> `ci / images-gate`). It exists because a required check must always report:
