@@ -96,7 +96,7 @@ Some advantages include:
 - The data producer remains the single source of truth
 - Kafka events no longer need to be backed up separately from the database
 
-Hexkit's interfaces for the pattern are the [DAO Publisher](../protocols/daopublisher.qmd) protocol on the producing side and the [DAO Subscriber](../protocols/daosubscriber.qmd) protocol on the consuming side; each has its own chapter.
+hexkit's interfaces for the pattern are the [DAO Publisher](../protocols/daopublisher.qmd) protocol on the producing side and the [DAO Subscriber](../protocols/daosubscriber.qmd) protocol on the consuming side; each has its own chapter.
 
 ### Topic Compaction & Idempotence
 

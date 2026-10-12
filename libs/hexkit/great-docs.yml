@@ -146,6 +146,7 @@ user_guide:
         href: arch_concepts/index.qmd
       - arch_concepts/hexagonal_arch.qmd
       - arch_concepts/triple_hexagonal_arch.qmd
+      - arch_concepts/dependency_injection.qmd
       - arch_concepts/dao_pattern.qmd
       - arch_concepts/event_driven_arch.qmd
       - arch_concepts/dlq.qmd
