@@ -42,6 +42,8 @@ ResponseHandler = Callable[
 
 # Match what FastAPI considers a variable
 _VARIABLE = re.compile(r"\{[a-zA-Z_][a-zA-Z0-9_]*\}")
+# Stands in for a variable's value; a route path cannot contain a brace as a literal
+_PROBE_SEGMENT = "{"
 _METHODS = ("GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE")
 
 
@@ -80,38 +82,46 @@ class MockApi:
 
         `path` is relative to the base URL.
         An empty path or `/` routes the base URL itself.
+        A `{variable}` has to be a whole path segment.
 
-        Routes are tried in the order they were added, so a literal route needs to go before
-        a variable one that would match. The other way round is refused.
+        Routes are tried in the order they were added, so a route needs to go before a
+        broader one that would match its requests too. The other way round is refused.
         """
         method = method.upper()
         if method not in _METHODS:
             raise MockSetupError(f"Route method {method!r} is not an HTTP method")
         if not callable(getattr(self, handler, None)):
             raise MockSetupError(f"Handler `{handler}` is not defined.")
-        if any(brace in part for part in _VARIABLE.split(path) for brace in "{}"):
+        # Requests match on their decoded path, so the route path is decoded first
+        decoded = unquote(path).lstrip("/")
+        if any(brace in part for part in _VARIABLE.split(decoded) for brace in "{}"):
             raise MockSetupError(
                 f"Route path {path!r} contains braces outside a `{{variable}}`."
             )
-        if "?" in path:
+        if any(
+            _VARIABLE.search(segment) and not _VARIABLE.fullmatch(segment)
+            for segment in decoded.split("/")
+        ):
+            raise MockSetupError(
+                f"Route path {path!r} has a variable that is not a whole path segment."
+            )
+        if "?" in path:  # as written, since an encoded `?` is part of the path
             raise MockSetupError(
                 f"Route path {path!r} should not specify query parameters."
             )
         base_path = self.base_url.path.rstrip("/")
         regex = re.escape(base_path)
-        if path.strip("/"):
-            parts = _VARIABLE.split(path.lstrip("/"))
-            regex += "/" + "[^/]+".join(re.escape(unquote(part)) for part in parts)
+        if decoded.strip("/"):
+            parts = _VARIABLE.split(decoded)
+            regex += "/" + "[^/]+".join(re.escape(part) for part in parts)
         else:
             regex += "/?"  # the base URL itself, with or without its trailing slash
         pattern = re.compile(regex)
-    # A route without path variables must be defined above matching routes with path variables, if applicable.
-        is_literal = not _VARIABLE.search(path)
-        literal_path = f"{base_path}/{unquote(path.lstrip('/'))}"
+        # A route must be defined above a broader one that matches its requests too.
+        probe_path = f"{base_path}/{_VARIABLE.sub(_PROBE_SEGMENT, decoded)}"
         for routed_method, routed_pattern, routed_handler in self._routes:
             if routed_method == method and (
-                routed_pattern == pattern
-                or (is_literal and routed_pattern.fullmatch(literal_path))
+                routed_pattern == pattern or routed_pattern.fullmatch(probe_path)
             ):
                 raise MockSetupError(
                     f"{method} {path!r} is registered for handler `{routed_handler}` already, so"
