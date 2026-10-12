@@ -6,6 +6,7 @@ The repo-wide rules are in the root [AGENTS.md](../AGENTS.md), what the director
 ## Where to read
 
 [docs/architecture/metadata-and-file-journeys.md](../docs/architecture/metadata-and-file-journeys.md) is required reading before changing how a service produces or consumes events: it is how metadata and files flow across the platform.
+Before changing which events a service publishes or subscribes to, read [the Kafka topology rule](../.claude/rules/kafka-topology.md): the cascades map is hand-maintained, so the same change updates it.
 
 ## Service patterns
 

@@ -10,6 +10,8 @@
 >
 > File:line anchors are provided as entry points.
 > They drift — treat them as "start looking here", not as guarantees.
+>
+> **The same flows as a diagram.** [kafka-cascade-map.html](kafka-cascade-map.html) draws the event cascades these journeys describe, one tree per entrypoint; [kafka-cascade-map.md](kafka-cascade-map.md) says how to open and maintain it.
 
 ---
 

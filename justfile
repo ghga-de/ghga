@@ -136,6 +136,11 @@ hooks-update: _guard
 docs-check *args: _guard
     uv run python scripts/docs_check.py {{args}}
 
+# The same check the kafka-map pre-commit hook runs.
+# Write docs/architecture/kafka-cascades.yaml into the map page; `--check` only reports.
+kafka-map *args: _guard
+    uv run python scripts/kafka_map.py {{args}}
+
 # vale is a Go binary outside the uv and pnpm toolchains, so the dev container lacks it;
 # .vale.ini pins the rule package, which `vale sync` downloads into the gitignored .vale/.
 # Warns only. Without paths it reads the Markdown and Python files changed against the
