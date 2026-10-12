@@ -21,7 +21,14 @@ with the database.
 import typing
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
+from collections.abc import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Collection,
+    Iterable,
+    Mapping,
+)
 from contextlib import AbstractAsyncContextManager
 from functools import partial
 from typing import Any, Generic, TypeVar
@@ -33,6 +40,7 @@ from hexkit.custom_types import ID
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
 
 __all__ = [
+    "BatchOperationError",
     "Dao",
     "DaoFactoryProtocol",
     "FindError",
@@ -107,6 +115,25 @@ class PreconditionFailedError(DaoError):
         super().__init__(message)
 
 
+class BatchOperationError(DaoError):
+    """Raised when some resources of a batch failed; the unlisted ones were written.
+
+    `errors` maps each failed ID to the error a single-resource method would raise.
+    `not_attempted` lists, in input order, the IDs an ordered batch skipped after its
+    first failure.
+    """
+
+    def __init__(
+        self, *, errors: Mapping[ID, DaoError], not_attempted: Collection[ID] = ()
+    ):
+        self.errors = dict(errors)
+        self.not_attempted = tuple(not_attempted)
+        message = (
+            f"{len(self.errors)} resource(s) of the batch failed: {list(self.errors)}"
+        )
+        super().__init__(message)
+
+
 # TODO: Remove `mapping` when moving hexkit to v11.0.0
 MAPPING_DEPRECATION_MESSAGE = (
     "The mapping parameter is being renamed to filter_, and support for mapping will"
@@ -138,6 +165,18 @@ def resolve_filter(
         MAPPING_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=stacklevel
     )
     return mapping
+
+
+def ensure_distinct_ids(ids: Iterable[ID]) -> None:
+    """Raise a ValueError naming the IDs that occur more than once in a batch."""
+    seen: set[ID] = set()
+    duplicates: list[ID] = []
+    for id_ in ids:
+        if id_ in seen and id_ not in duplicates:
+            duplicates.append(id_)
+        seen.add(id_)
+    if duplicates:
+        raise ValueError(f"The batch holds these IDs more than once: {duplicates}")
 
 
 class FindError(DaoError):
