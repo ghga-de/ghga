@@ -34,7 +34,13 @@ from urllib.parse import unquote
 
 import httpx2
 
-__all__ = ["MockApi", "MockSetupError", "NotMockedError", "ResponseHandler"]
+__all__ = [
+    "MockApi",
+    "MockSetupError",
+    "NotMockedError",
+    "ResponseHandler",
+    "path_variables",
+]
 
 ResponseHandler = Callable[
     [httpx2.Request], httpx2.Response | Awaitable[httpx2.Response]
@@ -145,3 +151,23 @@ class MockApi:
             if request.method == method and pattern.fullmatch(url.path):
                 return getattr(self, handler)
         return None
+
+
+def path_variables(request: httpx2.Request, path: str) -> dict[str, str]:
+    """Read the `{variable}` values of route `path` from the end of the request's path.
+
+    `path` is the one given to `route`, so a handler can look up what its route matched.
+    """
+    decoded = unquote(path).lstrip("/")
+    names = [variable[1:-1] for variable in _VARIABLE.findall(decoded)]
+    if decoded.strip("/"):
+        parts = _VARIABLE.split(decoded)
+        regex = "/" + "([^/]+)".join(re.escape(part) for part in parts)
+    else:
+        regex = "/?"  # the base URL itself, which has no variables
+    match = re.search(f"{regex}$", request.url.path)
+    if match is None:
+        raise MockSetupError(
+            f"Request path {request.url.path!r} does not end in route path {path!r}."
+        )
+    return dict(zip(names, match.groups(), strict=True))
