@@ -77,6 +77,7 @@ Its document keeps `__metadata__.published == False`, so `publish_pending()` sen
 This gives at-least-once delivery, the strongest guarantee available without a transaction across MongoDB and Kafka.
 A repeated event is harmless, because each one carries the full current state of its resource.
 `insert_many` treats a tombstoned ID as taken, as `insert` does.
+`upsert_many` recreates a tombstoned resource, as `upsert` does.
 
 Republishing events:
 

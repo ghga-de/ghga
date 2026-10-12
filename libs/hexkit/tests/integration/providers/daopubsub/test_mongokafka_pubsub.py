@@ -1336,3 +1336,23 @@ async def test_insert_many_publishes_best_effort(
             events=[change_event(failing)], in_topic=EXAMPLE_TOPIC
         ):
             await dao.publish_pending()
+
+
+async def test_upsert_many_publishes(mongo_kafka: MongoKafkaFixture):
+    """Test that upsert_many publishes each written resource and recreates a
+    tombstoned one.
+    """
+    async with example_publisher(mongo_kafka) as dao:
+        tombstoned = ExampleDto()
+        await dao.insert(tombstoned)
+        await dao.delete(tombstoned.id)
+        recreated = tombstoned.model_copy(update={"field_b": 7})
+        new = ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(recreated), change_event(new)],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.upsert_many([recreated, new])
+
+        assert await dao.get_by_id(tombstoned.id) == recreated
