@@ -25,7 +25,10 @@ from tests.fixtures.metadata import (
     INVALID_MINIMAL_METADATA_EXAMPLES,
     VALID_MINIMAL_METADATA_EXAMPLES,
 )
-from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
+from tests.fixtures.metadata_models import (
+    MINIMAL_MODEL_WITH_STUDY,
+    VALID_MINIMAL_METADATA_MODEL,
+)
 
 
 @pytest.mark.parametrize(
@@ -44,3 +47,38 @@ def test_validate_against_model(metadata: dict[str, Any], is_valid: bool):
         nullcontext() if is_valid else pytest.raises(MetadataValidator.ValidationError)
     ):
         validator.validate(metadata)
+
+
+@pytest.mark.parametrize(
+    "studies, expected_message",
+    [
+        ([], "holds 0 entries, but the model allows at least 1"),
+        ([{"alias": "study_1"}], None),
+        (
+            [{"alias": "study_1"}, {"alias": "study_2"}],
+            "holds 2 entries, but the model allows at most 1",
+        ),
+    ],
+    ids=["no_study", "one_study", "two_studies"],
+)
+def test_validate_one_study_per_submission(
+    studies: list[dict[str, Any]], expected_message: str | None
+):
+    """Test that metadata must hold exactly one study when the model limits the
+    studies to one, and that a violation names the field and the limit.
+    """
+    validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
+    metadata = {
+        "studies": studies,
+        "files": [{"alias": "file_1", "filename": "file_1.fastq"}],
+    }
+
+    if expected_message is None:
+        validator.validate(metadata)
+        return
+
+    with pytest.raises(MetadataValidator.ValidationError) as error:
+        validator.validate(metadata)
+
+    assert "in field 'studies'" in str(error.value)
+    assert expected_message in str(error.value)

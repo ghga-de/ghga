@@ -24,17 +24,24 @@ from metldata.model_utils.config import MetadataModelConfig
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.metadata_models import (
     INVALID_METADATA_MODELS,
+    MINIMAL_MODEL_WITH_STUDY,
+    MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES,
     VALID_METADATA_MODELS,
 )
 
 
 @pytest.mark.parametrize(
     "model, is_valid",
-    [(valid_model, True) for valid_model in VALID_METADATA_MODELS]
+    [(MINIMAL_MODEL_WITH_STUDY, True)]
+    # models without a study class, or allowing any number of studies:
+    + [(model, False) for model in VALID_METADATA_MODELS]
+    + [(MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES, False)]
     + [(invalid_model, False) for invalid_model in INVALID_METADATA_MODELS],
 )
 def test_config(model: MetadataModel, is_valid: bool):
-    """Test with valid and invalid model."""
+    """Test that only a submission model with exactly one study per submission
+    loads.
+    """
     with model.temporary_yaml_path() as model_path:
         with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
             config = MetadataModelConfig(metadata_model_path=model_path)

@@ -4,6 +4,7 @@ event_store_path: event_store
 artifact_topic_prefix: artifact
 accession_store_path: accession_store
 prefix_mapping:
+  Study: GHGAY
   SampleFile: GHGASF
   ExperimentFile: GHGAEF
   Experiment: GHGAE
