@@ -38,7 +38,7 @@ The pre-commit hook runs the same script, so a stale page or an edit inside the 
 
 | Part of the map | Read from |
 |---|---|
-| Topics, event types, and which service produces or subscribes | `deploy/charts/<service>/values.yaml`, the `_topics` block: `topic.value` is the topic, `type.value` the event type, and `kafkaUser.operations` the ACL — `Write` for a producer, `Read` for a subscriber |
+| Topics, event types, and which service produces or subscribes | the `_topics` block: `topic.value` is the topic, `type.value` the event type, and `kafkaUser.operations` the ACL — `Write` for a producer, `Read` for a subscriber. Read it from the generated `deploy/charts/<service>/values.yaml`; edit it in the member's own `chart-values.yaml`, then run `just charts` |
 | The publish mechanism of each edge | the hexkit provider the service wires in its `inject.py`: `KafkaEventPublisher` is plain, `MongoKafkaDaoPublisherFactory` is outbox, `PersistentKafkaPublisher` is persisted |
 | What a subscriber does with an event | `services/<service>/src/<pkg>/adapters/inbound/event_sub.py`, and the core method it calls |
 | Which event a service publishes, and when | `services/<service>/src/<pkg>/adapters/outbound/event_pub.py`, or the outbox DAO the service registers in `inject.py` |

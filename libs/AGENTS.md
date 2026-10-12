@@ -19,3 +19,4 @@ Consumers import these from source, so one `uv.lock` resolves them and a change 
 Editing a `libs/` member therefore means running `just affected` and testing every consumer, not only the member's own suite.
 
 Before changing `ghga-event-schemas`, read [its rule](../.claude/rules/event-schemas.md): an event schema is a wire format two services agree on.
+[The Kafka topology rule](../.claude/rules/kafka-topology.md) applies here too: `ghga-event-schemas` declares the topics and types, and `metldata` publishes to them.

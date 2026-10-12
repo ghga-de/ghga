@@ -356,13 +356,15 @@ def test_reports_an_up_to_date_page_on_stdout(tmp_path, capsys):
     block = kafka_map.render(kafka_map.build(MINIMAL))
     _page(tmp_path, block)
     assert kafka_map.main([], root=tmp_path) == 0
-    assert capsys.readouterr().out == "Kafka map already up to date.\n"
+    assert capsys.readouterr().out == (
+        "Kafka map page already matches kafka-cascades.yaml.\n"
+    )
 
 
 def test_reports_the_page_it_rewrote(tmp_path, capsys):
     page = _page(tmp_path, f"{kafka_map.START}\n  var SVC = 1;\n{kafka_map.END}\n")
     assert kafka_map.main([], root=tmp_path) == 1
-    assert "Kafka map updated; stage" in capsys.readouterr().err
+    assert "Kafka map page rebuilt from kafka-cascades.yaml" in capsys.readouterr().err
     assert "var FLOWS" in page.read_text()
 
 
@@ -370,5 +372,5 @@ def test_check_reports_a_stale_page_and_writes_nothing(tmp_path, capsys):
     page = _page(tmp_path, f"{kafka_map.START}\n  var SVC = 1;\n{kafka_map.END}\n")
     before = page.read_text()
     assert kafka_map.main(["--check"], root=tmp_path) == 1
-    assert "Kafka map is stale" in capsys.readouterr().err
+    assert "Kafka map page is behind kafka-cascades.yaml" in capsys.readouterr().err
     assert page.read_text() == before
