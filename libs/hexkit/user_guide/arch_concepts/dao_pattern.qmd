@@ -69,7 +69,7 @@ A classic DAO setup has three participants:
 1. **A data transfer object (DTO)** describing the shape of the data being stored.
    In hexkit, DTOs are [Pydantic](https://docs.pydantic.dev) models, which gives you validation and serialization for free.
 2. **An abstract DAO interface** declaring the available operations.
-   Hexkit defines this once, generically, as the [`Dao`](../../reference/protocols.dao.Dao.qmd) protocol: CRUD operations (create, read, update, delete) plus `find` operations for querying by field values.
+   hexkit defines this once, generically, as the [`Dao`](../../reference/protocols.dao.Dao.qmd) protocol: CRUD operations (create, read, update, delete) plus `find` operations for querying by field values.
 3. **A concrete implementation** of that interface for a specific storage technology, such as hexkit's [`MongoDbDao`](../../reference/providers.mongodb.MongoDbDao.qmd).
 
 Because the interface is generic over the DTO type, one DAO instance manages exactly one kind of resource (users, books, upload jobs, and so on), roughly corresponding to one table or collection in the database.
@@ -86,13 +86,13 @@ The difference is one of intent:
 - A **repository** is domain-oriented.
   It presents itself as an in-memory collection of domain aggregates and speaks pure domain language, for example `overdue_loans_for(member)`.
 
-Hexkit deliberately provides the DAO as the generic, reusable building block, since a repository's domain-specific interface cannot be provided by a library.
+hexkit deliberately provides the DAO as the generic, reusable building block, since a repository's domain-specific interface cannot be provided by a library.
 If your service calls for repositories, the natural approach in hexkit is to define the repository as a port of your application and implement it as a thin translator on top of one or more DAOs.
 For straightforward services, using the DAOs directly as outbound dependencies of your domain logic is perfectly fine.
 
 ## DAOs in the Triple Hexagonal Architecture
 
-Hexkit structures all infrastructure access according to the [Triple Hexagonal Architecture](triple_hexagonal_arch.qmd), which splits each adapter into a service-independent *provider* and a service-specific *translator*, connected through an abstract *protocol*.
+hexkit structures all infrastructure access according to the [Triple Hexagonal Architecture](triple_hexagonal_arch.qmd), which splits each adapter into a service-independent *provider* and a service-specific *translator*, connected through an abstract *protocol*.
 Database access via DAOs follows exactly this scheme:
 
 - **The port** is defined by your application in domain terms.
@@ -102,7 +102,7 @@ Database access via DAOs follows exactly this scheme:
   It defines an abstract vocabulary for CRUD-style database access (resources, IDs, DTO models, find mappings, indexes) without committing to any particular database.
   The [DAO protocol](../protocols/dao.qmd) chapter describes it in detail.
 - **The provider** implements the protocol for a concrete technology.
-  Hexkit currently ships a [MongoDB provider](../providers/mongodb.qmd#mongodb-dao) for production use and an [in-memory mock DAO](../providers/testing.qmd) for unit testing.
+  hexkit currently ships a [MongoDB provider](../providers/mongodb.qmd#mongodb-dao) for production use and an [in-memory mock DAO](../providers/testing.qmd) for unit testing.
   Providers for other databases can be added without touching any service code, and the [DAO protocol](../protocols/dao.qmd#implementing-a-custom-provider) chapter shows how to write your own.
 - **The translator** is the small piece you write per service: it wires a DAO produced by the factory to your port, converting between domain objects and DTOs where the two differ.
 
