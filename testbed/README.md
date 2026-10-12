@@ -8,6 +8,7 @@ This directory provides a test bed for running inter service integration tests f
 
 The test bed runs against the demo platform on a local kind cluster.
 Set it up and run it with the `just` recipes described in the root README's [test bed walkthrough](../README.md#run-the-test-bed-locally).
+It also runs against any deployment from outside, through the gateway alone; see [Running against a cluster](#running-against-a-cluster).
 
 ## Overview
 
@@ -30,14 +31,9 @@ Pytest fixtures are stored in the `fixtures` directory.
 - Use `just testbed` to run all tests.
 - For specific steps, such as step 240, use `just testbed steps/test_240_*`.
 - For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `just testbed -m browse`.
+- Use `just testbed-remote <config>` to run against the deployment a `tb.*.yaml` names, without the kind prelude; see [Running against a cluster](#running-against-a-cluster).
 
-### Modes of Operation
-
-- **Black Box Testing:** This mode involves accessing the application solely through the official API via the API gateway.
-  It's suitable for testing deployments in Kubernetes clusters.
-  - Enable black box testing by setting `black_box_mode` to `true`.
-    Otherwise, white box testing is the default mode.
-- **White Box Testing:** Here, the Test Bed also accesses foundational services (e.g., S3, Kafka, Mongo, Vault) to verify their states, including intermediate ones.
+The suite is a black box: it reaches the application only through the gateway, and MongoDB, Kafka, S3 and Vault only through the state-management service.
 
 ### Configuration
 
@@ -47,15 +43,38 @@ The testbed itself is configured via the YAML file named by the environment vari
 `just testbed` sets it to `tb.kind.yaml`, the configuration for the kind cluster, and supplies the secrets as `TB_*` environment variables read from the cluster.
 Alternative configurations can be saved as `tb.*.yaml` and activated the same way.
 
-- **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory, with the latter being default for automated black box tests.
-- **Additional Authentication:** The `auth_basic` setting is for passing basic authentication credentials, applicable only in black box testing.
+- **States:** `keep_state_in_db` stores the test states in the state-management database, the default, or in memory.
+- **Additional Authentication:** `auth_basic` adds Basic authentication to every request except those to the state-management, purge-controller and DLQ services.
+  Set it as `TB_AUTH_BASIC` where the gateway asks for it.
 
-### Advanced Configuration
+### Running against a cluster
 
-When running the tests against a Kubernetes cluster, please ensure that names of databases, API URLs, and secrets match what is configured in the cluster.
+The suite reaches a deployment only through its gateway: the service APIs, the state-management service, and the three test doubles it asserts against, the test OIDC provider, the mail server and the lox24 SMS mock.
+The one exception is the pre-signed S3 URLs the services hand to the connector, whose host must resolve from the runner.
+A target deployment therefore provides:
 
-- Relevant settings include `auth_basic`, `upload_token`, and `fis_pubkey`.
-  Bucket names (`*_bucket`) and URLs (`*_url`) must also be consistent.
+- the state-management service behind the gateway, under the guardrails of [ADR-0030](../docs/adrs/adr-0030-state-management-service-testbed-only.md): a non-empty `db_prefix`, a `db_permissions` list naming the suite's databases, and a Vault-issued token;
+- the three doubles behind the gateway, where the original deployment served them under a `/test/` prefix;
+- database, collection and event-type names that match the configuration, as `tb.kind.yaml` sets them for the kind cluster;
+- the four service tokens and the FIS public key, and credentials where the gateway asks for Basic authentication.
+
+Write a `tb.<env>.yaml` beside `tb.kind.yaml` holding URLs, database names, collection names and event-type names only, export the secrets, and run:
+
+```bash
+export TB_STATE_MANAGEMENT_TOKEN=… TB_PURGE_CONTROLLER_TOKEN=… TB_DLQ_TOKEN=… TB_UPLOAD_TOKEN=…
+export TB_FIS_PUBKEY=… TB_USER_PRIVATE_CRYPT4GH_KEY=… TB_USER_PUBLIC_CRYPT4GH_KEY=…
+export TB_AUTH_BASIC=user:password   # only where the gateway asks for it
+just testbed-remote testbed/tb.<env>.yaml steps/test_001_health_check.py   # reachability first
+just testbed-remote testbed/tb.<env>.yaml                                  # the whole suite
+```
+
+The recipe sets `TB_CONFIG_YAML`, writes the steward token to `dsk_token_path` for the data steward kit, and stops before pytest when a variable is missing, naming it.
+It never calls `kubectl`, forwards a port or edits `/etc/hosts`.
+The health check alone walks every configured API, so it is the reachability test: a failure there is a routing or deployment question before it is a suite question.
+The suite starts from an empty state and resets shared state as it goes, so run it against one deployment only once at a time.
+
+`tb.local-kind.yaml` runs the same lane against the local kind cluster, which proves the runner before a cluster exists.
+kind does not route the mail server and the lox24 mock through its gateway, so start the two forwards by hand, `kubectl port-forward svc/ghga-mailhog 8025:8025` and `svc/ghga-lox24-mock 18080:8080`, and harvest the secrets as the `testbed` recipe in the justfile does.
 
 ## License
 

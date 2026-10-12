@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-06-30
+amended: 2026-10-12
 tags: [deploy, testing]
 ---
 
@@ -33,6 +34,10 @@ It is not part of the application, and anyone who can reach it can destroy all s
 The umbrella chart ships the service disabled, and only the test-bed profile enables it.
 It is never deployed in the demo or in production.
 The demo seeds its data steward through a Job and `auth-service` configuration instead.
+
+**Amended 2026-10-12:** The e2e cluster that the test bed runs against from outside ([epic 0094](../epics/epic-0094-cuckoo-wasp.md)) is the one other environment where the service runs.
+It holds test data only, and its deployment pins three guardrails: a non-empty `db_prefix`, so the service reaches only the databases named for the suite; a `db_permissions` list naming those databases, without a database wildcard; and a token issued by Vault for that deployment, never a value shared between callers.
+Its wildcard delete keeps the services' migration records, so `db_version_collection_suffix` stays at its default.
 
 ### Consequences
 
