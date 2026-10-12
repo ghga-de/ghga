@@ -47,6 +47,28 @@ class BucketCleanupConfig(BaseSettings):
     )
 
 
+def _parse_object_ids(
+    raw_object_ids: list[str], *, bucket_id: str, storage_alias: str
+) -> list[uuid.UUID]:
+    """Parse the keys found in a download bucket, skipping those that are not UUIDs.
+
+    DCS never writes such a key, so it is left to whoever put it there.
+    """
+    object_ids: list[uuid.UUID] = []
+    for raw_object_id in raw_object_ids:
+        try:
+            object_ids.append(uuid.UUID(raw_object_id))
+        except ValueError:
+            log.warning(
+                "Skipping object %s in download bucket %s in storage %s:"
+                + " its key is not a UUID.",
+                raw_object_id,
+                bucket_id,
+                storage_alias,
+            )
+    return object_ids
+
+
 class DownloadBucketCleaner(BucketCleanerPort):
     """A service that manages download bucket cleanup."""
 
@@ -119,7 +141,9 @@ class DownloadBucketCleaner(BucketCleanerPort):
                 exc_info=True,
             )
             return
-        object_ids = [uuid.UUID(x) for x in raw_object_ids]
+        object_ids = _parse_object_ids(
+            raw_object_ids, bucket_id=bucket_id, storage_alias=storage_alias
+        )
         log.debug(
             f"Retrieved list of deletion candidates for storage '{storage_alias}'"
         )
