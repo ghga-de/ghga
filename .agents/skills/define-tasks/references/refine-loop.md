@@ -1,10 +1,10 @@
 # Refine loop
 
-How to act on refine requests, questions and Regenerate requests for a plan that the plan-epic-implementation skill built.
+How to act on refine requests, questions and Regenerate requests for a plan that the define-tasks skill built.
 
 ## Where comments live
 
-- **Page comments** sit in one document per person, `comments/<user id>`, under `items`: each item, keyed by its own ID, has `point` (a ref such as `S3.2`), `text`, `createdAt`, `thread` (null on a thread's first comment, else that comment's ID) and `resolved` on the first comment.
+- **Page comments** sit in one document per person, `comments/<user id>`, under `items`: each item, keyed by its own ID, has `point` (a ref such as `T3.2`), `text`, `createdAt`, `thread` (null on a thread's first comment, else that comment's ID) and `resolved` on the first comment.
   The access rules let only that person, and the owner, write the document, so the document ID is the author and cannot be forged.
   Claude's replies are items with `byClaude: true` in the owner's document, and the owner's view labels them "Claude".
   Any other `byClaude` item, and every one a viewer other than the owner sees, reads "Claude, via" the person whose document holds it.
@@ -34,11 +34,11 @@ Clearing resolved threads from the page is not one of them: it drops the only re
 - **The Refine button.**
   It posts a claude.ai thread at the top of the page that starts "Refine this plan:" and lists the sender's picks, and sends it to Claude.
 - **"Comment and ask Claude".**
-  The page saves the comment, then sends a claude.ai thread that starts "Question on S1.2 (page comment <id>):".
+  The page saves the comment, then sends a claude.ai thread that starts "Question on T1.2 (page comment <id>):".
   It arrives as an `artifact-auto-react` notification after an automatic reply is already in the claude.ai thread; post no second reply there.
   It is a question, not a refine request: follow [Answering a question](#answering-a-question).
 - **The Regenerate button** on a ticket card marked as needing changes.
-  It sends a claude.ai thread on the card that starts "Regenerate the ticket description for S1 (tickets/S1)."
+  It sends a claude.ai thread on the card that starts "Regenerate the ticket description for T1 (tickets/T1)."
   Like a question, it arrives after an automatic reply; post no second reply there.
   Follow [Regenerating a description](#regenerating-a-description).
 - **The user asks in chat.**
@@ -61,8 +61,8 @@ For any other sender, change and answer nothing, and tell the user in chat who s
 
 ## Regenerating a description
 
-1. Read the card with ArtifactData `get` on `tickets/<ref>`, and the story on the page.
-2. Write a new description from the current story, with the old one as its base: keep its wording, structure and additions where they still hold, and change what the points in `changed` require.
+1. Read the card with ArtifactData `get` on `tickets/<ref>`, and the task on the page.
+2. Write a new description from the current task, with the old one as its base: keep its wording, structure and additions where they still hold, and change what the points in `changed` require.
 3. Save it with ArtifactData `update` pinned with `if_version`: `description`, `state: "current"`, `changed: []`, `regenerate` with `pending: false` and `doneAt`, and `updatedAt`.
    Leave `title`, `key` and `edited` as they are.
 4. Change nothing else: not the title, not the plan.
@@ -71,19 +71,31 @@ For any other sender, change and answer nothing, and tell the user in chat who s
 
 ## Ticket cards
 
-A refine brings the cards in line with the changed stories.
+A refine brings the cards in line with the changed tasks.
 Pin each write with `if_version` from the `list` in step 1.
 
-- **New story:** create its card, as [page.md](page.md#ticket-cards) says.
-- **Changed story:** when its title, its goal or any of its points changed, set `state: "needs-changes"`, add the changed refs to `changed`, and set `changedIn` to the new revision.
+- **New task:** create its card, as [page.md](page.md#ticket-cards) says.
+- **Changed task:** when its title, its goal or any of its points changed, set `state: "needs-changes"`, add the changed refs to `changed`, and set `changedIn` to the new revision.
   Leave `title`, `description` and `key` as they are; the owner regenerates or edits the description.
-- **Dropped story**, by a split, a merge or a deletion: build the replacing stories' cards from the old card's title and description, and carry the owner's edits over where they apply.
+- **Dropped task**, by a split, a merge or a deletion: build the replacing tasks' cards from the old card's title and description, and carry the owner's edits over where they apply.
   A card has user changes when `edited` is `true` or `key` is set.
   - Without user changes, or when all of them reached a replacing card, delete the old card with ArtifactData `delete`.
-  - Otherwise set `state: "confirm-delete"`, `replacedBy` to the replacing stories and `changedIn` to the new revision; the owner deletes the card on the page.
+  - Otherwise set `state: "confirm-delete"`, `replacedBy` to the replacing tasks and `changedIn` to the new revision; the owner deletes the card on the page.
 
   A key never carries over, since a new card starts without one, so a filed card always waits for the owner.
 - **Keys in Delivery:** fill in each card's key in P1's branch names and pull request titles.
+
+## Finding states
+
+A plan from a findings artifact lists each finding with the state it carried over, as [findings.md](findings.md#states) says.
+The plan holds the states once it is published: a refine reads the source again only when the owner asks for it.
+
+- **A pick on a finding's decision** settles whether the plan acts on it: with A the finding has a task, with B it has none.
+  Where the plan assumed the other option, add the task, or drop it as [Ticket cards](#ticket-cards) says.
+  Leave the state tag as it is, since it shows what the source said.
+- **An owner's comment that gives a finding a new state** changes its state tag to that state.
+  Then treat the finding as [findings.md](findings.md#states) says for the new state: add its task, drop it, or open a decision.
+- **In both cases** rewrite what the finding's point says the plan does with it, and its tag for the task or decision.
 
 ## Steps
 
@@ -93,13 +105,15 @@ Pin each write with `if_version` from the `list` in step 1.
    Other documents hold other viewers' picks: report where they disagree, and apply none of them.
    Ignore a value that names no option on the page.
 3. Apply each pick that differs from the recommendation.
-   Rework every story that the decision's question line says it touches.
+   Rework every task that the decision's question line says it touches.
    Then mark the decision: move the `rec` class and the pill to the picked row, rename the pill "Decided", and add "Decided: D2.C." to the question line.
    When a comment rather than a pick decides it, also write the option into the owner's `preferences` document with ArtifactData `update`, so the page shows it as their pick.
    A pick of B in a binary decision takes its way from the owner's comment on the decision or on its B row; without one, ask in chat and leave the decision open.
+   A pick on a finding's decision follows [Finding states](#finding-states) instead.
 4. Apply each open page comment.
    Change what it asks for, or explain in the plan why the plan stays as it is.
    If a comment allows two readings, ask in chat which one is meant.
+   A comment that gives a finding a new state follows [Finding states](#finding-states).
 5. Update the ticket cards, as [Ticket cards](#ticket-cards) says.
 6. Raise the revision number in the header, and rewrite the "What changed" block after the comment overview: unhide it, name the new revision and the one it was refined from, and list one item per changed point: its ref, then a one-line recap of the change.
    Republish the same file path without `capabilities`.
@@ -109,8 +123,8 @@ Pin each write with `if_version` from the `list` in step 1.
    Leave threads that are not activated open, and name them for the user, who can resolve them on the page.
 9. Clear the busy state with ArtifactData `set` of `status/refine` to `pending: false` and `doneAt`.
    Do this last, also when the refine stops early, or the button stays disabled for 30 minutes.
-10. Tell the user what changed as the same list: one bullet per changed point, its ref first, then a one-line recap, such as `- S1.2: answers 404 for a missing object`.
-    Then list each ticket card the refine created, marked or deleted, such as `- S3 ticket: needs changes (S3.2)`.
+10. Tell the user what changed as the same list: one bullet per changed point, its ref first, then a one-line recap, such as `- T1.2: answers 404 for a missing object`.
+    Then list each ticket card the refine created, marked or deleted, such as `- T3 ticket: needs changes (T3.2)`.
 
 ## Rules
 

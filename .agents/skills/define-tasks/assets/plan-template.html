@@ -1,5 +1,5 @@
 <title>FILL: Code Name Plan</title>
-<!-- Built by the plan-epic-implementation skill. Fill the FILL markers; keep the styles and the script as they are. -->
+<!-- Built by the define-tasks skill. Fill the FILL markers; keep the styles and the script as they are. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -465,7 +465,7 @@ button.clear {
 .pick-hint { display: none; }
 .can-pick .pick-hint { display: inline; }
 
-/* Story order strip */
+/* Task order strip */
 .flow {
   display: grid;
   grid-auto-flow: column;
@@ -502,8 +502,8 @@ button.clear {
   .flow .col + .col::before { content: "↓"; left: 50%; top: -1.2rem; transform: translateX(-50%); }
 }
 
-/* Stories */
-article.story {
+/* Tasks */
+article.task {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: 8px;
@@ -511,15 +511,15 @@ article.story {
   margin: 0 0 1.5rem;
   scroll-margin-top: 1rem;
 }
-.story .head h3 { margin: 0.1rem 0 0.4rem; }
-.story .head .ref { display: block; color: var(--accent); padding: 0; }
+.task .head h3 { margin: 0.1rem 0 0.4rem; }
+.task .head .ref { display: block; color: var(--accent); padding: 0; }
 dl.facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin: 0 0 0.5rem; font-size: var(--step--1); }
 dl.facts div { display: flex; gap: 0.4rem; }
 dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; }
 .goal { margin: 0; }
 
-/* Ticket cards: one YouTrack ticket per story, filled from the page's store */
+/* Ticket cards: one YouTrack ticket per task, filled from the page's store */
 .ticket {
   display: grid;
   gap: 0.65rem;
@@ -586,16 +586,17 @@ dl.facts dd { margin: 0; }
 </style>
 
 <div class="page">
-  <!-- FILL: one link per section; nest the stories. -->
+  <!-- FILL: one link per section; nest the tasks. Keep the Findings link only when the source is a findings artifact. -->
   <nav class="toc" aria-label="Contents">
     <p>Contents</p>
     <ol>
-      <li><a href="#gaps">Gaps in the epic</a></li>
+      <li><a href="#findings">Findings</a></li>
+      <li><a href="#gaps">Gaps in the FILL: epic, review or triage</a></li>
       <li><a href="#decisions">Decisions</a></li>
       <li><a href="#contract">Shared contract</a></li>
-      <li><a href="#stories">Stories</a>
+      <li><a href="#tasks">Tasks</a>
         <ol>
-          <li><a href="#s1">FILL: S1 First unit</a></li>
+          <li><a href="#t1">FILL: T1 First unit</a></li>
         </ol>
       </li>
       <li><a href="#delivery">Delivery</a></li>
@@ -605,20 +606,20 @@ dl.facts dd { margin: 0; }
 
   <main>
     <header class="top">
-      <p class="eyebrow">FILL: Epic NNNN · Implementation plan</p>
-      <h1 id="top-heading" tabindex="-1">FILL: Code Name</h1>
-      <p class="lede">FILL: one sentence on what the epic adds and why.</p>
+      <p class="eyebrow">FILL: Epic NNNN, Review of #NNN or Bug triage · Implementation plan</p>
+      <h1 id="top-heading" tabindex="-1">FILL: the epic's code name, or what the findings are about</h1>
+      <p class="lede">FILL: one sentence on what the epic adds, or what the findings ask to change, and why.</p>
       <!-- FILL: a PyPI-lane member with its version; any other with its lane, such as "platform lane". -->
       <dl class="meta">
         <div><dt>Member</dt><dd>FILL: <code>libs/example</code> 1.0.0</dd></div>
-        <div><dt>Spec</dt><dd>FILL: <code>docs/epics/epic-NNNN-code-name.md</code></dd></div>
+        <div><dt>Source</dt><dd>FILL: <code>docs/epics/epic-NNNN-code-name.md</code>, or a link to the findings artifact under its title</dd></div>
         <div><dt>Revision</dt><dd>1 · FILL: YYYY-MM-DD</dd></div>
       </dl>
       <div class="refine" id="refine" hidden>
         <button type="button" class="refine-btn" id="refine-btn" disabled>Refine plan</button>
         <p class="refine-text"><span id="refine-picks"></span> <span class="spinner" id="refine-spinner" aria-hidden="true" hidden></span><span id="refine-state">Checking for a Claude session…</span></p>
       </div>
-      <p class="howto">Every numbered point takes comments. Press <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 3h11v7.5H7l-3 2.5v-2.5H2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg> beside a point to read its comments or add one; a filled button counts the open threads there. Cite refs such as <code>S1.2</code> when a comment spans several points.</p>
+      <p class="howto">Every numbered point takes comments. Press <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 3h11v7.5H7l-3 2.5v-2.5H2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg> beside a point to read its comments or add one; a filled button counts the open threads there. Cite refs such as <code>T1.2</code> when a comment spans several points.</p>
       <details class="overview" id="comment-overview" hidden>
         <summary><span id="overview-title">Comments</span></summary>
         <div id="overview-list"></div>
@@ -628,16 +629,27 @@ dl.facts dd { margin: 0; }
         <summary>What changed in revision N</summary>
         <p>Refined from revision N-1.</p>
         <ul>
-          <li><span class="ref">S1.2</span> FILL: one-line recap of the change.</li>
+          <li><span class="ref">T1.2</span> FILL: one-line recap of the change.</li>
         </ul>
       </details>
     </header>
 
-    <section id="gaps">
-      <h2>Gaps in the epic</h2>
-      <p>What the epic leaves out, leaves open or gets wrong against the current code. Each gap says what the plan does about it: a decision, a rule or a story detail further down.</p>
+    <!-- FILL: keep this section only when the source is a findings artifact. One li per finding, in the source's order. Tag it with its state in the source's own words, then with the task or decision it leads to; a finding the plan leaves out gets no second tag. Give the source's own ID where it differs from the ref, then what the finding says and what the plan does with it. -->
+    <section id="findings">
+      <h2>Findings</h2>
+      <p>FILL: What the review or the triage found. Each finding carries its state from there and says what the plan does with it: a task, a decision or nothing.</p>
       <ul class="points">
-        <!-- FILL: one li per gap, tagged with its kind: Left out, Left open, Contradicted or Unverifiable. Say what the epic says or omits, what the code does, why it matters and what the plan does about it, with refs. Tag "d" links a decision. -->
+        <li class="pt" data-point="F1" id="f1"><span class="ref">F1</span><div class="txt"><span class="tag">FILL: Verified</span><span class="tag d">T1</span>FILL</div></li>
+        <li class="pt" data-point="F2" id="f2"><span class="ref">F2</span><div class="txt"><span class="tag">FILL: Open</span><span class="tag d">D1</span>FILL</div></li>
+        <li class="pt" data-point="F3" id="f3"><span class="ref">F3</span><div class="txt"><span class="tag">FILL: Not an issue</span>FILL</div></li>
+      </ul>
+    </section>
+
+    <section id="gaps">
+      <h2>Gaps in the FILL: epic, review or triage</h2>
+      <p>What it leaves out, leaves open or gets wrong against the current code. Each gap says what the plan does about it: a decision, a rule or a task detail further down.</p>
+      <ul class="points">
+        <!-- FILL: one li per gap, tagged with its kind: Left out, Left open, Contradicted or Unverifiable. Say what the source says or omits, what the code does, why it matters and what the plan does about it, with refs. Tag "d" links a decision. -->
         <li class="pt" data-point="G1" id="g1"><span class="ref">G1</span><div class="txt"><span class="tag">Left open</span><span class="tag d">D1</span>FILL</div></li>
         <li class="pt" data-point="G2" id="g2"><span class="ref">G2</span><div class="txt"><span class="tag">Left out</span>FILL</div></li>
       </ul>
@@ -645,15 +657,15 @@ dl.facts dd { margin: 0; }
 
     <section id="decisions">
       <h2>Decisions</h2>
-      <p>Each table lists what an option changes and what it costs the code that uses it. Where only one way fits, the table offers that way or another you name in a comment. The recommended option is shaded, and the stories below assume it until a pick says otherwise.<span class="pick-hint"> Use <strong>Pick</strong> in each table to record your preference; it saves at once, and only you can change your own picks.</span></p>
+      <p>Each table lists what an option changes and what it costs the code that uses it. Where only one way fits, the table offers that way or another you name in a comment. The recommended option is shaded, and the tasks below assume it until a pick says otherwise.<span class="pick-hint"> Use <strong>Pick</strong> in each table to record your preference; it saves at once, and only you can change your own picks.</span></p>
 
-      <!-- FILL: one block per decision, binary as in D2 where only one way fits. Radio name "pick-Dn", ids "pick-dn-x", status id "status-dn". -->
+      <!-- FILL: one block per decision, binary as in D2 where only one way fits. Radio name "pick-Dn", ids "pick-dn-x", status id "status-dn". A decision the source has settled keeps the settled option shaded, with the pill "Decided" and "Decided in the review: D1.A." in its question line. -->
       <div class="decision" id="d1">
         <div class="head" data-point="D1">
           <div>
             <span class="ref">D1</span>
             <h3>FILL: the question</h3>
-            <p class="q">FILL: why the epic leaves it open. Touches S1.</p>
+            <p class="q">FILL: why the source leaves it open. Touches T1.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -681,7 +693,7 @@ dl.facts dd { margin: 0; }
           <div>
             <span class="ref">D2</span>
             <h3>FILL: the question, naming the one way</h3>
-            <p class="q">FILL: what the epic leaves open, and why only one way fits. Touches S1.</p>
+            <p class="q">FILL: what the source leaves open, and why only one way fits. Touches T1.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -707,46 +719,46 @@ dl.facts dd { margin: 0; }
 
     <section id="contract">
       <h2>Shared contract</h2>
-      <p>Rules every story follows, so the stories only state what differs.</p>
+      <p>Rules every task follows, so the tasks only state what differs.</p>
       <ul class="points">
-        <li class="pt" data-point="C1" id="c1"><span class="ref">C1</span><div class="txt">FILL: e.g. each story passes the checks on its own after merge.</div></li>
+        <li class="pt" data-point="C1" id="c1"><span class="ref">C1</span><div class="txt">FILL: e.g. each task passes the checks on its own after merge.</div></li>
       </ul>
     </section>
 
-    <section id="stories">
-      <h2>Stories</h2>
-      <p>FILL: one story per unit the epic adds, plus groundwork before them. Say what fixes the order.</p>
-      <!-- FILL: one column per step of the order; stories that can be built side by side share a column. -->
-      <div class="flow" aria-label="Story order">
-        <div class="col"><a href="#s1"><span class="ref">S1</span>FILL: First unit</a></div>
+    <section id="tasks">
+      <h2>Tasks</h2>
+      <p>FILL: one task per unit the epic adds or per fix the findings need, plus groundwork before them. Say what fixes the order.</p>
+      <!-- FILL: one column per step of the order; tasks that can be built side by side share a column. -->
+      <div class="flow" aria-label="Task order">
+        <div class="col"><a href="#t1"><span class="ref">T1</span>FILL: First unit</a></div>
       </div>
       <p class="label" style="margin-bottom:1.5rem">FILL: the dependencies in one line</p>
 
-      <!-- FILL: one article per story; refs run on across its sections (S1.1, S1.2, …). A PyPI-lane member's version bump goes in the first story. The script adds each story's ticket card from the page's store, so write no card here. -->
-      <article class="story" id="s1">
-        <div class="head" data-point="S1">
+      <!-- FILL: one article per task; refs run on across its sections (T1.1, T1.2, …). A PyPI-lane member's version bump goes in the first task. The script adds each task's ticket card from the page's store, so write no card here. -->
+      <article class="task" id="t1">
+        <div class="head" data-point="T1">
           <div>
-            <span class="ref">S1</span>
-            <h3>FILL: story title</h3>
-            <dl class="facts"><div><dt>Depends on</dt><dd>FILL: the stories it needs, or nothing</dd></div><div><dt>Decisions</dt><dd>FILL: D1</dd></div></dl>
+            <span class="ref">T1</span>
+            <h3>FILL: task title</h3>
+            <dl class="facts"><div><dt>Depends on</dt><dd>FILL: the tasks it needs, or nothing</dd></div><div><dt>Decisions</dt><dd>FILL: D1</dd></div></dl>
             <p class="goal">FILL: one sentence goal.</p>
           </div>
         </div>
         <h4>Changes</h4>
         <ul class="points">
-          <li class="pt" data-point="S1.1" id="s1-1"><span class="ref">S1.1</span><div class="txt"><p>FILL: file and change.</p><pre><code>FILL: the planned code, escaped for HTML. Keep this block only for a change of 3 to 20 lines that handles something non-trivial.</code></pre></div></li>
+          <li class="pt" data-point="T1.1" id="t1-1"><span class="ref">T1.1</span><div class="txt"><p>FILL: file and change.</p><pre><code>FILL: the planned code, escaped for HTML. Keep this block only for a change of 3 to 20 lines that handles something non-trivial.</code></pre></div></li>
         </ul>
         <h4>Acceptance criteria</h4>
         <ul class="points">
-          <li class="pt" data-point="S1.2" id="s1-2"><span class="ref">S1.2</span><div class="txt">FILL: observable behaviour.</div></li>
+          <li class="pt" data-point="T1.2" id="t1-2"><span class="ref">T1.2</span><div class="txt">FILL: observable behaviour.</div></li>
         </ul>
         <h4>Tests</h4>
         <ul class="points">
-          <li class="pt" data-point="S1.3" id="s1-3"><span class="ref">S1.3</span><div class="txt">FILL: test file and the criteria it covers.</div></li>
+          <li class="pt" data-point="T1.3" id="t1-3"><span class="ref">T1.3</span><div class="txt">FILL: test file and the criteria it covers.</div></li>
         </ul>
         <h4>Docs</h4>
         <ul class="points">
-          <li class="pt" data-point="S1.4" id="s1-4"><span class="ref">S1.4</span><div class="txt">FILL: doc page and section.</div></li>
+          <li class="pt" data-point="T1.4" id="t1-4"><span class="ref">T1.4</span><div class="txt">FILL: doc page and section.</div></li>
         </ul>
       </article>
     </section>
@@ -1398,7 +1410,7 @@ dl.facts dd { margin: 0; }
     if (canWrite && !threadsFor(ref).length) p.newForm.querySelector("textarea").focus();
   }
 
-  // Ticket cards: one YouTrack ticket per story, kept in tickets/<story ref>. Claude
+  // Ticket cards: one YouTrack ticket per task, kept in tickets/<task ref>. Claude
   // writes them; the owner edits them, files the ticket and enters its key.
   var KEY_PATTERN = /^[A-Z]+-\d+$/;
   var renderTickets = function () {};
@@ -1409,8 +1421,8 @@ dl.facts dd { margin: 0; }
     var orphans = null;
     var regenTimer = null;
 
-    function storyFor(ref) {
-      var head = document.querySelector('article.story > .head[data-point="' + CSS.escape(ref) + '"]');
+    function taskFor(ref) {
+      var head = document.querySelector('article.task > .head[data-point="' + CSS.escape(ref) + '"]');
       return head ? head.parentNode : null;
     }
 
@@ -1601,13 +1613,13 @@ dl.facts dd { margin: 0; }
     function noticeFor(t, orphan) {
       var rev = t.changedIn ? " in revision " + t.changedIn : "";
       if (t.state === "confirm-delete" || orphan) {
-        var dropped = "The plan dropped this story" + rev + (t.replacedBy.length ? ", replaced by " + t.replacedBy.join(", ") : "") + ".";
+        var dropped = "The plan dropped this task" + rev + (t.replacedBy.length ? ", replaced by " + t.replacedBy.join(", ") : "") + ".";
         if (!viewerIsOwner) return dropped;
         return dropped + " Changes on this card did not carry over: copy what you still need, then delete the card." +
           (t.key ? " Close or relink " + t.key + " in YouTrack." : "");
       }
       if (t.state === "needs-changes") {
-        var changed = "The story changed" + rev + (t.changed.length ? ": " + t.changed.join(", ") : "") + ".";
+        var changed = "The task changed" + rev + (t.changed.length ? ": " + t.changed.join(", ") : "") + ".";
         if (!viewerIsOwner) return changed + " This ticket text is out of date.";
         return changed + " Regenerate the description or edit it; either clears this mark." +
           (t.key ? " Then update " + t.key + " in YouTrack." : "");
@@ -1621,8 +1633,8 @@ dl.facts dd { margin: 0; }
       if (input.value !== value) input.value = value;
     }
 
-    function showIssue(story, key) {
-      var facts = story && story.querySelector(".head dl.facts");
+    function showIssue(task, key) {
+      var facts = task && task.querySelector(".head dl.facts");
       if (!facts) return;
       var item = facts.querySelector("[data-issue]");
       if (!key) {
@@ -1639,29 +1651,29 @@ dl.facts dd { margin: 0; }
       item.lastChild.textContent = key;
     }
 
-    // A card whose story is gone has no story to sit in, so it waits at the end of Stories
+    // A card whose task is gone has no task to sit in, so it waits at the end of Tasks
     function orphanBox() {
       if (!orphans) {
         orphans = el("div", "orphan-tickets");
         orphans.appendChild(el("h3", "", "Ticket cards pending deletion"));
-        orphans.appendChild(el("p", "", "Their stories have left the plan."));
-        document.getElementById("stories").appendChild(orphans);
+        orphans.appendChild(el("p", "", "Their tasks have left the plan."));
+        document.getElementById("tasks").appendChild(orphans);
       }
       return orphans;
     }
 
     function renderCard(t) {
       var c = cards[t.ref] || (cards[t.ref] = buildCard(t.ref));
-      var story = storyFor(t.ref);
-      var host = story || orphanBox();
+      var task = taskFor(t.ref);
+      var host = task || orphanBox();
       if (c.root.parentNode !== host) host.appendChild(c.root);
       var busy = regenerating(t);
-      var flag = t.state === "confirm-delete" || !story ? "Confirm deletion" : t.state === "needs-changes" ? "Needs changes" : "";
-      c.heading.textContent = story ? "Ticket" : "Ticket for " + t.ref;
+      var flag = t.state === "confirm-delete" || !task ? "Confirm deletion" : t.state === "needs-changes" ? "Needs changes" : "";
+      c.heading.textContent = task ? "Ticket" : "Ticket for " + t.ref;
       c.pill.textContent = flag;
       c.pill.hidden = !flag;
       c.root.classList.toggle("is-flagged", !!flag);
-      c.notice.textContent = noticeFor(t, !story);
+      c.notice.textContent = noticeFor(t, !task);
       c.notice.hidden = !c.notice.textContent;
       setValue(c.key, t.key || "");
       setValue(c.title, t.title);
@@ -1671,18 +1683,18 @@ dl.facts dd { margin: 0; }
       c.working.textContent = "";
       if (busy) c.working.appendChild(workingEl("Claude is regenerating the description, sent " + when(t.regenSentAt) + "."));
       c.working.hidden = !busy;
-      c.regen.hidden = !(viewerIsOwner && claudeComments && story && t.state === "needs-changes");
+      c.regen.hidden = !(viewerIsOwner && claudeComments && task && t.state === "needs-changes");
       c.regen.disabled = busy;
-      c.del.hidden = !(viewerIsOwner && (t.state === "confirm-delete" || !story));
+      c.del.hidden = !(viewerIsOwner && (t.state === "confirm-delete" || !task));
       c.actions.hidden = c.regen.hidden && c.del.hidden && !c.note.textContent;
-      showIssue(story, t.key);
+      showIssue(task, t.key);
     }
 
     renderTickets = function () {
       Object.keys(cards).forEach(function (ref) {
         if (tickets[ref]) return;
         cards[ref].root.remove();
-        showIssue(storyFor(ref), null);
+        showIssue(taskFor(ref), null);
         delete cards[ref];
       });
       Object.keys(tickets).forEach(function (ref) { renderCard(tickets[ref]); });
@@ -1692,7 +1704,7 @@ dl.facts dd { margin: 0; }
     store.collection("tickets").limit(200).onSnapshot(function (snap) {
       tickets = {};
       snap.docs.forEach(function (doc) {
-        if (/^S\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc);
+        if (/^T\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc);
       });
       renderTickets();
       if (!regenTimer && Object.keys(tickets).some(function (ref) { return tickets[ref].regenSentAt; })) {
