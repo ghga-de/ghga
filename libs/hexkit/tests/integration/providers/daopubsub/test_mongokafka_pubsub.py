@@ -1356,3 +1356,39 @@ async def test_upsert_many_publishes(mongo_kafka: MongoKafkaFixture):
             await dao.upsert_many([recreated, new])
 
         assert await dao.get_by_id(tombstoned.id) == recreated
+
+
+async def test_update_many_keeps_tombstones(mongo_kafka: MongoKafkaFixture):
+    """Test that update_many publishes only the replaced resources and treats a
+    tombstoned ID as missing.
+    """
+    async with example_publisher(mongo_kafka) as dao:
+        live, tombstoned = ExampleDto(), ExampleDto()
+        await dao.insert(live)
+        await dao.insert(tombstoned)
+        await dao.delete(tombstoned.id)
+        changed = live.model_copy(update={"field_b": 7})
+        missing = ExampleDto()
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[change_event(changed)], in_topic=EXAMPLE_TOPIC
+        ):
+            with pytest.raises(BatchOperationError) as caught:
+                await dao.update_many(
+                    [changed, tombstoned.model_copy(update={"field_b": 7}), missing]
+                )
+
+        assert set(caught.value.errors) == {tombstoned.id, missing.id}
+        for error in caught.value.errors.values():
+            assert isinstance(error, ResourceNotFoundError)
+        assert await dao.get_by_id(live.id) == changed
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(tombstoned.id)
+
+
+@pytest.mark.parametrize("method", ["update_many"])
+async def test_publisher_batch_empty(method: str, mongo_kafka: MongoKafkaFixture):
+    """Test that an empty batch through the publisher writes and publishes nothing."""
+    async with example_publisher(mongo_kafka) as dao:
+        async with mongo_kafka.kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            await getattr(dao, method)([])

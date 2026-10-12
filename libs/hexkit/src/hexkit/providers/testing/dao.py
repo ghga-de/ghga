@@ -636,6 +636,17 @@ class BaseInMemDao(Generic[DTO]):
             dtos, self.insert, expected=ResourceAlreadyExistsError, stop=ordered
         )
 
+    async def update_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Update resources one by one, collecting the missing ones as MongoDB does.
+
+        A missing resource never stops a batch, so `ordered` changes nothing here.
+        """
+        await self._write_each(
+            dtos, self.update, expected=ResourceNotFoundError, stop=False
+        )
+
     async def upsert_many(
         self, dtos: Collection[DTO], *, ordered: bool = False
     ) -> None:

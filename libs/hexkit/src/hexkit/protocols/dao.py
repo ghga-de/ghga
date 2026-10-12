@@ -490,6 +490,33 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
+    async def update_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Replace several existing resources in one call, matched by their IDs.
+
+        The batch is not atomic: when some resources fail, the others are still
+        replaced. An empty batch writes nothing.
+
+        Args:
+            dtos:
+                The updated resources as pydantic-based data transfer objects, each
+                including its ID. No two of them may share an ID.
+            ordered:
+                Whether to stop at the first failure and skip the remaining resources,
+                instead of attempting every one. A missing resource never stops the
+                batch.
+
+        Raises:
+            ValueError: when two DTOs share an ID; nothing is written then.
+            BatchOperationError:
+                when some resources failed. Each failed ID maps to
+                `ResourceNotFoundError` if no resource with that ID exists, or to
+                `UniqueConstraintViolationError` if it clashes with a unique index over
+                another field.
+        """
+        ...
+
     async def upsert_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
     ) -> None:
