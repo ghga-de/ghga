@@ -66,6 +66,7 @@ Add `tb.<env>.yaml` beside `tb.kind.yaml` (`external_base_url`, `data_portal_url
   The decision as a whole stands, so this goes in as an amendment carrying an `amended` date.
 - The e2e cluster must expose, through the gateway, the SMS API and the three test doubles the suite asserts against: the test OIDC provider, the mail server, and the lox24 SMS mock.
   The original "testing" deployment served them under a `/test/` prefix, which the configuration can follow or replace.
+  The deployment must keep SMS's default `db_version_collection_suffix`, so the clean slate spares the services' migration records.
 - Single operation mode: the black box is the only functioning mode, and it is being derived from the existing internal APIs.
   Basic authentication will be used in every case when auth basic is set.
   Delete the unnecessary duplicate of the flag in `testbed/fixtures/auth.py`, authentication using `TokenGenerator.key`, the abandoned `upload_config_as_file`, as well as the unused keys for S3 in `object_storages`.
@@ -83,6 +84,8 @@ Add `tb.<env>.yaml` beside `tb.kind.yaml` (`external_base_url`, `data_portal_url
   The recipe runs on demand.
 - New scenarios, and changes to any service, chart or the data portal.
 - The `kind` lane, which keeps working unchanged apart from losing the flag.
+- The kind lane's startup race and the migration records its clean slate dropped.
+  GSI-2674 ([#336](https://github.com/ghga-de/ghga/pull/336)) fixes both in hexkit, SMS and the demo charts.
 
 ## API Definitions
 
