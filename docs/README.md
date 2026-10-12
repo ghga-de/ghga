@@ -12,6 +12,8 @@ Design and migration records for the consolidation of GHGA's ~28 maintained repo
 - **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout, uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
 - **[architecture/metadata-and-file-journeys.md](architecture/metadata-and-file-journeys.md)** — current-state reference for how metadata and files flow (submission, accessions, upload, file mapping, serving).
   Read before touching those paths.
+- **[architecture/kafka-cascade-map.md](architecture/kafka-cascade-map.md)** — the Kafka cascades map: one tree per entrypoint showing which service reacts to which event, plus every topic with its producer and subscribers.
+  The page is [kafka-cascade-map.html](architecture/kafka-cascade-map.html); the document says how to open it, where the topology comes from and how to keep it current.
 - **[migration/runbook.md](migration/runbook.md)** — phased, executable migration with a cutover checklist.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
 - **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes, their tags, version stamping, the PyPI upload plan and the publish targets.

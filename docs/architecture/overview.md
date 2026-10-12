@@ -3,6 +3,9 @@
 > Status: **Implemented**, and kept as the reference for the architecture it describes — the consolidation of GHGA's ~28 actively-maintained repositories into one polyglot monorepo.
 > The load-bearing decisions are captured as ADRs under [docs/adrs/](../adrs/), whose [index](../README.md#decisions-adrs) carries their current status, and the step-by-step migration is in [docs/migration/runbook.md](../migration/runbook.md).
 > Where a section still reads as a plan, the ADRs are the current answer.
+>
+> This document describes the repository and its build.
+> For how the deployed services behave, read the two current-state references beside it: [metadata-and-file-journeys.md](metadata-and-file-journeys.md) for the metadata and file flows, and [kafka-cascade-map.md](kafka-cascade-map.md) for the event cascades, which the interactive [kafka-cascade-map.html](kafka-cascade-map.html) draws.
 
 ## 1. Goals & non-goals
 
