@@ -8,7 +8,7 @@ Add it as a dependency in another chart's `Chart.yaml`:
 ```yaml
 dependencies:
   - name: ghga-common
-    version: "2.13.1"
+    version: "2.14.0"
     repository: oci://registry-1.docker.io/ghga
 ```
 
