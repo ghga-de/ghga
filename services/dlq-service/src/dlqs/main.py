@@ -22,6 +22,8 @@ Additional endpoints might be structured in dedicated modules
 
 import logging
 
+from dlqs.adapters.inbound.fastapi_ import dummies
+from dlqs.adapters.inbound.metrics import start_metrics_server
 from dlqs.config import Config
 from dlqs.inject import prepare_dlq_subscriber, prepare_rest_app
 from dlqs.migrations import run_db_migrations
@@ -48,6 +50,8 @@ async def run_rest_app():
         )
 
     async with prepare_rest_app(config=config) as app:
+        dlq_manager = app.dependency_overrides[dummies.dlq_manager_port]()
+        start_metrics_server(config=config, dlq_manager=dlq_manager)
         await run_server(app=app, config=config)
 
 
