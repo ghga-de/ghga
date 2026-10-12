@@ -25,7 +25,11 @@ from tests.fixtures.oidc_provider import OidcProviderMock
 @pytest.fixture
 def oidc_provider(monkeypatch: pytest.MonkeyPatch) -> OidcProviderMock:
     """Provide a mock of the OIDC provider that answers the `httpx2.get` calls."""
-    provider = OidcProviderMock(str(CONFIG.oidc_userinfo_endpoint))
+    endpoint = CONFIG.oidc_userinfo_endpoint
+    assert endpoint, (
+        "set oidc_userinfo_endpoint in dev_config.yaml to mock the provider"
+    )
+    provider = OidcProviderMock(str(endpoint))
     client = httpx2.Client(transport=provider.as_transport())
     monkeypatch.setattr(httpx2, "get", client.get)
     return provider
