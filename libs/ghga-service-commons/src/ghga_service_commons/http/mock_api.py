@@ -121,7 +121,7 @@ class MockApi:
 
     @property
     def last_request(self) -> httpx2.Request | None:
-        """The latest request a route of this mock served."""
+        """The latest request served by this mock."""
         if not self.requests:
             return None
         return self.requests[-1]
