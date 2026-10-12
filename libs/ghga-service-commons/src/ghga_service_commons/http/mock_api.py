@@ -207,7 +207,10 @@ def serve(*mocks: MockApi) -> httpx2.MockTransport:
 
 
 class _MockTransport(httpx2.MockTransport):
-    """Custom flavour of a MockTransport with some special handling for the mock setup."""
+    """Custom flavour of a MockTransport with some special handling for the mock setup.
+
+    Reads the body, rejects an async handler on a sync client, and checks the handler returned a response.
+    """
 
     def handle_request(self, request: httpx2.Request) -> httpx2.Response:
         """Answer a sync client, which cannot await an async handler's answer."""
