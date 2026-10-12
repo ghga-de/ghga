@@ -35,7 +35,7 @@ from .utils import get_dataset_overview, search_dataset
 scenarios("../features/600_delete_datasets.feature")
 
 
-def is_dataset_a_and_b(event_file: Path) -> bool:
+def is_complete_dataset_submission(event_file: Path) -> bool:
     """Check whether the given event file is a submission for a complete dataset."""
     event = open(event_file).read()
     return (
@@ -48,24 +48,26 @@ def is_dataset_a_and_b(event_file: Path) -> bool:
 @when("the artifacts for the complete datasets are removed from the event store")
 def delete_artifacts_for_complete_datasets(fixtures: JointFixture):
     event_path = fixtures.dsk.config.event_store
-    source_event = None
-    for event_file in (event_path / "source_events").glob("*.json"):
-        if is_dataset_a_and_b(event_file):
-            assert not source_event
-            source_event = event_file.name
-    assert source_event
+    # one submission per complete dataset, since a submission holds exactly one study
+    source_events = [
+        event_file.name
+        for event_file in (event_path / "source_events").glob("*.json")
+        if is_complete_dataset_submission(event_file)
+    ]
+    assert len(source_events) == 2
     num_artifact_types = num_deleted_artifacts = 0
     for artifact_dir in event_path.glob("artifact*"):
         if not artifact_dir.is_dir():
             continue
         num_artifact_types += 1
-        artifact_path = artifact_dir / source_event
-        if artifact_path.exists():
-            artifact_path.unlink()
-            num_deleted_artifacts += 1
+        for source_event in source_events:
+            artifact_path = artifact_dir / source_event
+            if artifact_path.exists():
+                artifact_path.unlink()
+                num_deleted_artifacts += 1
     assert num_artifact_types == 6
     if num_deleted_artifacts:  # allow that they have already been deleted
-        assert num_deleted_artifacts == num_artifact_types
+        assert num_deleted_artifacts == num_artifact_types * len(source_events)
 
 
 # The following step is re-used from the artifact loading test

@@ -11,7 +11,7 @@ Feature: 10 Submit Metadata
   Scenario: Submitting metadata
     Given we have valid research metadata JSON files
     When the metadata is submitted to the submission store
-    Then one submission JSON file exists in the local submission store
+    Then two submission JSON files exist in the local submission store
 
   Scenario: Finishing the metadata submission
     Then set the state to "metadata submission is completed"
