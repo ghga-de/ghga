@@ -105,7 +105,7 @@ class MockApi:
         else:
             regex += "/?"  # the base URL itself, with or without its trailing slash
         pattern = re.compile(regex)
-        # A route without path variables is only allowed before an also matching route with path variables
+    # A route without path variables must be defined above matching routes with path variables, if applicable.
         is_literal = not _VARIABLE.search(path)
         literal_path = f"{base_path}/{unquote(path.lstrip('/'))}"
         for routed_method, routed_pattern, routed_handler in self._routes:
