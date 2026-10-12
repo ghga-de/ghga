@@ -248,9 +248,17 @@ def _answered(response: object, request: httpx2.Request) -> httpx2.Response:
 
 
 def instrumentable(transport: httpx2.MockTransport) -> httpx2.AsyncHTTPTransport:
-    """Wrapper for transports to correctly deal with non-test code instrumentation.
+    """Lets OpenTelemetry record client spans for requests a mock transport answers.
 
-    This is needed to correctly record OTel spans in tests that use the custom mock transports.
+    Needed only when a test checks the span of an outbound call.
+    Autoinstrumentation hooks into httpx2's network transports, and a mock transport
+    stands in for those, so a mocked call normally records no span.
+    This returns a real `AsyncHTTPTransport`, so the instrumentation applies, with a
+    connection pool that answers from the mock instead of connecting.
+
+    Use it where the mock transport would go, in an async client:
+
+        client = httpx2.AsyncClient(transport=instrumentable(test_api.as_transport()))
     """
     wrapped = httpx2.AsyncHTTPTransport()
     wrapped._pool = _MockPool(transport)  # type: ignore[assignment]
