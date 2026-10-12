@@ -44,10 +44,10 @@ import pathlib
 import re
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass
 
-import tomllib
 from packaging.version import InvalidVersion, Version
 
 from affected_targets import _canonical

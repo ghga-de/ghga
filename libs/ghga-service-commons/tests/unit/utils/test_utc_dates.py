@@ -15,7 +15,8 @@
 
 """Test the utils.utc_dates module."""
 
-from datetime import datetime, timedelta, timezone
+import datetime as datetime_module
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -31,11 +32,7 @@ from ghga_service_commons.utils.utc_dates import (
 
 def test_utc_constant():
     """Test the UTC constant."""
-    assert UTC is timezone.utc
-    try:
-        assert UTC is datetime.UTC  # type: ignore
-    except AttributeError:  # Python < 3.11
-        pass
+    assert UTC is datetime_module.UTC
     assert UTC.tzname(None) == "UTC"
 
 

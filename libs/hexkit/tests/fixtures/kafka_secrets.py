@@ -133,9 +133,9 @@ def generate_cert(
         .issuer_name(issuer)
         .public_key(public_key)
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_before(datetime.datetime.now(datetime.UTC))
         .not_valid_after(
-            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=days)
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=days)
         )
         .add_extension(
             x509.BasicConstraints(ca=is_ca, path_length=None),

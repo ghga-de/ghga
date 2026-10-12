@@ -18,7 +18,7 @@
 
 import uuid
 from contextlib import nullcontext
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from os import environ
 from pathlib import Path
 from typing import cast
@@ -112,7 +112,7 @@ async def test_kafka_event_publisher(kafka: KafkaFixture):
         "test_null": None,
         "test_uuid": uuid.uuid4(),
         "test_date": date.today(),
-        "test_datetime_utc": datetime.now(timezone.utc),
+        "test_datetime_utc": datetime.now(UTC),
         "test_array": [1, "two", 3],
         "test_object": {"content": "value"},
         "test_nested": {"values": [1], "nested_object": {"id": uuid.uuid4()}},

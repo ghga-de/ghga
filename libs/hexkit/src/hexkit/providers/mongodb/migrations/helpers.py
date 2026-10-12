@@ -16,7 +16,7 @@
 """Prefab functions to help with migrations caused by changes in hexkit."""
 
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from hexkit.providers.mongodb.migrations import Document
@@ -52,7 +52,7 @@ def convert_uuids_and_datetimes_v6(
         for field in date_fields or []:
             old_dt = datetime.fromisoformat(doc[field])
             if old_dt.tzname() != "UTC":
-                old_dt = old_dt.astimezone(timezone.utc)
+                old_dt = old_dt.astimezone(UTC)
             doc[field] = round_datetime_to_ms(old_dt)
         return doc
 

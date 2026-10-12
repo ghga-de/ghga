@@ -16,7 +16,7 @@
 
 import time
 from contextlib import nullcontext
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pymongo
@@ -167,7 +167,7 @@ async def test_v1_init(mongodb: MongoDbFixture):
     assert_not_versioned(version_coll)
 
     # run the migration to set up the versioned DB
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     await run_db_migrations(config=config, target_version=1, migration_map={})
 
     # Inspect the results
@@ -175,7 +175,7 @@ async def test_v1_init(mongodb: MongoDbFixture):
     assert len(versions) == 1
     verdoc = versions[0]
     assert verdoc["version"] == 1
-    completed = verdoc["completed"].astimezone(timezone.utc)
+    completed = verdoc["completed"].astimezone(UTC)
     assert completed - now < timedelta(seconds=3)
     assert not verdoc["backward"]
     assert isinstance(verdoc["total_duration_ms"], int)

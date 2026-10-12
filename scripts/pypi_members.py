@@ -39,12 +39,12 @@ import argparse
 import json
 import pathlib
 import sys
+import tomllib
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass, replace
 from typing import NamedTuple, Self, TypeVar
 
-import tomllib
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
