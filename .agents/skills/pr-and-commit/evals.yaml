@@ -11,11 +11,14 @@ execution:
   max_turns: 15
   timeout_seconds: 300
   allowed_tools: [Read, Glob, Grep, Skill]
-  # Neither arm loads AGENTS.md, which a session in the repo would.
+  # Neither arm loads AGENTS.md, which a session in the repo would. Runs of other suites
+  # guessed the main clone's path and worked there, where the expected values do not
+  # hold, so the prompt keeps them in their own clone.
   append_system_prompt: >-
     You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
     root and in the AGENTS.md of each area; read the root file before you start, as a
-    session here loads it.
+    session here loads it. The clone is your working directory: work only there, since
+    another checkout on this machine is not the one under test.
 
 graders:
   # An agent's trailer, not the words in a sentence that explains why it is left out.
@@ -30,10 +33,11 @@ graders:
     flags: m
     match: not_contains
   # Neither arm loads the uv guard hook, so in a real session this is stopped earlier.
+  # A grader on a tool sees its input as JSON, so a command starts after `"command":"`.
   no-direct-uv:
     type: tool_used
     tool: Bash
-    input_match: '(^|[\s;&|(\x60])uv\s'
+    input_match: '(^|[\s;&|(\x60"])uv\s'
     min: 0
     max: 0
 
