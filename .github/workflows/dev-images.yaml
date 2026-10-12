@@ -81,6 +81,7 @@ jobs:
           echo "version=$(python3 scripts/platform_version.py --cd "$number")" >> "$GITHUB_OUTPUT"
 
   publish:
+    name: publish ${{ matrix.image }}
     needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 40

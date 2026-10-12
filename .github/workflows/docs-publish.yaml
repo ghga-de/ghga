@@ -55,6 +55,7 @@ jobs:
         run: uv run --script scripts/docs_members.py --check
 
   build:
+    name: build ${{ matrix.member.package }}
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 30
