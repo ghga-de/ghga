@@ -6,8 +6,6 @@
 # see deploy/README.md. Tokens and crypt4gh keys come from env (TB_*), harvested
 # from the secret-gen secrets — never from this file.
 
-black_box_mode: true
-
 external_base_url: http://localhost/api
 data_portal_url: http://localhost
 

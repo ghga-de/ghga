@@ -19,7 +19,6 @@
 from pathlib import Path
 
 from hexkit.config import config_from_yaml
-from hexkit.providers.s3 import S3Config
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings
 
@@ -41,7 +40,6 @@ class S3StorageConfig(BaseModel):
     """Configuration for an S3 object storage."""
 
     storage_alias: str
-    credentials: S3Config
     buckets: Buckets
 
 
@@ -56,8 +54,6 @@ class ObjectStoragesConfig(BaseModel):
 class Config(BaseSettings):
     """Config class for the test app."""
 
-    # operation modes
-    black_box_mode: bool = Field(False, description="set to True for black-box testing")
     keep_state_in_db: bool = Field(
         True, description="set to True for saving state permanently"
     )
@@ -97,11 +93,6 @@ class Config(BaseSettings):
         **{
             "primary": {
                 "storage_alias": "primary",
-                "credentials": {
-                    "s3_endpoint_url": "http://localstack-1:4566",
-                    "s3_access_key_id": "testbed-key",
-                    "s3_secret_access_key": "testbed-secret",
-                },
                 "buckets": {
                     "inbox": "hub1-inbox",
                     "outbox": "hub1-outbox",
@@ -111,11 +102,6 @@ class Config(BaseSettings):
             },
             "secondary": {
                 "storage_alias": "secondary",
-                "credentials": {
-                    "s3_endpoint_url": "http://localstack-2:4566",
-                    "s3_access_key_id": "testbed-key",
-                    "s3_secret_access_key": "testbed-secret",
-                },
                 "buckets": {
                     "inbox": "hub2-inbox",
                     "outbox": "hub2-outbox",
@@ -153,7 +139,6 @@ class Config(BaseSettings):
     internal_apis: list[str] = ["ekss", "auth_adapter", "ucs"]
 
     # auth
-    auth_key_file: Path = Path(__file__).parent.parent / ".devcontainer/auth.env"
     auth_adapter_url: str = "auth"
     api_ext_path: str = ""
     auth_basic: str = ""  # for Basic Authentication
@@ -303,14 +288,6 @@ class Config(BaseSettings):
 
     # lox24 mock server
     lox24_mock_url: str = "http://lox24-mock:8080"
-
-    @model_validator(mode="after")
-    def check_operation_modes(self):
-        """Check that operation modes are not conflicting."""
-        if not self.black_box_mode and self.auth_basic:
-            error = "Basic auth must only be used with API gateway"
-            raise ValueError(f"Check operation modes: {error}")
-        return self
 
     @model_validator(mode="after")
     def add_external_base_url(self):

@@ -368,8 +368,7 @@ def reset_state(fixtures: JointFixture):
     restore_data_stewardship(saved_data_steward, fixtures)
     fixtures.dsk.reset_work_dir()  # reset local submission registry
     empty_mail_server(fixtures)  # reset mail server
-    if not fixtures.config.black_box_mode:
-        fixtures.vault.empty_secrets()  # empty secret storage
+    fixtures.vault.empty_secrets()  # empty secret storage
 
 
 @given("no notification has been sent yet")
@@ -521,8 +520,7 @@ def check_field_in_email_subject(
 @given("no file encryption secrets exist in the vault")
 def reset_file_encryption_secrets(fixtures: JointFixture):
     """Reset the file encryption secrets in the vault."""
-    if not fixtures.config.black_box_mode:
-        fixtures.vault.empty_secrets()  # empty secret storage
+    fixtures.vault.empty_secrets()  # empty secret storage
 
 
 @given("no access requests have been made yet")

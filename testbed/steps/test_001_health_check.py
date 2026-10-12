@@ -35,12 +35,6 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
     else:
         health_endpoint += "/health"
 
-    # Only in case of local testing make sure the internal service is healthy
-    if not config.black_box_mode and is_internal:
-        health_endpoint = "http://" + health_endpoint.replace(
-            config.external_base_url, ""
-        ).lstrip("/")
-
     try:
         response = fixtures.http.get(health_endpoint)
     except Exception as e:
@@ -48,7 +42,7 @@ def check_api_is_healthy(api: str, fixtures: JointFixture):  # noqa: C901
         raise
 
     status_code = response.status_code
-    expected_status = 404 if config.black_box_mode and is_internal else 200
+    expected_status = 404 if is_internal else 200
     if status_code == 200 and response.text.startswith("<!doctype html>"):
         # count response from frontend as "not found"
         status_code = 404
@@ -132,19 +126,18 @@ def check_service_health(apis: list[str], fixtures: JointFixture):
 @then("we have a valid Data Steward account for testing")
 def check_data_steward_account(fixtures: JointFixture):
     """Check that we have a valid Data Steward account for testing."""
-    if not fixtures.config.black_box_mode:
-        data_steward_claim = fixtures.mongo.wait_for_documents(
-            fixtures.config.ums_db_name,
-            fixtures.config.ums_claims_collection,
-            {
-                "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
-                "visa_value": "data_steward@ghga.de",
-            },
-        )
-        assert data_steward_claim, (
-            f"Data steward claim not found in {fixtures.config.ums_db_name}."
-        )
-        assert len(data_steward_claim) == 1, (
-            f"Multiple data steward claims found in {fixtures.config.ums_db_name}."
-            "Expected: 1."
-        )
+    data_steward_claim = fixtures.mongo.wait_for_documents(
+        fixtures.config.ums_db_name,
+        fixtures.config.ums_claims_collection,
+        {
+            "visa_type": "https://www.ghga.de/GA4GH/VisaTypes/Role/v1.0",
+            "visa_value": "data_steward@ghga.de",
+        },
+    )
+    assert data_steward_claim, (
+        f"Data steward claim not found in {fixtures.config.ums_db_name}."
+    )
+    assert len(data_steward_claim) == 1, (
+        f"Multiple data steward claims found in {fixtures.config.ums_db_name}."
+        "Expected: 1."
+    )

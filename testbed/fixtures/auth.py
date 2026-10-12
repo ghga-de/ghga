@@ -27,7 +27,6 @@ from urllib.parse import parse_qs, urlparse
 import pyotp
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from httpx import Response
-from jwcrypto import jwk
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 from pyparsing import Any
 from pytest import fixture
@@ -83,8 +82,6 @@ class TOTPAlgorithm(StrEnum):
 class TokenGenerator:
     """Generator for auth tokens"""
 
-    black_box_mode: bool
-    key_file: Path
     auth_adapter_url: str
     op_url: str
     op_issuer: str
@@ -92,8 +89,6 @@ class TokenGenerator:
     user_domain = "home.org"
 
     def __init__(self, config: Config, http: HttpClient):
-        self.black_box_mode = config.black_box_mode
-        self.key_file = config.auth_key_file
         self.op_url = config.op_url
         self.op_issuer = config.op_issuer
         self.auth_adapter_url = config.ums_url
@@ -378,15 +373,6 @@ class TokenGenerator:
         )
         totp = self.generate_totp(totp_token)
         return self.verify_totp(totp, session_headers)
-
-    @property
-    def key(self) -> jwk.JWK:
-        """Read the signing key from a local env file."""
-        with open(self.key_file, encoding="ascii") as key_file:
-            for line in key_file:
-                if line.startswith("AUTH_SERVICE_AUTH_KEY="):
-                    return jwk.JWK.from_json(line.split("=", 1)[1].rstrip().strip("'"))
-        raise RuntimeError("Cannot read signing key for authentication")
 
 
 @fixture(name="auth", scope="session")
