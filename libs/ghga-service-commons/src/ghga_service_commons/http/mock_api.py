@@ -236,7 +236,7 @@ class _MockTransport(httpx2.MockTransport):
 
 
 def _answered(response: object, request: httpx2.Request) -> httpx2.Response:
-    """Returns the response a handler answered `request` with."""
+    """Check that a handler's answer to `request` is a `Response`, then pass it through."""
     if not isinstance(response, httpx2.Response):
         raise MockSetupError(
             f"The handler answering {request.method} {request.url} returned"
