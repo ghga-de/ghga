@@ -42,7 +42,11 @@ class DskConfig(BaseSettings):
     metadata_config_path: Path = metadata_dir / "metadata_config.yaml"
     metadata_model_path: Path = metadata_dir / "metadata_model.yaml"
     minimal_metadata_path: Path = metadata_dir / "minimal_metadata.json"
-    complete_metadata_path: Path = metadata_dir / "metadata.json"
+    # one submission per study, since a submission holds exactly one study
+    submission_metadata_paths: tuple[Path, ...] = (
+        metadata_dir / "metadata_study_a.json",
+        metadata_dir / "metadata_study_b.json",
+    )
 
     metadata_model_file: str = "metadata_model.yaml"
     metadata_file_fields: tuple = (

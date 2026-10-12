@@ -70,8 +70,8 @@ def call_data_steward_kit_submit(
 
 @given("we have valid research metadata JSON files")
 def metadata_json_exist(fixtures: JointFixture):
-    metadata_json_path = fixtures.dsk.config.metadata_dir / "metadata.json"
-    assert metadata_json_path.exists()
+    for metadata_json_path in fixtures.dsk.config.submission_metadata_paths:
+        assert metadata_json_path.exists()
 
 
 @given("we have a valid metadata config YAML file")
@@ -82,13 +82,14 @@ def metadata_config_exist(fixtures: JointFixture):
 @when("the metadata is submitted to the submission store")
 def submit_metadata(fixtures: JointFixture):
     workdir = fixtures.dsk.config.submission_registry
-    metadata_json_path = fixtures.dsk.config.metadata_dir / "metadata.json"
     cwd = os.getcwd()
     os.chdir(workdir)
-    call_data_steward_kit_submit(
-        metadata_path=metadata_json_path,
-        metadata_config_path=fixtures.dsk.config.metadata_config_path,
-    )
+    # one submission per study, since a submission holds exactly one study
+    for metadata_json_path in fixtures.dsk.config.submission_metadata_paths:
+        call_data_steward_kit_submit(
+            metadata_path=metadata_json_path,
+            metadata_config_path=fixtures.dsk.config.metadata_config_path,
+        )
     os.chdir(cwd)
 
 
@@ -191,11 +192,3 @@ def submission_registry_exists(num: str, fixtures: JointFixture):
     assert num_found == num_expected, (
         f"{num_found} submission JSON files found in '{submission_store}'"
     )
-    # Currently, the Archive Test Bed supports only one active test submission.
-    # Below, the code assumes that the stored ID belongs to the submission.
-    if num_expected == 1:
-        fixtures.state.set_state("submission id", Path(json_files[0]).stem)
-    else:
-        print(
-            f"Cannot store submission ID: expected submissions {num_expected}, found {num_found}."
-        )
