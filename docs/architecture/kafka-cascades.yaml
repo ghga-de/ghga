@@ -3,6 +3,8 @@
 # kafka-cascade-map.md says where each part comes from and how to check it.
 #
 # services:  short name → full service name, as the page spells it out.
+# labels:    the same lookup, for the names that are not services: what became of
+#            an event rather than who handled it.
 # fragments: sub-cascades used by more than one flow; {{param}} is filled at each `use`.
 # flows:     one entrypoint each. `root` is the service that publishes first; every node
 #            below it is a service reacting, and its `event` is the edge that woke it.
@@ -10,7 +12,8 @@
 #            `- use: name` or `- use: {fragment: name, <param>: value}` splices a
 #            fragment into a children list. An event is a Kafka edge
 #            {topic, type, class} with class plain, outbox or persisted, or an HTTP hop
-#            {http: label}. `action` and `condition` may hold inline HTML.
+#            {http: label}. `action` and `condition` are written into the page as
+#            HTML, so they may hold markup and must escape a literal < or &.
 # topics:    the reference table; omit subscribers when nothing in the repo subscribes.
 
 updated: 2026-10-09
@@ -33,6 +36,7 @@ services:
   DLQS: dlq-service
   metldata: metadata ETL & artifact loader
   CLI: operational command
+labels:
   —: published, nothing subscribes
   (suppressed): the event that does not fire
   that service: the one service the retry topic belongs to

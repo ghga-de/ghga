@@ -1,7 +1,7 @@
 # Kafka cascades map
 
 [kafka-cascade-map.html](kafka-cascade-map.html) draws every Kafka event cascade in GHGA as a tree per entrypoint: pick the call that publishes first, and the page unfolds which service reacts to which event, and what each one does.
-It covers 23 topics and 22 entrypoints, and lists each topic with its producer and its subscribers.
+It also lists every topic with its producer and its subscribers; the page's own header carries the counts, which come from the source.
 
 The page is generated in part. [kafka-cascades.yaml](kafka-cascades.yaml) holds the topology; `just kafka-map` writes it into the page's marked data block, which no one edits by hand.
 The page's stylesheet and its d3 drawing code are hand-written, and `just kafka-map` leaves them alone.
@@ -20,6 +20,7 @@ python3 -m http.server 8000 --directory docs/architecture
 
 Microsoft's Live Preview extension (`ms-vscode.live-server`) adds a "Show Preview" entry to the editor's context menu, which renders the page in a tab.
 Either way the page needs network access: it loads d3 from cdnjs and its fonts from Google.
+No formatter or linter covers it: prettier is scoped to `frontend/data-portal`, so `just fmt` leaves `docs/**/*.html` alone.
 
 ## Changing the map
 
@@ -31,7 +32,9 @@ Either way the page needs network access: it loads d3 from cdnjs and its fonts f
    It validates the source, writes the data block and reports that it changed the page; stage the result.
 4. Open the page and click through the flows you touched.
 
-The validation rejects an unknown or missing field, an event class that is not `plain`, `outbox`, `persisted` or `http`, a duplicate flow id, a `use` of an unknown fragment or with the wrong argument, and a service name that either no node uses or no `services` entry defines.
+The validation rejects an unknown or missing field, an event class that is not `plain`, `outbox`, `persisted` or `http`, a duplicate flow id, a `use` of an unknown fragment or with the wrong argument, and a name that no node uses, or that no `services` or `labels` entry defines.
+It also cross-checks the two halves of the source: every topic an edge names has a row in the table and every row is named by some edge, the two agree on the topic's class, and no topic is listed twice.
+A topic in angle brackets, such as the replay flow's `<that service's topics>`, stands for a set and is matched against no row.
 The pre-commit hook runs the same script, so a stale page or an edit inside the markers fails the commit.
 
 ## Where the topology comes from
@@ -56,6 +59,7 @@ just kafka-map --topics
 This prints every topic the charts declare, with the charts that write and read it, and then names the topics only one of the two sides has.
 Read it, do not trust it: a chart may grant a service an ACL it never uses, and the map names the service that acts rather than every one entitled to.
 A topic in the charts and not in the map is the signal worth chasing, since it is usually a cascade nobody has drawn yet.
+Two differences it reports today are chart bugs rather than map bugs, and are left for a `deploy/` change: `dins` is granted `Write` on `metadata-datasets` though it has no event publisher, and `ns` declares `notifications` with no `kafkaUser` block though it subscribes.
 
 For the flows themselves there is no such shortcut.
 Take one entrypoint, follow it through the `event_sub.py` of each service it reaches, and compare it with the tree the page draws.

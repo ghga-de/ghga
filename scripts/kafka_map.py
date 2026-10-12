@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import pathlib
 import re
@@ -42,7 +43,7 @@ RETRY = re.compile(r"^retry\b.*")
 CLASSES = {"plain": "plain", "outbox": "outbox", "persisted": "persist", "http": "http"}
 HTTP_TYPE = "synchronous call"
 
-TOP_FIELDS = ("updated", "services", "fragments", "flows", "topics")
+TOP_FIELDS = ("updated", "services", "labels", "fragments", "flows", "topics")
 FLOW_FIELDS = ("id", "lane", "actor", "call", "title", "target")
 NODE_FIELDS = ("event", "service", "action", "condition", "terminal", "children")
 EVENT_FIELDS = ("topic", "type", "class")
@@ -205,17 +206,71 @@ def _check_fragments(fragments: dict) -> None:
         _fields(fragment, ("params", "nodes"), ("nodes",), f"fragment {name!r}")
 
 
-def _check_services(services: dict, flows: list[dict]) -> None:
-    """Check that the names the nodes use and the names defined are the same set."""
+def _check_names(names: dict, flows: list[dict]) -> None:
+    """Check that the names the nodes use and the names defined are the same set.
+
+    `names` is the services and the labels together: the page looks a node's name up in
+    one map, and a typo must fail whichever of the two it was meant to be.
+    """
     used: set[str] = set()
     for flow in flows:
         _services_used(flow["root"], used)
-    undefined = used - set(services)
+    undefined = used - set(names)
     if undefined:
-        raise SourceError(f"services: {', '.join(sorted(undefined))} not defined")
-    unused = set(services) - used
+        raise SourceError(
+            f"services: {', '.join(sorted(undefined))} is neither a service nor a label"
+        )
+    unused = set(names) - used
     if unused:
         raise SourceError(f"services: {', '.join(sorted(unused))} named by no node")
+
+
+def _topic_key(name: object) -> str:
+    """Normalise a topic for comparison: the table escapes its HTML, an event does not."""
+    return RETRY.sub("retry", html.unescape(str(name)))
+
+
+def _topics_used(node: dict, out: dict[str, set[str]]) -> None:
+    """Collect each Kafka topic a tree names, with the classes its edges give it."""
+    event = node.get("e")
+    if event and event["k"] != CLASSES["http"]:
+        out.setdefault(_topic_key(event["tp"]), set()).add(event["k"])
+    for child in node.get("kids") or ():
+        _topics_used(child, out)
+
+
+def _check_topics(flows: list[dict], topics: list[list]) -> None:
+    """Check that the flows and the topic table agree on the topics and their classes.
+
+    A topic written with angle brackets stands for a set rather than one topic — the
+    replay flow's `<that service's topics>` — so it is matched against no row.
+    """
+    rows: dict[str, str] = {}
+    for topic in topics:
+        key = _topic_key(topic[0])
+        if key in rows:
+            raise SourceError(f"topics: {topic[0]} is listed twice")
+        rows[key] = topic[1]
+
+    used: dict[str, set[str]] = {}
+    for flow in flows:
+        _topics_used(flow["root"], used)
+    used = {key: classes for key, classes in used.items() if "<" not in key}
+
+    missing = set(used) - set(rows)
+    if missing:
+        raise SourceError(
+            f"topics: {', '.join(sorted(missing))} in a flow but not listed"
+        )
+    undrawn = set(rows) - set(used)
+    if undrawn:
+        raise SourceError(f"topics: {', '.join(sorted(undrawn))} listed but in no flow")
+    for key in sorted(used):
+        if {rows[key]} != used[key]:
+            raise SourceError(
+                f"topics: {key} is {rows[key]} in the table but "
+                f"{', '.join(sorted(used[key]))} on an edge"
+            )
 
 
 def build(source: object) -> dict:
@@ -232,16 +287,23 @@ def build(source: object) -> dict:
     duplicate = {flow_id for flow_id in ids if ids.count(flow_id) > 1}
     if duplicate:
         raise SourceError(f"flows: duplicate id {', '.join(sorted(duplicate))}")
-    _check_services(source["services"], flows)
+    # A label is not a service: `—`, `(suppressed)` and the two the replay flows use
+    # name what happened to an event, and the page prints them the same way.
+    overlap = set(source["services"]) & set(source.get("labels") or {})
+    if overlap:
+        raise SourceError(f"labels: {', '.join(sorted(overlap))} is also a service")
+    names = {**source["services"], **(source.get("labels") or {})}
+    _check_names(names, flows)
 
     topics = [_topic(topic, i) for i, topic in enumerate(source["topics"])]
+    _check_topics(flows, topics)
     data = {
         "meta": {
             "updated": str(source["updated"]),
             "topics": len(topics),
             "entrypoints": len(flows),
         },
-        "services": source["services"],
+        "services": names,
         "flows": flows,
         "topics": topics,
     }
@@ -299,10 +361,12 @@ def render(data: dict) -> str:
 def update(page: str, block: str) -> str | None:
     """Return the page with the block between the markers replaced, or None if absent."""
     start = page.find(START)
-    end = page.find(END)
-    if start < 0 or end < 0 or end < start:
+    end = page.find(END, start + len(START)) if start >= 0 else -1
+    if start < 0 or end < 0:
         return None
-    return page[:start] + block + page[end + len(END) + 1 :]
+    # Drop the end marker's own line, however it ends, rather than one assumed "\n".
+    rest = page.find("\n", end)
+    return page[:start] + block + (page[rest + 1 :] if rest >= 0 else "")
 
 
 def chart_topics(root: pathlib.Path) -> dict[str, dict[str, list[str]]]:
@@ -337,7 +401,7 @@ def report_topics(root: pathlib.Path, topics: list[list]) -> str:
     lists both and names what only one side has; judging a difference is the reader's.
     """
     charts = chart_topics(root)
-    mapped = {RETRY.sub("retry", row[0]): row for row in topics}
+    mapped = {RETRY.sub("retry", row[0]) for row in topics}
     lines = [f"{'topic':<28} {'charts write':<22} charts read"]
     for name in sorted(charts):
         sides = charts[name]
@@ -346,8 +410,8 @@ def report_topics(root: pathlib.Path, topics: list[list]) -> str:
             f"{','.join(sides['Read']) or '—'}"
         )
     for label, missing in (
-        ("in the charts, not in the map", sorted(set(charts) - set(mapped))),
-        ("in the map, not in the charts", sorted(set(mapped) - set(charts))),
+        ("in the charts, not in the map", sorted(set(charts) - mapped)),
+        ("in the map, not in the charts", sorted(mapped - set(charts))),
     ):
         lines += ["", f"{label}: {', '.join(missing) or 'none'}"]
     return "\n".join(lines) + "\n"
@@ -356,10 +420,12 @@ def report_topics(root: pathlib.Path, topics: list[list]) -> str:
 def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
     """Regenerate the page's data block; return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
+    # One or the other: both write nothing, and --topics answers a different question.
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--check", action="store_true", help="report a stale page without writing it"
     )
-    parser.add_argument(
+    mode.add_argument(
         "--topics",
         action="store_true",
         help="print the charts' topics beside the map's, and write nothing",

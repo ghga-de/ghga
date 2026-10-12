@@ -60,6 +60,21 @@ def _source(**changes):
     return source
 
 
+def _extra_topic(source: dict, topic: str, cls: str = "outbox") -> None:
+    """Add a topic row and an edge naming it, so the two sides stay consistent."""
+    source["topics"].append(
+        {"topic": topic, "class": cls, "types": "upserted", "producer": "RS"}
+    )
+    source["flows"][0]["root"]["children"].append(
+        {
+            "event": {"topic": topic, "type": "upserted", "class": cls},
+            "service": "WPS",
+            "action": "reacts",
+            "terminal": True,
+        }
+    )
+
+
 def test_builds_the_minimal_source():
     data = kafka_map.build(_source())
     assert data["meta"] == {"updated": "2026-10-09", "topics": 1, "entrypoints": 1}
@@ -75,22 +90,31 @@ def test_builds_the_minimal_source():
 
 def test_counts_come_from_the_source():
     source = _source()
-    source["topics"].append(dict(source["topics"][0], topic="studies"))
+    _extra_topic(source, "studies")
     assert kafka_map.build(source)["meta"]["topics"] == 2
 
 
 def test_http_event_needs_no_topic_or_class():
     source = _source()
-    source["flows"][0]["root"]["children"][0]["event"] = {"http": "UCS · POST /boxes"}
-    event = kafka_map.build(source)["flows"][0]["root"]["kids"][0]["e"]
+    source["flows"][0]["root"]["children"].append(
+        {
+            "event": {"http": "UCS · POST /boxes"},
+            "service": "WPS",
+            "action": "creates the box",
+            "terminal": True,
+        }
+    )
+    event = kafka_map.build(source)["flows"][0]["root"]["kids"][1]["e"]
     assert event == {"tp": "UCS · POST /boxes", "ty": "synchronous call", "k": "http"}
 
 
 def test_persisted_becomes_the_value_the_page_switches_on():
     source = _source()
     source["flows"][0]["root"]["children"][0]["event"]["class"] = "persisted"
-    assert kafka_map.build(source)["flows"][0]["root"]["kids"][0]["e"]["k"] == "persist"
-    assert kafka_map.build(source)["topics"][0][1] == "outbox"
+    source["topics"][0]["class"] = "persisted"
+    data = kafka_map.build(source)
+    assert data["flows"][0]["root"]["kids"][0]["e"]["k"] == "persist"
+    assert data["topics"][0][1] == "persist"
 
 
 def test_fragment_fills_its_placeholder_at_each_use():
@@ -113,6 +137,14 @@ def test_fragment_fills_its_placeholder_at_each_use():
             ],
         }
     }
+    source["topics"].append(
+        {
+            "topic": "file-upload-boxes",
+            "class": "outbox",
+            "types": "upserted",
+            "producer": "UCS",
+        }
+    )
     children = source["flows"][0]["root"]["children"]
     children.append({"use": {"fragment": "box_echo", "reason": "box created"}})
     kids = kafka_map.build(source)["flows"][0]["root"]["kids"]
@@ -132,6 +164,14 @@ def test_fragment_of_several_nodes_is_spliced_into_the_children():
         "terminal": True,
     }
     source["fragments"] = {"pair": {"nodes": [leaf, dict(leaf, action="another")]}}
+    source["topics"] = [
+        {
+            "topic": "audit-records",
+            "class": "persisted",
+            "types": "audit_record_logged",
+            "producer": "RS",
+        }
+    ]
     source["flows"][0]["root"]["children"] = [{"use": "pair"}]
     kids = kafka_map.build(source)["flows"][0]["root"]["kids"]
     assert [kid["a"] for kid in kids] == ["a record", "another"]
@@ -184,10 +224,36 @@ def test_rejects_a_duplicate_flow_id():
         kafka_map.build(source)
 
 
-def test_rejects_a_service_no_entry_defines():
+def test_rejects_a_name_neither_service_nor_label():
     source = _source()
     source["flows"][0]["root"]["children"][0]["service"] = "WSP"
-    with pytest.raises(kafka_map.SourceError, match="WSP not defined"):
+    with pytest.raises(kafka_map.SourceError, match="WSP is neither a service nor"):
+        kafka_map.build(source)
+
+
+def test_a_label_names_a_node_the_way_a_service_does():
+    source = _source()
+    source["labels"] = {"—": "published, nothing subscribes"}
+    source["flows"][0]["root"]["children"][0]["service"] = "—"
+    del source["services"]["WPS"]
+    data = kafka_map.build(source)
+    assert data["flows"][0]["root"]["kids"][0]["s"] == "—"
+    # the page looks both up in one map
+    assert data["services"]["—"] == "published, nothing subscribes"
+    assert data["services"]["RS"] == "ghga-registry-service"
+
+
+def test_rejects_a_label_that_is_also_a_service():
+    source = _source()
+    source["labels"] = {"WPS": "work-package-service"}
+    with pytest.raises(kafka_map.SourceError, match="WPS is also a service"):
+        kafka_map.build(source)
+
+
+def test_rejects_a_label_no_node_names():
+    source = _source()
+    source["labels"] = {"—": "published, nothing subscribes"}
+    with pytest.raises(kafka_map.SourceError, match="— named by no node"):
         kafka_map.build(source)
 
 
@@ -335,7 +401,7 @@ def test_report_names_a_topic_only_one_side_has(tmp_path):
     assert "in the map, not in the charts: studies" in report
 
 
-def test_topics_writes_nothing(tmp_path, capsys):
+def test_topics_writes_nothing(capsys):
     page = ROOT / kafka_map.PAGE
     before = page.read_text(encoding="utf-8")
     assert kafka_map.main(["--topics"], root=ROOT) == 0
@@ -374,3 +440,74 @@ def test_check_reports_a_stale_page_and_writes_nothing(tmp_path, capsys):
     assert kafka_map.main(["--check"], root=tmp_path) == 1
     assert "Kafka map page is behind kafka-cascades.yaml" in capsys.readouterr().err
     assert page.read_text() == before
+
+
+def test_rejects_a_topic_an_edge_names_but_the_table_lacks():
+    source = _source()
+    source["flows"][0]["root"]["children"][0]["event"]["topic"] = "studies"
+    with pytest.raises(kafka_map.SourceError, match="studies in a flow but not listed"):
+        kafka_map.build(source)
+
+
+def test_rejects_a_topic_row_no_edge_names():
+    source = _source()
+    source["topics"].append(
+        {"topic": "studies", "class": "outbox", "types": "upserted", "producer": "RS"}
+    )
+    with pytest.raises(kafka_map.SourceError, match="studies listed but in no flow"):
+        kafka_map.build(source)
+
+
+def test_rejects_a_class_the_table_and_the_edge_disagree_on():
+    source = _source()
+    source["flows"][0]["root"]["children"][0]["event"]["class"] = "persisted"
+    with pytest.raises(
+        kafka_map.SourceError, match="is outbox in the table but persist"
+    ):
+        kafka_map.build(source)
+
+
+def test_rejects_a_topic_listed_twice():
+    source = _source()
+    source["topics"].append(dict(source["topics"][0]))
+    with pytest.raises(kafka_map.SourceError, match="is listed twice"):
+        kafka_map.build(source)
+
+
+def test_a_topic_in_angle_brackets_stands_for_a_set_and_matches_no_row():
+    """The replay flow names `<that service's topics>`, which is no single topic."""
+    source = _source()
+    source["flows"][0]["root"]["children"].append(
+        {
+            "event": {
+                "topic": "&lt;that service's topics&gt;",
+                "type": "upserted",
+                "class": "outbox",
+            },
+            "service": "WPS",
+            "action": "reacts",
+            "terminal": True,
+        }
+    )
+    assert kafka_map.build(source)["meta"]["topics"] == 1
+
+
+def test_the_retry_rows_fold_into_one_topic():
+    source = _source()
+    source["topics"].append(
+        {
+            "topic": "retry-&lt;service&gt;",
+            "class": "plain",
+            "types": "(the original type)",
+            "producer": "DLQS",
+        }
+    )
+    source["flows"][0]["root"]["children"].append(
+        {
+            "event": {"topic": "retry-ucs", "type": "upserted", "class": "plain"},
+            "service": "WPS",
+            "action": "reacts",
+            "terminal": True,
+        }
+    )
+    assert kafka_map.build(source)["meta"]["topics"] == 2
