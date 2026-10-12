@@ -31,6 +31,7 @@ from ghga_service_commons.http.mock_api import (
     ResponseHandler,
     fail_to_connect,
     instrumentable,
+    path_variables,
     respond,
     serve,
 )
@@ -142,6 +143,8 @@ def test_routing_to_a_missing_handler_is_refused():
         ("GET", "/things/{1thing}"),  # a name starting with a digit
         ("GET", "/things/{größe}"),  # a name that is not ASCII
         ("GET", "/things/{thing_id"),  # an unclosed variable
+        ("GET", "/things/%7Bthing_id"),  # a brace hidden by percent-encoding
+        ("GET", "/things/{thing_id}.json"),  # a variable that is not a whole segment
         ("GTE", "/things"),  # not an HTTP method
         ("GET", "/things?page=2"),  # a query, which routing ignores
     ],
@@ -177,6 +180,7 @@ def test_base_url_with_a_query_is_refused():
     [
         ("/things/{thing_id}", "things/{id}"),  # the same route again
         ("/things/{thing_id}", "/things/latest"),  # a literal route behind it
+        ("/things/{thing_id}/{part}", "/things/{thing_id}/parts"),  # a narrower one
     ],
 )
 def test_route_an_earlier_one_answers_is_refused(first: str, second: str):
@@ -366,6 +370,29 @@ def test_fail_to_connect():
     with pytest.raises(httpx2.ConnectError, match="refused") as caught:
         fail_to_connect("refused")(request)
     assert caught.value.request is request
+
+
+def test_path_variables():
+    """Test that a handler can read the variables its route matched."""
+    route_path = "/items/{item_id}/tags/{tag}"
+    items = ItemsMock()
+    items.on_get_tag = lambda request: httpx2.Response(
+        200, json=path_variables(request, route_path)
+    )
+    client = httpx2.Client(transport=items.as_transport())
+
+    response = client.get("http://items.invalid/api/items/i%201/tags/t1")
+
+    assert response.json() == {"item_id": "i 1", "tag": "t1"}
+
+
+def test_path_variables_of_another_route_are_refused():
+    """Test that reading the variables of a route the request did not take is refused."""
+    request = httpx2.Request("DELETE", "http://items.invalid/api/items/i1")
+
+    assert path_variables(request, "/items/{item_id}") == {"item_id": "i1"}
+    with pytest.raises(MockSetupError, match="does not end in"):
+        path_variables(request, "/items/{item_id}/tags/{tag}")
 
 
 def test_serve_mocks_sharing_a_host():
