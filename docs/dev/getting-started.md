@@ -70,6 +70,8 @@ Forwarding a port as well creates a loop that hangs the connection; leave VS Cod
 | 9000 | MinIO, the demo's S3 | Pre-signed URLs name the host `ghga-minio`, so that name must resolve to `127.0.0.1`; the dev container maps it, and `just testbed-hosts` does it elsewhere. |
 | 8080 | `just fe-dev` | The data portal with mocked APIs. |
 | 443 | `just fe-dev-oidc` and `just fe-dev-backend-oidc` | The OIDC provider redirects to a URL without a port; the recipe allows `node` to bind it. |
+| 8025 | MailHog, forwarded by `just testbed` | The suite reads the mails the platform sends. |
+| 18080 | the lox24 SMS mock, forwarded by `just testbed` | Not the mock's own 8080, which `just fe-dev` uses. |
 | 9323 | `just testbed-trace` | The Playwright trace viewer. |
 
 Because of these fixed ports, only one checkout or worktree at a time can run the demo or the test bed.

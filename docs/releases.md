@@ -158,9 +158,10 @@ The summary headings above the lists are left for you to fill in:
    Delete a heading with nothing worth saying, and the hint comments.
 3. Publish the draft.
 
-To see the notes before tagging, or to compare with a ref other than the previous tag:
+To see the notes before pushing a tag, or to compare with a ref other than the previous tag:
 
 ```sh
+git tag ghga/15.4.0    # the script needs the tag; delete it with `git tag -d` if you do not push it
 uv run --script scripts/release_notes.py ghga/15.4.0 --previous ghga/15.3.1
 ```
 
