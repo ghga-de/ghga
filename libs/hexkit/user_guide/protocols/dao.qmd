@@ -143,6 +143,7 @@ The batch operations apply a write to many resources in one call, which the Mong
 | `insert_many(dtos)` | Create new resources. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
 | `update_many(dtos)` | Replace existing resources, matched by their IDs. | `ResourceNotFoundError`, `UniqueConstraintViolationError` |
 | `upsert_many(dtos)` | Create or replace resources, matched by their IDs. | `UniqueConstraintViolationError` |
+| `delete_many(ids)` | Remove resources by their IDs, ignoring unknown ones. | nothing |
 
 A batch is not atomic.
 When some resources fail, the others are still written, and the call raises a [`BatchOperationError`](../../reference/protocols.dao.BatchOperationError.qmd).
@@ -164,6 +165,7 @@ Every batch also follows these rules:
 
 - No two DTOs in a batch may share an ID.
   Such a batch raises `ValueError` before anything is written.
+  `delete_many` ignores repeated IDs instead.
 - An empty batch writes nothing and raises nothing.
 
 `update_many` names the missing IDs with one lookup after its write.

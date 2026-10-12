@@ -945,7 +945,9 @@ async def test_batch_rejects_duplicate_ids(method: str):
     assert (await dao.get_by_id("Wrench")).count == 12
 
 
-@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
+@pytest.mark.parametrize(
+    "method", ["insert_many", "update_many", "upsert_many", "delete_many"]
+)
 async def test_batch_with_empty_input(method: str):
     """Test that an empty batch changes nothing and raises nothing."""
     dao = DaoClass()
@@ -988,3 +990,14 @@ async def test_upsert_many():
 
     assert (await dao.get_by_id("Wrench")).count == 1
     assert await dao.get_by_id("Hammer") == HAMMER
+
+
+async def test_delete_many():
+    """Test that delete_many deletes the given items and ignores unknown IDs."""
+    dao = DaoClass()
+    for item in (WRENCH, CANDLE, HAMMER):
+        await dao.insert(item)
+
+    await dao.delete_many(["Wrench", "Unknown", "Hammer", "Wrench"])
+
+    assert await stored_titles(dao) == ["Candle"]

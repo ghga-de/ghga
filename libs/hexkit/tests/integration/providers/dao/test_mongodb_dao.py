@@ -1147,7 +1147,9 @@ async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
         assert counter.writes == []
 
 
-@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
+@pytest.mark.parametrize(
+    "method", ["insert_many", "update_many", "upsert_many", "delete_many"]
+)
 async def test_dao_batch_empty(method: str, mongodb: MongoDbFixture):
     """Test that an empty batch sends no command and raises nothing."""
     async with counted_dao(mongodb) as (dao, counter):
@@ -1241,3 +1243,22 @@ async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
         assert caught.value.not_attempted == (last.id,)
         assert await dao.get_by_id(target.id) == target
         assert await dao.get_by_id(last.id) == last
+
+
+async def test_dao_delete_many(mongodb: MongoDbFixture):
+    """Test that delete_many deletes in one write command and ignores unknown and
+    repeated IDs.
+    """
+    async with counted_dao(mongodb) as (dao, counter):
+        kept, gone_1, gone_2 = ExampleDto(), ExampleDto(), ExampleDto()
+        for dto in (kept, gone_1, gone_2):
+            await dao.insert(dto)
+        counter.writes.clear()
+
+        await dao.delete_many([gone_1.id, uuid.uuid4(), gone_2.id, gone_1.id])
+
+        assert counter.writes == ["delete"]
+        assert await dao.get_by_id(kept.id) == kept
+        for dto in (gone_1, gone_2):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.get_by_id(dto.id)

@@ -1278,6 +1278,11 @@ def change_event(dto: ExampleDto) -> ExpectedEvent:
     )
 
 
+def delete_event(id_: uuid.UUID) -> ExpectedEvent:
+    """The delete event the publisher sends for the given resource ID."""
+    return ExpectedEvent(payload={}, type_=DELETE_EVENT_TYPE, key=str(id_))
+
+
 async def test_insert_many_publishes_written(mongo_kafka: MongoKafkaFixture):
     """Test that insert_many publishes events only for the resources it created, and
     that a tombstoned ID counts as existing.
@@ -1386,7 +1391,34 @@ async def test_update_many_keeps_tombstones(mongo_kafka: MongoKafkaFixture):
             await dao.get_by_id(tombstoned.id)
 
 
-@pytest.mark.parametrize("method", ["update_many"])
+async def test_delete_many_tombstones_live_ids(mongo_kafka: MongoKafkaFixture):
+    """Test that delete_many tombstones the live resources and publishes one delete
+    each, and nothing for missing or already deleted IDs.
+    """
+    async with example_publisher(mongo_kafka) as dao:
+        first, second, deleted = ExampleDto(), ExampleDto(), ExampleDto()
+        for dto in (first, second, deleted):
+            await dao.insert(dto)
+        await dao.delete(deleted.id)
+        ids = [first.id, uuid.uuid4(), deleted.id, second.id, first.id]
+
+        async with mongo_kafka.kafka.expect_events(
+            events=[delete_event(first.id), delete_event(second.id)],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.delete_many(ids)
+
+        collection = get_mongo_collection(mongo_kafka, "example")
+        for dto in (first, second):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.get_by_id(dto.id)
+            tombstone = collection.find_one({"_id": dto.id})
+            assert tombstone is not None
+            assert tombstone["__metadata__"]["deleted"] is True
+            assert tombstone["__metadata__"]["published"] is True
+
+
+@pytest.mark.parametrize("method", ["update_many", "delete_many"])
 async def test_publisher_batch_empty(method: str, mongo_kafka: MongoKafkaFixture):
     """Test that an empty batch through the publisher writes and publishes nothing."""
     async with example_publisher(mongo_kafka) as dao:

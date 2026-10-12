@@ -79,6 +79,7 @@ A repeated event is harmless, because each one carries the full current state of
 `insert_many` treats a tombstoned ID as taken, as `insert` does.
 `upsert_many` recreates a tombstoned resource, as `upsert` does.
 `update_many` leaves tombstones alone and reports their IDs as missing, as `update` does.
+`delete_many` tombstones only resources that are not already deleted.
 
 Republishing events:
 

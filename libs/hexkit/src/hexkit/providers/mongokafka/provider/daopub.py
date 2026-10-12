@@ -651,6 +651,34 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise
         await self._publish_written(dtos, None)
 
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Tombstone the live resources among the IDs and publish a delete for each.
+
+        Missing and already deleted IDs are ignored and publish nothing.
+        """
+        distinct = list(dict.fromkeys(ids))
+        if not distinct:
+            return
+        existing = await self._dao._existing_ids(distinct, NOT_DELETED)
+        live = [id_ for id_ in distinct if id_ in existing]
+        if not live:
+            return
+        metadata = {
+            "deleted": True,
+            "published": False,
+            "correlation_id": get_correlation_id(),
+        }
+        tombstones = [{"_id": id_, "__metadata__": metadata} for id_ in live]
+        _, failures = await self._dao._bulk_replace(
+            tombstones, NOT_DELETED, upsert=False, ordered=False
+        )
+        if failures:
+            raise failures
+        if self._autopublish:
+            await self._publish_best_effort(
+                {id_: partial(self._publish_delete, id_) for id_ in live}
+            )
+
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
         correlation_id = document.get("__metadata__", {}).get("correlation_id", "")

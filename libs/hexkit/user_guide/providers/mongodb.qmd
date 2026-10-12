@@ -234,6 +234,7 @@ A batch is not atomic, and there are no transactions yet to make it so.
 A `BatchOperationError` names every failed and every skipped ID, so the caller knows exactly what was written.
 After a timeout or a lost connection the outcome is unknown; `find_all` shows what arrived.
 `upsert_many` can then be repeated safely.
+To undo a partial batch, call `delete_many` on the written IDs.
 
 ### Error Handling
 
