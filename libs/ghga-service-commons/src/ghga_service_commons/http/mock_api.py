@@ -185,7 +185,7 @@ def respond(
     content: bytes | str | None = None,
     headers: dict[str, str] | None = None,
 ) -> ResponseHandler:
-    """Create a handler answering every request with the configured response."""
+    """Create a handler that answers every request with the configured response."""
     if json is not None and content is not None:
         raise MockSetupError(
             "respond() takes `json` or `content` as the body, not both"
