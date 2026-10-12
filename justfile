@@ -278,12 +278,13 @@ affected base="origin/dev":
 # a worktree: that is where Claude Code's `--worktree` puts its own, and /.claude/* in
 # .gitignore hides them. Git records a worktree's path absolutely, and the host and the
 # container see different paths, so only the container may create them.
-# Each worktree gets its own .venv, which the uv cache makes a copy rather than a download.
+# Each worktree gets its own .venv, which the uv cache makes a copy rather than a download,
+# and its own node_modules, which the Prettier and ESLint hooks need for a portal commit.
 #
 #   just wt chore/GSI-1234-bump-hexkit       # .claude/worktrees/GSI-1234-bump-hexkit
 #   just wt hotfix/ucs-retry origin/main     # from another base
 #
-# Create a worktree on a new branch and sync its .venv, e.g. `just wt feat/add-x`.
+# Create a worktree on a new branch and install its dependencies, e.g. `just wt feat/add-x`.
 wt branch base="origin/dev": _guard-host
     #!/usr/bin/env bash
     set -euo pipefail
@@ -291,7 +292,7 @@ wt branch base="origin/dev": _guard-host
     dir="$main/.claude/worktrees/$(basename "{{branch}}")"
     git fetch origin
     git worktree add "$dir" -b "{{branch}}" "{{base}}"
-    cd "$dir" && just sync
+    cd "$dir" && just sync && just fe-install
 
 # Leaves the branch: after a squash merge `git branch -d` refuses it, and deleting it with
 # `-D` is the dev's call, not a recipe's.

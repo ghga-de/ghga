@@ -28,15 +28,15 @@ Pytest fixtures are stored in the `fixtures` directory.
 ### Execution
 
 - Use `just testbed` to run all tests.
-- For specific steps, such as step 240, use `just testbed steps/test_240_*`.
+- For specific steps, such as step 001, use `just testbed steps/test_001_*`.
 - For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `just testbed -m browse`.
 
 ### Modes of Operation
 
 - **Black Box Testing:** This mode involves accessing the application solely through the official API via the API gateway.
   It's suitable for testing deployments in Kubernetes clusters.
-  - Enable black box testing by setting `black_box_mode` to `true`.
-    Otherwise, white box testing is the default mode.
+  - Enable black box testing by setting `black_box_mode` to `true`, as `tb.kind.yaml` does, so `just testbed` runs in this mode.
+    Without the setting, white box testing is the default mode.
 - **White Box Testing:** Here, the Test Bed also accesses foundational services (e.g., S3, Kafka, Mongo, Vault) to verify their states, including intermediate ones.
 
 ### Configuration
@@ -47,7 +47,7 @@ The testbed itself is configured via the YAML file named by the environment vari
 `just testbed` sets it to `tb.kind.yaml`, the configuration for the kind cluster, and supplies the secrets as `TB_*` environment variables read from the cluster.
 Alternative configurations can be saved as `tb.*.yaml` and activated the same way.
 
-- **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory, with the latter being default for automated black box tests.
+- **States:** The `keep_state_in_db` setting determines whether to store test states in a database or in memory; the database is the default, and `tb.kind.yaml` keeps it.
 - **Additional Authentication:** The `auth_basic` setting is for passing basic authentication credentials, applicable only in black box testing.
 
 ### Advanced Configuration

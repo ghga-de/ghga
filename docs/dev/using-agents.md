@@ -45,7 +45,7 @@ Do not use tools such as claude-mem on this repo: they record every tool output,
 ## Parallel work
 
 `just wt <branch>` creates a git worktree for a second agent session or a quick fix next to your feature branch.
-It cuts the branch from `origin/dev`, or from the base you pass as the second argument, puts the worktree in `.claude/worktrees/` and syncs its `.venv`, so `just test` works there at once.
+It cuts the branch from `origin/dev`, or from the base you pass as the second argument, puts the worktree in `.claude/worktrees/` and syncs its `.venv` and the front-end packages, so `just test` and the commit hooks work there at once.
 `just wt-rm <name>` removes the worktree and keeps the branch.
 
 - **Open it** in its own VS Code window with *File → Open Folder…* and the worktree's path; the dialog shows the container's file system, so the window stays in the same container.
