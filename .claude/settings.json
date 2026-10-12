@@ -68,13 +68,25 @@
       "Bash(gh run list *)",
       "Bash(gh repo view *)",
       "Bash(gh release view *)",
-      "Bash(gh release list *)"
+      "Bash(gh release list *)",
+      "Bash(rg *)",
+      "Bash(fd *)",
+      "Bash(just test *)",
+      "Bash(just lint)",
+      "Bash(just typecheck)",
+      "Bash(just affected *)"
     ],
     "ask": [
       "Bash(gh pr create *)",
       "Bash(gh pr comment *)",
       "Bash(gh pr review *)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "Bash(rg *--pre*)",
+      "Bash(fd *-x *)",
+      "Bash(fd *-X *)",
+      "Bash(fd *--exec*)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)"
     ],
     "deny": [
       "Bash(gh pr merge *)",
@@ -88,6 +100,10 @@
       "Bash(git push * --force*)",
       "Bash(git push -f*)",
       "Bash(git push * -f*)",
+      "Bash(sudo *)",
+      "Bash(ssh *)",
+      "Bash(chmod 777 *)",
+      "Bash(chmod -R 777 *)",
       "Read(./.env)",
       "Read(./**/.env)",
       "Read(./**/local.env)"
