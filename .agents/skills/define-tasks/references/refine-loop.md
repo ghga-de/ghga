@@ -97,6 +97,15 @@ The plan holds the states once it is published: a refine reads the source again 
   Then treat the finding as [findings.md](findings.md#states) says for the new state: add its task, drop it, or open a decision.
 - **In both cases** rewrite what the finding's point says the plan does with it, and its tag for the task or decision.
 
+## The page source
+
+A refine edits the page's HTML and republishes it to the same link, without `capabilities`, which keeps the stored set.
+
+- **In the session that built the plan**, the source is the copy in the scratchpad: edit it and publish the same file path.
+- **In a new session** that copy is gone.
+  Read the page back with Artifact `read` and the URL, and build the new version from what comes back: the file the result names, or the HTML it prints.
+  Publish it with the page's `url`; a publish without that read is refused.
+
 ## Steps
 
 1. Read the page comments with ArtifactData `list` on `comments`, the claude.ai threads with ArtifactComments `read`, and the ticket cards with ArtifactData `list` on `tickets`.
@@ -116,7 +125,7 @@ The plan holds the states once it is published: a refine reads the source again 
    A comment that gives a finding a new state follows [Finding states](#finding-states).
 5. Update the ticket cards, as [Ticket cards](#ticket-cards) says.
 6. Raise the revision number in the header, and rewrite the "What changed" block after the comment overview: unhide it, name the new revision and the one it was refined from, and list one item per changed point: its ref, then a one-line recap of the change.
-   Republish the same file path without `capabilities`.
+   Republish it as [The page source](#the-page-source) says.
 7. Answer each page thread you addressed with a `byClaude` item in the owner's document, as in [Answering a question](#answering-a-question); the refine request names that document in "Sent by <owner id>".
    Then resolve the thread: ArtifactData `update` of the document that holds its first comment, setting `resolved: true` on that item, pinned with `if_version`.
 8. Resolve every claude.ai thread you acted on that is activated for Claude, the refine and question threads included.

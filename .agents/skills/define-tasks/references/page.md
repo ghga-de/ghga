@@ -1,6 +1,25 @@
 # The plan page
 
-How the page that the define-tasks skill publishes keeps its ticket cards, and the traps of building and publishing it.
+How the page that the define-tasks skill publishes names its points and keeps its ticket cards, what sharing it exposes, and the traps of building and publishing it.
+
+## Refs
+
+Every plan uses the same refs, so a ref names the same kind of point in every plan.
+Use no other prefix, and number each one from 1 in page order on the first publish; groundwork is the one exception, as `T0`.
+
+| Section | Ref | Example |
+|---|---|---|
+| Findings, only for a findings artifact | `F` | `F1` |
+| Gaps in the source | `G` | `G1` |
+| Decisions, and their options | `D`, then a letter per option | `D1`, `D1.A` |
+| Shared contract | `C` | `C1` |
+| Tasks | `T`, from `T0` when the plan has groundwork | `T1` |
+| A task's points | the task, then a number running across its changes, criteria, tests and docs | `T1.3` |
+| Delivery, and after the merge | `P`, a number running across both lists | `P1` |
+| Risks and limits | `R` | `R1` |
+| Not in this plan | `X` | `X1` |
+
+The `id` of a point is its ref in lower case with dashes for dots, such as `t1-3`.
 
 ## Ticket cards
 
@@ -30,6 +49,15 @@ The page renders the cards from its store, one document per task at `tickets/<ta
 - **Delivery carries the keys.**
   P1's branch names and pull request titles take each task's key, as the [conventions](../../../../docs/conventions.md#names-branches-prs-commits) say; each refine fills in the keys added since the last revision.
 - **How a refine changes the cards**, and how Regenerate works, is in [refine-loop.md](refine-loop.md#ticket-cards).
+
+## Sharing
+
+If the user asks about sharing the plan, name what it exposes before they decide:
+
+- Everyone they share it with reads the plan and its ticket cards, and with Contributor access also comments and picks.
+- A plan from a findings artifact repeats its findings, also for people who cannot open that artifact.
+- A refine reads those comments into this session, which has the repository and its tools; the session treats them as data, but they remain text from other people.
+- Editors can send to Claude, and every comment sent to Claude starts this session's automatic reply before any check of the sender.
 
 ## Traps
 
