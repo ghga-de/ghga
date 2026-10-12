@@ -511,3 +511,36 @@ def test_the_retry_rows_fold_into_one_topic():
         }
     )
     assert kafka_map.build(source)["meta"]["topics"] == 2
+
+
+def test_rejects_a_placeholder_the_fragment_does_not_declare():
+    """A stray {{name}} must name its fragment, not raise a KeyError."""
+    source = _source()
+    source["fragments"] = {
+        "box_echo": {
+            "params": ["reason"],
+            "nodes": [
+                {"service": "RS", "action": "upserts {{nope}}", "terminal": True}
+            ],
+        }
+    }
+    source["flows"][0]["root"]["children"].append(
+        {"use": {"fragment": "box_echo", "reason": "box created"}}
+    )
+    with pytest.raises(kafka_map.SourceError, match=r"box_echo': \{\{nope\}\} is not"):
+        kafka_map.build(source)
+
+
+def test_rejects_a_field_beside_a_use_in_a_children_list():
+    """The field would be dropped, so a typo there must fail rather than vanish."""
+    source = _source()
+    source["fragments"] = {
+        "audit_leaf": {
+            "nodes": [{"service": "WPS", "action": "a record", "terminal": True}]
+        }
+    }
+    source["flows"][0]["root"]["children"].append(
+        {"use": "audit_leaf", "service": "TYPO"}
+    )
+    with pytest.raises(kafka_map.SourceError, match="a use entry takes no other field"):
+        kafka_map.build(source)

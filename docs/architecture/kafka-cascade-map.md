@@ -11,15 +11,16 @@ This page says where each part of it comes from, so the next reader can check it
 
 ## Opening the page
 
-Open the file in a browser; it is one self-contained page and needs no server.
-VS Code has no HTML preview of its own, so from the dev container serve the directory instead and open the forwarded link:
+Open the file in a real browser; it is one self-contained page and needs no server.
+From the dev container, serve the directory and open the forwarded link:
 
 ```shell
 python3 -m http.server 8000 --directory docs/architecture
 ```
 
-Microsoft's Live Preview extension (`ms-vscode.live-server`) adds a "Show Preview" entry to the editor's context menu, which renders the page in a tab.
+VS Code has no HTML preview of its own, and Microsoft's Live Preview extension (`ms-vscode.live-server`) does not render this page in its embedded tab; its "open in external browser" action does.
 Either way the page needs network access: it loads d3 from cdnjs and its fonts from Google.
+When d3 cannot be fetched the page says so where the diagram would be, and still draws its header, legend and topic table; the fonts need no such guard, since they fall back to the stack beside them.
 No formatter or linter covers it: prettier is scoped to `frontend/data-portal`, so `just fmt` leaves `docs/**/*.html` alone.
 
 ## Changing the map

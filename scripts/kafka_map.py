@@ -88,14 +88,21 @@ def _event(raw: object, where: str) -> dict:
     return {"tp": raw["topic"], "ty": raw["type"], "k": CLASSES[raw["class"]]}
 
 
-def _substitute(value: object, args: dict[str, str]) -> object:
+def _substitute(value: object, args: dict[str, str], where: str) -> object:
     """Fill the {{param}} placeholders of a fragment's nodes, at any depth."""
+
+    def fill(match: re.Match) -> str:
+        name = match.group(1)
+        if name not in args:
+            raise SourceError(f"{where}: {match.group(0)} is not a parameter of it")
+        return args[name]
+
     if isinstance(value, str):
-        return PLACEHOLDER.sub(lambda match: args[match.group(1)], value)
+        return PLACEHOLDER.sub(fill, value)
     if isinstance(value, list):
-        return [_substitute(item, args) for item in value]
+        return [_substitute(item, args, where) for item in value]
     if isinstance(value, dict):
-        return {key: _substitute(item, args) for key, item in value.items()}
+        return {key: _substitute(item, args, where) for key, item in value.items()}
     return value
 
 
@@ -116,7 +123,7 @@ def _fragment(raw: object, fragments: dict, where: str) -> list[dict]:
     if set(args) != params:
         expected = ", ".join(sorted(params)) or "no argument"
         raise SourceError(f"{where}: fragment {name!r} takes {expected}")
-    nodes = _substitute(fragments[name]["nodes"], args)
+    nodes = _substitute(fragments[name]["nodes"], args, f"fragment {name!r}")
     assert isinstance(nodes, list)
     return [_node(node, fragments, f"{where} → {name}") for node in nodes]
 
@@ -127,6 +134,8 @@ def _children(raw: dict, fragments: dict, where: str) -> list[dict]:
     for index, child in enumerate(raw.get("children") or ()):
         spot = f"{where} › {raw['service']}[{index}]"
         if isinstance(child, dict) and "use" in child:
+            if set(child) != {"use"}:
+                raise SourceError(f"{spot}: a use entry takes no other field")
             children += _fragment(child["use"], fragments, spot)
         else:
             children.append(_node(child, fragments, spot))

@@ -1482,6 +1482,44 @@
 
   var KIND_LABEL = { plain: "plain", outbox: "outbox", persist: "persisted", http: "HTTP" };
 
+  // ---- counts and date, so the header cannot disagree with the data ------
+  document.getElementById("topology").textContent =
+    "GHGA · event topology · " + META.topics + " topics · " + META.entrypoints + " entrypoints";
+  document.getElementById("updated").textContent = "Last updated " + META.updated;
+
+  // ---- topic table -------------------------------------------------------
+  var rows = document.getElementById("topic-rows");
+  TOPICS.forEach(function (t) {
+    var tr = document.createElement("tr");
+    function td(cls, html) {
+      var c = document.createElement("td");
+      if (cls) c.className = cls;
+      c.innerHTML = html;
+      return c;
+    }
+    tr.appendChild(td("tp", t[0]));
+    tr.appendChild(td(null, "<span class='chip k-" + t[1] + "'><i></i>" + KIND_LABEL[t[1]] + "</span>"));
+    tr.appendChild(td(null, t[2]));
+    tr.appendChild(td(null, t[3]));
+    tr.appendChild(td(t[4] ? null : "none", t[4] || "none in this repo"));
+    rows.appendChild(tr);
+  });
+
+  // ---- the drawing needs d3, which comes from cdnjs ----------------------
+  // Everything below draws with d3. When that script does not load the page would
+  // otherwise show its full chrome around an empty stage with nothing saying why, so
+  // the canvas says it instead. The header, the legend and the topic table above need
+  // no d3 and stay as they are.
+  if (!window.d3) {
+    var holder = document.querySelector(".canvas-holder");
+    holder.textContent =
+      "This map is drawn with d3, loaded from cdnjs, and that script did not load \u2014 " +
+      "usually a network policy in the way, or a machine that is offline.";
+    holder.style.padding = "18px";
+    return;
+  }
+
+
   // ---- geometry ----------------------------------------------------------
   // Node boxes are a fixed width but a variable height: the action text wraps to as
   // many lines as it needs, so nothing is ever elided. Row spacing therefore comes
@@ -1999,29 +2037,6 @@
   });
   document.getElementById("b-collapse").addEventListener("click", function () {
     collapseAll(root, 1); render(); fit(0.85);
-  });
-
-  // ---- counts and date, so the header cannot disagree with the data ------
-  document.getElementById("topology").textContent =
-    "GHGA · event topology · " + META.topics + " topics · " + META.entrypoints + " entrypoints";
-  document.getElementById("updated").textContent = "Last updated " + META.updated;
-
-  // ---- topic table -------------------------------------------------------
-  var rows = document.getElementById("topic-rows");
-  TOPICS.forEach(function (t) {
-    var tr = document.createElement("tr");
-    function td(cls, html) {
-      var c = document.createElement("td");
-      if (cls) c.className = cls;
-      c.innerHTML = html;
-      return c;
-    }
-    tr.appendChild(td("tp", t[0]));
-    tr.appendChild(td(null, "<span class='chip k-" + t[1] + "'><i></i>" + KIND_LABEL[t[1]] + "</span>"));
-    tr.appendChild(td(null, t[2]));
-    tr.appendChild(td(null, t[3]));
-    tr.appendChild(td(t[4] ? null : "none", t[4] || "none in this repo"));
-    rows.appendChild(tr);
   });
 
   select(FLOWS[0], firstBtn);
