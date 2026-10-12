@@ -29,14 +29,19 @@ from typing import Any
 import httpx2
 import pytest
 
-from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond, serve
+from ghga_service_commons.http.mock_api import (
+    MockApi,
+    ResponseHandler,
+    path_variables,
+    respond,
+    serve,
+)
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.router import (
     MOCK_API_HOST,
     MockApiTransport,
     httpyexpect_error,
-    path_variables,
 )
 from tests.fixtures.utils import TEST_FILE_ID, TEST_PUBLIC_KEYS, TEST_STORAGE_ALIAS1
 

@@ -29,6 +29,7 @@ from ghga_connector.core.client import async_client
 from ghga_connector.core.main import upload_files
 from ghga_connector.core.uploading.structs import CoreFileInfo
 from ghga_connector.core.utils import modify_for_debug
+from ghga_service_commons.http.mock_api import path_variables
 from ghga_service_commons.utils.temp_files import big_temp_file
 from tests.fixtures.config import get_test_config
 from tests.fixtures.mock_api.apis import (
@@ -37,7 +38,7 @@ from tests.fixtures.mock_api.apis import (
     MockApis,
     mock_apis,  # noqa: F401
 )
-from tests.fixtures.mock_api.router import mock_health_checks, path_variables
+from tests.fixtures.mock_api.router import mock_health_checks
 from tests.fixtures.s3 import S3Fixture, s3_fixture  # noqa: F401
 from tests.fixtures.utils import (
     PRIVATE_KEY_FILE,

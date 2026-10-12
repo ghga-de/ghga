@@ -35,7 +35,6 @@ __all__ = [
     "is_mocked",
     "may_be_reached",
     "mock_health_checks",
-    "path_variables",
 ]
 
 # The host the mocks are served from; `canonical` folds the loopback aliases onto it
@@ -53,15 +52,6 @@ def httpyexpect_error(
         content=json.dumps(body, default=str),
         headers={"content-type": "application/json"},
     )
-
-
-def path_variables(request: httpx2.Request, path: str) -> dict[str, str]:
-    """Read the `{name}` segments of `path` from the end of the request's path."""
-    pattern = re.sub(r"\\\{(\w+)\\\}", r"(?P<\1>[^/]+)", re.escape(path))
-    match = re.search(f"{pattern}$", request.url.path)
-    if match is None:
-        raise AssertionError(f"{request.url.path} does not end in {path}")
-    return match.groupdict()
 
 
 def canonical(url: httpx2.URL) -> httpx2.URL:
