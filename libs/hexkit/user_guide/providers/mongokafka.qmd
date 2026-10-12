@@ -71,6 +71,13 @@ When data is deleted, the Outbox Publisher publishes an event with an empty payl
 Consumers can subscribe to the given outbox topic and perform the suitable action based on whether the event type is "upserted" or "deleted" — hexkit's interface for this is the [DAO Subscriber](../protocols/daosubscriber.qmd) protocol.
 All event publishing depends on `autopublish` being set to True.
 
+The batch operations publish one event per written resource after their write, just as the single-resource methods do.
+Publishing a batch is best effort: an event that cannot be sent is logged instead of failing the call, because the write itself already succeeded.
+Its document keeps `__metadata__.published == False`, so `publish_pending()` sends it later.
+This gives at-least-once delivery, the strongest guarantee available without a transaction across MongoDB and Kafka.
+A repeated event is harmless, because each one carries the full current state of its resource.
+`insert_many` treats a tombstoned ID as taken, as `insert` does.
+
 Republishing events:
 
 - `publish_pending()`: Publishes all documents where `__metadata__.published == False` using the stored correlation ID and appropriate event type.

@@ -19,6 +19,7 @@
 Requires dependencies of the `akafka` and `mongodb` extras.
 """
 
+import logging
 from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
@@ -40,6 +41,7 @@ from pymongo.errors import DuplicateKeyError
 from hexkit.correlation import get_correlation_id, set_correlation_id
 from hexkit.custom_types import ID, JsonObject
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
     Dto,
     FindResult,
@@ -66,6 +68,8 @@ from hexkit.providers.mongodb.provider import (
 )
 from hexkit.providers.mongodb.provider.dao import MongoDbIndex
 from hexkit.providers.mongokafka.config import MongoKafkaConfig
+
+log = logging.getLogger(__name__)
 
 
 class ResourceDeletedError(RuntimeError):
@@ -565,6 +569,51 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise UniqueConstraintViolationError(unique_fields=key_value) from error
         if self._autopublish:
             await self._publish_change(dto)
+
+    async def _publish_best_effort(
+        self, publishes: Mapping[ID, Callable[[], Awaitable[None]]]
+    ) -> None:
+        """Publish each event, logging a failure instead of raising it.
+
+        A batch call must not fail after its write: a resource whose event did not go
+        out keeps `published: False`, so `publish_pending` sends it later.
+        """
+        for id_, publish in publishes.items():
+            try:
+                await publish()
+            except Exception:
+                log.warning("Could not publish the event for %s", id_, exc_info=True)
+
+    async def _publish_written(
+        self, dtos: Collection[Dto], error: BatchOperationError | None
+    ) -> None:
+        """Publish a change event for each DTO the batch wrote."""
+        if not self._autopublish:
+            return
+        unwritten = set(error.errors) | set(error.not_attempted) if error else set()
+        await self._publish_best_effort(
+            {
+                getattr(dto, self._id_field): partial(self._publish_change, dto)
+                for dto in dtos
+                if getattr(dto, self._id_field) not in unwritten
+            }
+        )
+
+    async def insert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Create several resources in one call and publish each one written.
+
+        An ID that a publisher deletion left as a tombstone counts as existing, as in
+        `insert`; `upsert_many` recreates it. Please see the `Dao` protocol for the
+        arguments and the errors.
+        """
+        try:
+            await self._dao.insert_many(dtos, ordered=ordered)
+        except BatchOperationError as error:
+            await self._publish_written(dtos, error)
+            raise
+        await self._publish_written(dtos, None)
 
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""

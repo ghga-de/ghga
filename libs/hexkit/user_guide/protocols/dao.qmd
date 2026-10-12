@@ -134,6 +134,35 @@ assert same_book == extended
 await book_dao.delete(book.id)
 ```
 
+## Batch Operations
+
+The batch operations apply a write to many resources in one call, which the MongoDB provider sends to the database in one round-trip:
+
+| Operation | Description | Fails per resource with |
+| --------- | ----------- | ----------------------- |
+| `insert_many(dtos)` | Create new resources. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
+
+A batch is not atomic.
+When some resources fail, the others are still written, and the call raises a [`BatchOperationError`](../../reference/protocols.dao.BatchOperationError.qmd).
+Its `errors` attribute maps each failed ID to the error the single-resource method would have raised:
+
+```python
+try:
+    await book_dao.insert_many(books)
+except BatchOperationError as error:
+    for book_id, reason in error.errors.items():
+        log.warning("Book %s was not stored: %s", book_id, reason)
+```
+
+By default, every resource in a batch is attempted.
+Pass `ordered=True` to stop at the first failure instead; `error.not_attempted` then lists the IDs after it, in input order.
+
+Every batch also follows these rules:
+
+- No two DTOs in a batch may share an ID.
+  Such a batch raises `ValueError` before anything is written.
+- An empty batch writes nothing and raises nothing.
+
 ## Finding Resources
 
 Beyond lookups by ID, DAOs support searching by field values.
@@ -209,6 +238,8 @@ The full hierarchy:
     - `NoHitsFoundError`: `find_one` found nothing
     - `MultipleHitsFoundError`: `find_one` found more than one match
   - `DbTimeoutError`: a database operation timed out
+  - `BatchOperationError`: some resources of a batch failed; `errors` holds one of the
+    errors above per failed ID
 
 Providers translate their native driver errors into these types, so your error handling stays portable across backends:
 
