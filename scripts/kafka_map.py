@@ -385,12 +385,15 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         print(f"{PAGE}: missing {START.strip()} or {END.strip()}", file=sys.stderr)
         return 1
     if updated == page:
+        print("Kafka map already up to date.")
         return 0
     if args.check:
-        print(f"{PAGE}: stale; run `just kafka-map`", file=sys.stderr)
+        print("Kafka map is stale; run `just kafka-map`.", file=sys.stderr)
         return 1
     page_path.write_text(updated, encoding="utf-8")
-    print(f"{PAGE}: regenerated the data; stage the file", file=sys.stderr)
+    # Non-zero on a write, as the other generators here are: the pre-commit hook then
+    # fails the commit and the dev stages the page the hook has just rewritten.
+    print(f"Kafka map updated; stage {PAGE}.", file=sys.stderr)
     return 1
 
 

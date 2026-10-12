@@ -341,3 +341,34 @@ def test_topics_writes_nothing(tmp_path, capsys):
     assert kafka_map.main(["--topics"], root=ROOT) == 0
     assert "charts write" in capsys.readouterr().out
     assert page.read_text(encoding="utf-8") == before
+
+
+def _page(tmp_path: Path, block: str) -> Path:
+    """Put a source and a page holding `block` under tmp_path, and return the page."""
+    (tmp_path / "docs" / "architecture").mkdir(parents=True)
+    (tmp_path / kafka_map.SOURCE).write_text(yaml.safe_dump(MINIMAL))
+    page = tmp_path / kafka_map.PAGE
+    page.write_text(f"<script>\n{block}</script>\n")
+    return page
+
+
+def test_reports_an_up_to_date_page_on_stdout(tmp_path, capsys):
+    block = kafka_map.render(kafka_map.build(MINIMAL))
+    _page(tmp_path, block)
+    assert kafka_map.main([], root=tmp_path) == 0
+    assert capsys.readouterr().out == "Kafka map already up to date.\n"
+
+
+def test_reports_the_page_it_rewrote(tmp_path, capsys):
+    page = _page(tmp_path, f"{kafka_map.START}\n  var SVC = 1;\n{kafka_map.END}\n")
+    assert kafka_map.main([], root=tmp_path) == 1
+    assert "Kafka map updated; stage" in capsys.readouterr().err
+    assert "var FLOWS" in page.read_text()
+
+
+def test_check_reports_a_stale_page_and_writes_nothing(tmp_path, capsys):
+    page = _page(tmp_path, f"{kafka_map.START}\n  var SVC = 1;\n{kafka_map.END}\n")
+    before = page.read_text()
+    assert kafka_map.main(["--check"], root=tmp_path) == 1
+    assert "Kafka map is stale" in capsys.readouterr().err
+    assert page.read_text() == before
