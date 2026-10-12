@@ -19,7 +19,7 @@
 # `docker login dhi.io` locally; DOCKERHUB_USERNAME/DOCKERHUB_TOKEN org secrets in CI.
 
 # renovate: track=python-base
-ARG PYTHON_BASE=3.13.15-alpine3.24
+ARG PYTHON_BASE=3.13.16-alpine3.24
 ARG BASE=dhi.io/python:${PYTHON_BASE}
 # single = one member per image (the release artifact); mono = every Python member in
 # one venv, for the demo, the integration gate and the dev cluster only (ADR-0045).
