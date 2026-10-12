@@ -21,12 +21,13 @@ from collections.abc import AsyncGenerator
 from datetime import timedelta
 from uuid import UUID, uuid4
 
+import httpx2
 import pytest
 from pytest_asyncio import fixture as async_fixture
 
 from ars.adapters.outbound.http import AccessGrantsAdapter, AccessGrantsConfig
 from ars.core.models import BaseAccessGrant
-from ghga_service_commons.http.mock_api import fail_to_connect, respond
+from ghga_service_commons.http.mock_api import respond
 from hexkit.utils import now_utc_ms_prec
 
 from .fixtures.access_grants import GRANT_ID, AccessGrantsMock
@@ -34,7 +35,7 @@ from .fixtures.access_grants import GRANT_ID, AccessGrantsMock
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
-DOWNLOAD_ACCESS_URL = "http://test-access:1234/download-access"
+ADAPTER_ACCESS_URL = "http://test-access:1234/download-access"
 
 USER_ID = UUID("2db49f46-7c35-4883-be19-bed49528e95c")
 IVA_ID = UUID("72859ba4-ed8c-47a4-8df4-02f74c53a819")
@@ -55,8 +56,8 @@ GRANT = BaseAccessGrant(
     user_email="doe@home.org",
 )
 
-GRANT_URL = f"{DOWNLOAD_ACCESS_URL}/users/{USER_ID}/ivas/{IVA_ID}/datasets/{DATASET_ID}"
-GRANTS_URL = f"{DOWNLOAD_ACCESS_URL}/grants"
+GRANT_URL = f"{ADAPTER_ACCESS_URL}/users/{USER_ID}/ivas/{IVA_ID}/datasets/{DATASET_ID}"
+GRANTS_URL = f"{ADAPTER_ACCESS_URL}/grants"
 
 
 def as_json(grant: BaseAccessGrant, **kwargs) -> dict:
@@ -64,10 +65,15 @@ def as_json(grant: BaseAccessGrant, **kwargs) -> dict:
     return json.loads(grant.model_dump_json(**kwargs))
 
 
+def time_out(request: httpx2.Request) -> httpx2.Response:
+    """Answer like a download access API that takes too long to respond."""
+    raise httpx2.ReadTimeout("Simulated network problem", request=request)
+
+
 @pytest.fixture(name="access_grants")
 def access_grants_fixture() -> AccessGrantsMock:
     """Mock the download access API at the URL these tests configure."""
-    return AccessGrantsMock(DOWNLOAD_ACCESS_URL)
+    return AccessGrantsMock(ADAPTER_ACCESS_URL)
 
 
 @async_fixture(name="grants_adapter", loop_scope="session")
@@ -75,7 +81,7 @@ async def fixture_grants_adapter(
     access_grants: AccessGrantsMock,
 ) -> AsyncGenerator[AccessGrantsAdapter]:
     """Get access grants test adapter talking to the mocked download access API."""
-    config = AccessGrantsConfig(download_access_url=DOWNLOAD_ACCESS_URL)
+    config = AccessGrantsConfig(download_access_url=ADAPTER_ACCESS_URL)
     async with AccessGrantsAdapter.construct(
         config=config, transport=access_grants.as_transport()
     ) as adapter:
@@ -153,7 +159,7 @@ async def test_grant_download_access_with_timeout(
 ):
     """Test granting download access when there is a network timeout"""
     grant_access = grants_adapter.grant_download_access
-    access_grants.on_grant_access = fail_to_connect("Simulated network problem")
+    access_grants.on_grant_access = time_out
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
@@ -246,7 +252,7 @@ async def test_get_access_grants_with_timeout(
 ):
     """Test fetching download access grants when there is a network timeout"""
     get_grants = grants_adapter.get_download_access_grants
-    access_grants.on_get_grants = fail_to_connect("Simulated network problem")
+    access_grants.on_get_grants = time_out
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
@@ -306,7 +312,7 @@ async def test_revoke_access_grants_with_timeout(
 ):
     """Test deleting a download access grants when there is a network timeout"""
     revoke_grant = grants_adapter.revoke_download_access_grant
-    access_grants.on_revoke_grant = fail_to_connect("Simulated network problem")
+    access_grants.on_revoke_grant = time_out
 
     with pytest.raises(
         grants_adapter.AccessGrantsError, match="Simulated network problem"
