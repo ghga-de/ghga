@@ -116,6 +116,29 @@ def check_anchor_points(model: MetadataModel, classes: list[str] | None = None) 
             ) from error
 
 
+def check_study_cardinality(model: MetadataModel, study_class: str = "Study") -> None:
+    """Check that the model holds exactly one study per submission: the study class
+    is anchored on the root class, and its anchor slot has a minimum and a maximum
+    cardinality of one.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+    check_class_exists(model=model, class_name=study_class)
+    check_anchor_points(model=model, classes=[study_class])
+
+    root_slot = get_anchors_points_by_target(model=model)[study_class].root_slot
+    # the cardinality is usually set in the root class's slot_usage, which only the
+    # induced slot reflects
+    slot = model.schema_view.induced_slot(slot_name=root_slot, class_name=ROOT_CLASS)
+    if slot.minimum_cardinality != 1 or slot.maximum_cardinality != 1:
+        raise MetadataModelAssumptionError(
+            f"The anchor slot '{root_slot}' of the '{study_class}' class must have a"
+            + " minimum_cardinality and a maximum_cardinality of 1, so that every"
+            + " submission holds exactly one study."
+        )
+
+
 def check_basic_model_assumption(model: MetadataModel) -> None:
     """Check that the basic assumptions that metldata makes about the metadata model
     are met. Raises a MetadataModelAssumptionError otherwise.

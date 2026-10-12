@@ -124,3 +124,50 @@ async def test_upload_artifacts_via_http_api(
     observed_artifacts = json.loads(observed_requests[0].content.decode("utf-8"))
     assert observed_artifacts == EXAMPLE_ARTIFACTS
     assert observed_requests[0].headers["Authorization"] == f"Bearer {token}"
+
+
+@pytest.mark.asyncio
+async def test_upload_rejects_publishable_artifact_with_two_studies(
+    file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
+):
+    """Test that a publishable artifact holding two studies fails the upload before
+    anything is sent to the loader API.
+    """
+    config = ArtifactLoaderClientConfig(
+        artifact_types=["added_accessions"],
+        artifact_topic_prefix="artifact",
+        loader_api_root="http://localhost:8000",
+        publishable_artifacts=["added_accessions"],
+        **file_system_event_fixture.config.model_dump(),
+    )
+    artifact_event = Event(
+        topic=get_artifact_topic(
+            artifact_topic_prefix=config.artifact_topic_prefix,
+            artifact_type="added_accessions",
+        ),
+        type_="added_accessions",
+        key=str(uuid4()),
+        payload={
+            "content": {
+                "studies": [{"accession": "GHGAS1"}, {"accession": "GHGAS2"}],
+            },
+        },
+    )
+    await file_system_event_fixture.publish_events([artifact_event])
+
+    observed_requests: list[httpx2.Request] = []
+    router: MockRouter = MockRouter()
+
+    @router.post("/rpc/load-artifacts")
+    def load_artifacts(request: httpx2.Request) -> httpx2.Response:
+        """Record the request and acknowledge it."""
+        observed_requests.append(request)
+        return httpx2.Response(status_code=204)
+
+    with pytest.raises(RuntimeError) as error:
+        upload_artifacts_via_http_api(
+            token="some-token", config=config, transport=router.as_transport()
+        )
+
+    assert "Expected exactly one study, found 2: GHGAS1, GHGAS2." in str(error.value)
+    assert not observed_requests

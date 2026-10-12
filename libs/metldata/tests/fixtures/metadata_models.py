@@ -21,6 +21,7 @@ from tests.fixtures.utils import BASE_DIR
 
 EXAMPLE_MODEL_DIR = BASE_DIR / "example_models"
 VALID_MINIMAL_MODEL_EXAMPLE_PATH = EXAMPLE_MODEL_DIR / "minimal_model.yaml"
+MINIMAL_MODEL_WITH_STUDY_PATH = EXAMPLE_MODEL_DIR / "minimal_model_with_study.yaml"
 
 
 def _get_example_model(name: str) -> MetadataModel:
@@ -30,6 +31,10 @@ def _get_example_model(name: str) -> MetadataModel:
 
 VALID_MINIMAL_METADATA_MODEL = _get_example_model("minimal_model")
 VALID_ADVANCED_METADATA_MODEL = _get_example_model("advanced_model")
+MINIMAL_MODEL_WITH_STUDY = _get_example_model("minimal_model_with_study")
+MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES = _get_example_model(
+    "minimal_model_with_unbounded_studies"
+)
 VALID_METADATA_MODELS = [VALID_MINIMAL_METADATA_MODEL, VALID_ADVANCED_METADATA_MODEL]
 
 ROOT_CLASS_INVALID_MODELS = [

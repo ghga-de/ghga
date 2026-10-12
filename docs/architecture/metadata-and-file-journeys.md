@@ -41,15 +41,43 @@ Not part of the metadata world today: the future schemapack services (resource-r
 
 ## 2. Journey A — Metadata submission (offline: dskit + metldata)
 
-Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
+Canonical sequence, with a [metadata config](../../tools/ghga-datasteward-kit/metadata_config.md) and a [load config](../../tools/ghga-datasteward-kit/load_config.md):
 
 1. `metadata generate-artifact-models` — build artifact models + `artifact_infos.json` from the LinkML model.
-2. `metadata transpile input.xlsx input.json` — spreadsheet → JSON.
+
+   ```bash
+   ghga-datasteward-kit metadata generate-artifact-models --config-path metadata_config.yaml
+   ```
+
+2. `metadata transpile` — spreadsheet → JSON.
    Re-exported from `ghga_transpiler.cli.transpile`.
    **No schema validation here.**
+
+   ```bash
+   ghga-datasteward-kit metadata transpile metadata.xlsx metadata.json
+   ```
+
 3. `metadata submit` — validate + register a submission locally, mint accessions, publish a source event.
+
+   ```bash
+   ghga-datasteward-kit metadata submit --submission-title "<title>" \
+       --submission-description "<description>" \
+       --metadata-path metadata.json --config-path metadata_config.yaml
+   ```
+
 4. `metadata transform` — run the GHGA archive workflow → produce artifacts on disk.
+
+   ```bash
+   ghga-datasteward-kit metadata transform --config-path metadata_config.yaml
+   ```
+
 5. `load` (top-level, **not** `metadata load`) — POST artifacts to the loader API.
+
+   ```bash
+   ghga-datasteward-kit load --config-path loader_config.yaml
+   ```
+
+The test bed runs the same sequence against a deployment, in `testbed/steps/test_010_submit_metadata.py`, `test_011_transform_metadata.py` and `test_020_load_metadata.py`.
 
 ### The submission object & store
 

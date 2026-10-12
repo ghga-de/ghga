@@ -20,7 +20,10 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-from metldata.model_utils.assumptions import check_basic_model_assumption
+from metldata.model_utils.assumptions import (
+    check_basic_model_assumption,
+    check_study_cardinality,
+)
 from metldata.model_utils.essentials import MetadataModel
 
 
@@ -33,7 +36,10 @@ class MetadataModelConfig(BaseSettings):
 
     @property
     def metadata_model(self) -> MetadataModel:
-        """Load the model from the path and check basic assumptions."""
+        """Load the submission model from the path and check that it meets the basic
+        assumptions and holds exactly one study per submission.
+        """
         model = MetadataModel.init_from_path(self.metadata_model_path)
         check_basic_model_assumption(model)
+        check_study_cardinality(model)
         return model
