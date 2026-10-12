@@ -279,6 +279,7 @@ jobs:
   # security-scan call), so the dockerfile / context / registry-name mapping is never
   # duplicated into a workflow. Nothing is pushed: no packages: write, no GHCR login.
   check-images:
+    name: build ${{ matrix.target.image }} (${{ contains(matrix.runner, 'arm') && 'arm64' || 'amd64' }})
     needs: discover
     if: ${{ needs.discover.outputs.images != '[]' }}
     timeout-minutes: 40
