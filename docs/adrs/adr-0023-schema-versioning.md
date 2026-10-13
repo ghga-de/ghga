@@ -139,5 +139,5 @@ Adding the `schema_version` field to each model also introduces the chance that 
 ### Addendum
 
 This has since been implemented in `hexkit`.
-A service declares the database version it expects together with a map of migration definitions, which the `MigrationManager` compares against the version recorded in the database when the service starts, applying the outstanding migrations.
+A service declares the database version it expects together with a map of migration definitions, which the `MigrationManager` compares against the version recorded in the database before the service starts, applying the outstanding migrations ([ADR-0022](adr-0022-db-migrations.md)).
 Version 1 is reserved by the framework to mark the point at which versioning was introduced.

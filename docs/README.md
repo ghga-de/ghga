@@ -14,6 +14,7 @@ Design and migration records for the consolidation of GHGA's ~28 maintained repo
   Read before touching those paths.
 - **[architecture/kafka-cascade-map.md](architecture/kafka-cascade-map.md)** — the Kafka cascades map: one tree per entrypoint showing which service reacts to which event, plus every topic with its producer and subscribers.
   The page is [kafka-cascade-map.html](architecture/kafka-cascade-map.html); the document says how to open it, where the topology comes from and how to keep it current.
+- **[architecture/db-migrations.md](architecture/db-migrations.md)** — how services migrate their MongoDB databases: the `migrations/` package, the `migrate-db` init container, the version check, and how to write and test a migration.
 - **[migration/runbook.md](migration/runbook.md)** — phased, executable migration with a cutover checklist.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
 - **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes, their tags, version stamping, the PyPI upload plan and the publish targets.
