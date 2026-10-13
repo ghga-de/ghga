@@ -22,15 +22,24 @@
 
 - **`accession_store_path`** *(string, format: path)*: A JSON file holding the random blocks of the study PIDs minted so far, by year, so that none is minted twice.
 
-- **`study_pid_prefix`** *(string)*: The leading block of the study PID 'PREFIX.YY.XXX.V'. Must not contain dots, as they separate the blocks of the PID. Default: `"GHGA"`.
+- **`study_pid_prefix`** *(string)*: The leading block of the study PID 'PREFIX.YY.XXX.V'.
+  Must not contain dots, as they separate the blocks of the PID.
+  Default: `"GHGA"`.
 
-- **`dataset_pid_prefix`** *(string)*: The part of a dataset PID '{study_pid}.DS.XXX' that marks it as a dataset. Must not contain dots, as they separate the blocks of the PID. Default: `"DS"`.
+- **`dataset_pid_prefix`** *(string)*: The part of a dataset PID '{study_pid}.DS.XXX' that marks it as a dataset.
+  Must not contain dots, as they separate the blocks of the PID.
+  Default: `"DS"`.
 
-- **`random_block_length`** *(integer)*: Number of base32 characters (RFC 4648) in the random block of a study PID ('XXX') and of a dataset accession ('DS.xxx'). Minimum: `1`. Default: `3`.
+- **`random_block_length`** *(integer)*: Number of base32 characters (RFC 4648) in the random block of a study PID ('XXX') and of a dataset accession ('DS.xxx').
+  Minimum: `1`.
+  Default: `3`.
 
-- **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the bare study PID. The model does not need to contain it. Default: `"Study"`.
+- **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the bare study PID.
+  The model does not need to contain it.
+  Default: `"Study"`.
 
-- **`dataset_class_name`** *(string)*: Name of the metadata model class whose entities are accessioned as '{study_pid}.DS.xxx'. Default: `"Dataset"`.
+- **`dataset_class_name`** *(string)*: Name of the metadata model class whose entities are accessioned as '{study_pid}.DS.xxx'.
+  Default: `"Dataset"`.
 
 - **`metadata_model_path`** *(string, format: path)*: The path to the metadata model defined in LinkML.
 
