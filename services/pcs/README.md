@@ -28,6 +28,7 @@ The executable `pcs` takes one of these commands:
 
 - `run-rest` runs the HTTP REST API
 - `publish-events` publishes pending events
+- `migrate-db` runs the database migrations
 
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 

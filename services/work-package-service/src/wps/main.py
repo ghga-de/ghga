@@ -50,7 +50,6 @@ async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()
     configure_logging(config=config)
-    configure_opentelemetry(service_name=config.service_name, config=config)
     async with MigrationManager(
         config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
     ) as mm:
