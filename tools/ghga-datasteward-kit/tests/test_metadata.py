@@ -15,18 +15,27 @@
 
 """Metadata related tests"""
 
+import json
 import os
 import shutil
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+import typer
 
-from ghga_datasteward_kit.cli.metadata import compare_aliases, submit, transform
+from ghga_datasteward_kit import amendment
+from ghga_datasteward_kit.amendment import AccessionChanges, AccessionDiff
+from ghga_datasteward_kit.cli.metadata import amend, compare_aliases, submit, transform
+from ghga_datasteward_kit.exceptions import AmendmentStatusError
+from metldata.model_utils.anchors import AnchorPoint
+from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
+    AMENDED_METADATA_PATH,
     ARCHIVE_METADATA_CONFIG_PATH,
     ARCHIVE_ORIGINAL_METADATA_PATH,
     ARCHIVE_ORIGINAL_MODEL_PATH,
+    DROPPED_METADATA_PATH,
     METADATA_CONFIG_PATH,
     ORIGINAL_METADATA_PATH,
     ORIGINAL_MODEL_PATH,
@@ -109,3 +118,272 @@ def test_compare_aliases(file_overview_path: Path, output: str, capsys):
     )
     captured = capsys.readouterr()
     assert captured.out.strip() == output
+
+
+def submit_original() -> tuple[str, dict[str, dict[str, str]]]:
+    """Submit the original metadata and return the submission ID and accession map.
+
+    Must be called from within a work directory fixture, since the test config uses
+    paths relative to the current working directory.
+    """
+    submit(
+        submission_title="Test Title",
+        submission_description="Test Description",
+        metadata_path=ORIGINAL_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    submission_paths = list(Path("submission_store").glob("*.json"))
+    assert len(submission_paths) == 1
+
+    submission = json.loads(submission_paths[0].read_text(encoding="utf-8"))
+    return submission["id"], submission["accession_map"]
+
+
+def read_accession_map(*, submission_id: str) -> dict[str, dict[str, str]]:
+    """Read the accession map of a stored submission."""
+    path = Path("submission_store") / f"{submission_id}.json"
+    return json.loads(path.read_text(encoding="utf-8"))["accession_map"]
+
+
+def test_amend_preserves_accessions(example_workdir: Path):
+    """Test that amending a submission with an added file keeps every accession that
+    was already assigned, and mints one only for the added alias.
+    """
+    submission_id, accessions_before = submit_original()
+
+    amend(
+        submission_id=submission_id,
+        metadata_path=AMENDED_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    accessions_after = read_accession_map(submission_id=submission_id)
+
+    for anchor, accessions in accessions_before.items():
+        for alias, accession in accessions.items():
+            assert accessions_after[anchor][alias] == accession
+
+    assert "test_sample_03_R1" in accessions_after["sample_files"]
+    assert "test_sample_03_R1" not in accessions_before["sample_files"]
+
+    # the submission and its source event are replaced, not duplicated:
+    assert len(list(Path("submission_store").glob("*.json"))) == 1
+    assert len(list(Path("event_store/source_events").glob("*.json"))) == 1
+
+    transform(config_path=METADATA_CONFIG_PATH)
+
+
+def test_amend_dropped_alias_needs_confirmation(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that an amendment dropping an alias is refused unless confirmed, and that
+    refusing it leaves the submission untouched.
+    """
+    submission_id, _ = submit_original()
+    submission_path = Path("submission_store") / f"{submission_id}.json"
+    content_before = submission_path.read_bytes()
+
+    monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: False)
+
+    with pytest.raises(typer.Abort):
+        amend(
+            submission_id=submission_id,
+            metadata_path=DROPPED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert submission_path.read_bytes() == content_before
+
+
+def test_amend_dropped_alias_confirmed(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a confirmed amendment drops the accession of a removed alias and
+    keeps all others.
+    """
+    submission_id, accessions_before = submit_original()
+
+    monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: True)
+
+    amend(
+        submission_id=submission_id,
+        metadata_path=DROPPED_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    accessions_after = read_accession_map(submission_id=submission_id)
+    assert "test_sample_01_R2" not in accessions_after["sample_files"]
+    assert (
+        accessions_after["sample_files"]["test_sample_01_R1"]
+        == accessions_before["sample_files"]["test_sample_01_R1"]
+    )
+
+
+def test_amend_unknown_submission(example_workdir: Path):
+    """Test that amending a submission that does not exist is an error."""
+    submit_original()
+
+    with pytest.raises(SubmissionStore.SubmissionDoesNotExistError):
+        amend(
+            submission_id="does-not-exist",
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+
+def test_amend_mints_nothing_when_aborted(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that planning an amendment does not consume accessions, so declining one
+    leaves the accession store untouched.
+    """
+    submission_id, _ = submit_original()
+    accession_store_before = Path("accession_store").read_text(encoding="utf-8")
+
+    monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: False)
+
+    with pytest.raises(typer.Abort):
+        amend(
+            submission_id=submission_id,
+            metadata_path=DROPPED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+
+
+def test_needs_confirmation():
+    """Test which amendments are considered risky enough to confirm."""
+    pure_addition = AccessionChanges(
+        preserved={"files": {"a": "GHGAF1"}}, new_aliases={"files": ["b"]}
+    )
+    assert not amendment.needs_confirmation(changes=pure_addition)
+
+    with_drop = AccessionChanges(
+        preserved={"files": {"a": "GHGAF1"}}, dropped={"files": {"b": "GHGAF2"}}
+    )
+    assert amendment.needs_confirmation(changes=with_drop)
+
+    nothing_preserved = AccessionChanges(new_aliases={"files": ["a"]})
+    assert amendment.needs_confirmation(changes=nothing_preserved)
+
+
+def test_amendment_report_mentions_every_dropped_accession():
+    """Test that the report never truncates dropped accessions, however many there
+    are, since each one is a resource a later load would remove.
+    """
+    dropped = {"files": {f"alias_{index}": f"GHGAF{index}" for index in range(50)}}
+    changes = AccessionChanges(
+        preserved={"files": {"kept": "GHGAF999"}}, dropped=dropped
+    )
+
+    report = amendment.format_amendment_report(submission_id="some-id", changes=changes)
+
+    for alias, accession in dropped["files"].items():
+        assert alias in report
+        assert accession in report
+
+
+ANCHOR_POINTS = {
+    "Class1": AnchorPoint(
+        root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
+    ),
+    "Class2": AnchorPoint(
+        root_slot="class2_anchor", target_class="Class2", identifier_slot="alias"
+    ),
+}
+
+
+def test_plan_accession_changes():
+    """Test planning the accession changes an amendment would cause.
+
+    Covers an alias that keeps its accession, an alias that needs a new one, an alias
+    that loses its accession, and a whole anchor that disappears from the content.
+    """
+    changes = amendment.plan_accession_changes(
+        content={
+            "class1_anchor": [{"alias": "kept"}, {"alias": "added"}],
+        },
+        existing_accession_map={
+            "class1_anchor": {"kept": "ACC1", "gone": "ACC2"},
+            "class2_anchor": {"orphan": "ACC3"},
+        },
+        anchor_points_by_target=ANCHOR_POINTS,
+    )
+
+    assert changes.preserved == {"class1_anchor": {"kept": "ACC1"}}
+    assert changes.new_aliases == {"class1_anchor": ["added"]}
+    assert changes.dropped == {
+        "class1_anchor": {"gone": "ACC2"},
+        "class2_anchor": {"orphan": "ACC3"},
+    }
+    assert changes.preserved_count == 1
+    assert changes.new_alias_count == 1
+    assert changes.dropped_count == 2
+    assert not changes.is_lossless
+
+
+def test_plan_accession_changes_pure_addition():
+    """Test that adding a resource preserves every existing accession and drops none,
+    which is the case the amend command exists for.
+    """
+    changes = amendment.plan_accession_changes(
+        content={"class1_anchor": [{"alias": "old"}, {"alias": "new"}]},
+        existing_accession_map={"class1_anchor": {"old": "ACC1"}},
+        anchor_points_by_target=ANCHOR_POINTS,
+    )
+
+    assert changes.preserved == {"class1_anchor": {"old": "ACC1"}}
+    assert changes.new_aliases == {"class1_anchor": ["new"]}
+    assert changes.is_lossless
+
+
+def test_diff_accession_maps():
+    """Test comparing the accession maps from before and after an amendment."""
+    diff = amendment.diff_accession_maps(
+        before={"files": {"kept": "ACC1", "gone": "ACC2", "moved": "ACC3"}},
+        after={"files": {"kept": "ACC1", "added": "ACC4", "moved": "ACC5"}},
+    )
+
+    assert diff.preserved == {"files": {"kept": "ACC1"}}
+    # a changed accession counts as minted and dropped, so it cannot hide:
+    assert diff.minted == {"files": {"added": "ACC4", "moved": "ACC5"}}
+    assert diff.dropped == {"files": {"gone": "ACC2", "moved": "ACC3"}}
+
+
+def test_amendment_result_lists_minted_accessions():
+    """Test that the result names every accession the amendment minted, since those
+    are what the steward needs for the next ingest.
+    """
+    diff = AccessionDiff(
+        preserved={"files": {"old": "ACC1"}}, minted={"files": {"new": "ACC2"}}
+    )
+
+    result = amendment.format_amendment_result(diff=diff)
+
+    assert "1 accessions preserved, 1 minted, 0 dropped" in result
+    assert "files / new  ACC2" in result
+
+
+def test_amend_requires_completed_submission(example_workdir: Path):
+    """Test that a submission still pending cannot be amended.
+
+    `submit` always completes a submission, so this only happens if a previous run was
+    interrupted between providing content and completing it.
+    """
+    submission_id, _ = submit_original()
+
+    # drop the completion, leaving the submission pending
+    submission_path = Path("submission_store") / f"{submission_id}.json"
+    submission = json.loads(submission_path.read_text(encoding="utf-8"))
+    submission["status_history"] = submission["status_history"][:1]
+    assert submission["status_history"][0]["new_status"] == "pending"
+    submission_path.write_text(json.dumps(submission), encoding="utf-8")
+
+    with pytest.raises(AmendmentStatusError):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )

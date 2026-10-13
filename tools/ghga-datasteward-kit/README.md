@@ -83,6 +83,8 @@ This is performed with the following steps:
    Please see [this section](#metadata) for further details.
 3. **Include in Submission Registry**: The submission JSON is included in a submission registry on the local file system using the `ghga-datasteward-kit metadata submit` command.
    Please see [this section](#metadata) for further details.
+   If the submission has been submitted before and only gained files since, use the `ghga-datasteward-kit metadata amend` command instead, so that the accessions already assigned are kept.
+   Please see [this section](#metadata-amend) for further details.
 4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions in the submission registry to produce multiple query-specific metadata artifacts using the `ghga-datasteward-kit metadata transform` command.
    Please see [this section](#metadata) for further details.
 5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the running system so that they are available on the GHGA website, the `ghga-datasteward-kit load` command can be used.
@@ -164,6 +166,32 @@ This command requires a configuration file as described in the [ingest config](.
 The metadata label groups metadata related commands.
 
 Some of them require a configuration file as described in the [metadata config](./metadata_config.md).
+
+#### metadata amend
+
+Adds to a submission that has already been accessioned, keeping its existing accessions.
+
+Use this, not a second `metadata submit`, whenever a submission gains files.
+A second `submit` creates a new submission with a fresh set of accessions, which breaks every reference to the files already ingested from that submission.
+In the legacy upload path the file accession is also the file's storage ID, and the identifiers derived from it cannot be recovered.
+
+```text
+ghga-datasteward-kit metadata amend \
+  --submission-id <id> \
+  --metadata-path <metadata JSON> \
+  --config-path <metadata config YAML>
+```
+
+Aliases that already have an accession keep it, and only new aliases get new accessions.
+The command reports what it will do before writing anything.
+It asks for confirmation when the amendment would drop accessions, or when it would preserve none at all, since both usually mean the wrong submission or the wrong aliases.
+That question cannot be skipped, by design: a dropped accession removes resources from the running system on the next `load`.
+Without a terminal to prompt on, a risky amendment aborts and changes nothing.
+
+Dropping an accession is not just a local change: the next `load` removes the corresponding resources from the running system.
+
+The submission's own record in the submission store is what makes this work: its `accession_map` is the only place an alias is tied to an accession.
+Keep that store backed up.
 
 ### load
 
