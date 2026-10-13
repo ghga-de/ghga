@@ -17,7 +17,7 @@
 
 | Component | Kind | Owns / does |
 |---|---|---|
-| `tools/ghga-datasteward-kit` (**dskit**) | CLI | Offline driver: transpile xlsx→json, `submit` (mint accessions), `transform` (run workflow), `load` (push artifacts). Legacy S3 upload + FIS ingest. |
+| `tools/ghga-datasteward-kit` (**dskit**) | CLI | Offline driver: transpile xlsx→json, `submit` (mint accessions), `amend` (extend a submission, keeping its accessions), `transform` (run workflow), `load` (push artifacts). Legacy S3 upload + FIS ingest. |
 | `libs/metldata` | library + deployable API | The engine behind dskit. Submission registry, accession registry, transformation workflows, and the **combined loader + artifacts-query API** (`metldata run-api`). |
 | `libs/ghga-event-schemas` | library | Shared Kafka event/payload models (upload boxes, file uploads, searchable resources, dataset overviews, artifacts). |
 | `services/ghga-registry-service` (**RS**) | service | A **new, forward-looking** service (built with the upcoming metadata services in mind). Owns `ResearchDataUploadBox` (RDUB), `FileAccession` mapping records, and a first-class **`Study`** entity that already models lifecycle (`DRAFT`/`ARCHIVED` status, approval provenance, and a `superseded_by_id` deprecation link). Steward-facing box + mapping + grants API. Its Study/FileAccession state is *currently populated* by an interim bridge consuming metldata's `SearchableResource` events — **that ingestion path is the legacy part, not the entity**. |
@@ -48,6 +48,7 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
    Re-exported from `ghga_transpiler.cli.transpile`.
    **No schema validation here.**
 3. `metadata submit` — validate + register a submission locally, mint accessions, publish a source event.
+   For a submission that already has accessions and only gained files, `metadata amend --submission-id <id>` instead, which keeps them.
 4. `metadata transform` — run the GHGA archive workflow → produce artifacts on disk.
 5. `load` (top-level, **not** `metadata load`) — POST artifacts to the loader API.
 
@@ -59,6 +60,8 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
   Full-document overwrite each save; not event-sourced at the store layer.
 - Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content` (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a source event) → `complete_submission`.
   **Only `PENDING`→`COMPLETED` is ever used.**
+  `upsert_submission_content` refuses anything but `PENDING`, and nothing in metldata amends a completed submission.
+  dskit does that itself (`ghga_datasteward_kit/amendment.py`), driving `SubmissionStore`, `generate_accession_map` and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
 - `SubmissionStatus` (`models.py:31`) *defines* `DEPRECATED_*`, `PUBLISHED`, `HIDDEN_*`, `EMPTIED_*`, `CANCELED`, `IN_REVIEW` — **none are ever set**.
   There is no replaces/replaced-by field and no versioning anywhere today. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
@@ -71,8 +74,11 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
 - Persisted in a flat, append-only **text file** (`accession_store.py:56`), one accession per line; `exists()` is a linear scan.
   Up to 10 collision retries.
 - Alias↔accession stability (`submission_registry/identifiers.py:102`): within one submission object, re-upserting the same alias **reuses** its accession; new aliases get new ones; dropped aliases fall out.
-  **But `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.**
-  There is no cross-submission accession stability today. → [changed by the feature](../epics/epic-0093-giraffe.md).
+  `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
+  **`dskit metadata amend --submission-id <id>` is the way to extend an accessioned submission**: it loads the stored submission, hands its map to `generate_accession_map`, and writes the result back under the same ID, so existing accessions survive and only new aliases are minted.
+  It reports preserved/new/dropped before writing and asks for confirmation when accessions would be dropped or none preserved.
+  All of it lives in dskit (`ghga_datasteward_kit/amendment.py`); metldata is unchanged.
+  There is still no accession stability *across* submissions. → [changed by the feature](../epics/epic-0093-giraffe.md).
 - A **separate** catalog-accession scheme exists (`generate-catalog-accessions`, `catalog_accession_generator.py`): base `GHGAMC` + per-type letter + 14 digits.
   Distinct from submission accessions; not on the submission path.
 
