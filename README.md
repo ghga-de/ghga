@@ -37,7 +37,7 @@ One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `
 If you are new to the repo, read [docs/dev/getting-started.md](docs/dev/getting-started.md) first: how the parts fit together and what to read next.
 
 ```bash
-uv sync                 # or: just sync
+just sync               # install every member with its extras into .venv
 just hooks              # install the git hooks (the dev container does this for you)
 just lint && just test
 ```
