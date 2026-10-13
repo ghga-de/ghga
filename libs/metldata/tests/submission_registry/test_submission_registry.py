@@ -18,6 +18,7 @@
 
 import pytest
 
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.config import SubmissionConfig
@@ -128,11 +129,25 @@ def test_happy(
     )
 
 
+@pytest.mark.parametrize(
+    "submission_content",
+    [
+        INVALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLE,
+        {
+            "studies": [{"alias": "shared"}],
+            "files": [{"alias": "shared", "filename": "shared.fastq"}],
+        },
+    ],
+    ids=["invalid_against_model", "shared_alias"],
+)
 def test_failed_content_validation(
+    submission_content: dict,
     config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
-    """Test that invalid content cannot be upserted."""
+    """Test that invalid content cannot be upserted, and that no study PID is minted
+    for it.
+    """
     # inject dependencies:
     submission_store = SubmissionStore(config=config_sub_fixture)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
@@ -156,15 +171,16 @@ def test_failed_content_validation(
     observed_submission_original = submission_store.get_by_id(submission_id)
 
     # provide invalid content:
-    submission_content = INVALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLE
     with pytest.raises(SubmissionRegistry.ValidationError):
         submission_registry.upsert_submission_content(
             submission_id=submission_id, content=submission_content
         )
 
-    # check that the submission was not changed:
+    # check that the submission was not changed and no study PID was minted:
     observed_submission_updated = submission_store.get_by_id(submission_id)
     assert observed_submission_original == observed_submission_updated
+    year = now_as_utc().strftime("%y")
+    assert accession_store.get_random_blocks(year=year) == set()
 
 
 def test_update_after_completion(
