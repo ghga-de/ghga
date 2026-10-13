@@ -32,6 +32,8 @@ Personal instructions go in one of these, never in a committed file:
 
 Personal settings go in `.claude/settings.local.json`, which is gitignored.
 To use another output style, set `outputStyle` there; your user settings do not override the project's default.
+If you have Anthropic's `commit-commands` plugin, you need not turn it off, but we recommend it for this repo: `claude plugin disable commit-commands@claude-plugins-official --scope local`.
+`/pr-and-commit` replaces it here, and the model can run the plugin's commands unasked; its `commit-push-pr` pushes without asking, and its commit messages ignore the grammar.
 
 Tools worth installing for yourself, none of them shared:
 
@@ -64,6 +66,7 @@ It cuts the branch from `origin/dev`, or from the base you pass as the second ar
 - **One at a time** runs the demo or the test bed, since all worktrees share one kind cluster and the host's ports.
 - **A locked worktree:** Claude Code locks the worktrees of its background sessions, and `just wt-rm` fails on them until you run `git worktree unlock <path>`.
 - **After a squash merge,** delete the branch with `git branch -D`; `-d` refuses it.
+  `/pr-and-commit cleanup` does this for every merged branch and its worktree.
 
 ## Checking your setup
 
@@ -82,7 +85,8 @@ For `adr` it runs 42 sessions on your own Claude credential in about 15 minutes,
 
 The [PR template](../../.github/pull_request_template.md) asks for the checks and the credit.
 Before you ask a person for review, run `/ghga-review`, which checks the change against the written rules, and the built-in `/code-review`, which looks for bugs.
-`/pr-and-commit` drafts branch names, PR titles and descriptions, replies to review comments and, before you squash, the merge commit, which GitHub's prefill never gets right.
+`/pr-and-commit <stage>` takes a change through its branch by the naming grammar: `branch`, `commit`, `open` (title and description, pushed after your go), `merge` (the squash commit, which GitHub's prefill never gets right, and a stack PR by PR) and `cleanup` (merged branches and their worktrees).
+It also drafts replies to review comments.
 Credit an agent in the PR description as the [conventions](../conventions.md#names-branches-prs-commits) say, never with a `Co-authored-by:` trailer.
 
 ## Delivery
