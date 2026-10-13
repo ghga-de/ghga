@@ -37,9 +37,10 @@ After the init container, the main container's command checks the version first.
 The equality is deliberate: a pod of the old release that restarts after the new release has migrated stops instead of working on a schema it does not know.
 Anything else that starts a service, such as a local run, must run `migrate-db` first, too.
 
-A database is never migrated backward in a deployment.
-`migrate-db` always targets the release's `DB_VERSION`, and an older release's map lacks the newer definitions, so its `migrate-db` fails with `NotImplementedError` on a database that is ahead.
-`unapply()` runs only from code that has the newer definition, in practice the migration tests.
+Avoid rolling back a release that migrated.
+If one must be rolled back, migrate its database down first, with the newer release's code: the older release's map lacks the newer definitions, so its `migrate-db` fails with `NotImplementedError` on a database that is ahead.
+`migrate-db` always targets its own release's `DB_VERSION`, so the downgrade needs `MigrationManager` with the older release's `DB_VERSION` as target, run from the newer release's image while the service is scaled to 0.
+A migration that is not `Reversible` cannot be undone this way; rolling back across one means restoring the database from a backup.
 
 ## Adding a migration
 
@@ -64,8 +65,8 @@ Whatever the shape:
 - **Make the change function idempotent.**
   If a document is already in the new shape, return it unchanged, and raise on a shape that is neither old nor new, as wps `v3.py` does.
   A database whose version record is missing then passes through the migration unchanged, and an unknown shape stops it before anything is written.
-- **Make it reversible when you can:** inherit `Reversible` and implement `unapply()`, so the test can check the round trip.
-  A migration that drops data or derives new IDs cannot be reversed (dcs V3, ifrs V3, ns V2); leave `Reversible` out.
+- **Make it reversible when you can:** inherit `Reversible` and implement `unapply()`, so a release can be rolled back and the test can check the round trip.
+  A migration that drops data or derives new IDs cannot be reversed (dcs V3, fis V2, ifrs V3, ns V2); leave `Reversible` out.
 
 ## The first migration of a service
 
