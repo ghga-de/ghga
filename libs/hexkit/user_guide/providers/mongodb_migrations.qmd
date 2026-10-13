@@ -198,8 +198,9 @@ async def run_db_migrations(
     ) as mm:
         await mm.migrate_or_wait()
 
-# Then, exposed as an entrypoint command that gets called before the service's
-#  main logic is initiated:
+
+# Then expose it as an entrypoint command that runs before the service's
+# main logic starts:
 async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()
