@@ -30,11 +30,11 @@ cli = typer.Typer()
 @cli.callback(invoke_without_command=True)
 def require_command(ctx: typer.Context):
     """Run the notification orchestration service or migrate its database."""
-    # Deployments that still start the bare executable must fail visibly
-    # rather than start a service that skips the migrations.
+    # Started without a command, the executable must fail visibly
+    # rather than run a service whose migrations may not have run.
     if ctx.invoked_subcommand is None:
         typer.echo(
-            "nos needs a command, it no longer runs without one."
+            "nos needs a command."
             " Start the service with `nos consume-events`, and run"
             " `nos migrate-db` before it, for instance in an init container.\n",
             err=True,

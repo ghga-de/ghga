@@ -29,11 +29,11 @@ cli = typer.Typer()
 @cli.callback(invoke_without_command=True)
 def require_command(ctx: typer.Context):
     """Run the auth service's REST APIs or its event consumer, or migrate its database."""
-    # Deployments that still start the bare executable must fail visibly
-    # rather than start a service that skips the migrations.
+    # Started without a command, the executable must fail visibly
+    # rather than run a service whose migrations may not have run.
     if ctx.invoked_subcommand is None:
         typer.echo(
-            "auth-service needs a command, it no longer runs without one."
+            "auth-service needs a command."
             " Start the service with `auth-service run-rest` or"
             " `auth-service consume-events`, and run"
             " `auth-service migrate-db` before it, for instance in an init container.\n",
