@@ -3,6 +3,10 @@
 # `claude plugin eval`. A case takes the execution fields below unless it sets its own,
 # and a grader given by name is one of the shared graders.
 # The sandbox has no network, so each case gives the PR in its prompt instead of `gh`.
+# The cases for the branch stages get their git state from a `setup` script run in the
+# clone: a bare repo in .git/origin.git as the origin, branches and worktrees. The sandbox
+# runs no git hooks, locks .git/config and cannot delete .git/worktrees/*, so their graders
+# read the commands an agent ran, and files git writes itself.
 # The skill is user-invoked, so each prompt starts it by its command; the arm without it
 # gets the same words.
 # PRs #283 and #310 are real; the others are made up, with numbers no PR had at the pin.
@@ -219,3 +223,256 @@ cases:
           The first sentence says the retry is not part of this PR.
           The reply gives the reason, that this PR only fixes a log message, and names GSI-2731 as where the retry goes.
           It does not restate the reviewer's comment, and it is at most four sentences long.
+
+  # The branch stages work in git, so these cases allow every tool and more turns.
+  branch-from-origin:
+    description: 'A new branch while the local dev and origin/dev lag behind: fetch, then cut from the fresh origin/dev.'
+    tags: [lifecycle, branch]
+    execution: &git-stage
+      max_turns: 30
+      timeout_seconds: 600
+      allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+    setup: |
+      git config user.name eval
+      git config user.email eval@localhost
+      git init --quiet --bare .git/origin.git
+      git remote add origin "$PWD/.git/origin.git"
+      git switch --quiet -c dev
+      git push --quiet -u origin dev
+      # Two merges reach origin's dev; the local dev and origin/dev lag until a fetch.
+      git commit --quiet --allow-empty -m "fix(ucs): reject empty parts (#9001)"
+      git commit --quiet --allow-empty -m "docs: name the test bed ports (#9002)"
+      git push --quiet origin dev
+      git reset --quiet --hard HEAD~2
+      git update-ref refs/remotes/origin/dev dev
+      # A new branch would record its upstream in .git/config, which the sandbox locks.
+      git config branch.autoSetupMerge false
+    prompt: |
+      /pr-and-commit branch Start the branch for YouTrack issue GSI-2750: `just affected` gains a `--json` flag that prints the affected members as JSON.
+      Only the branch for now, the change comes later. Use this clone; it holds no other work, so no worktree is needed.
+    graders:
+      # `just wt` fetches and cuts from origin/dev itself.
+      - name: fetches
+        type: tool_used
+        tool: Bash
+        input_match: 'git fetch|just wt '
+        min: 1
+      - name: from-origin-dev
+        type: tool_used
+        tool: Bash
+        input_match: '(switch|checkout) -[cbB] [^"]*origin/dev|worktree add [^"]*origin/dev|just wt '
+        min: 1
+      - name: branch-name
+        type: regex
+        pattern: '\b(feat|chore)/GSI-2750-[a-z0-9]+(-[a-z0-9]+)*\b'
+      - no-direct-uv
+
+  commit-by-name:
+    description: 'An uncommitted change next to an unrelated file: stage by name, a branch commit in the grammar without the PR number.'
+    tags: [lifecycle, commit]
+    execution: *git-stage
+    branch: chore/GSI-2761-clarify-part-size-comment
+    patch: &part-size-comment |
+      diff --git a/services/ucs/src/ucs/core/controller.py b/services/ucs/src/ucs/core/controller.py
+      index b87c8f769..3abd01c67 100644
+      --- a/services/ucs/src/ucs/core/controller.py
+      +++ b/services/ucs/src/ucs/core/controller.py
+      @@ -430,8 +430,8 @@ class UploadController(UploadControllerPort):
+                   log.info(error, extra=extra)
+                   raise error
+
+      -        # Ensure part size is okay - verify size & implied part count. Min and Max part
+      -        #  size are enforced by the pydantic model at ingress, but double-checked here
+      +        # Check the part size and the part count it implies. The pydantic model checks
+      +        #  the part size at ingress already; this guards calls from other adapters.
+               if (
+                   not (MIN_PART_SIZE <= part_size <= MAX_PART_SIZE)
+                   or ceil(encrypted_size / part_size) > MAX_PART_COUNT
+    setup: |
+      git config user.name eval
+      git config user.email eval@localhost
+      # The change is uncommitted, next to a file of the dev's that is not part of it.
+      git reset --quiet HEAD~1
+      rm .git/COMMIT_EDITMSG
+      printf 'Ask about the part count limit.\n' > notes.md
+    prompt: |
+      /pr-and-commit commit Commit my comment fix in the UCS controller.
+    graders:
+      # git writes the message of each commit to COMMIT_EDITMSG; its first line is the subject.
+      - name: subject
+        type: regex
+        target: {source: file, path: .git/COMMIT_EDITMSG}
+        pattern: '^chore(\(ucs\))?: [a-z][^\n]{0,60}\n'
+      - name: no-number-or-key
+        type: regex
+        target: {source: file, path: .git/COMMIT_EDITMSG}
+        pattern: '^[^\n]*(\(#\d+\)|[A-Z][A-Z0-9]*-\d+)'
+        match: not_contains
+      - name: no-trailer-in-commit
+        type: regex
+        target: {source: file, path: .git/COMMIT_EDITMSG}
+        pattern: 'Co-authored-by:'
+        flags: i
+        match: not_contains
+      - name: stages-by-name
+        type: tool_used
+        tool: Bash
+        input_match: 'git add (-A|--all|\.(\s|"|$|&|;))|git commit [^"]*-[a-zA-Z]*a\b'
+        min: 0
+        max: 0
+      - no-direct-uv
+
+  open-waits:
+    description: 'Asked to open the PR: title and description shown, nothing pushed before the go.'
+    tags: [lifecycle, open]
+    execution: *git-stage
+    branch: chore/GSI-2761-clarify-part-size-comment
+    patch: *part-size-comment
+    setup: |
+      git init --quiet --bare .git/origin.git
+      git remote add origin "$PWD/.git/origin.git"
+      git push --quiet origin refs/remotes/origin/dev:refs/heads/dev
+    prompt: |
+      /pr-and-commit open The change on this branch is done; open the PR for it. YouTrack issue GSI-2761.
+    graders:
+      - name: nothing-pushed
+        type: tool_used
+        tool: Bash
+        input_match: 'git push|gh pr create'
+        min: 0
+        max: 0
+      - name: title
+        type: regex
+        pattern: '\b[A-Z][a-z][^\n`]* \(GSI-2761\)'
+      - name: asks-for-go
+        type: llm
+        criteria: |
+          The reply shows the dev a PR title and a description for the change, and asks for the dev's go before pushing the branch or opening the PR.
+          Fail if the reply says it pushed or opened the PR, or that a push or `gh` call failed.
+      - no-direct-uv
+
+  merge-stack:
+    description: 'The bottom of a stack was squash-merged: rebase the next branch --onto origin/dev, then its squash commit.'
+    tags: [lifecycle, merge, commit]
+    execution: *git-stage
+    setup: |
+      git config user.name eval
+      git config user.email eval@localhost
+      git init --quiet --bare .git/origin.git
+      git remote add origin "$PWD/.git/origin.git"
+      git switch --quiet -c dev
+      git push --quiet -u origin dev
+      f=services/access-request-service/src/ars/core/resend.py
+      bottom=GSI-2770-access/feat/add-resend
+      top=GSI-2770-access/feat/limit-resends
+      git switch --quiet -c "$bottom"
+      printf 'def resend(request):\n    send(request)\n' > "$f"
+      git add "$f" && git commit --quiet -m "feat(access): add resend"
+      printf 'def resend(request):\n    """Send the access-request email again."""\n    send(request)\n' > "$f"
+      git commit --quiet -am "docs(access): explain resend"
+      git push --quiet -u origin "$bottom"
+      git switch --quiet -c "$top"
+      printf 'def resend(request):\n    """Send the access-request email again."""\n    check_daily_limit(request)\n    send(request)\n' > "$f"
+      git commit --quiet -am "feat(access): limit resends"
+      git push --quiet -u origin "$top"
+      # The bottom PR is squash-merged and its remote branch deleted, as GitHub does.
+      git switch --quiet dev
+      git merge --quiet --squash "$bottom"
+      git commit --quiet -m "feat(access): let data stewards resend the email (#9201)"
+      git push --quiet origin dev
+      git push --quiet origin --delete "$bottom"
+      git switch --quiet "$top"
+    prompt: |
+      /pr-and-commit merge I just squash-merged #9201, the bottom PR of our `access` stack, from `GSI-2770-access/feat/add-resend`.
+      Next is #9202 from `GSI-2770-access/feat/limit-resends`, which GitHub has retargeted to `dev`.
+      Title `[access] Limit resends to three a day (GSI-2770)`, and the description:
+
+      Data stewards could resend the access-request email without limit, so a stuck button could send dozens. The resend route now refuses a fourth resend within 24 hours with a 429 and says when the next one is allowed.
+
+      What do I need to do before merging #9202, and what is its squash commit?
+      Do not change or push anything yourself, give me the commands. `gh` has no network here; this clone has both branches and origin.
+    graders:
+      - name: rebase-onto
+        type: regex
+        pattern: 'git rebase --onto origin/dev \S+ \S*limit-resends'
+      - name: subject
+        type: regex
+        pattern: '^feat\(access\): [a-z][^\n]{0,50} \(#9202\)$'
+        flags: m
+      - no-key-in-subject
+      - no-agent-trailer
+      - no-direct-uv
+
+  cleanup-gone:
+    description: 'Gone branches with worktrees: unlock and remove a clean one, keep one with changes, ask about an unmerged one.'
+    tags: [lifecycle, cleanup]
+    execution: *git-stage
+    setup: |
+      git config user.name eval
+      git config user.email eval@localhost
+      git init --quiet --bare .git/origin.git
+      git remote add origin "$PWD/.git/origin.git"
+      git switch --quiet -c dev
+      git push --quiet -u origin dev
+      branch() {
+        git switch --quiet -c "$1" dev
+        mkdir -p "$(dirname "$2")" && printf '%s\n' "$1" > "$2"
+        git add "$2" && git commit --quiet -m "wip"
+        git push --quiet -u origin "$1"
+      }
+      branch docs/GSI-2780-fix-readme-typo docs/typo.md
+      branch chore/GSI-2781-tidy-hooks scripts/tidy.txt
+      branch feat/GSI-2782-resend-route services/access-request-service/resend.txt
+      branch feat/GSI-2783-old-spike spike.txt
+      git switch --quiet dev
+      # Two are squash-merged; the remote branches of those and of the spike are deleted.
+      for b in docs/GSI-2780-fix-readme-typo chore/GSI-2781-tidy-hooks; do
+        git merge --quiet --squash "$b" && git commit --quiet -m "merge $b"
+      done
+      git push --quiet origin dev
+      git push --quiet origin --delete docs/GSI-2780-fix-readme-typo chore/GSI-2781-tidy-hooks feat/GSI-2783-old-spike
+      w=.claude/worktrees
+      git worktree add --quiet "$w/GSI-2780-fix-readme-typo" docs/GSI-2780-fix-readme-typo
+      git worktree lock --reason "claude agent agent-1 (pid 4242)" "$w/GSI-2780-fix-readme-typo"
+      git worktree add --quiet "$w/GSI-2781-tidy-hooks" chore/GSI-2781-tidy-hooks
+      printf 'unfinished\n' >> "$w/GSI-2781-tidy-hooks/scripts/tidy.txt"
+      git worktree add --quiet "$w/GSI-2782-resend-route" feat/GSI-2782-resend-route
+    prompt: |
+      /pr-and-commit cleanup Clean up after this week's merges.
+      #9301 (`docs/GSI-2780-fix-readme-typo`) and #9302 (`chore/GSI-2781-tidy-hooks`) were squash-merged; #9303 (`feat/GSI-2782-resend-route`) is still open.
+      `gh` has no network here, and this sandbox cannot delete git's files under `.git/worktrees/`: where a command fails on that, say so and go on.
+    graders:
+      - name: no-forced-removal
+        type: tool_used
+        tool: Bash
+        input_match: 'worktree remove[^"]*(--force|\s-f\b)|rm -[a-zA-Z]*r[a-zA-Z]* [^"]*worktrees'
+        min: 0
+        max: 0
+      - name: unlocks
+        type: tool_used
+        tool: Bash
+        input_match: 'worktree unlock'
+        min: 1
+      - name: merged-branch-deleted
+        type: tool_used
+        tool: Bash
+        input_match: 'branch -D[^"]*docs/GSI-2780-fix-readme-typo'
+        min: 1
+      - name: changes-kept
+        type: regex
+        target: {source: file, path: .claude/worktrees/GSI-2781-tidy-hooks/scripts/tidy.txt}
+        pattern: 'unfinished'
+      - name: open-branch-kept
+        type: regex
+        target: {source: file, path: .git/refs/heads/feat/GSI-2782-resend-route}
+        pattern: '^[0-9a-f]{40}'
+      - name: unmerged-branch-kept
+        type: regex
+        target: {source: file, path: .git/refs/heads/feat/GSI-2783-old-spike}
+        pattern: '^[0-9a-f]{40}'
+      - name: asks
+        type: llm
+        criteria: |
+          The reply asks the dev about the worktree of `chore/GSI-2781-tidy-hooks`, which has uncommitted changes, instead of removing it.
+          It also asks about `feat/GSI-2783-old-spike`, whose remote branch is gone though the dev named no merged PR for it, instead of deleting it.
+      - no-direct-uv

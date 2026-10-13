@@ -11,10 +11,11 @@
 # network, so the .venv is synced here from the warm uv cache; linking the main clone's
 # .venv instead would let `uv run` rewrite it for the clone's paths.
 #
+# The clone is repacked to hold its own objects (about 60 MB, a second): the sandbox of a
+# run cannot read the main clone's, so `git diff` would fail, and so would pushing to the
+# bare repo some cases set up as their origin.
 # Given a patch and a branch name, it also commits the patch on that branch, off an
-# `origin/dev` at the pin, so that a case can review or describe a change of its own. Such a clone
-# is repacked to hold its own objects (about 60 MB, a second): the sandbox of a run cannot
-# read the main clone's, so `git diff` would fail.
+# `origin/dev` at the pin, so that a case can review or describe a change of its own.
 set -euo pipefail
 
 PIN=9f5df2dd4
@@ -24,6 +25,8 @@ user_home=$(getent passwd "$(id -un)" | cut -d: -f6)
 
 git clone --quiet --shared --no-checkout "$repo" .
 git checkout --quiet --detach "$PIN"
+# The clone has a branch for whatever the main clone has checked out; no case wants it.
+git for-each-ref --format='%(refname:short)' refs/heads | xargs -r git branch --quiet -D
 git remote remove origin
 git rm -r --quiet .agents/skills .claude/skills
 UV_CACHE_DIR="$user_home/.cache/uv" UV_OFFLINE=1 UV_LINK_MODE=copy \
@@ -33,9 +36,9 @@ uv run --offline --quiet python scripts/docs_check.py >/dev/null || true
 uv run --offline --quiet python scripts/docs_check.py >/dev/null
 git add -A
 git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "eval: remove the root skills"
+git repack -a -d -q
+rm .git/objects/info/alternates
 if [[ $# -eq 2 ]]; then
-    git repack -a -d -q
-    rm .git/objects/info/alternates
     git update-ref refs/remotes/origin/dev HEAD
     git checkout --quiet -b "$2"
     git apply --index "$1"

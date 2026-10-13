@@ -111,6 +111,48 @@ def test_expand_gives_a_case_with_a_patch_its_own_scaffold(tmp_path):
     )
 
 
+def test_expand_runs_a_case_setup_after_the_scaffold(tmp_path):
+    suite = {
+        "cases": {
+            "plain": {
+                "description": "A case with a remote.",
+                "prompt": "Clean up.\n",
+                "setup": "git init --bare .git/origin.git\n",
+                "graders": [{"name": "said", "type": "regex", "pattern": "x"}],
+            },
+            "both": {
+                "description": "A case with a change and a remote.",
+                "prompt": "Open it.\n",
+                "patch": "diff --git a/x b/x\n",
+                "branch": "fix/x",
+                "setup": "git init --bare .git/origin.git\n",
+                "graders": [{"name": "said", "type": "regex", "pattern": "x"}],
+            },
+        }
+    }
+    skill = tmp_path / ".agents/skills/demo"
+    skill.mkdir(parents=True)
+    (skill / "evals.yaml").write_text(yaml.safe_dump(suite))
+
+    skill_eval.expand(tmp_path, "demo")
+
+    scaffold = tmp_path / skill_eval.SCAFFOLD
+    for name, args in (
+        ("plain", ""),
+        ("both", f" {skill}/evals/both/change.patch fix/x"),
+    ):
+        case_dir = skill / "evals" / name
+        assert (
+            case_dir / "setup.sh"
+        ).read_text() == "git init --bare .git/origin.git\n"
+        assert "setup" not in yaml.safe_load((case_dir / "case.yaml").read_text())
+        assert (case_dir / "scaffold.sh").read_text().splitlines()[2:] == [
+            "set -euo pipefail",
+            f"bash {scaffold}{args}",
+            f"bash {case_dir / 'setup.sh'}",
+        ]
+
+
 def test_expand_writes_a_plugin_per_entry_of_plugins(tmp_path):
     skills = tmp_path / ".agents/skills"
     for name in ("demo", "other"):
