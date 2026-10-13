@@ -201,6 +201,7 @@ config:
   enable_opentelemetry: false
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: auth_service
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

@@ -221,6 +221,7 @@ config:
   kafka_enable_dlq: true
   db_version_collection: "nosDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: nos
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

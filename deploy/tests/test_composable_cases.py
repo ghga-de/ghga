@@ -457,3 +457,18 @@ def test_local_image_id_annotates_only_its_own_image(rendered_chart):
         "annotations"
     ]
     assert "local-image-id" not in annotations
+
+
+def test_migration_init_container(rendered_chart):
+    """The migration init container runs migrate-db with the main container's env."""
+    manifests = rendered_chart("common.yaml", "migration_init_container.yaml")
+    pod = manifests["Deployment"]["spec"]["template"]["spec"]
+    (init,) = pod["initContainers"]
+    assert init["name"] == "migration"
+    assert init["command"] == ["myexe"]
+    assert init["args"] == ["migrate-db"]
+    assert init["envFrom"] == pod["containers"][0]["envFrom"]
+    assert init["envFrom"] == [
+        {"configMapRef": {"name": "my-env-configmap"}},
+        {"secretRef": {"name": "my-env-secret"}},
+    ]

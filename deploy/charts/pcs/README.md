@@ -26,6 +26,7 @@ for the full set of configurable values.
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
 | `config.file_deletion_request_topic` | The name of the topic to receive events informing about files to delete. | `null` |
 | `config.file_deletion_request_type` | The type used for events indicating that a request to delete a file has been received. | `null` |
@@ -47,7 +48,6 @@ for the full set of configurable values.
 | `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.port` | Port to expose the server on the specified host | `8080` |
 | `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
 | `config.workers` | Number of workers processes to run. | `1` |

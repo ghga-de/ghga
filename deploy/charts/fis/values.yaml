@@ -39,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: fis
@@ -180,6 +180,7 @@ config:
   mongo_dsn:
   db_version_collection: "fisDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
   enable_opentelemetry: false
   ekss_api_url: http://encryption-key-store:8080
 configPrefix: fis

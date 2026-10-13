@@ -223,6 +223,7 @@ config:
   enable_opentelemetry: false
   db_version_collection: "ucsDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: ucs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

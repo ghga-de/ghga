@@ -39,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: ifrs
@@ -233,6 +233,7 @@ config:
   enable_opentelemetry: false
   db_version_collection: "ifrsDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: ifrs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

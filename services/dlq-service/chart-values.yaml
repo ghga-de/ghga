@@ -19,6 +19,8 @@ config:
   kafka_enable_dlq: false
   db_version_collection: "dlqsDbVersions"
   migration_wait_sec: 10
+  # replicas waiting on another one's migration fail after this, so a stuck lock shows
+  migration_max_wait_sec: 600
 
 executableArgs:
 - run-rest

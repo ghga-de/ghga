@@ -39,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: rts
@@ -189,6 +189,7 @@ config:
   mongo_dsn:
   db_version_collection: rtsDbVersions
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
   sheet_names:
     analyses: Analysis
     analysis_methods: AnalysisMethod

@@ -39,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: rs
@@ -233,6 +233,7 @@ config:
   work_order_signing_key: '{}'
   db_version_collection: rsDbVersions
   migration_wait_sec: 5
+  migration_max_wait_sec: 600
   httpx_standard_timeout_sec: 60.0
   httpx_long_timeout_sec: 600.0
 configPrefix: rs

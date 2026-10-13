@@ -182,6 +182,7 @@ config:
   kafka_enable_dlq: false
   db_version_collection: "dlqsDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: dlqs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

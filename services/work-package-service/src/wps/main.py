@@ -18,8 +18,9 @@
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager
 from wps.config import Config
-from wps.migrations import run_db_migrations
+from wps.migrations import MIGRATION_MAP
 from wps.prepare import prepare_consumer, prepare_rest_app
 
 DB_VERSION = 3
@@ -50,4 +51,7 @@ async def migrate_db() -> None:
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
