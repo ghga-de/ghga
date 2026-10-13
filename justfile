@@ -219,7 +219,7 @@ service-docs *args: _guard
 test target="": _guard sync-check
     #!/usr/bin/env bash
     set -uo pipefail
-    target="{{target}}"
+    target={{quote(target)}}
     # `.` was this recipe's old default; it still means "everything", not "the root as a member"
     [ "$target" = "." ] && target=""
     # repeated trailing slashes must not defeat the bare-tier and member checks below
@@ -271,7 +271,7 @@ test target="": _guard sync-check
 # Defaults to the integration branch, which is what feature branches are cut from (ADR-0038).
 # On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
 affected base="origin/dev":
-    uv run python scripts/affected_targets.py --base {{base}}
+    uv run python scripts/affected_targets.py --base {{quote(base)}}
 
 # --- Worktrees (parallel work) ----------------------------------------------------------
 # Worktrees go under .claude/worktrees/ of the main checkout, even when the recipe runs in
