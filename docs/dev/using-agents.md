@@ -13,7 +13,7 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 - **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), checks at session start that you run in the dev container and that the git hooks are installed.
   Guards stop edits to generated files, `uv` on the host and commands that skip the git hooks, and an edit to lint configuration asks you first.
 - **Permissions:** the same file allows the read-only `gh` commands, `rg`, `fd`, `just test`, `just lint`, `just typecheck` and `just affected`.
-  It asks before creating or commenting on a PR, before `rm -rf` and before `rg --pre` or `fd --exec`, which run other commands.
+  It asks before creating or commenting on a PR, before `rm -rf`, before `rg --pre` or `fd --exec`, which run other commands, and before `rg` searches `.env` or gitignored files.
   It denies merges, releases, force pushes, `sudo`, `ssh`, `chmod 777` and reading `.env` files.
   The rules match a command as the agent writes it, so they stop the usual call, not every way round it.
 - **MCP:** only the data portal has servers, in [`frontend/data-portal/.mcp.json`](../../frontend/data-portal/.mcp.json); a session started at the repo root does not load them.
