@@ -28,6 +28,12 @@ from ghga_datasteward_kit.file_ingest import (
     alias_to_accession,
     file_ingest,
 )
+from ghga_service_commons.http.mock_api import (
+    MockApi,
+    ResponseHandler,
+    respond,
+    serve,
+)
 from ghga_service_commons.utils.simple_token import generate_token
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.submission_registry.models import (
@@ -42,9 +48,18 @@ from tests.fixtures.ingest import (  # noqa: F401
     ingest_fixture,
     legacy_ingest_fixture,
 )
-from tests.fixtures.mock_api import ApiMock, MockedEndpoint, respond
+from tests.fixtures.mock_api import WkvsMock, serve_httpx2_from
 
 DEFAULT_STORAGE_ALIASES = {"test": "http://example.com"}
+
+
+class FileIngestApiMock(MockApi):
+    """A mock of the file ingest endpoint at `endpoint`, accepting everything with 202."""
+
+    def __init__(self, base_url: str, endpoint: str) -> None:
+        super().__init__(base_url)
+        self.on_ingest: ResponseHandler = respond(202)
+        self.route("POST", endpoint, "on_ingest")
 
 
 def mock_ingest_api(
@@ -53,30 +68,17 @@ def mock_ingest_api(
     *,
     endpoint_path: str,
     storage_aliases: dict[str, str] | None = None,
-) -> MockedEndpoint:
-    """Mock the WKVS and file ingest endpoints used by an ingest run.
-
-    Returns the ingest endpoint, which starts out accepting everything with a 202.
-    Reassign its `handler` to make the calls that follow fail instead.
-    """
-    api_mock = ApiMock()
-    api_mock.add(
-        method="GET",
-        path="/values/storage_aliases",
-        handler=respond(
-            200,
-            json={
-                "storage_aliases": DEFAULT_STORAGE_ALIASES
-                if storage_aliases is None
-                else storage_aliases
-            },
-        ),
+) -> FileIngestApiMock:
+    """Mock the WKVS and the ingest endpoint of an ingest run, returning the latter."""
+    wkvs = WkvsMock(
+        config.wkvs_api_url,
+        storage_aliases=DEFAULT_STORAGE_ALIASES
+        if storage_aliases is None
+        else storage_aliases,
     )
-    ingest_endpoint = api_mock.add(
-        method="POST", path=endpoint_path, handler=respond(202)
-    )
-    api_mock.patch_httpx(monkeypatch)
-    return ingest_endpoint
+    ingest_api = FileIngestApiMock(config.file_ingest_baseurl, endpoint_path)
+    serve_httpx2_from(monkeypatch, serve(wkvs, ingest_api))
+    return ingest_api
 
 
 @pytest.mark.asyncio
@@ -363,7 +365,7 @@ async def test_legacy_ingest_directly(
     """Test file_ingest function directly"""
     token = generate_token()
 
-    ingest_endpoint = mock_ingest_api(
+    ingest_api = mock_ingest_api(
         monkeypatch,
         legacy_ingest_fixture.config,
         endpoint_path=legacy_ingest_fixture.config.file_ingest_legacy_endpoint,
@@ -376,7 +378,7 @@ async def test_legacy_ingest_directly(
         submission_id=EXAMPLE_SUBMISSION.id,
     )
 
-    ingest_endpoint.handler = respond(
+    ingest_api.on_ingest = respond(
         403, json={"detail": "Not authorized to access ingest endpoint."}
     )
     with pytest.raises(ValueError, match=r"Not authorized to access ingest endpoint."):
@@ -387,7 +389,7 @@ async def test_legacy_ingest_directly(
             submission_id=EXAMPLE_SUBMISSION.id,
         )
 
-    ingest_endpoint.handler = respond(
+    ingest_api.on_ingest = respond(
         422, json={"detail": "Could not decrypt received payload."}
     )
     with pytest.raises(ValueError, match=r"Could not decrypt received payload."):
@@ -407,7 +409,7 @@ async def test_ingest_directly(
     """Test file_ingest function directly"""
     token = generate_token()
 
-    ingest_endpoint = mock_ingest_api(
+    ingest_api = mock_ingest_api(
         monkeypatch,
         ingest_fixture.config,
         endpoint_path=ingest_fixture.config.file_ingest_federated_endpoint,
@@ -420,7 +422,7 @@ async def test_ingest_directly(
         submission_id=EXAMPLE_SUBMISSION.id,
     )
 
-    ingest_endpoint.handler = respond(
+    ingest_api.on_ingest = respond(
         403, json={"detail": "Not authorized to access ingest endpoint."}
     )
     with pytest.raises(ValueError, match=r"Not authorized to access ingest endpoint."):
@@ -431,7 +433,7 @@ async def test_ingest_directly(
             submission_id=EXAMPLE_SUBMISSION.id,
         )
 
-    ingest_endpoint.handler = respond(
+    ingest_api.on_ingest = respond(
         422, json={"detail": "Could not decrypt received payload."}
     )
     with pytest.raises(ValueError, match=r"Could not decrypt received payload."):
@@ -465,7 +467,7 @@ async def test_legacy_main(
             lambda self: generate_token(),
         )
 
-        ingest_endpoint = mock_ingest_api(
+        ingest_api = mock_ingest_api(
             patch,
             legacy_ingest_fixture.config,
             endpoint_path=legacy_ingest_fixture.config.file_ingest_legacy_endpoint,
@@ -478,7 +480,7 @@ async def test_legacy_main(
 
         assert "Successfully sent all file upload metadata for ingest" in out
 
-        ingest_endpoint.handler = respond(403, json={"detail": "Unauthorized"})
+        ingest_api.on_ingest = respond(403, json={"detail": "Unauthorized"})
         ingest_upload_metadata(
             config_path=config_path, submission_id=EXAMPLE_SUBMISSION.id
         )
