@@ -891,6 +891,25 @@
             "null"
           ]
         },
+        "migration_max_wait_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+          "examples": [
+            null,
+            300,
+            600,
+            3600
+          ],
+          "title": "Migration Max Wait Sec"
+        },
         "enable_opentelemetry": {
           "default": false,
           "description": "If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled.",
@@ -1487,25 +1506,6 @@
             null
           ],
           "title": "Mongo Timeout"
-        },
-        "migration_max_wait_sec": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
-          "examples": [
-            null,
-            300,
-            600,
-            3600
-          ],
-          "title": "Migration Max Wait Sec"
         },
         "data_hub_auth_keys": {
           "additionalProperties": {

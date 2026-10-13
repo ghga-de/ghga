@@ -25,6 +25,7 @@ for the full set of configurable values.
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.file_deletion_request_topic` | The name of the topic to receive events informing about files to delete. | `null` |
 | `config.file_deletion_request_type` | The type used for events indicating that a request to delete a file has been received. | `null` |
 | `config.file_internally_registered_topic` | Name of the topic used for events indicating that a file has been registered for download. | `null` |
@@ -52,7 +53,6 @@ for the full set of configurable values.
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.file_upload_box_topic` | Topic containing published FileUploadBox outbox events | `null` |
 | `config.wps_auth_config` |  | `null` |
