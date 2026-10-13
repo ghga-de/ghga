@@ -90,7 +90,8 @@ Both instances require the database to be up to date, but it's not efficient to 
 If we run migrations automatically at startup, we should add a mechanism to ensure that a migration script is only triggered once for such services.
 
 **Amended 2026-10-09:** The consequences above describe the original decision, in which every service instance migrated at startup.
-With the `migrate-db` init container, the migration runs once per pod regardless of how many containers it holds, and a service no longer migrates after a database restore on its own — the init container does, before the service starts.
+With the `migrate-db` init container, every pod of the service runs the migration step before its containers start, and the lock lets only one of them migrate.
+After a database restore, the init container migrates the documents when the pods next start.
 
 ### Alternatives
 
