@@ -82,3 +82,40 @@ def test_validate_one_study_per_submission(
 
     assert "in field 'studies'" in str(error.value)
     assert expected_message in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "study_alias, file_aliases, shared_alias, expected_message",
+    [
+        ("study_1", ["file_1", "file_2"], None, None),
+        ("sample_1", ["sample_1", "file_2"], "sample_1", "classes 'File', 'Study'"),
+        ("study_1", ["file_1", "file_1"], "file_1", "classes 'File', 'File'"),
+    ],
+    ids=["unique", "shared_across_classes", "shared_within_class"],
+)
+def test_check_alias_uniqueness(
+    study_alias: str,
+    file_aliases: list[str],
+    shared_alias: str | None,
+    expected_message: str | None,
+):
+    """Test that an alias shared by two entities is rejected, naming the alias and
+    the classes sharing it, whether the entities are of different classes or not.
+    """
+    validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
+    metadata = {
+        "studies": [{"alias": study_alias}],
+        "files": [
+            {"alias": alias, "filename": f"{alias}.fastq"} for alias in file_aliases
+        ],
+    }
+
+    if expected_message is None:
+        validator.check_alias_uniqueness(metadata)
+        return
+
+    with pytest.raises(MetadataValidator.ValidationError) as error:
+        validator.check_alias_uniqueness(metadata)
+
+    assert f"with value '{shared_alias}'" in str(error.value)
+    assert expected_message in str(error.value)
