@@ -41,6 +41,7 @@ from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 from urllib.parse import unquote
 
+import httpcore2
 import httpx2
 
 __all__ = [
@@ -49,6 +50,7 @@ __all__ = [
     "NotMockedError",
     "ResponseHandler",
     "fail_to_connect",
+    "instrumentable",
     "path_variables",
     "respond",
     "serve",
@@ -243,6 +245,68 @@ def _answered(response: object, request: httpx2.Request) -> httpx2.Response:
             f" {type(response).__name__}, not an httpx2.Response"
         )
     return response
+
+
+def instrumentable(transport: httpx2.MockTransport) -> httpx2.AsyncHTTPTransport:
+    """Lets OpenTelemetry record client spans for requests a mock transport answers.
+
+    Needed only when a test checks the span of an outbound call.
+    Autoinstrumentation hooks into httpx2's network transports, and a mock transport
+    stands in for those, so a mocked call normally records no span.
+    This returns a real `AsyncHTTPTransport`, so the instrumentation applies, with a
+    connection pool that answers from the mock instead of connecting.
+
+    Use it where the mock transport would go, in an async client:
+
+        client = httpx2.AsyncClient(transport=instrumentable(test_api.as_transport()))
+    """
+    wrapped = httpx2.AsyncHTTPTransport()
+    wrapped._pool = _MockPool(transport)  # type: ignore[assignment]
+    return wrapped
+
+
+class _MockPool:
+    """Stand-in for httpcore2's connection pool, answering from a mock transport."""
+
+    def __init__(self, transport: httpx2.MockTransport) -> None:
+        self._transport = transport
+
+    async def handle_async_request(
+        self, request: httpcore2.Request
+    ) -> httpcore2.Response:
+        """Rebuild `request` for httpx2, answer it, and hand the answer back."""
+        stream: Any = request.stream
+        body = b"".join([chunk async for chunk in stream])
+        url = request.url
+        rebuilt = httpx2.Request(
+            request.method.decode(),
+            httpx2.URL(
+                scheme=url.scheme.decode(),
+                host=url.host.decode(),
+                port=url.port,
+                raw_path=url.target,
+            ),
+            headers=request.headers,
+            content=body,
+            extensions=request.extensions,
+        )
+        response = await self._transport.handle_async_request(rebuilt)
+        # Passed on still encoded, as its Content-Encoding header says
+        raw: Any = response.stream
+        content = b"".join([chunk async for chunk in raw])
+        return httpcore2.Response(
+            response.status_code, headers=response.headers.raw, content=content
+        )
+
+    async def __aenter__(self) -> "_MockPool":
+        """Enter as httpx2's transport enters its pool."""
+        return self
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        """Leave as httpx2's transport leaves its pool."""
+
+    async def aclose(self) -> None:
+        """Nothing to close: no connections were opened."""
 
 
 def respond(
