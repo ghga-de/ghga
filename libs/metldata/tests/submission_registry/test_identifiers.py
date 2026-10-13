@@ -30,7 +30,7 @@ class FakeAccessionRegistry:
         """Tell whether the given class is the study class."""
         return class_name == "Study"
 
-    def get_study_accession(self, *, predecessor_pid: str | None = None) -> str:
+    def get_study_accession(self) -> str:
         """Generate the PID of a study."""
         return "generated_study_pid"
 

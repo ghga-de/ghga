@@ -21,10 +21,8 @@ from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.accession_registry.accession_registry_utils import (
-    LEGACY_STUDY_ACCESSION_PATTERN,
     find_unused_pid,
     generate_random_block,
-    study_pid_pattern,
 )
 from metldata.accession_registry.accession_store import AccessionStore
 
@@ -87,11 +85,6 @@ class AccessionRegistry:
 
     class AccessionGenerationError(RuntimeError):
         """Raised when a the generation of a new accession failed."""
-
-    class InvalidPredecessorError(ValueError):
-        """Raised when a predecessor PID is neither a legacy study accession nor a
-        study PID minted by this registry.
-        """
 
     def __init__(
         self, *, config: AccessionRegistryConfig, accession_store: AccessionStore
@@ -157,53 +150,13 @@ class AccessionRegistry:
 
         return f"{root}.1"
 
-    def _continue_study_pid(self, *, predecessor_pid: str) -> str:
-        """Continue the lineage of a study PID: same root, version + 1.
-
-        Nothing is registered, since the root was registered when its lineage started.
-
-        Raises:
-            InvalidPredecessorError: If the predecessor is not a well-formed study PID
-                or its root was never registered.
-        """
-        match = study_pid_pattern(
-            self._config.study_pid_prefix,
-            BASE32_ALPHABET,
-            self._config.random_block_length,
-        ).match(predecessor_pid)
-        if match is None:
-            raise self.InvalidPredecessorError(
-                f"'{predecessor_pid}' is neither a legacy study accession nor a study"
-                + " PID."
-            )
-
-        root, version = match.group(1), int(match.group(2))
-        # the prefix holds no dots, so the root splits into exactly its three parts
-        _, year, random_block = root.split(".")
-        if not self._accession_store.exists(year=year, random_block=random_block):
-            raise self.InvalidPredecessorError(
-                f"The study PID '{predecessor_pid}' was never minted."
-            )
-
-        return f"{root}.{version + 1}"
-
-    def get_study_accession(self, *, predecessor_pid: str | None = None) -> str:
-        """Get the PID of a study, given the PID of the study it replaces, if any.
-
-        A new study, or one replacing a legacy study accession, starts a fresh lineage
-        'PREFIX.YY.XXX.1'. One replacing a study PID continues that lineage with the
-        version increased by one.
+    def get_study_accession(self) -> str:
+        """Get the PID of a study, which starts a fresh lineage 'PREFIX.YY.XXX.1'.
 
         Raises:
             AccessionGenerationError: If every study PID root of the year is taken.
-            InvalidPredecessorError: If the predecessor is not a valid study PID.
         """
-        if predecessor_pid is None or LEGACY_STUDY_ACCESSION_PATTERN.match(
-            predecessor_pid
-        ):
-            return self._mint_fresh_study_pid()
-
-        return self._continue_study_pid(predecessor_pid=predecessor_pid)
+        return self._mint_fresh_study_pid()
 
     def _choose_unused_dataset_pid(
         self, *, study_pid: str, used_dataset_pids: set[str]

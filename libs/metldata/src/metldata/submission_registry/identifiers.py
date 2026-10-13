@@ -129,7 +129,6 @@ def get_study_pid(
     content: SubmissionContent,
     params: SubmissionParams,
     anchor_points_by_target: dict[str, AnchorPoint],
-    predecessor_pid: str | None,
 ) -> str:
     """Get the PID of the study in the provided content.
 
@@ -137,8 +136,7 @@ def get_study_pid(
     is considered, and any further ones are ignored.
 
     The PID found in the provided accession map is kept, so re-upserting a submission
-    never changes it. Otherwise a new one is requested from the accession registry,
-    continuing the lineage of the predecessor if one is given.
+    never changes it. Otherwise a new one is requested from the accession registry.
 
     Raises:
         MissingStudyError: If the content holds no study.
@@ -160,10 +158,11 @@ def get_study_pid(
                 )
             )
         )
-        return lookup_accession(
-            anchor=anchor, alias=study_alias, accession_map=params.accession_map
-        ) or params.accession_registry.get_study_accession(
-            predecessor_pid=predecessor_pid
+        return (
+            lookup_accession(
+                anchor=anchor, alias=study_alias, accession_map=params.accession_map
+            )
+            or params.accession_registry.get_study_accession()
         )
 
     raise MissingStudyError("The submission content holds no study.")
@@ -175,7 +174,6 @@ def generate_accession_map(
     existing_accession_map: AccessionMap | None = None,
     accession_registry: AccessionRegistry,
     anchor_points_by_target: dict[str, AnchorPoint],
-    predecessor_pid: str | None = None,
 ) -> AccessionMap:
     """Generate an accession map for the provided content.
 
@@ -203,7 +201,6 @@ def generate_accession_map(
         content=content,
         params=params,
         anchor_points_by_target=anchor_points_by_target,
-        predecessor_pid=predecessor_pid,
     )
 
     get_accession_ = partial(

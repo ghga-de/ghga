@@ -16,26 +16,8 @@
 
 """Util functions for accession registry"""
 
-import re
 import secrets
 from collections.abc import Callable
-from functools import cache
-
-# A study accession minted under the flat scheme that predates study PIDs.
-LEGACY_STUDY_ACCESSION_PATTERN = re.compile(r"^GHGAS\d+$")
-
-
-@cache
-def study_pid_pattern(
-    prefix: str, alphabet: str, random_block_length: int
-) -> re.Pattern[str]:
-    """Build the pattern of a study PID 'PREFIX.YY.XXX.V', grouping the root
-    'PREFIX.YY.XXX' and the version. Cached, so each config builds it once.
-    """
-    return re.compile(
-        rf"^({re.escape(prefix)}\.\d{{2}}\.[{alphabet}]{{{random_block_length}}})"
-        + r"\.([1-9]\d*)$"
-    )
 
 
 def generate_random_block(alphabet: str, random_block_length: int) -> str:
