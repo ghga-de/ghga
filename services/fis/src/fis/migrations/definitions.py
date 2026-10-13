@@ -41,10 +41,14 @@ FILE_VALIDATIONS = "fileValidations"
 
 
 class V2Migration(MigrationDefinition):
-    """Move stored outbox events from the `file-validations` to two new collections:
+    """Move stored outbox events from `fileValidations` to two new collections:
 
     1. `ingestedFiles`: where each document merely contains the file ID
     2. `fisPersistedEvents`: a collection used for event persistence (replaces outbox)
+
+    The outbox collection must be named `fileValidations`, the default of the former
+    config field; rename it first in a database restored with another name, or this
+    migration silently moves nothing.
 
     This migration is not reversible because it would require writing migrations for
     most other file services only for the purpose of making them reversible too.
