@@ -198,7 +198,8 @@ Since a failed instance raises rather than starting the service, deployment tool
 
 ## Checking the Database Version
 
-Sometimes a component needs to *verify* the database version without being allowed to change anything — a job that runs alongside the service, a readiness check, or a tool operating on the same database.
+Sometimes a component needs to *verify* the database version without being allowed to change anything — a service whose migrations run as a separate step before it starts, a job that runs alongside the service, a readiness check, or a tool operating on the same database.
+Running the migrations as that separate step, for instance a one-off command before the service instances start, keeps the instances from migrating at startup, and the check stops an instance from starting on a database the step has not migrated.
 The standalone [`check_db_version`](../../reference/providers.mongodb.migrations.check_db_version.qmd) helper reads the version collection and raises a [`DbVersionMismatchError`](../../reference/providers.mongodb.migrations.DbVersionMismatchError.qmd) if the current version differs from the expected one:
 
 ```python
