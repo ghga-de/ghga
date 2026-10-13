@@ -20,7 +20,7 @@ from ars.migrations import MIGRATION_MAP
 from ars.prepare import prepare_access_request_dao, prepare_consumer, prepare_rest_app
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
+from hexkit.providers.mongodb.migrations import MigrationManager
 
 DB_VERSION = 3
 
@@ -29,8 +29,6 @@ async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
-
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -41,8 +39,6 @@ async def consume_events(run_forever: bool = True) -> None:
     config = Config()
     configure_logging(config=config)
 
-    await check_db_version(config=config, target_version=DB_VERSION)
-
     async with prepare_consumer(config=config) as consumer:
         await consumer.event_subscriber.run(forever=run_forever)
 
@@ -51,8 +47,6 @@ async def publish_events(*, all: bool = False):
     """Publish pending events. Set `--all` to (re)publish all events regardless of status."""
     config = Config()
     configure_logging(config=config)
-
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_access_request_dao(config=config) as outbox_publisher:
         if all:

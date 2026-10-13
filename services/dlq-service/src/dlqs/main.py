@@ -27,7 +27,7 @@ from dlqs.inject import prepare_dlq_subscriber, prepare_rest_app
 from dlqs.migrations import MIGRATION_MAP
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
-from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
+from hexkit.providers.mongodb.migrations import MigrationManager
 
 log = logging.getLogger(__name__)
 
@@ -38,8 +38,6 @@ async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
-
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     if config.kafka_max_message_size < 16_000_000:
         log.warning(
@@ -56,8 +54,6 @@ async def consume_events(run_forever: bool = True):
     """Run the DLQ event consumer"""
     config = Config()
     configure_logging(config=config)
-
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_dlq_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
