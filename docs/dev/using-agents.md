@@ -12,7 +12,10 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 - **Skills:** task procedures in `.agents/skills/`, listed with where each applies in the [skill catalogue](../agent-skills.md); `/skills` in Claude Code lists the ones your session can use.
 - **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), checks at session start that you run in the dev container and that the git hooks are installed.
   Guards stop edits to generated files, `uv` on the host and commands that skip the git hooks, and an edit to lint configuration asks you first.
-- **Permissions:** the same file allows the read-only `gh` commands, asks before creating or commenting on a PR, and denies merges, releases, force pushes and reading `.env` files.
+- **Permissions:** the same file allows the read-only `gh` commands, `rg`, `fd`, `just test`, `just lint`, `just typecheck` and `just affected`.
+  It asks before creating or commenting on a PR, before `rm -rf`, before `rg --pre` or `fd --exec`, which run other commands, and before `rg` searches `.env` or gitignored files.
+  It denies merges, releases, force pushes, `sudo`, `ssh`, `chmod 777` and reading `.env` files.
+  The rules match a command as the agent writes it, so they stop the usual call, not every way round it.
 - **MCP:** only the data portal has servers, in [`frontend/data-portal/.mcp.json`](../../frontend/data-portal/.mcp.json); a session started at the repo root does not load them.
 - **Output style:** Claude Code sessions default to **GHGA Dev** ([`.claude/output-styles/ghga-dev.md`](../../.claude/output-styles/ghga-dev.md)), which keeps replies short and plain.
 
@@ -29,6 +32,14 @@ Personal instructions go in one of these, never in a committed file:
 
 Personal settings go in `.claude/settings.local.json`, which is gitignored.
 To use another output style, set `outputStyle` there; your user settings do not override the project's default.
+
+Tools worth installing for yourself, none of them shared:
+
+- **[`npx skills`](https://github.com/vercel-labs/skills)** installs skills from a repo or a docs site, such as hexkit's; set `DISABLE_TELEMETRY=1`, since it reports installs by default.
+- **[skill-creator](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator)** helps write a skill and test it.
+- **[Trail of Bits](https://github.com/trailofbits/skills)**: only the plugins `differential-review`, `insecure-defaults` and `sharp-edges`, installed one by one, which review a change for security.
+  We have not checked the repo's other plugins, and some of them add hooks that run in every session.
+- **YouTrack's MCP server**, built into YouTrack at `<instance>/mcp`: add it with `claude mcp add --transport http youtrack https://<instance>/mcp` and authorize with `/mcp`.
 
 What you learn goes where the people who need it will find it:
 
