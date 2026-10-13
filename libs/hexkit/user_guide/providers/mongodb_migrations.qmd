@@ -163,8 +163,8 @@ If one of them is not reversible, the backward migration fails with an error —
 ## Running Migrations
 
 The database has to be at the version a service expects *before* that service begins its actual work (consuming events, serving requests, etc.), so the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd) runs as its own step rather than from inside the service.
-To ensure this prerequisite is met, we highly recommend exposing the migration as its own entrypoint command and running that from an `init` container if using Kubernetes.
-We typically define a function like `run_db_migrations()` from the example below and call that from the aforementioned dedicated top-level function:
+We recommend exposing the migration as its own entrypoint command and, on Kubernetes, running that command in an init container.
+The example below defines `run_db_migrations()` and calls it from such a command, `migrate_db()`:
 
 ```python
 from hexkit.providers.mongodb.migrations import MigrationManager
