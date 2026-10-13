@@ -183,6 +183,7 @@ async def run_db_migrations(
     migration_map: MigrationMap | None = None,
 ):
     """Run all migrations.
+
     Args
     - `config`: Config containing mongo_dsn string and DB versioning collection name
     - `target_version`: Which version the db needs to be at for this version of the service
