@@ -17,7 +17,7 @@
 
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
+from hexkit.providers.mongodb.migrations import MigrationManager
 from ifrs.config import Config
 from ifrs.inject import get_persistent_publisher, prepare_event_subscriber
 from ifrs.migrations import MIGRATION_MAP
@@ -34,7 +34,6 @@ async def consume_events(run_forever: bool = True):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)
@@ -45,7 +44,6 @@ async def publish_events(*, all: bool = False):
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with get_persistent_publisher(config=config) as persistent_publisher:
         if all:

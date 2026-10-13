@@ -18,7 +18,7 @@
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
+from hexkit.providers.mongodb.migrations import MigrationManager
 from wps.config import Config
 from wps.migrations import MIGRATION_MAP
 from wps.prepare import prepare_consumer, prepare_rest_app
@@ -31,7 +31,6 @@ async def run_rest_app() -> None:
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -42,7 +41,6 @@ async def consume_events(run_forever: bool = True) -> None:
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_consumer(config=config) as consumer:
         await consumer.event_subscriber.run(forever=run_forever)

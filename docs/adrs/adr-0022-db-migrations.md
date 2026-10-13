@@ -54,7 +54,7 @@ The migration logic for a service will run when the service is started so that a
 
 **Amended 2026-10-09:** The migrations no longer run when the service starts.
 Each service has a `migrate-db` command, which its chart runs in a migration init container before every pod starts, so a release still needs no extra step to migrate.
-Every other entry point checks the database version with hexkit's `check_db_version()` and stops unless it equals the version the release expects.
+Before any other command, the service's CLI checks the database version with hexkit's `check_db_version()` and stops unless it equals the version the release expects.
 This keeps migration failures and their logs apart from the service's own, and leaves the service with only a read of the version records at startup.
 The check is an equality on purpose: a pod of the old release that restarts after the new one has migrated fails instead of working on a schema it does not know.
 
