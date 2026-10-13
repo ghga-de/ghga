@@ -167,7 +167,13 @@ We recommend exposing the migration as its own entrypoint command and, on Kubern
 The example below defines `run_db_migrations()` and calls it from such a command, `migrate_db()`:
 
 ```python
-from hexkit.providers.mongodb.migrations import MigrationManager
+from hexkit.log import configure_logging
+from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationManager,
+    MigrationMap,
+)
 
 from my_service.config import Config  # inherits from MigrationConfig
 from my_service.migrations import V2Migration, V3Migration
