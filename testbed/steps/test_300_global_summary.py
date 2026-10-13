@@ -39,19 +39,19 @@ def check_summary_statistics(response: Response):
     assert result["id"] == "global"
     resource_stats = result["resource_stats"]
     assert resource_stats == {
-        "DataAccessCommittee": {"count": 1},
-        "Experiment": {"count": 2},
+        "DataAccessCommittee": {"count": 2},
+        "Experiment": {"count": 3},
         "IndividualSupportingFile": {
             "count": 1,
             "stats": {"format": [{"count": 1, "value": "JSON"}]},
         },
-        "Individual": {"count": 1, "stats": {"sex": [{"count": 1, "value": "MALE"}]}},
+        "Individual": {"count": 2, "stats": {"sex": [{"count": 2, "value": "MALE"}]}},
         "Analysis": {"count": 2},
         "Dataset": {"count": 2},
-        "Sample": {"count": 2, "stats": {"type": [{"count": 2, "value": "CF_DNA"}]}},
+        "Sample": {"count": 3, "stats": {"type": [{"count": 3, "value": "CF_DNA"}]}},
         "ExperimentMethod": {
-            "count": 1,
-            "stats": {"instrument_model": [{"count": 1, "value": "454_GS"}]},
+            "count": 2,
+            "stats": {"instrument_model": [{"count": 2, "value": "454_GS"}]},
         },
         "Study": {"count": 2},
         "ProcessDataFile": {
@@ -68,7 +68,7 @@ def check_summary_statistics(response: Response):
         },
         "EmbeddedDataset": {"count": 2},
         "Publication": {"count": 2},
-        "AnalysisMethod": {"count": 1},
+        "AnalysisMethod": {"count": 2},
         "AnalysisMethodSupportingFile": {
             "count": 1,
             "stats": {"format": [{"count": 1, "value": "TXT"}]},
