@@ -15,7 +15,7 @@
 
 """Tests for the rate limiting transport handling of HTTP 429 responses."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from email.utils import format_datetime
 from unittest.mock import AsyncMock, patch
 
@@ -24,6 +24,9 @@ import pytest
 
 from ghga_service_commons.transports.config import RateLimitingTransportConfig
 from ghga_service_commons.transports.ratelimiting import AsyncRateLimitingTransport
+from ghga_service_commons.utils.utc_dates import now_as_utc
+
+pytestmark = pytest.mark.asyncio()
 
 # The per-request sleep is drawn from random.uniform keeps the real sleep at zero
 # while exposing the delay the transport computed.
@@ -45,7 +48,6 @@ def _ratelimiter(transport: AsyncMock, **config_kwargs) -> AsyncRateLimitingTran
     )
 
 
-@pytest.mark.asyncio
 async def test_passes_through_non_429_response():
     """Ensure non-429 responses are returned unchanged without a Should-Wait header."""
     response = httpx2.Response(httpx2.codes.OK)
@@ -57,7 +59,6 @@ async def test_passes_through_non_429_response():
     assert "Should-Wait" not in result.headers
 
 
-@pytest.mark.asyncio
 async def test_429_with_retry_after_sets_wait_time():
     """Ensure a 429 with a Retry-After header stores the wait time and does not signal Should-Wait."""
     response = httpx2.Response(429, headers={"Retry-After": "5"})
@@ -69,7 +70,6 @@ async def test_429_with_retry_after_sets_wait_time():
     assert "Should-Wait" not in result.headers
 
 
-@pytest.mark.asyncio
 async def test_429_without_retry_after_sets_should_wait_header():
     """Ensure a 429 without a Retry-After header signals Should-Wait and stores no wait time."""
     response = httpx2.Response(429)
@@ -81,7 +81,6 @@ async def test_429_without_retry_after_sets_should_wait_header():
     assert ratelimiter._wait_time == 0
 
 
-@pytest.mark.asyncio
 async def test_carried_over_wait_time_is_applied_to_next_request():
     """Ensure a wait time learned from a 429 is applied as the delay before the next request."""
     responses = [
@@ -102,7 +101,6 @@ async def test_carried_over_wait_time_is_applied_to_next_request():
     assert remaining_wait == pytest.approx(10, abs=0.5)
 
 
-@pytest.mark.asyncio
 async def test_wait_time_reset_after_configured_requests():
     """Ensure stored wait time is cleared once the configured number of requests has passed."""
     ratelimiter = _ratelimiter(
@@ -123,7 +121,6 @@ async def test_wait_time_reset_after_configured_requests():
     assert ratelimiter._wait_time == 0
 
 
-@pytest.mark.asyncio
 async def test_aclose_delegates_to_wrapped_transport():
     """Closing the rate limiting transport closes the transport it wraps."""
     transport = _mock_transport([])
@@ -133,7 +130,6 @@ async def test_aclose_delegates_to_wrapped_transport():
     transport.aclose.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_async_context_manager_closes_transport():
     """Exiting the async context manager closes the wrapped transport."""
     transport = _mock_transport([])
@@ -144,10 +140,9 @@ async def test_async_context_manager_closes_transport():
     transport.aclose.assert_awaited_once()
 
 
-@pytest.mark.asyncio
 async def test_429_with_http_date_retry_after_sets_wait_time():
     """Ensure a Retry-After given as an HTTP date is honored instead of crashing."""
-    retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
+    retry_at = now_as_utc() + timedelta(seconds=30)
     response = httpx2.Response(
         429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
     )
@@ -160,10 +155,9 @@ async def test_429_with_http_date_retry_after_sets_wait_time():
     assert "Should-Wait" not in result.headers
 
 
-@pytest.mark.asyncio
 async def test_429_with_past_http_date_does_not_wait():
     """Ensure a Retry-After date that has already passed yields no wait rather than a negative one."""
-    retry_at = datetime.now(timezone.utc) - timedelta(seconds=30)
+    retry_at = now_as_utc() - timedelta(seconds=30)
     response = httpx2.Response(
         429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
     )
@@ -175,7 +169,6 @@ async def test_429_with_past_http_date_does_not_wait():
     assert result.headers["Should-Wait"] == "true"
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("value", ["garbage", "", "inf", "nan"])
 async def test_429_with_unusable_retry_after_delegates_to_retry_layer(value: str):
     """Ensure an unparsable or non-finite Retry-After is treated as if the header were absent."""
@@ -188,7 +181,6 @@ async def test_429_with_unusable_retry_after_delegates_to_retry_layer(value: str
     assert result.headers["Should-Wait"] == "true"
 
 
-@pytest.mark.asyncio
 async def test_429_with_repeated_retry_after_takes_the_longest():
     """Ensure repeated Retry-After headers resolve to the longest wait, not to header order."""
     response = httpx2.Response(
@@ -202,7 +194,6 @@ async def test_429_with_repeated_retry_after_takes_the_longest():
     assert "Should-Wait" not in result.headers
 
 
-@pytest.mark.asyncio
 async def test_429_with_repeated_retry_after_ignores_unusable_values():
     """Ensure a malformed repeat cannot suppress a usable sibling value."""
     response = httpx2.Response(
