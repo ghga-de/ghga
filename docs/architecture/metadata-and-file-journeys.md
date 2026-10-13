@@ -118,9 +118,10 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 ### The LinkML model (current testbed model)
 
 - Root/tree class `Submission`; every entity class is a required, multivalued, `inlined_as_list` slot of it.
-  **The model permits multiple studies per submission** (used in fixtures: `STUDY_A`, `STUDY_B`), though operationally there has only ever been one.
+  **The model holds exactly one study per submission**: the `studies` slot has a minimum and maximum cardinality of 1, which metldata checks when it loads the model.
+  The fixtures are therefore two submissions, `metadata_study_a.json` (`STUDY_A`) and `metadata_study_b.json` (`STUDY_B`).
 - Entities reference each other **by alias** at submission time; `add_accessions` swaps aliases for accessions during transform.
-- Study↔Dataset: `Dataset.study` is a **single** alias reference (`testbed/.../metadata.json`).
+- Study↔Dataset: `Dataset.study` is a **single** alias reference (`testbed/.../metadata_study_a.json`).
   Files (`ResearchDataFile`, `ProcessDataFile`, `*SupportingFile`) carry `alias`, a `name` (filename), a `dataset` ref, and an `ega_accession` slot.
   Study→datasets is *inferred* during transform (`Study<(study)Dataset`).
 - **`studies[0]` assumption:** the loader derives a publishable artifact's `study_accession` from `content["studies"][0]["accession"]` (`libs/metldata/src/metldata/load/collect.py:91`) — a hard one-study-per-submission assumption. → [made a hard rule by the feature](../epics/epic-0093-giraffe.md).
