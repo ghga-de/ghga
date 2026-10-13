@@ -37,10 +37,11 @@ from dhfs.adapters.outbound.http import (
 from dhfs.config import Config
 from dhfs.core.models import InterrogationReport
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
+from ghga_service_commons.http.mock_api import respond
 from ghga_service_commons.utils.crypt import decrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
-from tests.fixtures.central_api import CentralApiMock, respond
+from tests.fixtures.central_api import CentralApiMock
 from tests.fixtures.utils import CENTRAL_CRYPT4GH_PRIVATE_KEY, DHFS_JWK
 
 pytestmark = pytest.mark.asyncio()
