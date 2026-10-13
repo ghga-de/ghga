@@ -13,5 +13,10 @@ Feature: 10 Submit Metadata
     When the metadata is submitted to the submission store
     Then one submission JSON file exists in the local submission store
 
+  Scenario: Amending the submission keeps its accessions
+    When the submission is amended with the same metadata
+    Then one submission JSON file exists in the local submission store
+    And the accessions of the submission are unchanged
+
   Scenario: Finishing the metadata submission
     Then set the state to "metadata submission is completed"
