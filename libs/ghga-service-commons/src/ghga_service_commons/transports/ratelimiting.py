@@ -20,7 +20,7 @@ import math
 import random
 import time
 from contextlib import suppress
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from logging import getLogger
 from types import TracebackType
@@ -49,8 +49,8 @@ def _parse_retry_after(value: str) -> float | None:
         retry_at = parsedate_to_datetime(value)
         if retry_at.tzinfo is None:
             # A value parsed without a zone would compare wrong.
-            retry_at = retry_at.replace(tzinfo=timezone.utc)
-        return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
+            retry_at = retry_at.replace(tzinfo=UTC)
+        return max(0.0, (retry_at - datetime.now(UTC)).total_seconds())
 
     # No retry-after value found. Return None
     return None
