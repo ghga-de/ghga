@@ -10,7 +10,7 @@ This repository contains two services for the management, authentication and aut
 
 These two services are described in the following sections.
 The setting `provide_apis` can be used to determine which of the services will be started and which APIs these services should provide.
-The setting `run_consumer` should be set for the service instance that runs as an event consumer.
+The claims repository also consumes dataset events, in an instance of its own started with the `consume-events` command.
 
 ### Auth Adapter
 
@@ -47,11 +47,16 @@ Therefore, these are also specified as response headers.
 The Auth Service provides two APIs, the (public) `users` API for the user registry, and the (internal) `claims` API for the claims repository.
 The setting `provide_apis` can be used to specify which of the two APIs should be provided.
 For testing purposes, both APIs can be provided at the same time, but this is not recommended in production.
-If no API is specified, then only a health endpoint is provided.
+At least one API must be specified.
 
 ## Usage
 
-The executable `auth-service` starts the service and takes no command.
+The executable `auth-service` takes one of these commands, and fails without one:
+
+- `run-rest` runs the REST APIs set in `provide_apis`
+- `consume-events` runs the claims repository's consumer of dataset events
+- `migrate-db` runs the database migrations
+
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
@@ -691,19 +696,6 @@ The service requires the following configuration parameters:
 
   ```json
   "[\"claims\", \"access\"]"
-  ```
-
-- <a id="properties/run_consumer"></a>**`run_consumer`** *(boolean)*: Whether the service should run as an event consumer.
-  Default: `false`.
-
-  Examples:
-
-  ```json
-  "false"
-  ```
-
-  ```json
-  "true"
   ```
 
 - <a id="properties/add_as_data_stewards"></a>**`add_as_data_stewards`** *(array)*: A list of of data stewards to seed the claims repository with.

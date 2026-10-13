@@ -11,7 +11,8 @@ global:
 commandPrefix: ''
 commandStyle: exec
 executable: auth-service
-executableArgs: []
+executableArgs:
+- run-rest
 deployment:
   enabled: true
 job:
@@ -38,11 +39,12 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
-  executable: ""
-  executableArgs: []
+  executable: auth-service
+  executableArgs:
+  - migrate-db
   env: []
   resources: {}
   volumeMounts: []

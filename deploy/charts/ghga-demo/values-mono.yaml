@@ -20,10 +20,13 @@ test-oidc-provider:
 auth-adapter:
   image:
     repository: ghga/platform
-auth-rest:
+auth-users:
   image:
     repository: ghga/platform
 auth-claims:
+  image:
+    repository: ghga/platform
+auth-consumer:
   image:
     repository: ghga/platform
 wkvs:
