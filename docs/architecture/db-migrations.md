@@ -62,9 +62,8 @@ Most definitions follow one of these shapes:
 
 Whatever the shape:
 
-- **Make the change function idempotent.**
-  If a document is already in the new shape, return it unchanged, and raise on a shape that is neither old nor new, as wps `v3.py` does.
-  A database whose version record is missing then passes through the migration unchanged, and an unknown shape stops it before anything is written.
+- **The change function should be idempotent:** it returns a document already in the new shape unchanged and raises on a shape that is neither old nor new, as wps `v3.py` does.
+  A database whose version record is missing then passes through the migration unchanged, and an unknown shape stops a migration inside `auto_finalize` before the original collections change.
 - **Make it reversible when you can:** inherit `Reversible` and implement `unapply()`, so the test can check the round trip and the planned rollback can undo it.
   A migration that drops data or derives new IDs cannot be reversed (dcs V3, fis V2, ifrs V3, ns V2); leave `Reversible` out.
 
