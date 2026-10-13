@@ -85,6 +85,7 @@
       "Bash(rg *.env*)",
       "Bash(rg -u*)",
       "Bash(rg * -u*)",
+      "Bash(rg *-*u *)",
       "Bash(rg *--unrestricted*)",
       "Bash(rg *--no-ignore*)",
       "Bash(fd *-*x *)",
