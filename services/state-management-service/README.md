@@ -372,7 +372,7 @@ The service requires the following configuration parameters:
   "*.*:*"
   ```
 
-- <a id="properties/db_version_collection_suffix"></a>**`db_version_collection_suffix`** *(string)*: Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since a service restarting without them would migrate its current data again.
+- <a id="properties/db_version_collection_suffix"></a>**`db_version_collection_suffix`** *(string)*: Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since the next migration run without them would migrate its current data again.
   Deleting such a collection by its name still works.
   An empty string turns the protection off.
   Default: `"DbVersions"`.

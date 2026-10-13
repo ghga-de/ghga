@@ -89,6 +89,9 @@ Some services have both a Kafka consumer and a REST API, which run in separate c
 Both instances require the database to be up to date, but it's not efficient to run the migration script more than once.
 If we run migrations automatically at startup, we should add a mechanism to ensure that a migration script is only triggered once for such services.
 
+**Amended 2026-10-09:** The consequences above describe the original decision, in which every service instance migrated at startup.
+With the `migrate-db` init container, the migration runs once per pod regardless of how many containers it holds, and a service no longer migrates after a database restore on its own — the init container does, before the service starts.
+
 ### Alternatives
 
 The main alternative was to store migration scripts in a dedicated repository.
@@ -106,6 +109,6 @@ Other Python projects in this realm include [mongodb-migrations](https://github.
 ### Addendum
 
 The approach described here has since been implemented in `hexkit`, which provides a `MigrationManager` along with helpers for defining the migrations of a service.
-The database version reached is recorded in a separate versioning collection and checked when a service starts up.
+The database version reached is recorded in a separate versioning collection, which the `migrate-db` command reads to decide what to migrate and the service reads at startup to check that the version matches.
 
 This also covers the open point mentioned above, namely ensuring that a migration is only triggered once for services that run more than one container: the `MigrationManager` acquires a lock in a dedicated collection before applying migrations, so that only one instance carries them out.
