@@ -37,10 +37,10 @@ After the init container, the main container's command checks the version first.
 The equality is deliberate: a pod of the old release that restarts after the new release has migrated stops instead of working on a schema it does not know.
 Anything else that starts a service, such as a local run, must run `migrate-db` first, too.
 
-Avoid rolling back a release that migrated.
-If one must be rolled back, migrate its database down first, with the newer release's code: the older release's map lacks the newer definitions, so its `migrate-db` fails with `NotImplementedError` on a database that is ahead.
-`migrate-db` always targets its own release's `DB_VERSION`, so the downgrade needs `MigrationManager` with the older release's `DB_VERSION` as target, run from the newer release's image while the service is scaled to 0.
-A migration that is not `Reversible` cannot be undone this way; rolling back across one means restoring the database from a backup.
+Rolling back a release that migrated is not possible yet.
+The older release's map lacks the newer definitions, so its `migrate-db` fails with `NotImplementedError` on a database that is ahead.
+Migrating down needs the newer release's code with the older release's `DB_VERSION` as target, and `migrate-db` always targets its own release's `DB_VERSION`.
+A target-version option for `migrate-db` and a rollback procedure are planned; until they exist, avoid rolling back across a migration, or restore the database from a backup.
 
 ## Adding a migration
 
@@ -65,7 +65,7 @@ Whatever the shape:
 - **Make the change function idempotent.**
   If a document is already in the new shape, return it unchanged, and raise on a shape that is neither old nor new, as wps `v3.py` does.
   A database whose version record is missing then passes through the migration unchanged, and an unknown shape stops it before anything is written.
-- **Make it reversible when you can:** inherit `Reversible` and implement `unapply()`, so a release can be rolled back and the test can check the round trip.
+- **Make it reversible when you can:** inherit `Reversible` and implement `unapply()`, so the test can check the round trip and the planned rollback can undo it.
   A migration that drops data or derives new IDs cannot be reversed (dcs V3, fis V2, ifrs V3, ns V2); leave `Reversible` out.
 
 ## The first migration of a service
