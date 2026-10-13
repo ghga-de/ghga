@@ -1,5 +1,4 @@
 <!-- rumdl-disable MD013 -->
-<!-- rumdl-disable MD013 -->
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 <!-- rumdl-enable MD013 -->
@@ -46,8 +45,6 @@ You may validate the metadata by:
 
 **Option 2:** Directly specify the metadata using JSON compliant with our [LinkML schema](https://github.com/ghga-de/ghga-metadata-schema/blob/main/src/schema/submission.yaml).
 Validation of the metadata can be achieved using the [GHGA Metadata Validator](https://github.com/ghga-de/ghga-validator/).
-**Option 2:** Directly specify the metadata using JSON compliant with our [LinkML schema](https://github.com/ghga-de/ghga-metadata-schema/blob/main/src/schema/submission.yaml).
-Validation of the metadata can be achieved using the [GHGA Metadata Validator](https://github.com/ghga-de/ghga-validator/).
 
 Once your spreadsheet or JSON file have passed validation, you may send the metadata to the Central Data Steward.
 
@@ -71,7 +68,6 @@ This is performed with the following steps:
 
 An overview of all commands is provided using:
 
-```text
 ```text
 ghga-datasteward-kit --help
 ```
