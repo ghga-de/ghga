@@ -19,15 +19,17 @@ import base64
 import inspect
 import json
 from collections import Counter
+from collections.abc import Callable
+from typing import Any
 from uuid import uuid4
 
 import httpx2
 import pytest
 from opentelemetry.trace import SpanKind
 
-from dcs import main
 from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
 from dcs.adapters.outbound.http.secrets import SecretsClient
+from dcs.cli import cli
 from dcs.inject import get_persistent_publisher
 from ghga_event_schemas.pydantic_ import FileInternallyRegistered
 from ghga_service_commons.http.mock_api import instrumentable
@@ -340,23 +342,29 @@ async def test_download_bucket_cleaner_records_spans(
     )
 
 
-async def test_long_running_entrypoints_configure_otel():
-    """An entrypoint that skips it emits no traces at all.
+def configures_otel(command: Callable[..., Any]) -> bool:
+    """Tell whether a command runs a coroutine that calls `configure_opentelemetry`.
 
-    `migrate_db` is excluded by convention: a one-off command, not a service.
+    It reads the names the code refers to, since running the command starts the service.
     """
-    excluded = {"migrate_db"}
-    entrypoints = {
-        name: obj
-        for name, obj in vars(main).items()
-        if inspect.iscoroutinefunction(obj) and obj.__module__ == main.__name__
-    }
-    assert entrypoints, "No entrypoints found - has main.py been restructured?"
-
-    missing = sorted(
-        name
-        for name, func in entrypoints.items()
-        if name not in excluded
-        and "configure_opentelemetry" not in inspect.getsource(func)
+    return any(
+        "configure_opentelemetry" in inspect.getclosurevars(func).globals
+        for func in inspect.getclosurevars(command).globals.values()
+        if inspect.iscoroutinefunction(func)
     )
-    assert not missing, f"Entrypoints not configuring OpenTelemetry: {missing}"
+
+
+async def test_long_running_commands_configure_otel():
+    """A command that skips it emits no traces at all.
+
+    `migrate-db` is excluded by convention: a one-off command, not a service.
+    """
+    commands = {
+        info.name or info.callback.__name__: info.callback
+        for info in cli.registered_commands
+        if info.callback and info.name != "migrate-db"
+    }
+    missing = sorted(
+        name for name, callback in commands.items() if not configures_otel(callback)
+    )
+    assert not missing, f"Commands not configuring OpenTelemetry: {missing}"
