@@ -16,10 +16,13 @@
 """Entrypoint of the package"""
 
 import asyncio
+import sys
 
 import typer
 
-from ns.main import consume_events, migrate_db
+from hexkit.providers.mongodb.migrations import check_db_version
+from ns.config import Config
+from ns.main import DB_VERSION, consume_events, migrate_db
 
 cli = typer.Typer()
 
@@ -38,6 +41,10 @@ def require_command(ctx: typer.Context):
         )
         typer.echo(ctx.get_help(), err=True)
         raise typer.Exit(code=2)
+    # Click parses a command's own `--help` only after this callback has run
+    if ctx.invoked_subcommand == "migrate-db" or "--help" in sys.argv:
+        return
+    asyncio.run(check_db_version(config=Config(), target_version=DB_VERSION))
 
 
 @cli.command(name="consume-events")

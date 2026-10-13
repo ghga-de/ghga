@@ -16,7 +16,7 @@
 """Top-level functions for the service"""
 
 from hexkit.log import configure_logging
-from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
+from hexkit.providers.mongodb.migrations import MigrationManager
 from nos.config import Config
 from nos.inject import prepare_event_subscriber
 from nos.migrations import MIGRATION_MAP
@@ -29,8 +29,6 @@ async def consume_events(run_forever: bool = True):
     config = Config()
 
     configure_logging(config=config)
-
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     async with prepare_event_subscriber(config=config) as event_subscriber:
         await event_subscriber.run(forever=run_forever)

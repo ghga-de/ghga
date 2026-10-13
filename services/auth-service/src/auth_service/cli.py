@@ -16,10 +16,12 @@
 """Command line interface of the service"""
 
 import asyncio
+import sys
 
 import typer
 
 from ghga_service_commons.utils.utc_dates import assert_tz_is_utc
+from hexkit.providers.mongodb.migrations import check_db_version
 
 cli = typer.Typer()
 
@@ -39,10 +41,18 @@ def require_command(ctx: typer.Context):
         )
         typer.echo(ctx.get_help(), err=True)
         raise typer.Exit(code=2)
+    # Click parses a command's own `--help` only after this callback has run
+    if ctx.invoked_subcommand == "migrate-db" or "--help" in sys.argv:
+        return
+    from auth_service.config import Config  # noqa: PLC0415
+    from auth_service.main import DB_VERSION  # noqa: PLC0415
+
+    asyncio.run(check_db_version(config=Config(), target_version=DB_VERSION))
 
 
-# The commands import `main` themselves: importing it builds the module-level
-# config, whose validation errors would otherwise hide the message above.
+# The callback and the commands import the config and `main` themselves: importing
+# either builds the module-level config, whose validation errors would otherwise hide
+# the message above.
 
 
 @cli.command(name="run-rest")

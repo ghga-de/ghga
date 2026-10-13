@@ -13,61 +13,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test that the entry points start only on a database at `DB_VERSION`."""
-
-import inspect
+"""Test that the CLI runs a command only on a database at `DB_VERSION`."""
 
 import pytest
+from typer.main import get_group
+from typer.testing import CliRunner
 
-from hexkit.providers.mongodb.migrations import (
-    DbVersionMismatchError,
-    check_db_version,
-)
+from hexkit.providers.mongodb.migrations import DbVersionMismatchError
 from hexkit.providers.mongodb.testutils import MongoDbFixture
+from ns import cli as cli_module
 from ns import main
 from tests.fixtures.config import get_config
 
-# Every coroutine in `main` is an entry point; `migrate_db` alone may change the version.
-ENTRYPOINTS = sorted(
-    name
-    for name, obj in vars(main).items()
-    if inspect.iscoroutinefunction(obj)
-    and obj.__module__ == main.__name__
-    and name != "migrate_db"
-)
+cli = cli_module.cli
+
+# `migrate-db` alone runs on any version, since setting the version is its job
+COMMANDS = sorted(set(get_group(cli).commands) - {"migrate-db"})
 
 
 @pytest.fixture(autouse=True)
-def empty_database(mongodb: MongoDbFixture):
-    """Start each test on an empty database, as a fresh deployment does."""
+def empty_database(mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch):
+    """Point the CLI at an empty database, as a fresh deployment finds it."""
     mongodb.empty_collections()
-
-
-def test_entrypoints_found():
-    """The introspection still finds the entry points."""
-    assert ENTRYPOINTS, "No entry points found - has main.py been restructured?"
-
-
-@pytest.mark.asyncio()
-@pytest.mark.parametrize("entrypoint", ENTRYPOINTS)
-async def test_entrypoint_refuses_unmigrated_db(
-    entrypoint: str, mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch
-):
-    """An entry point stops before its work when the database is not migrated."""
     config = get_config(sources=[mongodb.config])
+    monkeypatch.setattr(cli_module, "Config", lambda: config)
     monkeypatch.setattr(main, "Config", lambda: config)
     monkeypatch.setattr(main, "configure_logging", lambda config: None)
-    with pytest.raises(DbVersionMismatchError):
-        await getattr(main, entrypoint)()
 
 
-@pytest.mark.asyncio()
-async def test_migrate_db_reaches_db_version(
-    mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch
-):
-    """`migrate_db` brings an empty database to the version the entry points check."""
-    config = get_config(sources=[mongodb.config])
-    monkeypatch.setattr(main, "Config", lambda: config)
-    monkeypatch.setattr(main, "configure_logging", lambda config: None)
-    await main.migrate_db()
-    await check_db_version(config=config, target_version=main.DB_VERSION)
+def stub_command(name: str, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Replace a command with a stub that records its calls, so it does no real work."""
+    calls: list[str] = []
+    info = next(info for info in cli.registered_commands if info.name == name)
+    monkeypatch.setattr(info, "callback", lambda: calls.append(name))
+    return calls
+
+
+@pytest.mark.parametrize("command", COMMANDS)
+def test_command_refuses_unmigrated_db(command: str, monkeypatch: pytest.MonkeyPatch):
+    """A command does not start when the database is not migrated."""
+    calls = stub_command(command, monkeypatch)
+    result = CliRunner().invoke(cli, [command])
+    assert isinstance(result.exception, DbVersionMismatchError)
+    assert not calls
+
+
+@pytest.mark.parametrize("command", COMMANDS)
+def test_command_runs_after_migrate_db(command: str, monkeypatch: pytest.MonkeyPatch):
+    """A command starts once `migrate-db` has brought the database to `DB_VERSION`."""
+    result = CliRunner().invoke(cli, ["migrate-db"])
+    assert result.exit_code == 0, result.output
+    calls = stub_command(command, monkeypatch)
+    result = CliRunner().invoke(cli, [command])
+    assert result.exit_code == 0, result.output
+    assert calls == [command]

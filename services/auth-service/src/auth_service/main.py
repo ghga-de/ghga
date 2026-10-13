@@ -23,7 +23,7 @@ from auth_service.migrations import MIGRATION_MAP
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-from hexkit.providers.mongodb.migrations import MigrationManager, check_db_version
+from hexkit.providers.mongodb.migrations import MigrationManager
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +53,6 @@ async def run_rest_app() -> None:
     if auth_adapter and len(apis) > 1:
         raise ValueError("ext_auth cannot be combined with other APIs")
     log.info("Starting the %s API", " and ".join(apis))
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     prepare_rest_app = import_prepare_module(auth_adapter).prepare_rest_app
     async with prepare_rest_app(config=config) as app:
@@ -65,7 +64,6 @@ async def consume_events(run_forever: bool = True) -> None:
     config = Config()
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
-    await check_db_version(config=config, target_version=DB_VERSION)
 
     prepare_event_subscriber = import_prepare_module(
         auth_adapter=False
