@@ -19,10 +19,9 @@
 import json
 from uuid import uuid4
 
-import httpx2
 import pytest
 
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
 from metldata.load.client import upload_artifacts_via_http_api
 from metldata.load.collect import get_artifact_topic
 from metldata.load.config import ArtifactLoaderClientConfig
@@ -68,6 +67,15 @@ EXAMPLE_ARTIFACTS: ArtifactResourceDict = {
 }
 
 
+class LoaderApiMock(MockApi):
+    """A mock of the artifact loader API, accepting artifacts by default."""
+
+    def __init__(self, base_url: str) -> None:
+        super().__init__(base_url)
+        self.on_load_artifacts: ResponseHandler = respond(204)
+        self.route("POST", "/rpc/load-artifacts", "on_load_artifacts")
+
+
 @pytest.mark.asyncio
 async def test_upload_artifacts_via_http_api(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
@@ -102,25 +110,15 @@ async def test_upload_artifacts_via_http_api(
     await file_system_event_fixture.publish_events(artifact_events)
 
     # mock the api:
-    observed_requests: list[httpx2.Request] = []
-    router: MockRouter = MockRouter()
-
-    @router.post("/rpc/load-artifacts")
-    def load_artifacts(request: httpx2.Request) -> httpx2.Response:
-        """Record the request and acknowledge it."""
-        observed_requests.append(request)
-        return httpx2.Response(status_code=204)
+    loader_api = LoaderApiMock(config.loader_api_root)
 
     # upload to api:
     upload_artifacts_via_http_api(
-        token=token, config=config, transport=router.as_transport()
+        token=token, config=config, transport=loader_api.as_transport()
     )
 
     # ensure that the api was called with the expected data:
-    assert len(observed_requests) == 1
-    assert (
-        str(observed_requests[0].url) == f"{config.loader_api_root}/rpc/load-artifacts"
-    )
-    observed_artifacts = json.loads(observed_requests[0].content.decode("utf-8"))
-    assert observed_artifacts == EXAMPLE_ARTIFACTS
-    assert observed_requests[0].headers["Authorization"] == f"Bearer {token}"
+    [request] = loader_api.requests
+    assert str(request.url) == f"{config.loader_api_root}/rpc/load-artifacts"
+    assert json.loads(request.content) == EXAMPLE_ARTIFACTS
+    assert request.headers["Authorization"] == f"Bearer {token}"
