@@ -336,7 +336,7 @@ A lease that expires too early costs CPU time and one CRITICAL log line, never d
 
 ### Known limitations
 
-#### A lost response leases a file to nobody
+#### A lost response blocks a file for the lease duration
 
 The claim is a side effect of a GET that the client retries.
 A response lost after the write, or a 500 retried three times, leaves one to three files leased to no worker, idle until the lease expires.
@@ -458,4 +458,4 @@ New DHFS tests:
 
 Number of sprints required: 1
 
-Number of developers required: 1
+Number of developers required: 1 + LLM
