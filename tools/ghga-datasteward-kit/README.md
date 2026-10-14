@@ -200,7 +200,10 @@ Aliases that already have an accession keep it, and only new aliases get new acc
 The command reports what it will do before writing anything.
 It asks for confirmation when the amendment would drop accessions, or when it would preserve none at all, since both usually mean the wrong submission or the wrong aliases.
 That question cannot be skipped, by design: a dropped accession removes resources from the running system on the next `load`.
-Without a terminal to prompt on, a risky amendment aborts and changes nothing.
+
+Such an amendment can only be applied from a terminal.
+There is no `--yes`, and the prompt cannot be answered through a pipe either: when stdin is not a terminal the command refuses and changes nothing, rather than reading an answer nobody typed.
+An amendment that drops nothing and preserves something is not affected, so adding files stays scriptable.
 
 Dropping an accession is not just a local change: the next `load` removes the corresponding resources from the running system.
 

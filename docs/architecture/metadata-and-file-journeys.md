@@ -76,7 +76,7 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
 - Alias↔accession stability (`submission_registry/identifiers.py:102`): within one submission object, re-upserting the same alias **reuses** its accession; new aliases get new ones; dropped aliases fall out.
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
   **`dskit metadata amend --submission-id <id>` is the way to extend an accessioned submission**: it loads the stored submission, hands its map to `generate_accession_map`, and writes the result back under the same ID, so existing accessions survive and only new aliases are minted.
-  It reports preserved/new/dropped before writing and asks for confirmation when accessions would be dropped or none preserved.
+  It reports preserved/new/dropped before writing and asks for confirmation when accessions would be dropped or none preserved, and refuses such an amendment outright when stdin is not a terminal, so a pipe cannot answer for a steward.
   **It is not file-specific**: it replaces the submission's whole content and applies the same alias matching to every anchored class, so a study, dataset or sample keeps, gains or loses its accession the same way a file does.
   A field changed on an already-accessioned resource is not an accession change at all — no report entry, no prompt, and the next `load` upserts that resource.
   Confining amendments to added files is an operational rule, not one the tool enforces.
