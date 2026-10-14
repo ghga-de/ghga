@@ -41,7 +41,7 @@ def _wait_strategy(max_backoff: int = 60):
 
 LOGGER_NAME = "ghga_service_commons.transports.retry"
 RETRYABLE_STATUS_CODE = 503
-_REQUEST = httpx2.Request("GET", "http://test")
+_REQUEST = httpx2.Request("GET", "http://api.invalid")
 
 
 class _TrackedResponse(httpx2.Response):

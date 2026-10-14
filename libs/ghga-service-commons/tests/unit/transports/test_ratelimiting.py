@@ -35,7 +35,7 @@ from ghga_service_commons.transports.ratelimiting import (
 
 pytestmark = pytest.mark.asyncio()
 
-_REQUEST = httpx2.Request("GET", "http://test")
+_REQUEST = httpx2.Request("GET", "http://api.invalid")
 _URL = _REQUEST.url
 
 # Pinning the jitter to zero makes the interval the whole spacing, so timing is exact.
@@ -150,13 +150,13 @@ async def test_penalty_never_moves_backwards():
 async def test_penalty_holds_back_only_its_own_scope():
     """Ensure a 429 from one service leaves the client's other services free."""
     budget = _unpaced_budget()
-    await budget.update_floor(httpx2.URL("http://test/upload/a"), 30)
+    await budget.update_floor(httpx2.URL("http://api.invalid/upload/a"), 30)
 
     started = time.monotonic()
-    await budget.acquire(httpx2.URL("http://test/download/b"))
+    await budget.acquire(httpx2.URL("http://api.invalid/download/b"))
 
     assert time.monotonic() - started < _STEP
-    held = httpx2.URL("http://test/upload/b")
+    held = httpx2.URL("http://api.invalid/upload/b")
     assert _remaining_retry_after_wait(budget, held) == pytest.approx(30, abs=1)
 
 
@@ -166,9 +166,9 @@ async def test_scopes_are_paced_independently():
     started = time.monotonic()
 
     first_upload, second_upload, download = await asyncio.gather(
-        _acquired_at(budget, started, httpx2.URL("http://test/upload/a")),
-        _acquired_at(budget, started, httpx2.URL("http://test/upload/b")),
-        _acquired_at(budget, started, httpx2.URL("http://test/download/a")),
+        _acquired_at(budget, started, httpx2.URL("http://api.invalid/upload/a")),
+        _acquired_at(budget, started, httpx2.URL("http://api.invalid/upload/b")),
+        _acquired_at(budget, started, httpx2.URL("http://api.invalid/download/a")),
     )
 
     assert second_upload - first_upload >= _STEP * 0.75
@@ -178,10 +178,10 @@ async def test_scopes_are_paced_independently():
 @pytest.mark.parametrize(
     "url, scope",
     [
-        ("https://H/upload/boxes/1?x=1", "https://h/upload"),
-        ("http://u:p@h:8080/x/y", "http://h:8080/x"),
-        ("https://h", "https://h/"),
-        ("https://h/", "https://h/"),
+        ("https://API.INVALID/upload/boxes/1?x=1", "https://api.invalid/upload"),
+        ("http://u:p@api.invalid:8080/x/y", "http://api.invalid:8080/x"),
+        ("https://api.invalid", "https://api.invalid/"),
+        ("https://api.invalid/", "https://api.invalid/"),
     ],
 )
 async def test_scope_is_origin_and_first_path_segment(url: str, scope: str):

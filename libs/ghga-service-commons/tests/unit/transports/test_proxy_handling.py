@@ -32,14 +32,14 @@ HTTPS_PROTOCOL = "https://"
 ALL_PROTOCOL = "all://"
 
 # Proxy URLs for each protocol
-HTTP_PROXY_URL = "http://proxy.example.com:8080"
-HTTPS_PROXY_URL = "https://secure-proxy.example.com:8443"
-ALL_PROXY_URL = "http://fallback-proxy.example.com:8080"
+HTTP_PROXY_URL = "http://proxy.invalid:8080"
+HTTPS_PROXY_URL = "https://secure-proxy.invalid:8443"
+ALL_PROXY_URL = "http://fallback-proxy.invalid:8080"
 
 # Request URLs for testing
-HTTP_REQUEST_URL = "http://example.com/test"
-HTTPS_REQUEST_URL = "https://secure.example.com/api"
-ALL_REQUEST_URL = "ftp://files.example.com/data"
+HTTP_REQUEST_URL = "http://service.invalid/test"
+HTTPS_REQUEST_URL = "https://secure.invalid/api"
+ALL_REQUEST_URL = "ftp://files.invalid/data"
 
 # Response content patterns
 HTTP_PROTOCOL_RESPONSE = b'{"protocol": "http"}'
@@ -288,6 +288,7 @@ async def test_not_hitting_proxy_mount(
             new_callable=AsyncMock,
             return_value=mock_response,
         ):
-            async with httpx2.AsyncClient(mounts=mounts) as client:
+            direct = httpx2.MockTransport(lambda request: httpx2.Response(200))
+            async with httpx2.AsyncClient(mounts=mounts, transport=direct) as client:
                 await client.get(request_url)
                 mounts[protocol_key].handle_async_request.assert_not_called()
