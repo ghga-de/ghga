@@ -162,7 +162,8 @@ If one of them is not reversible, the backward migration fails with an error —
 
 ## Running Migrations
 
-The database has to be at the version a service expects *before* that service begins its actual work (consuming events, serving requests, etc.), so the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd) runs as its own step rather than from inside the service.
+The database has to be at the version a service expects *before* that service begins its actual work (consuming events, serving requests, etc.).
+Running the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd) as its own step before the service starts, rather than from inside the service, ensures this and keeps migration failures and their logs apart from the service's own.
 We recommend exposing the migration as its own entrypoint command and, on Kubernetes, running that command in an init container.
 The example below defines `run_db_migrations()` and calls it from such a command, `migrate_db()`:
 
@@ -171,7 +172,7 @@ from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationConfig, MigrationManager
 
-from my_service.config import Config  # inherits from MigrationConfig
+from my_service.config import Config  # inherits from MigrationConfig, LoggingConfig and OpenTelemetryConfig
 from my_service.migrations import V2Migration, V3Migration
 
 DB_VERSION = 3  # the database version this service release expects
@@ -196,7 +197,6 @@ async def migrate_db() -> None:
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
     await run_db_migrations(config=config, target_version=DB_VERSION)
-    # Success allows the orchestration layer to initiate the service, failure blocks it.
 ```
 
 The `migration_map` gathers all known migration definitions, keyed by the version each one migrates *to*.
