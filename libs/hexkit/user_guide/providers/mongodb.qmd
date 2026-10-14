@@ -274,7 +274,7 @@ The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main
 ## MongoDB Migration Tools
 
 When a service's data model evolves, documents already stored in MongoDB must be brought into the shape its DTO models now expect.
-The `hexkit.providers.mongodb.migrations` subpackage provides a versioned migration framework for exactly that, run as its own step before the service starts.
+The `hexkit.providers.mongodb.migrations` subpackage provides a versioned migration framework for exactly that, run before the service begins its actual work.
 It is covered in the dedicated [MongoDB Migrations](mongodb_migrations.qmd) chapter.
 
 ## MongoDB KV Store Providers
