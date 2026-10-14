@@ -22,6 +22,7 @@ from pydantic_settings import BaseSettings
 
 from metldata.model_utils.assumptions import (
     check_basic_model_assumption,
+    check_study_anchor,
     check_study_cardinality,
 )
 from metldata.model_utils.essentials import MetadataModel
@@ -41,5 +42,8 @@ class MetadataModelConfig(BaseSettings):
         """
         model = MetadataModel.init_from_path(self.metadata_model_path)
         check_basic_model_assumption(model)
+        # check_study_cardinality only looks at the STUDY_ANCHOR slot, not at the class
+        # it holds, so check_study_anchor must run first
+        check_study_anchor(model)
         check_study_cardinality(model)
         return model

@@ -35,6 +35,12 @@ MINIMAL_MODEL_WITH_STUDY = _get_example_model("minimal_model_with_study")
 MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES = _get_example_model(
     "minimal_model_with_unbounded_studies"
 )
+MINIMAL_MODEL_WITH_OPTIONAL_STUDY = _get_example_model(
+    "minimal_model_with_optional_study"
+)
+MINIMAL_MODEL_WITH_RENAMED_STUDY_ANCHOR = _get_example_model(
+    "minimal_model_with_renamed_study_anchor"
+)
 VALID_METADATA_MODELS = [VALID_MINIMAL_METADATA_MODEL, VALID_ADVANCED_METADATA_MODEL]
 
 ROOT_CLASS_INVALID_MODELS = [
