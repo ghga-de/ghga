@@ -49,7 +49,6 @@ from metldata.submission_registry.identifiers import (
 from metldata.submission_registry.models import Submission, SubmissionStatus
 from metldata.submission_registry.submission_store import SubmissionStore
 
-LOG = logging.getLogger(__name__)
 
 AccessionMap: TypeAlias = dict[str, dict[str, str]]
 
