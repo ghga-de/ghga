@@ -143,7 +143,7 @@ def plan_accession_changes(
     *,
     content: Json,
     existing_accession_map: AccessionMap,
-    anchor_points_by_target: dict,
+    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> AccessionChanges:
     """Work out which accessions an amendment would keep, drop, and mint, without
     minting anything.
