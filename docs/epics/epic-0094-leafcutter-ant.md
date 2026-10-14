@@ -232,7 +232,7 @@ It is then absent from the next claim, which comes back empty and sends the repl
 The `except Exception` round in `run_interrogator` (`main.py:60`) reaches the same sleep.
 It counts as a round that processed nothing, so an unhandled error does not spin the loop.
 
-### Every path that ends without a report must release
+### Every path that ends without a report must release the file
 
 A file is freed either by a report, which sets `interrogated=True`, or by a release.
 Any path that produces neither leaves the file leased until expiry:
@@ -245,7 +245,7 @@ Any path that produces neither leaves the file leased until expiry:
 - `report_success` catching a `CentralAPIError` must **not** release.
   The comment at `interrogator.py:920-924` gives the reason: the round trip completed, so FIS may already have stored the report, and a second interrogation would use a different secret.
   Waiting is correct here, and the wait grows from 60 seconds to one lease.
-  Listed under Known limitations.
+  Listed under [A success report that returned an error now waits a lease](#a-success-report-that-returned-an-error-now-waits-a-lease).
 - SIGTERM releases the file in flight.
   A pod killed with SIGKILL cannot, and the file waits out its lease.
 
