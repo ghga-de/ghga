@@ -58,7 +58,8 @@ Most definitions follow one of these shapes:
 - **Changed IDs or indexes:** pass `copy_indexes=False` when the migration changes the index layout or the `_id`, as dcs [`v3.py`](../../services/dcs/src/dcs/migrations/definitions/v3.py) does.
 - **Validating against a model that has changed since:** define it locally in the definition, as ifrs [`v2.py`](../../services/ifrs/src/ifrs/migrations/definitions/v2.py) does with `FileMetadata`.
   Validation runs only in the last migration of a run; pass `force_validate=True` to run it in every migration.
-- **Beyond the helpers:** work on `self._db` directly when documents move between collections or into GridFS (rts), when a collection is dropped (ns), or when outbox documents with `__metadata__` cannot pass validation (rs).
+- **Outbox documents:** leave out `validation_model`, since `validate_doc()` rejects their `__metadata__` envelope as an unexpected field, as rs does.
+- **Beyond the helpers:** work on `self._db` directly when documents move between collections or into GridFS (rts), when a collection is renamed (rs) or dropped (ns).
 
 Whatever the shape:
 
@@ -74,7 +75,9 @@ ucs already inherits `MigrationConfig` in its `Config`, so deployments need no c
 
 The first migration is version 2, since hexkit reserves version 1 for an unversioned database.
 Add, besides the definition, everything in the [table](#the-parts): the `migrations/` package, `DB_VERSION = 2`, `migrate_db()`, the `migrate-db` command and the version check in `cli.py`, the chart values, the `migrate-db` line in the README's list of commands, and `tests/.../test_db_version.py`.
-Run `just charts` and `just service-docs` afterwards, since the chart and the README's parameter list are generated.
+Copy `migrate_db()` from wps [`main.py`](../../services/work-package-service/src/wps/main.py) and the `check_version` callback from wps [`cli.py`](../../services/work-package-service/src/wps/cli.py).
+The callback lets `--help` through by checking `sys.argv`, since Click parses a command's own `--help` only after the callback has run; without it, `<command> --help` would need a database at `DB_VERSION`.
+Run `just charts` and `just service-docs` afterwards, since the chart and the README's parameter list are generated; the README's list of commands is written by hand.
 
 ## Testing
 
