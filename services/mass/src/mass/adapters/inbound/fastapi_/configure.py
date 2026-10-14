@@ -15,6 +15,8 @@
 
 """Utils to configure the FastAPI app"""
 
+from email.utils import parseaddr
+
 from fastapi import FastAPI
 
 from ghga_service_commons.api import configure_app
@@ -25,25 +27,14 @@ from mass.config import Config
 
 def get_configured_app(*, config: Config) -> FastAPI:
     """Create and configure a REST API application."""
-    summary = metadata["Summary"]
-    author = metadata.get("Author")
-    email = metadata["Author-email"]
-    if not author and email.endswith(">"):
-        # author is contained in Author-email
-        author, email = email.rsplit("<", 1)
-        author = author.strip().strip('"')
-        email = email[:-1]
-    email = metadata["Author-email"]
+    title, summary = metadata["Summary"].split(" - ", 1)
+    # authors given with name and email fill only Author-email, as "name <email>"
+    name, email = parseaddr(metadata["Author-email"])
+    author = metadata.get("Author") or name
     # a PEP 639 `license` string in pyproject.toml fills License-Expression, not License
-    license = metadata.get("License-Expression") or metadata["License"]
-    title, summary = summary.split(" - ", 1)
-    contact = {
-        "name": author,
-        "email": email,
-    }
-    license_info = {
-        "name": license,
-    }
+    license = metadata.get("License-Expression") or metadata.get("License")
+    contact = {"name": author, "email": email}
+    license_info = {"name": license} if license else None
     version = metadata["Version"]
 
     app = FastAPI(
