@@ -31,7 +31,7 @@ pip install hexkit[mongodb]
 Working with it involves three pieces:
 
 - a [`MigrationDefinition`](../../reference/providers.mongodb.migrations.MigrationDefinition.qmd) subclass per database version, containing the actual transformation logic,
-- the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd), which every service instance runs at startup to apply pending migrations or wait for another instance to finish them,
+- the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd), which applies pending migrations, or waits for another instance to finish them, before the service begins its actual work,
 - [`MigrationConfig`](../../reference/providers.mongodb.migrations.MigrationConfig.qmd), the configuration class tying it all together.
 
 ## How Versioning Works
@@ -160,13 +160,16 @@ All the building blocks above work the same way in `unapply()`; the temporary co
 When the manager finds the database at a *higher* version than the service expects, it runs the affected migrations' `unapply()` methods in descending order.
 If one of them is not reversible, the backward migration fails with an error — so whether to offer reversibility is decided per migration.
 
-## Running Migrations at Startup
+## Running Migrations
 
-Migrations are not run by a separate deployment step but by the service itself: every instance executes the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd) *before* starting its actual work (consuming events, serving requests, etc.).
-The manager is an async context manager; `migrate_or_wait()` does the work:
+The database has to be at the version a service expects *before* that service begins its actual work (consuming events, serving requests, etc.).
+The service can run the [`MigrationManager`](../../reference/providers.mongodb.migrations.MigrationManager.qmd) itself at startup, or the manager can run as its own step before the service starts.
+We recommend the separate step, since it keeps migration failures and their logs apart from the service's own.
+One way is to expose the migration as its own entrypoint command and, on Kubernetes, to run that command in an init container.
+The example below defines `run_db_migrations()`, which a service can also call at startup, and calls it from such a command, `migrate_db()`:
 
 ```python
-from hexkit.providers.mongodb.migrations import MigrationManager
+from hexkit.providers.mongodb.migrations import MigrationConfig, MigrationManager
 
 from my_service.config import Config  # inherits from MigrationConfig
 from my_service.migrations import V2Migration, V3Migration
@@ -175,31 +178,43 @@ DB_VERSION = 3  # the database version this service release expects
 MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
 
 
-async def run_db_migrations():
-    """Call this before the service begins its main execution loop."""
-    config = Config()
-
-    async with MigrationManager(config, DB_VERSION, MIGRATION_MAP) as mm:
+async def run_db_migrations(*, config: MigrationConfig, target_version: int) -> None:
+    """Apply the outstanding migrations, or wait for another instance to finish them."""
+    async with MigrationManager(
+        config=config,
+        target_version=target_version,
+        migration_map=MIGRATION_MAP,
+    ) as mm:
         await mm.migrate_or_wait()
+
+
+# Either call run_db_migrations() at startup, before the service begins its
+# main loop, or expose it as an entrypoint command of its own (recommended):
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    # configure logging, tracing, etc. here
+    await run_db_migrations(config=config, target_version=DB_VERSION)
 ```
 
 The `migration_map` gathers all known migration definitions, keyed by the version each one migrates *to*.
 `target_version` is the version this release of the service needs.
 From those, `migrate_or_wait()` determines what to do:
 
-- **Database already at the target version**: return immediately; the service starts right away.
+- **Database already at the target version**: return immediately.
   This is the steady-state cost of the mechanism — a single read of the version collection.
 - **Database behind the target version**: acquire the migration lock and apply the missing migrations in ascending order (for a database at version 2 and a target of 5, that is versions 3, 4, and 5), then record the new version and release the lock.
 - **Database ahead of the target version**: the same, but backward, calling `unapply()` in descending order down to the target version.
 - **Another instance holds the lock**: sleep `migration_wait_sec` seconds and check again, until the migrations are complete or `migration_max_wait_sec` is exceeded, which raises a `MigrationTimeoutError`.
 
 A missing entry in the migration map raises a `NotImplementedError`, and a failing migration step raises a [`MigrationStepError`](../../reference/providers.mongodb.migrations.MigrationStepError.qmd) naming the version and direction that failed; in both cases the lock is released on context exit so other instances are not blocked forever.
-Since a failed instance raises rather than starting the service, deployment tooling can treat migration failures like any other startup failure.
+Since a failed migration raises, the service does not start: a separate step fails before the service is launched, and a migration at startup fails like any other startup error.
 
 ## Checking the Database Version
 
-Sometimes a component needs to *verify* the database version without being allowed to change anything — a service whose migrations run as a separate step before it starts, a job that runs alongside the service, a readiness check, or a tool operating on the same database.
-Running the migrations as that separate step, for instance a one-off command before the service instances start, keeps the instances from migrating at startup, and the check stops an instance from starting on a database the step has not migrated.
+If the migrations run as their own step, the service itself only needs to *verify* the database version, without being allowed to change anything.
+The same goes for a job that runs alongside the service, a readiness check, or a tool operating on the same database.
+The check stops an instance from starting on a database that has not been migrated.
 The standalone [`check_db_version`](../../reference/providers.mongodb.migrations.check_db_version.qmd) helper reads the version collection and raises a [`DbVersionMismatchError`](../../reference/providers.mongodb.migrations.DbVersionMismatchError.qmd) if the current version differs from the expected one:
 
 ```python
