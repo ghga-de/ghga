@@ -105,10 +105,16 @@ def amend(
         readable=True,
     ),
 ):
-    """Add to an already accessioned submission, keeping its existing accessions.
+    """Replace the content of an already accessioned submission, keeping its accessions.
 
     Use this instead of a second 'submit' when a submission gains files: aliases that
     are already accessioned keep their accession, and only new aliases get new ones.
+
+    This applies to every metadata class, not only files. The study, its datasets,
+    samples and experiments keep, gain or lose accessions by the same alias matching,
+    and a field changed on an already-accessioned resource is written through without
+    a report entry or a prompt, because it is not an accession change. Keeping an
+    amendment to added files is a rule for its users, not one this command enforces.
     """
     logging.basicConfig(level=logging.CRITICAL)
 

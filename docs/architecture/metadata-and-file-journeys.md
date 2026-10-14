@@ -77,6 +77,9 @@ Canonical sequence (see `tools/ghga-datasteward-kit/demo/run_steps.sh`):
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
   **`dskit metadata amend --submission-id <id>` is the way to extend an accessioned submission**: it loads the stored submission, hands its map to `generate_accession_map`, and writes the result back under the same ID, so existing accessions survive and only new aliases are minted.
   It reports preserved/new/dropped before writing and asks for confirmation when accessions would be dropped or none preserved.
+  **It is not file-specific**: it replaces the submission's whole content and applies the same alias matching to every anchored class, so a study, dataset or sample keeps, gains or loses its accession the same way a file does.
+  A field changed on an already-accessioned resource is not an accession change at all — no report entry, no prompt, and the next `load` upserts that resource.
+  Confining amendments to added files is an operational rule, not one the tool enforces.
   All of it lives in dskit (`ghga_datasteward_kit/amendment.py`); metldata is unchanged.
   There is still no accession stability *across* submissions. → [changed by the feature](../epics/epic-0093-giraffe.md).
 - A **separate** catalog-accession scheme exists (`generate-catalog-accessions`, `catalog_accession_generator.py`): base `GHGAMC` + per-type letter + 14 digits.

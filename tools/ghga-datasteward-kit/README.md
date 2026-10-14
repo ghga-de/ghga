@@ -175,6 +175,20 @@ Use this, not a second `metadata submit`, whenever a submission gains files.
 A second `submit` creates a new submission with a fresh set of accessions, which breaks every reference to the files already ingested from that submission.
 In the legacy upload path the file accession is also the file's storage ID, and the identifiers derived from it cannot be recovered.
 
+**The command is not limited to files.**
+It replaces the whole content of the submission and treats every metadata class alike: the study, its datasets, samples, experiments and individuals all keep, gain or lose accessions by the same alias matching.
+Nothing in the tool restricts an amendment to added files — that is a rule for the people using it, not one it enforces.
+
+Two consequences worth knowing before you run it:
+
+- A field changed on a resource that already has an accession is **not** an accession change, so it does not appear in the report and raises no prompt.
+  It is written through, keeps its accession, and the next `load` updates that resource in the running system.
+  Correcting metadata this way works; it just will not be flagged.
+- Renaming or removing the alias of any resource, a study or dataset included, drops its accession exactly as it would for a file.
+  That is what the confirmation question is for.
+
+Amend deliberately when the change is more than added files, and read the report rather than relying on the prompt to stop you.
+
 ```text
 ghga-datasteward-kit metadata amend \
   --submission-id <id> \
