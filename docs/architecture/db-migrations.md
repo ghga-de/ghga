@@ -59,7 +59,7 @@ Most definitions follow one of these shapes:
 - **Validating against a model that has changed since:** define it locally in the definition, as ifrs [`v2.py`](../../services/ifrs/src/ifrs/migrations/definitions/v2.py) does with `FileMetadata`.
   Validation runs only in the last migration of a run; pass `force_validate=True` to run it in every migration.
 - **Outbox documents:** leave out `validation_model`, since `validate_doc()` rejects their `__metadata__` envelope as an unexpected field, as rs does.
-- **Beyond the helpers:** work on `self._db` directly when documents move between collections or into GridFS (rts), when a collection is renamed (rs) or dropped (ns).
+- **Beyond the helpers:** work on `self._db` directly when documents move between collections or into GridFS (as in rts), when a collection is renamed (as in rs) or dropped (as in ns).
 
 Whatever the shape:
 
