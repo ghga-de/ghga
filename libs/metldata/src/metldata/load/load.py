@@ -29,7 +29,7 @@ from metldata.artifacts_rest.load_resources import (
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
 from metldata.load.event_publisher import EventPublisherPort
 from metldata.load.models import ArtifactJson, ArtifactResourceDict
-from metldata.load.study import StudyCountError, get_single_study_accession
+from metldata.load.study import InvalidStudyError, get_single_study_accession
 
 
 class ArtifactResourcesInvalid(RuntimeError):
@@ -59,7 +59,7 @@ def check_artifact_resources(
         for artifact in artifacts:
             try:
                 study_accession = get_single_study_accession(artifact["content"])
-            except StudyCountError as err:
+            except InvalidStudyError as err:
                 raise ArtifactResourcesInvalid(
                     f"Publishable artifact '{artifact_name}': {err}"
                 ) from err
