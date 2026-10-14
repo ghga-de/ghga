@@ -26,15 +26,16 @@ from tests.fixtures.metadata_models import (
     INVALID_METADATA_MODELS,
     MINIMAL_MODEL_WITH_STUDY,
     MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES,
-    VALID_METADATA_MODELS,
+    VALID_ADVANCED_METADATA_MODEL,
+    VALID_MINIMAL_METADATA_MODEL,
 )
 
 
 @pytest.mark.parametrize(
     "model, is_valid",
-    [(MINIMAL_MODEL_WITH_STUDY, True)]
+    [(MINIMAL_MODEL_WITH_STUDY, True), (VALID_ADVANCED_METADATA_MODEL, True)]
     # models without a study class, or allowing any number of studies:
-    + [(model, False) for model in VALID_METADATA_MODELS]
+    + [(VALID_MINIMAL_METADATA_MODEL, False)]
     + [(MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES, False)]
     + [(invalid_model, False) for invalid_model in INVALID_METADATA_MODELS],
 )
