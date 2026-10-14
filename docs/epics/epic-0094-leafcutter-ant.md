@@ -13,18 +13,18 @@ A Data Hub runs one DHFS replica.
 That epic put multi-replica operation under "Not included" and called it a separate design challenge involving FIS.
 This is that follow-up.
 
-Two replicas today both call `GET /storages/{alias}/uploads`, receive the same unbounded list, and re-encrypt the same files.
+If a Data Hub were to attempt to run more than one replica today, each replica would receive the same unbounded list, and re-encrypt the same files.
 This epic adds a lease to FIS: a file served to one replica is hidden from the next caller until the lease expires or the replica releases it.
 Most of the new logic is in FIS.
-DHFS sends a replica ID, releases the file on the paths that end without a report, and stops sleeping between files.
+DHFS sends a replica ID when requesting a new file, releases the file if interrogation is inconclusive, and stops sleeping between files.
 
 ### Included/Required
 
 FIS:
 
 - Add `leased_until`, `leased_by` and `times_claimed` to `FileUnderInterrogation`.
-- Turn the `GET /storages/{alias}/uploads` handler into a claim: serve one file, hide it from the next caller, and leave everything else unchanged.
-- Add `POST /storages/{alias}/uploads/{file_id}/release` so a replica can hand a file back before its lease expires.
+- Update the `GET /storages/{storage_alias}/uploads` handler to orchestrate file claims: serve one file, set `leased_until`, `leased_by` and `times_claimed`, and leave everything else unchanged.
+- Add `POST /rpc/storages/{storage_alias}/uploads/{file_id}/release` so a replica can hand a file back before its lease expires.
 - Add the compound index `{storage_alias: 1, state: 1, interrogated: 1, leased_until: 1, state_updated: 1}`.
   The `files` collection currently indexes only `object_id`.
 - Add the configuration settings listed under [Configuration](#configuration).
@@ -34,14 +34,15 @@ DHFS:
 - Send the service's existing `service_instance_id` on every claim and release, so FIS can tell one replica of a hub from another.
 - Call the release endpoint from the `InconclusiveError` branch of `interrogate_new_files()`, which today only logs, and from the `ConclusiveError` branch when `report_failure` did not reach FIS.
 - Release the file in flight on SIGTERM, in a single attempt that bypasses the retry transport.
-- Skip the poll interval when a round processed a file, and sleep only when the claim came back empty.
+- Skip the poll interval after conclusively *or* inconclusively processing a file, and sleep only when the request for the next file comes back empty.
   Serving one file per claim makes this required; see [Serving one file per claim requires the poll pacing change](#serving-one-file-per-claim-requires-the-poll-pacing-change).
 - Add jitter of up to 10% to `min_run_interval_seconds`, as a constant rather than a setting, so replicas rolled out together stop polling in lockstep.
 
 Deployment:
 
 - Set `serviceInstanceId.fromPodName: true` in `services/datahub-file-service/chart-values.yaml`.
-  The holder check is inert without it; see [Only the holder may release](#only-the-holder-may-release).
+  The holder check is inert without it; see [Only the DHFS instance holding the file may release it](#only-the-dhfs-instance-holding-the-file-may-release-it).
+  If a Data Hub isn't using Kubernetes, they'll need to ensure this `serviceInstanceId` is unique for every instance.
 
 ### Optional
 
@@ -53,7 +54,7 @@ Deployment:
 
 - Lease renewal or heartbeats.
   The lease is set once, at claim time.
-- Serving more than one file per claim, and the parallel file processing inside a DHFS replica that would have to come first.
+- Serving more than one file per claim/claim request.
 - A give-up state after N failed attempts.
   [Shovelnose Guitarfish](./epic-0092-shovelnose-guitarfish.md) already gives Data Stewards a requeue path.
 - Per-replica identity in the JWT.
@@ -61,46 +62,49 @@ Deployment:
 - Raising `replicaCount` for any hub.
   The chart already supports it; this epic only makes it safe.
   `deploy/charts/dhfs/values.yaml` is generated, so a hub that wants more replicas changes `services/datahub-file-service/chart-values.yaml`.
+  Again, that is only if they are using an orchestration layer comparable to Kubernetes.
 
 ## API Definitions
 
 ### RESTful/Synchronous
 
-`GET /storages/{storage_alias}/uploads` keeps its path, method and response model.
-It now serves at most one file, and leases the file it serves.
-`BaseFileInformation` is unchanged, so DHFS parses the response exactly as before.
+`GET /storages/{storage_alias}/uploads` keeps the same path, method and response model.
+It now serves **at most one file**, and leases the file it serves.
+The response shape still adheres to `BaseFileInformation`, which is unchanged.
 
 New endpoint:
 
-- `POST /storages/{storage_alias}/uploads/{file_id}/release`:
-  - *Hand a claimed file back to FIS before its lease expires.*
+- `POST /rpc/storages/{storage_alias}/uploads/{file_id}/release`:
+  - *Tell FIS to release a claimed file.*
   - Authenticated by the same Data Hub JWT and User-Agent check as the other three endpoints, and carries the caller's replica ID.
-  - Applies only when the caller still holds the lease; see [Only the holder may release](#only-the-holder-may-release).
+  - Applies only when the caller still holds the lease; see [Only the DHFS instance holding the file may release it](#only-the-dhfs-instance-holding-the-file-may-release-it).
   - Returns:
     - 204 on success, and also when the caller no longer holds the lease, because the caller cannot act on the difference
     - 404 if the file is unknown, or belongs to another storage alias
 
-The alias check is required.
+The storage alias check is required.
 `_require_data_hub_jwt` only proves the caller is that hub; it does not prove the file belongs to it.
 `handle_interrogation_report` omits this check today, so do not copy it from there.
 
 ## Additional Implementation Details
 
-### What a lease is
+### What is a Lease?
 
-One nullable field, `leased_until`, encodes both states a file can be held in: a claim sets it to `now + lease`, a release sets it to `now + backoff`.
-`null` means the file has never been claimed, or was requeued.
+Basically, it's the value set in `leased_until`.
+That value encodes both states that a file can be held in: when claimed, it's set to `now + lease`, and when released, it's set to `now + backoff`.
+If set to `null`, it means the file has never been claimed, or was requeued by a Data Steward after conclusive interrogation failure.
+A claim prevents FIS from sending the file to another DHFS instance until the lease expires.
 
 ```mermaid
 flowchart LR
-    A[claimable: null or past] -->|GET /uploads| B[leased until now + lease]
+    A[leased_until: null or in the past] -->|GET /uploads| B[set leased_until = now + file-specific lease]
     B -->|report success or failure| C[interrogated, leaves the pool]
-    B -->|POST .../release| D[backed off until now + backoff]
+    B -->|POST .../release| D[backed off until now + file-specific backoff]
     B -->|lease expires| A
     D -->|backoff expires| A
 ```
 
-A conclusive report already sets `interrogated=True`, which removes the file from the candidate set, so neither report path needs lease handling.
+Because a conclusive report (be it successful or not) already sets `interrogated=True`, which removes the file from the candidate set, the report path doesn't need lease logic at all.
 
 ### The claim query
 
@@ -111,12 +115,13 @@ filter_ = {
     "interrogated": False,
     # The null branch must come first: the in-memory DAO evaluates $or lazily and
     # its $lt is a plain Python comparison, which raises TypeError on None.
+    # Also note that GSI-2689 has been created for this.
     "$or": [{"leased_until": None}, {"leased_until": {"$lt": now}}],
 }
 ```
 
 hexkit allows this.
-`validate_find_mapping` checks only that filter keys are model fields, and `validate_fields_in_model` drops keys starting with `$` (`libs/hexkit/src/hexkit/utils.py:115`), so a top-level `$or` passes.
+`validate_find_mapping` checks only that filter keys are model fields, and `validate_fields_in_model` drops keys starting with `$` (`libs/hexkit/src/hexkit/utils.py`), so a top-level `$or` passes.
 Filter values are never inspected and go straight to pymongo.
 
 `{"leased_until": None}` matches a missing field as well as a null one, so **no migration and no `DB_VERSION` bump are needed**.
@@ -125,7 +130,8 @@ If the `$or` index union turns out to perform badly, the sentinel is the fallbac
 
 Sort ascending by `leased_until`, then by `state_updated`.
 Null sorts before any date in both Mongo and the in-memory DAO, so never-claimed files come first and expired leases follow oldest-first.
-The second key breaks the tie among never-claimed files, which otherwise share one sort key and are handed out in the same order to every replica.
+The second key gives the window a deterministic order, so a claim pages through the same candidates each time.
+Which of them a replica takes is then a random choice; see [The claim reads a window of candidates](#the-claim-reads-a-window-of-candidates).
 
 ### The claim itself
 
@@ -159,9 +165,9 @@ Two further rules for the claim path:
   A replica that is OOM-killed never releases, so a counter advanced only on release would leave a file that keeps failing retried at full speed forever.
   Incrementing at claim also makes the release endpoint idempotent, which matters because the retry transport repeats a POST on 5xx and on connection failures.
 
-### Only the holder may release
+### Only the DHFS instance holding the file may release it
 
-A release that is not checked against the current holder can clear a live lease.
+A release that is not checked against the current holder can clear a live lease for another holder.
 Replica A claims a file, its lease expires while A is still working, B claims the file, and A then fails with an `InconclusiveError` and releases.
 FIS overwrites B's lease with `now + backoff`, the next claim hands B's file to C, and two replicas interrogate the same file again.
 
@@ -170,7 +176,7 @@ A release from any other replica changes nothing and FIS logs a warning.
 The warning means a lease expired while a replica was still working, most often because `assumed_throughput_mib_per_second` is set too high, but also when S3 or the network degraded for that one file.
 
 **Use the existing `service_instance_id` as the identifier, and stop setting it to a constant.**
-hexkit already requires that setting and writes it into every log record as `instance` (`libs/hexkit/src/hexkit/log.py:56`), so reusing it adds no second identifier and lets a reader match a lease to the holder's own log lines.
+hexkit already requires that setting and writes it into every log record as `instance` (`libs/hexkit/src/hexkit/log.py`), so reusing it adds no second identifier and lets a reader match a lease to the holder's own log lines.
 Today the value is a fixed string: `services/datahub-file-service/dev_config.yaml` sets `"1"`, and the two demo instances use `"1"` and `"2"` for two different *hubs*, not two replicas.
 Two replicas of one hub would then send the same value and every holder check would pass, so the failure above returns through configuration instead of code, and no warning is logged.
 
@@ -202,10 +208,10 @@ The formula works only because DHFS starts the file as soon as it is served.
 Serving several files at once would break it, since DHFS works through them serially and the later ones would be leased long before anything touched them.
 So a claim serves one file, and no setting makes it serve more.
 
-### One file per claim, but still a list
+### One file per claim, but FIS's response is still in list format
 
-The response stays `list[BaseFileInformation]`, now holding zero or one entry.
-Keeping the list shape means DHFS needs no parsing change, and it leaves room to serve several files later without another API version.
+The response stays `list[BaseFileInformation]`, now holding merely zero or one entry.
+Keeping the list shape means DHFS needs no parsing change, and it leaves room to serve several files later should we do so.
 
 DHFS's `for file in new_files` loop therefore needs no change: it iterates over zero or one item.
 Leave the loop as it is.
@@ -258,12 +264,20 @@ A release sent through the normal transport would be killed mid-backoff and free
 Reading exactly one candidate and losing the check-and-set on it means the replica gets nothing and sleeps for a full `min_run_interval_seconds`, even on a hub with a thousand files waiting.
 One file per claim is the worst case for contention, because every replica targets the same first row.
 
-So the claim reads a small window of candidates, walks down it, and returns the first one it wins.
+So the claim reads a window of candidates with `limit`, picks one at random, and takes the next random one when the check-and-set fails.
 If it loses the whole window, it reads once more, since the window has moved; after a bounded number of rounds it gives up and returns nothing.
+
+Picking at random is what keeps replicas off each other.
+Walking the window top-down leaves every replica targeting the same first row, so each one has to lose a check-and-set before it finds work.
+With a window of 50, two replicas that claim at the same moment pick the same file one time in 50.
+
+Shuffle the window and walk the shuffled list, rather than calling `random.choice` once.
+A single choice needs a second pick anyway when the check-and-set fails, and a shuffle gives those retries without re-reading.
 
 The window is internal to the claim, and the endpoint still serves at most one file.
 Make it a constant in FIS with a comment rather than a setting: its size follows from how many replicas contend, which an operator cannot judge.
-Ten candidates over at most two rounds is enough for any replica count a hub is likely to run.
+Fifty candidates over at most two rounds is enough for any replica count a hub is likely to run, and 50 `FileUnderInterrogation` documents cost nothing to hold.
+The sort still puts never-claimed files and the oldest expired leases in the window, so a file cannot be passed over indefinitely.
 
 ### Backoff
 
@@ -396,7 +410,7 @@ The claim mutates on a GET, and the retry transport repeats it.
 `client_num_retries` is 3 over a set including 500, 502, 503 and 504, so one claim can strand up to three leases.
 `leased_by` makes the repeat safe, because the same replica reclaims its own lease.
 
-A `POST /storages/{alias}/uploads/claim` with the GET left read-only would be cleaner, but it does not fit the rollout.
+A `POST /storages/{storage_alias}/uploads/claim` with the GET left read-only would be cleaner, but it does not fit the rollout.
 Leases have to bind every caller from the moment FIS ships, including a DHFS that predates this epic and only knows the GET.
 A new endpoint would leave leases applying to nobody until every hub had upgraded, the flag day that deferring `dhfs_version_constraint` avoids.
 
@@ -418,6 +432,7 @@ New unit tests, on the `rig` fixture, with the clock frozen rather than slept th
 
 - A claim serves and leases one file, a second claim returns none, and a claim after the lease expires serves it again.
 - Never-claimed files are served before expired ones.
+- A claim picks at random within the window: seed the RNG, or set up fewer files than the window holds and assert the set rather than the order.
 - The lease is sized from the file's own `encrypted_size`, and the cap holds for a very large file.
 - Release applies the backoff, the cap holds, and a repeated release is idempotent.
 - Releasing a file that belongs to another storage alias is rejected.
