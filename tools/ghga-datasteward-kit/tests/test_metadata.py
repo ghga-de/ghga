@@ -15,9 +15,11 @@
 
 """Metadata related tests"""
 
+import io
 import json
 import os
 import shutil
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
@@ -146,6 +148,22 @@ def read_accession_map(*, submission_id: str) -> dict[str, dict[str, str]]:
     return json.loads(path.read_text(encoding="utf-8"))["accession_map"]
 
 
+class _TerminalStdin(io.StringIO):
+    """A stdin that claims to be a terminal, so confirmation is reachable."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+def pretend_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the amend command believe it is running interactively.
+
+    Under pytest stdin is not a terminal, and a risky amendment is refused outright
+    without one, so a test that exercises the prompt has to say it has one.
+    """
+    monkeypatch.setattr(sys, "stdin", _TerminalStdin())
+
+
 def test_amend_preserves_accessions(example_workdir: Path):
     """Test that amending a submission with an added file keeps every accession that
     was already assigned, and mints one only for the added alias.
@@ -184,6 +202,7 @@ def test_amend_dropped_alias_needs_confirmation(
     submission_path = Path("submission_store") / f"{submission_id}.json"
     content_before = submission_path.read_bytes()
 
+    pretend_terminal(monkeypatch)
     monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: False)
 
     with pytest.raises(typer.Abort):
@@ -204,6 +223,7 @@ def test_amend_dropped_alias_confirmed(
     """
     submission_id, accessions_before = submit_original()
 
+    pretend_terminal(monkeypatch)
     monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: True)
 
     amend(
@@ -241,6 +261,7 @@ def test_amend_mints_nothing_when_aborted(
     submission_id, _ = submit_original()
     accession_store_before = Path("accession_store").read_text(encoding="utf-8")
 
+    pretend_terminal(monkeypatch)
     monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: False)
 
     with pytest.raises(typer.Abort):
@@ -387,3 +408,53 @@ def test_amend_requires_completed_submission(example_workdir: Path):
             metadata_path=AMENDED_METADATA_PATH,
             config_path=METADATA_CONFIG_PATH,
         )
+
+
+def test_amend_refuses_risky_amendment_without_a_terminal(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a risky amendment is refused when stdin is not a terminal.
+
+    `typer.confirm` reads with `input()` and never checks for a terminal, so a piped
+    `y` would otherwise answer for someone who never saw the report. The prompt is the
+    only safeguard against dropping accessions, so it must not be answerable that way.
+    """
+    submission_id, _ = submit_original()
+    submission_path = Path("submission_store") / f"{submission_id}.json"
+    content_before = submission_path.read_bytes()
+    accession_store_before = Path("accession_store").read_text(encoding="utf-8")
+
+    # a terminal is never pretended here, and answering must not even be attempted
+    def fail_if_asked(*args, **kwargs):
+        raise AssertionError("confirmation must not be read from a non-terminal stdin")
+
+    monkeypatch.setattr(typer, "confirm", fail_if_asked)
+
+    with pytest.raises(typer.Abort):
+        amend(
+            submission_id=submission_id,
+            metadata_path=DROPPED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert submission_path.read_bytes() == content_before
+    assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+
+
+def test_amend_pure_addition_needs_no_terminal(example_workdir: Path):
+    """Test that an amendment which drops nothing still applies without a terminal,
+    so that adding files stays scriptable.
+    """
+    submission_id, accessions_before = submit_original()
+
+    amend(
+        submission_id=submission_id,
+        metadata_path=AMENDED_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    accessions_after = read_accession_map(submission_id=submission_id)
+    for anchor, accessions in accessions_before.items():
+        for alias, accession in accessions.items():
+            assert accessions_after[anchor][alias] == accession
+    assert "test_sample_03_R1" in accessions_after["sample_files"]

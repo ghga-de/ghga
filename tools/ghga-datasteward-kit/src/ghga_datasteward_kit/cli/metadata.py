@@ -16,6 +16,7 @@
 """Metadata related CLI"""
 
 import logging
+import sys
 from pathlib import Path
 
 import typer
@@ -71,6 +72,10 @@ def _report_and_confirm_amendment(
     There is deliberately no way to skip the question: an amendment that drops
     accessions removes resources from the running system on the next load, so it
     should only ever be applied by someone who has read the report.
+
+    `typer.confirm` reads the answer with `input()` and does not care whether anything
+    is attached to stdin, so a piped `y` would answer for a person who never saw the
+    report. A risky amendment is therefore refused outright without a terminal.
     """
     typer.echo(
         amendment.format_amendment_report(submission_id=submission_id, changes=changes)
@@ -78,6 +83,13 @@ def _report_and_confirm_amendment(
 
     if not amendment.needs_confirmation(changes=changes):
         return True
+
+    if not sys.stdin.isatty():
+        typer.echo(
+            "This amendment needs confirmation, but stdin is not a terminal."
+            " Re-run it interactively so the report can be read before answering."
+        )
+        return False
 
     return typer.confirm("Apply this amendment?", default=False)
 
