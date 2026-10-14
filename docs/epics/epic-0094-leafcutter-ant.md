@@ -33,7 +33,6 @@ DHFS:
 
 - Send the service's existing `service_instance_id` on every claim and release, so FIS can tell one replica of a hub from another.
 - Call the release endpoint from the `InconclusiveError` branch of `interrogate_new_files()`, which today only logs, and from the `ConclusiveError` branch when `report_failure` did not reach FIS.
-- Release the file in flight on SIGTERM, in a single attempt that bypasses the retry transport.
 - Skip the poll interval after conclusively *or* inconclusively processing a file, and sleep only when the request for the next file comes back empty.
   Serving one file per claim makes this required; see [Serving one file per claim requires the poll pacing change](#serving-one-file-per-claim-requires-the-poll-pacing-change).
 - Add jitter of up to 10% to `min_run_interval_seconds`, as a constant rather than a setting, so replicas rolled out together stop polling in lockstep.
@@ -57,6 +56,9 @@ Deployment:
 - Serving more than one file per claim/claim request.
 - A give-up state after N failed attempts.
   [Shovelnose Guitarfish](./epic-0092-shovelnose-guitarfish.md) already gives Data Stewards a requeue path.
+- Releasing the file in flight when the process is stopped (e.g. SIGTERM).
+  A signal handler, cancellation of the running interrogation and a release inside the 30 second grace window is a lot of DHFS machinery for one file per stopped pod.
+  That file waits out its lease instead, and other files keep flowing; see [A stopped replica parks one file](#a-stopped-replica-parks-one-file).
 - Per-replica identity in the JWT.
   `sub` is the storage alias, so two replicas of one hub are indistinguishable to the authentication layer.
 - Raising `replicaCount` for any hub.
@@ -189,7 +191,7 @@ The pod name survives a container restart inside the same pod, so a container th
 It also needs no code: `commandStyle: exec` runs without a shell, so `$HOSTNAME` is not reliably set, and a UUID would have to come from `socket.gethostname()` or the same Downward API variable anyway.
 
 A pod that is deleted and rescheduled comes back under a new name and cannot reclaim anything.
-That happens during a rollout, which the SIGTERM release covers instead.
+That file waits out its lease; see [A stopped replica parks one file](#a-stopped-replica-parks-one-file).
 
 ### The lease duration
 
@@ -246,18 +248,8 @@ Any path that produces neither leaves the file leased until expiry:
   The comment at `interrogator.py:920-924` gives the reason: the round trip completed, so FIS may already have stored the report, and a second interrogation would use a different secret.
   Waiting is correct here, and the wait grows from 60 seconds to one lease.
   Listed under [A success report that returned an error now waits a lease](#a-success-report-that-returned-an-error-now-waits-a-lease).
-- SIGTERM releases the file in flight.
-  A pod killed with SIGKILL cannot, and the file waits out its lease.
-
-The SIGTERM path is the largest piece of work in this epic, and raises the estimate to two sprints.
-DHFS installs no signal handler today, and Python's default SIGTERM ends the process outright, so no `finally` runs, including the multipart abort at `core/interrogator.py:800-803`.
-A killed replica therefore already leaves an orphaned upload behind.
-Add a signal handler, cancel the in-flight interrogation, and release from a shutdown path.
-
-That release must make **one attempt with a short timeout, outside the retry transport**.
-`terminationGracePeriodSeconds` is unset for dhfs, so the window is the Kubernetes default of 30 seconds, shared with the multipart abort.
-Three retries with `client_exponential_backoff_max` of 60 can exceed 30 seconds on their own.
-A release sent through the normal transport would be killed mid-backoff and free nothing.
+- A stopped or killed replica releases nothing, and the file waits out its lease.
+  Lease expiry is the only mechanism here, by choice; see [A stopped replica parks one file](#a-stopped-replica-parks-one-file).
 
 ### The claim reads a window of candidates
 
@@ -352,6 +344,16 @@ The pacing change makes DHFS poll far more often, so there are many more claims 
 `leased_by` covers the retried case, because the replica reclaims on its next claim the lease it already holds.
 A claim whose response is lost to a replica that then dies still waits for expiry, bounded by `lease_cap_seconds`.
 
+#### A stopped replica parks one file
+
+A replica that stops mid-file releases nothing, so that file stays leased until it expires.
+SIGTERM is the common case, during a rolling update, and SIGKILL or a node failure behaves the same way.
+DHFS installs no signal handler today, and Python's default SIGTERM ends the process outright, so no `finally` runs, including the multipart abort at `core/interrogator.py:800-803`: a stopped replica already leaves an orphaned upload behind.
+
+The cost is one file per stopped replica, delayed by up to its own lease.
+Nothing else stalls, because the claim picks at random from a window of candidates and every other file stays claimable.
+For a mass event, such as every replica of a hub restarting, reset `leased_until` to null in the `files` collection by hand.
+
 #### More requests against FIS
 
 One file per claim plus immediate re-polling turns one GET per batch of work into one GET per file.
@@ -383,10 +385,6 @@ Raise `dhfs_version_constraint` only after the hubs have upgraded, in a later re
 Raising it together with the feature is a flag day: a hub still on the old image gets 426, which DHFS turns into a `CriticalError`.
 `run_interrogator` then returns, and the container crash-loops with no interrogation until that hub upgrades.
 The same happens to the old pods during each hub's own rolling update.
-
-If the epic must fit one sprint, cut the SIGTERM release, not the holder check.
-Keep `serviceInstanceId.fromPodName`, which is one line and still recovers a container that restarts inside its pod.
-A pod deleted mid-file then parks that file for up to `lease_cap_seconds`.
 
 ### What was checked and ruled out
 
@@ -455,10 +453,9 @@ New DHFS tests:
 - A response holding more than one file is still processed in full, which guards the untouched loop.
 - Release is called for an inconclusive file, and for a conclusive one only when `report_failure` did not land; a failing release neither masks the original error nor stops the service.
 - A release from a replica that no longer holds the lease leaves the lease untouched, and logs the warning.
-- SIGTERM releases the file in flight.
 
 ## Human Resource/Time Estimation
 
-Number of sprints required: 2
+Number of sprints required: 1
 
 Number of developers required: 1
