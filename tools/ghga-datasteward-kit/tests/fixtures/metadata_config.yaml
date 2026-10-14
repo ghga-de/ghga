@@ -4,11 +4,11 @@ event_store_path: event_store
 artifact_topic_prefix: artifact
 accession_store_path: accession_store
 prefix_mapping:
-  Study: GHGAY
+  Study: GHGAS
   SampleFile: GHGASF
   ExperimentFile: GHGAEF
   Experiment: GHGAE
-  Sample: GHGAS
+  Sample: GHGAN
   Dataset: GHGAD
 suffix_length: 14
 metadata_model_path: original_model.yaml

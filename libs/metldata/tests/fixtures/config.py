@@ -25,10 +25,10 @@ from metldata.config import SubmissionConfig
 from tests.fixtures.metadata_models import MINIMAL_MODEL_WITH_STUDY_PATH
 
 PREFIX_MAPPING = {
-    "Study": "GHGAY",
+    "Study": "GHGAS",
     "File": "GHGAF",
     "Experiment": "GHGAE",
-    "Sample": "GHGAS",
+    "Sample": "GHGAN",
     "Dataset": "GHGAD",
 }
 
