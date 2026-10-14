@@ -169,11 +169,7 @@ The example below defines `run_db_migrations()` and calls it from such a command
 ```python
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
-from hexkit.providers.mongodb.migrations import (
-    MigrationConfig,
-    MigrationManager,
-    MigrationMap,
-)
+from hexkit.providers.mongodb.migrations import MigrationConfig, MigrationManager
 
 from my_service.config import Config  # inherits from MigrationConfig
 from my_service.migrations import V2Migration, V3Migration
@@ -182,26 +178,12 @@ DB_VERSION = 3  # the database version this service release expects
 MIGRATION_MAP = {2: V2Migration, 3: V3Migration}
 
 
-async def run_db_migrations(
-    *,
-    config: MigrationConfig,
-    target_version: int,
-    migration_map: MigrationMap | None = None,
-):
-    """Run all migrations.
-
-    Args
-    - `config`: Config containing mongo_dsn string and DB versioning collection name
-    - `target_version`: Which version the db needs to be at for this version of the service
-    - `migration_map`: Mapping of version to migration definition. Defaults to `MIGRATION_MAP`.
-    `migration_map` can be specified for testing, but may be left unspecified for production.
-    """
-    migration_map = migration_map or MIGRATION_MAP
-
+async def run_db_migrations(*, config: MigrationConfig, target_version: int) -> None:
+    """Apply the outstanding migrations, or wait for another instance to finish them."""
     async with MigrationManager(
         config=config,
         target_version=target_version,
-        migration_map=migration_map,
+        migration_map=MIGRATION_MAP,
     ) as mm:
         await mm.migrate_or_wait()
 
