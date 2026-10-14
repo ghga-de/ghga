@@ -186,6 +186,10 @@ Two consequences worth knowing before you run it:
   Correcting metadata this way works; it just will not be flagged.
 - Renaming or removing the alias of any resource, a study or dataset included, drops its accession exactly as it would for a file.
   That is what the confirmation question is for.
+- An alias listed twice within one class is reported and needs confirmation, even when nothing is dropped.
+  An alias identifies a resource, so the repeats share a single accession however much their other fields differ: the transform stamps that one accession on every row, and the next `load` keys them all to one resource, so only one survives.
+  Nothing upstream rejects a duplicate — not the transpiler, not the schema check, not `submit` — so the report marks whether the repeated rows are identical or differ, and the differing ones are the damaging case.
+  Fix those in the metadata rather than amending around them.
 
 Amend deliberately when the change is more than added files, and read the report rather than relying on the prompt to stop you.
 

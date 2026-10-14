@@ -30,7 +30,7 @@ from ghga_datasteward_kit import amendment
 from ghga_datasteward_kit.amendment import AccessionChanges, AccessionDiff
 from ghga_datasteward_kit.cli.metadata import amend, compare_aliases, submit, transform
 from ghga_datasteward_kit.exceptions import AmendmentStatusError
-from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.anchors import AnchorPoint, ClassNotAnchoredError
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
     AMENDED_METADATA_PATH,
@@ -458,3 +458,98 @@ def test_amend_pure_addition_needs_no_terminal(example_workdir: Path):
         for alias, accession in accessions.items():
             assert accessions_after[anchor][alias] == accession
     assert "test_sample_03_R1" in accessions_after["sample_files"]
+
+
+DUPE_ANCHORS = {
+    "C": AnchorPoint(root_slot="files", target_class="C", identifier_slot="alias")
+}
+
+
+def plan_with_duplicates(content: dict, existing: dict | None = None):
+    """Plan an amendment over content that may list an alias more than once."""
+    return amendment.plan_accession_changes(
+        content=content,
+        existing_accession_map=existing or {},
+        anchor_points_by_target=DUPE_ANCHORS,
+    )
+
+
+def test_plan_reports_duplicated_aliases():
+    """Test that an alias listed twice is reported, and flagged when the rows differ.
+
+    Nothing upstream rejects a duplicate, and an alias identifies a resource, so the
+    repeats share one accession: the transform stamps it on every row and the loader
+    keys them to one resource. Where the rows differ, one silently replaces the other.
+    """
+    changes = plan_with_duplicates(
+        {
+            "files": [
+                {"alias": "kept", "size": 1},
+                {"alias": "kept", "size": 999},
+                {"alias": "twin", "size": 5},
+                {"alias": "twin", "size": 5},
+            ]
+        },
+        {"files": {"kept": "ACC1"}},
+    )
+
+    assert changes.duplicated_aliases == {"files": ["kept", "twin"]}
+    # only the differing pair is damaging
+    assert changes.conflicting_aliases == {"files": ["kept"]}
+    assert changes.duplicated_alias_count == 2
+    assert changes.conflicting_alias_count == 1
+
+
+def test_plan_counts_a_duplicated_alias_once():
+    """Test that a repeated alias is counted once, since it receives one accession."""
+    changes = plan_with_duplicates({"files": [{"alias": "new"}, {"alias": "new"}]})
+    assert changes.new_aliases == {"files": ["new"]}
+    assert changes.new_alias_count == 1
+
+    changes = plan_with_duplicates(
+        {"files": [{"alias": "old"}, {"alias": "old"}]}, {"files": {"old": "ACC1"}}
+    )
+    assert changes.preserved == {"files": {"old": "ACC1"}}
+    assert changes.preserved_count == 1
+
+
+def test_duplicated_alias_needs_confirmation():
+    """Test that a duplicate requires confirmation even when nothing is dropped."""
+    changes = plan_with_duplicates(
+        {"files": [{"alias": "old"}, {"alias": "old"}]}, {"files": {"old": "ACC1"}}
+    )
+
+    assert changes.is_lossless
+    assert changes.dropped_count == 0
+    assert amendment.needs_confirmation(changes=changes)
+
+
+def test_report_names_duplicated_aliases():
+    """Test that the report names every duplicate and marks the differing ones."""
+    changes = plan_with_duplicates(
+        {
+            "files": [
+                {"alias": "differs", "size": 1},
+                {"alias": "differs", "size": 2},
+                {"alias": "same", "size": 3},
+                {"alias": "same", "size": 3},
+            ]
+        }
+    )
+
+    report = amendment.format_amendment_report(submission_id="x", changes=changes)
+
+    assert "files / differs" in report
+    assert "rows differ" in report
+    assert "files / same" in report
+    assert "rows identical" in report
+
+
+def test_plan_rejects_an_anchor_absent_from_the_model():
+    """Test that content under an anchor the model does not define is an error.
+
+    In the real flow the metadata is validated first, so this is a backstop rather
+    than something a steward would meet.
+    """
+    with pytest.raises(ClassNotAnchoredError):
+        plan_with_duplicates({"not_in_model": [{"alias": "a"}]})
