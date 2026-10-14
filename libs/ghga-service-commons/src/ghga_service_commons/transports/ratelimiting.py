@@ -19,7 +19,9 @@ import asyncio
 import math
 import random
 import time
+from collections import defaultdict
 from contextlib import suppress
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from logging import getLogger
@@ -33,7 +35,7 @@ log = getLogger(__name__)
 
 
 def _parse_retry_after(value: str) -> float | None:
-    """Turn a single Retry-After value into a number of seconds to wait.
+    """Turn a single Retry-After value into a number of seconds to wait
 
     RFC 9110 allows the header to carry either a number of seconds or an HTTP date, so
     both forms are accepted. Returns None when the value is neither.
@@ -48,7 +50,7 @@ def _parse_retry_after(value: str) -> float | None:
     with suppress(TypeError, ValueError):
         retry_at = parsedate_to_datetime(value)
         if retry_at.tzinfo is None:
-            # A value parsed without a zone would compare wrong.
+            # A missing zone would compare wrong.
             retry_at = retry_at.replace(tzinfo=timezone.utc)
         return max(0.0, (retry_at - datetime.now(timezone.utc)).total_seconds())
 
@@ -72,73 +74,91 @@ def _retry_after_seconds(headers: httpx2.Headers) -> float:
     return max(waits, default=0.0)
 
 
-class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
-    """Custom async Transport adding rate limiting handling on top of AsyncHTTPTransport.
+def _scope_of(url: httpx2.URL) -> str:
+    """Key a URL by origin and first path segment, e.g. `https://data.ghga.de/upload`."""
+    first_segment = url.path.lstrip("/").split("/", 1)[0]
+    port = "" if url.port is None else f":{url.port}"
+    return f"{url.scheme}://{url.host}{port}/{first_segment}"
 
-    If no retry-after header is found in the 429 response, this hands control back to the
-    caller and populates a `Should-Wait` header to signal that a custom wait/retry strategy
-    is needed.
-    Can be configured to add some jitter in between requests and carry over the wait time
-    of a 429 retry-after response for a configurable number of requests.
-    Both can be helpful in a situation when concurrent requests are fired in rapid succession
-    and might overwhelm the request endpoint.
+
+@dataclass
+class _ScopeState:
+    """Pacing and Retry-After state of one scope."""
+
+    next_slot: float = 0.0
+    floor: float = 0.0
+
+
+class RateBudget:
+    """Request pacing budget shared by every route of one client.
+
+    Each scope (origin plus first path segment) gets its own slots and Retry-After
+    floor, so a 429 from one service does not hold back the others.
+    """
+
+    def __init__(self, config: RateLimitingTransportConfig) -> None:
+        self._lock = asyncio.Lock()
+        self._interval = config.min_request_interval
+        self._jitter = config.per_request_jitter
+        self._scopes: defaultdict[str, _ScopeState] = defaultdict(_ScopeState)
+
+    def _spacing(self) -> float:
+        """Compute how far away two slots are."""
+        return self._interval + random.uniform(0, self._jitter)  # noqa: S311
+
+    async def acquire(self, url: httpx2.URL) -> None:
+        """Wait until a request to this URL may go out."""
+        state = self._scopes[_scope_of(url)]
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                current_slot = max(now, state.next_slot, state.floor)
+                state.next_slot = current_slot + self._spacing()
+                delay = current_slot - now
+            if delay > 0:
+                log.debug("Waiting %.3f s for the next slot.", delay)
+                await asyncio.sleep(delay)
+            async with self._lock:
+                # If a Retry-After moved the floor beyond the current slot
+                # in the meantime, do an extra round to get a new slot
+                if time.monotonic() >= state.floor:
+                    return
+
+    async def update_floor(self, url: httpx2.URL, retry_after: float) -> None:
+        """Hold back this URL's scope for `retry_after` seconds."""
+        scope = _scope_of(url)
+        state = self._scopes[scope]
+        async with self._lock:
+            state.floor = max(state.floor, time.monotonic() + retry_after)
+        log.info("Received retry after response for %s: %.3f s.", scope, retry_after)
+
+
+class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
+    """Paces requests and honors Retry-After on 429 responses.
+
+    Pass a `RateBudget` to share pacing with the other transports of the same client.
+    Without one, this transport paces itself alone.
     """
 
     def __init__(
-        self, config: RateLimitingTransportConfig, transport: httpx2.AsyncBaseTransport
+        self,
+        config: RateLimitingTransportConfig,
+        transport: httpx2.AsyncBaseTransport,
+        budget: RateBudget | None = None,
     ) -> None:
-        self._jitter = config.per_request_jitter
+        self._budget = budget or RateBudget(config)
         self._transport = transport
-        self._num_requests = 0
-        self._reset_after: int = config.retry_after_applicable_for_num_requests
-        self._last_retry_after_received: float = 0
-        self._wait_time: float = 0
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
-        """Handles HTTP requests and adds wait logic for HTTP 429 responses around calls."""
-        # Calculate seconds since the last request has been fired and corresponding wait time
-        time_elapsed = time.monotonic() - self._last_retry_after_received
-        remaining_wait = max(0, self._wait_time - time_elapsed)
-        log.debug(
-            "Time elapsed since last request: %.3f s.\nRemaining wait time: %.3f s.",
-            time_elapsed,
-            remaining_wait,
-        )
-
-        # Add jitter to both cases and sleep
-        if remaining_wait < self._jitter:
-            sleep_for = random.uniform(remaining_wait, self._jitter)  # noqa: S311
-            log.debug("Sleeping for %.3f s.", sleep_for)
-            await asyncio.sleep(sleep_for)
-        else:
-            sleep_for = random.uniform(remaining_wait, remaining_wait + self._jitter)  # noqa: S311
-            log.debug("Sleeping for %.3f s.", sleep_for)
-            await asyncio.sleep(sleep_for)
-
-        # Delegate call and update timestamp
+        """Wait for a slot, then delegate. A 429 holds back its scope."""
+        await self._budget.acquire(request.url)
         # Strictly pass request as non kwarg arg to work around Otel httpx
         # instrumentation trying to extract from arg[0]
         response = await self._transport.handle_async_request(request)
-
-        # Update state
-        self._num_requests += 1
-        if response.status_code == 429:
-            retry_after = _retry_after_seconds(response.headers)
-            if retry_after:
-                self._wait_time = retry_after
-                log.info("Received retry after response: %.3f s.", self._wait_time)
-                self._last_retry_after_received = time.monotonic()
-            else:
-                log.warning(
-                    "No usable Retry-After header in 429 response.\nDelegating to underlying wait strategy."
-                )
-                # Modify response headers to communicate intent to retry layer
-                response.headers["Should-Wait"] = "true"
-            self._num_requests = 0
-        elif self._reset_after and self._reset_after <= self._num_requests:
-            self._wait_time = 0
-            self._num_requests = 0
-
+        if response.status_code == 429 and (
+            retry_after := _retry_after_seconds(response.headers)
+        ):
+            await self._budget.update_floor(request.url, retry_after)
         return response
 
     async def aclose(self) -> None:  # noqa: D102
