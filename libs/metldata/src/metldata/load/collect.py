@@ -28,7 +28,7 @@ from metldata.event_handling.artifact_events import (
 )
 from metldata.event_handling.event_handling import FileSystemEventCollector
 from metldata.load.models import ArtifactJson, ArtifactResourceDict
-from metldata.load.study import StudyCountError, get_single_study_accession
+from metldata.load.study import InvalidStudyError, get_single_study_accession
 
 
 class ArtifactCollectorConfig(ArtifactEventConfig):
@@ -90,7 +90,7 @@ def collect_artifacts(
                 # violation never reaches the loader half-way through.
                 try:
                     study_accession = get_single_study_accession(content)
-                except StudyCountError as err:
+                except InvalidStudyError as err:
                     raise RuntimeError(
                         f"Artifact '{artifact_type}' is marked as publishable: {err}"
                     ) from err

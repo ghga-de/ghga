@@ -20,8 +20,8 @@ from metldata.custom_types import Json
 from metldata.model_utils.essentials import STUDY_ANCHOR
 
 
-class StudyCountError(ValueError):
-    """Raised when an artifact does not hold exactly one study."""
+class InvalidStudyError(ValueError):
+    """Raised when an artifact does not hold exactly one well-formed study."""
 
 
 def get_single_study_accession(content: Json) -> str:
@@ -33,19 +33,35 @@ def get_single_study_accession(content: Json) -> str:
     rule to the artifacts published whole.
 
     Raises:
-        StudyCountError: If the content holds no study or more than one, or the study
-            has no accession.
+        InvalidStudyError: If the studies are not a list of objects, the content holds
+            no study or more than one, or the study has no accession string.
     """
+    # the loader API validates content only as a JSON object, so the values inside
+    # it can be any JSON, and a type error here would surface as a 500
     studies = content.get(STUDY_ANCHOR, [])
+    if not isinstance(studies, list):
+        raise InvalidStudyError(
+            f"Expected a list under '{STUDY_ANCHOR}', found {type(studies).__name__}."
+        )
+    if not all(isinstance(study, dict) for study in studies):
+        raise InvalidStudyError(
+            f"Expected every item under '{STUDY_ANCHOR}' to be an object."
+        )
+
     if len(studies) != 1:
         accessions = ", ".join(str(study.get("accession")) for study in studies)
-        raise StudyCountError(
+        raise InvalidStudyError(
             f"Expected exactly one study, found {len(studies)}"
             + (f": {accessions}." if accessions else ".")
         )
 
     accession = studies[0].get("accession")
     if not accession:
-        raise StudyCountError("The study has no accession.")
+        raise InvalidStudyError("The study has no accession.")
+    if not isinstance(accession, str):
+        raise InvalidStudyError(
+            "Expected the study accession to be a string, found"
+            + f" {type(accession).__name__}."
+        )
 
     return accession

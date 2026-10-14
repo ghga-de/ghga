@@ -18,7 +18,7 @@
 import pytest
 
 from metldata.custom_types import Json
-from metldata.load.study import StudyCountError, get_single_study_accession
+from metldata.load.study import InvalidStudyError, get_single_study_accession
 
 
 def test_single_study():
@@ -38,12 +38,31 @@ def test_single_study():
             "Expected exactly one study, found 2: GHGAS1, GHGAS2.",
         ),
         ({"studies": [{"alias": "STUDY_1"}]}, "The study has no accession."),
+        ({"studies": None}, "Expected a list under 'studies', found NoneType."),
+        ({"studies": "ab"}, "Expected a list under 'studies', found str."),
+        (
+            {"studies": ["GHGAS1"]},
+            "Expected every item under 'studies' to be an object.",
+        ),
+        (
+            {"studies": [{"accession": 5}]},
+            "Expected the study accession to be a string, found int.",
+        ),
     ],
-    ids=["no_studies_key", "no_study", "two_studies", "no_accession"],
+    ids=[
+        "no_studies_key",
+        "no_study",
+        "two_studies",
+        "no_accession",
+        "null_studies",
+        "studies_not_list",
+        "study_not_object",
+        "accession_not_string",
+    ],
 )
 def test_not_single_study(content: Json, expected_message: str):
-    """Content without exactly one study with an accession is rejected."""
-    with pytest.raises(StudyCountError) as error:
+    """Content without exactly one well-formed study with an accession is rejected."""
+    with pytest.raises(InvalidStudyError) as error:
         get_single_study_accession(content)
 
     assert str(error.value) == expected_message
