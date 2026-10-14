@@ -39,7 +39,8 @@ import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { ConfigService } from '@app/shared/services/config';
-import { screen } from '@testing-library/angular';
+import { screen, within } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 
 /**
  * Mock a basic version of the auth service
@@ -150,5 +151,15 @@ describe('DatasetDetailsPage', () => {
   it('should show dataset description', () => {
     const expected = /^Test dataset with some details for testing\./;
     expect(screen.queryByText(expected)).not.toBeNull();
+  });
+
+  it('should show a publication without DOI and no DOI line for it', async () => {
+    await userEvent.click(screen.getByRole('tab', { name: /Publications/ }));
+    await fixture.whenStable();
+    const title = await screen.findByText('Test publication without DOI');
+    const publication = title.closest('h2')?.parentElement as HTMLElement;
+    expect(within(publication).getByText(/Test author/)).toBeInTheDocument();
+    expect(within(publication).queryByText('DOI:')).toBeNull();
+    expect(within(publication).queryByText('View Publication')).toBeNull();
   });
 });
