@@ -35,6 +35,13 @@ from linkml_runtime.linkml_model import SchemaDefinition
 # The name of the root class of a model:
 ROOT_CLASS = "Submission"
 
+# The class of the study, of which every submission holds exactly one:
+STUDY_CLASS = "Study"
+
+# The slot of the root class that anchors the study, which the loader reads the
+# study from:
+STUDY_ANCHOR = "studies"
+
 
 class MetadataModel(SchemaDefinition):
     """A dataclass for describing metadata models."""

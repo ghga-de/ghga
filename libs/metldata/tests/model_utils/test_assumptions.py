@@ -24,11 +24,14 @@ from metldata.model_utils.assumptions import (
     check_basic_model_assumption,
     check_class_exists,
     check_class_slot_exists,
+    check_study_anchor,
     check_study_cardinality,
 )
 from metldata.model_utils.essentials import MetadataModel
 from tests.fixtures.metadata_models import (
     INVALID_METADATA_MODELS,
+    MINIMAL_MODEL_WITH_OPTIONAL_STUDY,
+    MINIMAL_MODEL_WITH_RENAMED_STUDY_ANCHOR,
     MINIMAL_MODEL_WITH_STUDY,
     MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES,
     VALID_METADATA_MODELS,
@@ -91,8 +94,23 @@ def test_check_class_slot_exists(
     "model, is_valid",
     [
         (MINIMAL_MODEL_WITH_STUDY, True),
-        (MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES, False),
+        (MINIMAL_MODEL_WITH_RENAMED_STUDY_ANCHOR, False),  # not anchored on studies
         (VALID_MINIMAL_METADATA_MODEL, False),  # has no study class
+    ],
+)
+def test_check_study_anchor(model: MetadataModel, is_valid: bool):
+    """Test that only a model anchoring the study on STUDY_ANCHOR passes."""
+    with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
+        check_study_anchor(model=model)
+
+
+@pytest.mark.parametrize(
+    "model, is_valid",
+    [
+        (MINIMAL_MODEL_WITH_STUDY, True),
+        (MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES, False),
+        (MINIMAL_MODEL_WITH_OPTIONAL_STUDY, False),  # studies is not required
+        (VALID_MINIMAL_METADATA_MODEL, False),  # has no studies slot
     ],
 )
 def test_check_study_cardinality(model: MetadataModel, is_valid: bool):

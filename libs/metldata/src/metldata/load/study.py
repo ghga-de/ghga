@@ -17,6 +17,7 @@
 """The rule that an artifact published whole holds exactly one study."""
 
 from metldata.custom_types import Json
+from metldata.model_utils.essentials import STUDY_ANCHOR
 
 
 class StudyCountError(ValueError):
@@ -25,7 +26,8 @@ class StudyCountError(ValueError):
 
 def get_single_study_accession(content: Json) -> str:
     """Return the accession of the one study in an artifact's `content` field, which
-    holds the artifact's resources keyed by anchor, e.g. 'studies'.
+    holds the artifact's resources keyed by anchor. The study is read from the
+    STUDY_ANCHOR slot, which check_study_anchor enforces on the model.
 
     Both the loader client and the loader API call this, so that they apply the same
     rule to the artifacts published whole.
@@ -34,7 +36,7 @@ def get_single_study_accession(content: Json) -> str:
         StudyCountError: If the content holds no study or more than one, or the study
             has no accession.
     """
-    studies = content.get("studies", [])
+    studies = content.get(STUDY_ANCHOR, [])
     if len(studies) != 1:
         accessions = ", ".join(str(study.get("accession")) for study in studies)
         raise StudyCountError(
