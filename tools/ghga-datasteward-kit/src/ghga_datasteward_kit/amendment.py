@@ -24,7 +24,6 @@ Everything here drives metldata through its public API, so that metldata itself 
 no changes.
 """
 
-import logging
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import TypeAlias
@@ -39,7 +38,10 @@ from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.custom_types import Json
 from metldata.event_handling.event_handling import FileSystemEventPublisher
-from metldata.model_utils.anchors import get_anchors_points_by_target
+from metldata.model_utils.anchors import (
+    AnchorPoint,
+    get_anchors_points_by_target,
+)
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry.event_publisher import SourceEventPublisher
 from metldata.submission_registry.identifiers import (
@@ -48,7 +50,6 @@ from metldata.submission_registry.identifiers import (
 )
 from metldata.submission_registry.models import Submission, SubmissionStatus
 from metldata.submission_registry.submission_store import SubmissionStore
-
 
 AccessionMap: TypeAlias = dict[str, dict[str, str]]
 
