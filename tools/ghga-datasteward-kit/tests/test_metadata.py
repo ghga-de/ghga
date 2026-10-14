@@ -553,3 +553,53 @@ def test_plan_rejects_an_anchor_absent_from_the_model():
     """
     with pytest.raises(ClassNotAnchoredError):
         plan_with_duplicates({"not_in_model": [{"alias": "a"}]})
+
+
+@pytest.mark.parametrize(
+    "amended_metadata_path",
+    [AMENDED_METADATA_PATH, DROPPED_METADATA_PATH],
+    ids=["addition", "drop"],
+)
+def test_plan_matches_what_the_amendment_applies(
+    example_workdir: Path, amended_metadata_path: Path
+):
+    """Test that the plan shown before confirming matches the amendment applied after.
+
+    The report comes from `plan_accession_changes` and the write from
+    `generate_accession_map`, two separate decisions about every alias. Each is covered
+    on its own elsewhere, so without this the report could promise something the
+    amendment does not do and every other test would still pass.
+    """
+    submission_id, _ = submit_original()
+
+    captured: list[AccessionChanges] = []
+
+    def capture_and_approve(changes: AccessionChanges) -> bool:
+        captured.append(changes)
+        return True
+
+    diff = amendment.amend_metadata_from_path(
+        submission_id=submission_id,
+        metadata_path=amended_metadata_path,
+        config_path=METADATA_CONFIG_PATH,
+        confirm=capture_and_approve,
+    )
+
+    assert len(captured) == 1, "the plan must be offered exactly once"
+    changes = captured[0]
+
+    # the accessions promised as kept are the ones kept, with the same values
+    assert changes.preserved == diff.preserved
+
+    # the aliases promised a new accession are the ones that got one
+    promised_new = {anchor: sorted(a) for anchor, a in changes.new_aliases.items()}
+    actually_minted = {anchor: sorted(a) for anchor, a in diff.minted.items()}
+    assert promised_new == actually_minted
+
+    # the accessions promised as released are the ones released, with the same values
+    assert changes.dropped == diff.dropped
+
+    # and the counts the steward read agree with the outcome
+    assert changes.preserved_count == diff.preserved_count
+    assert changes.new_alias_count == diff.minted_count
+    assert changes.dropped_count == diff.dropped_count
