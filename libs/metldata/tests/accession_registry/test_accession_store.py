@@ -16,6 +16,7 @@
 """Testing the accession store."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -80,3 +81,59 @@ def test_file_format_keeps_legacy(
         "legacy": ["GHGAS12345678901234"],
         "years": {"26": ["CBR"]},
     }
+
+
+FLAT_STORE = "GHGAS12345678901234\nGHGAF98765432109876\n"
+
+
+def make_flat_store(config: SubmissionConfig, tmp_path: Path) -> AccessionStore:
+    """Return an accession store whose file is a flat list of accessions."""
+    store_path = tmp_path / "accession_store"
+    store_path.write_text(FLAT_STORE, encoding="utf-8")
+    return AccessionStore(
+        config=config.model_copy(update={"accession_store_path": store_path})
+    )
+
+
+def test_flat_store_rejected(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    tmp_path: Path,
+):
+    """A store that is still a flat list of accessions is not a valid store."""
+    accession_store = make_flat_store(config_sub_fixture, tmp_path)
+
+    with pytest.raises(AccessionStore.InvalidStoreError):
+        accession_store.get_random_blocks(year="26")
+
+
+def test_migrate_legacy_store(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    tmp_path: Path,
+):
+    """Migrating keeps the accessions under `legacy` and the original as backup, after
+    which the store takes new random blocks.
+    """
+    accession_store = make_flat_store(config_sub_fixture, tmp_path)
+
+    accession_store.migrate_legacy_store()
+    accession_store.save(year="26", random_block="CBR")
+
+    assert json.loads((tmp_path / "accession_store").read_text(encoding="utf-8")) == {
+        "legacy": ["GHGAS12345678901234", "GHGAF98765432109876"],
+        "years": {"26": ["CBR"]},
+    }
+    assert (tmp_path / "accession_store.bak").read_text(encoding="utf-8") == FLAT_STORE
+
+
+def test_migrate_twice_rejected(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    tmp_path: Path,
+):
+    """A store migrated already is not migrated again, so the backup stays intact."""
+    accession_store = make_flat_store(config_sub_fixture, tmp_path)
+    accession_store.migrate_legacy_store()
+
+    with pytest.raises(AccessionStore.NotALegacyStoreError):
+        accession_store.migrate_legacy_store()
+
+    assert (tmp_path / "accession_store.bak").read_text(encoding="utf-8") == FLAT_STORE

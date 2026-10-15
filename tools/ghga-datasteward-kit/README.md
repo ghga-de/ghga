@@ -84,6 +84,10 @@ The metadata label groups metadata related commands.
 
 Some of them require a configuration file as described in the [metadata config](./metadata_config.md).
 
+The production accession store from before study PIDs is a flat list of accessions.
+Convert it once with `ghga-datasteward-kit metadata migrate-accession-store --config-path <config>` before the next `metadata submit`; the original is kept next to it as `<store>.bak`.
+A later release removes the command once the production store is converted.
+
 #### metadata amend
 
 Adds to a submission that has already been accessioned, keeping its existing accessions.

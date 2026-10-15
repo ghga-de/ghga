@@ -16,9 +16,10 @@
 
 """Storing and exploring the random blocks of study PIDs already minted."""
 
+import shutil
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import BaseSettings
 
 
@@ -29,7 +30,8 @@ class AccessionStoreConfig(BaseSettings):
         ...,
         description=(
             "A JSON file holding the random blocks of the study PIDs minted so far, by"
-            + " year, so that none is minted twice."
+            + " year, so that none is minted twice, and the accessions minted before"
+            + " study PIDs."
         ),
     )
 
@@ -64,19 +66,43 @@ class AccessionStore:
             )
             super().__init__(message)
 
+    class InvalidStoreError(RuntimeError):
+        """Raised when the store file is not a valid accession store."""
+
+        def __init__(self, *, path: Path):
+            message = f"'{path}' is not a valid accession store."
+            super().__init__(message)
+
+    class NotALegacyStoreError(RuntimeError):
+        """Raised when migrating a store file that is empty or in the JSON format."""
+
+        def __init__(self, *, path: Path):
+            message = (
+                f"The accession store '{path}' is empty or in the JSON format already,"
+                + " so there is nothing to migrate."
+            )
+            super().__init__(message)
+
     def __init__(self, *, config: AccessionStoreConfig):
         """Initialize with config parameters."""
         self._config = config
 
     def _load(self) -> AccessionStoreContent:
-        """Load the store content, treating a missing or empty file as empty."""
+        """Load the store content, treating a missing or empty file as empty.
+
+        Raises:
+            InvalidStoreError: If the file is not a valid accession store, such as a
+                flat list of accessions from before study PIDs.
+        """
         path = self._config.accession_store_path
-        if not path.exists() or not path.read_text(encoding="utf-8").strip():
+        text = path.read_text(encoding="utf-8") if path.exists() else ""
+        if not text.strip():
             return AccessionStoreContent()
 
-        return AccessionStoreContent.model_validate_json(
-            path.read_text(encoding="utf-8")
-        )
+        try:
+            return AccessionStoreContent.model_validate_json(text)
+        except ValidationError as error:
+            raise self.InvalidStoreError(path=path) from error
 
     def _dump(self, content: AccessionStoreContent) -> None:
         """Write the store content to the file."""
@@ -105,3 +131,25 @@ class AccessionStore:
 
         random_blocks.append(random_block)
         self._dump(content)
+
+    def migrate_legacy_store(self) -> None:
+        """Convert a store file that is a flat list of accessions into the JSON
+        format, keeping the accessions under `legacy`.
+
+        Runs once per store, in production only, and is removed from a later release
+        once that store is converted. The original file is kept with the suffix '.bak'.
+
+        Raises:
+            NotALegacyStoreError: If the file is empty or in the JSON format already.
+        """
+        path = self._config.accession_store_path
+        text = path.read_text(encoding="utf-8")
+        # a flat list starts with an accession, never with '{', so a JSON file is
+        # refused whether it is valid or not, and never overwrites the backup
+        if not text.strip() or text.lstrip().startswith("{"):
+            raise self.NotALegacyStoreError(path=path)
+
+        shutil.copy2(path, path.with_name(f"{path.name}.bak"))
+
+        legacy = [line.strip() for line in text.splitlines() if line.strip()]
+        self._dump(AccessionStoreContent(legacy=legacy))
