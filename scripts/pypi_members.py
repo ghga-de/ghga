@@ -30,6 +30,7 @@ Usage (`uv run --script`, so the PEP 723 block above resolves):
     uv run --script scripts/pypi_members.py --plan              # ordered plan + errors
     uv run --script scripts/pypi_members.py --plan --target hexkit   # that member alone
     uv run --script scripts/pypi_members.py --check-versions    # declared versions per lane
+    uv run --script scripts/pypi_members.py --check-blocked-cells  # BLOCKED_CELLS still needed
 
 """
 
@@ -46,12 +47,29 @@ from dataclasses import asdict, dataclass, replace
 from typing import NamedTuple, Self, TypeVar
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.utils import InvalidWheelFilename, parse_wheel_filename
 from packaging.version import InvalidVersion, Version
 
 from affected_targets import _canonical, internal_dep_graph
 
 # The versions the matrix runs on.
 TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14", "3.15")
+
+# Cells the matrix cannot run, keyed by (member path, Python version) with the
+# distribution that blocks them. A dependency shipping no wheel for a version makes the
+# install fall back to its sdist, and a source build that fails is not something this
+# repo can fix — so the cell is dropped rather than left red. `--check-blocked-cells`
+# fails once the blocker ships a wheel, which is what gets these entries deleted again:
+# nobody has to remember.
+#
+# crypt4gh bundles libsodium and ships one wheel per Python version. 1.8.6 (2026-05-02)
+# stops at cp314, so on 3.15 pip and uv take the sdist and its vendored autotools build
+# fails for want of libtool. It is a core dependency of ghga-connector and sits in
+# ghga-service-commons' `crypt` extra, which `all` pulls in.
+BLOCKED_CELLS: dict[tuple[str, str], str] = {
+    ("libs/ghga-service-commons", "3.15"): "crypt4gh",
+    ("tools/ghga-connector", "3.15"): "crypt4gh",
+}
 
 # Directory defaults for the release lane (ADR-0033).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
@@ -81,6 +99,7 @@ class Member:
     train_deps: tuple[str, ...]
     extras: tuple[str, ...]
     pythons: tuple[str, ...]
+    blocked_pythons: tuple[tuple[str, str], ...]
 
     def with_train_deps(self, release_member_paths: set[str]) -> Self:
         """Copies the member, filling in the part of its closure shipping in this run."""
@@ -157,17 +176,35 @@ def _supported(requires_python: str, python: str) -> bool:
     return SpecifierSet(requires_python).contains(Version(python))
 
 
+def _blocked_pythons(member_path: str) -> tuple[tuple[str, str], ...]:
+    """The (version, blocker) pairs BLOCKED_CELLS drops for one member."""
+    return tuple(
+        sorted(
+            (python, blocker)
+            for (path, python), blocker in BLOCKED_CELLS.items()
+            if path == member_path
+        )
+    )
+
+
 def _supported_pythons(requires_python: str, member_path: str) -> tuple[str, ...]:
     """Returns the versions in TEST_PYTHONS the member can run on.
 
     A member declaring `requires-python = ">=3.13"` yields `("3.13", "3.14", "3.15")`.
+    Versions listed for this member in BLOCKED_CELLS are left out: the member declares
+    them, but a dependency has no wheel there yet.
 
     Raises:
         SystemExit: if the specifier cannot be parsed — `packaging` names only the
             offending string, not the member declaring it.
     """
+    blocked = dict(_blocked_pythons(member_path))
     try:
-        return tuple(p for p in TEST_PYTHONS if _supported(requires_python, p))
+        return tuple(
+            p
+            for p in TEST_PYTHONS
+            if p not in blocked and _supported(requires_python, p)
+        )
     except InvalidSpecifier as error:
         sys.exit(
             f"error: {member_path}/pyproject.toml declares an unparseable"
@@ -274,6 +311,7 @@ def pypi_members(member_paths: list[str] | None = None) -> list[Member]:
                         _test_extras(project.get("optional-dependencies", {}))
                     ),
                     pythons=_supported_pythons(requires_python, relative),
+                    blocked_pythons=_blocked_pythons(relative),
                 )
             )
     return members
@@ -380,9 +418,16 @@ def _pypi_project(package: str) -> dict:
     """Queries PyPI's JSON API for what the index knows about one package.
 
     Returns `versions` (everything ever released under that name), `latest` (the latest
-    stable release) and `reachable`. reachable=False means the query failed, not that the
-    project is new — the callers treat the two differently.
+    stable release), `latest_wheels` (that release's wheel filenames, which is where a
+    newly added interpreter tag shows up) and `reachable`. reachable=False means the
+    query failed, not that the project is new — the callers treat the two differently.
     """
+    empty: dict = {
+        "reachable": True,
+        "versions": set(),
+        "latest": None,
+        "latest_wheels": (),
+    }
     url = f"https://pypi.org/pypi/{package}/json"
     try:
         with urllib.request.urlopen(url, timeout=15) as response:
@@ -390,15 +435,102 @@ def _pypi_project(package: str) -> dict:
     except urllib.error.HTTPError as error:
         # 404 means nothing of this name has ever been published.
         if error.code == 404:
-            return {"reachable": True, "versions": set(), "latest": None}
-        return {"reachable": False, "versions": set(), "latest": None}
+            return empty
+        return {**empty, "reachable": False}
     except OSError:
-        return {"reachable": False, "versions": set(), "latest": None}
+        return {**empty, "reachable": False}
+    releases = pypi_response.get("releases", {})
+    latest = pypi_response.get("info", {}).get("version")
     return {
         "reachable": True,
-        "versions": set(pypi_response.get("releases", {})),
-        "latest": pypi_response.get("info", {}).get("version"),
+        "versions": set(releases),
+        "latest": latest,
+        # Only the latest release: an interpreter tag added to an older one cannot help
+        # a caller that already resolves to the newest version it is allowed.
+        "latest_wheels": tuple(
+            file["filename"]
+            for file in releases.get(latest, [])
+            if file.get("packagetype") == "bdist_wheel"
+        ),
     }
+
+
+def _wheel_supports(filename: str, python: str) -> bool:
+    """Whether one wheel is installable on `python`, given as e.g. "3.15".
+
+    Three tag shapes matter. A pure-Python `py3` wheel fits every version. A
+    version-specific `cp315` wheel fits that one alone. A stable-ABI `cp311-abi3` wheel
+    fits that version and every later one, so a project switching to abi3 counts as
+    having shipped for 3.15 — which a plain `cp315` substring test would never notice,
+    leaving a BLOCKED_CELLS entry alive forever.
+    """
+    target = Version(python)
+    try:
+        _, _, _, tags = parse_wheel_filename(filename)
+    except InvalidWheelFilename:
+        return False
+    for tag in tags:
+        interpreter = tag.interpreter
+        if interpreter in ("py3", f"cp{target.major}{target.minor}"):
+            return True
+        if tag.abi == "abi3" and interpreter.startswith("cp"):
+            try:
+                floor = Version(f"{interpreter[2]}.{interpreter[3:]}")
+            except InvalidVersion:
+                continue
+            if floor <= target:
+                return True
+    return False
+
+
+def blocked_cell_errors() -> list[str]:
+    """Checks that every BLOCKED_CELLS entry still has a reason to exist.
+
+    An entry costs a member its coverage on a version it declares, so a stale one is a
+    silent regression: the wheel is there and nothing tests against it. This fails
+    rather than warns, and names exactly what to delete.
+
+    An unreachable index leaves the entry alone, the same way `release_candidates`
+    treats a member it could not ask about. A blocker the index has never heard of is
+    an error instead: a renamed or yanked distribution can never ship the wheel that
+    would retire the entry.
+    """
+    errors = []
+    lane_paths = {member.path for member in pypi_members()}
+    for (path, python), blocker in sorted(BLOCKED_CELLS.items()):
+        if path not in lane_paths:
+            errors.append(
+                f"BLOCKED_CELLS names {path}, which is not a PyPI-lane member; correct"
+                " the path or delete the entry"
+            )
+            continue
+        project = _pypi_project(blocker)
+        if not project["reachable"]:
+            continue
+        if not project["versions"]:
+            errors.append(
+                f"BLOCKED_CELLS blocks {path} on {python} because of {blocker}, which"
+                " PyPI has never published — the entry can never expire on its own"
+            )
+            continue
+        if any(_wheel_supports(w, python) for w in project["latest_wheels"]):
+            errors.append(
+                f"{blocker} {project['latest']} now ships a wheel for Python {python}:"
+                f" delete the BLOCKED_CELLS entry for {path} on {python} in"
+                f" scripts/pypi_members.py, add the Python {python} classifier back to"
+                f" {path}/pyproject.toml, and drop the row from docs/dependencies.md"
+            )
+    return errors
+
+
+def active_blocks() -> list[str]:
+    """One line per cell BLOCKED_CELLS is currently dropping, for the CI log."""
+    if not BLOCKED_CELLS:
+        return ["note: no cells are blocked"]
+    return [
+        f"note: {path} is not tested on Python {python}: {blocker} ships no wheel"
+        for (path, python), blocker in sorted(BLOCKED_CELLS.items())
+    ]
 
 
 def _is_newer(candidate: str, other: str) -> bool:
@@ -673,11 +805,22 @@ def _reject_ignored_flags(
     # plan in particular always asks the index about every lane member, because the
     # closure check has to see candidates outside whatever the caller narrowed to.
     if (
-        args.plan or args.candidates or args.dev_requirements or args.check_versions
+        args.plan
+        or args.candidates
+        or args.dev_requirements
+        or args.check_versions
+        or args.check_blocked_cells
     ) and (args.paths or args.check_pypi):
         parser.error(
             "--paths and --check-pypi only apply to the default cells or --members"
         )
+
+
+def _report(errors: list[str]) -> int:
+    """Prints each error and returns the exit code the check modes share."""
+    for error in errors:
+        print(f"error: {error}", file=sys.stderr)
+    return 1 if errors else 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -706,6 +849,12 @@ def main(argv: list[str] | None = None) -> int:
         help="fail when a member declares a version its lane does not allow",
     )
     mode.add_argument(
+        "--check-blocked-cells",
+        action="store_true",
+        help="fail when a BLOCKED_CELLS blocker has started shipping the wheel its"
+        " entry waits for",
+    )
+    mode.add_argument(
         "--plan",
         action="store_true",
         help="emit the release plan: ordered members, paths, skips and errors",
@@ -728,10 +877,14 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(dev_requirements()))
         return 0
     if args.check_versions:
-        errors = version_errors()
-        for error in errors:
-            print(f"error: {error}", file=sys.stderr)
-        return 1 if errors else 0
+        return _report(version_errors())
+    if args.check_blocked_cells:
+        if code := _report(blocked_cell_errors()):
+            return code
+        # The surviving blocks go to the log, so a shrunken matrix is visible as a fact
+        # about the index rather than as cells quietly missing from the run.
+        print("\n".join(active_blocks()))
+        return 0
     if args.plan:
         print(json.dumps(release_plan(args.target)))
         return 0

@@ -1,4 +1,6 @@
-"""Tests for pypi_members.py's member JSON and its version check per lane."""
+"""Tests for pypi_members.py's member JSON, its version check per lane and the
+blocked-cell table that keeps a member off a Python version its dependencies
+cannot install on."""
 
 import json
 import sys
@@ -22,6 +24,7 @@ def _member(version: str) -> Member:
         train_deps=(),
         extras=(),
         pythons=("3.13",),
+        blocked_pythons=(),
     )
 
 
@@ -111,3 +114,124 @@ def test_pypi_member_depending_on_platform_member_fails(tmp_path, monkeypatch, s
 
     [error] = pypi_members.version_errors()
     assert error.startswith("hexkit is on the PyPI lane")
+
+
+@pytest.mark.parametrize(
+    "filename, supported",
+    [
+        # A version-specific wheel fits that version alone.
+        ("crypt4gh-1.8.6-cp315-cp315-manylinux_2_17_x86_64.whl", True),
+        ("crypt4gh-1.8.6-cp314-cp314-manylinux_2_17_x86_64.whl", False),
+        # Pure Python fits everything.
+        ("crypt4gh-1.8.6-py3-none-any.whl", True),
+        # The stable ABI fits its own version and every later one, so a project moving
+        # to abi3 counts as having shipped for 3.15.
+        ("crypt4gh-1.8.6-cp311-abi3-manylinux_2_28_x86_64.whl", True),
+        ("crypt4gh-1.8.6-cp316-abi3-manylinux_2_28_x86_64.whl", False),
+        ("not-a-wheel.txt", False),
+    ],
+)
+def test_wheel_support_reads_the_interpreter_tag(filename, supported):
+    assert pypi_members._wheel_supports(filename, "3.15") is supported
+
+
+def test_blocked_versions_leave_the_members_matrix(monkeypatch):
+    """The member still declares the version; only its cell is dropped."""
+    monkeypatch.setattr(
+        pypi_members, "BLOCKED_CELLS", {("libs/hexkit", "3.15"): "crypt4gh"}
+    )
+
+    assert pypi_members._supported_pythons(">=3.13", "libs/hexkit") == ("3.13", "3.14")
+    assert pypi_members._supported_pythons(">=3.13", "libs/schemapack") == (
+        "3.13",
+        "3.14",
+        "3.15",
+    )
+
+
+def _stub_index(monkeypatch, **projects) -> None:
+    """Answers for `_pypi_project`, so no test reaches the network."""
+    defaults = {"reachable": True, "versions": {"1.0"}, "latest": "1.0"}
+    monkeypatch.setattr(
+        pypi_members,
+        "_pypi_project",
+        lambda package: {**defaults, **projects.get(package, {"latest_wheels": ()})},
+    )
+
+
+def test_a_blocker_without_the_wheel_keeps_its_entry(repo, monkeypatch, capsys):
+    monkeypatch.setattr(
+        pypi_members, "BLOCKED_CELLS", {("libs/hexkit", "3.15"): "crypt4gh"}
+    )
+    _stub_index(
+        monkeypatch,
+        crypt4gh={"latest_wheels": ("crypt4gh-1.0-cp314-cp314-linux_x86_64.whl",)},
+    )
+
+    assert pypi_members.blocked_cell_errors() == []
+    assert pypi_members.main(["--check-blocked-cells"]) == 0
+    assert "libs/hexkit is not tested on Python 3.15" in capsys.readouterr().out
+
+
+def test_a_blocker_that_shipped_the_wheel_fails_and_names_the_edits(
+    repo, monkeypatch, capsys
+):
+    """The entry costs coverage, so going stale is a failure, not a warning."""
+    monkeypatch.setattr(
+        pypi_members, "BLOCKED_CELLS", {("libs/hexkit", "3.15"): "crypt4gh"}
+    )
+    _stub_index(
+        monkeypatch,
+        crypt4gh={
+            "latest": "1.8.7",
+            "latest_wheels": ("crypt4gh-1.8.7-cp315-cp315-linux_x86_64.whl",),
+        },
+    )
+
+    assert pypi_members.main(["--check-blocked-cells"]) == 1
+    error = capsys.readouterr().err
+    assert "crypt4gh 1.8.7 now ships a wheel for Python 3.15" in error
+    for edit in ("scripts/pypi_members.py", "pyproject.toml", "docs/dependencies.md"):
+        assert edit in error
+
+
+def test_an_unreachable_index_leaves_the_entry_alone(repo, monkeypatch):
+    """Same as release_candidates: a failed query is not evidence about the wheel."""
+    monkeypatch.setattr(
+        pypi_members, "BLOCKED_CELLS", {("libs/hexkit", "3.15"): "crypt4gh"}
+    )
+    _stub_index(monkeypatch, crypt4gh={"reachable": False, "latest_wheels": ()})
+
+    assert pypi_members.blocked_cell_errors() == []
+
+
+def test_a_blocker_the_index_never_published_fails(repo, monkeypatch):
+    """A renamed or yanked blocker can never ship the wheel that retires the entry."""
+    monkeypatch.setattr(
+        pypi_members, "BLOCKED_CELLS", {("libs/hexkit", "3.15"): "crypt4gh"}
+    )
+    _stub_index(
+        monkeypatch, crypt4gh={"versions": set(), "latest": None, "latest_wheels": ()}
+    )
+
+    [error] = pypi_members.blocked_cell_errors()
+    assert "PyPI has never published" in error
+
+
+def test_a_blocked_path_outside_the_lane_fails(repo, monkeypatch):
+    monkeypatch.setattr(
+        pypi_members, "BLOCKED_CELLS", {("libs/renamed-lib", "3.15"): "crypt4gh"}
+    )
+    _stub_index(monkeypatch)
+
+    [error] = pypi_members.blocked_cell_errors()
+    assert "not a PyPI-lane member" in error
+
+
+def test_the_repos_own_blocked_cells_name_real_members_and_versions():
+    """Offline structural check on the committed table, with no index lookup."""
+    lane_paths = {member.path for member in pypi_members.pypi_members()}
+    for (path, python), blocker in pypi_members.BLOCKED_CELLS.items():
+        assert path in lane_paths, path
+        assert python in pypi_members.TEST_PYTHONS, python
+        assert blocker

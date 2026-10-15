@@ -334,6 +334,11 @@ published-combo member python="3.12":
                  ' release marker (ADR-0033)')
     cell = members[0]
     package, declared = cell['package'], cell['requires_python']
+    blocked = dict(cell['blocked_pythons'])
+    if python in blocked:
+        sys.exit(f'error: the matrix does not run {package} on {python}:'
+                 f' {blocked[python]} ships no wheel for it, so the cell is dropped'
+                 ' — see BLOCKED_CELLS in scripts/pypi_members.py')
     if python not in cell['pythons']:
         runs_on = ', '.join(cell['pythons']) or 'no version in the matrix range'
         sys.exit(f'error: the matrix does not run {package} on {python} — it declares'
