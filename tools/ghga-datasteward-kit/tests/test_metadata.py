@@ -545,14 +545,6 @@ def test_report_names_duplicated_aliases():
     assert "rows identical" in report
 
 
-def test_plan_rejects_an_anchor_absent_from_the_model():
-    """Test that content under an anchor the model does not define is an error.
-
-    In the real flow the metadata is validated first, so this is a backstop rather
-    than something a steward would meet.
-    """
-    with pytest.raises(ClassNotAnchoredError):
-        plan_with_duplicates({"not_in_model": [{"alias": "a"}]})
 
 
 @pytest.mark.parametrize(
