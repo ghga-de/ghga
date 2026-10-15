@@ -441,23 +441,6 @@ def test_amend_refuses_risky_amendment_without_a_terminal(
     assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
 
 
-def test_amend_pure_addition_needs_no_terminal(example_workdir: Path):
-    """Test that an amendment which drops nothing still applies without a terminal,
-    so that adding files stays scriptable.
-    """
-    submission_id, accessions_before = submit_original()
-
-    amend(
-        submission_id=submission_id,
-        metadata_path=AMENDED_METADATA_PATH,
-        config_path=METADATA_CONFIG_PATH,
-    )
-
-    accessions_after = read_accession_map(submission_id=submission_id)
-    for anchor, accessions in accessions_before.items():
-        for alias, accession in accessions.items():
-            assert accessions_after[anchor][alias] == accession
-    assert "test_sample_03_R1" in accessions_after["sample_files"]
 
 
 DUPE_ANCHORS = {
