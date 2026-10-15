@@ -30,7 +30,7 @@ from ghga_datasteward_kit import amendment
 from ghga_datasteward_kit.amendment import AccessionChanges, AccessionDiff
 from ghga_datasteward_kit.cli.metadata import amend, compare_aliases, submit, transform
 from ghga_datasteward_kit.exceptions import AmendmentStatusError
-from metldata.model_utils.anchors import AnchorPoint, ClassNotAnchoredError
+from metldata.model_utils.anchors import AnchorPoint
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
     AMENDED_METADATA_PATH,
@@ -441,8 +441,6 @@ def test_amend_refuses_risky_amendment_without_a_terminal(
     assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
 
 
-
-
 DUPE_ANCHORS = {
     "C": AnchorPoint(root_slot="files", target_class="C", identifier_slot="alias")
 }
@@ -526,8 +524,6 @@ def test_report_names_duplicated_aliases():
     assert "rows differ" in report
     assert "files / same" in report
     assert "rows identical" in report
-
-
 
 
 @pytest.mark.parametrize(
