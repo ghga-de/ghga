@@ -365,7 +365,7 @@ published-combo member python="3.12":
         uv build --wheel --out-dir "$work/wheels" "$path"
     done
 
-    # From outside the repo: inside it, uv picks up the workspace's requires-python (3.13)
+    # From outside the repo: inside it, uv picks up the workspace's requires-python (3.14)
     # and warns about every member that cannot have it.
     cd "$work"
     uv venv --python "{{python}}" "$work/venv"

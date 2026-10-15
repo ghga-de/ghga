@@ -100,7 +100,7 @@ class MetadataModel(SchemaDefinition):
                                 del slot["from_schema"]
                             if "domain_of" in slot:
                                 del slot["domain_of"]
-                            # linkml >=1.10 (the py3.13 workspace can't use metldata's
+                            # linkml >=1.10 (the py3.14 workspace can't use metldata's
                             # upstream linkml==1.6.1) derives these onto slot_usage; not
                             # essential authored content (authored mappings live on the
                             # top-level slot).

@@ -51,7 +51,7 @@ from packaging.version import InvalidVersion, Version
 from affected_targets import _canonical, internal_dep_graph
 
 # The versions the matrix runs on.
-TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
+TEST_PYTHONS = ("3.11", "3.12", "3.13", "3.14", "3.15")
 
 # Directory defaults for the release lane (ADR-0033).
 LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
@@ -160,7 +160,7 @@ def _supported(requires_python: str, python: str) -> bool:
 def _supported_pythons(requires_python: str, member_path: str) -> tuple[str, ...]:
     """Returns the versions in TEST_PYTHONS the member can run on.
 
-    A member declaring `requires-python = ">=3.13"` yields `("3.13", "3.14")`.
+    A member declaring `requires-python = ">=3.13"` yields `("3.13", "3.14", "3.15")`.
 
     Raises:
         SystemExit: if the specifier cannot be parsed — `packaging` names only the
