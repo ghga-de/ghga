@@ -289,13 +289,13 @@ reference:
       - protocols.dao.ResourceAlreadyExistsError
       - protocols.dao.UniqueConstraintViolationError
       - protocols.dao.PreconditionFailedError
-      - retry.race_condition_retries
-      - retry.RaceConditionAttempt
       - protocols.dao.FindError
       - protocols.dao.InvalidMappingError
       - protocols.dao.MultipleHitsFoundError
       - protocols.dao.NoHitsFoundError
       - protocols.dao.DbTimeoutError
+      - retry.race_condition_retries
+      - retry.RaceConditionAttempt
 
   - title: Protocols — Storage
     desc: Ports for key-value and object storage
