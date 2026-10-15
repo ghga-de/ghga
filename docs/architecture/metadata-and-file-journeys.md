@@ -112,8 +112,6 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   Confining amendments to added files is an operational rule, not one the tool enforces.
   All of it lives in dskit (`ghga_datasteward_kit/amendment.py`); metldata is unchanged.
   There is still no accession stability *across* submissions. → [changed by the feature](../epics/epic-0093-giraffe.md).
-- A **separate** catalog-accession scheme exists (`generate-catalog-accessions`, `catalog_accession_generator.py`): base `GHGAMC` + per-type letter + 14 digits.
-  Distinct from submission accessions; not on the submission path.
 
 ### The LinkML model (current testbed model)
 
