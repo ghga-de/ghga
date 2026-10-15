@@ -29,9 +29,9 @@ from hexkit.protocols.dao import (
     ResourceNotFoundError,
     UniqueConstraintViolationError,
 )
+from hexkit.retry import race_condition_retries
 from hexkit.utils import now_utc_ms_prec
 from rs.constants import RDUB_OWNED_FIELDS, STAMP_FIELDS, VALID_STATE_TRANSITIONS
-from rs.core._rc_helper import race_condition_retries
 from rs.core.models import (
     PID,
     BoxRequeueResult,
