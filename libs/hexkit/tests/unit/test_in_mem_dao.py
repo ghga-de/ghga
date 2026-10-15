@@ -15,6 +15,7 @@
 
 """Testing the in-memory DAO."""
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -266,6 +267,71 @@ async def test_mql_comparison_ops(filter_: dict[str, Any], expected: list[str]):
 
     results = sorted([x.title async for x in dao.find_all(filter_=filter_)])
     assert results == expected
+
+
+class MixedValue(BaseModel):
+    """A model with an optional datetime, as a plain and as a nested field"""
+
+    id: str
+    value: datetime | None = None
+    nested: dict[str, datetime] | None = None
+
+
+NOW = datetime(2026, 1, 1, 12, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    "filter_,expected",
+    [
+        ({"value": {"$gt": None}}, []),
+        ({"value": {"$lt": None}}, []),
+        ({"value": {"$gte": None}}, ["null"]),
+        ({"value": {"$lte": None}}, ["null"]),
+        ({"value": {"$gt": NOW - timedelta(days=1)}}, ["datetime"]),
+        ({"value": {"$lt": NOW + timedelta(days=1)}}, ["datetime"]),
+        ({"value": {"$gte": NOW}}, ["datetime"]),
+        ({"value": {"$lte": NOW}}, ["datetime"]),
+    ],
+)
+async def test_ordering_ops_with_null_match_mongodb(
+    filter_: dict[str, Any], expected: list[str]
+):
+    """Test that $gt, $gte, $lt and $lte handle null without raising.
+
+    The expected results were taken from MongoDB 7.0: null never matches a value and
+    vice versa, and $gte/$lte null match null.
+    """
+    MixedValueDao = new_mock_dao_class(dto_model=MixedValue, id_field="id")  # noqa: N806
+    dao = MixedValueDao()
+    await dao.insert(MixedValue(id="datetime", value=NOW))
+    await dao.insert(MixedValue(id="null", value=None))
+
+    results = sorted([x.id async for x in dao.find_all(filter_=filter_)])
+    assert results == expected
+
+
+async def test_ordering_ops_with_missing_field_match_mongodb():
+    """Test that a missing field behaves like null for $gt, $gte, $lt and $lte"""
+    MixedValueDao = new_mock_dao_class(dto_model=MixedValue, id_field="id")  # noqa: N806
+    dao = MixedValueDao()
+    await dao.insert(MixedValue(id="present", nested={"when": NOW}))
+    await dao.insert(MixedValue(id="missing", nested={}))
+    await dao.insert(MixedValue(id="no_parent"))
+
+    async def find_ids(filter_: dict[str, Any]) -> list[str]:
+        return sorted([x.id async for x in dao.find_all(filter_=filter_)])
+
+    assert await find_ids({"nested.when": {"$lt": NOW + timedelta(days=1)}}) == [
+        "present"
+    ]
+    assert await find_ids({"nested.when": {"$gte": None}}) == [
+        "missing",
+        "no_parent",
+    ]
+    # The order of the $or branches doesn't matter: $lt never raises on null
+    assert await find_ids(
+        {"$or": [{"nested.when": {"$lt": NOW}}, {"nested.when": None}]}
+    ) == ["missing", "no_parent"]
 
 
 async def test_build_predicates_empty_mapping():

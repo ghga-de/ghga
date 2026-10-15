@@ -46,13 +46,27 @@ __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
 DTO = TypeVar("DTO", bound=BaseModel)
 Document = dict[str, Any]
 
+
+def _null_safe(compare: Callable[[Any, Any], bool]) -> Callable[[Any, Any], bool]:
+    """Match MongoDB for null (or missing) values: it never orders null against a value,
+    and two nulls are equal, so `$gte`/`$lte` match them and `$gt`/`$lt` don't.
+    """
+
+    def null_safe_compare(stored_value: Any, target_value: Any) -> bool:
+        if stored_value is None or target_value is None:
+            return stored_value is None and target_value is None and compare(0, 0)
+        return compare(stored_value, target_value)
+
+    return null_safe_compare
+
+
 MQL_COMPARISON_OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
     "$eq": lambda a, b: a == b,
-    "$gt": lambda a, b: a > b,
-    "$gte": lambda a, b: a >= b,
+    "$gt": _null_safe(lambda a, b: a > b),
+    "$gte": _null_safe(lambda a, b: a >= b),
     "$in": lambda a, b: a in b,
-    "$lt": lambda a, b: a < b,
-    "$lte": lambda a, b: a <= b,
+    "$lt": _null_safe(lambda a, b: a < b),
+    "$lte": _null_safe(lambda a, b: a <= b),
     "$ne": lambda a, b: a != b,
     "$nin": lambda a, b: a not in b,
 }
@@ -602,6 +616,12 @@ def new_mock_dao_class(
     use MongoDB query language predicates (e.g. $ne, $in, $ge, etc.). Not all MQL
     operators are supported. Please see `SUPPORTED_MQL_OPERATORS` for a complete list
     of the currently supported MQL operators.
+
+    The MQL support is a testing aid, not an emulation of MongoDB. Operators follow
+    Python semantics, except where MongoDB's behavior is common in service code and
+    simple to match, such as comparing against null or missing fields. Other edge cases,
+    like ordering values of different types, may raise or match differently than
+    MongoDB. Cover those with integration tests against MongoDB instead.
     """
 
     class MockDao(BaseInMemDao[DTO]):
