@@ -227,6 +227,11 @@ class Config(BaseSettings):
 
     # vault
     vault_path: str = "testing"
+    allow_vault_reset: bool = Field(
+        False,
+        description="let the suite delete the secrets under vault_path; enable it only"
+        " where that path holds the suite's secrets alone",
+    )
 
     # sms
     sms_url: str = "sms"
@@ -288,6 +293,13 @@ class Config(BaseSettings):
 
     # lox24 mock server
     lox24_mock_url: str = "http://lox24-mock:8080"
+
+    @model_validator(mode="after")
+    def check_vault_reset(self):
+        """Refuse a Vault reset without a path, which would aim at no known path."""
+        if self.allow_vault_reset and not self.vault_path.strip("/"):
+            raise ValueError("allow_vault_reset needs a non-empty vault_path")
+        return self
 
     @model_validator(mode="after")
     def add_external_base_url(self):

@@ -33,7 +33,8 @@ Pytest fixtures are stored in the `fixtures` directory.
 - For specific group of tests, BDD tags (pytest markers) can also be used, e.g. `just testbed -m browse`.
 - Use `just testbed-remote <config>` to run against the deployment a `tb.*.yaml` names, without the kind prelude; see [Running against a cluster](#running-against-a-cluster).
 
-The suite is a black box: it reaches the application only through the gateway, and MongoDB, Kafka, S3 and Vault only through the state-management service.
+The suite reaches the application only through the gateway, and MongoDB, Kafka, S3 and Vault only through the state-management service.
+It uses that service to reset state and also to read service databases when checking outcomes, so it is grey box rather than black box.
 
 ### Configuration
 
@@ -44,8 +45,10 @@ The testbed itself is configured via the YAML file named by the environment vari
 Alternative configurations can be saved as `tb.*.yaml` and activated the same way.
 
 - **States:** `keep_state_in_db` stores the test states in the state-management database, the default, or in memory.
-- **Additional Authentication:** `auth_basic` adds Basic authentication to every request except those to the state-management, purge-controller and DLQ services.
+- **Additional Authentication:** `auth_basic` adds Basic authentication to the suite's own HTTP requests, except those to the state-management, purge-controller and DLQ services; the browser, the data steward kit and the connector do not send it yet.
   Set it as `TB_AUTH_BASIC` where the gateway asks for it.
+- **Vault reset:** `allow_vault_reset` lets the clean slate delete the secrets under `vault_path`.
+  It is off by default, because Vault holds secrets no other store keeps; enable it only where that path holds the suite's secrets alone, as `tb.kind.yaml` does.
 
 ### Running against a cluster
 
@@ -53,7 +56,7 @@ The suite reaches a deployment only through its gateway: the service APIs, the s
 The one exception is the pre-signed S3 URLs the services hand to the connector, whose host must resolve from the runner.
 A target deployment therefore provides:
 
-- the state-management service behind the gateway, under the guardrails of [ADR-0030](../docs/adrs/adr-0030-state-management-service-testbed-only.md): a non-empty `db_prefix`, a `db_permissions` list naming the suite's databases, and a Vault-issued token;
+- the state-management service behind the gateway, under the guardrails of [ADR-0030](../docs/adrs/adr-0030-state-management-service-testbed-only.md): a non-empty `db_prefix`, a `db_permissions` list naming the suite's databases, a Vault policy granting only the suite's secret path, and a Vault-issued token;
 - the three doubles behind the gateway, where the original deployment served them under a `/test/` prefix;
 - database, collection and event-type names that match the configuration, as `tb.kind.yaml` sets them for the kind cluster;
 - the four service tokens and the FIS public key, and credentials where the gateway asks for Basic authentication.
@@ -68,13 +71,12 @@ just testbed-remote testbed/tb.<env>.yaml steps/test_001_health_check.py   # rea
 just testbed-remote testbed/tb.<env>.yaml                                  # the whole suite
 ```
 
-The recipe sets `TB_CONFIG_YAML`, writes the steward token to `dsk_token_path` for the data steward kit, and stops before pytest when a variable is missing, naming it.
+The recipe sets `TB_CONFIG_YAML`, writes the steward token for the data steward kit to `~/.ghga_data_steward_token.txt`, the default `dsk_token_path`, and removes it afterwards, and it stops before pytest when a variable is missing, naming it.
 It never calls `kubectl`, forwards a port or edits `/etc/hosts`.
 The health check alone walks every configured API, so it is the reachability test: a failure there is a routing or deployment question before it is a suite question.
 The suite starts from an empty state and resets shared state as it goes, so run it against one deployment only once at a time.
 
-`tb.local-kind.yaml` runs the same lane against the local kind cluster, which proves the runner before a cluster exists.
-kind does not route the mail server and the lox24 mock through its gateway, so start the two forwards by hand, `kubectl port-forward svc/ghga-mailhog 8025:8025` and `svc/ghga-lox24-mock 18080:8080`, and harvest the secrets as the `testbed` recipe in the justfile does.
+On kind, `just testbed` runs this lane: it harvests the secrets from the cluster, forwards the mail server and the lox24 mock, which kind does not route through its gateway, and then calls `just testbed-remote testbed/tb.kind.yaml`.
 
 ## License
 

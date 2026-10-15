@@ -29,7 +29,7 @@ One service's own logic, DAO or API belongs in that member's tests, run with `ju
    Use `fixtures.mongo.wait_for_document`, `wait_for_documents` or `wait_for_removal`, `has_reached` for upload states, and `expect(...)` with `UI_TIMEOUT` in the browser.
 5. Tag the feature with a marker from `markers` in `testbed/pytest.ini`, which `just testbed -m` selects; register a new one there.
    A browser scenario also gets `@frontend`, which arms the tracing.
-6. Every run is black-box: reach MongoDB, Kafka, S3 and Vault through the fixtures, which go through the state-management service, and expect the APIs in `internal_apis` to answer 404.
+6. Every run reaches MongoDB, Kafka, S3 and Vault only through the fixtures, which go through the state-management service, and expects the APIs in `internal_apis` to answer 404.
 
 ## Debugging a failed run
 

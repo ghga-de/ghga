@@ -45,6 +45,16 @@ class VaultFixture(StateManager):
         return keys
 
     def empty_secrets(self):
+        """Delete the secrets under the configured Vault path.
+
+        Vault holds secrets that no other store keeps, so this does nothing unless the
+        configuration sets allow_vault_reset.
+        """
+        if not self.config.allow_vault_reset:
+            print(
+                f"Vault reset skipped: allow_vault_reset is off ({self.config.vault_path})"
+            )
+            return
         url = f"{self.config.sms_url}/secrets/{self.config.vault_path}"
         response = self.http.delete(url, headers=self.auth_headers)
         assert response.status_code == 204, f"Failed to delete secrets: {response.text}"
