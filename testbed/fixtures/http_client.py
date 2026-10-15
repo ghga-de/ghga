@@ -51,14 +51,10 @@ class HttpClient(Client):
 @fixture(name="http", scope="session")
 def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
     """Pytest fixture for tests using an HTTP client."""
-    black_box_mode = config.black_box_mode
-    if black_box_mode:
-        auth_basic = config.auth_basic
-        if auth_basic:
-            auth_basic = b64encode(auth_basic.encode("ascii")).decode("ascii")
-            auth_basic = f"Basic {auth_basic}"
-    else:
-        auth_basic = None
+    auth_basic = config.auth_basic
+    if auth_basic:
+        auth_basic = b64encode(auth_basic.encode("ascii")).decode("ascii")
+        auth_basic = f"Basic {auth_basic}"
     basic_auth_excluded_urls = tuple(
         getattr(config, f"{api}_url") for api in BASIC_AUTH_EXCLUDED_APIS
     )
@@ -68,8 +64,7 @@ def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
 
         This hook is called before sending the request.
 
-        It adds Basic authentication if necessary,
-        simulates the API gateway if we don't have one
+        It adds Basic authentication if configured
         and logs the request on standard output.
         """
         url = str(request.url)

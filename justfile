@@ -972,15 +972,12 @@ testbed-reset:
 
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 # Harvests tokens/keys from the cluster secrets, port-forwards the services the suite
-# reaches directly (mailhog, lox24 — MinIO is published by kind), runs pytest.
+# reaches directly (mailhog, lox24 — MinIO is published by kind), then runs the suite
+# through `testbed-remote` with tb.kind.yaml, so every kind run exercises that lane too.
 # Run the testbed suite (optionally scoped, e.g. `just testbed steps/test_001_health_check.py`).
 testbed *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
-    # on PATH. The testbed venv holds them as editable workspace installs (see
-    # testbed-install), so the CLIs are the very install the suite also imports.
-    export PATH="$PWD/.venv-testbed/bin:$PATH"
     K="kubectl --context kind-ghga"
     # Fail in seconds, not in 300 s timeouts per scenario, when the platform is broken:
     # e.g. a crash-looping service, or Vault not letting ekss log in (its readiness
@@ -991,12 +988,10 @@ testbed *args:
         exit 1
     fi
     secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
-    export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
     export TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)
     export TB_PURGE_CONTROLLER_TOKEN=$(secret ghga-harness-tokens PCS_TOKEN)
     export TB_DLQ_TOKEN=$(secret ghga-harness-tokens DLQS_TOKEN)
     export TB_UPLOAD_TOKEN=$(secret ghga-harness-tokens METLDATA_TOKEN)
-    printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
     export TB_FIS_PUBKEY=$(secret ghga-c4gh-files crypt4gh\\.pub | sed -n 2p)
     # per-run test-user crypt4gh keypair (any fresh pair works)
     # the connector needs the RAW 32-byte secret (export_private is PEM-ish and
@@ -1014,6 +1009,38 @@ testbed *args:
     just testbed-hosts
     trap "kill $PF1 $PF2 2>/dev/null || true" EXIT
     sleep 2
+    just testbed-remote testbed/tb.kind.yaml {{args}}
+
+# Run the suite against a deployment reached through its gateway alone, as a remote
+# cluster is: no kubectl, no port-forward, no /etc/hosts edit. The configuration holds
+# the URLs and database names; every secret comes from the environment, in the same
+# TB_* variables `testbed` harvests from the cluster, and a missing one fails here by
+# name instead of as a scenario timeout. The suite resets shared state, so run it
+# against one deployment only once at a time.
+# Run the testbed suite against a tb.*.yaml deployment without the kind prelude (e.g. `just testbed-remote testbed/tb.<env>.yaml steps/test_001_health_check.py`).
+testbed-remote config *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # The suite shells out to ghga-datasteward-kit and ghga-connector and expects them
+    # on PATH. The testbed venv holds them as editable workspace installs (see
+    # testbed-install), so the CLIs are the very install the suite also imports.
+    export PATH="$PWD/.venv-testbed/bin:$PATH"
+    arg={{quote(config)}}
+    config=$arg
+    [ -f "$config" ] || config={{quote(invocation_directory())}}/$arg
+    [ -f "$config" ] || config=testbed/$arg
+    [ -f "$config" ] || { echo "error: no such configuration: $arg (a tb.*.yaml path)" >&2; exit 1; }
+    missing=()
+    for var in TB_STATE_MANAGEMENT_TOKEN TB_PURGE_CONTROLLER_TOKEN TB_DLQ_TOKEN TB_UPLOAD_TOKEN \
+               TB_FIS_PUBKEY TB_USER_PRIVATE_CRYPT4GH_KEY TB_USER_PUBLIC_CRYPT4GH_KEY; do
+        [ -n "${!var:-}" ] || missing+=("$var")
+    done
+    [ ${#missing[@]} -eq 0 ] || { echo "error: not set in the environment: ${missing[*]}" >&2; exit 1; }
+    export TB_CONFIG_YAML="$(realpath "$config")"
+    # ghga-datasteward-kit reads the steward token from a file (the default dsk_token_path), not the environment
+    token_file="$HOME/.ghga_data_steward_token.txt"
+    printf '%s' "$TB_UPLOAD_TOKEN" > "$token_file"
+    trap 'rm -f "$token_file"' EXIT
     cd testbed && ../.venv-testbed/bin/pytest -v {{args}}
 
 # The name is matched loosely, so the `ghga-` prefix is optional and a substring is enough.

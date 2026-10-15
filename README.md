@@ -132,6 +132,7 @@ just testbed            # run the suite
 ```
 
 Scope a run with `just testbed steps/test_001_health_check.py`, and use `just testbed-reset` to return the cluster to a coherent cold start between runs — the suite starts from an empty state and its feature files are ordered by numeric prefix.
+The same suite runs against any deployment from outside with `just testbed-remote <config>`; [testbed/README.md](testbed/README.md#running-against-a-cluster) says what the deployment has to provide.
 
 #### Debugging a failing browser test
 
@@ -186,7 +187,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
 | Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix`, `logs [name]` |
-| Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-reset`, `testbed-hosts`, `testbed-trace [file]` |
+| Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-remote <config>`, `testbed-reset`, `testbed-hosts`, `testbed-trace [file]` |
 | Migration | `import-from-snapshot`, `sync-mainline` |
 
 ## Where to read
