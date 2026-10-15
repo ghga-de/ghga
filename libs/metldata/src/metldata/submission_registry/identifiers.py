@@ -128,15 +128,13 @@ def get_study_pid(
     *,
     content: SubmissionContent,
     params: SubmissionParams,
-    anchor_points_by_target: dict[str, AnchorPoint],
 ) -> str:
     """Get the PID of the study in the provided content.
 
-    A submission is assumed to hold exactly one study: only the first study resource
-    is considered, and any further ones are ignored.
-
-    The PID found in the provided accession map is kept, so re-upserting a submission
-    never changes it. Otherwise a new one is requested from the accession registry.
+    A submission is assumed to hold exactly one study. The PID found under the study
+    in the provided accession map is kept, whatever its alias, so re-upserting a
+    submission never changes it. Otherwise a new one is requested from the accession
+    registry.
 
     Raises:
         MissingStudyError: If the content holds no study.
@@ -148,20 +146,11 @@ def get_study_pid(
         if not params.accession_registry.is_study_class(class_name) or not resources:
             continue
 
-        # only the first study's alias, since a submission holds exactly one study
-        study_alias = next(
-            iter(
-                get_aliases_for_resources(
-                    resources=resources,
-                    root_slot=anchor,
-                    anchor_points_by_target=anchor_points_by_target,
-                )
-            )
-        )
+        # only the first PID, since a submission holds exactly one study; not looked
+        # up by alias, since a new alias does not make it a new study
+        existing_pids = params.accession_map.get(anchor, {}).values()
         return (
-            lookup_accession(
-                anchor=anchor, alias=study_alias, accession_map=params.accession_map
-            )
+            next(iter(existing_pids), None)
             or params.accession_registry.get_study_accession()
         )
 
@@ -197,11 +186,7 @@ def generate_accession_map(
         accession_map=existing_accession_map,
     )
 
-    study_pid = get_study_pid(
-        content=content,
-        params=params,
-        anchor_points_by_target=anchor_points_by_target,
-    )
+    study_pid = get_study_pid(content=content, params=params)
 
     get_accession_ = partial(
         get_accession,

@@ -94,3 +94,37 @@ def test_generate_accession_map():
     )
 
     assert observed_accession_map == expected_accession_map
+
+
+def test_new_study_alias_keeps_pid():
+    """A study given a new alias between two upserts keeps its PID, now under the
+    new alias, so the other accessions keep their prefix.
+    """
+    content = {
+        "study_anchor": [{"alias": "new_study_alias"}],
+        "class1_anchor": [{"alias": "test_alias1"}],
+    }
+    anchor_points_by_target = {
+        "Study": AnchorPoint(
+            root_slot="study_anchor", target_class="Study", identifier_slot="alias"
+        ),
+        "Class1": AnchorPoint(
+            root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
+        ),
+    }
+    existing_accession_map = {
+        "study_anchor": {"test_study": "existing_study_pid"},
+        "class1_anchor": {"test_alias1": "existing_study_pid.test_alias1"},
+    }
+
+    observed_accession_map = generate_accession_map(
+        content=content,
+        existing_accession_map=existing_accession_map,
+        accession_registry=FakeAccessionRegistry(),  # type: ignore
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
+    assert observed_accession_map == {
+        "study_anchor": {"new_study_alias": "existing_study_pid"},
+        "class1_anchor": {"test_alias1": "existing_study_pid.test_alias1"},
+    }
