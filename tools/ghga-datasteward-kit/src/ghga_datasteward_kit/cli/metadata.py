@@ -16,11 +16,14 @@
 """Metadata related CLI"""
 
 import logging
+import sys
 from pathlib import Path
 
 import typer
 
-from ghga_datasteward_kit import metadata
+from ghga_datasteward_kit import amendment, metadata
+from ghga_datasteward_kit.amendment import AccessionChanges
+from ghga_datasteward_kit.exceptions import AmendmentAbortedError
 from ghga_transpiler.cli import transpile
 
 cli = typer.Typer(no_args_is_help=True)
@@ -59,6 +62,89 @@ def submit(
         metadata_path=metadata_path,
         config_path=config_path,
     )
+
+
+def _report_and_confirm_amendment(
+    changes: AccessionChanges, *, submission_id: str
+) -> bool:
+    """Show what an amendment would do and, when it is risky, ask whether to apply it.
+
+    There is deliberately no way to skip the question: an amendment that drops
+    accessions removes resources from the running system on the next load, so it
+    should only ever be applied by someone who has read the report.
+
+    `typer.confirm` reads the answer with `input()` and does not care whether anything
+    is attached to stdin, so a piped `y` would answer for a person who never saw the
+    report. A risky amendment is therefore refused outright without a terminal.
+    """
+    typer.echo(
+        amendment.format_amendment_report(submission_id=submission_id, changes=changes)
+    )
+
+    if not amendment.needs_confirmation(changes=changes):
+        return True
+
+    if not sys.stdin.isatty():
+        typer.echo(
+            "This amendment needs confirmation, but stdin is not a terminal."
+            " Re-run it interactively so the report can be read before answering."
+        )
+        return False
+
+    return typer.confirm("Apply this amendment?", default=False)
+
+
+@cli.command(no_args_is_help=True)
+def amend(
+    submission_id: str = typer.Option(
+        ...,
+        help="The ID of the submission to amend.",
+    ),
+    metadata_path: Path = typer.Option(
+        ...,
+        help="The path to the amended version of the metadata JSON file.",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+        readable=True,
+    ),
+    config_path: Path = typer.Option(
+        ...,
+        help="Path to a config YAML.",
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        readable=True,
+    ),
+):
+    """Replace the content of an already accessioned submission, keeping its accessions.
+
+    Use this instead of a second 'submit' when a submission gains files: aliases that
+    are already accessioned keep their accession, and only new aliases get new ones.
+
+    This applies to every metadata class, not only files. The study, its datasets,
+    samples and experiments keep, gain or lose accessions by the same alias matching,
+    and a field changed on an already-accessioned resource is written through without
+    a report entry or a prompt, because it is not an accession change. Keeping an
+    amendment to added files is a rule for its users, not one this command enforces.
+    """
+    logging.basicConfig(level=logging.CRITICAL)
+
+    def confirm(changes: AccessionChanges) -> bool:
+        return _report_and_confirm_amendment(changes, submission_id=submission_id)
+
+    try:
+        diff = amendment.amend_metadata_from_path(
+            submission_id=submission_id,
+            metadata_path=metadata_path,
+            config_path=config_path,
+            confirm=confirm,
+        )
+    except AmendmentAbortedError as error:
+        typer.echo(str(error))
+        raise typer.Abort() from error
+
+    typer.echo(amendment.format_amendment_result(diff=diff))
 
 
 @cli.command(no_args_is_help=True)
