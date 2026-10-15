@@ -289,6 +289,8 @@ reference:
       - protocols.dao.ResourceAlreadyExistsError
       - protocols.dao.UniqueConstraintViolationError
       - protocols.dao.PreconditionFailedError
+      - retry.race_condition_retries
+      - retry.RaceConditionAttempt
       - protocols.dao.FindError
       - protocols.dao.InvalidMappingError
       - protocols.dao.MultipleHitsFoundError
