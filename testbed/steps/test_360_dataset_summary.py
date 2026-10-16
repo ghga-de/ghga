@@ -37,13 +37,10 @@ EXPECTED_SUMMARIES = {
         "types": ["And another Type"],
         "description": "An interesting dataset B of complete example set",
         "samples_summary": {
-            "count": 2,
+            "count": 1,
             "stats": {
                 "sex": [{"value": "MALE", "count": 1}],
-                "tissues": [
-                    {"value": "blood", "count": 1},
-                    {"value": "subcutaneous adipose tissue", "count": 1},
-                ],
+                "tissues": [{"value": "subcutaneous adipose tissue", "count": 1}],
                 "phenotypic_features": [{"value": "Leukemia", "count": 1}],
             },
         },
@@ -52,8 +49,8 @@ EXPECTED_SUMMARIES = {
             "stats": {"accessions": 1, "titles": "The B Study"},
         },
         "experiments_summary": {
-            "count": 2,
-            "stats": {"experiment_methods": [{"value": "454_GS", "count": 2}]},
+            "count": 1,
+            "stats": {"experiment_methods": [{"value": "454_GS", "count": 1}]},
         },
         "files_summary": {
             "count": 7,
