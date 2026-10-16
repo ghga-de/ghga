@@ -20,8 +20,12 @@ from typing import Any
 
 import pytest
 
-from hexkit.protocols.dao import PreconditionFailedError, ResourceNotFoundError
-from ucs.core._rc_helper import race_condition_retries
+from hexkit.protocols.dao import (
+    PreconditionFailedError,
+    RaceConditionAttempt,
+    ResourceNotFoundError,
+    race_condition_retries,
+)
 
 pytestmark = pytest.mark.asyncio()
 
@@ -62,7 +66,7 @@ def sleeps(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     async def record_sleep(seconds: float) -> None:
         waits.append(seconds)
 
-    monkeypatch.setattr("ucs.core._rc_helper.sleep", record_sleep)
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", record_sleep)
     return waits
 
 
@@ -87,7 +91,7 @@ async def test_race_condition_retries_exhausted(
     """Test that `error_on_failure` is raised after the last try, chained from the
     `PreconditionFailedError`, without waiting after that try.
     """
-    logger_name = "ucs.tests.race_condition_retries"
+    logger_name = "hexkit.tests.race_condition_retries"
     caplog.set_level(logging.DEBUG, logger=logger_name)
     update = ConflictingUpdate(conflicts=5)
 
@@ -169,3 +173,53 @@ async def test_race_condition_retries_new_error_per_failure():
 
     assert errors[0] is not errors[1]
     assert [error.__cause__ for error in errors] == conflicts
+
+
+async def test_race_condition_retries_attempt_not_entered():
+    """Test that an attempt not used as `with attempt:` raises a `RuntimeError` instead
+    of being treated as a lost race.
+    """
+    tries = 0
+
+    with pytest.raises(RuntimeError, match="with attempt:"):
+        async for _attempt in race_condition_retries(
+            description="update the resource", error_on_failure=GaveUpError
+        ):
+            tries += 1
+
+    assert tries == 1
+
+
+async def test_race_condition_attempt_success():
+    """Test that a block finishing without an error marks the attempt as succeeded."""
+    attempt = RaceConditionAttempt()
+    assert not attempt.entered
+
+    with attempt:
+        assert attempt.entered
+
+    assert attempt.succeeded
+    assert attempt.error is None
+
+
+async def test_race_condition_attempt_precondition_failed():
+    """Test that a `PreconditionFailedError` is suppressed and kept in `error`."""
+    attempt = RaceConditionAttempt()
+    conflict = PreconditionFailedError(id_="test", precondition={})
+
+    with attempt:
+        raise conflict
+
+    assert not attempt.succeeded
+    assert attempt.error is conflict
+
+
+async def test_race_condition_attempt_other_error():
+    """Test that errors other than `PreconditionFailedError` pass through unrecorded."""
+    attempt = RaceConditionAttempt()
+
+    with pytest.raises(ResourceNotFoundError), attempt:
+        raise ResourceNotFoundError(id_="test")
+
+    assert not attempt.succeeded
+    assert attempt.error is None
