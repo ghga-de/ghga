@@ -16,6 +16,7 @@
 """Utilities used in step functions"""
 
 import json
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,6 +32,28 @@ from pydantic import BaseModel, EmailStr
 from pytest_bdd import parsers
 
 parse: type[parsers.StepParser] = parsers.parse  # pylint: disable=invalid-name
+
+# the accessions metldata mints: the study PID 'GHGA.YY.XXX.V', the dataset PID
+# '{study_pid}.DS.xxx', and '{study_pid}.{alias}' for every other entity
+STUDY_PID = r"GHGA\.\d{2}\.[A-Z2-7]{3}\.\d+"
+DATASET_PID = STUDY_PID + r"\.DS\.[A-Z2-7]{3}"
+ALIAS_ACCESSION = STUDY_PID + r"\..+"
+
+
+def is_study_pid(accession: str) -> bool:
+    """Tell whether the accession is a study PID."""
+    return re.fullmatch(STUDY_PID, accession) is not None
+
+
+def is_dataset_pid(accession: str) -> bool:
+    """Tell whether the accession is a dataset PID."""
+    return re.fullmatch(DATASET_PID, accession) is not None
+
+
+def is_alias_accession(accession: str) -> bool:
+    """Tell whether the accession is that of an entity other than a study."""
+    return re.fullmatch(ALIAS_ACCESSION, accession) is not None
+
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
 DATASET_SEARCH_RESULT_KEYS = {"accession", "title", "ega_accession", "alias"}

@@ -18,6 +18,7 @@
 
 import pytest
 
+from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.config import SubmissionConfig
@@ -43,16 +44,18 @@ def test_happy(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test the happy path of using the submission registry."""
+    config = config_sub_fixture
+
     # inject dependencies:
-    submission_store = SubmissionStore(config=config_sub_fixture)
+    submission_store = SubmissionStore(config=config)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
-    accession_store = AccessionStore(config=config_sub_fixture)
+    event_publisher = SourceEventPublisher(config=config, provider=provider)
+    accession_store = AccessionStore(config=config)
     accession_registry = AccessionRegistry(
-        config=config_sub_fixture, accession_store=accession_store
+        config=config, accession_store=accession_store
     )
     submission_registry = SubmissionRegistry(
-        config=config_sub_fixture,
+        config=config,
         submission_store=submission_store,
         event_publisher=event_publisher,
         accession_registry=accession_registry,
@@ -79,6 +82,7 @@ def test_happy(
     observed_submission = submission_store.get_by_id(submission_id)
     assert observed_submission.content == submission_content
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
+    study_pid = observed_submission.accession_map["studies"]["test_study"]
 
     # update content:
     submission_content_updated = VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[1]
@@ -91,16 +95,21 @@ def test_happy(
     assert observed_submission.content == submission_content_updated
     assert observed_submission.current_status == models.SubmissionStatus.PENDING
 
-    # check accessions are in store:
-    for class_ in observed_submission.accession_map.values():
-        for accession in class_.values():
-            assert accession_store.exists(accession=accession)
+    # check the update kept the study PID, which every other accession derives from:
+    assert observed_submission.accession_map["studies"]["test_study"] == study_pid
+    for accessions_by_alias in observed_submission.accession_map.values():
+        for accession in accessions_by_alias.values():
+            assert accession.startswith(study_pid)
+
+    # check only the random block of the study PID is registered, under its year:
+    _, year, random_block, _ = study_pid.split(".")
+    assert accession_store.get_random_blocks(year=year) == {random_block}
 
     # check published source event:
     check_source_events(
         expected_submissions=[observed_submission],
-        source_event_topic=config_sub_fixture.source_event_topic,
-        source_event_type=config_sub_fixture.source_event_type,
+        source_event_topic=config.source_event_topic,
+        source_event_type=config.source_event_type,
         file_system_event_fixture=file_system_event_fixture,
     )
 
@@ -114,17 +123,31 @@ def test_happy(
     # check published source event:
     check_source_events(
         expected_submissions=[observed_submission],
-        source_event_topic=config_sub_fixture.source_event_topic,
-        source_event_type=config_sub_fixture.source_event_type,
+        source_event_topic=config.source_event_topic,
+        source_event_type=config.source_event_type,
         file_system_event_fixture=file_system_event_fixture,
     )
 
 
+@pytest.mark.parametrize(
+    "submission_content",
+    [
+        INVALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLE,
+        {
+            "studies": [{"alias": "shared"}],
+            "files": [{"alias": "shared", "filename": "shared.fastq"}],
+        },
+    ],
+    ids=["invalid_against_model", "shared_alias"],
+)
 def test_failed_content_validation(
+    submission_content: dict,
     config_sub_fixture: SubmissionConfig,  # noqa: F811
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
-    """Test that invalid content cannot be upserted."""
+    """Test that invalid content cannot be upserted, and that no study PID is minted
+    for it.
+    """
     # inject dependencies:
     submission_store = SubmissionStore(config=config_sub_fixture)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
@@ -148,15 +171,16 @@ def test_failed_content_validation(
     observed_submission_original = submission_store.get_by_id(submission_id)
 
     # provide invalid content:
-    submission_content = INVALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLE
     with pytest.raises(SubmissionRegistry.ValidationError):
         submission_registry.upsert_submission_content(
             submission_id=submission_id, content=submission_content
         )
 
-    # check that the submission was not changed:
+    # check that the submission was not changed and no study PID was minted:
     observed_submission_updated = submission_store.get_by_id(submission_id)
     assert observed_submission_original == observed_submission_updated
+    year = now_as_utc().strftime("%y")
+    assert accession_store.get_random_blocks(year=year) == set()
 
 
 def test_update_after_completion(
@@ -164,16 +188,18 @@ def test_update_after_completion(
     file_system_event_fixture: FileSystemEventFixture,  # noqa: F811
 ):
     """Test no updates can be carried out after completion."""
+    config = config_sub_fixture
+
     # inject dependencies:
-    submission_store = SubmissionStore(config=config_sub_fixture)
+    submission_store = SubmissionStore(config=config)
     provider = FileSystemEventPublisher(config=file_system_event_fixture.config)
-    event_publisher = SourceEventPublisher(config=config_sub_fixture, provider=provider)
-    accession_store = AccessionStore(config=config_sub_fixture)
+    event_publisher = SourceEventPublisher(config=config, provider=provider)
+    accession_store = AccessionStore(config=config)
     accession_registry = AccessionRegistry(
-        config=config_sub_fixture, accession_store=accession_store
+        config=config, accession_store=accession_store
     )
     submission_registry = SubmissionRegistry(
-        config=config_sub_fixture,
+        config=config,
         submission_store=submission_store,
         event_publisher=event_publisher,
         accession_registry=accession_registry,

@@ -24,14 +24,6 @@ import pytest
 from metldata.config import SubmissionConfig
 from tests.fixtures.metadata_models import MINIMAL_MODEL_WITH_STUDY_PATH
 
-PREFIX_MAPPING = {
-    "Study": "GHGAS",
-    "File": "GHGAF",
-    "Experiment": "GHGAE",
-    "Sample": "GHGAN",
-    "Dataset": "GHGAD",
-}
-
 
 @pytest.fixture
 def config_sub_fixture() -> Generator[SubmissionConfig, None, None]:
@@ -42,5 +34,4 @@ def config_sub_fixture() -> Generator[SubmissionConfig, None, None]:
                 metadata_model_path=MINIMAL_MODEL_WITH_STUDY_PATH,
                 submission_store_dir=submission_store_dir,
                 accession_store_path=accession_store_path.name,
-                prefix_mapping=PREFIX_MAPPING,
             )

@@ -122,6 +122,14 @@ def submit_metadata_from_path(
     )
 
 
+def migrate_accession_store_from_path(*, config_path: Path) -> None:
+    """Read the config from the specified path and convert its accession store from
+    a flat list of accessions into the JSON format.
+    """
+    config = load_config_yaml(path=config_path, config_cls=MetadataConfig)
+    AccessionStore(config=config).migrate_legacy_store()
+
+
 def save_artifact_models(
     *, artifact_models: dict[str, MetadataModel], artifact_model_dir: Path
 ):
