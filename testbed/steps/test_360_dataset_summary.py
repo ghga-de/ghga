@@ -15,7 +15,7 @@
 
 """Step definitions for the dataset summary view in the frontend"""
 
-from steps.utils import get_alias_from_ega_accession
+from steps.utils import get_alias_from_ega_accession, is_dataset_pid, is_study_pid
 
 from .conftest import (
     Config,
@@ -123,10 +123,10 @@ def request_dataset_summary(
 def check_dataset_summary(alias: str, response: Response):
     result = response.json()
     accession = result.pop("accession")
-    assert accession.startswith("GHGAD")
+    assert is_dataset_pid(accession)
     studies_summary = result["studies_summary"]["stats"]
     accessions = studies_summary.pop("accession")
-    assert all(accession.startswith("GHGAS") for accession in accessions)
+    assert all(is_study_pid(accession) for accession in accessions)
     studies_summary["accessions"] = len(accessions)
     studies_summary["titles"] = ", ".join(sorted(studies_summary.pop("title")))
     assert alias in EXPECTED_SUMMARIES

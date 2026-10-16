@@ -28,7 +28,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import verify_named_file
+from .utils import is_alias_accession, verify_named_file
 
 scenarios("../features/420_download_files.feature")
 
@@ -139,7 +139,7 @@ def files_are_downloaded(fixtures: JointFixture, file_scope: str, dataset_char: 
         file_id = file_["accession"]
         file_extension = file_["extension"]
 
-        assert file_id.startswith("GHGAF")
+        assert is_alias_accession(file_id)
         assert file_id in dataset_file_accessions
 
         verify_named_file(

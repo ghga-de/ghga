@@ -27,7 +27,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import get_alias_from_ega_accession, get_dataset_search_summary
+from .utils import STUDY_PID, get_alias_from_ega_accession, get_dataset_search_summary
 
 scenarios("../features/370_dataset_details.feature")
 
@@ -92,7 +92,7 @@ def request_one_associated_samples(
         ega_accession=ega_accession, config=config, http=http, state=state
     )
     result = response.json()
-    match = re.search("'sample': '(GHGAN[0-9]+)'", repr(result))
+    match = re.search(rf"'sample': '({STUDY_PID}\.[^']+)'", repr(result))
     assert match
     resource_id = match.group(1)
     url = (
