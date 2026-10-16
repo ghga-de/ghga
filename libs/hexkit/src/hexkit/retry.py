@@ -85,6 +85,17 @@ async def race_condition_retries(  # noqa: PLR0913
             ...
     ```
 
+    Leaving the loop early, by `return`, `break` or an exception, leaves the generator
+    suspended until asyncio finalizes it. For deterministic cleanup, wrap it in
+    `contextlib.aclosing`:
+
+    ```python
+    async with aclosing(race_condition_retries(...)) as attempts:
+        async for attempt in attempts:
+            with attempt:
+                ...
+    ```
+
     Args:
         description:
             What the action does, phrased to follow "to", e.g.
