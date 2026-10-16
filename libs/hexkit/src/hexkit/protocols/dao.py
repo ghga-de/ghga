@@ -567,7 +567,7 @@ class RaceConditionAttempt:
         self.error: PreconditionFailedError | None = None
 
     def __enter__(self) -> None:
-        """Does nothing; the outcome is recorded on exit."""
+        """Mark the attempt as entered; the outcome is recorded on exit."""
         self.entered = True
 
     def __exit__(
