@@ -111,7 +111,8 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
   **`dskit metadata amend --submission-id <id>` is the way to extend an accessioned submission**: it loads the stored submission, hands its map to `generate_accession_map`, and writes the result back under the same ID, so existing accessions survive and only new aliases are minted.
   It reports preserved/new/dropped before writing and asks for confirmation when accessions would be dropped or none preserved, and refuses such an amendment outright when stdin is not a terminal, so a pipe cannot answer for a steward.
-  **It is not file-specific**: it replaces the submission's whole content and applies the same alias matching to every anchored class, so a study, dataset or sample keeps, gains or loses its accession the same way a file does.
+  **It is not file-specific**: it replaces the submission's whole content and applies the same alias matching to every anchored class, so a dataset or sample keeps, gains or loses its accession the same way a file does.
+  The study is the exception: it keeps its PID even under a new alias, since every other accession of the submission starts with it.
   A field changed on an already-accessioned resource is not an accession change at all — no report entry, no prompt, and the next `load` upserts that resource.
   Confining amendments to added files is an operational rule, not one the tool enforces.
   All of it lives in dskit (`ghga_datasteward_kit/amendment.py`); metldata is unchanged.
