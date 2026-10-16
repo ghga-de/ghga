@@ -54,3 +54,32 @@ def test_metadata_model_temporary_yaml():
         model_copy = MetadataModel.init_from_path(model_path)
 
     assert model_copy == model
+
+
+def test_deepcopy_leaves_out_the_schema_view():
+    """The copy rebuilds its own schema view; the original keeps its cache."""
+    original = MetadataModel.init_from_path(VALID_MINIMAL_MODEL_EXAMPLE_PATH)
+    schema_view = original.schema_view
+
+    copied = deepcopy(original)
+
+    assert copied == original
+    assert copied.classes is not original.classes
+    assert copied._schema_view is None
+    assert original._schema_view is schema_view
+
+
+def test_deepcopy_does_not_share_nested_model_content():
+    """Equality alone cannot tell a deep copy from a shallow one, so mutate through it.
+
+    `classes` holds `ClassDefinition` objects, which a shallow copy would leave shared
+    between the two models.
+    """
+    original = MetadataModel.init_from_path(VALID_MINIMAL_MODEL_EXAMPLE_PATH)
+    description = original.classes["File"].description
+
+    copied = deepcopy(original)
+    copied.classes["File"].description = "changed in the copy"
+
+    assert original.classes["File"].description == description
+    assert copied != original
