@@ -16,15 +16,11 @@
 """Collection of all config classes."""
 
 from ghga_datasteward_kit.file_deletion import FileDeletionConfig
-from ghga_datasteward_kit.file_ingest import IngestConfig
 from ghga_datasteward_kit.loading import LoadConfig
 from ghga_datasteward_kit.metadata import MetadataConfig
-from ghga_datasteward_kit.s3_upload import Config as S3UploadConfig
 
 CONFIG_CLASSES = {
-    "s3_upload": S3UploadConfig,
     "purge": FileDeletionConfig,
     "metadata": MetadataConfig,
     "load": LoadConfig,
-    "ingest": IngestConfig,
 }

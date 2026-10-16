@@ -16,16 +16,6 @@
 """Exceptions used in ghga_datasteward_kit package."""
 
 
-class UnknownStorageAliasError(Exception):
-    """Raised when the storage alias in the metadata is not known/valid."""
-
-    def __init__(self, storage_alias: str):
-        super().__init__(
-            f"Unknown storage alias '{storage_alias}'. Please check your configuration or contact support."
-        )
-        self.storage_alias = storage_alias
-
-
 class AmendmentAbortedError(Exception):
     """Raised when the user declined to apply an amendment."""
 
