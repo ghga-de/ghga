@@ -151,8 +151,10 @@ class MetadataValidator:
 
         raise_on_errors(
             (
-                "the alias is shared by entities of the classes "
-                + ", ".join(f"'{class_name}'" for class_name in sorted(class_names))
+                f"the alias is used by {len(class_names)} entities, of the class(es) "
+                + ", ".join(
+                    f"'{class_name}'" for class_name in sorted(set(class_names))
+                )
                 + ", but must be unique across the submission",
                 "alias",
                 alias,

@@ -88,8 +88,18 @@ def test_validate_one_study_per_submission(
     "study_alias, file_aliases, shared_alias, expected_message",
     [
         ("study_1", ["file_1", "file_2"], None, None),
-        ("sample_1", ["sample_1", "file_2"], "sample_1", "classes 'File', 'Study'"),
-        ("study_1", ["file_1", "file_1"], "file_1", "classes 'File', 'File'"),
+        (
+            "sample_1",
+            ["sample_1", "file_2"],
+            "sample_1",
+            "2 entities, of the class(es) 'File', 'Study'",
+        ),
+        (
+            "study_1",
+            ["file_1", "file_1"],
+            "file_1",
+            "2 entities, of the class(es) 'File'",
+        ),
     ],
     ids=["unique", "shared_across_classes", "shared_within_class"],
 )
