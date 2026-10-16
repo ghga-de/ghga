@@ -57,7 +57,7 @@ just hooks                          # install the git hooks (once)
 just hooks-all                      # everything CI's hygiene job runs
 ```
 
-The member is on the PyPI lane, so the published-combo gate tests it on every version from 3.11 to 3.14 that its `requires-python` allows; changes must work across that range.
+The member is on the PyPI lane, so the published-combo gate tests it on every version from 3.11 to 3.15 that its `requires-python` allows; changes must work across that range.
 Cut feature branches from `dev` and merge them back into `dev` — a pre-commit hook blocks direct commits to `dev` and `main` ([branching](../../docs/conventions.md#branching)).
 
 ## Coding conventions

@@ -39,7 +39,7 @@ class Notification(NamedTuple):
     subject: str
     text: str
 
-    def formatted(self, **kwargs) -> "Notification":
+    def formatted(self, **kwargs) -> Notification:
         """Perform string interpolation on the `text` attribute.
 
         Returns a new Notification object with the subject and interpolated

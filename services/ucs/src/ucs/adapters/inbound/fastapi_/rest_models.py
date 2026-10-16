@@ -90,7 +90,7 @@ class BoxUpdateRequest(BaseModel):
     model_config = ConfigDict(title="Box Update Request")
 
     @model_validator(mode="after")
-    def enforce_size_state_exclusivity(self) -> "BoxUpdateRequest":
+    def enforce_size_state_exclusivity(self) -> BoxUpdateRequest:
         """Ensure that one and only one of 'state' or 'max_size' is provided."""
         if self.state is None and self.max_size is None:
             raise ValueError("At least one of 'state' or 'max_size' must be provided.")
@@ -130,7 +130,7 @@ class FileUploadCreationRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def encrypted_size_exceeds_decrypted_size(self) -> "FileUploadCreationRequest":
+    def encrypted_size_exceeds_decrypted_size(self) -> FileUploadCreationRequest:
         """Ensure encrypted_size is larger than decrypted_size."""
         if self.encrypted_size <= self.decrypted_size:
             raise ValueError(
