@@ -47,6 +47,7 @@ from dataclasses import asdict, dataclass, replace
 from typing import NamedTuple, Self, TypeVar
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.tags import Tag
 from packaging.utils import InvalidWheelFilename, parse_wheel_filename
 from packaging.version import InvalidVersion, Version
 
@@ -455,14 +456,34 @@ def _pypi_project(package: str) -> dict:
     }
 
 
+def _runner_can_install(tag: Tag) -> bool:
+    """Whether the combo matrix runner could install a wheel carrying this tag.
+
+    pypi-matrix.yaml runs on `ubuntu-latest`, so glibc Linux on x86_64. The interpreter
+    tag alone would retire a BLOCKED_CELLS entry on a wheel the cell still cannot use: a
+    `cp315` build for macOS or Windows, a free-threaded `cp315t` build, or a musllinux
+    one. Each of those means the blocker has shipped for *someone*, not for this matrix.
+    """
+    # Free-threaded builds carry a trailing `t` on the ABI tag (`cp315t`); `abi3` and
+    # `none` do not.
+    if tag.abi.endswith("t"):
+        return False
+    if tag.platform == "any":
+        return True
+    return tag.platform.startswith(("manylinux", "linux_")) and tag.platform.endswith(
+        "_x86_64"
+    )
+
+
 def _wheel_supports(filename: str, python: str) -> bool:
     """Whether one wheel is installable on `python`, given as e.g. "3.15".
 
-    Three tag shapes matter. A pure-Python `py3` wheel fits every version. A
-    version-specific `cp315` wheel fits that one alone. A stable-ABI `cp311-abi3` wheel
-    fits that version and every later one, so a project switching to abi3 counts as
-    having shipped for 3.15 — which a plain `cp315` substring test would never notice,
-    leaving a BLOCKED_CELLS entry alive forever.
+    Tags the matrix runner cannot use are skipped first (`_runner_can_install`); of what
+    is left, three interpreter shapes matter. A pure-Python `py3` wheel fits every
+    version. A version-specific `cp315` wheel fits that one alone. A stable-ABI
+    `cp311-abi3` wheel fits that version and every later one, so a project switching to
+    abi3 counts as having shipped for 3.15 — which a plain `cp315` substring test would
+    never notice, leaving a BLOCKED_CELLS entry alive forever.
     """
     target = Version(python)
     try:
@@ -470,6 +491,8 @@ def _wheel_supports(filename: str, python: str) -> bool:
     except InvalidWheelFilename:
         return False
     for tag in tags:
+        if not _runner_can_install(tag):
+            continue
         interpreter = tag.interpreter
         if interpreter in ("py3", f"cp{target.major}{target.minor}"):
             return True

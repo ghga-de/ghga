@@ -121,6 +121,7 @@ def test_pypi_member_depending_on_platform_member_fails(tmp_path, monkeypatch, s
     [
         # A version-specific wheel fits that version alone.
         ("crypt4gh-1.8.6-cp315-cp315-manylinux_2_17_x86_64.whl", True),
+        ("crypt4gh-1.8.6-cp315-cp315-linux_x86_64.whl", True),
         ("crypt4gh-1.8.6-cp314-cp314-manylinux_2_17_x86_64.whl", False),
         # Pure Python fits everything.
         ("crypt4gh-1.8.6-py3-none-any.whl", True),
@@ -128,6 +129,14 @@ def test_pypi_member_depending_on_platform_member_fails(tmp_path, monkeypatch, s
         # to abi3 counts as having shipped for 3.15.
         ("crypt4gh-1.8.6-cp311-abi3-manylinux_2_28_x86_64.whl", True),
         ("crypt4gh-1.8.6-cp316-abi3-manylinux_2_28_x86_64.whl", False),
+        # Shipped for 3.15, but not for the runner the matrix uses, so the cell it
+        # guards still cannot install and the entry has to stay.
+        ("crypt4gh-1.8.6-cp315-cp315-macosx_11_0_arm64.whl", False),
+        ("crypt4gh-1.8.6-cp315-cp315-win_amd64.whl", False),
+        ("crypt4gh-1.8.6-cp315-cp315-manylinux_2_17_aarch64.whl", False),
+        ("crypt4gh-1.8.6-cp315-cp315-musllinux_1_2_x86_64.whl", False),
+        # Free-threaded build; the matrix runs the stock interpreter.
+        ("crypt4gh-1.8.6-cp315-cp315t-manylinux_2_17_x86_64.whl", False),
         ("not-a-wheel.txt", False),
     ],
 )
@@ -165,7 +174,9 @@ def test_a_blocker_without_the_wheel_keeps_its_entry(repo, monkeypatch, capsys):
     )
     _stub_index(
         monkeypatch,
-        crypt4gh={"latest_wheels": ("crypt4gh-1.0-cp314-cp314-linux_x86_64.whl",)},
+        crypt4gh={
+            "latest_wheels": ("crypt4gh-1.0-cp314-cp314-manylinux_2_17_x86_64.whl",)
+        },
     )
 
     assert pypi_members.blocked_cell_errors() == []
@@ -184,7 +195,7 @@ def test_a_blocker_that_shipped_the_wheel_fails_and_names_the_edits(
         monkeypatch,
         crypt4gh={
             "latest": "1.8.7",
-            "latest_wheels": ("crypt4gh-1.8.7-cp315-cp315-linux_x86_64.whl",),
+            "latest_wheels": ("crypt4gh-1.8.7-cp315-cp315-manylinux_2_17_x86_64.whl",),
         },
     )
 
