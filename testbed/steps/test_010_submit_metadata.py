@@ -84,12 +84,17 @@ def submit_metadata(fixtures: JointFixture):
     workdir = fixtures.dsk.config.submission_registry
     cwd = os.getcwd()
     os.chdir(workdir)
+    submission_store = fixtures.dsk.config.submission_store
     # one submission per study, since a submission holds exactly one study
     for metadata_json_path in fixtures.dsk.config.submission_metadata_paths:
+        known_ids = {path.stem for path in submission_store.glob("*.json")}
         call_data_steward_kit_submit(
             metadata_path=metadata_json_path,
             metadata_config_path=fixtures.dsk.config.metadata_config_path,
         )
+        # submit does not print the ID, so it is the one file the call added
+        [new_id] = {path.stem for path in submission_store.glob("*.json")} - known_ids
+        fixtures.state.set_state(f"submission id {metadata_json_path.stem}", new_id)
     os.chdir(cwd)
 
 
@@ -145,11 +150,12 @@ def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
     target_fixture="amendment",
 )
 def amend_metadata(fixtures: JointFixture):
-    submission_id = fixtures.state.get_state("submission id")
+    # the first study's submission stands for all, as amend treats each alike
+    metadata_json_path = fixtures.dsk.config.submission_metadata_paths[0]
+    submission_id = fixtures.state.get_state(f"submission id {metadata_json_path.stem}")
     accessions_before = read_submission(fixtures, submission_id)["accession_map"]
 
     workdir = fixtures.dsk.config.submission_registry
-    metadata_json_path = fixtures.dsk.config.metadata_dir / "metadata.json"
     cwd = os.getcwd()
     os.chdir(workdir)
     try:

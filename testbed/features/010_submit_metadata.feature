@@ -15,7 +15,7 @@ Feature: 10 Submit Metadata
 
   Scenario: Amending the submission keeps its accessions
     When the submission is amended with the same metadata
-    Then one submission JSON file exists in the local submission store
+    Then two submission JSON files exist in the local submission store
     And the accessions of the submission are unchanged
 
   Scenario: Finishing the metadata submission
