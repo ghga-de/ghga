@@ -22,6 +22,7 @@ import pytest
 
 from hexkit.protocols.dao import (
     PreconditionFailedError,
+    RaceConditionAttempt,
     ResourceNotFoundError,
     race_condition_retries,
 )
@@ -187,3 +188,38 @@ async def test_race_condition_retries_attempt_not_entered():
             tries += 1
 
     assert tries == 1
+
+
+async def test_race_condition_attempt_success():
+    """Test that a block finishing without an error marks the attempt as succeeded."""
+    attempt = RaceConditionAttempt()
+    assert not attempt.entered
+
+    with attempt:
+        assert attempt.entered
+
+    assert attempt.succeeded
+    assert attempt.error is None
+
+
+async def test_race_condition_attempt_precondition_failed():
+    """Test that a `PreconditionFailedError` is suppressed and kept in `error`."""
+    attempt = RaceConditionAttempt()
+    conflict = PreconditionFailedError(id_="test", precondition={})
+
+    with attempt:
+        raise conflict
+
+    assert not attempt.succeeded
+    assert attempt.error is conflict
+
+
+async def test_race_condition_attempt_other_error():
+    """Test that errors other than `PreconditionFailedError` pass through unrecorded."""
+    attempt = RaceConditionAttempt()
+
+    with pytest.raises(ResourceNotFoundError), attempt:
+        raise ResourceNotFoundError(id_="test")
+
+    assert not attempt.succeeded
+    assert attempt.error is None
