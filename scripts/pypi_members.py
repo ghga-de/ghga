@@ -517,7 +517,7 @@ def blocked_cell_errors() -> list[str]:
             errors.append(
                 f"{blocker} {project['latest']} now ships a wheel for Python {python}:"
                 f" delete the BLOCKED_CELLS entry for {path} on {python} in"
-                f" scripts/pypi_members.py, add the Python {python} classifier back to"
+                f" scripts/pypi_members.py, add the Python {python} classifier to"
                 f" {path}/pyproject.toml, and drop the row from docs/dependencies.md"
             )
     return errors
