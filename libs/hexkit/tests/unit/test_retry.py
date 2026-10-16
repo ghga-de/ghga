@@ -169,3 +169,18 @@ async def test_race_condition_retries_new_error_per_failure():
 
     assert errors[0] is not errors[1]
     assert [error.__cause__ for error in errors] == conflicts
+
+
+async def test_race_condition_retries_attempt_not_entered():
+    """Test that an attempt not used as `with attempt:` raises a `RuntimeError` instead
+    of being treated as a lost race.
+    """
+    tries = 0
+
+    with pytest.raises(RuntimeError, match="with attempt:"):
+        async for _attempt in race_condition_retries(
+            description="update the resource", error_on_failure=GaveUpError
+        ):
+            tries += 1
+
+    assert tries == 1

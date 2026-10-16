@@ -30,15 +30,18 @@ class RaceConditionAttempt:
     """A single try yielded by `race_condition_retries`.
 
     Used as a context manager: suppresses a `PreconditionFailedError` raised in its block,
-    keeps it in `error`, and records whether the block finished without one.
+    keeps it in `error`, and records whether the block was entered and whether it
+    finished without one.
     """
 
     def __init__(self) -> None:
+        self.entered = False
         self.succeeded = False
         self.error: PreconditionFailedError | None = None
 
     def __enter__(self) -> None:
         """Start the attempt."""
+        self.entered = True
 
     def __exit__(
         self,
@@ -102,6 +105,7 @@ async def race_condition_retries(  # noqa: PLR0913
     - The error built by `error_on_failure` if the action still raises
       `PreconditionFailedError` on the last try. It is chained from that last
       `PreconditionFailedError`.
+    - `RuntimeError` if a yielded attempt was not used as `with attempt:`.
     """
     description = description.strip(" .")
     tries = max(1, max_tries)
@@ -109,6 +113,11 @@ async def race_condition_retries(  # noqa: PLR0913
     for attempt_number in range(1, tries + 1):
         attempt = RaceConditionAttempt()
         yield attempt
+        if not attempt.entered:
+            raise RuntimeError(
+                "Each attempt yielded by race_condition_retries must be used as"
+                " `with attempt:`."
+            )
         if attempt.succeeded:
             return
         last_error = attempt.error
