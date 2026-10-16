@@ -117,11 +117,11 @@ The ID field is implied, so leave it out:
 await book_dao.update(extended, precondition={"pages": 448})
 ```
 
-To retry an update that lost such a race, re-read the resource and try again inside `race_condition_retries` from `hexkit.retry`.
+To retry an update that lost such a race, re-read the resource and try again inside `race_condition_retries` from `hexkit.protocols.dao`.
 It retries on `PreconditionFailedError` only, waits a jittered interval between tries, and raises the error you give it once all tries have failed:
 
 ```python
-from hexkit.retry import race_condition_retries
+from hexkit.protocols.dao import race_condition_retries
 
 async for attempt in race_condition_retries(
     description=f"add pages to book {book_id}",

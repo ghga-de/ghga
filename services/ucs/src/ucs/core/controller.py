@@ -36,8 +36,8 @@ from hexkit.protocols.dao import (
     NoHitsFoundError,
     PreconditionFailedError,
     UniqueConstraintViolationError,
+    race_condition_retries,
 )
-from hexkit.retry import race_condition_retries
 from hexkit.utils import now_utc_ms_prec
 from ucs.config import Config
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE

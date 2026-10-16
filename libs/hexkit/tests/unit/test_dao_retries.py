@@ -20,8 +20,11 @@ from typing import Any
 
 import pytest
 
-from hexkit.protocols.dao import PreconditionFailedError, ResourceNotFoundError
-from hexkit.retry import race_condition_retries
+from hexkit.protocols.dao import (
+    PreconditionFailedError,
+    ResourceNotFoundError,
+    race_condition_retries,
+)
 
 pytestmark = pytest.mark.asyncio()
 
@@ -62,7 +65,7 @@ def sleeps(monkeypatch: pytest.MonkeyPatch) -> list[float]:
     async def record_sleep(seconds: float) -> None:
         waits.append(seconds)
 
-    monkeypatch.setattr("hexkit.retry.sleep", record_sleep)
+    monkeypatch.setattr("hexkit.protocols.dao.sleep", record_sleep)
     return waits
 
 
