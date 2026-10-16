@@ -78,11 +78,13 @@ async def race_condition_retries(  # noqa: PLR0913
 
     ```python
     async for attempt in race_condition_retries(
-        description="update stats for box <box_id>",
-        error_on_failure=lambda: StatsError(box_id),
+        description=f"add pages to book {book_id}",
+        error_on_failure=lambda: BookUpdateError(book_id),
     ):
         with attempt:  # <-- must use `with attempt:`
-            ...
+            book = await book_dao.get_by_id(book_id)
+            extended = book.model_copy(update={"pages": book.pages + 16})
+            await book_dao.update(extended, precondition={"pages": book.pages})
     ```
 
     Leaving the loop early, by `return`, `break` or an exception, leaves the generator
@@ -99,7 +101,7 @@ async def race_condition_retries(  # noqa: PLR0913
     Args:
         description:
             What the action does, phrased to follow "to", e.g.
-            "update stats for box <box_id>". Used in log messages.
+            "add pages to book <book_id>". Used in log messages.
         error_on_failure:
             Builds the error to raise once all tries have failed. Called at most once,
             after the last try.
