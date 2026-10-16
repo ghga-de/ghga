@@ -159,7 +159,7 @@ class AccessionRegistry:
         return self._mint_fresh_study_pid()
 
     def _choose_unused_dataset_pid(
-        self, *, study_pid: str, used_dataset_pids: set[str]
+        self, *, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Pick a dataset PID still unused in the given study.
 
@@ -172,7 +172,7 @@ class AccessionRegistry:
             compose=lambda random_block: self._compose_dataset_pid(
                 study_pid=study_pid, random_block=random_block
             ),
-            used_pids=used_dataset_pids,
+            used_pids=used_accessions,
         )
         if dataset_pid is None:
             raise self.AccessionGenerationError(
@@ -182,13 +182,15 @@ class AccessionRegistry:
         return dataset_pid
 
     def get_dataset_accession(
-        self, *, study_pid: str, used_dataset_pids: set[str]
+        self, *, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Generate the PID '{study_pid}.DS.XXX' of a new dataset.
 
         The random block must be unique among the datasets of the study, so the caller
-        passes the dataset PIDs already given out in it. Nothing is registered in the
-        store, since the dataset PID is unique by construction once the study PID is.
+        passes the accessions already given out in it, of every class: that also keeps
+        a dataset from taking the accession of an entity with an alias like 'DS.XXX'.
+        Nothing is registered in the store, since the dataset PID is unique by
+        construction once the study PID is.
 
         Raises:
             AccessionGenerationError: If every dataset PID of the study is taken.
@@ -205,11 +207,11 @@ class AccessionRegistry:
             dataset_pid = self._compose_dataset_pid(
                 study_pid=study_pid, random_block=random_block
             )
-            if dataset_pid not in used_dataset_pids:
+            if dataset_pid not in used_accessions:
                 return dataset_pid
 
         return self._choose_unused_dataset_pid(
-            study_pid=study_pid, used_dataset_pids=used_dataset_pids
+            study_pid=study_pid, used_accessions=used_accessions
         )
 
     def get_alias_accession(self, *, study_pid: str, alias: str) -> str:
@@ -241,7 +243,7 @@ class AccessionRegistry:
 
         if class_name == self._config.dataset_class_name:
             return self.get_dataset_accession(
-                study_pid=study_pid, used_dataset_pids=used_accessions
+                study_pid=study_pid, used_accessions=used_accessions
             )
 
         return self.get_alias_accession(study_pid=study_pid, alias=alias)

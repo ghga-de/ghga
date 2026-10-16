@@ -109,16 +109,16 @@ def test_dataset_pids(
     """
     accession_registry, accession_store = make_registry(config_sub_fixture)
     study_pid = accession_registry.get_study_accession()
-    used_dataset_pids: set[str] = set()
+    used_accessions: set[str] = set()
 
     for _ in range(50):
         dataset_pid = accession_registry.get_dataset_accession(
-            study_pid=study_pid, used_dataset_pids=used_dataset_pids
+            study_pid=study_pid, used_accessions=used_accessions
         )
         assert DATASET_PID_PATTERN.match(dataset_pid)
         assert dataset_pid.startswith(f"{study_pid}.DS.")
-        assert dataset_pid not in used_dataset_pids
-        used_dataset_pids.add(dataset_pid)
+        assert dataset_pid not in used_accessions
+        used_accessions.add(dataset_pid)
 
     year = now_as_utc().strftime("%y")
     assert len(accession_store.get_random_blocks(year=year)) == 1
@@ -130,19 +130,19 @@ def test_dataset_pids_exhausted(
     """Every dataset PID of the study is found before minting one more fails."""
     accession_registry, _ = make_registry(config_sub_fixture, random_block_length=1)
     study_pid = "GHGA.26.K.1"
-    used_dataset_pids: set[str] = set()
+    used_accessions: set[str] = set()
 
     for _ in BASE32_ALPHABET:
-        used_dataset_pids.add(
+        used_accessions.add(
             accession_registry.get_dataset_accession(
-                study_pid=study_pid, used_dataset_pids=used_dataset_pids
+                study_pid=study_pid, used_accessions=used_accessions
             )
         )
 
-    assert len(used_dataset_pids) == len(BASE32_ALPHABET)
+    assert len(used_accessions) == len(BASE32_ALPHABET)
     with pytest.raises(AccessionRegistry.AccessionGenerationError):
         accession_registry.get_dataset_accession(
-            study_pid=study_pid, used_dataset_pids=used_dataset_pids
+            study_pid=study_pid, used_accessions=used_accessions
         )
 
 
