@@ -296,7 +296,8 @@ wt branch base="origin/dev": _guard-host
     main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
     dir="$main/.claude/worktrees/$(basename "{{branch}}")"
     git fetch origin
-    git worktree add "$dir" -b "{{branch}}" "{{base}}"
+    # A branch tracking origin/dev would let a plain push or an editor sync land on dev.
+    git worktree add --no-track "$dir" -b "{{branch}}" "{{base}}"
     cd "$dir" && just sync && just fe-install
 
 # Leaves the branch: after a squash merge `git branch -d` refuses it, and deleting it with
