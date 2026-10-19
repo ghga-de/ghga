@@ -25,6 +25,7 @@ FIS:
 - Add `leased_until`, `leased_by` and `times_claimed` to `FileUnderInterrogation`.
 - Update the `GET /storages/{storage_alias}/uploads` handler to orchestrate file claims: serve one file, set `leased_until`, `leased_by` and `times_claimed`, and leave everything else unchanged.
 - Add `POST /rpc/storages/{storage_alias}/uploads/{file_id}/release` so a replica can hand a file back before its lease expires.
+  Wrap its read, holder check and write in `hexkit.protocols.dao.race_condition_retries`, so a release that races a claim re-reads the file and checks the holder again.
 - Add the compound index `{storage_alias: 1, state: 1, interrogated: 1, leased_until: 1, state_updated: 1}`.
   The `files` collection currently indexes only `object_id`.
 - Add the configuration settings listed under [Configuration](#configuration).
@@ -46,8 +47,6 @@ Deployment:
 ### Optional
 
 - Give `S3Cleaner` a minimum object age, which bounds the cleanup race described under [The cleanup race widens](#the-cleanup-race-widens).
-- Move `race_condition_retries` from `services/ucs/src/ucs/core/_rc_helper.py` into hexkit.
-  Its docstring asks for that once a second service needs it.
 
 ### Not included
 
