@@ -48,7 +48,8 @@ jobs:
           echo "cells=$cells" >> "$GITHUB_OUTPUT"
           echo "$cells" | python3 -m json.tool
 
-          # Warning if a member with no cells is skipped
+          # Warning if a member with no cells is skipped, or if a version it declares
+          # was dropped because a dependency ships no wheel for it (BLOCKED_CELLS).
           uv run --script scripts/pypi_members.py ${paths:+--paths $paths} --members \
             | python3 -c "
           import json, sys
@@ -56,6 +57,9 @@ jobs:
               if not member['pythons']:
                   print(f\"::warning::{member['package']} has no testable version in\"
                         f\" range (declares {member['requires_python']}) — NOT covered\")
+              for python, blocker in member['blocked_pythons']:
+                  print(f\"::warning::{member['package']} is NOT tested on Python\"
+                        f\" {python}: {blocker} ships no wheel for it\")
           "
 
   test:

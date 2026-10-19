@@ -63,7 +63,7 @@ class AccessGrantsAdapter(AccessGrantsPort):
         *,
         config: AccessGrantsConfig,
         transport: httpx2.AsyncBaseTransport | None = None,
-    ) -> AsyncGenerator["AccessGrantsAdapter"]:
+    ) -> AsyncGenerator[AccessGrantsAdapter]:
         """Setup AccessGrantsAdapter with the given config.
 
         A custom transport can be passed in to intercept the outgoing requests,

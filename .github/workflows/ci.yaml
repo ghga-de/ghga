@@ -359,6 +359,12 @@ jobs:
         # Platform-lane members declare 0.0.0, and no PyPI-lane member depends on one
         # (ADR-0046).
         run: uv run -q --script scripts/pypi_members.py --check-versions
+      - name: Assert every dropped matrix cell is still blocked
+        # BLOCKED_CELLS drops a (member, Python) cell because a dependency ships no
+        # wheel for it. This job has no `if:`, so the check runs on every PR and the
+        # entry cannot outlive its reason: the first build after the wheel appears
+        # fails here, naming what to delete. Nobody has to remember.
+        run: uv run -q --script scripts/pypi_members.py --check-blocked-cells
       - name: Assert every changed lane member declares an unpublished version
         run: |
           set -euo pipefail
