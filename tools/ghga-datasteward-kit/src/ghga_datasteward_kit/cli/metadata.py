@@ -177,3 +177,20 @@ def transform(
     """Run transformation workflow on submitted metadata to produce artifacts."""
     logging.basicConfig(level=logging.CRITICAL)
     metadata.transform_metadata_from_path(config_path=config_path)
+
+
+@cli.command(no_args_is_help=True)
+def migrate_accession_store(
+    config_path: Path = typer.Option(
+        ...,
+        help="Path to a config YAML.",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+):
+    """Convert an accession store that is a flat list of accessions into the JSON
+    format of study PIDs, once per store. The original is kept as '<store>.bak'.
+    """
+    metadata.migrate_accession_store_from_path(config_path=config_path)

@@ -22,7 +22,7 @@ from collections import Counter
 from fixtures.utils import temporary_file
 from ghga_datasteward_kit.loading import LoadConfig
 
-from steps.utils import load_config_as_file
+from steps.utils import is_alias_accession, is_dataset_pid, load_config_as_file
 
 from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
 
@@ -77,7 +77,7 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
-        assert accession.startswith("GHGAD")
+        assert is_dataset_pid(accession)
         content = dataset["content"]
         assert content["accession"] == accession
         simplified_dataset = {
@@ -112,7 +112,7 @@ def check_datasets_in_metldata_database(
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
-        assert accession.startswith("GHGAD")
+        assert is_dataset_pid(accession)
         content = dataset["content"]
         assert content["accession"] == accession
         simplified_dataset = {
@@ -155,7 +155,7 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
     for dataset in datasets:
         accession = dataset.get("_id")
         assert isinstance(accession, str)
-        assert accession.startswith("GHGAD")
+        assert is_dataset_pid(accession)
         assert dataset.get("stage") == "download"
         title = dataset.get("title")
         assert title
@@ -163,7 +163,7 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
         files = dataset.get("files")
         assert isinstance(files, list)
         assert all(isinstance(file_.get("accession"), str) for file_ in files)
-        assert all(file_["accession"].startswith("GHGAF") for file_ in files)
+        assert all(is_alias_accession(file_["accession"]) for file_ in files)
         extensions = Counter(file.get("extension") for file in files)
         simplified_datasets[title] = {"description": description, "files": extensions}
     assert simplified_datasets == {
@@ -187,7 +187,7 @@ def check_datasets_in_ars_database(config: Config, mongo: MongoFixture):
     for dataset in datasets:
         accession = dataset.get("_id")
         assert isinstance(accession, str)
-        assert accession.startswith("GHGAD")
+        assert is_dataset_pid(accession)
         title = dataset.get("title")
         assert title
         description = dataset.get("description")

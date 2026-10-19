@@ -84,6 +84,10 @@ The metadata label groups metadata related commands.
 
 Some of them require a configuration file as described in the [metadata config](./metadata_config.md).
 
+The production accession store from before study PIDs is a flat list of accessions.
+Convert it once with `ghga-datasteward-kit metadata migrate-accession-store --config-path <config>` before the next `metadata submit`; the original is kept next to it as `<store>.bak`.
+A later release removes the command once the production store is converted.
+
 #### metadata amend
 
 Adds to a submission that has already been accessioned, keeping its existing accessions.
@@ -93,7 +97,8 @@ A second `submit` creates a new submission with a fresh set of accessions, which
 In the legacy upload path the file accession is also the file's storage ID, and the identifiers derived from it cannot be recovered.
 
 **The command is not limited to files.**
-It replaces the whole content of the submission and treats every metadata class alike: the study, its datasets, samples, experiments and individuals all keep, gain or lose accessions by the same alias matching.
+It replaces the whole content of the submission and treats every metadata class but the study alike: datasets, samples, experiments and individuals all keep, gain or lose accessions by the same alias matching.
+The study keeps its PID even under a new alias, since every other accession of the submission starts with it.
 Nothing in the tool restricts an amendment to added files — that is a rule for the people using it, not one it enforces.
 
 Two consequences worth knowing before you run it:
@@ -101,7 +106,7 @@ Two consequences worth knowing before you run it:
 - A field changed on a resource that already has an accession is **not** an accession change, so it does not appear in the report and raises no prompt.
   It is written through, keeps its accession, and the next `load` updates that resource in the running system.
   Correcting metadata this way works; it just will not be flagged.
-- Renaming or removing the alias of any resource, a study or dataset included, drops its accession exactly as it would for a file.
+- Renaming or removing the alias of any resource but the study, a dataset included, drops its accession exactly as it would for a file.
   That is what the confirmation question is for.
 - An alias listed twice within one class is reported and needs confirmation, even when nothing is dropped.
   An alias identifies a resource, so the repeats share a single accession however much their other fields differ: the transform stamps that one accession on every row, and the next `load` keys them all to one resource, so only one survives.

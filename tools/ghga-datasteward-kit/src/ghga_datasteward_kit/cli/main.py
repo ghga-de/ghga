@@ -19,7 +19,7 @@ from pathlib import Path
 
 import typer
 
-from ghga_datasteward_kit import catalog_accession_generator, loading
+from ghga_datasteward_kit import loading
 from ghga_datasteward_kit.cli.file import cli as file_cli
 from ghga_datasteward_kit.cli.metadata import cli as metadata_cli
 from ghga_datasteward_kit.utils import (
@@ -32,37 +32,6 @@ from ghga_datasteward_kit.utils import (
 cli = typer.Typer(no_args_is_help=True)
 cli.add_typer(file_cli, name="files", help="File related operations.")
 cli.add_typer(metadata_cli, name="metadata", help="Metadata related operations.")
-
-
-@cli.command(no_args_is_help=True)
-def generate_catalog_accessions(
-    *,
-    store_path: Path = typer.Option(
-        ...,
-        help=(
-            "The path to the accession store which is a text file that has to exist."
-        ),
-    ),
-    resource_type: str = typer.Option(
-        ...,
-        help=(
-            "The resource type for which to generate accessions. Can be one of: "
-            f"{list(catalog_accession_generator.RESOURCE_PREFIXES)}"
-        ),
-    ),
-    number: int = typer.Option(..., help="The number of accessions to generate."),
-) -> None:
-    """Generate Metadata Catalog Accessions for the specified resource type.
-
-    The accessions will be stored in the specified accession store and returned to
-    stdout.
-    """
-    accessions = catalog_accession_generator.main(
-        store_path=store_path, resource_type=resource_type.lower(), number=number
-    )
-
-    for accession in accessions:
-        typer.echo(accession)
 
 
 @cli.command(no_args_is_help=True)

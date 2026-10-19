@@ -24,7 +24,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import get_alias_from_ega_accession, search_dataset
+from .utils import get_alias_from_ega_accession, is_dataset_pid, search_dataset
 
 scenarios("../features/320_search_datasets.feature")
 
@@ -111,7 +111,7 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
     datasets = {}  # mapping from alias to search summary
     for i, hit in enumerate(hits):
         accession = hit.pop("id_")
-        assert accession.startswith("GHGAD")
+        assert is_dataset_pid(accession)
         hit = hit.pop("content")
         hits[i] = hit
         summary = hit.copy()
