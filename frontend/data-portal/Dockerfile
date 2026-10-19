@@ -3,7 +3,7 @@
 # Define the non-dev base-image
 # Node is held at the LTS line, see docs/dependencies.md
 # renovate: track=node-base
-ARG NODE_BASE=24.21.0-alpine3.24
+ARG NODE_BASE=24.22.0-alpine3.24
 ARG BASE=dhi.io/node:${NODE_BASE}
 
 # BUILDER: a container to build the service dist directory
