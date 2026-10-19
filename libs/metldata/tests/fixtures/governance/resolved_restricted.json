@@ -1,0 +1,333 @@
+{
+  "payload": {
+    "content": {
+      "analysis_process_output_files": [
+        {
+          "accession": "GHGAF60227492784158",
+          "alias": "OUTPUT_1",
+          "analysis_process": "GHGAR39274427357650",
+          "checksum": "653c42e051644f1d03fd8a73c55649b9bea6d36b354348e9dc33ce355af41289",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "VCF",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_1.vcf.gz",
+          "size": 92161
+        },
+        {
+          "accession": "GHGAF98095735942999",
+          "alias": "OUTPUT_2",
+          "analysis_process": "GHGAR69880405010665",
+          "checksum": "5864b0ef8f3c25cd7da50fcb3b88f8884831ebbc87435dc3f84371437162d170",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "VCF",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_2.vcf.gz",
+          "size": 71681
+        },
+        {
+          "accession": "GHGAF03542347431941",
+          "alias": "OUTPUT_3",
+          "analysis_process": "GHGAR56199553295675",
+          "checksum": "68568c92cc9f836f9a2a1b701327ac089b7ff3c52228c4038b9de54edca876e0",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "VCF",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_3.vcf.gz",
+          "size": 122881
+        },
+        {
+          "accession": "GHGAF00240854404941",
+          "alias": "OUTPUT_4",
+          "analysis_process": "GHGAR75043017740512",
+          "checksum": "ef2b7a9496ac3e8d90a6b2317a0ddc05fdc8e2cb616a14431544b0920cca2d41",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_4.vcf.gz",
+          "size": 45057
+        },
+        {
+          "accession": "GHGAF70399258952657",
+          "alias": "OUTPUT_5",
+          "analysis_process": "GHGAR24081486884193",
+          "checksum": "b446a4e9cd57e2446e113b603be5e761672e88c0b3d87de5f12ca6bfa73cf110",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_5.vcf.gz",
+          "size": 65537
+        },
+        {
+          "accession": "GHGAF48722477903529",
+          "alias": "OUTPUT_6",
+          "analysis_process": "GHGAR30835311417129",
+          "checksum": "c3f451348e9c5cb0acbacd2df071392d151f007554bc2c08de667a1349eb0a86",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_6.vcf.gz",
+          "size": 45057
+        },
+        {
+          "accession": "GHGAF52403457644815",
+          "alias": "OUTPUT_7",
+          "analysis_process": "GHGAR38458015046073",
+          "checksum": "b17e8d803fb62757d41ccbe26ed719e6aa95119ffd55fac64dc100ea985d42f0",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_7.vcf.gz",
+          "size": 61441
+        },
+        {
+          "accession": "GHGAF64039739056861",
+          "alias": "OUTPUT_8",
+          "analysis_process": "GHGAR93850957626599",
+          "checksum": "2912879766f9c619fdebb8f10ba4dad02a367ee30f52c1a55bb8cad4999efa53",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_8.vcf.gz",
+          "size": 92161
+        },
+        {
+          "accession": "GHGAF00202976705407",
+          "alias": "OUTPUT_9",
+          "analysis_process": "GHGAR96450411800508",
+          "checksum": "2935b5685772b2c2778dfc6facde4186d59e516cc6ad55e92f96b3e63d44b68a",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "VCF",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_9.vcf.gz",
+          "size": 43009
+        }
+      ],
+      "data_access_committees": [
+        {
+          "accession": "GHGAC27979815690400",
+          "alias": "DAC_1",
+          "email": "dac_institute_a@dac.dac",
+          "institute": "institute_a"
+        }
+      ],
+      "data_access_policies": [
+        {
+          "accession": "GHGAP80911357088984",
+          "alias": "DAP_1",
+          "data_access_committee": "GHGAC27979815690400",
+          "data_use_modifiers": [
+            "clinical care use"
+          ],
+          "data_use_permission": "disease specific research",
+          "description": "A Data Access Policy 1",
+          "name": "DAP 1",
+          "policy_text": "This is a very permissible DAP",
+          "policy_url": "http://some/policy"
+        },
+        {
+          "accession": "GHGAP60953192127193",
+          "alias": "DAP_2",
+          "data_access_committee": "GHGAC27979815690400",
+          "data_use_modifiers": [
+            "user specific restriction"
+          ],
+          "data_use_permission": "no restriction",
+          "description": "A Data Access Policy 2",
+          "name": "DAP 2",
+          "policy_text": "This is a very strict DAP",
+          "policy_url": "http://some/other/policy"
+        }
+      ],
+      "datasets": [
+        {
+          "accession": "GHGAD09598790897621",
+          "alias": "DS_1",
+          "analysis_process_output_files": [
+            "GHGAF03542347431941",
+            "GHGAF60227492784158",
+            "GHGAF98095735942999"
+          ],
+          "data_access_policy": "GHGAP80911357088984",
+          "description": "An interesting dataset A",
+          "files": [
+            "GHGAF29699992445931"
+          ],
+          "sample_files": [],
+          "samples": [],
+          "sequencing_process_files": [
+            "GHGAF35359790750617",
+            "GHGAF88846609319878",
+            "GHGAF98787275505937"
+          ],
+          "studies": [
+            "GHGAS36422481396751"
+          ],
+          "study_files": [
+            "GHGAF29699992445931"
+          ],
+          "title": "The A dataset",
+          "types": [
+            "A Type",
+            "Another Type"
+          ]
+        },
+        {
+          "accession": "GHGAD13934222639683",
+          "alias": "DS_2",
+          "analysis_process_output_files": [
+            "GHGAF00202976705407",
+            "GHGAF00240854404941",
+            "GHGAF48722477903529",
+            "GHGAF52403457644815",
+            "GHGAF64039739056861",
+            "GHGAF70399258952657"
+          ],
+          "data_access_policy": "GHGAP60953192127193",
+          "description": "An interesting dataset B",
+          "files": [],
+          "sample_files": [],
+          "samples": [],
+          "sequencing_process_files": [
+            "GHGAF02723287849704",
+            "GHGAF07328380425408",
+            "GHGAF19339989618442",
+            "GHGAF62118300340019",
+            "GHGAF82574397155238",
+            "GHGAF86681016295324"
+          ],
+          "studies": [],
+          "study_files": [],
+          "title": "The B dataset",
+          "types": [
+            "And another Type"
+          ]
+        }
+      ],
+      "sequencing_process_files": [
+        {
+          "accession": "GHGAF98787275505937",
+          "alias": "SEQ_FILE_1",
+          "checksum": "995254cf212686d88ea73cbaf49489c8dc2784dc31cb586452e0aa835498ab98",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_1.fastq.gz",
+          "sequencing_process": "GHGAO62191423783852",
+          "size": 90113
+        },
+        {
+          "accession": "GHGAF88846609319878",
+          "alias": "SEQ_FILE_2",
+          "checksum": "b8de1729ef9b8a424749ce85815c9eeb166cb7f5f5eca4b02f04e2f9277501c6",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_2.fastq.gz",
+          "sequencing_process": "GHGAO26926467690962",
+          "size": 104449
+        },
+        {
+          "accession": "GHGAF35359790750617",
+          "alias": "SEQ_FILE_3",
+          "checksum": "6b7f4b8fc774de4359c985835733c169f1731a109db7893dd35acd4afea3c5b4",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_1_SPECIMEN_1_FILE_3.fastq.gz",
+          "sequencing_process": "GHGAO51030339704752",
+          "size": 51201
+        },
+        {
+          "accession": "GHGAF02723287849704",
+          "alias": "SEQ_FILE_4",
+          "checksum": "9aea8c99cc065836f1f2765a8590971c5b5d2a29c4c6569c475089c5b57d1180",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_4.fastq.gz",
+          "sequencing_process": "GHGAO97365634927261",
+          "size": 96257
+        },
+        {
+          "accession": "GHGAF19339989618442",
+          "alias": "SEQ_FILE_5",
+          "checksum": "a13dfc276fe322cb1b7490441097662e60443fb8787b011eaec4621916842847",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_5.fastq.gz",
+          "sequencing_process": "GHGAO06622800988515",
+          "size": 63489
+        },
+        {
+          "accession": "GHGAF82574397155238",
+          "alias": "SEQ_FILE_6",
+          "checksum": "e5c186653c619507cec6aa6b7affedeb5ec29a5e23d2814d2710076fa1f5000b",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_6.fastq.gz",
+          "sequencing_process": "GHGAO66715047871416",
+          "size": 104449
+        },
+        {
+          "accession": "GHGAF07328380425408",
+          "alias": "SEQ_FILE_7",
+          "checksum": "f37c331e32ba71cfabbd88b9115eeb6a000c1085cc596dcee9db3c7552229049",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_7.fastq.gz",
+          "sequencing_process": "GHGAO36629966744948",
+          "size": 53249
+        },
+        {
+          "accession": "GHGAF62118300340019",
+          "alias": "SEQ_FILE_8",
+          "checksum": "6c11379d7ce5625bdef86d2b72c0399280388f2532c26c3934f4ee88e7c25e4d",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_8.fastq.gz",
+          "sequencing_process": "GHGAO59081664899908",
+          "size": 96257
+        },
+        {
+          "accession": "GHGAF86681016295324",
+          "alias": "SEQ_FILE_9",
+          "checksum": "23ba42aeef99bffae8f1f4409c64d1a2e19c49dc74c2c6ad6c7b98c5bf04dd1f",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD13934222639683",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "SAMPLE_2_SPECIMEN_1_FILE_9.fastq.gz",
+          "sequencing_process": "GHGAO35933687766366",
+          "size": 49153
+        }
+      ],
+      "study_files": [
+        {
+          "accession": "GHGAF29699992445931",
+          "alias": "STUDY_FILE_1",
+          "checksum": "7a586609dd8c7d6f53cbc2e82e1165de2c7aab6769c6dde9882b45048b0fdaa9",
+          "checksum_type": "SHA256",
+          "dataset": "GHGAD09598790897621",
+          "format": "FASTQ",
+          "forward_or_reverse": "REVERSE",
+          "name": "STUDY_1_SPECIMEN_1_FILE_1.fastq.gz",
+          "size": 106497,
+          "study": "GHGAS36422481396751"
+        }
+      ]
+    }
+  },
+  "type_": "resolved_restricted"
+}

@@ -130,60 +130,33 @@ class GovernanceMetadata:
     @classmethod
     def from_artifacts(cls, *, contents: Sequence[Json]):
         """Index artifact contents in which references are accessions, such as
-        `added_accessions`.
+        `resolved_restricted`. Embedded artifacts are not supported, because they
+        nest the policy in the dataset instead of referencing it.
         """
         return cls(documents=contents, reference_slot="accession")
 
     def _index_files(self, *, documents: Sequence[Json]) -> None:
-        """Group file resources by physical file.
-
-        A file resource is grouped with the file it reuses. If B reuses A's file
-        and C reuses B's, all three resources are in one group.
+        """Index file resources by their own accession and by their reused
+        accession, so a query matches the file and the files that reuse it directly.
         """
-        parent: dict[str, str] = {}
-
-        def find(accession: str) -> str:
-            parent.setdefault(accession, accession)
-            while parent[accession] != accession:
-                parent[accession] = parent[parent[accession]]
-                accession = parent[accession]
-            return accession
-
-        files_with_accessions: list[tuple[int, Json, list[str]]] = []
+        self._files_by_accession: dict[str, list[tuple[int, Json]]] = defaultdict(list)
         for scope, document in enumerate(documents):
             for class_slot, resources in document.items():
                 if not class_slot.endswith(FILE_CLASS_SLOT_SUFFIX):
                     continue
                 for file in resources:
-                    accessions = [
-                        accession
-                        for accession in (
-                            file.get("accession"),
-                            file.get(REUSED_ACCESSION_SLOT),
-                        )
-                        if accession
-                    ]
-                    for accession in accessions[1:]:
-                        parent[find(accession)] = find(accessions[0])
-                    files_with_accessions.append((scope, file, accessions))
-
-        self._find_physical_file = find
-        self._files_by_physical_file: dict[str, list[tuple[int, Json]]] = defaultdict(
-            list
-        )
-        for scope, file, accessions in files_with_accessions:
-            if accessions:
-                self._files_by_physical_file[find(accessions[0])].append((scope, file))
+                    own_and_reused_accessions = {
+                        file.get("accession"),
+                        file.get(REUSED_ACCESSION_SLOT),
+                    }
+                    for accession in own_and_reused_accessions - {None, ""}:
+                        self._files_by_accession[accession].append((scope, file))
 
     def find_files(self, *, file_accession: str) -> list[tuple[int, Json]]:
-        """Return the resources of the physical file with the given accession, each
-        with the index of its document.
+        """Return the file resources whose own or reused accession is the given one,
+        each with the index of its document.
         """
-        return list(
-            self._files_by_physical_file.get(
-                self._find_physical_file(file_accession), []
-            )
-        )
+        return list(self._files_by_accession.get(file_accession, []))
 
     def resolve(
         self, *, scope: int, resource: Json, slot_name: str, class_slot: str
@@ -216,12 +189,13 @@ def _strip_slots(*, resource: Json, slot_names: Iterable[str]) -> Json:
 def resolve_file_governance(
     *, file_accession: str, metadata: GovernanceMetadata
 ) -> list[FileGovernance]:
-    """Resolve the governance of a physical file, one entry per dataset.
+    """Resolve the governance of a file accession, one entry per dataset.
 
-    Files match by their own accession and by their reused accession. The result
-    includes every study in `metadata` that uses the file, so callers choose which
-    documents to pass. Returns an empty list if no file matches. Raises a
-    GovernanceResolutionError if a reference is dangling.
+    Files match by their own accession and by their reused accession, one hop only:
+    if B reuses A's file and C reuses B's, querying A's accession finds A and B, not
+    C. The result includes every study in `metadata` with a matching file, so
+    callers choose which documents to pass. Returns an empty list if no file
+    matches. Raises a GovernanceResolutionError if a reference is dangling.
     """
     governance_by_dataset: dict[str | tuple[int, str], FileGovernance] = {}
 
