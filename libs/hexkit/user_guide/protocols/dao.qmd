@@ -221,13 +221,10 @@ The full hierarchy:
 - `DaoError`: base for everything below
   - `ResourceNotFoundError`: the requested ID does not exist (`get_by_id`, `update`, `delete`)
   - `ResourceAlreadyExistsError`: the ID is already taken (`insert`)
-  - `UniqueConstraintViolationError`: a write would break a unique index on a field
-    other than the ID
-  - `PreconditionFailedError`: the resource exists but does not match the
-    `precondition` passed to `update`
+  - `UniqueConstraintViolationError`: a write would break a unique index on a field other than the ID
+  - `PreconditionFailedError`: the resource exists but does not match the `precondition` passed to `update`
   - `FindError`: base for find-related errors
-    - `InvalidMappingError`: a filter or precondition key is not a field of the DTO
-      model
+    - `InvalidMappingError`: a filter or precondition key is not a field of the DTO model
     - `NoHitsFoundError`: `find_one` found nothing
     - `MultipleHitsFoundError`: `find_one` found more than one match
   - `DbTimeoutError`: a database operation timed out
