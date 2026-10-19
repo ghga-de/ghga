@@ -51,8 +51,6 @@ def _parse_object_ids(
     raw_object_ids: list[str], *, bucket_id: str, storage_alias: str
 ) -> list[uuid.UUID]:
     """Parse the keys found in a download bucket, skipping those that are not UUIDs.
-
-    DCS never writes such a key, so it is left to whoever put it there.
     """
     object_ids: list[uuid.UUID] = []
     for raw_object_id in raw_object_ids:
