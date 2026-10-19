@@ -23,6 +23,7 @@ import pytest
 from pydantic import ValidationError
 
 from wps.core.models import (
+    DatasetFile,
     DownloadWorkOrder,
     UploadWorkOrderTokenRequest,
     WorkPackage,
@@ -64,6 +65,25 @@ def test_work_order_token():
             accession="some_file_id",
             user_public_crypt4gh_key="some-public-key",
         )
+
+
+@pytest.mark.parametrize(
+    "accession",
+    ["GHGAF01", "GHGA.26.ABC.1.file_a", "GHGA.26.ABC.12.some.file"],
+)
+def test_good_file_accession(accession: str):
+    """Test that legacy and study PID file accessions are accepted."""
+    assert DatasetFile(accession=accession, extension=".bam").accession == accession
+
+
+@pytest.mark.parametrize(
+    "accession",
+    ["some_file_id", "GHGA.26.ABC.1", "GHGA.26.AB1.1.file_a", "GHGA.2026.ABC.1.f"],
+)
+def test_bad_file_accession(accession: str):
+    """Test that file accessions of neither form are rejected."""
+    with pytest.raises(ValidationError, match="accession"):
+        DatasetFile(accession=accession, extension=".bam")
 
 
 def test_good_creation_data():

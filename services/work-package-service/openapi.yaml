@@ -79,7 +79,7 @@ components:
       properties:
         accession:
           description: The file accession.
-          pattern: ^GHGAF.+
+          pattern: ^(?:GHGAF.+|[^.\s]+\.\d{2}\.[A-Z2-7]+\.\d+\..+)$
           title: Accession
           type: string
         extension:

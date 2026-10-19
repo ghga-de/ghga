@@ -59,7 +59,12 @@ __all__ = [
     "WorkType",
 ]
 
-FileAccession = Annotated[str, StringConstraints(pattern=r"^GHGAF.+")]
+# legacy 'GHGAF…' or '{study_pid}.{alias}' with the study PID 'PREFIX.YY.XXX.V';
+# the prefix is not spelled out, as metldata makes it configurable
+FileAccession = Annotated[
+    str,
+    StringConstraints(pattern=r"^(?:GHGAF.+|[^.\s]+\.\d{2}\.[A-Z2-7]+\.\d+\..+)$"),
+]
 
 
 class BaseDto(BaseModel):
