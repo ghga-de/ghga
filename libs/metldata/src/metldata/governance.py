@@ -69,7 +69,7 @@ class FileGovernance(BaseModel):
     data_access_committee_accession: str | None = Field(
         ..., description="Accession of the policy's data access committee."
     )
-    data_access_committee_alias: str = Field(
+    data_access_committee_alias: str | None = Field(
         ..., description="Alias of the data access committee."
     )
     data_access_committee: Json = Field(
@@ -144,7 +144,7 @@ class GovernanceMetadata:
         )
         linked_accessions: dict[str, set[str]] = defaultdict(set)
         position = 0
-        for scope, document in enumerate(documents):
+        for document_index, document in enumerate(documents):
             for class_slot, resources in document.items():
                 if not class_slot.endswith(FILE_CLASS_SLOT_SUFFIX):
                     continue
@@ -155,7 +155,7 @@ class GovernanceMetadata:
                     } - {None, ""}
                     for accession in own_and_reused_accessions:
                         self._files_by_accession[accession].append(
-                            (position, scope, file)
+                            (position, document_index, file)
                         )
                         linked_accessions[accession] |= own_and_reused_accessions
                     position += 1
@@ -179,14 +179,16 @@ class GovernanceMetadata:
             else {file_accession}
         )
         files_by_position = {
-            position: (scope, file)
+            position: (document_index, file)
             for accession in accessions
-            for position, scope, file in self._files_by_accession.get(accession, [])
+            for position, document_index, file in self._files_by_accession.get(
+                accession, []
+            )
         }
         return [files_by_position[position] for position in sorted(files_by_position)]
 
     def resolve(
-        self, *, scope: int, resource: Json, slot_name: str, class_slot: str
+        self, *, document_index: int, resource: Json, slot_name: str, class_slot: str
     ) -> Json:
         """Follow the reference in a resource's slot to the referenced resource."""
         reference = resource.get(slot_name)
@@ -197,7 +199,7 @@ class GovernanceMetadata:
                 + f" '{resource.get(self._reference_slot)}'>",
             )
         try:
-            return self._resources_by_reference[scope][class_slot][reference]
+            return self._resources_by_reference[document_index][class_slot][reference]
         except KeyError as error:
             raise GovernanceResolutionError(
                 class_slot=class_slot, reference=reference
@@ -244,10 +246,8 @@ def resolve_file_governance(
 ) -> list[FileGovernance]:
     """Resolve the governance of a file accession, one entry per dataset.
 
-    Files match by their own accession and by their reused accession, one hop only:
-    if B reuses A's file and C reuses B's, querying A's accession finds A and B, not
-    C. With `follow_reuse_chain`, every file in the reuse chain matches, so any of
-    the three accessions finds A, B and C.
+    Files match by their own accession and by their reused accession. With
+    `follow_reuse_chain`, every file in the reuse chain of the accession matches.
 
     The result covers every document in `metadata`, so callers choose the documents:
     - Loader: metadata from the artifact being loaded only, querying its own file
@@ -261,29 +261,29 @@ def resolve_file_governance(
     """
     governance_by_dataset: dict[str | tuple[int, str], FileGovernance] = {}
 
-    for scope, file in metadata.find_files(
+    for document_index, file in metadata.find_files(
         file_accession=file_accession, follow_reuse_chain=follow_reuse_chain
     ):
         dataset = metadata.resolve(
-            scope=scope,
+            document_index=document_index,
             resource=file,
             slot_name="dataset",
             class_slot=DATASET_CLASS_SLOT,
         )
         # Two artifact types of one study hold the same dataset. Datasets without
         # an accession are distinct per document.
-        dataset_key = dataset.get("accession") or (scope, file["dataset"])
+        dataset_key = dataset.get("accession") or (document_index, file["dataset"])
         if dataset_key in governance_by_dataset:
             continue
 
         data_access_policy = metadata.resolve(
-            scope=scope,
+            document_index=document_index,
             resource=dataset,
             slot_name="data_access_policy",
             class_slot=DATA_ACCESS_POLICY_CLASS_SLOT,
         )
         data_access_committee = metadata.resolve(
-            scope=scope,
+            document_index=document_index,
             resource=data_access_policy,
             slot_name="data_access_committee",
             class_slot=DATA_ACCESS_COMMITTEE_CLASS_SLOT,
@@ -297,7 +297,7 @@ def resolve_file_governance(
                 slot_names=IDENTITY_SLOTS | {"data_access_committee"},
             ),
             data_access_committee_accession=data_access_committee.get("accession"),
-            data_access_committee_alias=data_access_committee.get("alias", ""),
+            data_access_committee_alias=data_access_committee.get("alias"),
             data_access_committee=_strip_slots(
                 resource=data_access_committee, slot_names=IDENTITY_SLOTS
             ),

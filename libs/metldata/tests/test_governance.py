@@ -97,9 +97,9 @@ def load_study() -> Study:
     )
 
 
-def derive_study(*, base: Study, prefix: str, reused_file: Json) -> Study:
-    """Copy a study with new accessions. Its first file reuses `reused_file`, and
-    the dataset of that file uses the policy DAP_2.
+def derive_study(*, base: Study, prefix: str, reused_file: Json | None) -> Study:
+    """Copy a study with new accessions. Its first file reuses `reused_file`, if
+    given, and the dataset of that file uses the policy DAP_2.
     """
     new_accession_by_accession = {
         accession: f"{prefix}{accession}"
@@ -125,7 +125,8 @@ def derive_study(*, base: Study, prefix: str, reused_file: Json) -> Study:
     }
     data_access_policy_2 = accession_map["data_access_policies"]["DAP_2"]
     first_file = content["research_data_files"][0]
-    first_file["reused_accession"] = reused_file["accession"]
+    if reused_file is not None:
+        first_file["reused_accession"] = reused_file["accession"]
     for dataset in content["datasets"]:
         if dataset["accession"] == first_file["dataset"]:
             dataset["data_access_policy"] = data_access_policy_2
@@ -172,51 +173,27 @@ def test_same_answer_for_submission_and_its_artifact():
         assert len(governance) == 1
 
 
-def test_reuse_matched_one_hop():
-    """Test that a query matches a file by its own or its reused accession, one hop
-    only, with equal results for artifacts and submissions. B reuses A's file and C
-    reuses B's.
-    """
-    study_a = load_study()
-    study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
-    study_c = derive_study(base=study_a, prefix="C", reused_file=study_b.first_file)
-    expected_studies_by_query = {
-        study_a.first_file["accession"]: [study_a, study_b],
-        study_b.first_file["accession"]: [study_b, study_c],
-        study_c.first_file["accession"]: [study_c],
-    }
-
-    for file_accession, expected_studies in expected_studies_by_query.items():
-        from_artifacts, from_submissions = (
-            resolve_file_governance(file_accession=file_accession, metadata=metadata)
-            for metadata in both_representations([study_a, study_b, study_c])
-        )
-        assert from_artifacts == from_submissions
-        assert [governance.dataset_accession for governance in from_artifacts] == [
-            study.first_file["dataset"] for study in expected_studies
-        ]
-        assert [
-            governance.data_access_policy["name"] for governance in from_artifacts
-        ] == ["DAP 1" if study is study_a else "DAP 2" for study in expected_studies]
-
-
 def test_reuse_chain_followed():
     """Test that with follow_reuse_chain a query matches every file in the reuse
-    chain, with equal results for artifacts and submissions. B reuses A's file and
-    C reuses B's.
+    chain and no other file, with equal results for artifacts and submissions.
+    B reuses A's file, C reuses B's, and D reuses nothing.
     """
     study_a = load_study()
     study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
     study_c = derive_study(base=study_a, prefix="C", reused_file=study_b.first_file)
+    study_d = derive_study(base=study_a, prefix="D", reused_file=None)
+    all_studies = [study_a, study_b, study_c, study_d]
     cases = [
-        ([study_a, study_b], study_b.first_file["accession"]),
-        ([study_a, study_b, study_c], study_c.first_file["accession"]),
+        ([study_a, study_b], study_b, [study_a, study_b]),
+        (all_studies, study_a, [study_a, study_b, study_c]),
+        (all_studies, study_c, [study_a, study_b, study_c]),
+        (all_studies, study_d, [study_d]),
     ]
 
-    for studies, file_accession in cases:
+    for studies, queried_study, expected_studies in cases:
         from_artifacts, from_submissions = (
             resolve_file_governance(
-                file_accession=file_accession,
+                file_accession=queried_study.first_file["accession"],
                 metadata=metadata,
                 follow_reuse_chain=True,
             )
@@ -224,7 +201,7 @@ def test_reuse_chain_followed():
         )
         assert from_artifacts == from_submissions
         assert [governance.dataset_accession for governance in from_artifacts] == [
-            study.first_file["dataset"] for study in studies
+            study.first_file["dataset"] for study in expected_studies
         ]
 
 
