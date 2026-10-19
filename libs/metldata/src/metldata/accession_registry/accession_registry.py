@@ -25,6 +25,7 @@ from metldata.accession_registry.accession_registry_utils import (
     generate_random_block,
 )
 from metldata.accession_registry.accession_store import AccessionStore
+from metldata.metadata_utils import normalize_alias
 
 # RFC 4648 base32. Not configurable: removing or reassigning a character could
 # invalidate PIDs already minted.
@@ -187,9 +188,7 @@ class AccessionRegistry:
         """Generate the PID '{study_pid}.DS.XXX' of a new dataset.
 
         The random block must be unique among the datasets of the study, so the caller
-        passes the accessions already given out in it, of every class: that also keeps
-        a dataset from taking the accession of an entity with an alias like 'DS.XXX'.
-        Nothing is registered in the store, since the dataset PID is unique by
+        passes the accessions already given out in it. Nothing is registered in the store, since the dataset PID is unique by
         construction once the study PID is.
 
         Raises:
@@ -216,12 +215,12 @@ class AccessionRegistry:
 
     def get_alias_accession(self, *, study_pid: str, alias: str) -> str:
         """Compose the accession '{study_pid}.{alias}' of an entity that is neither
-        the study nor a dataset.
+        the study nor a dataset, from its normalized alias.
 
         Nothing is drawn or registered: the accession is unique by construction, since
-        the study PID is unique and aliases are unique within the study.
+        the study PID is unique and normalized aliases are unique within the study.
         """
-        return f"{study_pid}.{alias}"
+        return f"{study_pid}.{normalize_alias(alias)}"
 
     def is_study_class(self, class_name: str) -> bool:
         """Tell whether the given class is the one whose entity takes the study PID."""
