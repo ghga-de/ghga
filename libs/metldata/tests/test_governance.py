@@ -1,0 +1,291 @@
+# Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+# for the German Human Genome-Phenome Archive (GHGA)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+"""Test the governance traversal."""
+
+import json
+from dataclasses import dataclass
+
+import pytest
+
+from metldata.custom_types import Json
+from metldata.governance import (
+    GovernanceMetadata,
+    GovernanceResolutionError,
+    resolve_file_governance,
+    resolve_files_governance,
+)
+from metldata.submission_registry.models import AccessionMap, Submission
+from tests.fixtures.utils import BASE_DIR
+
+ADDED_ACCESSIONS_PATH = BASE_DIR / "load" / "example_metadata" / "added_accessions.json"
+UNKNOWN_FILE_ACCESSION = "GHGAF00000000000000"
+
+
+@dataclass
+class Study:
+    """One study as both an artifact content and the matching submission."""
+
+    content: Json
+    accession_map: AccessionMap
+
+    @property
+    def submission(self) -> Submission:
+        """The submission for the artifact, with aliases as references and no
+        accessions.
+        """
+        alias_by_accession = {
+            accession: alias
+            for aliases in self.accession_map.values()
+            for alias, accession in aliases.items()
+        }
+        submission_content = {
+            class_slot: [
+                {
+                    slot: _map_strings(value, mapping=alias_by_accession)
+                    for slot, value in resource.items()
+                    if slot != "accession"
+                }
+                for resource in resources
+            ]
+            for class_slot, resources in self.content.items()
+        }
+        return Submission(
+            id=str(id(self)),
+            title="test",
+            content=submission_content,
+            accession_map=self.accession_map,
+        )
+
+    @property
+    def first_file(self) -> Json:
+        """The first research data file."""
+        return self.content["research_data_files"][0]
+
+
+def _map_strings(value, *, mapping: dict[str, str]):
+    if isinstance(value, str):
+        return mapping.get(value, value)
+    if isinstance(value, list):
+        return [_map_strings(item, mapping=mapping) for item in value]
+    return value
+
+
+def load_study() -> Study:
+    """Load the added_accessions artifact as study A."""
+    payload = json.loads(ADDED_ACCESSIONS_PATH.read_text())["payload"]
+    return Study(
+        content=payload["content"],
+        accession_map=payload["annotation"]["accession_map"],
+    )
+
+
+def derive_study(*, base: Study, prefix: str, reused_file: Json) -> Study:
+    """Copy a study with new accessions. Its first file reuses `reused_file`, and
+    the dataset of that file uses the policy DAP_2.
+    """
+    new_accession_by_accession = {
+        accession: f"{prefix}{accession}"
+        for aliases in base.accession_map.values()
+        for accession in aliases.values()
+    }
+    content = {
+        class_slot: [
+            {
+                slot: _map_strings(value, mapping=new_accession_by_accession)
+                for slot, value in resource.items()
+            }
+            for resource in resources
+        ]
+        for class_slot, resources in base.content.items()
+    }
+    accession_map = {
+        class_slot: {
+            alias: new_accession_by_accession[accession]
+            for alias, accession in aliases.items()
+        }
+        for class_slot, aliases in base.accession_map.items()
+    }
+    data_access_policy_2 = accession_map["data_access_policies"]["DAP_2"]
+    first_file = content["research_data_files"][0]
+    first_file["reused_accession"] = reused_file["accession"]
+    for dataset in content["datasets"]:
+        if dataset["accession"] == first_file["dataset"]:
+            dataset["data_access_policy"] = data_access_policy_2
+    return Study(content=content, accession_map=accession_map)
+
+
+def both_representations(studies: list[Study]) -> list[GovernanceMetadata]:
+    """Index the same studies once as artifacts and once as submissions."""
+    return [
+        GovernanceMetadata.from_artifacts(
+            contents=[study.content for study in studies]
+        ),
+        GovernanceMetadata.from_submissions(
+            submissions=[study.submission for study in studies]
+        ),
+    ]
+
+
+def test_same_answer_without_reuse():
+    """Both representations resolve the same governance for every file."""
+    study = load_study()
+    file_accessions = [
+        file["accession"]
+        for class_slot, resources in study.content.items()
+        if class_slot.endswith("_files")
+        for file in resources
+    ]
+    assert len(file_accessions) == 14
+
+    from_artifacts, from_submissions = (
+        resolve_files_governance(file_accessions=file_accessions, metadata=metadata)
+        for metadata in both_representations([study])
+    )
+
+    assert from_artifacts == from_submissions
+    for governance in from_artifacts.values():
+        assert len(governance) == 1
+
+
+def test_resolved_content():
+    """The traversal reaches DAP 1 and DAC_1 and leaves identity slots out of the
+    content.
+    """
+    study = load_study()
+    [governance] = resolve_file_governance(
+        file_accession=study.first_file["accession"],
+        metadata=GovernanceMetadata.from_artifacts(contents=[study.content]),
+    )
+
+    assert governance.dataset_accession == study.first_file["dataset"]
+    assert governance.data_access_committee_alias == "DAC_1"
+    assert governance.data_access_policy["name"] == "DAP 1"
+    for slot in ("accession", "alias", "ega_accession", "data_access_committee"):
+        assert slot not in governance.data_access_policy
+    for slot in ("accession", "alias", "ega_accession"):
+        assert slot not in governance.data_access_committee
+
+
+def test_reuse_found_by_both_accessions():
+    """A reused file is found by both of its accessions, with equal results for
+    artifacts and submissions.
+    """
+    study_a = load_study()
+    study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
+
+    for file_accession in (
+        study_a.first_file["accession"],
+        study_b.first_file["accession"],
+    ):
+        from_artifacts, from_submissions = (
+            resolve_file_governance(file_accession=file_accession, metadata=metadata)
+            for metadata in both_representations([study_a, study_b])
+        )
+        assert from_artifacts == from_submissions
+        assert [
+            governance.data_access_policy["name"] for governance in from_artifacts
+        ] == ["DAP 1", "DAP 2"]
+
+
+def test_reuse_followed_transitively():
+    """If B reuses A's file and C reuses B's, all three studies govern the file."""
+    study_a = load_study()
+    study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
+    study_c = derive_study(base=study_a, prefix="C", reused_file=study_b.first_file)
+
+    for metadata in both_representations([study_a, study_b, study_c]):
+        for study in (study_a, study_b, study_c):
+            governance = resolve_file_governance(
+                file_accession=study.first_file["accession"], metadata=metadata
+            )
+            assert len(governance) == 3
+
+
+def test_submission_without_accessions():
+    """Files of a submission without accessions resolve with None accessions."""
+    study_a = load_study()
+    study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
+    new_submission = study_b.submission.model_copy(update={"accession_map": {}})
+
+    governance = resolve_file_governance(
+        file_accession=study_a.first_file["accession"],
+        metadata=GovernanceMetadata.from_submissions(
+            submissions=[study_a.submission, new_submission]
+        ),
+    )
+
+    assert len(governance) == 2
+    assert governance[1].dataset_accession is None
+    assert governance[1].data_access_committee_accession is None
+    assert governance[1].data_access_committee_alias == "DAC_1"
+    assert governance[1].data_access_policy["name"] == "DAP 2"
+
+
+def test_unknown_file_accession():
+    """An accession that occurs in no file resolves to no governance."""
+    for metadata in both_representations([load_study()]):
+        assert (
+            resolve_file_governance(
+                file_accession=UNKNOWN_FILE_ACCESSION, metadata=metadata
+            )
+            == []
+        )
+
+
+@pytest.mark.parametrize(
+    "class_slot, slot_name",
+    [
+        ("research_data_files", "dataset"),
+        ("datasets", "data_access_policy"),
+        ("data_access_policies", "data_access_committee"),
+    ],
+)
+def test_dangling_reference(class_slot: str, slot_name: str):
+    """A dangling reference anywhere on the chain raises an error."""
+    study = load_study()
+    for resource in study.content[class_slot]:
+        resource[slot_name] = "DANGLING"
+
+    for metadata in both_representations([study]):
+        with pytest.raises(GovernanceResolutionError, match="DANGLING"):
+            resolve_file_governance(
+                file_accession=study.first_file["accession"], metadata=metadata
+            )
+
+
+def test_missing_reference_slot():
+    """A resource without a reference slot raises a GovernanceResolutionError."""
+    study = load_study()
+    del study.content["datasets"][0]["data_access_policy"]
+    del study.content["datasets"][1]["data_access_policy"]
+
+    with pytest.raises(GovernanceResolutionError, match="data_access_policy"):
+        resolve_file_governance(
+            file_accession=study.first_file["accession"],
+            metadata=GovernanceMetadata.from_artifacts(contents=[study.content]),
+        )
+
+
+def test_same_dataset_in_several_documents():
+    """A dataset in several documents yields one entry."""
+    study = load_study()
+
+    for metadata in both_representations([study, study]):
+        governance = resolve_file_governance(
+            file_accession=study.first_file["accession"], metadata=metadata
+        )
+        assert len(governance) == 1
