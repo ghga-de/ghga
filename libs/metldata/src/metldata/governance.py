@@ -252,9 +252,10 @@ def resolve_file_governance(
     The result covers every document in `metadata`, so callers choose the documents:
     - Loader: metadata from the artifact being loaded only, querying its own file
       accessions.
-    - dskit warning 3: "new" is metadata from the new submission only, querying the
-      reused accession. "Before" is metadata from prior submissions only, querying
-      the reused accession with `follow_reuse_chain=True`.
+    - Submit-path governance finding: "new" is metadata from the new submission
+      only, querying the reused accession. "Before" is metadata from prior
+      submissions only, querying the reused accession with
+      `follow_reuse_chain=True`.
 
     Returns an empty list if no file matches. Raises a GovernanceResolutionError if
     a reference is dangling.
