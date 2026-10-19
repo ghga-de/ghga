@@ -137,9 +137,13 @@ class GovernanceMetadata:
 
     def _index_files(self, *, documents: Sequence[Json]) -> None:
         """Index file resources by their own accession and by their reused
-        accession, so a query matches the file and the files that reuse it directly.
+        accession, and group accessions linked by reuse into chains.
         """
-        self._files_by_accession: dict[str, list[tuple[int, Json]]] = defaultdict(list)
+        self._files_by_accession: dict[str, list[tuple[int, int, Json]]] = defaultdict(
+            list
+        )
+        linked_accessions: dict[str, set[str]] = defaultdict(set)
+        position = 0
         for scope, document in enumerate(documents):
             for class_slot, resources in document.items():
                 if not class_slot.endswith(FILE_CLASS_SLOT_SUFFIX):
@@ -148,15 +152,38 @@ class GovernanceMetadata:
                     own_and_reused_accessions = {
                         file.get("accession"),
                         file.get(REUSED_ACCESSION_SLOT),
-                    }
-                    for accession in own_and_reused_accessions - {None, ""}:
-                        self._files_by_accession[accession].append((scope, file))
+                    } - {None, ""}
+                    for accession in own_and_reused_accessions:
+                        self._files_by_accession[accession].append(
+                            (position, scope, file)
+                        )
+                        linked_accessions[accession] |= own_and_reused_accessions
+                    position += 1
 
-    def find_files(self, *, file_accession: str) -> list[tuple[int, Json]]:
+        self._reuse_chain_by_accession = _group_reuse_chains(
+            linked_accessions=linked_accessions
+        )
+
+    def find_files(
+        self, *, file_accession: str, follow_reuse_chain: bool = False
+    ) -> list[tuple[int, Json]]:
         """Return the file resources whose own or reused accession is the given one,
-        each with the index of its document.
+        each with the index of its document, in document order.
+
+        With `follow_reuse_chain`, match every accession in the reuse chain of the
+        given one instead.
         """
-        return list(self._files_by_accession.get(file_accession, []))
+        accessions = (
+            self._reuse_chain_by_accession.get(file_accession, {file_accession})
+            if follow_reuse_chain
+            else {file_accession}
+        )
+        files_by_position = {
+            position: (scope, file)
+            for accession in accessions
+            for position, scope, file in self._files_by_accession.get(accession, [])
+        }
+        return [files_by_position[position] for position in sorted(files_by_position)]
 
     def resolve(
         self, *, scope: int, resource: Json, slot_name: str, class_slot: str
@@ -177,6 +204,29 @@ class GovernanceMetadata:
             ) from error
 
 
+def _group_reuse_chains(
+    *, linked_accessions: dict[str, set[str]]
+) -> dict[str, frozenset[str]]:
+    """Map each accession to its reuse chain. Reuse links count in both directions,
+    so a chain is a connected component.
+    """
+    chain_by_accession: dict[str, frozenset[str]] = {}
+    for start_accession in linked_accessions:
+        if start_accession in chain_by_accession:
+            continue
+        chain = {start_accession}
+        pending = [start_accession]
+        while pending:
+            for linked_accession in linked_accessions[pending.pop()]:
+                if linked_accession not in chain:
+                    chain.add(linked_accession)
+                    pending.append(linked_accession)
+        frozen_chain = frozenset(chain)
+        for accession in chain:
+            chain_by_accession[accession] = frozen_chain
+    return chain_by_accession
+
+
 def _with_accession(*, resource: Json, accession: str | None) -> Json:
     return {**resource, "accession": accession} if accession else resource
 
@@ -187,19 +237,33 @@ def _strip_slots(*, resource: Json, slot_names: Iterable[str]) -> Json:
 
 
 def resolve_file_governance(
-    *, file_accession: str, metadata: GovernanceMetadata
+    *,
+    file_accession: str,
+    metadata: GovernanceMetadata,
+    follow_reuse_chain: bool = False,
 ) -> list[FileGovernance]:
     """Resolve the governance of a file accession, one entry per dataset.
 
     Files match by their own accession and by their reused accession, one hop only:
     if B reuses A's file and C reuses B's, querying A's accession finds A and B, not
-    C. The result includes every study in `metadata` with a matching file, so
-    callers choose which documents to pass. Returns an empty list if no file
-    matches. Raises a GovernanceResolutionError if a reference is dangling.
+    C. With `follow_reuse_chain`, every file in the reuse chain matches, so any of
+    the three accessions finds A, B and C.
+
+    The result covers every document in `metadata`, so callers choose the documents:
+    - Loader: metadata from the artifact being loaded only, querying its own file
+      accessions.
+    - dskit warning 3: "new" is metadata from the new submission only, querying the
+      reused accession. "Before" is metadata from prior submissions only, querying
+      the reused accession with `follow_reuse_chain=True`.
+
+    Returns an empty list if no file matches. Raises a GovernanceResolutionError if
+    a reference is dangling.
     """
     governance_by_dataset: dict[str | tuple[int, str], FileGovernance] = {}
 
-    for scope, file in metadata.find_files(file_accession=file_accession):
+    for scope, file in metadata.find_files(
+        file_accession=file_accession, follow_reuse_chain=follow_reuse_chain
+    ):
         dataset = metadata.resolve(
             scope=scope,
             resource=file,
@@ -243,12 +307,17 @@ def resolve_file_governance(
 
 
 def resolve_files_governance(
-    *, file_accessions: Iterable[str], metadata: GovernanceMetadata
+    *,
+    file_accessions: Iterable[str],
+    metadata: GovernanceMetadata,
+    follow_reuse_chain: bool = False,
 ) -> dict[str, list[FileGovernance]]:
     """Resolve the governance of several files, keyed by file accession."""
     return {
         file_accession: resolve_file_governance(
-            file_accession=file_accession, metadata=metadata
+            file_accession=file_accession,
+            metadata=metadata,
+            follow_reuse_chain=follow_reuse_chain,
         )
         for file_accession in file_accessions
     }

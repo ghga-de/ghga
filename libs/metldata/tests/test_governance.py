@@ -34,6 +34,8 @@ from tests.fixtures.utils import BASE_DIR
 ADDED_ACCESSIONS_PATH = BASE_DIR / "load" / "example_metadata" / "added_accessions.json"
 # Trimmed copy of the resolved_restricted artifact from the dskit demo store
 RESOLVED_RESTRICTED_PATH = BASE_DIR / "governance" / "resolved_restricted.json"
+# Trimmed copy of the submission that produced the resolved_restricted artifact
+SUBMISSION_PATH = BASE_DIR / "governance" / "submission.json"
 UNKNOWN_FILE_ACCESSION = "GHGAF00000000000000"
 
 
@@ -142,24 +144,31 @@ def both_representations(studies: list[Study]) -> list[GovernanceMetadata]:
     ]
 
 
-def test_same_answer_without_reuse():
-    """Test that both representations resolve the same governance for every file."""
-    study = load_study()
+def test_same_answer_for_submission_and_its_artifact():
+    """Test that a submission and the artifact produced from it resolve the same
+    governance for every file.
+    """
+    content = json.loads(RESOLVED_RESTRICTED_PATH.read_text())["payload"]["content"]
+    submission = Submission.model_validate_json(SUBMISSION_PATH.read_text())
     file_accessions = [
         file["accession"]
-        for class_slot, resources in study.content.items()
+        for class_slot, resources in content.items()
         if class_slot.endswith("_files")
         for file in resources
     ]
     assert file_accessions
 
-    from_artifacts, from_submissions = (
-        resolve_files_governance(file_accessions=file_accessions, metadata=metadata)
-        for metadata in both_representations([study])
+    from_artifact = resolve_files_governance(
+        file_accessions=file_accessions,
+        metadata=GovernanceMetadata.from_artifacts(contents=[content]),
+    )
+    from_submission = resolve_files_governance(
+        file_accessions=file_accessions,
+        metadata=GovernanceMetadata.from_submissions(submissions=[submission]),
     )
 
-    assert from_artifacts == from_submissions
-    for governance in from_artifacts.values():
+    assert from_artifact == from_submission
+    for governance in from_artifact.values():
         assert len(governance) == 1
 
 
@@ -189,6 +198,51 @@ def test_reuse_matched_one_hop():
         assert [
             governance.data_access_policy["name"] for governance in from_artifacts
         ] == ["DAP 1" if study is study_a else "DAP 2" for study in expected_studies]
+
+
+def test_reuse_chain_followed():
+    """Test that with follow_reuse_chain a query matches every file in the reuse
+    chain, with equal results for artifacts and submissions. B reuses A's file and
+    C reuses B's.
+    """
+    study_a = load_study()
+    study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
+    study_c = derive_study(base=study_a, prefix="C", reused_file=study_b.first_file)
+    cases = [
+        ([study_a, study_b], study_b.first_file["accession"]),
+        ([study_a, study_b, study_c], study_c.first_file["accession"]),
+    ]
+
+    for studies, file_accession in cases:
+        from_artifacts, from_submissions = (
+            resolve_file_governance(
+                file_accession=file_accession,
+                metadata=metadata,
+                follow_reuse_chain=True,
+            )
+            for metadata in both_representations(studies)
+        )
+        assert from_artifacts == from_submissions
+        assert [governance.dataset_accession for governance in from_artifacts] == [
+            study.first_file["dataset"] for study in studies
+        ]
+
+
+def test_loader_pattern_ignores_other_studies():
+    """Test that metadata from one artifact alone resolves only that artifact's
+    governance, even for a file that reuses another study's file.
+    """
+    study_a = load_study()
+    study_b = derive_study(base=study_a, prefix="B", reused_file=study_a.first_file)
+
+    governance = resolve_file_governance(
+        file_accession=study_b.first_file["accession"],
+        metadata=GovernanceMetadata.from_artifacts(contents=[study_b.content]),
+    )
+
+    assert [entry.dataset_accession for entry in governance] == [
+        study_b.first_file["dataset"]
+    ]
 
 
 def test_submission_without_accessions():
