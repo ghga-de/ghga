@@ -86,9 +86,9 @@ Repo→destination mapping for the import is the source of truth in [scripts/mig
   That is what makes "HEAD always integrated" literally true.
 - **Consequence (accepted):** a breaking change to a shared lib must be fixed for *all* consumers in the same PR.
   "Independent lifecycle" of a lib means "we can cut a `hexkit` release whenever", **not** "service X may lag on an old `hexkit`".
-- **Workspace Python baseline = 3.13** (the services' target).
+- **Workspace Python baseline = 3.14** (the services' target).
   The workspace lock resolves for one interpreter.
-- **Published libraries keep broad support** (3.11–3.14 today, a floor now uniform across the lane — [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md), amended 2026-08-24).
+- **Published libraries keep broad support** (3.11–3.15 today, a floor now uniform across the lane — [ADR-0026](../adrs/adr-0026-uv-workspace-source-coupled-libs.md), amended 2026-10-15).
   Their declared dependency *ranges* stay broad in their own `pyproject.toml`; a **per-package standalone matrix** job (`TEST_PYTHONS` in `scripts/pypi_members.py`) validates the *published* combination.
   So: the workspace lock tests "the integrated combo"; the matrix tests "the published combo".
   Both are required.
@@ -180,7 +180,7 @@ The monorepo was developed **separately from mainline (`ghga-de`) until cutover*
 | Tension | Resolution |
 |---|---|
 | "HEAD always integrated" vs "independent lifecycle" | Source-coupled libs (one `uv.lock`) → integration is structural; *independent lifecycle* applies to **release cadence** (per-component tags), not to consumers lagging on lib versions. |
-| Services need 3.13, libs need 3.9–3.12 | Workspace baseline 3.13; libs keep broad ranges + a standalone per-Python **matrix** job. |
+| Services need 3.14, libs need a broad range | Workspace baseline 3.14; libs keep broad ranges + a standalone per-Python **matrix** job. |
 | Self-reliant `helm install ghga` vs prod-faithful tests | One self-contained umbrella with an **Envoy Gateway** edge ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)) is **both** the install and the test bed: real Gateway-API routing + real Envoy ext_authz against the real auth-adapter, no external ops. Residual prod-only bits (Istio edge-auth CRs, mesh mTLS, Strimzi) → periodic staging check. |
 | App chart portability (Istio prod vs Envoy Gateway demo) | *Hybrid* boundary ([ADR-0031](../adrs/adr-0031-helm-chart-boundary-hybrid.md)): app charts own app-coupled CRDs (HTTPRoute, etc.) with toggles; the edge + edge-auth object live in the GitOps/demo layer and differ per environment. |
 | `state-management-service` power | Test-only, values-gated, never in demo/prod. |

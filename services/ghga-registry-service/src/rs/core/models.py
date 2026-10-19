@@ -298,7 +298,7 @@ class UpdateUploadBoxRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def state_and_max_size_are_exclusive(self) -> "Self":
+    def state_and_max_size_are_exclusive(self) -> Self:
         """Validate that state and max_size are not both set in the same request."""
         if self.state is not None and self.max_size is not None:
             raise ValueError("Cannot update state and max_size in the same request.")

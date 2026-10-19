@@ -7,7 +7,7 @@
   //     image's identity and the other a bolt-on, which is not how the repo is laid out.
   //   - A Python base image would pin an interpreter that nothing here builds against. uv
   //     owns every interpreter that matters, and the version is declared in the repo, not
-  //     the image tag: .python-version = 3.13, and `uv venv --python 3.12` for the test bed.
+  //     the image tag: .python-version = 3.14, and `uv venv --python 3.12` for the test bed.
   //     Baking a second Python into the image only invites the two to be confused.
   //
   // What the Python code needs from the image is a single bootstrap `python3` for the

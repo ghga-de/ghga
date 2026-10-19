@@ -8,13 +8,13 @@ name = "auth-km-jobs"
 description = "GHGA Auth Key Management Jobs - refreshes signing keys and re-encrypts secrets used by GHGA; runs as a Kubernetes Job, either regularly or on demand."
 license = "Apache-2.0"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 authors = [
   {name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de"}
 ]
 classifiers = [
   "Operating System :: POSIX :: Linux",
-  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
   "typer>=0.21",

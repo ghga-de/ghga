@@ -18,8 +18,8 @@ What the repository is, its layout, and how to run the demo and test bed are doc
 
 ## Tech stack
 
-- Python 3.13 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always integrated).
-  Members set their own `requires-python` floor — 3.11 on the PyPI lane, 3.13 for the services — and the combo gate tests a PyPI-lane member on every version from 3.11 to 3.14 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
+- Python 3.14 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always integrated).
+  Members set their own `requires-python` floor — 3.11 on the PyPI lane, 3.14 for the services — and the combo gate tests a PyPI-lane member on every version from 3.11 to 3.15 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
 - Services: FastAPI + Pydantic on `hexkit` (ports-and-adapters; Kafka, MongoDB, S3 providers); most run as a rest + consumer pair
 - Lint/format: `ruff` · typecheck: `mypy` · unit tests: `pytest`, each configured **once**, in the root `pyproject.toml`
 - Front end: Angular 22 with its own `pnpm` workspace and lockfile (not a uv member)

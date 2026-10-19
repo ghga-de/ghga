@@ -84,7 +84,7 @@ def wait_for_vault(client: hvac.Client, timeout: float = VAULT_STARTUP_TIMEOUT) 
             mounts = client.sys.list_mounted_secrets_engines()
             if "secret/" in mounts["data"]:
                 return
-        except (requests.exceptions.ConnectionError, hvac.exceptions.VaultError):
+        except requests.exceptions.ConnectionError, hvac.exceptions.VaultError:
             pass
         if time.monotonic() > deadline:
             raise RuntimeError(f"Vault was not ready within {timeout} seconds")

@@ -75,14 +75,22 @@ exclude = [
 ]
 
 [tool.ruff.per-file-target-version]
+# The platform lane and the one library the testbed installs: the testbed venv is built
+# with `--python 3.12` (see `testbed-install`), and it installs these from source, so
+# their floor cannot follow the workspace to 3.14 until that venv moves.
 "libs/ghga-event-schemas/**" = "py312"
 "libs/metldata/**" = "py312"
 "tools/ghga-datasteward-kit/**" = "py312"
-"services/**" = "py313"
-"tools/auth-km-jobs/**" = "py313"
-# not members: they run on the workspace interpreter
-"scripts/**" = "py313"
-"deploy/**" = "py313"
+"services/**" = "py314"
+"tools/auth-km-jobs/**" = "py314"
+# not a member: it runs on the workspace interpreter
+"deploy/**" = "py314"
+# not a member either, and not on the workspace interpreter: the PEP 723 scripts resolve
+# against their own requires-python, and ci.yaml and the justfile call some with a bare
+# `python3` — the image's interpreter, not the workspace's. So the target is the lowest
+# floor any script there declares, or ruff emits syntax one of those cannot parse:
+# PEP 758's unparenthesized `except` is 3.14 only.
+"scripts/**" = "py311"
 
 [tool.ruff.lint]
 # --- ported verbatim from the template ---

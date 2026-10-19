@@ -136,7 +136,7 @@ How a release runs end to end is in [releases.md](releases.md).
 ## Toolchain
 
 - One `ruff` / `mypy` / `pytest` config at the repo root (in `pyproject.toml`); no per-member copies (the old `.template/` sync is retired).
-- `just` is the task facade ([ADR-0034](adrs/adr-0034-task-runner.md)); `uv` manages Python 3.13.
+- `just` is the task facade ([ADR-0034](adrs/adr-0034-task-runner.md)); `uv` manages Python 3.14.
 - One `.pre-commit-config.yaml` at the root covers **both** stacks ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)).
   `just hooks` installs it, `just hooks-all` runs everything.
   The ruff / mypy / prettier / eslint hooks take their version from `uv.lock` and `pnpm-lock.yaml`, not from a `rev:` pin, so a hook can never disagree with CI.

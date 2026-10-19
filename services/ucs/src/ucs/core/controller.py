@@ -862,7 +862,7 @@ class UploadController(UploadControllerPort):
         async for file_upload in potential_uploads:
             try:
                 await self._requeue_file_upload(file_upload=file_upload)
-            except (self.S3ObjectMissingError, PreconditionFailedError):
+            except self.S3ObjectMissingError, PreconditionFailedError:
                 skipped.append(file_upload.id)
             else:
                 requeued.append(file_upload.id)
