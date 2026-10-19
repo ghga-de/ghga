@@ -12,6 +12,9 @@
 # through the charts below, and anyone wanting "latest integrated" without a release.
 # Release images remain per-member and version-stamped (release.yaml, ADR-0027).
 #
+# Both images are built for linux/amd64 and linux/arm64, as in release.yaml: the
+# dev-ant cluster pulls them, and its pods found no matching platform in an amd64-only index.
+#
 # The member charts are published alongside, for continuous deployment of `dev` to a
 # cluster: generated with --mono, so every Python member runs the platform image, and
 # pinned to the digests built here. Each run has one version (the version job): a dev
@@ -84,7 +87,9 @@ jobs:
     name: publish ${{ matrix.image }}
     needs: version
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Above release.yaml's 40: the mono image compiles aiokafka and pymongo for arm64
+    # under QEMU (no musllinux arm64 wheels), and with every member in one build.
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write # GHCR push via the ephemeral GITHUB_TOKEN
@@ -123,6 +128,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # arm64 has no native GitHub-hosted runner here: without QEMU registered, the
+      # arm64 stages fail with "exec format error".
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: arm64
       # The default (docker-driver) builder shares the daemon's storage but can't export
       # attestations to a registry — a docker-container builder is required for that.
       - name: Create buildx builder
@@ -138,6 +149,7 @@ jobs:
             build_args+=(--build-arg "${{ matrix.build-args }}")
           fi
           docker buildx build \
+            --platform linux/amd64,linux/arm64 \
             --push \
             --pull \
             --provenance=mode=max \
