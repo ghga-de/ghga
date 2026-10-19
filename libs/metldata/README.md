@@ -512,6 +512,16 @@ The service requires the following configuration parameters:
   ]
   ```
 
+- <a id="properties/governance_artifact_name"></a>**`governance_artifact_name`** *(string)*: Name of the artifact from which the governance of each file is resolved.
+  Its resources must reference each other by accession.
+  Default: `"added_accessions"`.
+
+  Examples:
+
+  ```json
+  "added_accessions"
+  ```
+
 #### Definitions
 
 - <a id="%24defs/AnchorPoint"></a>**`AnchorPoint`** *(object)*: A model for describing an anchor point for the specified target class.

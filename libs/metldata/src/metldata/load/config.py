@@ -50,6 +50,13 @@ class ArtifactLoaderAPIConfig(
         examples=[[], ["added_accessions"]],
     )
 
+    governance_artifact_name: str = Field(
+        default="added_accessions",
+        description="Name of the artifact from which the governance of each file is"
+        " resolved. Its resources must reference each other by accession.",
+        examples=["added_accessions"],
+    )
+
 
 class ArtifactLoaderClientConfig(ArtifactCollectorConfig, FileSystemEventConfig):
     """Config settings for the loader client."""

@@ -29,7 +29,10 @@ from metldata.artifacts_rest.load_resources import (
     get_file_slots,
 )
 from metldata.artifacts_rest.models import ArtifactResource, GlobalStats
+from metldata.load.api import FILE_GOVERNANCE_COLLECTION_NAME
 from metldata.load.auth import generate_token
+from metldata.load.load import resolve_governance_records
+from metldata.load.models import FileGovernanceRecord
 from metldata.load.stats import STATS_COLLECTION_NAME
 from tests.fixtures.load.joint import (
     EMBEDDED_DATASET_TEST_PATH,
@@ -105,6 +108,20 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
         observed_resource.content
         == joint_fixture.expected_embedded_dataset_resource_content
     )
+
+    # check that the governance of every added_accessions file was stored:
+    stored_records = _stored_governance_records(joint_fixture)
+    expected_records = {
+        record.file_accession: record
+        for record in resolve_governance_records(
+            artifact_resources=resources,
+            governance_artifact_name=joint_fixture.config.governance_artifact_name,
+        )
+    }
+    assert len(stored_records) == len(
+        _file_accessions(resources["added_accessions"][0])
+    )
+    assert stored_records == expected_records
 
     # check that the summary statistics has been created:
     expected_resource_stats = {
@@ -466,3 +483,157 @@ async def test_file_slot_transformation(joint_fixture: JointFixture):  # noqa: F
     }
     for file_info in convert_file_information(file_slots=file_slots):
         assert extension_mapping[file_info.accession] == file_info.file_extension
+
+
+def _stored_governance_records(
+    joint_fixture: JointFixture,  # noqa: F811
+) -> dict[str, FileGovernanceRecord]:
+    """Return the stored governance records by file accession."""
+    governance_collection = joint_fixture.mongodb.client[joint_fixture.config.db_name][
+        FILE_GOVERNANCE_COLLECTION_NAME
+    ]
+    stored_records = {}
+    for doc in governance_collection.find().to_list():
+        file_accession = doc.pop("_id")
+        stored_records[file_accession] = FileGovernanceRecord(
+            file_accession=file_accession, **doc
+        )
+    return stored_records
+
+
+def _file_accessions(artifact: dict) -> set[str]:
+    """Return the accessions of all files in an artifact."""
+    return {
+        file["accession"]
+        for class_slot, resources in artifact["content"].items()
+        if class_slot.endswith("_files")
+        for file in resources
+    }
+
+
+def _copy_with_new_accessions(artifact: dict, *, prefix: str) -> dict:
+    """Copy an artifact as another study by prefixing every accession in it."""
+    accessions = {
+        resource["accession"]
+        for resources in artifact["content"].values()
+        for resource in resources
+        if "accession" in resource
+    }
+
+    def prefixed(value):
+        if isinstance(value, str) and value in accessions:
+            return f"{prefix}{value}"
+        if isinstance(value, list):
+            return [prefixed(item) for item in value]
+        if isinstance(value, dict):
+            return {key: prefixed(item) for key, item in value.items()}
+        return value
+
+    return {
+        **prefixed(artifact),
+        "study_accession": prefixed(artifact["study_accession"]),
+    }
+
+
+async def test_governance_records_follow_full_state(
+    joint_fixture: JointFixture,  # noqa: F811
+):
+    """Test that a load which drops a study deletes the governance records of its
+    files and keeps those of the remaining study.
+    """
+    artifacts_to_load = deepcopy(joint_fixture.artifact_resources)
+    first_study = artifacts_to_load["added_accessions"][0]
+    second_study = _copy_with_new_accessions(first_study, prefix="SECOND_")
+    artifacts_to_load["added_accessions"].append(second_study)
+    governance_collection = joint_fixture.mongodb.client[joint_fixture.config.db_name][
+        FILE_GOVERNANCE_COLLECTION_NAME
+    ]
+
+    response = await joint_fixture.client.post(
+        "/rpc/load-artifacts",
+        json=artifacts_to_load,
+        headers={"Authorization": f"Bearer {joint_fixture.token}"},
+    )
+    assert response.status_code == 204
+    stored_file_accessions = {
+        doc["_id"] for doc in governance_collection.find().to_list()
+    }
+    assert stored_file_accessions == _file_accessions(first_study) | _file_accessions(
+        second_study
+    )
+
+    artifacts_to_load["added_accessions"] = [second_study]
+    response = await joint_fixture.client.post(
+        "/rpc/load-artifacts",
+        json=artifacts_to_load,
+        headers={"Authorization": f"Bearer {joint_fixture.token}"},
+    )
+    assert response.status_code == 204
+    stored_file_accessions = {
+        doc["_id"] for doc in governance_collection.find().to_list()
+    }
+    assert stored_file_accessions == _file_accessions(second_study)
+
+
+def _dangle_data_access_policies(artifacts: dict) -> None:
+    """Point every dataset to a data access policy that does not exist."""
+    for dataset in artifacts["added_accessions"][0]["content"]["datasets"]:
+        dataset["data_access_policy"] = "DANGLING"
+
+
+def _share_file_accession_across_studies(artifacts: dict) -> None:
+    """Add a second study whose first file has the accession of a first-study file."""
+    first_study = artifacts["added_accessions"][0]
+    second_study = _copy_with_new_accessions(first_study, prefix="SECOND_")
+    second_study["content"]["research_data_files"][0]["accession"] = first_study[
+        "content"
+    ]["research_data_files"][0]["accession"]
+    artifacts["added_accessions"].append(second_study)
+
+
+def _reuse_file_of_other_dataset(artifacts: dict) -> None:
+    """Make a file reuse a file of another dataset in the same study, so the reused
+    accession matches files in two datasets.
+    """
+    content = artifacts["added_accessions"][0]["content"]
+    reused_file = content["research_data_files"][0]
+    reusing_file = next(
+        file
+        for class_slot, resources in content.items()
+        if class_slot.endswith("_files")
+        for file in resources
+        if file["dataset"] != reused_file["dataset"]
+    )
+    reusing_file["reused_accession"] = reused_file["accession"]
+
+
+@pytest.mark.parametrize(
+    "break_artifacts, expected_detail",
+    [
+        (_dangle_data_access_policies, "DANGLING"),
+        (_share_file_accession_across_studies, "occurs in more than one artifact"),
+        (_reuse_file_of_other_dataset, "resolves to 2 datasets"),
+    ],
+)
+async def test_invalid_governance_rejected(
+    joint_fixture: JointFixture,  # noqa: F811
+    break_artifacts,
+    expected_detail: str,
+):
+    """Test that artifacts whose governance cannot be stored unambiguously return
+    422 and nothing is written to the database.
+    """
+    artifacts_to_load = deepcopy(joint_fixture.artifact_resources)
+    break_artifacts(artifacts_to_load)
+
+    response = await joint_fixture.client.post(
+        "/rpc/load-artifacts",
+        json=artifacts_to_load,
+        headers={"Authorization": f"Bearer {joint_fixture.token}"},
+    )
+
+    assert response.status_code == 422
+    assert expected_detail in response.json()["detail"]
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    for collection_name in db.list_collection_names():
+        assert not db[collection_name].find().to_list(), collection_name

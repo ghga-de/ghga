@@ -307,6 +307,7 @@ kafka_servers: ["kafka:9092"]
 primary_artifact_name: embedded_public
 primary_dataset_name: EmbeddedDataset
 publishable_artifacts: ["added_accessions"]
+governance_artifact_name: added_accessions
 artifact_topic: artifacts
 resource_change_topic: searchable_resources
 resource_deletion_type: searchable_resource_deleted

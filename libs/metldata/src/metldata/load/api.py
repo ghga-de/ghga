@@ -36,10 +36,14 @@ from metldata.load.load import (
     ArtifactResourcesInvalid,
     check_artifact_resources,
     load_artifact_resources_using_dao,
+    load_governance_records_using_dao,
     load_whole_artifacts_using_dao,
+    resolve_governance_records,
 )
-from metldata.load.models import ArtifactResourceDict
+from metldata.load.models import ArtifactResourceDict, FileGovernanceRecord
 from metldata.load.stats import create_stats_using_aggregator
+
+FILE_GOVERNANCE_COLLECTION_NAME = "file_governance"
 
 
 class LoaderTokenAuthContext(BaseModel):
@@ -85,6 +89,11 @@ async def rest_api_factory(  # noqa: PLR0913
         artifact_infos=artifact_infos,
         publishable_artifacts=config.publishable_artifacts,
     )
+    governance_dao = await dao_factory.get_dao(
+        name=FILE_GOVERNANCE_COLLECTION_NAME,
+        dto_model=FileGovernanceRecord,
+        id_field="file_accession",
+    )
 
     async def require_token_context(
         credentials: HTTPAuthorizationCredentials = Depends(
@@ -113,6 +122,10 @@ async def rest_api_factory(  # noqa: PLR0913
                 artifact_infos=artifact_info_dict,
                 publishable_artifacts=config.publishable_artifacts,
             )
+            governance_records = resolve_governance_records(
+                artifact_resources=artifact_resources,
+                governance_artifact_name=config.governance_artifact_name,
+            )
         except ArtifactResourcesInvalid as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -133,6 +146,10 @@ async def rest_api_factory(  # noqa: PLR0913
                 artifact_resources=artifact_resources,
                 event_publisher=event_publisher,
                 dao_collection=dao_collection,
+            )
+
+            await load_governance_records_using_dao(
+                records=governance_records, dao=governance_dao
             )
 
             await create_stats_using_aggregator(

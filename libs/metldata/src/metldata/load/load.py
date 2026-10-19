@@ -18,6 +18,7 @@
 
 from collections import defaultdict
 
+from hexkit.protocols.dao import Dao
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
 from metldata.artifacts_rest.load_resources import (
     extract_all_resources_from_artifact,
@@ -27,8 +28,18 @@ from metldata.artifacts_rest.load_resources import (
     process_removed_resources,
 )
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
+from metldata.governance import (
+    FILE_CLASS_SLOT_SUFFIX,
+    GovernanceMetadata,
+    GovernanceResolutionError,
+    resolve_files_governance,
+)
 from metldata.load.event_publisher import EventPublisherPort
-from metldata.load.models import ArtifactJson, ArtifactResourceDict
+from metldata.load.models import (
+    ArtifactJson,
+    ArtifactResourceDict,
+    FileGovernanceRecord,
+)
 from metldata.load.study import InvalidStudyError, get_single_study_accession
 
 
@@ -70,6 +81,78 @@ def check_artifact_resources(
                     + f" '{artifact['study_accession']}', but holds the study"
                     + f" '{study_accession}'."
                 )
+
+
+def resolve_governance_records(
+    *, artifact_resources: ArtifactResourceDict, governance_artifact_name: str
+) -> list[FileGovernanceRecord]:
+    """Resolve the governance of every file in the governance artifacts.
+
+    Each artifact is resolved on its own, querying its own file accessions. If no
+    governance artifact is present, there are no files to govern.
+
+    Raises:
+        ArtifactResourcesInvalid: If a reference on the governance chain is dangling,
+            a file does not resolve to exactly one dataset, or a file accession occurs
+            in more than one artifact.
+    """
+    records_by_file_accession: dict[str, FileGovernanceRecord] = {}
+
+    for artifact in artifact_resources.get(governance_artifact_name, []):
+        content = artifact["content"]
+        file_accessions = [
+            file["accession"]
+            for class_slot, resources in content.items()
+            if class_slot.endswith(FILE_CLASS_SLOT_SUFFIX)
+            for file in resources
+        ]
+        try:
+            governance_by_file_accession = resolve_files_governance(
+                file_accessions=file_accessions,
+                metadata=GovernanceMetadata.from_artifacts(contents=[content]),
+            )
+        except GovernanceResolutionError as error:
+            raise ArtifactResourcesInvalid(
+                f"Artifact '{governance_artifact_name}' of study"
+                + f" '{artifact['study_accession']}': {error}"
+            ) from error
+
+        for file_accession, governance in governance_by_file_accession.items():
+            if len(governance) != 1:
+                raise ArtifactResourcesInvalid(
+                    f"File '{file_accession}' resolves to {len(governance)} datasets"
+                    + " instead of exactly one."
+                )
+            if file_accession in records_by_file_accession:
+                raise ArtifactResourcesInvalid(
+                    f"File '{file_accession}' occurs in more than one artifact"
+                    + f" '{governance_artifact_name}'."
+                )
+            records_by_file_accession[file_accession] = FileGovernanceRecord(
+                file_accession=file_accession, **governance[0].model_dump()
+            )
+
+    return list(records_by_file_accession.values())
+
+
+async def load_governance_records_using_dao(
+    *, records: list[FileGovernanceRecord], dao: Dao[FileGovernanceRecord]
+) -> None:
+    """Store the given governance records as the full state: delete records of files
+    that are no longer present and upsert new or changed ones.
+    """
+    existing_records = {
+        record.file_accession: record
+        for record in await dao.find_all(mapping={}).to_list()
+    }
+    submitted_file_accessions = {record.file_accession for record in records}
+
+    for file_accession in existing_records.keys() - submitted_file_accessions:
+        await dao.delete(file_accession)
+
+    for record in records:
+        if existing_records.get(record.file_accession) != record:
+            await dao.upsert(record)
 
 
 async def load_whole_artifacts_using_dao(

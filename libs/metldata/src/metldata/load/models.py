@@ -18,7 +18,10 @@
 
 from typing import TypeAlias, TypedDict
 
+from pydantic import Field
+
 from metldata.custom_types import Json
+from metldata.governance import FileGovernance
 
 
 class ArtifactJson(TypedDict):
@@ -35,3 +38,9 @@ class ArtifactJson(TypedDict):
 # A dictionary of artifacts. The keys on the first correspond to artifact names.
 # The values are lists of artifact instances for different submissions.
 ArtifactResourceDict: TypeAlias = dict[str, list[ArtifactJson]]
+
+
+class FileGovernanceRecord(FileGovernance):
+    """The governance of a file as stored by the loader, keyed by file accession."""
+
+    file_accession: str = Field(..., description="Accession of the governed file.")
