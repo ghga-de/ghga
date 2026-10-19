@@ -48,6 +48,20 @@ class MetadataValidationError(InvalidMetadataError):
         super().__init__(message)
 
 
+def describe_error(error: jsonschema.ValidationError) -> str:
+    """Describe a validation error, spelling out list-length limits such as the
+    cardinality of a slot.
+    """
+    if error.validator in ("minItems", "maxItems") and isinstance(error.instance, list):
+        limit = "at least" if error.validator == "minItems" else "at most"
+        return (
+            f"holds {len(error.instance)} entries, but the model allows"
+            + f" {limit} {error.validator_value}"
+        )
+
+    return error.message
+
+
 @lru_cache
 def get_metadata_validator(model: MetadataModel) -> jsonschema.Draft7Validator:
     """Create a JSON Schema validator for the root class of the given metadata model.
@@ -95,7 +109,7 @@ class MetadataValidator:
             issues = [
                 ValidationMessage(
                     severity=SeverityEnum.error,
-                    message=error.message,
+                    message=describe_error(error),
                     field=(
                         ".".join(map(str, error.absolute_path))
                         if error.absolute_path

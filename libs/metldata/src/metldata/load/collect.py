@@ -28,6 +28,7 @@ from metldata.event_handling.artifact_events import (
 )
 from metldata.event_handling.event_handling import FileSystemEventCollector
 from metldata.load.models import ArtifactJson, ArtifactResourceDict
+from metldata.load.study import InvalidStudyError, get_single_study_accession
 
 
 class ArtifactCollectorConfig(ArtifactEventConfig):
@@ -84,15 +85,14 @@ def collect_artifacts(
             # obsolete.
             study_accession = ""
             if artifact_type in config.publishable_artifacts:
-                # If the artifact is publishable, we expect it to have a study_accession
-                # field. This is checked here to avoid encountering an error later
-                # on when the uploaded data is already half-way processed.
+                # A publishable artifact must hold exactly one study, whose accession
+                # keys it. This is checked here, before anything is sent, so that a
+                # violation never reaches the loader half-way through.
                 try:
-                    study_accession = content["studies"][0]["accession"]
-                except (KeyError, IndexError) as err:
+                    study_accession = get_single_study_accession(content)
+                except InvalidStudyError as err:
                     raise RuntimeError(
-                        f"Artifact '{artifact_type}' does not contain 'study_accession'"
-                        " field, but it is marked as publishable."
+                        f"Artifact '{artifact_type}' is marked as publishable: {err}"
                     ) from err
 
             artifact_resources[artifact_type].append(

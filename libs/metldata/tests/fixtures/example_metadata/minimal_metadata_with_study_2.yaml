@@ -1,0 +1,7 @@
+studies:
+  - alias: test_study
+files:
+  - alias: test_sample_01_R1
+    filename: test_sample_01_R1.fastq
+  - alias: test_sample_02_R1
+    filename: test_sample_02_R1.fastq

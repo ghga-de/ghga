@@ -29,6 +29,7 @@ from metldata.artifacts_rest.load_resources import (
 from metldata.artifacts_rest.models import ArtifactInfo, ArtifactResource
 from metldata.load.event_publisher import EventPublisherPort
 from metldata.load.models import ArtifactJson, ArtifactResourceDict
+from metldata.load.study import InvalidStudyError, get_single_study_accession
 
 
 class ArtifactResourcesInvalid(RuntimeError):
@@ -36,16 +37,39 @@ class ArtifactResourcesInvalid(RuntimeError):
 
 
 def check_artifact_resources(
-    artifact_resources: ArtifactResourceDict, artifact_infos: dict[str, ArtifactInfo]
+    artifact_resources: ArtifactResourceDict,
+    artifact_infos: dict[str, ArtifactInfo],
+    publishable_artifacts: list[str],
 ) -> None:
     """Check the provided artifact resources against the given artifact info.
+
+    Each publishable artifact must hold exactly one study, matching the study
+    accession it was sent with.
 
     Raises:
         ArtifactResourcesInvalid: If the artifact resources are invalid.
     """
-    for artifact_name in artifact_resources:
+    for artifact_name, artifacts in artifact_resources.items():
         if artifact_name not in artifact_infos:
             raise ArtifactResourcesInvalid(f"Artifact '{artifact_name}' is unknown.")
+
+        if artifact_name not in publishable_artifacts:
+            continue
+
+        for artifact in artifacts:
+            try:
+                study_accession = get_single_study_accession(artifact["content"])
+            except InvalidStudyError as err:
+                raise ArtifactResourcesInvalid(
+                    f"Publishable artifact '{artifact_name}': {err}"
+                ) from err
+
+            if artifact["study_accession"] != study_accession:
+                raise ArtifactResourcesInvalid(
+                    f"Artifact '{artifact_name}' was sent with study accession"
+                    + f" '{artifact['study_accession']}', but holds the study"
+                    + f" '{study_accession}'."
+                )
 
 
 async def load_whole_artifacts_using_dao(
