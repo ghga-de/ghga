@@ -20,27 +20,10 @@ cd /workspace/demo || exit 1
 mkdir -p \
     ./store/artifact_models \
     ./store/submissions \
-    ./store/event_store \
-    ./store/file_uploads
+    ./store/event_store
 touch ./store/accessions.txt
 
 echo "n65vGs4QfPjCOTrNLjnX_cFNM7z_PhmdnOLqUoizWo4" > ~/.ghga_data_steward_token.txt
-
-curl -X PUT -H "Content-Type: application/json" \
-    -H "Authorization: AWS test:test" \
-    "http://localstack:4566/staging"
-
-ghga-datasteward-kit files upload \
-    --input-path ./input/files/SEQ_FILE_A_R1.fastq.gz \
-    --alias SEQ_FILE_A_R1.fastq.gz \
-    --config-path ./config/file_config.yaml
-
-rm -f ./store/file_uploads/SEQ_FILE_A_R1.fastq.gz.json
-
-ghga-datasteward-kit files batch-upload \
-    --tsv ./input/files.tsv \
-    --config-path ./config/file_config.yaml \
-    --parallel-processes 10
 
 ghga-datasteward-kit metadata generate-artifact-models \
     --config-path ./config/metadata_config.yaml
