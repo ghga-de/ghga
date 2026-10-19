@@ -20,7 +20,8 @@ Do the stage the dev names after the command, or the one the request describes, 
 3. In a stack, the key goes in front of the stack name when the issue covers the whole stack, and in front of the description when it covers only this PR.
 4. Run `git fetch origin` and cut the branch from `origin/dev`, or `origin/main` for a hotfix, never from a local `dev`: it lags behind after every merge.
    In a stack, cut it from the branch below instead.
-5. When the main clone holds other work, `just wt <branch>` gives the branch its own worktree, cut from `origin/dev` (pass `origin/main` as the second argument for a hotfix); otherwise `git switch -c <branch> origin/dev`.
+5. When the main clone holds other work, `just wt <branch>` gives the branch its own worktree, cut from `origin/dev` (pass `origin/main` as the second argument for a hotfix); otherwise `git switch --no-track -c <branch> origin/dev`.
+   Without `--no-track` the branch tracks `origin/dev`, and a plain `git push` or the editor's sync button pushes it onto `dev`; the first `git push -u origin <branch>` sets the right upstream.
 
 ## Commit
 
