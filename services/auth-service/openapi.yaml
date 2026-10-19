@@ -310,7 +310,7 @@ components:
           type: string
         dataset_id:
           description: ID of the dataset this grant is for
-          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          pattern: ^(?:[A-Z]{1,6}[0-9]{3,18}|[^.\s]+\.\d{2}\.[A-Z2-7]+\.\d+\.[^.\s]+\.[A-Z2-7]+)$
           title: Dataset Id
           type: string
         id:
@@ -1162,7 +1162,7 @@ paths:
         required: true
         schema:
           description: Internal ID of the dataset
-          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          pattern: ^(?:[A-Z]{1,6}[0-9]{3,18}|[^.\s]+\.\d{2}\.[A-Z2-7]+\.\d+\.[^.\s]+\.[A-Z2-7]+)$
           title: Dataset Id
           type: string
       responses:
@@ -1214,7 +1214,7 @@ paths:
         required: true
         schema:
           description: The ID of the dataset
-          pattern: ^[A-Z]{1,6}[0-9]{3,18}$
+          pattern: ^(?:[A-Z]{1,6}[0-9]{3,18}|[^.\s]+\.\d{2}\.[A-Z2-7]+\.\d+\.[^.\s]+\.[A-Z2-7]+)$
           title: Dataset Id
           type: string
       requestBody:

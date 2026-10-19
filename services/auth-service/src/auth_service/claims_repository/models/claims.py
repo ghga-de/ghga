@@ -54,8 +54,17 @@ __all__ = [
 
 
 # Accession format should be moved to the commons module
+# legacy 'GHGAD12345…' or the dataset PID '{study_pid}.DS.XXX' with the study PID
+# 'PREFIX.YY.XXX.V'; both prefixes are configurable in metldata, so not spelled out
 Accession = Annotated[
-    str, StringConstraints(strip_whitespace=True, pattern="^[A-Z]{1,6}[0-9]{3,18}$")
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        pattern=(
+            r"^(?:[A-Z]{1,6}[0-9]{3,18}"
+            + r"|[^.\s]+\.\d{2}\.[A-Z2-7]+\.\d+\.[^.\s]+\.[A-Z2-7]+)$"
+        ),
+    ),
 ]
 
 
