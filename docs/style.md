@@ -22,7 +22,7 @@ Commit messages, branch names and pull request titles follow the [conventions](c
   The word count is not the test: if you have to read your own sentence twice, split it.
 - **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the same page").
   Name the literal action instead, and the literal thing: base, not substrate; required, not load-bearing.
-- **"X, not Y" only when the reader would assume Y.**
+- **"X, not Y" only when Y is what the reader would assume.**
   Otherwise state X alone.
 - **Every prohibition names the alternative.**
   "Don't X" leaves the reader guessing; say what to do instead.
