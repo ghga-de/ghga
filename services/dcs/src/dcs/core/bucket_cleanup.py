@@ -50,8 +50,7 @@ class BucketCleanupConfig(BaseSettings):
 def _parse_object_ids(
     raw_object_ids: list[str], *, bucket_id: str, storage_alias: str
 ) -> list[uuid.UUID]:
-    """Parse the keys found in a download bucket, skipping those that are not UUIDs.
-    """
+    """Parse the keys found in a download bucket, skipping those that are not UUIDs."""
     object_ids: list[uuid.UUID] = []
     for raw_object_id in raw_object_ids:
         try:
