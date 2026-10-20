@@ -1,0 +1,192 @@
+# The eval suite of the hexkit skill (docs/agent-instructions.md#admitting-a-skill).
+# `just skill-eval hexkit` expands each case into evals/<case>/case.yaml for
+# `claude plugin eval`. A case takes the execution fields below unless it sets its own,
+# and a grader given by name is one of the shared graders.
+# MANIFEST.in lists only SKILL.md, so neither this file nor evals/ reaches the wheel, and
+# great-docs' `skill.file` publishes SKILL.md alone.
+# The skill describes hexkit 10, which the shared pin predates, so the suite clones at its
+# own pin. The sandbox has no Docker and no network: no case runs a testcontainers suite,
+# and graders read the edits and the reply.
+# The runner offers the skill as a plugin skill copied from the working tree; `plugins`
+# names it, so the copy is made from the root link and the runner never sees the link.
+
+pin: 865cc8744
+plugins:
+  hexkit: [hexkit]
+
+execution:
+  max_turns: 40
+  timeout_seconds: 900
+  allowed_tools: [Read, Glob, Grep, Bash, Write, Edit, Skill]
+  # Neither arm loads AGENTS.md, which a session in the repo would. Runs guessed the main
+  # clone's path and worked there, so the prompt keeps them in their own clone.
+  append_system_prompt: >-
+    You work in a clone of the GHGA monorepo. Its instructions are in AGENTS.md at the
+    root and in the AGENTS.md of each area; read the root file before you start, as a
+    session here loads it. The clone is your working directory: work only there, since
+    another checkout on this machine is not the one under test. Docker is not available
+    in this session, so tests that start containers cannot run here.
+
+graders:
+  # A grader on a tool sees its input as JSON, so a command starts after `"command":"`.
+  no-direct-uv:
+    type: tool_used
+    tool: Bash
+    input_match: '(^|[\s;&|(\x60"])uv\s'
+    min: 0
+    max: 0
+  skill-fired:
+    type: tool_used
+    tool: Skill
+    arm: with-only
+
+cases:
+  outbox:
+    description: Other services need IFRS's file metadata and must be able to rebuild their copy, which is what the outbox publisher is for.
+    tags: [write]
+    prompt: |
+      Other services need to keep their own copy of the file metadata that the Internal File Registry Service (services/ifrs) stores in its `file_metadata` collection, including removals, and they must be able to rebuild that copy from scratch at any time. Change IFRS so that they can. Do not change the consuming services.
+    graders:
+      - name: outbox-factory
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'MongoKafkaDaoPublisherFactory|DaoPublisherFactoryProtocol'
+      - name: dto-to-event
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'dto_to_event'
+      - name: republish-command
+        type: llm
+        criteria: |
+          The change stores IFRS's file metadata through an outbox DAO publisher (hexkit's MongoKafkaDaoPublisherFactory or the DaoPublisher protocol), so every insert, update and deletion is published with the full state, keyed by the file ID, to a topic taken from the configuration, and it offers a way to publish pending changes or republish everything (publish_pending or republish), such as a CLI command. It does not publish events by hand next to each DAO write.
+      - skill-fired
+      - no-direct-uv
+
+  race:
+    description: Two data stewards update the same pending access request at once; the fix is a precondition on the update, not a lock or a loop of its own.
+    tags: [write]
+    prompt: |
+      In the Access Request Service (services/access-request-service), two data stewards can process the same pending access request at the same moment: both read it as pending in `update` in `src/ars/core/repository.py`, and the second write silently overwrites the first decision. Make that update safe, so a request decided by one steward cannot be overwritten by the other.
+    graders:
+      - name: precondition
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'precondition\s*='
+      - name: no-own-lock
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'asyncio\.Lock\(|threading\.Lock\(|while True:'
+        min: 0
+        max: 0
+      - name: handles-the-conflict
+        type: llm
+        criteria: |
+          The update passes a precondition (for example the status being pending) to the DAO's update, so the database checks and writes in one step, and the losing writer gets a clear error, such as the request being closed, after PreconditionFailedError, or re-reads and retries through hexkit's race_condition_retries. It does not add an in-process lock, which would not help across instances.
+      - skill-fired
+      - no-direct-uv
+
+  bad-payload:
+    description: The user asks to swallow invalid events; the dead letter queue, enabled in this service, already parks them without stopping consumption.
+    tags: [trap]
+    prompt: |
+      The notification service (services/notification-service) sometimes gets notification events whose payload does not validate. I don't want such an event to stop the consumer. Change the event translator in `src/ns/adapters/inbound/event_sub.py` so that it just logs an invalid payload and moves on to the next event.
+    graders:
+      - name: keeps-the-error
+        type: llm
+        criteria: |
+          The reply explains that an exception raised by the translator does not stop the consumer here because the dead letter queue is enabled (kafka_enable_dlq): the event is retried as configured, then published to the DLQ topic, where it can be inspected and requeued, and consumption continues. It keeps the error propagating, or raises the translator's MalformedPayloadError, instead of catching and only logging it, which would commit the offset and lose the event; or, if it does change the code as asked, it states plainly that the event is then lost.
+      - skill-fired
+      - no-direct-uv
+
+  fixture-test:
+    description: An integration test of a published event, which hexkit's Kafka fixture checks with expect_events.
+    tags: [test]
+    prompt: |
+      Add an integration test to the Internal File Registry Service (services/ifrs) checking that registering a new file publishes exactly one file-registered event with the file's accession and storage alias. Use the test infrastructure the service already has. Docker is not available here, so write the test without running it, and say how to run it.
+    graders:
+      - name: kafka-expectation
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'expect_events\(|record_events\('
+      - name: no-mock-broker
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'patch\([^)]*publish|MagicMock\(\)\.publish'
+        min: 0
+        max: 0
+      - name: run-command
+        type: regex
+        target: {source: response}
+        pattern: 'just test services/ifrs'
+      - skill-fired
+      - no-direct-uv
+
+  secret-setting:
+    description: A credential setting, which hexkit masks only when it is declared as a secret, and whose generated files the service-docs recipe writes.
+    tags: [write]
+    prompt: |
+      The Download Controller Service (services/dcs) will need an API token to call an external audit service. Add a configuration setting for the token, with no default, and update everything that documents the configuration.
+    graders:
+      - name: secret-type
+        type: tool_used
+        tool: Edit|Write
+        input_match: 'SecretStr|Secret\['
+      - name: service-docs
+        type: tool_used
+        tool: Bash
+        input_match: 'just service-docs'
+      - name: no-hand-edit-schema
+        type: tool_used
+        tool: Edit|Write
+        input_match: '"file_path":"[^"]*(config_schema\.json|example_config\.yaml|openapi\.yaml)"'
+        min: 0
+        max: 0
+      - no-direct-uv
+
+  pagination:
+    description: Paging a listing, which the DAO does in the database with skip, limit and sort, and counts with total_count.
+    tags: [write]
+    prompt: |
+      In the Access Request Service (services/access-request-service), `find_all` in `src/ars/core/repository.py` loads every matching access request and sorts them in Python. Data stewards will list thousands of them, so let the method take an offset and a page size and also return the total number of matching requests, newest first as now. Leave the REST API unchanged for now, adapt the existing callers and tests, and run the service's tests.
+    graders:
+      - name: sort-in-db
+        type: regex
+        target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
+        pattern: 'sort\s*=\s*\[\s*"-request_created"'
+      - name: skip-and-limit
+        type: regex
+        target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
+        pattern: '(?s)find_all\(.*skip\s*=.*limit\s*='
+      - name: total-count
+        type: regex
+        target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
+        pattern: 'total_count\(\)'
+      - name: no-mapping
+        type: tool_used
+        tool: Edit|Write
+        input_match: '\bmapping\s*='
+        min: 0
+        max: 0
+      - name: ran-tests
+        type: tool_used
+        tool: Bash
+        input_match: 'just test services/access-request-service'
+      - skill-fired
+      - no-direct-uv
+
+  not-hexkit:
+    description: A front-end question with no hexkit in it, where the skill must not load.
+    tags: [negative]
+    prompt: |
+      Which file in the data portal (frontend/data-portal) defines the routes of the app? Just name the file and the route of the dataset details page.
+    graders:
+      - name: no-hexkit
+        type: tool_used
+        tool: Skill
+        input_match: 'hexkit'
+        min: 0
+        max: 0
+      - name: answered
+        type: regex
+        target: {source: response}
+        pattern: 'app-routes\.ts'

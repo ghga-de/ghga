@@ -16,9 +16,14 @@
 # bare repo some cases set up as their origin.
 # Given a patch and a branch name, it also commits the patch on that branch, off an
 # `origin/dev` at the pin, so that a case can review or describe a change of its own.
+# `--pin <commit>` first replaces the pin, for a suite about code newer than it.
 set -euo pipefail
 
 PIN=9f5df2dd4
+if [[ ${1:-} == --pin ]]; then
+    PIN=$2
+    shift 2
+fi
 
 repo=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)
 user_home=$(getent passwd "$(id -un)" | cut -d: -f6)
@@ -29,6 +34,8 @@ git checkout --quiet --detach "$PIN"
 git for-each-ref --format='%(refname:short)' refs/heads | xargs -r git branch --quiet -D
 git remote remove origin
 git rm -r --quiet .agents/skills .claude/skills
+# A skill shipped in a package is a root skill too; its files stay behind otherwise.
+git ls-files -z -- ':(glob)libs/*/src/*/.agents/skills/**' | xargs -0r git rm --quiet
 UV_CACHE_DIR="$user_home/.cache/uv" UV_OFFLINE=1 UV_LINK_MODE=copy \
     uv sync --quiet --frozen --all-packages --all-extras
 # The skill catalogue lists the removed skills; regenerate it so the tree starts clean.
