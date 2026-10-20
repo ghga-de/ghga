@@ -17,7 +17,9 @@ This module provides custom proxy handling. httpx2 gives a custom transport prec
 the proxies it reads from the environment, but custom transports + proxy are a valid use case
 that need some custom logic around this default.
 
-Env proxies are parsed by default, but can be disabled using `trust_env=False`.
+There is no `trust_env` switch: httpx2 ignores the client's `trust_env` for proxies
+once it is handed a transport. To skip the proxies, unset the proxy variables or
+list the hosts in NO_PROXY.
 Hosts excluded via NO_PROXY are kept as `None` mounts, which tells httpx2 to connect
 directly to them.
 """
@@ -30,43 +32,30 @@ from .factory import (
     CompositeTransportFactory,
     default_base_transport_factory,
 )
-from .ratelimiting import RateBudget
 
 
 def ratelimiting_retry_proxies(
     config: CompositeConfig,
     *,
     make_base_transport: BaseTransportFactory | None = None,
-    budget: RateBudget | None = None,
-    trust_env: bool = True,
 ) -> dict[str, AsyncBaseTransport | None]:
     """Setup proxies from env for ratelimiting retry transport.
 
     The returned dictionary needs to be provided as `mounts` to the client.
-    Pass `budget` to enable request pacing, or `trust_env=False` to ignore the
-    environment for proxies and return no mounts.
-    If a `budget` is provided, it's shared between mounts.
 
     Example:
         ```
-        # all routes share a common request rate budget
-        budget = RateBudget(config)
-        transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config, budget=budget
-        )
-        mounts = ratelimiting_retry_proxies(config, budget=budget)
-        client = httpx2.AsyncClient(transport=transport, mounts=mounts)
+        # With HTTPS_PROXY=http://proxy.invalid:8080 and NO_PROXY=internal.invalid
+        mounts = ratelimiting_retry_proxies(config)
+        # {"https://": AsyncRetryTransport(...), "all://*internal.invalid": None}
         ```
     """
-    if not trust_env:
-        return {}
-
     factory = make_base_transport or default_base_transport_factory()
     return {
         key: None
         if url is None
         else CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config=config, make_base_transport=factory, proxy=url, budget=budget
+            config=config, make_base_transport=factory, proxy=url
         )
         for key, url in _get_proxy_urls_from_env().items()
     }

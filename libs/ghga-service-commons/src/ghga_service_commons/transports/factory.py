@@ -24,7 +24,7 @@ from typing import Any
 from httpx2 import AsyncBaseTransport, AsyncHTTPTransport, Limits
 
 from .config import CompositeConfig
-from .ratelimiting import AsyncRateLimitingTransport, RateBudget
+from .ratelimiting import AsyncRateLimitingTransport
 from .retry import AsyncRetryTransport
 
 BaseTransportFactory = Callable[[str | None], AsyncBaseTransport]
@@ -52,6 +52,7 @@ def get_ssl_verify() -> ssl.SSLContext | bool:
 
 
 def default_base_transport_factory(
+    *,
     limits: Limits | None = None,
     verify: ssl.SSLContext | bool | None = None,
 ) -> BaseTransportFactory:
@@ -64,7 +65,7 @@ def default_base_transport_factory(
         # Size the connection pool once, then build the direct route and every
         # proxy mount from the same factory.
         limits = httpx2.Limits(max_connections=10, max_keepalive_connections=10)
-        make_base_transport = default_base_transport_factory(limits)
+        make_base_transport = default_base_transport_factory(limits=limits)
         transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
             config, make_base_transport=make_base_transport
         )
@@ -87,6 +88,7 @@ def default_base_transport_factory(
 
 
 def fixed_base_transport_factory(
+    *,
     transport: AsyncBaseTransport,
 ) -> BaseTransportFactory:
     """Serve every route from one already built transport.
@@ -99,7 +101,9 @@ def fixed_base_transport_factory(
         # limiting layers in place.
         transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
             config,
-            make_base_transport=fixed_base_transport_factory(mock_api.as_transport()),
+            make_base_transport=fixed_base_transport_factory(
+                transport=mock_api.as_transport()
+            ),
         )
         ```
     """
@@ -116,17 +120,15 @@ class CompositeTransportFactory:
         *,
         make_base_transport: BaseTransportFactory | None = None,
         proxy: str | None = None,
-        budget: RateBudget | None = None,
     ):
         """Creates wrapped transports reused between different factory methods.
 
         If `make_base_transport` is not provided, a default factory using default
         limits is used.
-        Passing `budget` paces requests across routes.
         """
         factory = make_base_transport or default_base_transport_factory()
         ratelimiting_transport = AsyncRateLimitingTransport(
-            config=config, transport=factory(proxy), budget=budget
+            config=config, transport=factory(proxy)
         )
         return AsyncRetryTransport(config=config, transport=ratelimiting_transport)
 
@@ -137,11 +139,8 @@ class CompositeTransportFactory:
         *,
         make_base_transport: BaseTransportFactory | None = None,
         proxy: str | None = None,
-        budget: RateBudget | None = None,
     ) -> AsyncRetryTransport:
         """Creates a retry transport, wrapping, in sequence, a rate limiting transport and a base transport.
-
-        Pass `budget` to pace requests across routes of the same client.
 
         Example:
             ```
@@ -159,5 +158,4 @@ class CompositeTransportFactory:
             config,
             make_base_transport=make_base_transport,
             proxy=proxy,
-            budget=budget,
         )

@@ -147,7 +147,7 @@ def test_default_base_transport_factory_applies_its_settings(
     """
     limits = Limits(max_connections=7)
     verify = ssl.create_default_context()
-    make_base_transport = default_base_transport_factory(limits, verify)
+    make_base_transport = default_base_transport_factory(limits=limits, verify=verify)
 
     with patch(
         "ghga_service_commons.transports.factory.AsyncHTTPTransport"
@@ -187,7 +187,7 @@ def test_default_base_transport_factory_defaults(
 def test_fixed_base_transport_factory_serves_every_route():
     """Every route gets the given transport, whichever proxy it would have used."""
     base = AsyncHTTPTransport()
-    make_base_transport = fixed_base_transport_factory(base)
+    make_base_transport = fixed_base_transport_factory(transport=base)
 
     assert make_base_transport(None) is base
     assert make_base_transport(PROXY_URL) is base
@@ -210,7 +210,8 @@ def test_create_ratelimiting_retry_transport_uses_custom_base():
     base = AsyncHTTPTransport()
 
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        CompositeConfig(), make_base_transport=fixed_base_transport_factory(base)
+        CompositeConfig(),
+        make_base_transport=fixed_base_transport_factory(transport=base),
     )
 
     ratelimiting = transport._transport
