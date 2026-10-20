@@ -155,7 +155,8 @@ cases:
       - name: skip-and-limit
         type: regex
         target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
-        pattern: '(?s)find_all\(.*skip\s*=.*limit\s*='
+        pattern: 'find_all\(.*skip\s*=.*limit\s*='
+        flags: s
       - name: total-count
         type: regex
         target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
