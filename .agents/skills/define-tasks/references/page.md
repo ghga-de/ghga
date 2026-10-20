@@ -28,10 +28,12 @@ The page's how-to line tells readers so.
 
 - **Give every point a `data-gist`**, except a task or decision head, whose heading serves as its gist.
   Write what the point does or says in up to ten words, without paths, file names or refs, such as `data-gist="Each transport builds its own budget"`.
+  Write a double quote in it as `&quot;`, since a bare one ends the attribute.
 - **Keep the gist with the point.**
   Give every new point one in the refine that adds it, and change a gist only when its point's meaning changes.
 - **Write refs as plain text** in the text and tags, and the script links them.
-  A ref inside `code` or a link stays text, and so does a point's mention of itself.
+  A ref inside `code`, a link or an SVG stays text, and so does a point's mention of itself.
+  Write a source's own IDs and words that only look like refs, such as Cloudflare's R2, in `code`, or the page links them to the plan's point of that name.
 
 ## Ticket cards
 

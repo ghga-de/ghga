@@ -642,7 +642,7 @@ dl.facts dd { margin: 0; }
       </details>
     </header>
 
-    <!-- FILL: keep this section only when the source is a findings artifact. One li per finding, in the source's order. Tag it with its state in the source's own words, then with the task or decision it leads to; a finding the plan leaves out gets no second tag. Give the source's own ID where it differs from the ref, then what the finding says and what the plan does with it. -->
+    <!-- FILL: keep this section only when the source is a findings artifact. One li per finding, in the source's order. Tag it with its state in the source's own words, then with the task or decision it leads to; a finding the plan leaves out gets no second tag. Give the source's own ID where it differs from the ref, in <code>, since the page links plain refs, then what the finding says and what the plan does with it. -->
     <section id="findings">
       <h2>Findings</h2>
       <p>FILL: What the review or the triage found. Each finding carries its state from there and says what the plan does with it: a task, a decision or nothing.</p>
@@ -828,11 +828,9 @@ dl.facts dd { margin: 0; }
     try { document.getElementById("top-heading").focus({ preventScroll: true }); } catch (e) {}
   });
 
-  // Every ref the page shows links to its point and shows the point's gist on hover:
-  // in What changed, where a list such as "D9, D10" or a range such as "D1–D7" links to
-  // its first point, and in the text, tags and question lines of every other point.
-  // The gist is the point's data-gist, else its heading. A point without either falls
-  // back to its first sentence without paths.
+  // Refs link to their point and show its gist on hover; a list or a range such as
+  // "D1–D7" in What changed links to its first point. The gist is the point's
+  // data-gist, else its heading, else its first sentence without paths.
   function pointText(point) {
     var gist = point.getAttribute("data-gist");
     if (gist) return gist;
@@ -849,17 +847,16 @@ dl.facts dd { margin: 0; }
     return end === -1 ? text : text.slice(0, end + 1);
   }
 
-  function pointFor(ref) {
-    return document.querySelector('[data-point="' + ref.replace(/["\\]/g, "\\$&") + '"]');
+  function pointAnchor(point) {
+    return "#" + (point.id || (point.closest("[id]") || {}).id || "");
   }
 
   function refLink(label, refs, cls) {
-    var target = pointFor(refs[0]);
     var link = document.createElement("a");
     link.className = cls;
     link.textContent = label;
-    link.href = "#" + (target.id || (target.closest("[id]") || {}).id || "");
-    link.title = refs.map(function (ref) { return ref + ": " + pointText(pointFor(ref)); }).join("\n");
+    link.href = pointAnchor(pointEl(refs[0]));
+    link.title = refs.map(function (ref) { return ref + ": " + pointText(pointEl(ref)); }).join("\n");
     return link;
   }
 
@@ -875,7 +872,7 @@ dl.facts dd { margin: 0; }
         refs = refs.concat(ends);
       }
     });
-    return refs.filter(function (ref) { return pointFor(ref); });
+    return refs.filter(function (ref) { return pointEl(ref); });
   }
 
   function linkChanges() {
@@ -886,10 +883,10 @@ dl.facts dd { margin: 0; }
     }
   }
 
-  // Code, labels, links and the parts the script renders later keep their refs as text,
-  // and a point's mention of itself stays unlinked
+  // Refs in code, labels, links and SVG stay text, as does a point's mention of itself,
+  // so source IDs and ref-like words go in code
   var REF_PATTERN = /\b(?:[CFGPRX]\d+|D\d+(?:\.[A-Z])?|T\d+(?:\.\d+)?)\b/g;
-  var KEEP_AS_TEXT = "a, code, pre, button, textarea, input, label, h1, .ref, .threads-host, .ticket, #refine, .overview";
+  var KEEP_AS_TEXT = "a, code, pre, button, textarea, input, label, h1, svg, .ref";
 
   function linkRefsInText() {
     var main = document.querySelector("main");
@@ -906,7 +903,7 @@ dl.facts dd { margin: 0; }
       var parts = document.createDocumentFragment(), last = 0, m;
       REF_PATTERN.lastIndex = 0;
       while ((m = REF_PATTERN.exec(text))) {
-        var target = pointFor(m[0]);
+        var target = pointEl(m[0]);
         if (!target || target === home) continue;
         parts.appendChild(document.createTextNode(text.slice(last, m.index)));
         parts.appendChild(refLink(m[0], [m[0]], "xref"));
@@ -918,22 +915,31 @@ dl.facts dd { margin: 0; }
     });
   }
 
-  linkChanges();
-  linkRefsInText();
+  // The links are a convenience: a failure here must not stop picks, comments or cards
+  try {
+    linkChanges();
+    linkRefsInText();
+  } catch (e) {
+    if (window.console) console.warn("Ref links skipped:", e);
+  }
   document.addEventListener("click", function (ev) {
     var link = ev.target && ev.target.closest ? ev.target.closest("a.xref, #refine-changes a.ref") : null;
-    var target = link ? document.getElementById(link.getAttribute("href").slice(1)) : null;
+    // A modified click opens the link the browser's way, such as in a new tab
+    if (!link || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
+    var target = document.getElementById(link.getAttribute("href").slice(1));
     if (!target) return;
     ev.preventDefault();
     target.scrollIntoView({ block: "start" });
+    // Focus follows, so Tab continues from the point and a screen reader reads it
+    if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
   });
 
   if (!window.claude || typeof window.claude.use !== "function") return;
 
-  // The store shows this page's own write at once, before the server confirms it, and that
-  // pending view can hold only the fields just written. Merging it over the document's last
-  // confirmed body keeps the rest in view; otherwise a reply hides its thread's root, and
-  // with it the reply, until the server confirms.
+  // The store shows this page's own write before the server confirms it, and that view
+  // may hold only the written fields. Merging it over the last confirmed body keeps the
+  // rest in view; otherwise a reply hides its thread's root, and with it itself.
   var confirmedBodies = {};
 
   function isPlain(value) { return !!value && typeof value === "object" && !Array.isArray(value); }
@@ -947,7 +953,7 @@ dl.facts dd { margin: 0; }
     return out;
   }
 
-  // A document snapshot carries its own metadata; a query passes its own as the fallback
+  // A document snapshot has its own metadata; a query passes its own as the fallback
   function settledBody(path, snap, queryMeta) {
     var body = snap.exists ? snap.data() || {} : null;
     var meta = snap.metadata || queryMeta;
@@ -1341,7 +1347,7 @@ dl.facts dd { margin: 0; }
     var item = el("li");
     var target = pointEl(c.point);
     var link = el("a");
-    link.href = "#" + (target.id || (target.closest("[id]") || {}).id || "");
+    link.href = pointAnchor(target);
     link.setAttribute("data-goto", c.point);
     link.appendChild(el("span", "ref", c.point));
     item.appendChild(link);
