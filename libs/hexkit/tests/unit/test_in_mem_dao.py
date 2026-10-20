@@ -328,7 +328,6 @@ async def test_ordering_ops_with_missing_field_match_mongodb():
         "missing",
         "no_parent",
     ]
-    # The order of the $or branches doesn't matter: $lt never raises on null
     assert await find_ids(
         {"$or": [{"nested.when": {"$lt": NOW}}, {"nested.when": None}]}
     ) == ["missing", "no_parent"]
