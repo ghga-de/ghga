@@ -191,6 +191,19 @@ async def test_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
     assert response.headers["Authorization"] == ""
 
 
+async def test_health_without_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
+    """Test that the health endpoint is excluded from basic authentication."""
+    client = client_with_basic_auth.bare_client
+
+    response = await client.get("/health")
+    # not 200, so that the gateway does not pass the request on
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    response = await client.post("/health")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_allowed_paths(client_with_basic_auth: ClientWithBasicAuth):
     """Test that allowed paths are excluded from authentication."""
     client = client_with_basic_auth.bare_client
