@@ -48,8 +48,18 @@ Document = dict[str, Any]
 
 
 def _null_safe(compare: Callable[[Any, Any], bool]) -> Callable[[Any, Any], bool]:
-    """Match MongoDB for null (or missing) values: it never orders null against a value,
-    and two nulls are equal, so `$gte`/`$lte` match them and `$gt`/`$lt` don't.
+    """Create a version of the `compare` function that won't raise a `TypeError`
+    when encountering `None` values.
+
+    This is done to match MongoDB's behavior. For example, when there is a nullable
+    datetime field on a model, some of the documents might have a timestamp while other
+    documents have a `null`/`None` value. When sorting or ordering on that field, e.g.
+    `$gt: some_date`, MongoDB will skip documents with the null value if the comparison
+    operator is $gt or $lt. By default, Python will raise a TypeError.
+
+    This (_null_safe) will not produce a function with complete parity with MongoDB,
+    it will only match the behavior with regard to null values. For more thorough
+    testing, we recommend using the MongoDB test container.
     """
 
     def null_safe_compare(stored_value: Any, target_value: Any) -> bool:
