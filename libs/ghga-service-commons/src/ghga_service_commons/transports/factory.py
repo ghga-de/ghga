@@ -23,7 +23,7 @@ from typing import Any
 
 from httpx2 import AsyncBaseTransport, AsyncHTTPTransport, Limits
 
-from .config import CompositeConfig
+from .config import TransportConfig
 from .ratelimiting import AsyncRateLimitingTransport
 from .retry import AsyncRetryTransport
 
@@ -93,7 +93,7 @@ class CompositeTransportFactory:
     @classmethod
     def create_ratelimiting_retry_transport(
         cls,
-        config: CompositeConfig,
+        config: TransportConfig,
         *,
         make_base_transport: BaseTransportFactory | None = None,
         proxy: str | None = None,

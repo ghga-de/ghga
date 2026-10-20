@@ -13,79 +13,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Builds the transport and proxy mounts that give an httpx2.AsyncClient this stack."""
 
-"""Builds a ready-to-use httpx2.AsyncClient from the transports in this package."""
+from typing import TypedDict
 
-from typing import Any
+from httpx2 import AsyncBaseTransport
 
-import httpx2
-from httpx2 import Limits
-
-from .config import CompositeConfig
+from .config import TransportConfig
 from .factory import (
     BaseTransportFactory,
     CompositeTransportFactory,
     default_base_transport_factory,
 )
 from .proxy_handling import ratelimiting_retry_proxies
-from .ratelimiting import RateBudget
 
 
-def get_composite_client(
-    config: CompositeConfig,
+class ClientRoutes(TypedDict):
+    """The `transport` and `mounts` keyword arguments of an `httpx2.AsyncClient`."""
+
+    transport: AsyncBaseTransport
+    mounts: dict[str, AsyncBaseTransport | None]
+
+
+def client_routes(
+    config: TransportConfig,
     *,
-    limits: Limits | None = None,
     make_base_transport: BaseTransportFactory | None = None,
-    trust_env: bool = True,
-    **client_kwargs: Any,
-) -> httpx2.AsyncClient:
-    """Build an AsyncClient that applies retries and rate limiting to every route.
+) -> ClientRoutes:
+    """Build a client's transport and proxy mounts with retries and rate limiting.
 
-    The client gets one transport for direct requests and one mount per proxy
-    environment variable. Each is a base transport wrapped in rate limiting and then
-    in retrying. Mounts take precedence for the URLs they match, so a proxied request
-    keeps both the proxy and the wrapping.
+    httpx2 ignores the proxy environment variables once it is handed a transport, so
+    this builds one mount per proxy variable next to the direct transport. All of them
+    come from the same base transport factory and get the same wrapping.
 
-    All routes share one `RateBudget`, so the configured rate applies to the client as
-    a whole rather than to each route on its own.
+    The client ignores `verify`, `cert`, `http1`, `http2` and `limits`, as it is always
+    handed a transport. Set them in `make_base_transport` instead, for example
+    `default_base_transport_factory(limits=limits)`. Set the proxy environment
+    variables instead of passing `proxy` to the client: httpx2 would send every URL
+    that no mount claims through that proxy, without retries or rate limiting.
 
-    Pass `trust_env=False` to not mount any proxies. It does not stop `REQUESTS_CA_BUNDLE`
-    and `SSL_CERT_FILE` from determining the CA bundle.
-
-    Extra keyword arguments go to `httpx2.AsyncClient`. The client is always handed a
-    transport, so `verify`, `cert`, `http1` and `http2` have no effect. Configure them
-    on the transport through `make_base_transport`.
-
-    Raises:
-        TypeError: if `proxy` is given. It would replace the whole stack. Set the proxy
-            environment variables, or pass `make_base_transport`.
-        ValueError: if both `limits` and `make_base_transport` are given. `limits` only
-            size the default base transport; pass them to your own factory instead.
+    Example:
+        ```
+        async with httpx2.AsyncClient(
+            timeout=30.0, **client_routes(config)
+        ) as client:
+            response = await client.get(url)
+        ```
     """
-    if "proxy" in client_kwargs:
-        raise TypeError(
-            "get_composite_client() does not accept `proxy`, as it would bypass retries and rate limiting."
-            " Set the proxy environment variables or pass a `make_base_transport` instead"
-        )
-    if limits is not None and make_base_transport is not None:
-        raise ValueError(
-            "`limits` only apply to the default base transport. Either drop `limits` to use `make_base_transport`"
-            " or drop `make_base_transport` to use the default factory with custom `limits`"
-        )
-
-    factory = make_base_transport or default_base_transport_factory(limits)
-    budget = RateBudget(config)
-
-    return httpx2.AsyncClient(
-        transport=CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config=config, make_base_transport=factory, proxy=None, budget=budget
+    factory = make_base_transport or default_base_transport_factory()
+    return {
+        "transport": CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config, make_base_transport=factory
         ),
-        mounts=ratelimiting_retry_proxies(
-            config=config,
-            make_base_transport=factory,
-            budget=budget,
-            trust_env=trust_env,
-        ),
-        trust_env=trust_env,
-        **client_kwargs,
-    )
+        "mounts": ratelimiting_retry_proxies(config, make_base_transport=factory),
+    }

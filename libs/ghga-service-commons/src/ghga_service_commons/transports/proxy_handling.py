@@ -25,7 +25,7 @@ directly to them.
 
 from httpx2 import AsyncBaseTransport, _utils
 
-from .config import CompositeConfig
+from .config import TransportConfig
 from .factory import (
     BaseTransportFactory,
     CompositeTransportFactory,
@@ -34,13 +34,14 @@ from .factory import (
 
 
 def ratelimiting_retry_proxies(
-    config: CompositeConfig,
+    config: TransportConfig,
     *,
     make_base_transport: BaseTransportFactory | None = None,
 ) -> dict[str, AsyncBaseTransport | None]:
     """Setup proxies from env for ratelimiting retry transport.
 
     The returned dictionary needs to be provided as `mounts` to the client.
+    `client_routes` builds it together with the client's direct transport.
 
     Example:
         ```

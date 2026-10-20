@@ -15,8 +15,8 @@
 
 """Pluggable, custom and composable logic around HTTP calls."""
 
-from .client import get_composite_client
-from .config import CompositeConfig
+from .client import ClientRoutes, client_routes
+from .config import TransportConfig
 from .factory import (
     AsyncRateLimitingTransport,
     AsyncRetryTransport,
@@ -26,17 +26,16 @@ from .factory import (
     fixed_base_transport_factory,
 )
 from .proxy_handling import ratelimiting_retry_proxies
-from .ratelimiting import RateBudget
 
 __all__ = [
     "AsyncRateLimitingTransport",
     "AsyncRetryTransport",
     "BaseTransportFactory",
-    "CompositeConfig",
+    "ClientRoutes",
     "CompositeTransportFactory",
-    "RateBudget",
+    "TransportConfig",
+    "client_routes",
     "default_base_transport_factory",
     "fixed_base_transport_factory",
-    "get_composite_client",
     "ratelimiting_retry_proxies",
 ]
