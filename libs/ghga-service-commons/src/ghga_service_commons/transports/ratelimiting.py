@@ -89,8 +89,8 @@ class _ScopeState:
     floor: float = 0.0
 
 
-class RateBudget:
-    """Request pacing budget shared by every route of one client.
+class _RateBudget:
+    """Request pacing and Retry-After state of one rate limiting transport.
 
     Each scope (origin plus first path segment) gets its own slots and Retry-After
     floor, so a 429 from one service does not hold back the others.
@@ -136,17 +136,19 @@ class RateBudget:
 class AsyncRateLimitingTransport(httpx2.AsyncBaseTransport):
     """Paces requests and honors Retry-After on 429 responses.
 
-    Pass a `RateBudget` to share pacing with the other transports of the same client.
-    Without one, this transport paces itself alone.
+    Each transport builds its own `_RateBudget` from `config`. A client picks one
+    route per URL from its mounts, which match on scheme, host and port, and each
+    route has its own transport. A budget scope starts with the same scheme, host
+    and port, so all requests of a scope reach one transport, and a budget shared
+    between routes would pace them no differently.
     """
 
     def __init__(
         self,
         config: RateLimitingTransportConfig,
         transport: httpx2.AsyncBaseTransport,
-        budget: RateBudget | None = None,
     ) -> None:
-        self._budget = budget or RateBudget(config)
+        self._budget = _RateBudget(config)
         self._transport = transport
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:

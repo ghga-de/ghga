@@ -23,7 +23,9 @@ import httpx2
 import pytest
 
 from ghga_service_commons.transports.config import CompositeConfig
+from ghga_service_commons.transports.factory import CompositeTransportFactory
 from ghga_service_commons.transports.proxy_handling import ratelimiting_retry_proxies
+from ghga_service_commons.transports.ratelimiting import _scope_of
 from ghga_service_commons.transports.retry import AsyncRetryTransport
 
 # Protocol keys used in proxy configuration
@@ -304,3 +306,30 @@ async def test_not_hitting_proxy_mount(
                 assert [str(request.url) for request in direct_requests] == [
                     request_url
                 ]
+
+
+def test_requests_of_one_budget_scope_take_one_route(monkeypatch: pytest.MonkeyPatch):
+    """One transport paces each scope, so a budget per transport covers the whole scope."""
+    for name in ("http_proxy", "https_proxy", "all_proxy", "no_proxy"):
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.upper(), raising=False)
+    monkeypatch.setenv("HTTPS_PROXY", HTTPS_PROXY_URL)
+    monkeypatch.setenv("NO_PROXY", "internal.invalid")
+    config = CompositeConfig()
+    client = httpx2.AsyncClient(
+        transport=CompositeTransportFactory.create_ratelimiting_retry_transport(config),
+        mounts=ratelimiting_retry_proxies(config),
+    )
+    urls = [
+        "http://api.invalid/upload/a",
+        "https://api.invalid/upload/b?part=2",
+        "https://u:p@api.invalid/upload/c",
+        "https://internal.invalid/upload/a",
+        "https://internal.invalid/upload",
+    ]
+    routes: dict[str, set[int]] = {}
+    for url in map(httpx2.URL, urls):
+        routes.setdefault(_scope_of(url), set()).add(id(client._transport_for_url(url)))
+
+    assert len(routes) == 3
+    assert all(len(ids) == 1 for ids in routes.values())

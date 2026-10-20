@@ -29,7 +29,7 @@ import pytest
 from ghga_service_commons.transports.config import RateLimitingTransportConfig
 from ghga_service_commons.transports.ratelimiting import (
     AsyncRateLimitingTransport,
-    RateBudget,
+    _RateBudget,
     _scope_of,
 )
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -43,14 +43,14 @@ _URL = _REQUEST.url
 _STEP = 0.02
 
 
-def _budget(**config_kwargs) -> RateBudget:
+def _budget(**config_kwargs) -> _RateBudget:
     """Build a budget, by default paced by a small deterministic interval."""
     config_kwargs.setdefault("min_request_interval", _STEP)
     config_kwargs.setdefault("per_request_jitter", 0.0)
-    return RateBudget(RateLimitingTransportConfig(**config_kwargs))
+    return _RateBudget(RateLimitingTransportConfig(**config_kwargs))
 
 
-def _unpaced_budget() -> RateBudget:
+def _unpaced_budget() -> _RateBudget:
     """Build a budget that never delays, for tests that only care about floor updates."""
     return _budget(min_request_interval=0.0)
 
@@ -62,26 +62,23 @@ def _mock_transport(responses: list[httpx2.Response]) -> AsyncMock:
     return transport
 
 
-def _ratelimiter(
-    transport: AsyncMock, budget: RateBudget | None = None, **config_kwargs
-) -> AsyncRateLimitingTransport:
+def _ratelimiter(transport: AsyncMock, **config_kwargs) -> AsyncRateLimitingTransport:
     """Wrap the given transport in a rate limiting transport with the given overrides."""
     config_kwargs.setdefault("min_request_interval", 0.0)
     config_kwargs.setdefault("per_request_jitter", 0.0)
     return AsyncRateLimitingTransport(
         config=RateLimitingTransportConfig(**config_kwargs),
         transport=transport,
-        budget=budget,
     )
 
 
-def _remaining_retry_after_wait(budget: RateBudget, url: httpx2.URL = _URL) -> float:
+def _remaining_retry_after_wait(budget: _RateBudget, url: httpx2.URL = _URL) -> float:
     """Seconds the budget is still holding back the scope of the given URL."""
     return max(0.0, budget._scopes[_scope_of(url)].floor - time.monotonic())
 
 
 async def _acquired_at(
-    budget: RateBudget, started: float, url: httpx2.URL = _URL
+    budget: _RateBudget, started: float, url: httpx2.URL = _URL
 ) -> float:
     """Acquire a slot and report how far into the run it was granted."""
     await budget.acquire(url)
@@ -114,7 +111,7 @@ async def test_no_pacing_configured_grants_immediately():
 
 async def test_default_config_alone_spreads_requests():
     """Ensure the defaults alone spread requests, guarding the jitter default."""
-    budget = RateBudget(RateLimitingTransportConfig())
+    budget = _RateBudget(RateLimitingTransportConfig())
     started = time.monotonic()
 
     grants = await asyncio.gather(*(_acquired_at(budget, started) for _ in range(8)))
@@ -193,61 +190,32 @@ async def test_scope_is_origin_and_first_path_segment(url: str, scope: str):
 async def test_passes_through_non_429_response():
     """Ensure non-429 responses are returned and do not force a wait."""
     response = httpx2.Response(httpx2.codes.OK)
-    budget = _unpaced_budget()
 
-    result = await _ratelimiter(
-        _mock_transport([response]), budget
-    ).handle_async_request(_REQUEST)
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    result = await ratelimiter.handle_async_request(_REQUEST)
 
     assert result is response
-    assert _remaining_retry_after_wait(budget) == 0
+    assert _remaining_retry_after_wait(ratelimiter._budget) == 0
 
 
 async def test_429_with_retry_after_forces_wait():
     """Ensure a 429 with a Retry-After forces a wait."""
-    budget = _unpaced_budget()
     response = httpx2.Response(429, headers={"Retry-After": "5"})
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    await ratelimiter.handle_async_request(_REQUEST)
 
-    assert _remaining_retry_after_wait(budget) == pytest.approx(5, abs=1)
+    assert _remaining_retry_after_wait(ratelimiter._budget) == pytest.approx(5, abs=1)
 
 
 async def test_429_without_retry_after_leaves_pacing_to_the_retry_layer():
     """Ensure a missing Retry-After header does not add any wait."""
-    budget = _unpaced_budget()
     response = httpx2.Response(429)
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
-
-    assert _remaining_retry_after_wait(budget) == 0
-
-
-async def test_budget_is_shared_when_injected():
-    """Ensure two transports given the same budget actually share it."""
-    budget = _budget()
-    first = _ratelimiter(_mock_transport([httpx2.Response(200)]), budget)
-    second = _ratelimiter(_mock_transport([httpx2.Response(200)]), budget)
-    started = time.monotonic()
-
-    await asyncio.gather(
-        first.handle_async_request(_REQUEST), second.handle_async_request(_REQUEST)
-    )
-
-    assert time.monotonic() - started >= _STEP * 0.75
-
-
-async def test_transport_builds_its_own_budget_when_none_is_given():
-    """Ensure the transport still paces itself when used standalone."""
-    ratelimiter = _ratelimiter(_mock_transport([httpx2.Response(200)]))
-
+    ratelimiter = _ratelimiter(_mock_transport([response]))
     await ratelimiter.handle_async_request(_REQUEST)
 
-    assert isinstance(ratelimiter._budget, RateBudget)
+    assert _remaining_retry_after_wait(ratelimiter._budget) == 0
 
 
 async def test_aclose_delegates_to_wrapped_transport():
@@ -275,13 +243,11 @@ async def test_429_with_http_date_retry_after_is_honored():
     response = httpx2.Response(
         429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
     )
-    budget = _unpaced_budget()
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    await ratelimiter.handle_async_request(_REQUEST)
 
-    assert _remaining_retry_after_wait(budget) == pytest.approx(30, abs=2)
+    assert _remaining_retry_after_wait(ratelimiter._budget) == pytest.approx(30, abs=2)
 
 
 async def test_429_with_past_http_date_does_not_wait():
@@ -290,26 +256,22 @@ async def test_429_with_past_http_date_does_not_wait():
     response = httpx2.Response(
         429, headers={"Retry-After": format_datetime(retry_at, usegmt=True)}
     )
-    budget = _unpaced_budget()
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    await ratelimiter.handle_async_request(_REQUEST)
 
-    assert _remaining_retry_after_wait(budget) == 0
+    assert _remaining_retry_after_wait(ratelimiter._budget) == 0
 
 
 @pytest.mark.parametrize("value", ["garbage", "", "inf", "nan"])
 async def test_429_with_unusable_retry_after_is_treated_as_absent(value: str):
     """Ensure unparsable and non-finite values are ignored rather than reaching the sleep."""
     response = httpx2.Response(429, headers={"Retry-After": value})
-    budget = _unpaced_budget()
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    await ratelimiter.handle_async_request(_REQUEST)
 
-    assert _remaining_retry_after_wait(budget) == 0
+    assert _remaining_retry_after_wait(ratelimiter._budget) == 0
 
 
 async def test_429_with_repeated_retry_after_takes_the_longest():
@@ -317,13 +279,11 @@ async def test_429_with_repeated_retry_after_takes_the_longest():
     response = httpx2.Response(
         429, headers=[("Retry-After", "120"), ("Retry-After", "5")]
     )
-    budget = _unpaced_budget()
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    await ratelimiter.handle_async_request(_REQUEST)
 
-    assert _remaining_retry_after_wait(budget) == pytest.approx(120, abs=1)
+    assert _remaining_retry_after_wait(ratelimiter._budget) == pytest.approx(120, abs=1)
 
 
 async def test_429_with_repeated_retry_after_ignores_unusable_values():
@@ -331,10 +291,8 @@ async def test_429_with_repeated_retry_after_ignores_unusable_values():
     response = httpx2.Response(
         429, headers=[("Retry-After", "garbage"), ("Retry-After", "45")]
     )
-    budget = _unpaced_budget()
 
-    await _ratelimiter(_mock_transport([response]), budget).handle_async_request(
-        _REQUEST
-    )
+    ratelimiter = _ratelimiter(_mock_transport([response]))
+    await ratelimiter.handle_async_request(_REQUEST)
 
-    assert _remaining_retry_after_wait(budget) == pytest.approx(45, abs=1)
+    assert _remaining_retry_after_wait(ratelimiter._budget) == pytest.approx(45, abs=1)
