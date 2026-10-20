@@ -111,6 +111,30 @@ def test_expand_gives_a_case_with_a_patch_its_own_scaffold(tmp_path):
     )
 
 
+def test_expand_passes_the_suite_pin_to_every_scaffold(tmp_path):
+    suite = {
+        "pin": "abc1234",
+        "cases": {
+            "plain": {
+                "description": "A case at the suite's pin.",
+                "prompt": "Do it.\n",
+                "graders": [{"name": "said", "type": "regex", "pattern": "x"}],
+            }
+        },
+    }
+    skill = tmp_path / ".agents/skills/demo"
+    skill.mkdir(parents=True)
+    (skill / "evals.yaml").write_text(yaml.safe_dump(suite))
+
+    skill_eval.expand(tmp_path, "demo")
+
+    scaffold = skill / "evals/plain/scaffold.sh"
+    assert not scaffold.is_symlink()
+    assert scaffold.read_text().splitlines()[-1] == (
+        f"exec bash {tmp_path / skill_eval.SCAFFOLD} --pin abc1234"
+    )
+
+
 def test_expand_runs_a_case_setup_after_the_scaffold(tmp_path):
     suite = {
         "cases": {

@@ -93,6 +93,7 @@ Credit an agent in the PR description as the [conventions](../conventions.md#nam
 
 `/release <name> <version>`, such as `/release ghga 15.4.0`, works out the tag and its branch, runs the checks before it, and stops for your go before each step that cannot be undone: pushing the tag and dispatching the publish ([releases.md](../releases.md)).
 Publishing the release notes stays with you, since agents may not edit a release.
+The `hexkit` skill loads for code that uses hexkit; it is the one hexkit's wheel and docs site give every consumer, so it names nothing of this repo.
 The `testbed` skill loads once an agent works under `testbed/`: it places a new feature in the suite's order and debugs a failed run from its symptoms, before any code change.
 
 ## Front end

@@ -622,6 +622,40 @@ def test_skill_symlink(agents):
     ]
 
 
+def _packaged_skill(repo: Path, name: str = "kit") -> None:
+    """Write a skill shipped in a library's package and link it in at the root."""
+    path = repo / "libs/kit/src/kit/.agents/skills" / name / "SKILL.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(f"---\nname: {name}\ndescription: Use {name}.\n---\n\n# Skill\n")
+    (repo / ".agents/skills").mkdir(parents=True, exist_ok=True)
+    (repo / ".agents/skills" / name).symlink_to(
+        f"../../libs/kit/src/kit/.agents/skills/{name}"
+    )
+    (repo / ".claude/skills").mkdir(parents=True, exist_ok=True)
+    (repo / ".claude/skills" / name).symlink_to(f"../../.agents/skills/{name}")
+
+
+def test_packaged_skill(agents):
+    """A skill shipped in a package is a root skill, linked in at the root."""
+    _packaged_skill(agents)
+    assert _skill_problems(agents) == ([], [])
+    _stage(agents)
+    skills, _, _ = docs_check.load_skills(agents, docs_check._tracked(agents))
+    assert [(s.name, s.base) for s in skills] == [("kit", ""), ("qa", "libs")]
+
+
+def test_packaged_skill_links(agents):
+    """The root link to the package comes first; one without a skill is reported."""
+    _packaged_skill(agents)
+    (agents / ".agents/skills/kit").unlink()
+    (agents / ".agents/skills/gone").symlink_to("../../libs/gone")
+    problems, _ = _skill_problems(agents)
+    assert problems == [
+        ".agents/skills/gone: links to no skill shipped in a package",
+        ".agents/skills/kit: missing; link it to ../../libs/kit/src/kit/.agents/skills/kit",
+    ]
+
+
 def test_skill_symlink_must_not_be_a_copy(agents):
     _skill(agents, "", "adr")
     (agents / ".claude/skills/adr").unlink()
