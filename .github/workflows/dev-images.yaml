@@ -128,8 +128,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # arm64 has no native GitHub-hosted runner here: without QEMU registered, the
-      # arm64 stages fail with "exec format error".
+      # arm64 is emulated so one buildx call pushes the multi-platform index; native arm64
+      # runners (ubuntu-24.04-arm) would need a job per platform and a manifest merge.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
         with:
