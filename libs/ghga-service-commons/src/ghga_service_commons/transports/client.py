@@ -39,22 +39,28 @@ def get_composite_client(
     trust_env: bool = True,
     **client_kwargs: Any,
 ) -> httpx2.AsyncClient:
-    """Build a client whose own transport and proxy mounts use the same stack.
+    """Build an AsyncClient that applies retries and rate limiting to every route.
 
-    Like httpx2 it builds a default transport plus one mount per proxy environment variable,
-    but each one is built upon stacked custom transports enabling retries and ratelimiting.
-    Mounts still win for the URLs they claim, so that proxy settings can be respected.
+    The client gets one transport for direct requests and one mount per proxy
+    environment variable. Each is a base transport wrapped in rate limiting and then
+    in retrying. Mounts take precedence for the URLs they match, so a proxied request
+    keeps both the proxy and the wrapping.
 
-    Pass at most one of `limits` and `make_base_transport`.
-    `limits` are only relevant for the default factory, so providing both results in conflicting
-    information on which transport should be used, raising in such cases.
+    All routes share one `RateBudget`, so the configured rate applies to the client as
+    a whole rather than to each route on its own.
 
-    A shared `RateBudget` ensures request pacing is applied to the whole client.
+    Pass `trust_env=False` to not mount any proxies. It does not stop `REQUESTS_CA_BUNDLE`
+    and `SSL_CERT_FILE` from determining the CA bundle.
 
-    Extra keyword arguments go to the `httpx2.AsyncClient`.
-    Those configuring its own transport (`verify`, `cert`, `http1`, `http2`) have no effect,
-    since the client is always handed one. Set them through `make_base_transport` instead.
-    `proxy` raises a TypeError, as it would bypass the stack.
+    Extra keyword arguments go to `httpx2.AsyncClient`. The client is always handed a
+    transport, so `verify`, `cert`, `http1` and `http2` have no effect. Configure them
+    on the transport through `make_base_transport`.
+
+    Raises:
+        TypeError: if `proxy` is given. It would replace the whole stack. Set the proxy
+            environment variables, or pass `make_base_transport`.
+        ValueError: if both `limits` and `make_base_transport` are given. `limits` only
+            size the default base transport; pass them to your own factory instead.
     """
     if "proxy" in client_kwargs:
         raise TypeError(
