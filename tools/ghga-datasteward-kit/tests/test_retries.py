@@ -57,7 +57,9 @@ def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> Endpoin
     endpoint = EndpointMock(handler)
     RequestConfigurator.configure(
         config,
-        make_base_transport=fixed_base_transport_factory(endpoint.as_transport()),
+        make_base_transport=fixed_base_transport_factory(
+            transport=endpoint.as_transport()
+        ),
     )
     return endpoint
 

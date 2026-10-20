@@ -22,11 +22,10 @@ import httpx2
 from ghga_datasteward_kit import __version__
 from ghga_datasteward_kit.s3_upload.config import LegacyConfig
 from ghga_service_commons.transports import (
-    AsyncRetryTransport,
     BaseTransportFactory,
-    CompositeTransportFactory,
+    ClientRoutes,
+    client_routes,
     default_base_transport_factory,
-    ratelimiting_retry_proxies,
 )
 
 USER_AGENT = f"GHGADatastewardKit/{__version__}"
@@ -36,8 +35,7 @@ class RequestConfigurator:
     """Helper for user configurable httpx2 request parameters."""
 
     timeout: int | None
-    transport: AsyncRetryTransport
-    mounts: dict | None
+    routes: ClientRoutes
 
     @classmethod
     def configure(
@@ -58,14 +56,9 @@ class RequestConfigurator:
             max_keepalive_connections=config.client_max_parallel_transfers,
         )
         make_base_transport = make_base_transport or default_base_transport_factory(
-            limits
+            limits=limits
         )
-        cls.transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config, make_base_transport=make_base_transport
-        )
-        cls.mounts = ratelimiting_retry_proxies(
-            config, make_base_transport=make_base_transport
-        )
+        cls.routes = client_routes(config, make_base_transport=make_base_transport)
         # silence httpx2 messages on each request due to setting global level info before
         logging.getLogger("httpx2").setLevel(logging.WARNING)
 
@@ -76,7 +69,6 @@ async def httpx_client():
     async with httpx2.AsyncClient(
         headers=httpx2.Headers({"User-Agent": USER_AGENT}),
         timeout=RequestConfigurator.timeout,
-        transport=RequestConfigurator.transport,
-        mounts=RequestConfigurator.mounts,
+        **RequestConfigurator.routes,
     ) as client:
         yield client

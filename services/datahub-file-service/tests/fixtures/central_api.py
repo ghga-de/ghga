@@ -91,6 +91,6 @@ async def get_mocked_httpx_client(
         )
     async with get_configured_httpx_client(
         config=config,
-        make_base_transport=fixed_base_transport_factory(base_transport),
+        make_base_transport=fixed_base_transport_factory(transport=base_transport),
     ) as client:
         yield client

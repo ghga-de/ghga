@@ -23,15 +23,14 @@ from pydantic import Field
 
 from ghga_service_commons.transports import (
     BaseTransportFactory,
-    CompositeConfig,
-    CompositeTransportFactory,
-    ratelimiting_retry_proxies,
+    TransportConfig,
+    client_routes,
 )
 
 __all__ = ["HttpClientConfig", "get_configured_httpx_client"]
 
 
-class HttpClientConfig(CompositeConfig):
+class HttpClientConfig(TransportConfig):
     """Configuration for HTTP Client functionality in the DCS"""
 
     http_request_timeout_seconds: float = Field(
@@ -51,13 +50,8 @@ async def get_configured_httpx_client(
     the direct route and every env proxy mount alike. Tests use it to route requests
     to a `MockApi` while keeping the retry and rate limiting layers in place.
     """
-    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        config=config, make_base_transport=make_base_transport
-    )
-    proxies = ratelimiting_retry_proxies(
-        config=config, make_base_transport=make_base_transport
-    )
     async with httpx2.AsyncClient(
-        timeout=config.http_request_timeout_seconds, transport=transport, mounts=proxies
+        timeout=config.http_request_timeout_seconds,
+        **client_routes(config, make_base_transport=make_base_transport),
     ) as client:
         yield client

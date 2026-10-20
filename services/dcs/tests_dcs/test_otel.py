@@ -253,7 +253,7 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     async with get_configured_httpx_client(
         config=config,
         make_base_transport=fixed_base_transport_factory(
-            instrumentable(ekss.as_transport())
+            transport=instrumentable(ekss.as_transport())
         ),
     ) as client:
         secrets_client = SecretsClient(config=config, httpx_client=client)

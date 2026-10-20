@@ -57,7 +57,7 @@ async def client(ekss: EkssApiMock) -> AsyncGenerator[SecretsClient]:
     """Construct a SecretsClient backed by the configured httpx2 client."""
     async with get_configured_httpx_client(
         config=HTTP_CONFIG,
-        make_base_transport=fixed_base_transport_factory(ekss.as_transport()),
+        make_base_transport=fixed_base_transport_factory(transport=ekss.as_transport()),
     ) as httpx_client:
         yield SecretsClient(config=SECRETS_CONFIG, httpx_client=httpx_client)
 

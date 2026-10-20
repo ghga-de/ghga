@@ -150,7 +150,9 @@ async def joint_fixture(
     async with (
         prepare_core(
             config=config,
-            http_make_base_transport=fixed_base_transport_factory(ekss.as_transport()),
+            http_make_base_transport=fixed_base_transport_factory(
+                transport=ekss.as_transport()
+            ),
         ) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
         prepare_event_subscriber(

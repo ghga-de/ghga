@@ -98,7 +98,9 @@ async def configured_central_client(
     """Yields a CentralClient instance talking to the mocked Central API"""
     async with get_configured_httpx_client(
         config=config,
-        make_base_transport=fixed_base_transport_factory(central_api.as_transport()),
+        make_base_transport=fixed_base_transport_factory(
+            transport=central_api.as_transport()
+        ),
     ) as httpx_client:
         yield CentralClient(config=config, httpx_client=httpx_client)
 

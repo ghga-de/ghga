@@ -112,7 +112,7 @@ class MockApiTransport(httpx2.AsyncBaseTransport):
     ) -> None:
         self._base_urls = tuple(base_urls)
         self._mocked = get_ratelimiting_retry_transport(
-            fixed_base_transport_factory(mocks)
+            fixed_base_transport_factory(transport=mocks)
         )
         self._network = get_ratelimiting_retry_transport(make_base_transport)
 

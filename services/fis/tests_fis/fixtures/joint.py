@@ -77,7 +77,9 @@ async def joint_fixture(
     async with (
         prepare_core(
             config=config,
-            http_make_base_transport=fixed_base_transport_factory(ekss.as_transport()),
+            http_make_base_transport=fixed_base_transport_factory(
+                transport=ekss.as_transport()
+            ),
         ) as interrogation_handler,
         prepare_rest_app(config=config, core_override=interrogation_handler) as app,
         prepare_event_subscriber(

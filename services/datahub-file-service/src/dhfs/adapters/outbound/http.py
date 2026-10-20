@@ -25,9 +25,8 @@ from tenacity import RetryError
 from dhfs import __version__
 from ghga_service_commons.transports import (
     BaseTransportFactory,
-    CompositeConfig,
-    CompositeTransportFactory,
-    ratelimiting_retry_proxies,
+    TransportConfig,
+    client_routes,
 )
 
 __all__ = [
@@ -42,7 +41,7 @@ __all__ = [
 USER_AGENT = f"GHGA DataHubFileService/{__version__}"
 
 
-class HttpClientConfig(CompositeConfig):
+class HttpClientConfig(TransportConfig):
     """Configuration for HTTP Client functionality in the DHFS"""
 
     http_request_timeout_seconds: float = Field(
@@ -63,18 +62,11 @@ async def get_configured_httpx_client(
     tests, which can supply a mock transport that still gets exercised through the
     rate limiting and retry layers.
     """
-    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        config=config, make_base_transport=make_base_transport
-    )
     headers = httpx2.Headers({"User-Agent": USER_AGENT})
-    proxies = ratelimiting_retry_proxies(
-        config=config, make_base_transport=make_base_transport
-    )
     async with httpx2.AsyncClient(
         timeout=config.http_request_timeout_seconds,
         headers=headers,
-        transport=transport,
-        mounts=proxies,
+        **client_routes(config, make_base_transport=make_base_transport),
     ) as client:
         yield client
 

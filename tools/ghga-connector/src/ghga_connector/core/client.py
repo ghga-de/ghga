@@ -26,8 +26,8 @@ from ghga_service_commons.transports import (
     AsyncRetryTransport,
     BaseTransportFactory,
     CompositeTransportFactory,
+    client_routes,
     default_base_transport_factory,
-    ratelimiting_retry_proxies,
 )
 
 
@@ -62,13 +62,9 @@ async def async_client(*, purpose: Literal["upload", "download"]):
         max_keepalive_connections=max_concurrent_parts + POOL_HEADROOM,
         keepalive_expiry=KEEPALIVE_EXPIRY,
     )
-    make_base_transport = default_base_transport_factory(limits)
-    transport = get_ratelimiting_retry_transport(make_base_transport)
-    proxies = ratelimiting_retry_proxies(
-        config=config, make_base_transport=make_base_transport
+    routes = client_routes(
+        config, make_base_transport=default_base_transport_factory(limits=limits)
     )
-    async with httpx2.AsyncClient(
-        timeout=TIMEOUT, transport=transport, mounts=proxies
-    ) as client:
+    async with httpx2.AsyncClient(timeout=TIMEOUT, **routes) as client:
         attach_correlation_id_to_requests(client)
         yield client
