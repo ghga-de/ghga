@@ -16,6 +16,7 @@
 """Testing the metadata validator."""
 
 from contextlib import nullcontext
+from copy import deepcopy
 from typing import Any
 
 import pytest
@@ -24,6 +25,7 @@ from metldata.model_utils.metadata_validator import MetadataValidator
 from tests.fixtures.metadata import (
     INVALID_MINIMAL_METADATA_EXAMPLES,
     VALID_MINIMAL_METADATA_EXAMPLES,
+    VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES,
 )
 from tests.fixtures.metadata_models import (
     MINIMAL_MODEL_WITH_STUDY,
@@ -165,3 +167,21 @@ def test_check_aliases_are_ascii():
 
     assert "with value 'fïle_2'" in str(error.value)
     assert "of the class 'File' must hold ASCII characters only" in str(error.value)
+
+
+@pytest.mark.parametrize("alias", ["", "  ", "\t"])
+def test_validate_rejects_blank_alias(alias: str):
+    """Test that an empty or whitespace-only alias is rejected, naming its class,
+    though the model's `required` lets it through.
+    """
+    validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
+    metadata = deepcopy(VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0])
+    validator.validate(metadata)
+
+    metadata["files"][1]["alias"] = alias
+    with pytest.raises(MetadataValidator.ValidationError) as error:
+        validator.validate(metadata)
+
+    assert "of the class 'File' must not be empty or whitespace only" in str(
+        error.value
+    )

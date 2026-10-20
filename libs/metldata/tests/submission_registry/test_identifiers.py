@@ -15,7 +15,11 @@
 #
 """Test the identifiers module."""
 
+import pytest
+
+from metldata.metadata_utils import normalize_alias
 from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry.identifiers import generate_accession_map
 
 
@@ -128,3 +132,50 @@ def test_new_study_alias_keeps_pid():
         "study_anchor": {"new_study_alias": "existing_study_pid"},
         "class1_anchor": {"test_alias1": "existing_study_pid.test_alias1"},
     }
+
+
+class AliasAccessionRegistry(FakeAccessionRegistry):
+    """A fake accession registry composing '{study_pid}.{alias}' from the normalized
+    alias, as the real one does.
+    """
+
+    def get_accession(
+        self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
+    ) -> str:
+        """Compose the accession of a resource from its normalized alias."""
+        if self.is_study_class(class_name):
+            return study_pid
+        return f"{study_pid}.{normalize_alias(alias)}"
+
+
+def test_dropped_alias_accession_not_reused():
+    """A new alias that normalizes like a dropped one is rejected, naming the dropped
+    alias, since its accession would pass to another entity.
+    """
+    content = {
+        "study_anchor": [{"alias": "test_study"}],
+        "class1_anchor": [{"alias": "reads-bam"}],
+    }
+    anchor_points_by_target = {
+        "Study": AnchorPoint(
+            root_slot="study_anchor", target_class="Study", identifier_slot="alias"
+        ),
+        "Class1": AnchorPoint(
+            root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
+        ),
+    }
+    existing_accession_map = {
+        "study_anchor": {"test_study": "existing_study_pid"},
+        "class1_anchor": {"reads.bam": "existing_study_pid.reads-bam"},
+    }
+
+    with pytest.raises(MetadataValidator.ValidationError) as error:
+        generate_accession_map(
+            content=content,
+            existing_accession_map=existing_accession_map,
+            accession_registry=AliasAccessionRegistry(),  # type: ignore
+            anchor_points_by_target=anchor_points_by_target,
+        )
+
+    assert "with value 'reads-bam'" in str(error.value)
+    assert "which belonged to the alias 'reads.bam' before" in str(error.value)

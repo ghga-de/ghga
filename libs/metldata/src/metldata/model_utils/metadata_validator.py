@@ -114,7 +114,8 @@ class MetadataValidator:
         self._model = model
 
     def validate(self, metadata: dict[str, Any]) -> None:
-        """Validate metadata against the provided model.
+        """Validate metadata against the provided model, including that no alias is
+        blank, which the model's `required` does not catch.
 
         Raises:
             ValidationError: When validation failed.
@@ -128,6 +129,16 @@ class MetadataValidator:
                 error.instance if not isinstance(error.instance, dict) else None,
             )
             for error in sorted(validator.iter_errors(metadata), key=str)
+        )
+        raise_on_errors(
+            (
+                f"the alias of an entity of the class '{class_name}' must not be empty"
+                + " or whitespace only",
+                "alias",
+                alias,
+            )
+            for alias, class_name in self._iter_aliases(metadata)
+            if not alias.strip()
         )
 
     def _iter_aliases(self, metadata: dict[str, Any]) -> Iterator[tuple[str, str]]:
