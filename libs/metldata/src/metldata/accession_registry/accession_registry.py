@@ -188,8 +188,8 @@ class AccessionRegistry:
         """Generate the PID '{study_pid}.DS.XXX' of a new dataset.
 
         The random block must be unique among the datasets of the study, so the caller
-        passes the accessions already given out in it. Nothing is registered in the store, since the dataset PID is unique by
-        construction once the study PID is.
+        passes the accessions already given out in it. Nothing is registered in the
+        store, since the dataset PID is unique by construction once the study PID is.
 
         Raises:
             AccessionGenerationError: If every dataset PID of the study is taken.

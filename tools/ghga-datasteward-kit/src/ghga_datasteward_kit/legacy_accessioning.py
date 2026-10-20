@@ -16,8 +16,8 @@
 """Mint accessions in the flat scheme 'prefix + digits' that predates study PIDs, for
 amending a submission accessioned under it.
 
-Amendment is the only user, so this module goes with it, and metldata knows nothing
-of the flat scheme.
+Amendment is the only user, so this module goes with it: metldata keeps the flat
+accessions in the store's `legacy` list but no longer mints them.
 """
 
 from collections import Counter
