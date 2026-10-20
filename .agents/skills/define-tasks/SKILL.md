@@ -70,7 +70,7 @@ How to read one, and what each of its states becomes on the page, is in [referen
    Name pull requests, branches and commits by the [conventions](../../../docs/conventions.md#names-branches-prs-commits).
    Under "After the merge", point out what the release may need to coordinate, such as consumers that pin the member's version, dependencies that must be released first, or a change operators must act on, which makes the next platform release a major one.
 8. **Build the page:** copy the template into the scratchpad and replace every `FILL` marker, keeping the styles and the script, and avoid the [page's traps](references/page.md#traps).
-   Give every point its ref from [Refs](references/page.md#refs) in `data-point` and `id`.
+   Give every point its ref from [Refs](references/page.md#refs) in `data-point` and `id`, and its gist in `data-gist`, as [Gists](references/page.md#gists) says.
    Remove the Findings section and its Contents link for an epic.
 9. **Publish** with the Artifact tool, icon `plan`, a one-sentence description and these capabilities:
 

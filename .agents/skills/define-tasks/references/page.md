@@ -23,12 +23,15 @@ The `id` of a point is its ref in lower case with dashes for dots, such as `t1-3
 
 ## Gists
 
-The "What changed" block links each ref to its point and shows the point's gist on hover.
+Every ref the page shows links to its point and shows the point's gist on hover: in the "What changed" block, and in the text, tags and question lines of every other point.
+The page's how-to line tells readers so.
 
-- **Give every point you list there a `data-gist`**, unless it is a task or decision head, whose heading serves as its gist.
+- **Give every point a `data-gist`**, except a task or decision head, whose heading serves as its gist.
   Write what the point does or says in up to ten words, without paths, file names or refs, such as `data-gist="Each transport builds its own budget"`.
 - **Keep the gist with the point.**
-  Write it the first time a refine lists the point, and change it only when the point's meaning changes.
+  Give every new point one in the refine that adds it, and change a gist only when its point's meaning changes.
+- **Write refs as plain text** in the text and tags, and the script links them.
+  A ref inside `code` or a link stays text, and so does a point's mention of itself.
 
 ## Ticket cards
 

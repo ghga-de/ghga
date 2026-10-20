@@ -126,7 +126,7 @@ A refine edits the page's HTML and republishes it to the same link, without `cap
 5. Update the ticket cards, as [Ticket cards](#ticket-cards) says.
 6. Raise the revision number in the header, and rewrite the "What changed" block after the comment overview: unhide it, name the new revision and the one it was refined from, and list one item per changed point: its ref, then a one-line recap of the change.
    The page links each ref to its point and shows the point's gist on hover, so write refs as the page names them; a list such as `D9, D10` or a range such as `D1–D7` links to its first point.
-   Give each listed point a gist, as [page.md](page.md#gists) says.
+   Give each new point a gist, and change the gist of a point whose meaning changed, as [page.md](page.md#gists) says.
    Republish it as [The page source](#the-page-source) says.
 7. Answer each page thread you addressed with a `byClaude` item in the owner's document, as in [Answering a question](#answering-a-question); the refine request names that document in "Sent by <owner id>".
    Then resolve the thread: ArtifactData `update` of the document that holds its first comment, setting `resolved: true` on that item, pinned with `if_version`.
