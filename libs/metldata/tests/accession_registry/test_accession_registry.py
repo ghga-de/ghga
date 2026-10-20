@@ -150,7 +150,7 @@ def test_get_accession_by_class(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """The study takes the study PID, a dataset a dataset PID, and every other
-    resource the accession composed from its alias.
+    resource the accession composed from its normalized alias.
     """
     accession_registry, _ = make_registry(config_sub_fixture)
     study_pid = "GHGA.26.K7Q.1"
@@ -165,4 +165,6 @@ def test_get_accession_by_class(
 
     assert get_accession("Study", "STUDY_1") == study_pid
     assert get_accession("Dataset", "DS_1").startswith(f"{study_pid}.DS.")
-    assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.SAMPLE_1"
+    assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.sample_1"
+    # normalized, an alias cannot pose as a dataset PID
+    assert get_accession("Sample", "DS.ABC") == f"{study_pid}.ds-abc"
