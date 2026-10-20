@@ -116,7 +116,6 @@ cases:
         max: 0
       - name: run-command
         type: regex
-        target: {source: response}
         pattern: 'just test services/ifrs'
       - skill-fired
       - no-direct-uv
@@ -188,5 +187,4 @@ cases:
         max: 0
       - name: answered
         type: regex
-        target: {source: response}
         pattern: 'app-routes\.ts'
