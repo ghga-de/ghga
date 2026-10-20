@@ -73,3 +73,5 @@ If the user asks about sharing the plan, name what it exposes before they decide
   A rule at the prefix of a `{self}` rule must set both `read` and `write`.
   A plan published before ticket cards lacks the `tickets` rule: republish it once with the full capabilities from the skill's publish step, then create its cards.
 - **A local preview hides the controls and the ticket cards**, since it has no `window.claude`; add the class `can-pick` to `<html>` to see the pick controls.
+- **The page's own writes show before the server confirms them**, and that pending view can hold only the fields just written.
+  The script merges it over the document's last confirmed body in `settledBody`; read every store document through it, or a reply hides its thread until the server confirms.

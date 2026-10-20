@@ -125,6 +125,7 @@ A refine edits the page's HTML and republishes it to the same link, without `cap
    A comment that gives a finding a new state follows [Finding states](#finding-states).
 5. Update the ticket cards, as [Ticket cards](#ticket-cards) says.
 6. Raise the revision number in the header, and rewrite the "What changed" block after the comment overview: unhide it, name the new revision and the one it was refined from, and list one item per changed point: its ref, then a one-line recap of the change.
+   The page links each ref to its point and shows the point's text on hover, so write refs as the page names them; a list such as `D9, D10` or a range such as `D1–D7` links to its first point.
    Republish it as [The page source](#the-page-source) says.
 7. Answer each page thread you addressed with a `byClaude` item in the owner's document, as in [Answering a question](#answering-a-question); the refine request names that document in "Sent by <owner id>".
    Then resolve the thread: ArtifactData `update` of the document that holds its first comment, setting `resolved: true` on that item, pinned with `if_version`.

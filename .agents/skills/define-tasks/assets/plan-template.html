@@ -432,6 +432,8 @@ tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
 .changes ul { margin: 0 0 0.75rem; padding-left: 1.1rem; font-size: 0.95rem; }
 .changes li { margin-bottom: 0.3rem; }
 .changes li .ref { padding: 0; margin-right: 0.3rem; color: var(--accent); }
+.changes li a.ref { text-decoration: none; }
+.changes li a.ref:hover, .changes li a.ref:focus-visible { text-decoration: underline; }
 
 /* Decision picks */
 .pick {
@@ -624,7 +626,7 @@ dl.facts dd { margin: 0; }
         <summary><span id="overview-title">Comments</span></summary>
         <div id="overview-list"></div>
       </details>
-      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. -->
+      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. The script links each ref to its point and shows the point's text on hover; a list such as "D9, D10" or a range such as "D1–D7" links to its first point. -->
       <details class="changes" id="refine-changes" hidden>
         <summary>What changed in revision N</summary>
         <p>Refined from revision N-1.</p>
@@ -820,7 +822,90 @@ dl.facts dd { margin: 0; }
     try { document.getElementById("top-heading").focus({ preventScroll: true }); } catch (e) {}
   });
 
+  // What changed: each ref links to its point and names the point on hover.
+  // A list such as "D9, D10" or a range such as "D1–D7" links to its first point.
+  function pointText(point) {
+    var source = point.querySelector("h3") ||
+      (point.tagName === "TR" ? point.children[1] : null) ||
+      point.querySelector(".txt > p") || point.querySelector(".txt") || point;
+    var copy = source.cloneNode(true);
+    var drop = copy.querySelectorAll(".tag, .ref, button, .threads-host");
+    for (var i = 0; i < drop.length; i++) drop[i].remove();
+    var text = copy.textContent.replace(/\s+/g, " ").trim();
+    return text.length > 140 ? text.slice(0, 139) + "…" : text;
+  }
+
+  function refsIn(label) {
+    var refs = [];
+    label.split(/\s*,\s*/).forEach(function (part) {
+      var ends = part.split(/\s*[–-]\s*/);
+      var from = /^(.*?)(\d+)$/.exec(ends[0]);
+      var to = ends[1] && /^(.*?)(\d+)$/.exec(/^\d+$/.test(ends[1]) && from ? from[1] + ends[1] : ends[1]);
+      if (from && to && from[1] === to[1] && +from[2] <= +to[2]) {
+        for (var n = +from[2]; n <= +to[2]; n++) refs.push(from[1] + n);
+      } else {
+        refs = refs.concat(ends);
+      }
+    });
+    return refs;
+  }
+
+  function linkChanges() {
+    var labels = document.querySelectorAll("#refine-changes li > span.ref");
+    for (var i = 0; i < labels.length; i++) {
+      var points = refsIn(labels[i].textContent.trim()).map(function (ref) {
+        return { ref: ref, el: document.querySelector('[data-point="' + ref.replace(/["\\]/g, "\\$&") + '"]') };
+      }).filter(function (p) { return p.el; });
+      if (!points.length) continue;
+      var target = points[0].el;
+      var link = document.createElement("a");
+      link.className = "ref";
+      link.textContent = labels[i].textContent;
+      link.href = "#" + (target.id || (target.closest("[id]") || {}).id || "");
+      link.title = points.map(function (p) { return p.ref + ": " + pointText(p.el); }).join("\n");
+      labels[i].replaceWith(link);
+    }
+  }
+  linkChanges();
+  var changesBox = document.getElementById("refine-changes");
+  if (changesBox) changesBox.addEventListener("click", function (ev) {
+    var link = ev.target && ev.target.closest ? ev.target.closest("a.ref") : null;
+    var target = link ? document.getElementById(link.getAttribute("href").slice(1)) : null;
+    if (!target) return;
+    ev.preventDefault();
+    target.scrollIntoView({ block: "start" });
+  });
+
   if (!window.claude || typeof window.claude.use !== "function") return;
+
+  // The store shows this page's own write at once, before the server confirms it, and that
+  // pending view can hold only the fields just written. Merging it over the document's last
+  // confirmed body keeps the rest in view; otherwise a reply hides its thread's root, and
+  // with it the reply, until the server confirms.
+  var confirmedBodies = {};
+
+  function isPlain(value) { return !!value && typeof value === "object" && !Array.isArray(value); }
+
+  function mergeBodies(base, patch) {
+    var out = {};
+    Object.keys(base).forEach(function (k) { out[k] = base[k]; });
+    Object.keys(patch).forEach(function (k) {
+      out[k] = isPlain(out[k]) && isPlain(patch[k]) ? mergeBodies(out[k], patch[k]) : patch[k];
+    });
+    return out;
+  }
+
+  // A document snapshot carries its own metadata; a query passes its own as the fallback
+  function settledBody(path, snap, queryMeta) {
+    var body = snap.exists ? snap.data() || {} : null;
+    var meta = snap.metadata || queryMeta;
+    if (!(meta && meta.hasPendingWrites)) {
+      confirmedBodies[path] = body;
+      return body;
+    }
+    var base = confirmedBodies[path];
+    return body && base ? mergeBodies(base, body) : body;
+  }
 
   // Decision picks: each viewer keeps one document, preferences/<their id>.
   var DECISIONS = Array.prototype.slice.call(document.querySelectorAll('input[name^="pick-"]'))
@@ -918,7 +1003,7 @@ dl.facts dd { margin: 0; }
         // A cached first snapshot without the document says nothing yet
         if (!snap.exists && snap.metadata && snap.metadata.fromCache) return;
         prefExists = snap.exists;
-        var data = (snap.exists && snap.data()) || {};
+        var data = settledBody("preferences/" + uid, snap) || {};
         DECISIONS.forEach(function (d) { if (!pendingPicks[d]) picks[d] = validOption(d, data[d]); });
         renderPicks();
       }, function () {
@@ -1047,7 +1132,7 @@ dl.facts dd { margin: 0; }
   function readComments(snap) {
     var list = [];
     snap.docs.forEach(function (doc) {
-      var items = (doc.data() || {}).items;
+      var items = (settledBody("comments/" + doc.id, doc, snap.metadata) || {}).items;
       if (!items || typeof items !== "object") return;
       Object.keys(items).forEach(function (id) {
         var d = items[id] || {};
@@ -1426,8 +1511,8 @@ dl.facts dd { margin: 0; }
       return head ? head.parentNode : null;
     }
 
-    function readTicket(doc) {
-      var d = doc.data() || {};
+    function readTicket(doc, queryMeta) {
+      var d = settledBody("tickets/" + doc.id, doc, queryMeta) || {};
       var refs = function (v) { return Array.isArray(v) ? v.filter(function (s) { return typeof s === "string"; }) : []; };
       var regen = d.regenerate && typeof d.regenerate === "object" ? d.regenerate : {};
       return {
@@ -1704,7 +1789,7 @@ dl.facts dd { margin: 0; }
     store.collection("tickets").limit(200).onSnapshot(function (snap) {
       tickets = {};
       snap.docs.forEach(function (doc) {
-        if (/^T\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc);
+        if (/^T\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc, snap.metadata);
       });
       renderTickets();
       if (!regenTimer && Object.keys(tickets).some(function (ref) { return tickets[ref].regenSentAt; })) {
