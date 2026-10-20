@@ -626,7 +626,7 @@ dl.facts dd { margin: 0; }
         <summary><span id="overview-title">Comments</span></summary>
         <div id="overview-list"></div>
       </details>
-      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. The script links each ref to its point and shows the point's text on hover; a list such as "D9, D10" or a range such as "D1–D7" links to its first point. -->
+      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. Give each listed point a data-gist unless it is a task or decision head. The script links each ref to its point and shows the gist on hover; a list such as "D9, D10" or a range such as "D1–D7" links to its first point. -->
       <details class="changes" id="refine-changes" hidden>
         <summary>What changed in revision N</summary>
         <p>Refined from revision N-1.</p>
@@ -824,15 +824,22 @@ dl.facts dd { margin: 0; }
 
   // What changed: each ref links to its point and names the point on hover.
   // A list such as "D9, D10" or a range such as "D1–D7" links to its first point.
+  // The hover shows a point's data-gist, else its heading. A point without either, on a
+  // plan built before gists, falls back to its first sentence without paths.
   function pointText(point) {
+    var gist = point.getAttribute("data-gist");
+    if (gist) return gist;
     var source = point.querySelector("h3") ||
       (point.tagName === "TR" ? point.children[1] : null) ||
       point.querySelector(".txt > p") || point.querySelector(".txt") || point;
     var copy = source.cloneNode(true);
-    var drop = copy.querySelectorAll(".tag, .ref, button, .threads-host");
+    var drop = copy.querySelectorAll(".tag, .ref, button, .threads-host, pre");
     for (var i = 0; i < drop.length; i++) drop[i].remove();
-    var text = copy.textContent.replace(/\s+/g, " ").trim();
-    return text.length > 140 ? text.slice(0, 139) + "…" : text;
+    var code = copy.querySelectorAll("code");
+    for (var j = 0; j < code.length; j++) if (/[\/\\]|\.\w{1,4}$/.test(code[j].textContent)) code[j].remove();
+    var text = copy.textContent.replace(/\s+/g, " ").replace(/^[\s:;,.]+/, "").trim();
+    var end = text.search(/\.\s/);
+    return end === -1 ? text : text.slice(0, end + 1);
   }
 
   function refsIn(label) {
