@@ -218,6 +218,23 @@ jobs:
               echo "$shipped" | head -5
               exit 1
             fi
+            # A skill shipped in the package must reach the wheel, its eval suite must not:
+            # setuptools ships a package's non-Python files only when MANIFEST.in lists them.
+            wheel=$(unzip -Z1 "dist/$package"/*.whl)
+            for skill in "$path"/src/*/.agents/skills/*/SKILL.md; do
+              [ -e "$skill" ] || continue
+              rel=${skill#"$path/src/"}
+              if ! grep -qxF "$rel" <<<"$wheel"; then
+                echo "::error::$package: the wheel lacks $rel; list it in $path/MANIFEST.in"
+                exit 1
+              fi
+            done
+            leaked=$(grep -E '/\.agents/skills/[^/]+/evals(\.yaml$|/)' <<<"$wheel" || true)
+            if [ -n "$leaked" ]; then
+              echo "::error::$package: the wheel ships a skill's eval suite"
+              echo "$leaked" | head -5
+              exit 1
+            fi
             uvx twine check "dist/$package"/*
             echo "::endgroup::"
           done
