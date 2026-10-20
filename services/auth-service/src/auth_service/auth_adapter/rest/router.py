@@ -116,6 +116,22 @@ def add_allowed_routes():
 add_allowed_routes()
 
 
+@router.get(
+    "/health",
+    summary="health",
+    tags=["health"],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def health() -> Response:
+    """Used to check that this service is alive, without Basic auth.
+
+    The gateway also sends requests for its own `/health` here. ExtAuth lets
+    a request pass only on 200, so answering 204 keeps those requests from reaching
+    a backend without Basic auth.
+    """
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
