@@ -101,6 +101,10 @@ Nothing else in it is edited, so a newer copy replaces it whole; the Angular one
 The Markdown lint and `just prose` skip it.
 Where it disagrees with our docs, a skill of ours names the difference and takes priority, as `data-portal` does.
 
+A library we publish to PyPI ships its consumer skill inside its package, in `src/<package>/.agents/skills/<name>/`, as FastAPI and Typer do: tools that read `site-packages` find it there, and the docs site publishes the same file (great-docs' `skill.file`).
+The root `.agents/skills/<name>` is a committed symlink to that directory, so the repo offers it as a root skill; `MANIFEST.in` lists the `SKILL.md`, and the publish workflow fails a wheel without it or with its eval suite.
+hexkit's is the first.
+
 Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, beside the same `.agents/`: in the root for a root skill, in the member for a nested one.
 Its documentation supports this, and the symlink goes when Claude Code reads the standard path.
 

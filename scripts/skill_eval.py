@@ -9,6 +9,8 @@ the patch and the case's `branch`, so the case starts with that change on that b
 off an `origin/dev` at the pin.
 A case with a `setup`, a shell script, gets one too: it runs the setup in the clone after
 the shared scaffold, for a state a patch cannot give, such as a remote or a worktree.
+A suite with a `pin` clones at that commit instead of the scaffold's, for a skill about
+code newer than the shared pin; every case then gets a scaffold of its own.
 A run loads only the plugin under test, so a suite that measures a skill next to another
 one lists `plugins`, each a set of skills: `expand` then writes a plugin per entry under
 evals/, with the cases inside, and the suite runs once per plugin, each against no skill.
@@ -127,7 +129,8 @@ def _write_cases(root: pathlib.Path, suite: dict, evals: pathlib.Path) -> None:
         )
         patch = suite["cases"][name].get("patch")
         setup = suite["cases"][name].get("setup")
-        if patch is None and setup is None:
+        pin = suite.get("pin")
+        if patch is None and setup is None and pin is None:
             (case_dir / "scaffold.sh").symlink_to(
                 os.path.relpath(root / SCAFFOLD, case_dir)
             )
@@ -135,6 +138,8 @@ def _write_cases(root: pathlib.Path, suite: dict, evals: pathlib.Path) -> None:
         # The runner starts the scaffold from the run's workspace, so the paths are
         # absolute.
         args: list[str | pathlib.Path] = [root / SCAFFOLD]
+        if pin is not None:
+            args += ["--pin", pin]
         if patch is not None:
             (case_dir / "change.patch").write_text(patch, encoding="utf-8")
             branch = suite["cases"][name].get("branch", DEFAULT_BRANCH)

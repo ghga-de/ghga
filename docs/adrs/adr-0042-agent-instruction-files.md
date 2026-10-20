@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-09-16
-amended: 2026-10-07
+amended: 2026-10-20
 tags: [docs, process]
 related: [ADR-0033, ADR-0041]
 ---
@@ -74,6 +74,9 @@ The decision itself:
   A skill for one area says so in its `paths` frontmatter field: Claude Code and Cursor then list it once the agent works there, and the other tools list it everywhere.
   Only a skill about one member's internals stays nested in that member.
   Copilot CLI, OpenCode and Codex find a nested skill only in a session started in its area.
+
+  **Amended 2026-10-20:** A library we publish ships its skill for consumers inside its package, at `src/<package>/.agents/skills/<name>/`, so the wheel and the docs site carry the same file.
+  The root `.agents/skills/<name>` is a symlink to it, and the repo offers it like any root skill.
 
   **Amended 2026-10-07:** A fifth kind of file: `.claude/rules/<topic>.md` with `paths` frontmatter, for a rule a directory cannot scope, about a kind of file found in several areas or about one member inside an area.
   Area rules stay in `AGENTS.md`.

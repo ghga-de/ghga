@@ -51,6 +51,9 @@ The 📖 [User Guide](https://ghga-de.github.io/ghga/hexkit/user-guide/) covers 
 For a complete example service built with hexkit, have a look at the [stream_calc](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/examples/stream_calc) example application.
 We also put a lot of effort into making the code self-documenting: you can find the protocols being defined at [src/hexkit/protocols](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/src/hexkit/protocols) and the providers being implemented at [src/hexkit/providers](https://github.com/ghga-de/ghga/tree/main/libs/hexkit/src/hexkit/providers).
 
+Coding agents get an [agent skill](https://agentskills.io) for hexkit with the package, at `hexkit/.agents/skills/hexkit/SKILL.md` in `site-packages`, where tools such as [library-skills](https://library-skills.io) find it.
+The docs site publishes the same file, so `npx skills add https://ghga-de.github.io/ghga/hexkit` installs it as well.
+
 ## Installation
 
 This package is available at PyPI:

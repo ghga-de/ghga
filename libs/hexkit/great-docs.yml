@@ -388,6 +388,14 @@ reference:
       - providers.testing.MockDAOEmptyError
       - providers.testing.TopicExhaustedError
 
+# Agent Skill
+# -----------
+# The site publishes the hand-written skill that also ships in the wheel, so
+# `npx skills add` and tools reading site-packages get the same file. `skill.file`
+# publishes SKILL.md alone, which keeps the eval suite beside it off the site.
+skill:
+  file: src/hexkit/.agents/skills/hexkit/SKILL.md
+
 # Site URL
 # --------
 # Canonical address of the deployed documentation site.

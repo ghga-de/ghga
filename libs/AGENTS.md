@@ -18,5 +18,7 @@ The repo-wide rules are in the root [AGENTS.md](../AGENTS.md), what the director
 Consumers import these from source, so one `uv.lock` resolves them and a change lands in every consumer at once ([ADR-0026](../docs/adrs/adr-0026-uv-workspace-source-coupled-libs.md)).
 Editing a `libs/` member therefore means running `just affected` and testing every consumer, not only the member's own suite.
 
+hexkit ships a skill for its consumers in `src/hexkit/.agents/skills/hexkit/` ([agent-instructions.md](../docs/agent-instructions.md#skills)); a change to the API it describes updates it in the same PR.
+
 Before changing `ghga-event-schemas`, read [its rule](../.claude/rules/event-schemas.md): an event schema is a wire format two services agree on.
 [The Kafka topology rule](../.claude/rules/kafka-topology.md) applies here too: `ghga-event-schemas` declares the topics and types, and `metldata` publishes to them.

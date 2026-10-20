@@ -106,6 +106,10 @@ COPILOT_STUB = ".github/copilot-instructions.md"
 SKILL_DIR = ".agents/skills"
 SKILL_FILE = "SKILL.md"
 SKILL_PATH = re.compile(r"^(?:(.+)/)?\.agents/skills/([^/]+)/SKILL\.md$")
+# A library ships its skill inside its package, where tools that read site-packages
+# find it; the root .agents/skills/ links to it, so the repo offers it as a root skill.
+PACKAGED_SKILL_PATH = re.compile(r"^(.+/src/[^/]+)/\.agents/skills/([^/]+)/SKILL\.md$")
+SKILL_DIR_ENTRY = re.compile(r"^\.agents/skills/([^/]+)$")
 # Claude Code reads .claude/skills/ only, so each skill has a symlink there.
 CLAUDE_SKILL_ENTRY = re.compile(r"^(?:(.+)/)?\.claude/skills/([^/]+)$")
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -768,7 +772,8 @@ def load_skills(
         match = SKILL_PATH.match(rel)
         if not match or (text := _stub_text(root, rel)) is None:
             continue
-        skill = Skill(match.group(2), match.group(1) or "", rel)
+        packaged = PACKAGED_SKILL_PATH.match(rel)
+        skill = Skill(match.group(2), "" if packaged else match.group(1) or "", rel)
         meta, body = _split(text)
         if meta is None or "" in meta:
             problems.append(f"{rel}: frontmatter must be a YAML mapping between ---")
@@ -791,11 +796,19 @@ def check_skill_links(root: pathlib.Path, tracked: list[str]) -> list[str]:
     """Report a skill without its .claude/skills/ symlink, and a symlink without its skill.
 
     The link sits beside the same .agents/ and is relative, so a clone gets it working
-    without a setup step (docs/agent-instructions.md).
+    without a setup step (docs/agent-instructions.md). A skill shipped in a package
+    gets a root .agents/skills/ link to its directory first, and its .claude/ link
+    beside the root .agents/.
     """
     tracked_set, problems, expected = set(tracked), [], {}
     for rel in tracked:
-        if match := SKILL_PATH.match(rel):
+        if match := PACKAGED_SKILL_PATH.match(rel):
+            name = match.group(2)
+            expected[f"{SKILL_DIR}/{name}"] = (
+                f"../../{match.group(1)}/{SKILL_DIR}/{name}"
+            )
+            expected[f".claude/skills/{name}"] = f"../../{SKILL_DIR}/{name}"
+        elif match := SKILL_PATH.match(rel):
             prefix = f"{match.group(1)}/" if match.group(1) else ""
             name = match.group(2)
             expected[f"{prefix}.claude/skills/{name}"] = f"../../{SKILL_DIR}/{name}"
@@ -809,6 +822,11 @@ def check_skill_links(root: pathlib.Path, tracked: list[str]) -> list[str]:
         f"{rel}: no skill at {SKILL_DIR}/{match.group(2)}"
         for rel in tracked
         if (match := CLAUDE_SKILL_ENTRY.match(rel)) and rel not in expected
+    ]
+    problems += [
+        f"{rel}: links to no skill shipped in a package"
+        for rel in tracked
+        if SKILL_DIR_ENTRY.match(rel) and rel not in expected
     ]
     return sorted(problems)
 
