@@ -9,6 +9,8 @@
 # and graders read the edits and the reply.
 # The runner offers the skill as a plugin skill copied from the working tree; `plugins`
 # names it, so the copy is made from the root link and the runner never sees the link.
+# Runs often change files through Bash scripts, so graders read the files a case leaves
+# behind; a tool grader takes one tool name, and `Edit|Write` matches no call at all.
 
 pin: 865cc8744
 plugins:
@@ -44,17 +46,18 @@ cases:
   outbox:
     description: Other services need IFRS's file metadata and must be able to rebuild their copy, which is what the outbox publisher is for.
     tags: [write]
+    # Switching the DAO, its config, the command and the tests took all 40 turns in every
+    # run of the first pass.
+    execution:
+      max_turns: 80
+      timeout_seconds: 1800
     prompt: |
       Other services need to keep their own copy of the file metadata that the Internal File Registry Service (services/ifrs) stores in its `file_metadata` collection, including removals, and they must be able to rebuild that copy from scratch at any time. Change IFRS so that they can. Do not change the consuming services.
     graders:
       - name: outbox-factory
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'MongoKafkaDaoPublisherFactory|DaoPublisherFactoryProtocol'
-      - name: dto-to-event
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'dto_to_event'
+        type: regex
+        target: {source: file, path: services/ifrs/src/ifrs/inject.py}
+        pattern: 'MongoKafkaDaoPublisherFactory'
       - name: republish-command
         type: llm
         criteria: |
@@ -69,15 +72,9 @@ cases:
       In the Access Request Service (services/access-request-service), two data stewards can process the same pending access request at the same moment: both read it as pending in `update` in `src/ars/core/repository.py`, and the second write silently overwrites the first decision. Make that update safe, so a request decided by one steward cannot be overwritten by the other.
     graders:
       - name: precondition
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'precondition\s*='
-      - name: no-own-lock
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'asyncio\.Lock\(|threading\.Lock\(|while True:'
-        min: 0
-        max: 0
+        type: regex
+        target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
+        pattern: 'precondition\s*='
       - name: handles-the-conflict
         type: llm
         criteria: |
@@ -102,18 +99,12 @@ cases:
     description: An integration test of a published event, which hexkit's Kafka fixture checks with expect_events.
     tags: [test]
     prompt: |
-      Add an integration test to the Internal File Registry Service (services/ifrs) checking that registering a new file publishes exactly one file-registered event with the file's accession and storage alias. Use the test infrastructure the service already has. Docker is not available here, so write the test without running it, and say how to run it.
+      Add an integration test to the Internal File Registry Service (services/ifrs), in a new file `tests_ifrs/test_registration_event.py`, checking that registering a new file publishes exactly one file-registered event with the file's ID and storage alias. Use the test infrastructure the service already has. Docker is not available here, so write the test without running it, and say how to run it.
     graders:
       - name: kafka-expectation
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'expect_events\(|record_events\('
-      - name: no-mock-broker
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'patch\([^)]*publish|MagicMock\(\)\.publish'
-        min: 0
-        max: 0
+        type: regex
+        target: {source: file, path: services/ifrs/tests_ifrs/test_registration_event.py}
+        pattern: 'expect_events\(|record_events\('
       - name: run-command
         type: regex
         pattern: 'just test services/ifrs'
@@ -124,19 +115,26 @@ cases:
     description: A credential setting, which hexkit masks only when it is declared as a secret, and whose generated files the service-docs recipe writes.
     tags: [write]
     prompt: |
-      The Download Controller Service (services/dcs) will need an API token to call an external audit service. Add a configuration setting for the token, with no default, and update everything that documents the configuration.
+      The Download Controller Service (services/dcs) will need an API token to call an external audit service. Add a configuration setting `audit_api_token` for it, with no default, and update everything that documents the configuration.
     graders:
+      # A Secret type shows in the generated schema as a write-only password.
       - name: secret-type
-        type: tool_used
-        tool: Edit|Write
-        input_match: 'SecretStr|Secret\['
+        type: regex
+        target: {source: file, path: services/dcs/config_schema.json}
+        pattern: '"audit_api_token": \{[^}]*"writeOnly": true'
       - name: service-docs
         type: tool_used
         tool: Bash
         input_match: 'just service-docs'
       - name: no-hand-edit-schema
         type: tool_used
-        tool: Edit|Write
+        tool: Edit
+        input_match: '"file_path":"[^"]*(config_schema\.json|example_config\.yaml|openapi\.yaml)"'
+        min: 0
+        max: 0
+      - name: no-hand-write-schema
+        type: tool_used
+        tool: Write
         input_match: '"file_path":"[^"]*(config_schema\.json|example_config\.yaml|openapi\.yaml)"'
         min: 0
         max: 0
@@ -161,9 +159,15 @@ cases:
         type: regex
         target: {source: file, path: services/access-request-service/src/ars/core/repository.py}
         pattern: 'total_count\(\)'
-      - name: no-mapping
+      - name: no-mapping-edit
         type: tool_used
-        tool: Edit|Write
+        tool: Edit
+        input_match: '\bmapping\s*='
+        min: 0
+        max: 0
+      - name: no-mapping-write
+        type: tool_used
+        tool: Write
         input_match: '\bmapping\s*='
         min: 0
         max: 0
