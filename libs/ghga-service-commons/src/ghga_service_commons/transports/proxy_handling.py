@@ -46,6 +46,17 @@ def ratelimiting_retry_proxies(
     Pass `budget` to enable request pacing, or `trust_env=False` to ignore the
     environment for proxies and return no mounts.
     If a `budget` is provided, it's shared between mounts.
+
+    Example:
+        ```
+        # all routes share a common request rate budget
+        budget = RateBudget(config)
+        transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config, budget=budget
+        )
+        mounts = ratelimiting_retry_proxies(config, budget=budget)
+        client = httpx2.AsyncClient(transport=transport, mounts=mounts)
+        ```
     """
     if not trust_env:
         return {}

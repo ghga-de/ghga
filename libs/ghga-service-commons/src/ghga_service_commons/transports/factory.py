@@ -58,6 +58,20 @@ def default_base_transport_factory(
     """Build a factory producing the standard network transport for a route.
 
     Applies the same limits and SSL verification to direct and proxied routes.
+
+    Example:
+        ```
+        # Size the connection pool once, then build the direct route and every
+        # proxy mount from the same factory.
+        limits = httpx2.Limits(max_connections=10, max_keepalive_connections=10)
+        make_base_transport = default_base_transport_factory(limits)
+        transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config, make_base_transport=make_base_transport
+        )
+        mounts = ratelimiting_retry_proxies(
+            config, make_base_transport=make_base_transport
+        )
+        ```
     """
     resolved_verify = get_ssl_verify() if verify is None else verify
 
@@ -78,6 +92,16 @@ def fixed_base_transport_factory(
     """Serve every route from one already built transport.
 
     This will ignore proxy settings as they can't be applied to an already created instance.
+
+    Example:
+        ```
+        # In tests, send requests to a MockApi while keeping the retry and rate
+        # limiting layers in place.
+        transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+            config,
+            make_base_transport=fixed_base_transport_factory(mock_api.as_transport()),
+        )
+        ```
     """
     return lambda _: transport
 
@@ -118,6 +142,18 @@ class CompositeTransportFactory:
         """Creates a retry transport, wrapping, in sequence, a rate limiting transport and a base transport.
 
         Pass `budget` to pace requests across routes of the same client.
+
+        Example:
+            ```
+            # The client sends a request through `transport` unless one of the
+            # proxy mounts matches its URL.
+            transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
+                config
+            )
+            mounts = ratelimiting_retry_proxies(config)
+            async with httpx2.AsyncClient(transport=transport, mounts=mounts) as client:
+                response = await client.get(url)
+            ```
         """
         return cls._create_common_transport_layers(
             config,
