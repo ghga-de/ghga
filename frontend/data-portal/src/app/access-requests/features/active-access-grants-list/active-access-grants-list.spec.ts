@@ -5,46 +5,44 @@
  */
 
 import { provideHttpClient } from '@angular/common/http';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
 import { provideHttpCache } from '@ngneat/cashew';
-import { ActiveAccessGrantsListComponent } from './active-access-grants-list';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import { ActiveAccessGrantsList } from './active-access-grants-list';
 
 const MockConfigService = {
   auth_url: '/test/auth',
 };
 
-describe('ActiveAccessGrantsListComponent', () => {
-  let component: ActiveAccessGrantsListComponent;
-  let fixture: ComponentFixture<ActiveAccessGrantsListComponent>;
+describe('ActiveAccessGrantsList', () => {
+  let result: RenderResult<ActiveAccessGrantsList>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ActiveAccessGrantsListComponent],
+    result = await render(ActiveAccessGrantsList, {
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useValue: MockConfigService },
         provideHttpClient(),
         provideHttpCache(),
       ],
-    }).compileComponents();
-
+    });
     accessRequestService = TestBed.inject(AccessRequestService);
-    fixture = TestBed.createComponent(ActiveAccessGrantsListComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
+    expect(
+      screen.getByText('You do not yet have access to any datasets.'),
+    ).toBeVisible();
   });
 
   it('should fetch the access grants again when refreshed', () => {
     const reload = vitest.spyOn(accessRequestService, 'reloadUserAccessGrants');
-    component.refresh();
+    result.fixture.componentInstance.refresh();
     expect(reload).toHaveBeenCalledTimes(1);
   });
 });

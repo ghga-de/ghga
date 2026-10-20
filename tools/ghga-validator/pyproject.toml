@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Environment :: Console",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Utilities",
@@ -48,10 +49,6 @@ ghga_validator = "ghga_validator.__main__:run"
 where = [
     "src",
 ]
-
-[tool.pytest.ini_options]
-minversion = "7.1"
-asyncio_mode = "strict"
 
 [tool.coverage.paths]
 source = [

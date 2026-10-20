@@ -6,15 +6,15 @@
 
 import { Component } from '@angular/core';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { Stencil } from '@app/shared/ui/stencil/stencil/stencil';
 
 /**
  * A stencil for the search results shown as a loading state.
  */
 @Component({
   selector: 'app-search-result-stencil',
-  imports: [MatExpansionModule, StencilComponent],
+  imports: [MatExpansionModule, Stencil],
   templateUrl: './search-result.stencil.html',
   styleUrl: './search-result.stencil.scss',
 })
-export class SearchResultStencilComponent {}
+export class SearchResultStencil {}

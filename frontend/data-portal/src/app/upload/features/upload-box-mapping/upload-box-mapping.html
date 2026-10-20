@@ -118,8 +118,7 @@
                 <mat-label>Filter by part of filename or extension</mat-label>
                 <input
                   matInput
-                  [ngModel]="filterText()"
-                  (ngModelChange)="filterText.set($event)"
+                  [formField]="filterField"
                   placeholder="Type part of filename or extension to filter…"
                 />
                 @if (filterText()) {
@@ -217,8 +216,7 @@
                           <input
                             #inlineInput
                             matInput
-                            [ngModel]="inlineInputValue()"
-                            (ngModelChange)="inlineInputValue.set($event)"
+                            [formField]="inlineInputField"
                             [matAutocomplete]="autocomplete"
                             [attr.aria-label]="
                               'Map upload box file for ' +

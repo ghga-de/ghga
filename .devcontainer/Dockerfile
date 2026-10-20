@@ -41,3 +41,9 @@ RUN apt-get update \
 # command line anyone writes, copies, or remembers says `fd` and `bat`, so expose those.
 RUN ln -s /usr/bin/fdfind /usr/local/bin/fd \
  && ln -s /usr/bin/batcat /usr/local/bin/bat
+
+# static-web-server, the server the data portal's production image runs, so `just fe-prod`
+# serves the production build with the same server and sws.toml headers as a deployment.
+# Installed the way frontend/data-portal/Dockerfile does, from the project's installer, so
+# both get the same release; Debian does not package it.
+RUN curl --proto '=https' --tlsv1.2 -sSfL https://get.static-web-server.net | sh

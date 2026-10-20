@@ -17,6 +17,7 @@
 """Step definitions for submitting metadata with the datasteward-kit"""
 
 import glob
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -89,6 +90,90 @@ def submit_metadata(fixtures: JointFixture):
         metadata_config_path=fixtures.dsk.config.metadata_config_path,
     )
     os.chdir(cwd)
+
+
+def call_data_steward_kit_amend(
+    submission_id: str,
+    metadata_path: Path,
+    metadata_config_path: Path,
+    timeout: int = 600,
+):
+    """Call cli command 'ghga-datasteward-kit metadata amend'
+    to amend an already accessioned submission
+    """
+    completed_amend = subprocess.run(  # nosec B607, B603
+        [
+            "ghga-datasteward-kit",
+            "metadata",
+            "amend",
+            "--submission-id",
+            submission_id,
+            "--metadata-path",
+            metadata_path,
+            "--config-path",
+            metadata_config_path,
+        ],
+        capture_output=True,
+        check=False,
+        encoding="utf-8",
+        text=True,
+        timeout=timeout,
+    )
+
+    if completed_amend.stdout:
+        print(completed_amend.stdout)
+    if "ERROR" in completed_amend.stderr or completed_amend.returncode:
+        print(completed_amend.stderr)
+
+    # unlike submit, amend reports what it changed on stdout
+    assert "ERROR" not in completed_amend.stderr
+    assert not completed_amend.returncode
+
+
+def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
+    """Read a submission JSON from the local submission store."""
+    submission_path = (
+        Path(fixtures.dsk.config.submission_store) / f"{submission_id}.json"
+    )
+    with open(submission_path, encoding="utf-8") as submission_file:
+        return json.load(submission_file)
+
+
+@when(
+    "the submission is amended with the same metadata",
+    target_fixture="amendment",
+)
+def amend_metadata(fixtures: JointFixture):
+    submission_id = fixtures.state.get_state("submission id")
+    accessions_before = read_submission(fixtures, submission_id)["accession_map"]
+
+    workdir = fixtures.dsk.config.submission_registry
+    metadata_json_path = fixtures.dsk.config.metadata_dir / "metadata.json"
+    cwd = os.getcwd()
+    os.chdir(workdir)
+    try:
+        call_data_steward_kit_amend(
+            submission_id=submission_id,
+            metadata_path=metadata_json_path,
+            metadata_config_path=fixtures.dsk.config.metadata_config_path,
+        )
+    finally:
+        os.chdir(cwd)
+
+    submission_after = read_submission(fixtures, submission_id)
+
+    return {
+        "accessions_before": accessions_before,
+        "submission_after": submission_after,
+    }
+
+
+@then("the accessions of the submission are unchanged")
+def accessions_unchanged(amendment: dict):
+    submission_after = amendment["submission_after"]
+
+    assert submission_after["accession_map"] == amendment["accessions_before"]
+    assert submission_after["status_history"][-1]["new_status"] == "completed"
 
 
 @then(parse("{num} submission JSON file exists in the local submission store"))

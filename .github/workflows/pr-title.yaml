@@ -1,0 +1,31 @@
+# Warn when a PR title breaks the naming grammar (docs/conventions.md). The title is the
+# subject GitHub prefills for the squash commit, so a title in the grammar leaves less to
+# rewrite at merge time. The job stays green until the team decides to make it fail.
+#
+# A workflow of its own, not a job in ci.yaml: `edited` re-runs the check when the title
+# is fixed, and in ci.yaml it would re-run every test as well.
+name: pr-title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/check_pr_title.py
+          sparse-checkout-cone-mode: false
+      # The title reaches the script through the environment: interpolated into `run`,
+      # a title on this public repo could inject shell commands.
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+        run: python3 scripts/check_pr_title.py --head "$HEAD" --base "$BASE" -- "$TITLE"

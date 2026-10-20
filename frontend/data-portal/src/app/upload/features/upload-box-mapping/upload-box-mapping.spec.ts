@@ -11,8 +11,8 @@ import { provideRouter } from '@angular/router';
 import { uploadBoxes } from '@app/../mocks/data';
 import { EmFile } from '@app/metadata/models/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { FileIdMap, Study } from '@app/upload/models/study';
@@ -20,11 +20,13 @@ import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import {
   MappingSnapshot,
-  UploadBoxMappingStateService,
+  UploadBoxMappingStore,
 } from '@app/upload/services/upload-box-mapping-state';
+import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { UploadBoxMappingComponent } from './upload-box-mapping';
-import { UploadBoxMappingConfirmDialogComponent } from './upload-box-mapping-confirm-dialog';
+import { UploadBoxMapping } from './upload-box-mapping';
+import { UploadBoxMappingConfirmDialog } from './upload-box-mapping-confirm-dialog';
 
 const TEST_BOX = {
   ...uploadBoxes.boxes[0],
@@ -187,9 +189,9 @@ const mockMappingStateService = {
   clearSnapshot: vitest.fn(),
 };
 
-describe('UploadBoxMappingComponent', () => {
-  let component: UploadBoxMappingComponent;
-  let fixture: ComponentFixture<UploadBoxMappingComponent>;
+describe('UploadBoxMapping', () => {
+  let component: UploadBoxMapping;
+  let fixture: ComponentFixture<UploadBoxMapping>;
   let uploadBoxService: MockUploadBoxService;
 
   /**
@@ -199,12 +201,10 @@ describe('UploadBoxMappingComponent', () => {
    */
   async function createComponent(snapshot?: MappingSnapshot): Promise<void> {
     mockMappingStateService.snapshotFor.mockReturnValue(snapshot);
-    fixture = TestBed.createComponent(UploadBoxMappingComponent);
+    fixture = TestBed.createComponent(UploadBoxMapping);
     fixture.componentRef.setInput('box', TEST_BOX);
     component = fixture.componentInstance;
-    fixture.detectChanges();
     await fixture.whenStable();
-    fixture.detectChanges();
   }
 
   beforeEach(async () => {
@@ -219,21 +219,21 @@ describe('UploadBoxMappingComponent', () => {
     mockMappingStateService.snapshotFor.mockReturnValue(undefined);
 
     await TestBed.configureTestingModule({
-      imports: [UploadBoxMappingComponent],
+      imports: [UploadBoxMapping],
       providers: [
         provideRouter([]),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
-        { provide: NotificationService, useValue: mockNotificationService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
+        { provide: Notifier, useValue: mockNotificationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
         {
-          provide: UploadBoxMappingStateService,
+          provide: UploadBoxMappingStore,
           useValue: mockMappingStateService,
         },
       ],
     })
-      .overrideComponent(UploadBoxMappingComponent, {
+      .overrideComponent(UploadBoxMapping, {
         set: {
           providers: [{ provide: MetadataService, useClass: MockMetadataService }],
         },
@@ -310,7 +310,6 @@ describe('UploadBoxMappingComponent', () => {
     mockDialog.open.mockReturnValueOnce({ afterClosed: () => of(false) });
 
     component.pendingMappedField.set('name');
-    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(mockDialog.open).toHaveBeenCalled();
@@ -320,7 +319,6 @@ describe('UploadBoxMappingComponent', () => {
 
     mockDialog.open.mockReturnValueOnce({ afterClosed: () => of(true) });
     component.pendingMappedField.set('name');
-    fixture.detectChanges();
     await fixture.whenStable();
 
     expect(component.committedMappedField()).toBe('name');
@@ -373,7 +371,7 @@ describe('UploadBoxMappingComponent', () => {
     component.onConfirmAndArchive();
 
     expect(mockDialog.open).toHaveBeenCalledWith(
-      UploadBoxMappingConfirmDialogComponent,
+      UploadBoxMappingConfirmDialog,
       expect.objectContaining({
         data: {
           unmappedBoxFileAliases: [],
@@ -518,5 +516,60 @@ describe('UploadBoxMappingComponent', () => {
     expect(mockNotificationService.showInfo).toHaveBeenCalledWith(
       'Manual mappings have been reset.',
     );
+  });
+
+  describe('with a committed mapped field', () => {
+    beforeEach(async () => {
+      await createComponent({
+        studyId: TEST_STUDY.id,
+        mappedField: 'alias',
+        manualMappings: [],
+      });
+    });
+
+    /**
+     * Get the button that opens the inline editor of a row
+     * @param alias - the alias of the metadata file in the row
+     * @returns the button, or null if the row is not shown
+     */
+    function editButton(alias: string) {
+      return screen.queryByRole('button', {
+        name: `Click to change mapping for ${alias}`,
+      });
+    }
+
+    it('should filter the rows by the typed text and clear the filter', async () => {
+      const filter = screen.getByRole('textbox', {
+        name: 'Filter by part of filename or extension',
+      });
+      await userEvent.type(filter, 'other');
+      await fixture.whenStable();
+
+      expect(editButton('other.fastq.gz')).toBeVisible();
+      expect(editButton('dup.fastq.gz')).toBeNull();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Clear filter' }));
+      await fixture.whenStable();
+
+      expect(filter).toHaveValue('');
+      expect(editButton('dup.fastq.gz')).toBeVisible();
+    });
+
+    it('should map a row to the box file typed in the inline editor', async () => {
+      await userEvent.click(editButton('dup.fastq.gz')!);
+      await fixture.whenStable();
+
+      const input = screen.getByRole('combobox', {
+        name: 'Map upload box file for dup.fastq.gz',
+      });
+      expect(input).toHaveValue('DUP.fastq.gz');
+
+      await userEvent.clear(input);
+      await userEvent.type(input, 'DUP.fastq.gz{Enter}');
+      await fixture.whenStable();
+
+      expect(component.manualMappings()).toEqual(new Map([['meta-3', 'file-3']]));
+      expect(component.editingMetaAccession()).toBeNull();
+    });
   });
 });

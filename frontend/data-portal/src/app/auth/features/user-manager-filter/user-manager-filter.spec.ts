@@ -6,7 +6,7 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { UserManagerFilterComponent } from './user-manager-filter';
+import { UserManagerFilter } from './user-manager-filter';
 
 import { provideHttpClient } from '@angular/common/http';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -35,14 +35,14 @@ class MockConfigService {
   auth_url = 'https://test-auth.example.com';
 }
 
-describe('UserManagerFilterComponent', () => {
-  let component: UserManagerFilterComponent;
-  let fixture: ComponentFixture<UserManagerFilterComponent>;
+describe('UserManagerFilter', () => {
+  let component: UserManagerFilter;
+  let fixture: ComponentFixture<UserManagerFilter>;
   let userService: UserService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UserManagerFilterComponent],
+      imports: [UserManagerFilter],
       providers: [
         { provide: UserService, useValue: mockUserService },
         { provide: ConfigService, useClass: MockConfigService },
@@ -51,7 +51,7 @@ describe('UserManagerFilterComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UserManagerFilterComponent);
+    fixture = TestBed.createComponent(UserManagerFilter);
     component = fixture.componentInstance;
     userService = TestBed.inject(UserService);
     await fixture.whenStable();
@@ -116,5 +116,47 @@ describe('UserManagerFilterComponent', () => {
       roles: undefined,
       status: UserStatus.active,
     });
+  });
+
+  it('should set the filter after choosing no assigned role and clear it again', async () => {
+    await userEvent.click(screen.getByRole('combobox', { name: 'Any role' }));
+    await userEvent.click(screen.getByRole('option', { name: 'No assigned role' }));
+    await fixture.whenStable();
+
+    expect(userService.setUsersFilter).toHaveBeenLastCalledWith({
+      idStrings: '',
+      roles: [null],
+      status: undefined,
+    });
+
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for user role' }),
+    );
+    await fixture.whenStable();
+
+    expect(
+      vitest.mocked(userService.setUsersFilter).mock.lastCall![0].roles?.length ?? 0,
+    ).toBe(0);
+  });
+
+  it('should clear the name filter with its remove button', async () => {
+    const textbox = screen.getByRole('textbox', {
+      name: 'Name, email, or LS ID of user',
+    });
+    await userEvent.type(textbox, 'Doe');
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Remove filter for user name, email, and LS ID',
+      }),
+    );
+    await fixture.whenStable();
+
+    expect(userService.setUsersFilter).toHaveBeenLastCalledWith({
+      idStrings: '',
+      roles: undefined,
+      status: undefined,
+    });
+    expect(textbox).toHaveValue('');
   });
 });

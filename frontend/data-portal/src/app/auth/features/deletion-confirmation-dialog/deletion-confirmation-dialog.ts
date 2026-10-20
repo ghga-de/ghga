@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, inject, model, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -18,7 +18,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { DisplayUser, UserService } from '@app/auth/services/user';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * Component for the deletion confirmation dialog
@@ -26,7 +26,7 @@ import { NotificationService } from '@app/shared/services/notification';
 @Component({
   selector: 'app-deletion-confirmation-dialog',
   imports: [
-    FormsModule,
+    FormField,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -35,20 +35,19 @@ import { NotificationService } from '@app/shared/services/notification';
     MatDialogContent,
     MatDialogActions,
   ],
-  providers: [UserService],
   templateUrl: './deletion-confirmation-dialog.html',
 })
-export class DeletionConfirmationDialogComponent {
-  #dialogRef = inject(MatDialogRef<DeletionConfirmationDialogComponent, boolean>);
+export class DeletionConfirmationDialog {
+  #dialogRef = inject(MatDialogRef<DeletionConfirmationDialog, boolean>);
   protected data = inject<{ user: DisplayUser }>(MAT_DIALOG_DATA);
 
   #userService = inject(UserService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
-  protected userInput = model<string | undefined>();
+  protected emailField = form(signal(''));
 
   protected disabled = computed(
-    () => this.userInput()?.trim() !== this.user.email || this.#isProcessing(),
+    () => this.emailField().value().trim() !== this.user.email || this.#isProcessing(),
   );
   #isProcessing = signal(false);
 
@@ -60,15 +59,6 @@ export class DeletionConfirmationDialogComponent {
    */
   get user(): DisplayUser {
     return this.data.user;
-  }
-
-  /**
-   * Handle input change event
-   * @param event The event object
-   */
-  onInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.userInput.set(input.value.trim());
   }
 
   /**

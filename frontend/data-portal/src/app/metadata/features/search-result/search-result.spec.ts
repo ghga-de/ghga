@@ -4,21 +4,17 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
+
 import { datasetSummary, searchResults } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { SearchResultComponent } from './search-result';
-
-const fakeActivatedRoute = {
-  snapshot: { data: {} },
-} as ActivatedRoute;
+import { SearchResult } from './search-result';
 
 /**
  * Mock the auth service as needed for the search result component
@@ -47,44 +43,46 @@ class MockMetadataService {
     isLoading: () => false,
     error: () => undefined,
   };
-  loadDatasetSummary = () => undefined;
+  loadDatasetSummary = vitest.fn();
 }
 
-describe(SearchResultComponent, () => {
-  let component: SearchResultComponent;
-  let fixture: ComponentFixture<SearchResultComponent>;
+describe(SearchResult, () => {
+  let result: RenderResult<SearchResult>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [SearchResultComponent],
+    result = await render(SearchResult, {
+      inputs: { hit: searchResults.hits.at(0)! },
       providers: [
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: IvaService, useClass: MockIvaService },
       ],
-    })
-      .overrideComponent(SearchResultComponent, {
-        set: {
-          providers: [{ provide: MetadataService, useClass: MockMetadataService }],
-        },
-      })
-      .compileComponents();
-
-    fixture = TestBed.createComponent(SearchResultComponent);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('hit', searchResults.hits.at(0));
-    await fixture.whenStable();
+      configureTestBed: (testBed) =>
+        testBed.overrideComponent(SearchResult, {
+          set: {
+            providers: [{ provide: MetadataService, useClass: MockMetadataService }],
+          },
+        }),
+      routes: [],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
   });
 
   it('should show accession and title', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.textContent;
-    expect(text).toContain('GHGAD12345678901234');
-    expect(text).toContain('Test dataset for details');
+    const header = screen.getByRole('button', { name: /GHGAD12345678901234/ });
+    expect(header).toHaveTextContent('GHGAD12345678901234');
+    expect(header).toHaveTextContent('Test dataset for details');
+  });
+
+  it('should load the dataset summary when opened', async () => {
+    const header = screen.getByRole('button', { name: /GHGAD12345678901234/ });
+    await userEvent.click(header);
+    await result.fixture.whenStable();
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    const metadata = result.debugElement.injector.get(MetadataService);
+    expect(metadata.loadDatasetSummary).toHaveBeenCalledWith('GHGAD12345678901234');
   });
 });

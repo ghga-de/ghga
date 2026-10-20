@@ -31,6 +31,7 @@ Additionally, hexkit supports and integrates with other architectural patterns c
 
 - [Hexagonal Architecture](hexagonal_arch.qmd) - the foundational architecture pattern
 - [Triple Hexagonal Architecture](triple_hexagonal_arch.qmd) - hexkit's extension to address microservice code redundancy
+- [Dependency Injection](dependency_injection.qmd) - Wiring the core and its adapters together with plain Python
 - [The DAO Pattern](dao_pattern.qmd) - Database access through Data Access Objects, hexkit's approach to persistence
 - [Event Driven Architecture](event_driven_arch.qmd) - Communication patterns supported by hexkit for decoupled microservices
 - [Dead Letter Queue](dlq.qmd) - Error handling and reliability patterns integrated with hexkit

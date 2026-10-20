@@ -178,14 +178,16 @@
                     @if (pub.year) {
                       <p class="text-base"><strong>Year:</strong> {{ pub.year }}</p>
                     }
-                    <p class="text-base">
-                      <strong>DOI: </strong>
-                      <a
-                        appExtLink
-                        [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
-                        >{{ pub.doi | validateDOI }}</a
-                      >
-                    </p>
+                    @if (pub.doi) {
+                      <p class="text-base">
+                        <strong>DOI: </strong>
+                        <a
+                          appExtLink
+                          [href]="'https://www.doi.org/' + (pub.doi | validateDOI)"
+                          >{{ pub.doi | validateDOI }}</a
+                        >
+                      </p>
+                    }
                     @if (pub.abstract) {
                       <app-paragraphs
                         [text]="pub.abstract"
@@ -289,6 +291,7 @@
       >
 
       <div class="grid grid-cols-1 gap-2 overflow-x-auto *:min-w-128">
+        <!-- Once @boundary is stable, wrap each table in one, so a table that fails to render leaves the rest of the dataset page usable. -->
         <app-dataset-details-table
           tableName="experiments"
           [data]="experiments()"

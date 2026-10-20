@@ -78,6 +78,12 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
+        },
+        "localImageIds": {
+          "type": "object",
+          "description": "Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
@@ -98,7 +104,9 @@
     },
     "executableArgs": {
       "type": "array",
-      "default": []
+      "default": [
+        "run-rest"
+      ]
     },
     "deployment": {
       "type": "object",
@@ -239,7 +247,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Run a dedicated init container for DB migrations before the main container starts",
-          "default": false
+          "default": true
         },
         "image": {
           "type": "string",
@@ -253,11 +261,13 @@
         "executable": {
           "type": "string",
           "description": "Executable name and arguments run inside the migration init container",
-          "default": ""
+          "default": "auth-service"
         },
         "executableArgs": {
           "type": "array",
-          "default": []
+          "default": [
+            "migrate-db"
+          ]
         },
         "env": {
           "type": "array",
@@ -426,13 +436,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -1034,6 +1048,25 @@
             "null"
           ]
         },
+        "migration_max_wait_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+          "examples": [
+            null,
+            300,
+            600,
+            3600
+          ],
+          "title": "Migration Max Wait Sec"
+        },
         "otel_trace_sampling_rate": {
           "default": 1.0,
           "description": "Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False.",
@@ -1409,25 +1442,6 @@
             null
           ],
           "title": "Mongo Timeout"
-        },
-        "migration_max_wait_sec": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
-          "examples": [
-            null,
-            300,
-            600,
-            3600
-          ],
-          "title": "Migration Max Wait Sec"
         },
         "log_level": {
           "default": "INFO",
@@ -2024,19 +2038,6 @@
           "title": "Provide APIs",
           "type": [
             "array",
-            "null"
-          ]
-        },
-        "run_consumer": {
-          "default": false,
-          "description": "Whether the service should run as an event consumer",
-          "examples": [
-            "false",
-            "true"
-          ],
-          "title": "Run Consumer",
-          "type": [
-            "boolean",
             "null"
           ]
         },

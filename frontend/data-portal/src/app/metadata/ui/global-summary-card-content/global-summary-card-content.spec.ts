@@ -9,22 +9,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { screen } from '@testing-library/angular';
-import { GlobalSummaryCardContentComponent } from './global-summary-card-content';
+import { GlobalSummaryCardContent } from './global-summary-card-content';
 
-describe('GlobalSummaryCardContentComponent', () => {
-  let component: GlobalSummaryCardContentComponent;
-  let fixture: ComponentFixture<GlobalSummaryCardContentComponent>;
+describe('GlobalSummaryCardContent', () => {
+  let component: GlobalSummaryCardContent;
+  let fixture: ComponentFixture<GlobalSummaryCardContent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GlobalSummaryCardContentComponent],
+      imports: [GlobalSummaryCardContent],
       providers: [
         RouterModule,
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(GlobalSummaryCardContentComponent);
+    fixture = TestBed.createComponent(GlobalSummaryCardContent);
     fixture.componentRef.setInput('isLoading', false);
     fixture.componentRef.setInput('data', [{ count: 20, value: 'Test item' }]);
     fixture.componentRef.setInput('caption', 'Test');
@@ -37,9 +37,9 @@ describe('GlobalSummaryCardContentComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show the correct data', () => {
+  it('should show the correct data', async () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    fixture.detectChanges();
+    await fixture.whenStable();
     const item = compiled.getElementsByTagName('td');
     expect(item.length).toBe(2);
     expect(item[0].textContent).toBe('20');
@@ -51,9 +51,9 @@ describe('GlobalSummaryCardContentComponent', () => {
     expect(caption.textContent).toBe('Test');
   });
 
-  it('should show the correct table headers', () => {
+  it('should show the correct table headers', async () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    fixture.detectChanges();
+    await fixture.whenStable();
     const item = compiled.getElementsByTagName('th');
     expect(item.length).toBe(2);
     expect(item[0].textContent).toBe('Count');

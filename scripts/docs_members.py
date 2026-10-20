@@ -31,8 +31,8 @@ import argparse
 import json
 import pathlib
 import sys
-
 import tomllib
+
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]

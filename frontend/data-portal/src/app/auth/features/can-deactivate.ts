@@ -7,7 +7,7 @@
 import { inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
-  ConfirmDialogComponent,
+  ConfirmDialog,
   ConfirmDialogData,
 } from '@app/shared/ui/confirm-dialog/confirm-dialog';
 import { Observable, switchMap } from 'rxjs';
@@ -31,8 +31,8 @@ export const canDeactivate = (
 
   const dialog = inject(MatDialog);
 
-  const dialogRef = dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
-    ConfirmDialogComponent,
+  const dialogRef = dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(
+    ConfirmDialog,
     {
       data: {
         title: 'Login incomplete',

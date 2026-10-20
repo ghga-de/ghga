@@ -3,7 +3,7 @@
 [![integration](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml/badge.svg?branch=dev)](https://github.com/ghga-de/ghga/actions/workflows/integration.yaml?query=branch%3Adev)
 [![security-scan](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml/badge.svg)](https://github.com/ghga-de/ghga/actions/workflows/security-scan.yaml)
 [![docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ghga-de.github.io/ghga/)
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
@@ -34,8 +34,10 @@ One polyglot monorepo for GHGA: Python services, libraries, and CLIs (a single `
 
 ## Getting started
 
+If you are new to the repo, read [docs/dev/getting-started.md](docs/dev/getting-started.md) first: how the parts fit together and what to read next.
+
 ```bash
-uv sync                 # or: just sync
+just sync               # install every member with its extras into .venv
 just hooks              # install the git hooks (the dev container does this for you)
 just lint && just test
 ```
@@ -161,6 +163,7 @@ For the click-through equivalent, the Kubernetes extension (`ms-kubernetes-tools
 ### Image profiles
 
 Building and loading are separate steps: the build lands in the local docker store and survives `just down`, the load copies into the kind node and does not.
+After a rebuild, `just up` or `just testbed-up` is enough: both restart exactly the pods whose image changed, and leave the others running.
 
 | profile | build | what you get |
 |---|---|---|
@@ -178,8 +181,8 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 |---|---|
 | Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
 | Parallel work | `wt <branch> [base]`, `wt-rm <name>` |
-| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `service-docs` |
-| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-cert` |
+| Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `service-docs`, `prose [paths]` |
+| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-prod`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
 | Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix`, `logs [name]` |
@@ -188,6 +191,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 
 ## Where to read
 
+- **[docs/dev/getting-started.md](docs/dev/getting-started.md)** — a first read for new developers, with a reading path.
 - **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
 - **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
 - **[docs/adrs/](docs/adrs/)** — the decisions (and why); the [index](docs/README.md#decisions-adrs) carries their status and supersession.

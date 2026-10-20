@@ -19,6 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
@@ -47,11 +48,6 @@ Repository = "https://github.com/ghga-de/ghga"
 where = [
     "src",
 ]
-
-[tool.pytest.ini_options]
-minversion = "9.0"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

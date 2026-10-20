@@ -16,7 +16,10 @@ import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
-import { UserManagerListComponent } from './user-manager-list';
+import { screen } from '@testing-library/angular';
+import { UserManagerList } from './user-manager-list';
+
+const WARN_TITLE = 'There are multiple user accounts with this name and email address.';
 /**
  * Mock ConfigService for testing
  */
@@ -49,9 +52,9 @@ const paginatorDefaults: MatPaginatorDefaultOptions = {
   pageSizeOptions: [10, 25, 50, 100, 250, 500],
 };
 
-describe('UserManagerListComponent', () => {
-  let component: UserManagerListComponent;
-  let fixture: ComponentFixture<UserManagerListComponent>;
+describe('UserManagerList', () => {
+  let component: UserManagerList;
+  let fixture: ComponentFixture<UserManagerList>;
   let mockUserService: MockUserService;
   let mockRouter: MockRouter;
 
@@ -60,7 +63,7 @@ describe('UserManagerListComponent', () => {
     mockRouter = new MockRouter();
 
     await TestBed.configureTestingModule({
-      imports: [UserManagerListComponent],
+      imports: [UserManagerList],
       providers: [
         { provide: UserService, useValue: mockUserService },
         { provide: ConfigService, useClass: MockConfigService },
@@ -71,7 +74,7 @@ describe('UserManagerListComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UserManagerListComponent);
+    fixture = TestBed.createComponent(UserManagerList);
     component = fixture.componentInstance;
   });
 
@@ -79,17 +82,17 @@ describe('UserManagerListComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display loading message when users are loading', () => {
+  it('should display loading message when users are loading', async () => {
     mockUserService.users.isLoading.mockReturnValue(true);
-    fixture.detectChanges();
+    await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Loading users...');
   });
 
-  it('should display "No users found" when no users exist', () => {
+  it('should display "No users found" when no users exist', async () => {
     mockUserService.users.isLoading.mockReturnValue(false);
     mockUserService.users.value.mockReturnValue([]);
-    fixture.detectChanges();
+    await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('No users found');
 
@@ -103,7 +106,7 @@ describe('UserManagerListComponent', () => {
     expect(component.source.data).toEqual([]);
   });
 
-  it('should have correct default pagination settings', () => {
+  it('should have correct default pagination settings', async () => {
     const usersWithVariousTitles: Partial<DisplayUser>[] = [];
     for (let i = 0; i < 15; i++) {
       usersWithVariousTitles.push({
@@ -118,7 +121,7 @@ describe('UserManagerListComponent', () => {
     mockUserService.users.value.mockReturnValue(
       usersWithVariousTitles as unknown as DisplayUser[],
     );
-    fixture.detectChanges();
+    await fixture.whenStable();
     const paginatorDebugEl = fixture.debugElement.query(By.directive(MatPaginator));
     const paginator = paginatorDebugEl.componentInstance as MatPaginator;
     const defaults = TestBed.inject(MAT_PAGINATOR_DEFAULT_OPTIONS);
@@ -189,5 +192,23 @@ describe('UserManagerListComponent', () => {
     const mockUser = { id: '123', name: 'Test User' } as unknown as DisplayUser;
     component.viewDetails(mockUser);
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/user-manager', '123']);
+  });
+
+  it('should mark only the ambiguous users with a warning', async () => {
+    const users: Partial<DisplayUser>[] = ['u1', 'u2', 'u3'].map((id) => ({
+      id,
+      email: `${id}@test.dev`,
+      roles: [],
+      displayName: `User ${id}`,
+      roleNames: [],
+      sortName: `User ${id}`,
+    }));
+    mockUserService.users.value.mockReturnValue(users as unknown as DisplayUser[]);
+    mockUserService.ambiguousUserIds.mockReturnValue(new Set(['u2']));
+    await fixture.whenStable();
+
+    const markers = screen.getAllByTitle(WARN_TITLE);
+    expect(markers).toHaveLength(1);
+    expect(markers[0].closest('tr')).toHaveTextContent('u2@test.dev');
   });
 });

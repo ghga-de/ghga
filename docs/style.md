@@ -22,7 +22,7 @@ Commit messages, branch names and pull request titles follow the [conventions](c
   The word count is not the test: if you have to read your own sentence twice, split it.
 - **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the same page").
   Name the literal action instead, and the literal thing: base, not substrate; required, not load-bearing.
-- **"X, not Y" only when the reader would assume Y.**
+- **"X, not Y" only when Y is what the reader would assume.**
   Otherwise state X alone.
 - **Every prohibition names the alternative.**
   "Don't X" leaves the reader guessing; say what to do instead.
@@ -40,6 +40,8 @@ Commit messages, branch names and pull request titles follow the [conventions](c
   What changed — incidents, dates, "this used to be X" — belongs in the commit message.
 - **Pull request descriptions** are a few short paragraphs on what changed, why, and what to look at; no headings for a small change.
   Detail that does not fit goes in the commit body.
+- **`just prose` flags AI tells** in the Markdown and Python files you changed: filler phrases, shell nouns, and figurative verbs such as "lands in" or "surfaces".
+  It only warns; install [vale](https://vale.sh/docs/install) first, since the dev container lacks it.
 
 ## Markdown
 
@@ -63,7 +65,7 @@ Agents read these files as well as people, so every extra paragraph costs contex
 | Pull request description | Up to 3 short paragraphs, about 150 words |
 | Commit message body | 3 to 5 bullets, per the [conventions](conventions.md#names-branches-prs-commits) |
 | Code comment | One line, a few at most |
-| ADR | About 500 words; the Summary alone about 80. Long analysis goes into an architecture document that the ADR links to |
+| ADR | About 500 words; the Summary alone about 120, at most 150. Long analysis goes into an architecture document that the ADR links to |
 | Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture documents instead of restating them |
 | Architecture document | As long as the subject needs; open with a summary of up to 10 lines and use headings, so a reader can load a single section |
 
@@ -127,7 +129,7 @@ Status values, the set [MADR](https://adr.github.io/madr/) uses:
 
 | Status | Meaning |
 |---|---|
-| `proposed` | Open for review; not binding yet. Set to `accepted` in the pull request before it merges. |
+| `proposed` | Open for review; not binding yet. A new ADR starts here even when the team has already agreed. Set to `accepted` in the pull request before it merges. |
 | `accepted` | Binding. |
 | `rejected` | Considered and turned down; kept for the reasoning. |
 | `deprecated` | No longer binding, and nothing replaces it. |

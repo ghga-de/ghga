@@ -7,13 +7,7 @@
   </p>
   <mat-form-field class="w-full">
     <mat-label>Confirm user email</mat-label>
-    <input
-      type="text"
-      matInput
-      class="w-full"
-      [(ngModel)]="userInput"
-      (input)="onInput($event)"
-    />
+    <input type="text" matInput class="w-full" [formField]="emailField" />
     <mat-error>{{
       deletionError() ? 'User deletion failed. Please try again.' : ''
     }}</mat-error>

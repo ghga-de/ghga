@@ -28,11 +28,12 @@ RUN pnpm build
 # prepare runtime artifacts: base package.json with just name and version,
 # js-yaml (symlinks resolved) for runtime, and a group-writable config.js
 # (writable at runtime under any UID)
-# PLATFORM_VERSION, when given, overrides the package.json version so the
-# app reports the platform release it was built for (inert when unset)
-ARG PLATFORM_VERSION=""
+# PLATFORM_VERSION replaces the package.json version, which is the placeholder
+# 0.0.0 (ADR-0046), so the app reports the platform release it was built for;
+# the default marks dev builds, as in docker/Dockerfile
+ARG PLATFORM_VERSION=0.0.0+dev
 RUN jq --arg v "${PLATFORM_VERSION}" \
-      '{name, version: (if $v == "" then .version else $v end), type}' \
+      '{name, version: $v, type}' \
       package.json > ./package.json.run \
  && mkdir -p /tmp/runtime-deps \
  && cp -rL node_modules/js-yaml /tmp/runtime-deps/ \

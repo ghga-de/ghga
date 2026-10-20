@@ -15,19 +15,17 @@
     </p>
     <mat-form-field class="w-full">
       <input
-        [(ngModel)]="emailInput"
+        [formField]="confirmForm.email"
         matInput
         class="w-full"
-        (input)="onInput($event, 'email')"
         placeholder="Confirm email of user"
       />
     </mat-form-field>
     <mat-form-field class="w-full">
       <input
-        [(ngModel)]="datasetInput"
+        [formField]="confirmForm.dataset"
         matInput
         class="w-full"
-        (input)="onInput($event, 'dataset')"
         placeholder="Confirm dataset accession"
       />
     </mat-form-field>

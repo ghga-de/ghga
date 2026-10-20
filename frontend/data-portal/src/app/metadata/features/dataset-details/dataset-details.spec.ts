@@ -10,7 +10,7 @@ import { datasetDetails, datasetInformation } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { DatasetDetailsComponent } from './dataset-details';
+import { DatasetDetailsPage } from './dataset-details';
 
 /**
  * Mock the config service as needed by the dataset details component
@@ -39,7 +39,8 @@ import { AuthService } from '@app/auth/services/auth';
 import { IvaService } from '@app/ivas/services/iva';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { ConfigService } from '@app/shared/services/config';
-import { screen } from '@testing-library/angular';
+import { screen, within } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 
 /**
  * Mock a basic version of the auth service
@@ -82,13 +83,13 @@ class MockDatasetInformationService {
   loadDatasetInformation = () => undefined;
 }
 
-describe('DatasetDetailsComponent', () => {
-  let component: DatasetDetailsComponent;
-  let fixture: ComponentFixture<DatasetDetailsComponent>;
+describe('DatasetDetailsPage', () => {
+  let component: DatasetDetailsPage;
+  let fixture: ComponentFixture<DatasetDetailsPage>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DatasetDetailsComponent],
+      imports: [DatasetDetailsPage],
       providers: [
         { provide: ConfigService, useClass: MockConfigService },
         { provide: DatasetInformationService, useClass: MockDatasetInformationService },
@@ -99,14 +100,14 @@ describe('DatasetDetailsComponent', () => {
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     })
-      .overrideComponent(DatasetDetailsComponent, {
+      .overrideComponent(DatasetDetailsPage, {
         set: {
           providers: [{ provide: MetadataService, useClass: MockMetadataService }],
         },
       })
       .compileComponents();
 
-    fixture = TestBed.createComponent(DatasetDetailsComponent);
+    fixture = TestBed.createComponent(DatasetDetailsPage);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('id', datasetDetails.accession);
     await fixture.whenStable();
@@ -150,5 +151,15 @@ describe('DatasetDetailsComponent', () => {
   it('should show dataset description', () => {
     const expected = /^Test dataset with some details for testing\./;
     expect(screen.queryByText(expected)).not.toBeNull();
+  });
+
+  it('should show a publication without DOI and no DOI line for it', async () => {
+    await userEvent.click(screen.getByRole('tab', { name: /Publications/ }));
+    await fixture.whenStable();
+    const title = await screen.findByText('Test publication without DOI');
+    const publication = title.closest('h2')?.parentElement as HTMLElement;
+    expect(within(publication).getByText(/Test author/)).toBeInTheDocument();
+    expect(within(publication).queryByText('DOI:')).toBeNull();
+    expect(within(publication).queryByText('View Publication')).toBeNull();
   });
 });

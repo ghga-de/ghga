@@ -16,6 +16,6 @@
 """DB migration logic"""
 
 from .definitions import V2Migration
-from .entry import run_db_migrations
+from .entry import MIGRATION_MAP
 
-__all__ = ["V2Migration", "run_db_migrations"]
+__all__ = ["MIGRATION_MAP", "V2Migration"]

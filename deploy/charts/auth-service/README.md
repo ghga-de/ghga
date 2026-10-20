@@ -23,6 +23,7 @@ for the full set of configurable values.
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
 | `config.auth_topic` | The name of the topic containing auth-related events. | `null` |
 | `config.second_factor_recreated_type` | The event type for recreation of the second factor for authentication | `null` |
@@ -54,7 +55,6 @@ for the full set of configurable values.
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.db_name` | the name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `"auth-db"` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |
 | `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
 | `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
@@ -102,7 +102,6 @@ for the full set of configurable values.
 | `config.allow_read_paths` | paths that are public or use their own authentication mechanism | `["/.well-known/*", "/service-logo.png"]` |
 | `config.allow_write_paths` | paths for writing that use their own authentication mechanism | `[]` |
 | `config.provide_apis` | Which REST APIs should be provided. | `[]` |
-| `config.run_consumer` | Whether the service should run as an event consumer | `false` |
 | `config.add_as_data_stewards` | A list of of data stewards to seed the claims repository with. All other data steward claims will be removed. This is only used with the claims API. | `[]` |
 | `config.oidc_authority_url` | external OIDC authority URL used by the auth adapter | `"https://login.aai.lifescience-ri.eu/oidc/"` |
 | `config.oidc_issuer` | external OIDC issuer for access tokens used by the auth adapter (URL format with or without end slash, determined using OIDC discovery if empty) | `"https://login.aai.lifescience-ri.eu/oidc/"` |
@@ -116,10 +115,11 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"auth-service"` |
-| `executableArgs` |  | `[]` |
+| `executableArgs` |  | `["run-rest"]` |
 | `deployment.enabled` | Render the Deployment resource; disable for Job/CronJob-only charts | `true` |
 | `job.enabled` | Render a one-off Job resource alongside (or instead of) the Deployment | `false` |
 | `cronjobs.default.enabled` |  | `false` |
@@ -139,11 +139,11 @@ for the full set of configurable values.
 | `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
 | `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
-| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
+| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `true` |
 | `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
 | `migrationInitContainer.imagePullPolicy` | imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset | `null` |
-| `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `""` |
-| `migrationInitContainer.executableArgs` |  | `[]` |
+| `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `"auth-service"` |
+| `migrationInitContainer.executableArgs` |  | `["migrate-db"]` |
 | `migrationInitContainer.env` | Extra env vars for just the migration init container | `[]` |
 | `migrationInitContainer.resources` |  | `{}` |
 | `migrationInitContainer.volumeMounts` | Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets) | `[]` |
@@ -170,7 +170,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |

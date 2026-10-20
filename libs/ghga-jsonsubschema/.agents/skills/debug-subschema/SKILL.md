@@ -17,7 +17,7 @@ s2 = {"type": "string"}
 print(is_subschema(s1, s2))
 ```
 
-Run it with `uv run python <script>` (or `uv run python -c "..."`).
+Run it inside the dev container with `uv run python <script>` (or `uv run python -c "..."`); no `just` recipe runs an ad-hoc script.
 The CLI alternative for existing files: `uv run jsonsubschema lhs.json rhs.json`.
 
 ## Inspect the pipeline stage by stage
@@ -41,7 +41,7 @@ print(type(e), dict(e))  # JSONschema subclasses dict
 ## Things to know while reading `_checkers.py`
 
 - `JSONschema` objects are dicts with behavior; `JSONbot` (uninhabited / bottom) and `JSONtop` (anything / top) are special.
-  `obj == False` / `obj == True` comparisons are **intentional** (overridden `__eq__`) — don't rewrite them.
+  Both override `__eq__` and `__bool__`, so a schema-valued slot is tested with `is_top()` / `is_bot()`, never with `==`, `is` or truthiness.
 - Numeric ranges use the `portion` interval library; string patterns are compared as DFAs via `greenery.parse`.
   Wrong string verdicts are often a regex-translation issue in `_utils.py` (e.g. length bounds → regex).
 - Uninhabited detection runs on every construction via `UninhabitedMeta`; `set_warn_uninhabited(True)` makes it warn.

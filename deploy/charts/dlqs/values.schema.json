@@ -16,6 +16,12 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
+        },
+        "localImageIds": {
+          "type": "object",
+          "description": "Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
@@ -179,7 +185,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Run a dedicated init container for DB migrations before the main container starts",
-          "default": false
+          "default": true
         },
         "image": {
           "type": "string",
@@ -193,11 +199,13 @@
         "executable": {
           "type": "string",
           "description": "Executable name and arguments run inside the migration init container",
-          "default": ""
+          "default": "dlqs"
         },
         "executableArgs": {
           "type": "array",
-          "default": []
+          "default": [
+            "migrate-db"
+          ]
         },
         "env": {
           "type": "array",
@@ -366,13 +374,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -934,25 +946,6 @@
             "null"
           ]
         },
-        "mongo_timeout": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior).",
-          "examples": [
-            300,
-            600,
-            null
-          ],
-          "title": "Mongo Timeout"
-        },
         "migration_max_wait_sec": {
           "anyOf": [
             {
@@ -971,6 +964,25 @@
             3600
           ],
           "title": "Migration Max Wait Sec"
+        },
+        "mongo_timeout": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior).",
+          "examples": [
+            300,
+            600,
+            null
+          ],
+          "title": "Mongo Timeout"
         },
         "kafka_servers": {
           "description": "A list of connection strings to connect to Kafka bootstrap servers.",

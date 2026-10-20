@@ -74,6 +74,11 @@ def test_openapi_spec():
 
     assert info["title"] == "Metadata Artifact Search Service"
     assert info["license"] == {"name": "Apache-2.0"}
+    # the spec normalises the email, so check what the app was given
+    assert app.contact == {
+        "name": "German Human Genome Phenome Archive (GHGA)",
+        "email": "contact@ghga.de",
+    }
 
 
 async def test_search_options(joint_fixture: JointFixture):

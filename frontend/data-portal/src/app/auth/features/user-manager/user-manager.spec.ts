@@ -11,7 +11,7 @@ import { provideNativeDateAdapter } from '@angular/material/core';
 import { UserService } from '@app/auth/services/user';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
-import { UserManagerComponent } from './user-manager';
+import { UserManager } from './user-manager';
 
 /**
  * Mock ConfigService for testing
@@ -41,14 +41,14 @@ class MockUserService {
   ambiguousUserIds = () => new Set();
 }
 
-describe('UserManagerComponent', () => {
-  let component: UserManagerComponent;
-  let fixture: ComponentFixture<UserManagerComponent>;
+describe('UserManager', () => {
+  let component: UserManager;
+  let fixture: ComponentFixture<UserManager>;
   let userService: MockUserService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UserManagerComponent],
+      imports: [UserManager],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -59,7 +59,7 @@ describe('UserManagerComponent', () => {
     }).compileComponents();
 
     userService = TestBed.inject(UserService) as unknown as MockUserService;
-    fixture = TestBed.createComponent(UserManagerComponent);
+    fixture = TestBed.createComponent(UserManager);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

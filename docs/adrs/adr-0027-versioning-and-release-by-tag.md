@@ -3,7 +3,7 @@ status: accepted
 date: 2026-06-30
 supersedes: [ADR-0024]
 tags: [release, deploy]
-related: [ADR-0026, ADR-0033, ADR-0038]
+related: [ADR-0026, ADR-0033, ADR-0038, ADR-0046]
 ---
 
 # ADR-0027 — Releases: platform lockstep and a PyPI lane
@@ -38,6 +38,7 @@ Each member's markers put it in one of two lanes ([ADR-0033](adr-0033-capability
 **Platform lane.**
 Services, the front end, the charts, `metldata` and `ghga-datasteward-kit` share one version.
 A `ghga/X.Y.Z` tag builds every image and chart from the tagged commit and stamps them with that version.
+The tag is the only place that version is kept; members declare a placeholder ([ADR-0046](adr-0046-platform-version-from-tags.md)).
 Images embed internal libraries from source at that commit, never from PyPI.
 The version is operator-oriented semver: a major release means operators must act, a minor one adds features, a patch fixes, and the series continues from 15.3, the version the charts carried at cutover.
 `ghga-datasteward-kit` is not published; data stewards run it from a clone of the tag.

@@ -12,8 +12,8 @@ import { MatNavList } from '@angular/material/list';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NavigationStart, Router, RouterLink } from '@angular/router';
-import { AccountButtonComponent } from '../../../auth/features/account-button/account-button';
-import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-header-nav-buttons';
+import { AccountButton } from '../../../auth/features/account-button/account-button';
+import { SiteHeaderNavButtons } from '../site-header-nav-buttons/site-header-nav-buttons';
 
 /**
  * This is the site header component
@@ -27,14 +27,14 @@ import { SiteHeaderNavButtonsComponent } from '../site-header-nav-buttons/site-h
     MatButtonModule,
     MatIconModule,
     RouterLink,
-    AccountButtonComponent,
+    AccountButton,
     MatSidenavModule,
-    SiteHeaderNavButtonsComponent,
+    SiteHeaderNavButtons,
     MatRippleModule,
   ],
   styleUrl: './site-header.scss',
 })
-export class SiteHeaderComponent {
+export class SiteHeader {
   #router = inject(Router);
   @ViewChild('sidenav') sidenav: MatSidenav | undefined;
 

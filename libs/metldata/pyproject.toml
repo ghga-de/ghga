@@ -20,12 +20,12 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 name = "metldata"
-version = "4.2.1"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "metldata - A framework for handling metadata based on ETL, CQRS, and event sourcing."
 license = "Apache-2.0"
 dependencies = [
-    "hexkit[akafka,mongodb] >= 9.0, < 10",
-    "ghga-service-commons[api,auth] >= 8.0, < 9",
+    "hexkit[akafka,mongodb] >= 10.0, < 11",
+    "ghga-service-commons[api,auth] >= 9.0, < 10",
     "ghga-event-schemas ~= 13.0.0",
     "typer >= 0.25",
     "linkml >= 1.8",
@@ -46,11 +46,6 @@ metldata = "metldata.__main__:run"
 where = [
     "src",
 ]
-
-[tool.pytest.ini_options]
-minversion = "8.4"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

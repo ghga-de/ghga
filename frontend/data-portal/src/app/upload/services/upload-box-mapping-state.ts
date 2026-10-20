@@ -23,7 +23,7 @@ export interface MappingSnapshot {
  * Instantiated lazily — only created when a data steward opens the mapping tool.
  */
 @Service()
-export class UploadBoxMappingStateService {
+export class UploadBoxMappingStore {
   readonly #snapshots = signal<Map<string, MappingSnapshot>>(new Map());
 
   /**

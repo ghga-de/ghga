@@ -14,9 +14,9 @@ import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
-import { NewIvaDialogComponent } from '../new-iva-dialog/new-iva-dialog';
-import { VerificationDialogComponent } from '../verification-dialog/verification-dialog';
+import { Notifier } from '@app/shared/services/notification';
+import { NewIvaDialog } from '../new-iva-dialog/new-iva-dialog';
+import { VerificationDialog } from '../verification-dialog/verification-dialog';
 
 /**
  * Component to manage the list of IVAs belonging to the current user
@@ -33,11 +33,11 @@ import { VerificationDialogComponent } from '../verification-dialog/verification
   providers: [IvaTypePipe],
   templateUrl: './user-iva-list.html',
 })
-export class UserIvaListComponent implements OnInit {
+export class UserIvaList implements OnInit {
   protected readonly IvaState = IvaState;
   #dialog = inject(MatDialog);
   #confirm = inject(ConfirmationService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #ivaService = inject(IvaService);
 
   #ivas = this.#ivaService.userIvas;
@@ -132,7 +132,7 @@ export class UserIvaListComponent implements OnInit {
   enterVerificationCode(iva: Iva): void {
     if (iva.state === IvaState.CodeTransmitted) {
       const address = this.#ivaAddress(iva);
-      this.#dialog.open(VerificationDialogComponent, {
+      this.#dialog.open(VerificationDialog, {
         data: { id: iva.id, address },
       });
     } else {
@@ -222,7 +222,7 @@ export class UserIvaListComponent implements OnInit {
    * Enter data to create a new IVA
    */
   enterNew(): void {
-    const dialogRef = this.#dialog.open(NewIvaDialogComponent);
+    const dialogRef = this.#dialog.open(NewIvaDialog);
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         const { type, value } = result;

@@ -146,6 +146,7 @@ user_guide:
         href: arch_concepts/index.qmd
       - arch_concepts/hexagonal_arch.qmd
       - arch_concepts/triple_hexagonal_arch.qmd
+      - arch_concepts/dependency_injection.qmd
       - arch_concepts/dao_pattern.qmd
       - arch_concepts/event_driven_arch.qmd
       - arch_concepts/dlq.qmd
@@ -287,11 +288,14 @@ reference:
       - protocols.dao.ResourceNotFoundError
       - protocols.dao.ResourceAlreadyExistsError
       - protocols.dao.UniqueConstraintViolationError
+      - protocols.dao.PreconditionFailedError
       - protocols.dao.FindError
-      - protocols.dao.InvalidFindMappingError
+      - protocols.dao.InvalidMappingError
       - protocols.dao.MultipleHitsFoundError
       - protocols.dao.NoHitsFoundError
       - protocols.dao.DbTimeoutError
+      - protocols.dao.race_condition_retries
+      - protocols.dao.RaceConditionAttempt
 
   - title: Protocols — Storage
     desc: Ports for key-value and object storage

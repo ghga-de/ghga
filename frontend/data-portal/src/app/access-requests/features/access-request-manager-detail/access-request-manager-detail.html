@@ -120,9 +120,7 @@
                 } @else if (userExtId.error() || !userExtId.value()) {
                   <em class="text-red-600">could not be retrieved</em>
                 } @else {
-                  <code class="text-base"
-                    >{{ userExtId.value()!.split('@', 2).join('\u200B@') }}
-                  </code>
+                  <code class="text-base">{{ userExtIdText() }}</code>
                 }
               </span>
             </p>
@@ -213,8 +211,8 @@
                 }
               </label>
               <mat-radio-group
-                [(ngModel)]="selectedIvaIdRadioButton"
-                (ngModelChange)="saveIva()"
+                [formField]="ivaField"
+                (change)="saveIva()"
                 id="iva-selection-group"
               >
                 <div

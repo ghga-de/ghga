@@ -7,7 +7,7 @@
 import { inject, Service } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 // eslint-disable-next-line boundaries/dependencies
-import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog';
+import { ConfirmDialog } from '../ui/confirm-dialog/confirm-dialog';
 
 /**
  * Service providing confirmation dialogs
@@ -48,7 +48,7 @@ export class ConfirmationService {
     maxWidth?: string;
     callback?: (confirmed: boolean | undefined) => void;
   }): void {
-    const dialogRef = this.#dialog.open(ConfirmDialogComponent, {
+    const dialogRef = this.#dialog.open(ConfirmDialog, {
       data: {
         title,
         message,

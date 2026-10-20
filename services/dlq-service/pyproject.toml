@@ -9,18 +9,18 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "dlqs"
-version = "4.1.1"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "DLQ Service - a service to manage the dead letter queue for Kafka events"
 license = "Apache-2.0"
 dependencies = [
@@ -39,11 +39,6 @@ dlqs = "dlqs.__main__:cli"
 where = [
     "src",
 ]
-
-[tool.pytest.ini_options]
-minversion = "9.0"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

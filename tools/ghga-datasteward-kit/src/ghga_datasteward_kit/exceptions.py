@@ -24,3 +24,20 @@ class UnknownStorageAliasError(Exception):
             f"Unknown storage alias '{storage_alias}'. Please check your configuration or contact support."
         )
         self.storage_alias = storage_alias
+
+
+class AmendmentAbortedError(Exception):
+    """Raised when the user declined to apply an amendment."""
+
+    def __init__(self):
+        super().__init__("Amendment aborted. Nothing was changed.")
+
+
+class AmendmentStatusError(Exception):
+    """Raised when a submission cannot be amended because of its status."""
+
+    def __init__(self, *, submission_id: str, current_status: str):
+        super().__init__(
+            f"The submission '{submission_id}' has the status '{current_status}' but"
+            " must be 'completed' to be amended."
+        )

@@ -19,18 +19,20 @@ import base64
 import inspect
 import json
 from collections import Counter
+from collections.abc import Callable
+from typing import Any
 from uuid import uuid4
 
 import httpx2
 import pytest
-from opentelemetry.instrumentation.httpx import HTTPX2ClientInstrumentor
 from opentelemetry.trace import SpanKind
 
-from dcs import main
 from dcs.adapters.outbound.http.api_calls import get_configured_httpx_client
 from dcs.adapters.outbound.http.secrets import SecretsClient
+from dcs.cli import cli
 from dcs.inject import get_persistent_publisher
 from ghga_event_schemas.pydantic_ import FileInternallyRegistered
+from ghga_service_commons.http.mock_api import instrumentable
 from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
     otel_provider_fixture,
@@ -238,33 +240,26 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     otel,  # first, so OpenTelemetry is configured before the fixtures below
     populated_fixture: PopulatedFixture,
 ):
-    """The outbound EKSS call is autoinstrumented at the client level.
+    """The outbound EKSS call records the autoinstrumented httpx2 client span.
 
-    The global httpx2 autoinstrumentation only wraps the real network transport, which
-    the HTTP mock swaps out - so the test above cannot see the outbound span. Here the
-    client instance is instrumented directly, the same wrapping hexkit's
-    autoinstrumentation applies to the real transport in production, which lets the
-    span surface even against the mock.
+    Autoinstrumentation only wraps real transports, so the mock is served through the
+    opt-in `instrumentable` one.
     """
     config = populated_fixture.joint_fixture.config
     receiver_public_key = base64.b64encode(b"test-public-key").decode()
     ekss = EkssApiMock(config=config)
 
     async with get_configured_httpx_client(
-        config=config, base_transport=ekss.as_transport(), mount_env_proxies=False
+        config=config,
+        base_transport=instrumentable(ekss.as_transport()),
+        mount_env_proxies=False,
     ) as client:
-        # the instrumentor targets httpx2, but upstream annotates (un)instrument_client
-        # against httpx 0.x client types, so a real httpx2 client never matches
-        HTTPX2ClientInstrumentor.instrument_client(client)  # type: ignore[arg-type]
-        try:
-            secrets_client = SecretsClient(config=config, httpx_client=client)
+        secrets_client = SecretsClient(config=config, httpx_client=client)
 
-            otel.reset()
-            envelope = await secrets_client.get_envelope(
-                secret_id=SECRET_ID, receiver_public_key=receiver_public_key
-            )
-        finally:
-            HTTPX2ClientInstrumentor.uninstrument_client(client)  # type: ignore[arg-type]
+        otel.reset()
+        envelope = await secrets_client.get_envelope(
+            secret_id=SECRET_ID, receiver_public_key=receiver_public_key
+        )
 
     assert envelope  # the mocked EKSS really answered
 
@@ -347,23 +342,29 @@ async def test_download_bucket_cleaner_records_spans(
     )
 
 
-async def test_long_running_entrypoints_configure_otel():
-    """An entrypoint that skips it emits no traces at all.
+def configures_otel(command: Callable[..., Any]) -> bool:
+    """Tell whether a command runs a coroutine that calls `configure_opentelemetry`.
 
-    `migrate_db` is excluded by convention: a one-off command, not a service.
+    It reads the names the code refers to, since running the command starts the service.
     """
-    excluded = {"migrate_db"}
-    entrypoints = {
-        name: obj
-        for name, obj in vars(main).items()
-        if inspect.iscoroutinefunction(obj) and obj.__module__ == main.__name__
-    }
-    assert entrypoints, "No entrypoints found - has main.py been restructured?"
-
-    missing = sorted(
-        name
-        for name, func in entrypoints.items()
-        if name not in excluded
-        and "configure_opentelemetry" not in inspect.getsource(func)
+    return any(
+        "configure_opentelemetry" in inspect.getclosurevars(func).globals
+        for func in inspect.getclosurevars(command).globals.values()
+        if inspect.iscoroutinefunction(func)
     )
-    assert not missing, f"Entrypoints not configuring OpenTelemetry: {missing}"
+
+
+async def test_long_running_commands_configure_otel():
+    """A command that skips it emits no traces at all.
+
+    `migrate-db` is excluded by convention: a one-off command, not a service.
+    """
+    commands = {
+        info.name or info.callback.__name__: info.callback
+        for info in cli.registered_commands
+        if info.callback and info.name != "migrate-db"
+    }
+    missing = sorted(
+        name for name, callback in commands.items() if not configures_otel(callback)
+    )
+    assert not missing, f"Commands not configuring OpenTelemetry: {missing}"

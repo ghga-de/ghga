@@ -16,6 +16,12 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
+        },
+        "localImageIds": {
+          "type": "object",
+          "description": "Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
@@ -179,7 +185,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Run a dedicated init container for DB migrations before the main container starts",
-          "default": false
+          "default": true
         },
         "image": {
           "type": "string",
@@ -368,13 +374,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -880,6 +890,25 @@
             "integer",
             "null"
           ]
+        },
+        "migration_max_wait_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+          "examples": [
+            null,
+            300,
+            600,
+            3600
+          ],
+          "title": "Migration Max Wait Sec"
         },
         "enable_opentelemetry": {
           "default": false,
@@ -1477,25 +1506,6 @@
             null
           ],
           "title": "Mongo Timeout"
-        },
-        "migration_max_wait_sec": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
-          "examples": [
-            null,
-            300,
-            600,
-            3600
-          ],
-          "title": "Migration Max Wait Sec"
         },
         "data_hub_auth_keys": {
           "additionalProperties": {

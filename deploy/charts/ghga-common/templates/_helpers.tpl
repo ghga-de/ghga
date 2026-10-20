@@ -66,3 +66,16 @@
 {{- end }}
 {{- dict "envVars" $envVars | toYaml -}}
 {{- end -}}
+
+{{/*
+Render a container probe from its values block, minus `enabled`. A probe takes one
+handler, so when the values add another handler next to the default one, the
+default (`.handler`) is dropped rather than rendered alongside it.
+*/}}
+{{- define "ghga-common.container-probe" -}}
+{{- $probe := omit .probe "enabled" -}}
+{{- if gt (len (pick $probe "httpGet" "tcpSocket" "exec" "grpc")) 1 -}}
+{{- $probe = omit $probe .handler -}}
+{{- end -}}
+{{- include "common.tplvalues.render" (dict "value" $probe "context" .context) -}}
+{{- end -}}

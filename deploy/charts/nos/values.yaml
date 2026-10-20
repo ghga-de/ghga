@@ -7,10 +7,12 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: nos
-executableArgs: []
+executableArgs:
+- consume-events
 deployment:
   enabled: true
 job:
@@ -37,11 +39,12 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
-  executable: ""
-  executableArgs: []
+  executable: nos
+  executableArgs:
+  - migrate-db
   env: []
   resources: {}
   volumeMounts: []
@@ -73,8 +76,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -219,6 +223,7 @@ config:
   kafka_enable_dlq: true
   db_version_collection: "nosDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: nos
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

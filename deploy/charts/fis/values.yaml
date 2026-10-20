@@ -7,6 +7,7 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: fis
@@ -38,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: fis
@@ -76,8 +77,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -178,6 +180,7 @@ config:
   mongo_dsn:
   db_version_collection: "fisDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
   enable_opentelemetry: false
   ekss_api_url: http://encryption-key-store:8080
 configPrefix: fis

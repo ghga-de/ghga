@@ -14,7 +14,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 import {
   ResearchDataUploadBox,
@@ -56,9 +56,9 @@ interface UploadBoxRow extends ResearchDataUploadBox {
   providers: [providePaginatorIntl('Upload boxes per page')],
   templateUrl: './upload-box-manager-list.html',
 })
-export class UploadBoxManagerListComponent {
+export class UploadBoxManagerList {
   #uploadBoxService = inject(UploadBoxService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #router = inject(Router);
 
   #uploadBoxResource = this.#uploadBoxService.boxRetrievalResults;

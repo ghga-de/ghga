@@ -1,4 +1,4 @@
-# DevOps Production Preparation 1 (Honey Bee)
+# DevOps Production Preparation (Honey Bee)
 
 **Epic Type:** Implementation Epic
 

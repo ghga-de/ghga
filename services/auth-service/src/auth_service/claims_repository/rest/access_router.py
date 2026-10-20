@@ -143,10 +143,10 @@ async def get_download_access_grants(  # noqa: PLR0913
     grants: list[DownloadGrant] = []
     users: dict[UUID, User | None] = {}  # user cache
 
-    mapping = create_controlled_access_filter(
+    filter_ = create_controlled_access_filter(
         user_id=user_id, iva_id=iva_id, dataset_id=dataset_id
     )
-    async for claim in claim_dao.find_all(mapping=mapping):
+    async for claim in claim_dao.find_all(filter_=filter_):
         if claim.revocation_date:
             continue  # revoked claims should be considered deleted as grants
         if valid is not None and is_valid_claim(claim) != valid:
@@ -212,10 +212,10 @@ async def revoke_download_access_grant(
     # internal service, authorization without token via service mesh
 ) -> Response:
     """Revoke a download access grants."""
-    mapping = cast(dict[str, str | UUID4 | None], create_controlled_access_filter())
-    mapping.update({"id": grant_id, "revocation_date": None})
+    filter_ = cast(dict[str, str | UUID4 | None], create_controlled_access_filter())
+    filter_.update({"id": grant_id, "revocation_date": None})
     try:
-        claim = await claim_dao.find_one(mapping=mapping)
+        claim = await claim_dao.find_one(filter_=filter_)
     except NoHitsFoundError as error:
         raise download_grant_not_found_error from error
 
@@ -352,8 +352,8 @@ async def check_download_access(
 
     valid_until: UTCDatetime | None = None
     # run through all controlled access grants for the user
-    mapping = create_controlled_access_filter(user_id=user_id)
-    async for claim in claim_dao.find_all(mapping=mapping):
+    filter_ = create_controlled_access_filter(user_id=user_id)
+    async for claim in claim_dao.find_all(filter_=filter_):
         # check whether the claim is valid and for a dataset
         if not (
             is_valid_claim(claim)
@@ -415,9 +415,9 @@ async def get_datasets_with_download_access(
         raise user_not_found_error
 
     dataset_id_to_end_date: dict[str, UTCDatetime] = {}
-    mapping = create_controlled_access_filter(user_id=user_id)
+    filter_ = create_controlled_access_filter(user_id=user_id)
     # run through all controlled access grants for the user
-    async for claim in claim_dao.find_all(mapping=mapping):
+    async for claim in claim_dao.find_all(filter_=filter_):
         # consider only valid controlled access grants for the user
         if not (
             is_valid_claim(claim)
@@ -511,8 +511,8 @@ async def get_upload_access_grants(  # noqa: PLR0913
     grants: list[UploadGrant] = []
     users: dict[UUID, User | None] = {}  # user cache
 
-    mapping = create_upload_access_filter(user_id=user_id, iva_id=iva_id, box_id=box_id)
-    async for claim in claim_dao.find_all(mapping=mapping):
+    filter_ = create_upload_access_filter(user_id=user_id, iva_id=iva_id, box_id=box_id)
+    async for claim in claim_dao.find_all(filter_=filter_):
         if claim.revocation_date:
             continue  # revoked claims should be considered deleted as grants
         if valid is not None and is_valid_claim(claim) != valid:
@@ -578,10 +578,10 @@ async def revoke_upload_access_grant(
     # internal service, authorization without token via service mesh
 ) -> Response:
     """Revoke an upload access grant."""
-    mapping = cast(dict[str, str | UUID4 | None], create_upload_access_filter())
-    mapping.update({"id": grant_id, "revocation_date": None})
+    filter_ = cast(dict[str, str | UUID4 | None], create_upload_access_filter())
+    filter_.update({"id": grant_id, "revocation_date": None})
     try:
-        claim = await claim_dao.find_one(mapping=mapping)
+        claim = await claim_dao.find_one(filter_=filter_)
     except NoHitsFoundError as error:
         raise upload_grant_not_found_error from error
 
@@ -716,8 +716,8 @@ async def check_upload_access(
 
     valid_until: UTCDatetime | None = None
     # run through all upload access grants for the user
-    mapping = create_upload_access_filter(user_id=user_id)
-    async for claim in claim_dao.find_all(mapping=mapping):
+    filter_ = create_upload_access_filter(user_id=user_id)
+    async for claim in claim_dao.find_all(filter_=filter_):
         # check whether the claim is valid and for an upload box
         if not (
             is_valid_claim(claim)
@@ -779,9 +779,9 @@ async def get_boxes_with_upload_access(
         raise user_not_found_error
 
     box_id_to_end_date: dict[UUID4, UTCDatetime] = {}
-    mapping = create_upload_access_filter(user_id=user_id)
+    filter_ = create_upload_access_filter(user_id=user_id)
     # run through all upload access grants for the user
-    async for claim in claim_dao.find_all(mapping=mapping):
+    async for claim in claim_dao.find_all(filter_=filter_):
         # consider only valid upload access grants for the user
         if not (
             is_valid_claim(claim)

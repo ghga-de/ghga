@@ -118,7 +118,7 @@ class OidcProvider:
                 try:
                     task.cancel()
                     await task
-                except (RuntimeError, asyncio.CancelledError):
+                except RuntimeError, asyncio.CancelledError:
                     pass
 
     async def reset(self):

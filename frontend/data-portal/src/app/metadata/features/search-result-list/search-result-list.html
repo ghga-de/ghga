@@ -14,6 +14,7 @@
 } @else {
   <mat-accordion multi>
     @for (hit of hits(); track hit.id_) {
+      <!-- Once @boundary is stable, wrap each result in one, so a hit that fails to render does not empty the whole result list. -->
       <app-search-result [hit]="hit" />
     }
   </mat-accordion>

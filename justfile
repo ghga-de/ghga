@@ -131,24 +131,88 @@ hooks-update: _guard
     uv run pre-commit autoupdate
 
 # The same check the docs-set pre-commit hook runs (ADR-0041).
-# Check the ADRs and epics and every reference to them, and regenerate their indexes.
-docs-check: _guard
-    uv run python scripts/docs_check.py
+# Check the ADRs, epics, instruction files and skills and every reference to them, and
+# regenerate their indexes; `--budget` prints each session's context budget.
+docs-check *args: _guard
+    uv run python scripts/docs_check.py {{args}}
+
+# The same check the kafka-map pre-commit hook runs.
+# Write docs/architecture/kafka-cascades.yaml into the map page; `--check` only reports.
+kafka-map *args: _guard
+    uv run python scripts/kafka_map.py {{args}}
+
+# vale is a Go binary outside the uv and pnpm toolchains, so the dev container lacks it;
+# .vale.ini pins the rule package, which `vale sync` downloads into the gitignored .vale/.
+# Warns only. Without paths it reads the Markdown and Python files changed against the
+# base, since the older docs, legacy ADRs among them, would bury a change's own findings.
+# Flag AI tells in prose (docs/style.md), e.g. `just prose` or `just prose README.md`.
+prose *paths:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v vale >/dev/null; then
+        echo "error: vale is not installed: https://vale.sh/docs/install (tested with 3.24)" >&2
+        exit 1
+    fi
+    [ -d .vale/styles/ai-tells ] || vale sync
+    files=({{paths}})
+    if [ ${#files[@]} -eq 0 ]; then
+        mapfile -t files < <(
+            { git diff --name-only --diff-filter=d "$(git merge-base origin/dev HEAD)"
+              git ls-files --others --exclude-standard; } \
+            | grep -E '\.(md|py)$' | grep -Ev '^(docs/epics|deploy/charts|\.agents/skills/angular-developer)/' | sort -u)
+    fi
+    [ ${#files[@]} -eq 0 ] && { echo "no changed Markdown or Python files"; exit 0; }
+    vale --no-exit "${files[@]}"
+
+# A root skill's eval suite, .agents/skills/<name>/evals.yaml, each case run with and without
+# the skill in a pinned clone that scripts/skill-eval-scaffold.sh prepares
+# (docs/agent-instructions.md). A pass is due when the skill's SKILL.md changes, and for
+# every suite when SKILL_EVAL_MODEL moves to a new default model. The report stays local;
+# extra arguments go to `claude plugin eval`, e.g. `--case new-adr --runs 1`.
+# Each run's trace is kept in the results, so a fixed grader can be checked against a pass
+# without rerunning it; the workspaces themselves, a clone and a .venv each, go.
+SKILL_EVAL_MODEL := "claude-opus-5-5"
+
+# Run a root skill's eval suite and print its scores, e.g. `just skill-eval adr`.
+skill-eval name *args: _guard
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # One run per plugin: the skill itself, or each entry of the suite's `plugins`.
+    mapfile -t targets < <(uv run python scripts/skill_eval.py expand "{{name}}")
+    stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+    # Each kept workspace holds a clone and a copied .venv, about 2.5 GB, until `collect`
+    # removes it: a pass outgrows the container's /tmp, so the runner works on the disk.
+    export TMPDIR="${XDG_CACHE_HOME:-$HOME/.cache}/ghga-skill-eval"
+    mkdir -p "$TMPDIR"
+    for target in "${targets[@]}"; do
+        pass=""
+        [[ "$target" == */evals/* ]] && pass="-${target##*/}"
+        out=".agents/skills/{{name}}/evals/results/$stamp$pass"
+        # The threshold is 0 so that only a run that breaks, not a low score, fails the
+        # recipe.
+        claude plugin eval "$target" --model "{{SKILL_EVAL_MODEL}}" \
+            --scaffold --trust-plugin --no-publish --allow-tools Bash Write Edit \
+            --concurrency 4 --max-cost-usd 20 --threshold 0 --keep-temp \
+            --output-dir "$out" {{args}} || status=$?
+        echo "== {{name}}$pass on {{SKILL_EVAL_MODEL}}"
+        uv run python scripts/skill_eval.py collect "$out"
+    done
+    exit "${status:-0}"
 
 # The same check the service-docs pre-commit hook runs; `--check` writes nothing.
 # Regenerate each service's config schema, example config, README parameters and OpenAPI spec.
 service-docs *args: _guard
     uv run python scripts/service_docs.py {{args}}
 
-# Each member is its own pytest rootdir: 24 of them carry a `tests` package, so ONE pytest
+# Each member runs as its own pytest: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
-# collision scripts/typecheck.py works around for mypy) -- and a root run would ignore the
-# members' own `[tool.pytest.ini_options]` anyway (auth-service's `testpaths`, say). That
-# collision is why a bare tier ("libs", "services", "tools") is swept member-by-member too,
-# not handed to pytest as one target.
+# collision scripts/typecheck.py works around for mypy). That collision is why a bare tier
+# ("libs", "services", "tools") is swept member-by-member too, not handed to pytest as one
+# target. Every run still finds the one pytest config in the root pyproject.toml, so the
+# rootdir is the repo root.
 # So the sweep runs one pytest per member, from the member directory, exactly as CI's
-# check-python matrix does; scripts/ and deploy/ belong to no member and share the root
-# rootdir, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
+# check-python matrix does; scripts/ and deploy/ belong to no member and run from the
+# root, as CI's hygiene job runs them. Like that matrix it does not fail fast: a red
 # member should not hide the state of the other 31.
 #
 #   just test                                    # every member, then the non-member suites
@@ -160,7 +224,7 @@ service-docs *args: _guard
 test target="": _guard sync-check
     #!/usr/bin/env bash
     set -uo pipefail
-    target="{{target}}"
+    target={{quote(target)}}
     # `.` was this recipe's old default; it still means "everything", not "the root as a member"
     [ "$target" = "." ] && target=""
     # repeated trailing slashes must not defeat the bare-tier and member checks below
@@ -212,27 +276,29 @@ test target="": _guard sync-check
 # Defaults to the integration branch, which is what feature branches are cut from (ADR-0038).
 # On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
 affected base="origin/dev":
-    uv run python scripts/affected_targets.py --base {{base}}
+    uv run python scripts/affected_targets.py --base {{quote(base)}}
 
 # --- Worktrees (parallel work) ----------------------------------------------------------
 # Worktrees go under .claude/worktrees/ of the main checkout, even when the recipe runs in
 # a worktree: that is where Claude Code's `--worktree` puts its own, and /.claude/* in
 # .gitignore hides them. Git records a worktree's path absolutely, and the host and the
 # container see different paths, so only the container may create them.
-# Each worktree gets its own .venv, which the uv cache makes a copy rather than a download.
+# Each worktree gets its own .venv, which the uv cache makes a copy rather than a download,
+# and its own node_modules, which the Prettier and ESLint hooks need for a portal commit.
 #
 #   just wt chore/GSI-1234-bump-hexkit       # .claude/worktrees/GSI-1234-bump-hexkit
 #   just wt hotfix/ucs-retry origin/main     # from another base
 #
-# Create a worktree on a new branch and sync its .venv, e.g. `just wt feat/add-x`.
+# Create a worktree on a new branch and install its dependencies, e.g. `just wt feat/add-x`.
 wt branch base="origin/dev": _guard-host
     #!/usr/bin/env bash
     set -euo pipefail
     main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
     dir="$main/.claude/worktrees/$(basename "{{branch}}")"
     git fetch origin
-    git worktree add "$dir" -b "{{branch}}" "{{base}}"
-    cd "$dir" && just sync
+    # A branch tracking origin/dev would let a plain push or an editor sync land on dev.
+    git worktree add --no-track "$dir" -b "{{branch}}" "{{base}}"
+    cd "$dir" && just sync && just fe-install
 
 # Leaves the branch: after a squash merge `git branch -d` refuses it, and deleting it with
 # `-D` is the dev's call, not a recipe's.
@@ -269,6 +335,11 @@ published-combo member python="3.12":
                  ' release marker (ADR-0033)')
     cell = members[0]
     package, declared = cell['package'], cell['requires_python']
+    blocked = dict(cell['blocked_pythons'])
+    if python in blocked:
+        sys.exit(f'error: the matrix does not run {package} on {python}:'
+                 f' {blocked[python]} ships no wheel for it, so the cell is dropped'
+                 ' — see BLOCKED_CELLS in scripts/pypi_members.py')
     if python not in cell['pythons']:
         runs_on = ', '.join(cell['pythons']) or 'no version in the matrix range'
         sys.exit(f'error: the matrix does not run {package} on {python} — it declares'
@@ -300,7 +371,7 @@ published-combo member python="3.12":
         uv build --wheel --out-dir "$work/wheels" "$path"
     done
 
-    # From outside the repo: inside it, uv picks up the workspace's requires-python (3.13)
+    # From outside the repo: inside it, uv picks up the workspace's requires-python (3.14)
     # and warns about every member that cannot have it.
     cd "$work"
     uv venv --python "{{python}}" "$work/venv"
@@ -322,7 +393,7 @@ published-combo member python="3.12":
     uv pip install --python "$work/venv/bin/python" --find-links "$work/wheels" \
       -r "$work/test-requirements.txt"
 
-    # cwd = the member directory, as in CI: each member is its own pytest rootdir, and the
+    # cwd = the member directory, as in CI: each member runs as its own pytest, and the
     # src/ layout means the tests import the installed package, not the working tree.
     echo "== running {{member}} tests on {{python}} (env: $work/venv)"
     cd "{{member}}"
@@ -417,6 +488,12 @@ fe-format-check:
 fe-dev:
     cd frontend/data-portal && node run.js --dev
 
+# For what only a deployment shows: the optimized build and the sws.toml headers, on
+# http://localhost:8080. The production build starts no MSW mocks, so API calls fail.
+# Build the data-portal for production and serve it with static-web-server, as deployed.
+fe-prod: fe-build
+    cd frontend/data-portal && node run.js
+
 # Run the data-portal against a real backend (default: staging) instead of mocks.
 fe-dev-backend:
     cd frontend/data-portal && node run.js --dev --with-backend
@@ -505,15 +582,19 @@ demo-template:
 # `just image-mono updated --pull`. dev-images.yaml deliberately does NOT: publishing
 # attestations needs a docker-container buildx builder, which these `docker build`
 # recipes cannot provide (see ADR-0037).
+# Both stamp the version derived from the checkout (ADR-0046); a `--build-arg` in `flags`
+# comes later on the command line and overrides it.
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
+    version="$(python3 scripts/platform_version.py)"
     if [ -f "{{target}}/package.json" ]; then
         name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
+        docker build -f "{{target}}/Dockerfile" --build-arg PLATFORM_VERSION="$version" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
     else
         name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
-        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
+        docker build -f docker/Dockerfile --build-arg PACKAGE="$name" --build-arg PLATFORM_VERSION="$version" \
+            --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
     fi
 
 # One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
@@ -521,7 +602,9 @@ image target tag='local' *flags: check-members
 # see the mono stage in docker/Dockerfile for why this is demo/CI only.
 # Build the mono image: EVERY Python member in one venv (docker/Dockerfile VARIANT=mono).
 image-mono tag='local' *flags: check-members
-    docker build -f docker/Dockerfile --build-arg VARIANT=mono {{flags}} \
+    docker build -f docker/Dockerfile --build-arg VARIANT=mono \
+      --build-arg PLATFORM_VERSION="$(python3 scripts/platform_version.py)" \
+      --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" {{flags}} \
       -t {{image_registry}}/platform:{{tag}} .
 
 # uv finds workspace members by glob (`libs/*`, `services/*`, `tools/*`) and refuses any
@@ -636,6 +719,14 @@ demo-load profile="" reclaim="false": cluster
     fi
     echo "loaded $loaded image(s) into the kind node ($already already there)"
 
+# Read from the node, not the docker store: CI's reclaim drops the docker copies, and the
+# docker image ID differs from containerd's anyway.
+# Print the node's ID for every `:local` image, as JSON keyed by image reference.
+[private]
+_local-image-ids:
+    @docker exec ghga-control-plane crictl images -o json \
+      | jq -c '[.images[] | .id as $id | .repoTags[] | select(endswith(":local")) | {key: ., value: $id}] | from_entries'
+
 # Reclaim BuildKit cache and dangling layers. Run occasionally: local image builds grew
 # the cache to ~17 GB within days, and a full disk breaks builds AND testcontainers.
 docker-prune:
@@ -699,22 +790,43 @@ up profile="": (demo-load profile)
     fi
     just demo-template
     echo "installing — this waits for every workload to become ready, a few minutes"
+    # The API server warns about every int32/int64 format in the Envoy Gateway CRDs,
+    # dozens of lines that say nothing about this install; the filter drops only those.
     helm upgrade --install ghga deploy/charts/ghga-demo \
       -f deploy/charts/ghga-demo/values-local.yaml \
       ${extra[@]+"${extra[@]}"} \
-      --kube-context kind-ghga --wait --timeout 15m
+      --set-json "global.localImageIds=$(just _local-image-ids)" \
+      --kube-context kind-ghga --wait --timeout 15m \
+      2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
     echo "gateway: http://localhost/  (portal at /, issuer at /ghga)"
 
 # `helm --wait` covers the release's own workloads, but the gateway's pod is created by
 # the Envoy operator from the Gateway resource — outside the release — so it needs its
-# own condition. Without both gates a fresh cluster answers the first request before
-# anything is listening: the services fail fast when Kafka is not yet up
-# (KafkaConnectionError), and though Kubernetes restarts them, a suite that starts
-# immediately runs against the crash-loop window.
-# Block until the gateway is programmed, i.e. the platform actually serves.
+# own condition. And a Ready pod can still crash: the services fail fast when Kafka is
+# not yet up (KafkaConnectionError), and a suite that starts immediately runs against
+# the crash-loop window. So after the gateway is programmed, this polls the DRS health
+# check, the suite's first request, until it answers 200; it passes ext-authz, so that
+# proves routing and the auth adapter work end to end.
 wait-ready:
-    kubectl --context kind-ghga wait --for=condition=Programmed gateway/ghga --timeout=5m
+    #!/usr/bin/env bash
+    set -euo pipefail
+    K="kubectl --context kind-ghga"
+    $K wait --for=condition=Programmed gateway/ghga --timeout=5m
+    url=http://localhost/api/ga4gh/drs/v1/health
+    deadline=$((SECONDS + 120))
+    until code=$(curl -s -o /dev/null -w '%{http_code}' "$url"); [ "$code" = 200 ]; do
+        if [ "$SECONDS" -ge "$deadline" ]; then
+            echo "error: $url still answers $code after 2 min; the gateway logged:" >&2
+            $K logs -l gateway.envoyproxy.io/owning-gateway-name=ghga -c envoy --tail=500 \
+              | jq -rR 'fromjson? | select(.["x-envoy-origin-path"] == "/api/ga4gh/drs/v1/health")
+                  | "\(.start_time) \(.response_code) \(.response_code_details) \(.response_flags)"' \
+              | tail -3 >&2
+            echo "ext_authz_error means the auth adapter failed: see 'just logs auth-adapter'" >&2
+            exit 1
+        fi
+        sleep 2
+    done
 
 # Delete the kind cluster (the images on its node go with it; the docker store keeps them).
 down:
@@ -766,7 +878,9 @@ testbed-up profile="": (demo-load profile)
       -f deploy/charts/ghga-demo/values-artifacts.yaml \
       -f deploy/charts/ghga-demo/values-testbed.yaml \
       ${extra[@]+"${extra[@]}"} \
-      --kube-context kind-ghga --wait --timeout 15m
+      --set-json "global.localImageIds=$(just _local-image-ids)" \
+      --kube-context kind-ghga --wait --timeout 15m \
+      2>&1 | { grep -vE --line-buffered 'warnings\.go:[0-9]+\] "Warning: unrecognized format \\"int(32|64)\\""$' || true; }
     just wait-ready
 
 # The suite imports ghga-datasteward-kit and runs it and ghga-connector as CLIs, so both
@@ -844,9 +958,8 @@ testbed-reset:
         sel=$($K get "$d" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
         $K wait --for=delete pod -l "$sel" --timeout=120s > /dev/null
     done
-    # Drop every service database: the suite's clean slate removes the migration
-    # bookkeeping, so a service restarting afterwards would re-run migrations over
-    # already-migrated data and crash-loop. Starting from empty avoids that.
+    # Drop every service database, migration records included, so each service
+    # migrates and re-seeds from empty.
     $K exec "$MPOD" -- mongosh --quiet --eval \
       'db.adminCommand({listDatabases:1}).databases
          .map(d => d.name)
@@ -904,7 +1017,8 @@ testbed *args:
     mkdir -p /tmp/submission /tmp/connector
     $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
     PF1=$!
-    $K port-forward svc/ghga-lox24-mock 8080:8080 > /dev/null 2>&1 &
+    # 18080, not the mock's own 8080, which `just fe-dev` serves the portal on
+    $K port-forward svc/ghga-lox24-mock 18080:8080 > /dev/null 2>&1 &
     PF2=$!
     # MinIO needs no forward: kind publishes its S3 node port on the host's 9000
     # (deploy/kind-config.yaml), which is the authority the pre-signed URLs carry —

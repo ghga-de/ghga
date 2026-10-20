@@ -13,25 +13,20 @@ import {
 } from '@angular/core';
 import { MatIconRegistry } from '@angular/material/icon';
 import { RouterOutlet } from '@angular/router';
-import { SiteFooterComponent } from '@app/portal/features/site-footer/site-footer';
-import { SiteHeaderComponent } from '@app/portal/features/site-header/site-header';
-import { VersionRibbonComponent } from '@app/portal/features/version-ribbon/version-ribbon';
-import { UmamiService } from './shared/services/umami';
+import { SiteFooter } from '@app/portal/features/site-footer/site-footer';
+import { SiteHeader } from '@app/portal/features/site-header/site-header';
+import { VersionRibbon } from '@app/portal/features/version-ribbon/version-ribbon';
+import { UmamiTracker } from './shared/services/umami';
 
 /**
  * This is the root component of the application.
  */
 @Component({
   selector: 'app-root',
-  imports: [
-    RouterOutlet,
-    SiteHeaderComponent,
-    SiteFooterComponent,
-    VersionRibbonComponent,
-  ],
+  imports: [RouterOutlet, SiteHeader, SiteFooter, VersionRibbon],
   templateUrl: './app.html',
 })
-export class AppComponent implements OnInit {
+export class App implements OnInit {
   #matIconReg = inject(MatIconRegistry);
   #envInjector = inject(EnvironmentInjector);
 
@@ -60,7 +55,7 @@ export class AppComponent implements OnInit {
     const scheduleIdle = (cb: () => void) =>
       (window.requestIdleCallback ?? setTimeout)(cb);
     scheduleIdle(() => {
-      runInInjectionContext(this.#envInjector, () => inject(UmamiService));
+      runInInjectionContext(this.#envInjector, () => inject(UmamiTracker));
     });
   }
 }

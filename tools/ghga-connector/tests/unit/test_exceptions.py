@@ -16,6 +16,7 @@
 """Unit tests for custom exceptions and exception helpers."""
 
 import httpx2
+import pytest
 
 from ghga_connector import exceptions
 
@@ -31,3 +32,24 @@ def test_reason_from_exception_falls_back_to_type_for_blank_message():
 
     assert reason  # assert not empty
     assert "httpx2.ReadError" in reason
+
+
+@pytest.mark.parametrize(
+    "request_error, expected_reason",
+    [
+        (
+            httpx2.ConnectError("All connection attempts failed"),
+            "All connection attempts failed",
+        ),
+        (httpx2.ConnectTimeout(""), "httpx2.ConnectTimeout"),
+    ],
+)
+def test_connection_failed_reason_is_never_blank(
+    request_error: httpx2.RequestError, expected_reason: str
+):
+    """Ensure a connection failure names its cause even when httpx gives no message."""
+    url = "https://central-api.invalid/api"
+    with pytest.raises(exceptions.ConnectionFailedError) as exc_info:
+        exceptions.raise_if_connection_failed(request_error=request_error, url=url)
+
+    assert expected_reason in str(exc_info.value)

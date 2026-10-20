@@ -17,11 +17,23 @@
 
 import pytest
 
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationManager,
+)
 from hexkit.providers.mongodb.testutils import MongoDbFixture
-from ns.migrations import run_db_migrations
+from ns.migrations import MIGRATION_MAP
 from tests.fixtures.config import get_config
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 async def test_migration_v2(mongodb: MongoDbFixture):

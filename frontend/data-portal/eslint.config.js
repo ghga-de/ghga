@@ -68,7 +68,6 @@ export default tseslint.config(
         'error',
         { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
-      '@angular-eslint/prefer-on-push-component-change-detection': 'error',
       'local/require-file-header': 'error',
       'jsdoc/require-jsdoc': [
         'warn',
@@ -89,6 +88,9 @@ export default tseslint.config(
           contexts: ['FunctionDeclaration', 'MethodDefinition', 'ClassDeclaration'],
         },
       ],
+      // As in ruff's pep257 convention: tags only where the signature does not explain the value
+      'jsdoc/require-param': 'off',
+      'jsdoc/require-returns': 'off',
       ...boundaries.configs.strict.rules,
       'boundaries/dependencies': [
         2,

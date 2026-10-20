@@ -10,13 +10,13 @@ import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import {
   MappingConfirmDialogData,
-  UploadBoxMappingConfirmDialogComponent,
+  UploadBoxMappingConfirmDialog,
 } from './upload-box-mapping-confirm-dialog';
 
 const mockDialogRef = { close: vitest.fn() };
 
-describe('UploadBoxMappingConfirmDialogComponent', () => {
-  let fixture: ComponentFixture<UploadBoxMappingConfirmDialogComponent>;
+describe('UploadBoxMappingConfirmDialog', () => {
+  let fixture: ComponentFixture<UploadBoxMappingConfirmDialog>;
 
   /**
    * Creates the dialog component with the given input data.
@@ -25,15 +25,14 @@ describe('UploadBoxMappingConfirmDialogComponent', () => {
    */
   async function createComponent(data: MappingConfirmDialogData): Promise<void> {
     await TestBed.configureTestingModule({
-      imports: [UploadBoxMappingConfirmDialogComponent],
+      imports: [UploadBoxMappingConfirmDialog],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
         { provide: MAT_DIALOG_DATA, useValue: data },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(UploadBoxMappingConfirmDialogComponent);
-    fixture.detectChanges();
+    fixture = TestBed.createComponent(UploadBoxMappingConfirmDialog);
     await fixture.whenStable();
   }
 
@@ -71,7 +70,7 @@ describe('UploadBoxMappingConfirmDialogComponent', () => {
     expect(confirmButton).toBeDisabled();
 
     await userEvent.click(checkbox);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(confirmButton).toBeEnabled();
   });
@@ -98,7 +97,7 @@ describe('UploadBoxMappingConfirmDialogComponent', () => {
         name: /i understand this action cannot be undone/i,
       }),
     );
-    fixture.detectChanges();
+    await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: /confirm and archive/i }));
 
     expect(mockDialogRef.close).toHaveBeenCalledWith(true);

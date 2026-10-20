@@ -46,7 +46,7 @@ import {
   providers: [CommonDatePipe, providePaginatorIntl('Access grants per page')],
   templateUrl: './access-grant-manager-list.html',
 })
-export class AccessGrantManagerListComponent {
+export class AccessGrantManagerList {
   #ars = inject(AccessRequestService);
   #router = inject(Router);
 

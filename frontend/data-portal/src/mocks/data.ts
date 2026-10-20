@@ -496,6 +496,12 @@ export const datasetDetails: DatasetDetailsRaw = {
       {
         doi: '10.1109/5.771074',
       },
+      {
+        title: 'Test publication without DOI',
+        author: 'Test author',
+        journal: 'Test journal',
+        year: 2024,
+      },
     ],
   },
   process_data_files: [

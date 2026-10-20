@@ -4,18 +4,28 @@
 # docker.io/ghga, the production target (ADR-0027).
 #
 # :dev is NOT a release artifact. The mono variant packs every Python member into one
-# venv (docker/Dockerfile VARIANT=mono — demo/CI only), and the tag simply tracks the
+# venv (docker/Dockerfile VARIANT=mono — never a release image), and the tag tracks the
 # `dev` branch — integration state, which is what it is named for. `main` deliberately
 # does not feed it: `main` only moves at release time (ADR-0038) and its artifacts are
 # the version-stamped release images. Consumers are the daily security-scan workflow
-# (which pulls these images as its published-exposure baseline) and anyone wanting
-# "latest integrated" without a release.
+# (which pulls these images as its published-exposure baseline), the dev cluster
+# through the charts below, and anyone wanting "latest integrated" without a release.
 # Release images remain per-member and version-stamped (release.yaml, ADR-0027).
 #
+# Both images are built for linux/amd64 and linux/arm64, as in release.yaml: the
+# dev-ant cluster pulls them, and its pods found no matching platform in an amd64-only index.
+#
+# The member charts are published alongside, for continuous deployment of `dev` to a
+# cluster: generated with --mono, so every Python member runs the platform image, and
+# pinned to the digests built here. Each run has one version (the version job): a dev
+# release after the highest ghga/ tag on dev, numbered by run. Tags only get added and run
+# numbers only rise, so in semver every run sorts above the last, and a CD tool following
+# the range >=0.0.0-0 rolls out every merge in order (ADR-0045).
+#
 # Publishing is deliberately independent of ci.yaml: merges are already gated by PR CI,
-# and :dev makes no greenness promise beyond that. PLATFORM_VERSION is left at its
-# default (0.0.0+dev / the frontend's package.json version) — the revision label and
-# GIT_SHA build-arg carry the traceability.
+# and :dev makes no greenness promise beyond that. PLATFORM_VERSION is the run's dev
+# version, so a running service reports which build it is; the revision label and
+# GIT_SHA build-arg tie that to the commit.
 #
 # Every published tag carries an SBOM + SLSA provenance attestation (buildx-native,
 # provenance=mode=max, re-published via cosign attest) and a keyless cosign signature
@@ -46,11 +56,40 @@ env:
   # deliberately separate from the release target (docker.io/ghga; see justfile's
   # image_registry and release.yaml).
   IMAGE_REGISTRY: ghcr.io/ghga-de/ghga
+  CHART_REGISTRY: ghcr.io/ghga-de/ghga/charts
 
 jobs:
-  publish:
+  # The one version both the image tag and the charts carry. Computed once: "Re-run
+  # failed jobs" never re-runs a job that succeeded, so its output survives, while a
+  # re-run job reading run_attempt itself would get a new one. A dev release after the
+  # highest ghga/ tag on dev, e.g. 15.3.1-rc.8.dev.19401 for run 194, attempt 1
+  # (ADR-0045, ADR-0046): the tag says where dev stands, and the run number makes the
+  # newest merge, or a full re-run of it, the highest version. One number rather than
+  # <run>.<attempt> keeps it valid PEP 440, which the services' stamped metadata and
+  # FIS's check of the DHFS version need; attempts stay below 100. run_number restarts
+  # at 1 if this workflow is renamed or recreated; add an offset to it then.
+  version:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0 # every tag the merge contains; blobs are not needed
+          filter: blob:none
+      - id: version
+        run: |
+          number=$(( ${{ github.run_number }} * 100 + ${{ github.run_attempt }} ))
+          echo "version=$(python3 scripts/platform_version.py --cd "$number")" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: publish ${{ matrix.image }}
+    needs: version
+    runs-on: ubuntu-latest
+    # Above release.yaml's 40: the mono image compiles aiokafka and pymongo for arm64
+    # under QEMU (no musllinux arm64 wheels), and with every member in one build.
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write # GHCR push via the ephemeral GITHUB_TOKEN
@@ -69,6 +108,7 @@ jobs:
             build-args: ""
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      DEV_VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
       - name: Short SHA
@@ -88,6 +128,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # arm64 is emulated so one buildx call pushes the multi-platform index; native arm64
+      # runners (ubuntu-24.04-arm) would need a job per platform and a manifest merge.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: arm64
       # The default (docker-driver) builder shares the daemon's storage but can't export
       # attestations to a registry — a docker-container builder is required for that.
       - name: Create buildx builder
@@ -98,11 +144,12 @@ jobs:
       - name: Build and push (attested)
         id: build
         run: |
-          build_args=(--build-arg "GIT_SHA=${SHORT_SHA}")
+          build_args=(--build-arg "GIT_SHA=${SHORT_SHA}" --build-arg "PLATFORM_VERSION=${DEV_VERSION}")
           if [ -n "${{ matrix.build-args }}" ]; then
             build_args+=(--build-arg "${{ matrix.build-args }}")
           fi
           docker buildx build \
+            --platform linux/amd64,linux/arm64 \
             --push \
             --pull \
             --provenance=mode=max \
@@ -112,6 +159,7 @@ jobs:
             --metadata-file metadata.json \
             -f "${{ matrix.dockerfile }}" \
             -t "${REGISTRY}/${{ matrix.image }}:dev" \
+            -t "${REGISTRY}/${{ matrix.image }}:${DEV_VERSION}" \
             "${{ matrix.context }}"
           digest=$(jq -r '."containerimage.digest"' metadata.json)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
@@ -124,3 +172,64 @@ jobs:
       # In a script so release.yaml runs the identical path rather than a second copy.
       - name: Attest SBOM + provenance (keyless)
         run: scripts/attest-image.sh "${REGISTRY}/${{ matrix.image }}@${{ steps.build.outputs.digest }}"
+      - name: Save digest for the charts
+        run: |
+          mkdir -p digests
+          echo -n "${{ steps.build.outputs.digest }}" > "digests/${{ matrix.image }}"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: digest-${{ matrix.image }}
+          path: digests/${{ matrix.image }}
+          retention-days: 1
+
+  # Mirrors release.yaml's package-charts; see there for why ghga-common is vendored
+  # rather than resolved. Only the generated member charts are pushed: aai,
+  # ghga-common and ghga-demo carry their own versions and are not deployed from here.
+  publish-charts:
+    needs: [version, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DEV_VERSION: ${{ needs.version.outputs.version }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: "digest-*"
+          path: digests
+          merge-multiple: true
+      - name: Generate the charts
+        run: |
+          for f in digests/*; do
+            jq -n --arg image "$(basename "$f")" --arg digest "$(cat "$f")" '{($image): $digest}'
+          done | jq -s 'add' > digests.json
+          uv run python deploy/src/create_charts.py --version "$DEV_VERSION" \
+            --registry "$REGISTRY" --chart-registry "$CHART_REGISTRY" --chart-suffix "" \
+            --mono --digests digests.json --require-digests
+      - name: Package
+        run: |
+          work=$(mktemp -d)
+          helm package deploy/charts/ghga-common -d "$work"
+          mkdir -p dist
+          for c in deploy/charts/*/; do
+            head -1 "${c}values.yaml" | grep -q '^# Generated by create_charts.py' || continue
+            mkdir -p "${c}charts"
+            cp "$work"/ghga-common-*.tgz "${c}charts/"
+            helm package "$c" -d dist/
+          done
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push
+        run: |
+          for chart in dist/*.tgz; do
+            helm push "$chart" "oci://${CHART_REGISTRY}"
+          done

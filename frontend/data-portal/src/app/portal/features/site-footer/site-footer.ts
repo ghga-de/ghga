@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 
 /**
  * This is the site footer component
@@ -23,7 +23,7 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
     MatButtonModule,
     MatRippleModule,
     DatePipe,
-    ExternalLinkDirective,
+    ExternalLink,
     NgOptimizedImage,
   ],
   templateUrl: './site-footer.html',
@@ -32,7 +32,7 @@ import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-lin
     '[style.--svg-encoded]': 'background',
   },
 })
-export class SiteFooterComponent {
+export class SiteFooter {
   date = new Date();
   svg = `<svg width="1440" height="120" preserveAspectRatio="none"
     viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg"><path

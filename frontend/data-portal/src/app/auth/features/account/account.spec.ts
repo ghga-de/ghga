@@ -18,7 +18,7 @@ import { ConfigService } from '@app/shared/services/config';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { provideHttpCache } from '@ngneat/cashew';
 import { screen } from '@testing-library/angular';
-import { AccountComponent } from './account';
+import { Account } from './account';
 
 /**
  * Mock the auth service as needed for the account component
@@ -58,13 +58,13 @@ const MockConfigService = {
   auth_url: '/test/auth',
 };
 
-describe('AccountComponent', () => {
-  let component: AccountComponent;
-  let fixture: ComponentFixture<AccountComponent>;
+describe('Account', () => {
+  let component: Account;
+  let fixture: ComponentFixture<Account>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccountComponent],
+      imports: [Account],
       providers: [
         { provide: AuthService, useClass: MockAuthService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
@@ -77,7 +77,7 @@ describe('AccountComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccountComponent);
+    fixture = TestBed.createComponent(Account);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

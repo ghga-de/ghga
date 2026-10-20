@@ -54,7 +54,7 @@ from tests.fixtures.config import (  # noqa: F401
     steward_token_fixture,
     storage_config,
 )
-from tests.fixtures.mock_api import ApiMock, respond
+from tests.fixtures.mock_api import WkvsMock, serve_httpx2_from
 
 ALIAS = "test_file"
 BUCKET_ID = "test-bucket"
@@ -63,20 +63,15 @@ FILE_SIZE = 50 * 1024**2
 pytestmark = pytest.mark.asyncio
 
 
-def mock_wkvs(monkeypatch: pytest.MonkeyPatch, s3_endpoint_url: str) -> None:
-    """Mock the WKVS lookup resolving the configured storage alias to `s3_endpoint_url`.
+def mock_wkvs(
+    monkeypatch: pytest.MonkeyPatch, wkvs_api_url: str, s3_endpoint_url: str
+) -> None:
+    """Mock the WKVS, resolving the storage alias to `s3_endpoint_url`.
 
-    Only the clients handed out by `httpx2` itself are redirected. The S3 traffic to the
-    testcontainer and the part uploads go through their own clients and stay on the
-    real network.
+    S3 traffic uses its own clients and still reaches the testcontainer.
     """
-    api_mock = ApiMock()
-    api_mock.add(
-        method="GET",
-        path="/values/storage_aliases",
-        handler=respond(200, json={"storage_aliases": {"test": s3_endpoint_url}}),
-    )
-    api_mock.patch_httpx(monkeypatch)
+    wkvs = WkvsMock(wkvs_api_url, storage_aliases={"test": s3_endpoint_url})
+    serve_httpx2_from(monkeypatch, wkvs.as_transport())
 
 
 async def test_legacy_process(
@@ -96,7 +91,7 @@ async def test_legacy_process(
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
         sys.set_int_max_str_digits(FILE_SIZE)
@@ -153,7 +148,7 @@ async def test_process(config_fixture: Config, monkeypatch):  # noqa: F811
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
         sys.set_int_max_str_digits(FILE_SIZE)
@@ -215,7 +210,7 @@ async def test_error_handling_local_checksum_validation(
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -280,7 +275,7 @@ async def test_error_handling_remote_checksum_validation(
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -339,7 +334,7 @@ async def test_error_handling_upload_completion(
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -405,7 +400,7 @@ async def test_error_handling_part_upload(
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 
@@ -472,7 +467,7 @@ async def test_batch_upload_retries(
                 ),
             }
         )
-        mock_wkvs(monkeypatch, s3_config.s3_endpoint_url)
+        mock_wkvs(monkeypatch, config.wkvs_api_url, s3_config.s3_endpoint_url)
         storage = get_object_storage(config=config)
         await storage.create_bucket(bucket_id=get_bucket_id(config))
 

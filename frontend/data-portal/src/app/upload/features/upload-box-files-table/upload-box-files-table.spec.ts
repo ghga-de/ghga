@@ -1,5 +1,5 @@
 /**
- * Tests for the UploadBoxFilesTableComponent.
+ * Tests for the UploadBoxFilesTable.
  * @copyright The GHGA Authors
  * @license Apache-2.0
  */
@@ -10,7 +10,7 @@ import { Sort } from '@angular/material/sort';
 import { UploadBoxState } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { screen, within } from '@testing-library/angular';
-import { UploadBoxFilesTableComponent } from './upload-box-files-table';
+import { UploadBoxFilesTable } from './upload-box-files-table';
 
 /**
  * Create a file upload fixture.
@@ -70,11 +70,11 @@ async function createComponent(inputs: {
   showDelete?: boolean;
   deletable?: (file: FileUploadWithAccession) => boolean;
   totalCount?: number;
-}): Promise<ComponentFixture<UploadBoxFilesTableComponent>> {
+}): Promise<ComponentFixture<UploadBoxFilesTable>> {
   await TestBed.configureTestingModule({
-    imports: [UploadBoxFilesTableComponent],
+    imports: [UploadBoxFilesTable],
   }).compileComponents();
-  const fixture = TestBed.createComponent(UploadBoxFilesTableComponent);
+  const fixture = TestBed.createComponent(UploadBoxFilesTable);
   fixture.componentRef.setInput('pageFiles', inputs.pageFiles);
   fixture.componentRef.setInput('boxState', inputs.boxState);
   fixture.componentRef.setInput(
@@ -100,7 +100,7 @@ async function createComponent(inputs: {
   return fixture;
 }
 
-describe('UploadBoxFilesTableComponent', () => {
+describe('UploadBoxFilesTable', () => {
   it('should render the file names', async () => {
     await createComponent({ pageFiles, boxState: UploadBoxState.open });
     expect(screen.getByText('alpha.txt')).toBeInTheDocument();

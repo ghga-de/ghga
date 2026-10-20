@@ -19,7 +19,7 @@ import { BaseRouteService } from '@app/shared/services/base-route';
   imports: [MatIconModule, MatButtonModule, MatMenuModule, RouterLink],
   templateUrl: './admin-menu.html',
 })
-export class AdminMenuComponent {
+export class AdminMenu {
   #baseRoute = inject(BaseRouteService);
   #route = this.#baseRoute.route;
   isUserManagerRoute = computed<boolean>(() =>

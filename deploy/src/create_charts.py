@@ -16,6 +16,10 @@ Conventions baked into the derived values:
 - image.digest is empty unless --digests supplies one: release.yaml's build-images
   only knows a member's real digest after it pushes, so it is injected here as a
   post-build overlay rather than derived like the other image fields
+- --mono points every Python member at the single mono image instead of its own; the
+  command stays the member's console script, which the mono image carries on its PATH
+- a member whose chart-values.yaml names a migrationInitContainer command gets the
+  init container enabled, unless it sets `enabled` itself
 """
 
 import argparse
@@ -93,15 +97,19 @@ def deep_merge(base, override):
     return override
 
 
-def derived_values(member: dict, registry: str) -> dict:
+def image_name(member: dict, mono: bool = False) -> str:
+    """The image a member chart runs: its own, or the mono image for Python members."""
+    return MONO_IMAGE if mono and member["kind"] == "python" else member["package"]
+
+
+def derived_values(member: dict, registry: str, mono: bool = False) -> dict:
     """Values derived from workspace metadata for one member chart."""
     registry_host, _, repo_prefix = registry.partition("/")
+    image = image_name(member, mono)
     values: dict = {
         "image": {
             "registry": registry_host,
-            "repository": f"{repo_prefix}/{member['package']}"
-            if repo_prefix
-            else member["package"],
+            "repository": f"{repo_prefix}/{image}" if repo_prefix else image,
         },
         "configPrefix": member["package"].replace("-", "_"),
         "commandStyle": "exec",
@@ -404,16 +412,21 @@ def current_member_version() -> str:
 
 
 def compose_member_values(
-    member: dict, registry: str, defaults: dict
+    member: dict, registry: str, defaults: dict, mono: bool = False
 ) -> tuple[dict, str]:
     """Merge one member chart's values: defaults <- derived <- chart-values."""
     source = f"{member['path']}/chart-values.yaml"
-    values = deep_merge(defaults, derived_values(member, registry))
+    values = deep_merge(defaults, derived_values(member, registry, mono))
 
     values_file = REPO_ROOT / member["path"] / "chart-values.yaml"
     if values_file.is_file():
-        member_values = YAML_PARSER.load(values_file.read_text()) or {}
-        values = deep_merge(values, _plain(member_values))
+        member_values = _plain(YAML_PARSER.load(values_file.read_text()) or {})
+        values = deep_merge(values, member_values)
+        # a member that names its migration command runs it before every pod start;
+        # the library default stays off for the members without migrations
+        migration = member_values.get("migrationInitContainer") or {}
+        if migration.get("executableArgs") and "enabled" not in migration:
+            values["migrationInitContainer"]["enabled"] = True
     else:
         source = f"{source} (absent; library defaults only)"
         print(
@@ -546,7 +559,7 @@ def _parameters_table(rows: list[tuple[str, str, object]]) -> str:
 
 
 def chart_readme_text(
-    name: str, description: str, path: str, chart_registry: str, schema: dict
+    name: str, description: str, path: str, chart_ref: str, schema: dict
 ) -> str:
     """Chart root README.md — `helm package` bundles it into the .tgz (Helm convention;
     also what Artifact Hub reads as the chart's Overview, were this repo ever listed
@@ -581,7 +594,7 @@ def chart_readme_text(
 ## Installing
 
 ```
-helm install {name} oci://{chart_registry}/{name}-chart
+helm install {name} oci://{chart_ref}
 ```
 
 ## Source
@@ -633,13 +646,39 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--chart-suffix",
+        default="-chart",
+        help=(
+            "suffix the published chart name carries, for each chart README's install"
+            " snippet; Docker Hub needs one to keep charts apart from same-named images"
+        ),
+    )
+    parser.add_argument(
         "--digests",
         type=Path,
         help=(
             "JSON file mapping member package name to its resolved image digest"
             " (release.yaml's build-images output, merged across matrix members);"
             " a member missing from it keeps image.digest empty, falling back to"
-            " tag/appVersion as usual"
+            " tag/appVersion as usual; with --mono, Python members look up"
+            f" {MONO_IMAGE!r} instead"
+        ),
+    )
+    parser.add_argument(
+        "--require-digests",
+        action="store_true",
+        help=(
+            "fail when a member gets no digest from --digests, instead of falling back"
+            " to a tag: dev charts pin images that are only ever pushed by digest"
+        ),
+    )
+    parser.add_argument(
+        "--mono",
+        action="store_true",
+        help=(
+            f"point every Python member at the {MONO_IMAGE!r} image"
+            " (docker/Dockerfile VARIANT=mono) instead of its own; for dev"
+            " deployments only, the release lane keeps one image per member"
         ),
     )
     args = parser.parse_args()
@@ -652,8 +691,15 @@ def main() -> None:
     docs = library_docs()
     for member in image_members():
         description = member["description"] or member["package"]
-        values, source = compose_member_values(member, args.registry, defaults)
-        digest = digests.get(member["package"])
+        values, source = compose_member_values(
+            member, args.registry, defaults, args.mono
+        )
+        digest = digests.get(image_name(member, args.mono))
+        if args.require_digests and not digest:
+            sys.exit(
+                f"no digest for {member['package']}"
+                f" (image {image_name(member, args.mono)!r}) in {args.digests}"
+            )
         if digest:
             values = deep_merge(values, {"image": {"digest": digest}})
         chart_dir = stamp_chart(
@@ -673,7 +719,7 @@ def main() -> None:
                 name=member["package"],
                 description=description,
                 path=member["path"],
-                chart_registry=args.chart_registry,
+                chart_ref=f"{args.chart_registry}/{member['package']}{args.chart_suffix}",
                 schema=schema,
             )
         )

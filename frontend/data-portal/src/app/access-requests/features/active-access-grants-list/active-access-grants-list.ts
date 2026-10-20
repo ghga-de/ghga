@@ -11,19 +11,19 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink, RouterModule } from '@angular/router';
 import { AccessGrant } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { StencilComponent } from '../../../shared/ui/stencil/stencil/stencil';
+import { Stencil } from '../../../shared/ui/stencil/stencil/stencil';
 // eslint-disable-next-line boundaries/dependencies
-import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
+import { DownloadWorkPackageDialog } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
 
 /**
  * This component shows a list of access grants that have been granted.
  */
 @Component({
   selector: 'app-granted-access-grants-list',
-  imports: [RouterLink, StencilComponent, MatIconModule, MatButtonModule, RouterModule],
+  imports: [RouterLink, Stencil, MatIconModule, MatButtonModule, RouterModule],
   templateUrl: './active-access-grants-list.html',
 })
-export class ActiveAccessGrantsListComponent {
+export class ActiveAccessGrantsList {
   #ars = inject(AccessRequestService);
   #dialog = inject(MatDialog);
 
@@ -45,7 +45,7 @@ export class ActiveAccessGrantsListComponent {
    * @param grant The access grant to download data for
    */
   openDownloadDialog(grant: AccessGrant): void {
-    this.#dialog.open(DownloadWorkPackageDialogComponent, {
+    this.#dialog.open(DownloadWorkPackageDialog, {
       data: grant,
       width: '64rem',
       maxWidth: '96vw',

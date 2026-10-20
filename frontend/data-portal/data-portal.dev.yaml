@@ -25,7 +25,7 @@ rts_url: /api/rts
 wps_url: /api/wps
 wkvs_url: null
 
-ribbon_text: 'Development v$v'
+ribbon_text: 'Dev v$v'
 max_facet_options: 7
 
 oidc_client_id: ghga-dev-client

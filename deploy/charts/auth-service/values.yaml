@@ -7,10 +7,12 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: auth-service
-executableArgs: []
+executableArgs:
+- run-rest
 deployment:
   enabled: true
 job:
@@ -37,11 +39,12 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
-  executable: ""
-  executableArgs: []
+  executable: auth-service
+  executableArgs:
+  - migrate-db
   env: []
   resources: {}
   volumeMounts: []
@@ -74,8 +77,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -199,6 +203,7 @@ config:
   enable_opentelemetry: false
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: auth_service
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

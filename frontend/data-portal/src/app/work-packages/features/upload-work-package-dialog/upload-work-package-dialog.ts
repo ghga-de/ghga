@@ -22,14 +22,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
-import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';
+import { Notifier } from '@app/shared/services/notification';
+import { Paragraphs } from '@app/shared/ui/paragraphs/paragraphs';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/errors';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadWorkPackageRequest } from '@app/work-packages/models/work-package';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
-import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-input';
+import { PubkeyField } from '@app/work-packages/ui/pubkey-input/pubkey-input';
 
 /**
  * Dialog for creating upload tokens to upload files via the GHGA connector.
@@ -45,18 +45,18 @@ import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-
     MatIconModule,
     MatProgressSpinnerModule,
     MatCardModule,
-    ParagraphsComponent,
+    Paragraphs,
     DatePipe,
     IvaTypePipe,
-    PubkeyFieldComponent,
+    PubkeyField,
     FormField,
   ],
   templateUrl: './upload-work-package-dialog.html',
 })
-export class UploadWorkPackageDialogComponent {
+export class UploadWorkPackageDialog {
   #clipboard = inject(Clipboard);
-  #dialogRef = inject(MatDialogRef<UploadWorkPackageDialogComponent>);
-  #notify = inject(NotificationService);
+  #dialogRef = inject(MatDialogRef<UploadWorkPackageDialog>);
+  #notify = inject(Notifier);
   #wpService = inject(WorkPackageService);
   #iva = inject(IvaService);
 
@@ -74,9 +74,9 @@ export class UploadWorkPackageDialogComponent {
   }
 
   protected model = signal({ pubkey: '' });
-  protected pubkeyField = viewChild.required(PubkeyFieldComponent);
+  protected pubkeyField = viewChild.required(PubkeyField);
   protected uploadForm = form(this.model, (p) => {
-    apply(p.pubkey, PubkeyFieldComponent.schema);
+    apply(p.pubkey, PubkeyField.schema);
   });
 
   protected token = signal('');

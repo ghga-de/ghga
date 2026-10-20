@@ -4,10 +4,10 @@
 
   // Flat pytest discovery from the repo root COLLIDES across members: every member has a
   // `tests` package and the suites do `from tests.fixtures... import ...`, which only resolves
-  // when the member is its own rootdir. So discovery is disabled for the root folder.
+  // when each member runs as its own pytest. So discovery is disabled for the root folder.
   //
   // >>> Open `ghga.code-workspace` (File > Open Workspace from File) for working per-member
-  //     test discovery: each member is a folder with its own rootdir, so imports resolve. <<<
+  //     test discovery: each member is a folder that runs its own pytest, so imports resolve. <<<
   "python.testing.pytestEnabled": false,
   "python.testing.unittestEnabled": false,
 

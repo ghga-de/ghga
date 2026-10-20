@@ -111,6 +111,12 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
+        },
+        "localImageIds": {
+          "type": "object",
+          "description": "Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
@@ -459,13 +465,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -1302,6 +1312,19 @@
           "description": "Path to service account token used by kube auth adapter.",
           "format": "path",
           "title": "Service Account Token Path",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "db_version_collection_suffix": {
+          "default": "DbVersions",
+          "description": "Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since the next migration run without them would migrate the service's current data again. Deleting such a collection by its name still works. An empty string turns the protection off.",
+          "examples": [
+            "DbVersions",
+            ""
+          ],
+          "title": "Db Version Collection Suffix",
           "type": [
             "string",
             "null"

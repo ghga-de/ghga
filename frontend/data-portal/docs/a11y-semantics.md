@@ -1,4 +1,4 @@
-# Accessibility and Semantics Best Practices for Developers
+# Accessibility and semantics best practices for developers
 
 The themes of accessibility (aka a11y) and semantics have been joined due to the latter's relationship with the former.
 **Where there is good web semantics, there is better accessibility.**
@@ -23,7 +23,7 @@ Here is a list of the ten most crucial accessibility requirements specifically f
 - Accessibility of _on hover_ and _on focus_ content.
 - Understandable context in link text (e.g. not having a link that only says 'here' or 'click')
 
-Evaluation of our compliance with WCAG 2.1 AA and EN 301 549 should be based on the [actual guidelines](https://www.w3.org/TR/WCAG21/); however, when developing, we have access to validation tools for many aspects of our website's compliance.
+Evaluation of our compliance with WCAG 2.1 AA and EN 301 549 must be based on the [actual guidelines](https://www.w3.org/TR/WCAG21/); however, when developing, we have access to validation tools for many aspects of our website's compliance.
 The W3C has a [guide on web accessibility evaluation](https://www.w3.org/WAI/test-evaluate/), including a [list of evaluation tools (both websites and browser extensions)](https://www.w3.org/WAI/test-evaluate/tools/list/), and browsers come with a set of accessibility tools by default.
 
 **Our team uses the [SilkTide toolbar](https://silktide.com/toolbar/) for the GHGA website with great success.**
@@ -49,7 +49,7 @@ Tools to check for colour contrast ratios can be found in the links above.
 
 See also [the list of online resources in Epic-0079](../../../docs/epics/epic-0079-miniature-horse.md#list-of-online-resources).
 
-## Specific Implementation Details
+## Specific implementation details
 
 - **Material Icons**: We exclusively use the `fontIcon` syntax (`<mat-icon fontIcon="icon"></mat-icon>`) syntax, instead of the ligature syntax (`<mat-icon>icon</mat-icon>`) as the latter encounters issues in some screen readers where the icon code name is read out even though the `mat-icon` element has `aria-hidden` set.
   Although this has only been experienced with the screen reader in the SilkTide Plugin (see above), it is best to be cautious and assume this issue is present elsewhere.

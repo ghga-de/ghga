@@ -18,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Environment :: Console",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Software Development :: Libraries",
@@ -55,10 +56,6 @@ where = [
 "ghga_transpiler.configs" = [
     "*.yaml",
 ]
-
-[tool.pytest.ini_options]
-minversion = "8.0"
-asyncio_mode = "strict"
 
 [tool.coverage.paths]
 source = [

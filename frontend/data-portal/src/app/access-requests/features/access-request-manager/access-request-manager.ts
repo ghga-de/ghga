@@ -6,9 +6,9 @@
 
 import { Component, inject, OnInit } from '@angular/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
-import { AccessRequestManagerFilterComponent } from '../access-request-manager-filter/access-request-manager-filter';
-import { AccessRequestManagerListComponent } from '../access-request-manager-list/access-request-manager-list';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
+import { AccessRequestManagerFilter } from '../access-request-manager-filter/access-request-manager-filter';
+import { AccessRequestManagerList } from '../access-request-manager-list/access-request-manager-list';
 
 /**
  * Access Request Manager component.
@@ -18,14 +18,10 @@ import { AccessRequestManagerListComponent } from '../access-request-manager-lis
  */
 @Component({
   selector: 'app-access-request-manager',
-  imports: [
-    AccessRequestManagerFilterComponent,
-    AccessRequestManagerListComponent,
-    RefreshButtonComponent,
-  ],
+  imports: [AccessRequestManagerFilter, AccessRequestManagerList, RefreshButton],
   templateUrl: './access-request-manager.html',
 })
-export class AccessRequestManagerComponent implements OnInit {
+export class AccessRequestManager implements OnInit {
   #ars = inject(AccessRequestService);
 
   /**

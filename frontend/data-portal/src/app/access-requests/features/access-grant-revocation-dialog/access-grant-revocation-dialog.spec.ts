@@ -12,17 +12,25 @@ import { accessGrants } from '@app/../mocks/data';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
+import { Notifier } from '@app/shared/services/notification';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { AccessGrantRevocationDialogComponent } from './access-grant-revocation-dialog';
+import { AccessGrantRevocationDialog } from './access-grant-revocation-dialog';
 
 const MockConfigService = {
   auth_url: '/test/auth',
 };
 
-describe('AccessGrantRevocationDialogComponent', () => {
-  let component: AccessGrantRevocationDialogComponent;
-  let fixture: ComponentFixture<AccessGrantRevocationDialogComponent>;
+// A real notifier opens snack bars in document.body, which the test runner
+// shares between spec files.
+const MockNotifier = {
+  showSuccess: vitest.fn(),
+  showError: vitest.fn(),
+};
+
+describe('AccessGrantRevocationDialog', () => {
+  let component: AccessGrantRevocationDialog;
+  let fixture: ComponentFixture<AccessGrantRevocationDialog>;
   let service: AccessRequestService;
 
   const dialogRef = {
@@ -31,7 +39,7 @@ describe('AccessGrantRevocationDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessGrantRevocationDialogComponent],
+      imports: [AccessGrantRevocationDialog],
       providers: [
         {
           provide: MAT_DIALOG_DATA,
@@ -43,14 +51,15 @@ describe('AccessGrantRevocationDialogComponent', () => {
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         provideHttpCache(),
         { provide: ConfigService, useValue: MockConfigService },
+        { provide: Notifier, useValue: MockNotifier },
         provideHttpClient(),
       ],
-      teardown: { destroyAfterEach: false },
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessGrantRevocationDialogComponent);
+    fixture = TestBed.createComponent(AccessGrantRevocationDialog);
     component = fixture.componentInstance;
-    service = fixture.debugElement.injector.get(AccessRequestService);
+    // The shared instance, so its local updates reach the grant lists
+    service = TestBed.inject(AccessRequestService);
     await fixture.whenStable();
   });
 
@@ -84,5 +93,23 @@ describe('AccessGrantRevocationDialogComponent', () => {
     expect(button).toHaveTextContent('Confirm revocation');
     button.click();
     expect(revokeSpy).toHaveBeenCalledWith(accessGrants[0].id);
+    expect(MockNotifier.showSuccess).toHaveBeenCalled();
+    expect(dialogRef.close).toHaveBeenCalledWith(true);
+  });
+
+  it('should keep the confirm button disabled until both entries match', async () => {
+    const button = screen.getByRole('button', { name: 'Confirm revocation' });
+    expect(button).toBeDisabled();
+    await userEvent.type(
+      screen.getByPlaceholderText('Confirm email of user'),
+      'doe@home.org',
+    );
+    expect(button).toBeDisabled();
+    const datasetInput = screen.getByPlaceholderText('Confirm dataset accession');
+    await userEvent.type(datasetInput, 'GHGAD12345678901230');
+    expect(button).toBeDisabled();
+    await userEvent.clear(datasetInput);
+    await userEvent.type(datasetInput, ' GHGAD12345678901234 ');
+    expect(button).toBeEnabled();
   });
 });

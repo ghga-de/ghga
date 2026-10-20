@@ -4,11 +4,12 @@
  * @license Apache-2.0
  */
 
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { allIvasOfDoe } from '@app/../mocks/data';
 import { IvaService } from '@app/ivas/services/iva';
-import { AccessRequestManagerDetailComponent } from './access-request-manager-detail';
+import { AccessRequestManagerDetail } from './access-request-manager-detail';
 
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -21,6 +22,8 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
+import { of } from 'rxjs';
 
 /**
  * Mock the IVA service as needed by the access request manager dialog component
@@ -29,7 +32,7 @@ class MockIvaService {
   loadUserIvas = () => undefined;
   userIvas = {
     value: () => allIvasOfDoe,
-    isLoading: () => false,
+    isLoading: signal(false),
     error: () => undefined,
   };
 }
@@ -42,13 +45,13 @@ class MockConfigService {
   helpdeskTicketUrl = 'http:/helpdesk.test/ticket/';
 }
 
-describe('AccessRequestManagerDetailComponent', () => {
-  let fixture: ComponentFixture<AccessRequestManagerDetailComponent>;
+describe('AccessRequestManagerDetail', () => {
+  let fixture: ComponentFixture<AccessRequestManagerDetail>;
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
-      imports: [AccessRequestManagerDetailComponent],
+      imports: [AccessRequestManagerDetail],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
         { provide: AccessRequestService, useClass: MockAccessRequestService },
@@ -60,7 +63,7 @@ describe('AccessRequestManagerDetailComponent', () => {
     });
 
     await TestBed.compileComponents();
-    fixture = TestBed.createComponent(AccessRequestManagerDetailComponent);
+    fixture = TestBed.createComponent(AccessRequestManagerDetail);
     httpMock = TestBed.inject(HttpTestingController);
 
     fixture.componentRef.setInput('id', '9409db13-e23e-433e-9afa-544d8f25b720');
@@ -158,5 +161,42 @@ describe('AccessRequestManagerDetailComponent', () => {
     expect(links).toHaveLength(2);
     const hrefs = links.map((link) => link.getAttribute('href'));
     expect(hrefs).toContain('/access-grant-manager/grant-ghga-8c4b9d5a1f0b');
+  });
+
+  it('should save the IVA that the data steward selects', async () => {
+    const updateRequest = vitest.fn(() => of(undefined));
+    Object.assign(TestBed.inject(AccessRequestService), { updateRequest });
+    const button = screen.getByRole('radio', {
+      name: 'Postal Address: c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
+    });
+
+    await userEvent.click(button);
+    await fixture.whenStable();
+
+    expect(button).toBeChecked();
+    expect(updateRequest).toHaveBeenCalledExactlyOnceWith(
+      '9409db13-e23e-433e-9afa-544d8f25b720',
+      { iva_id: allIvasOfDoe[2].id },
+    );
+  });
+
+  it('should preselect the best IVA again when the IVAs reload', async () => {
+    const postal = screen.getByRole('radio', {
+      name: 'Postal Address: c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
+    });
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => of(undefined),
+    });
+    await userEvent.click(postal);
+    await fixture.whenStable();
+    expect(postal).toBeChecked();
+
+    const ivas = (TestBed.inject(IvaService) as unknown as MockIvaService).userIvas;
+    ivas.isLoading.set(true);
+    await fixture.whenStable();
+    ivas.isLoading.set(false);
+    await fixture.whenStable();
+
+    expect(screen.getByRole('radio', { name: 'SMS: +441234567890004' })).toBeChecked();
   });
 });

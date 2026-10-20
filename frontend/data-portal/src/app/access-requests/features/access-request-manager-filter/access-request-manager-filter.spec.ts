@@ -8,7 +8,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { AccessRequestManagerFilterComponent } from './access-request-manager-filter';
+import { AccessRequestManagerFilter } from './access-request-manager-filter';
 
 import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
 import { screen } from '@testing-library/angular';
@@ -31,21 +31,21 @@ const mockAccessRequestService = {
   setAllAccessRequestsFilter: vitest.fn(),
 };
 
-describe('AccessRequestManagerFilterComponent', () => {
-  let component: AccessRequestManagerFilterComponent;
-  let fixture: ComponentFixture<AccessRequestManagerFilterComponent>;
+describe('AccessRequestManagerFilter', () => {
+  let component: AccessRequestManagerFilter;
+  let fixture: ComponentFixture<AccessRequestManagerFilter>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessRequestManagerFilterComponent],
+      imports: [AccessRequestManagerFilter],
       providers: [
         { provide: AccessRequestService, useValue: mockAccessRequestService },
         provideNativeDateAdapter(),
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessRequestManagerFilterComponent);
+    fixture = TestBed.createComponent(AccessRequestManagerFilter);
     component = fixture.componentInstance;
     accessRequestService = TestBed.inject(AccessRequestService);
     await fixture.whenStable();
@@ -107,7 +107,7 @@ describe('AccessRequestManagerFilterComponent', () => {
   });
 
   it('should set the filter after selecting a status', async () => {
-    const combobox = screen.getByRole('combobox', { name: 'All resolutions' });
+    const combobox = screen.getByRole('combobox', { name: 'Resolution' });
 
     await userEvent.click(combobox);
     await fixture.whenStable();
@@ -162,5 +162,88 @@ describe('AccessRequestManagerFilterComponent', () => {
       noteToRequester: undefined,
       internalNote: 'We need to ask X',
     });
+  });
+
+  /**
+   * Get the filter the component sent last
+   * @returns the last filter
+   */
+  function lastFilter() {
+    return mockAccessRequestService.setAllAccessRequestsFilter.mock.lastCall![0];
+  }
+
+  it('should set the filter after typing a dataset and a DAC', async () => {
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Dataset title or ID' }),
+      'GHGAD1',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Name or email of DAC' }),
+      'Main DAC',
+    );
+    await fixture.whenStable();
+
+    expect(lastFilter()).toMatchObject({ dataset: 'GHGAD1', dac: 'Main DAC' });
+  });
+
+  it('should set the filter after typing request details', async () => {
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Request details' }),
+      'cancer',
+    );
+    await fixture.whenStable();
+
+    expect(lastFilter()).toMatchObject({ requestText: 'cancer' });
+  });
+
+  it('should set the filter after typing creation dates', async () => {
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Request creation date from' }),
+      '1/15/2025',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Request creation date until' }),
+      '2/28/2025',
+    );
+    await fixture.whenStable();
+
+    expect(lastFilter()).toMatchObject({
+      fromDate: new Date(2025, 0, 15),
+      toDate: new Date(2025, 1, 28),
+    });
+  });
+
+  it('should clear the filter with the remove buttons', async () => {
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ticket ID' }), '1559');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Request creation date from' }),
+      '1/15/2025',
+    );
+    await fixture.whenStable();
+    expect(lastFilter()).toMatchObject({
+      ticketId: '1559',
+      fromDate: new Date(2025, 0, 15),
+    });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for ticket ID' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove filter for dates ranging from' }),
+    );
+    await fixture.whenStable();
+
+    expect(lastFilter().ticketId).toBeFalsy();
+    expect(lastFilter().fromDate).toBeFalsy();
+    expect(screen.getByRole('textbox', { name: 'Ticket ID' })).toHaveValue('');
+    expect(
+      screen.getByRole('textbox', { name: 'Request creation date from' }),
+    ).toHaveValue('');
+  });
+
+  it('should show "All resolutions" under its label while no value is chosen', () => {
+    expect(screen.getByRole('combobox', { name: 'Resolution' })).toHaveTextContent(
+      'All resolutions',
+    );
   });
 });

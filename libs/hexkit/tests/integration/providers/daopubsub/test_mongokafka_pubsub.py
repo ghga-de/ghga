@@ -34,6 +34,8 @@ from hexkit.correlation import (
     set_new_correlation_id,
 )
 from hexkit.protocols.dao import (
+    InvalidMappingError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
@@ -266,21 +268,21 @@ async def test_dao_outbox_happy(dto_model: type, mongo_kafka: MongoKafkaFixture)
 
         # perform a search for multiple resources:
         obtained_hits = {
-            hit async for hit in dao.find_all(mapping={"field_b": 42, "field_c": True})
+            hit async for hit in dao.find_all(filter_={"field_b": 42, "field_c": True})
         }
         assert obtained_hits == {example, example3}
 
         # perform a search using values with non-standard data types
         # (note that in this case we need to serialize these values manually):
-        mapping = {id_field: example_id, "field_d": example.field_d}
-        obtained_hit = await dao.find_one(mapping=mapping)
+        filter_ = {id_field: example_id, "field_d": example.field_d}
+        obtained_hit = await dao.find_one(filter_=filter_)
         assert obtained_hit == example
-        obtained_hits = {hit async for hit in dao.find_all(mapping=mapping)}
+        obtained_hits = {hit async for hit in dao.find_all(filter_=filter_)}
         assert obtained_hits == {example}
 
         # make sure that 4 resources with different IDs were inserted:
         obtained_ids = {
-            getattr(hit, id_field) async for hit in dao.find_all(mapping={})
+            getattr(hit, id_field) async for hit in dao.find_all(filter_={})
         }
         assert len(obtained_ids) == 4
         assert example_id in obtained_ids
@@ -293,7 +295,7 @@ async def test_dao_outbox_happy(dto_model: type, mongo_kafka: MongoKafkaFixture)
                 assert isinstance(obtained_id, uuid.UUID)
 
         # find a single resource:
-        obtained_hit = await dao.find_one(mapping={"field_a": "test"})
+        obtained_hit = await dao.find_one(filter_={"field_a": "test"})
 
         assert obtained_hit == example
 
@@ -315,7 +317,7 @@ async def test_dao_outbox_happy(dto_model: type, mongo_kafka: MongoKafkaFixture)
             await dao.get_by_id(example_id)
 
         # make sure that only 3 resources are left:
-        obtained_hits = {hit async for hit in dao.find_all(mapping={})}
+        obtained_hits = {hit async for hit in dao.find_all(filter_={})}
         assert len(obtained_hits) == 3
 
 
@@ -396,16 +398,16 @@ async def test_complex_models(mongo_kafka: MongoKafkaFixture):
                 },
             ]
 
-            for mapping in mappings:
-                obtained_hit = await dao.find_one(mapping=mapping)
+            for filter_ in mappings:
+                obtained_hit = await dao.find_one(filter_=filter_)
                 assert obtained_hit == resource
-                obtained_hits = await dao.find_all(mapping=mapping).to_list()
+                obtained_hits = await dao.find_all(filter_=filter_).to_list()
                 assert obtained_hits == [resource]
 
         # stage 4: delete
         for i in range(3):
             await dao.delete(resources[i].id)
-            obtained_hits = await dao.find_all(mapping={}).to_list()
+            obtained_hits = await dao.find_all(filter_={}).to_list()
             assert len(obtained_hits) == 2 - i
 
     # check that the expected events have been created
@@ -507,7 +509,7 @@ async def test_suppress_publishing(mongo_kafka: MongoKafkaFixture):
                 await dao.insert(example)
 
         # check that all resources were saved:
-        records = await dao.find_all(mapping={}).to_list()
+        records = await dao.find_all(filter_={}).to_list()
         assert len(records) == 3
         assert any(record.field_c for record in records)
 
@@ -952,12 +954,12 @@ async def test_find_returns_documents_without_metadata(mongo_kafka: MongoKafkaFi
         )
 
         # find_all must return the metadata-less document but not the deleted one.
-        result = dao.find_all(mapping={})
+        result = dao.find_all(filter_={})
         assert [hit async for hit in result] == [live_example]
         assert await result.total_count() == 1
 
         # find_one (which delegates to find_all) must locate it as well.
-        assert await dao.find_one(mapping={"id": live_id}) == live_example
+        assert await dao.find_one(filter_={"id": live_id}) == live_example
 
 
 async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
@@ -1008,6 +1010,68 @@ async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
             await dao.upsert(dto5)
 
 
+async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
+    """Test that `update` with `precondition` only replaces and publishes a
+    resource that exists, is not deleted, and matches the criteria.
+    """
+    kafka = mongo_kafka.kafka
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+        )
+
+        example = ExampleDto(field_b=1)
+        example_update = example.model_copy(update={"field_b": 2})
+
+        # Non-existing resource should raise ResourceNotFoundError
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.update(example_update, precondition={"field_b": 1})
+
+        await dao.insert(example)
+
+        # Criteria mismatch should raise NotHitsFoundError
+        # Bogus fields for precondition should raise InvalidMappingError
+        # and in either of the above cases, no events should be published
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(PreconditionFailedError):
+                await dao.update(example_update, precondition={"field_b": 3})
+            with pytest.raises(InvalidMappingError):
+                await dao.update(example_update, precondition={"not_a_field": 1})
+        assert await dao.get_by_id(example.id) == example
+
+        # Criteria match, including the ID field and an MQL operator
+        async with kafka.expect_events(
+            events=[
+                ExpectedEvent(
+                    payload=example_update.model_dump(),
+                    type_=CHANGE_EVENT_TYPE,
+                    key=str(example.id),
+                )
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.update(
+                example_update,
+                precondition={"id": example.id, "field_b": {"$lt": 2}},
+            )
+
+        # Verify that the document was updated
+        assert await dao.get_by_id(example.id) == example_update
+
+        # Deleted resource should behave the same as the non-existing resource case above
+        await dao.delete(example.id)
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.update(example, precondition={"field_b": 2})
+
+
 async def test_find_all_total_count_excludes_soft_deleted(
     mongo_kafka: MongoKafkaFixture,
 ):
@@ -1031,7 +1095,7 @@ async def test_find_all_total_count_excludes_soft_deleted(
         await dao.delete(dead2.id)
 
         # Run a query and make sure total_count() is 2
-        result = dao.find_all(mapping={})
+        result = dao.find_all(filter_={})
         page = await result.to_list()
         assert len(page) == 2
 
@@ -1064,11 +1128,11 @@ async def test_pagination_against_deleted_docs(mongo_kafka: MongoKafkaFixture):
 
         # Only live_doc remains; the soft-deleted docs are excluded.
         #  If filtering is not done properly, this would return an empty list
-        results_limit = [x async for x in dao.find_all(mapping={}, skip=None, limit=4)]
+        results_limit = [x async for x in dao.find_all(filter_={}, skip=None, limit=4)]
         assert results_limit == [live_doc]
 
         # Check that using skip=1 and no limit returns an empty list
-        results_skip = [x async for x in dao.find_all(mapping={}, skip=1)]
+        results_skip = [x async for x in dao.find_all(filter_={}, skip=1)]
         assert results_skip == []
 
 
@@ -1108,15 +1172,15 @@ async def test_pagination_against_metadataless_docs(mongo_kafka: MongoKafkaFixtu
         await dao.insert(live_doc)
 
         # The metadata-less docs are live, so they must be retrieved alongside live_doc.
-        result = dao.find_all(mapping={})
+        result = dao.find_all(filter_={})
         all_hits = {hit async for hit in result}
         assert all_hits == {*docs, live_doc}
         assert await result.total_count() == 5
 
         # Pagination still applies across all five live docs.
-        page = await dao.find_all(mapping={}, limit=4).to_list()
+        page = await dao.find_all(filter_={}, limit=4).to_list()
         assert len(page) == 4
-        remaining = await dao.find_all(mapping={}, skip=4).to_list()
+        remaining = await dao.find_all(filter_={}, skip=4).to_list()
         assert len(remaining) == 1
 
 
@@ -1143,7 +1207,7 @@ async def test_find_all_pagination_total_count(mongo_kafka: MongoKafkaFixture):
             await dao.insert(ExampleDto(field_b=field_b, field_c=False))
 
         result = dao.find_all(
-            mapping={"field_c": True}, skip=1, limit=3, sort=["field_b"]
+            filter_={"field_c": True}, skip=1, limit=3, sort=["field_b"]
         )
 
         # to_list() returns only the paginated slice: field_b in [1, 2, 3]
@@ -1168,7 +1232,7 @@ async def test_find_all_to_list(mongo_kafka: MongoKafkaFixture):
         )
 
         # Test on empty list
-        assert await dao.find_all(mapping={}).to_list() == []
+        assert await dao.find_all(filter_={}).to_list() == []
 
         # Insert 3 docs
         dtos = [ExampleDto(field_b=i) for i in range(3)]
@@ -1176,7 +1240,7 @@ async def test_find_all_to_list(mongo_kafka: MongoKafkaFixture):
             await dao.insert(dto)
 
         # Verify that to_list does what it should
-        result = dao.find_all(mapping={}, sort=["field_b"])
+        result = dao.find_all(filter_={}, sort=["field_b"])
         items = await result.to_list()
         assert isinstance(items, list)
         assert items == dtos

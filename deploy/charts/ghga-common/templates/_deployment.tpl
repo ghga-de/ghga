@@ -12,7 +12,7 @@ metadata:
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
   annotations:
-    configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+    configmap-hash: {{ (include (print $.Template.BasePath "/configmap.yml") . | fromYaml).data | toYaml | sha256sum }}
     {{- if .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
     {{- end }}
@@ -29,9 +29,15 @@ spec:
   template:
     metadata:
       annotations:
-        configmap-hash: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+        configmap-hash: {{ (include (print $.Template.BasePath "/configmap.yml") . | fromYaml).data | toYaml | sha256sum }}
         {{- if .Values.podAnnotations }}
         {{- .Values.podAnnotations | toYaml | nindent 8 }}
+        {{- end }}
+        {{- /* A rebuilt local image keeps its tag, so without the image ID the spec
+             would not change and the pods would keep running the old build. Jobs and
+             CronJobs need none: their pods are created anew and get the current image. */}}
+        {{- with index (.Values.global.localImageIds | default dict) (include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global "chart" .Chart)) }}
+        local-image-id: {{ . | quote }}
         {{- end }}
         {{- if .Values.vaultAgent.enabled }}
         {{- if .Values.vaultAgent.singleTemplate }}
@@ -89,13 +95,13 @@ spec:
           ports: {{- include "ghga-common.container-ports" . | nindent 12 }}
           {{- end }}
           {{- if and .Values.readinessProbe.enabled (omit .Values.readinessProbe "enabled") }}
-          readinessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.readinessProbe "enabled") "context" $) | nindent 12 }}
+          readinessProbe: {{- include "ghga-common.container-probe" (dict "probe" .Values.readinessProbe "handler" "httpGet" "context" $) | nindent 12 }}
           {{- end }}
           {{- if and .Values.livenessProbe.enabled (omit .Values.livenessProbe "enabled") }}
-          livenessProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.livenessProbe "enabled") "context" $) | nindent 12 }}
+          livenessProbe: {{- include "ghga-common.container-probe" (dict "probe" .Values.livenessProbe "handler" "tcpSocket" "context" $) | nindent 12 }}
           {{- end }}
           {{- if and .Values.startupProbe.enabled (omit .Values.startupProbe "enabled") }}
-          startupProbe: {{- include "common.tplvalues.render" (dict "value" (omit .Values.startupProbe "enabled") "context" $) | nindent 12 }}
+          startupProbe: {{- include "ghga-common.container-probe" (dict "probe" .Values.startupProbe "handler" "tcpSocket" "context" $) | nindent 12 }}
           {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}

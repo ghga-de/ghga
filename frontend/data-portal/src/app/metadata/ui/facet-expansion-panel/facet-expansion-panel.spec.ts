@@ -7,17 +7,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { FacetExpansionPanelComponent } from './facet-expansion-panel';
+import { FacetExpansionPanel } from './facet-expansion-panel';
 
-describe('FacetExpansionPanelComponent', () => {
-  let component: FacetExpansionPanelComponent;
-  let fixture: ComponentFixture<FacetExpansionPanelComponent>;
+describe('FacetExpansionPanel', () => {
+  let component: FacetExpansionPanel;
+  let fixture: ComponentFixture<FacetExpansionPanel>;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FacetExpansionPanelComponent],
+      imports: [FacetExpansionPanel],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(FacetExpansionPanelComponent);
+    fixture = TestBed.createComponent(FacetExpansionPanel);
     fixture.componentRef.setInput('facet', {
       key: 'test',
       name: 'Test Facet',

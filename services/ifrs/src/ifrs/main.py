@@ -17,9 +17,10 @@
 
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager
 from ifrs.config import Config
 from ifrs.inject import get_persistent_publisher, prepare_event_subscriber
-from ifrs.migrations import run_db_migrations
+from ifrs.migrations import MIGRATION_MAP
 
 DB_VERSION = 3
 
@@ -55,4 +56,7 @@ async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()
     configure_logging(config=config)
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

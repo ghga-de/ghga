@@ -81,7 +81,6 @@ otel_trace_sampling_rate: 1.0
 port: 8080
 provide_apis:
 - users
-run_consumer: false
 second_factor_recreated_type: second_factor_recreated
 service_instance_id: '1'
 service_name: auth_service

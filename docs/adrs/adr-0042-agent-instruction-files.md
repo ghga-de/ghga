@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-09-16
-amended: 2026-09-30
+amended: 2026-10-07
 tags: [docs, process]
 related: [ADR-0033, ADR-0041]
 ---
@@ -69,12 +69,33 @@ The decision itself:
   A rule lives in one of them, and the others link it.
   `AGENTS.md` is written for agents first and a README for humans first, which sets how each is written — not who is bound by it.
   The rules in an `AGENTS.md` are the team's, and an agent changes them by proposing a diff like any other.
+
+  **Amended 2026-10-02:** Shared skills live in the root `.agents/skills/`, flat, one directory per skill, with their symlinks in the root `.claude/skills/`.
+  A skill for one area says so in its `paths` frontmatter field: Claude Code and Cursor then list it once the agent works there, and the other tools list it everywhere.
+  Only a skill about one member's internals stays nested in that member.
+  Copilot CLI, OpenCode and Codex find a nested skill only in a session started in its area.
+
+  **Amended 2026-10-07:** A fifth kind of file: `.claude/rules/<topic>.md` with `paths` frontmatter, for a rule a directory cannot scope, about a kind of file found in several areas or about one member inside an area.
+  Area rules stay in `AGENTS.md`.
+  Claude Code and VS Code load a rule once the agent reads or edits a matching file.
+  The `AGENTS.md` it would otherwise sit in keeps one line linking it, so tools that do not read rule files find it on demand; `docs_check.py` fails on a rule without `paths` or without that link.
+  Copilot's `.github/instructions/` and Cursor's `.cursor/rules/` stay unused.
 - **Placement follows the loading cost.**
   A passage belongs in the root file only if it holds for every area; anything narrower moves down, and anything needed only while doing one named task becomes a skill.
   Each file aims at 100 to 150 lines, and nothing an agent needs is left unlinked.
+
+  **Amended 2026-10-02:** A skill joins the shared set, committed and offered to the model, only if most devs of its area use it monthly, it carries repo knowledge the model lacks, and an eval shows it beats a session without it.
+  Any other skill is user-invoked (`disable-model-invocation`) or personal.
+  The repo's always-on context stays under 4k tokens in a root session and 7k in an area session, at most 1.5k of them skill descriptions; `docs_check.py` warns past each.
+
+  **Amended 2026-10-07:** An `AGENTS.md` or rule file stays under 200 lines, the figure in Claude Code's memory docs, and ideally under 150.
+  `docs_check.py` warns past 150 and fails past 200.
 - **No eager imports beyond the area file.**
   The style and conventions are linked, not `@`-imported, and read when a session needs them.
 - **`scripts/docs_check.py` enforces the shape** ([ADR-0041](adr-0041-docs-linting.md)): every `AGENTS.md` has its stubs, a stub carries no content of its own, and no orphan instruction file sits at a path no tool reads.
+
+  **Amended 2026-10-02:** The check also covers each `SKILL.md`: a `name` equal to its directory and in the spec's pattern, a description of at most 1024 characters (a warning past 300), known frontmatter fields, resolving links and the `.claude/skills/` symlink.
+  It reports the context budget and generates the skill catalogue in [`docs/agent-skills.md`](../agent-skills.md), which a person opens and no session loads.
 
 ### Consequences
 

@@ -67,7 +67,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         `False` otherwise.
         """
         try:
-            file = await self._file_dao.find_one(mapping={"object_id": object_id})
+            file = await self._file_dao.find_one(filter_={"object_id": object_id})
         except NoHitsFoundError:
             # If not found, log a warning, but indicate the file is removable
             log.warning("Did not find a record of a file with ID %s.", object_id)
@@ -413,7 +413,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         files = [
             models.BaseFileInformation(**x.model_dump())
             async for x in self._file_dao.find_all(
-                mapping={
+                filter_={
                     "storage_alias": storage_alias,
                     "state": "inbox",
                     "interrogated": False,

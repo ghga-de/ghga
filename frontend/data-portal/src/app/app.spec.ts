@@ -4,17 +4,13 @@
  * @license Apache-2.0
  */
 
-import {
-  ComponentFixture,
-  DeferBlockBehavior,
-  DeferBlockState,
-  TestBed,
-} from '@angular/core/testing';
-import { AppComponent } from './app';
+import { DeferBlockBehavior, DeferBlockState } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import { App } from './app';
 
 import { Component } from '@angular/core';
-import { SiteFooterComponent } from './portal/features/site-footer/site-footer';
-import { SiteHeaderComponent } from './portal/features/site-header/site-header';
+import { SiteFooter } from './portal/features/site-footer/site-footer';
+import { SiteHeader } from './portal/features/site-header/site-header';
 import { ConfigService } from './shared/services/config';
 
 /**
@@ -42,55 +38,57 @@ class MockSiteHeaderComponent {}
 })
 class MockSiteFooterComponent {}
 
-describe('AppComponent', () => {
-  let component: AppComponent;
-  let fixture: ComponentFixture<AppComponent>;
+describe('App', () => {
+  let result: RenderResult<App>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AppComponent],
+    result = await render(App, {
       providers: [{ provide: ConfigService, useClass: MockConfigService }],
+      importOverrides: [
+        { replace: SiteHeader, with: MockSiteHeaderComponent },
+        { replace: SiteFooter, with: MockSiteFooterComponent },
+      ],
       deferBlockBehavior: DeferBlockBehavior.Manual,
-      teardown: { destroyAfterEach: false },
-    })
-      .overrideComponent(AppComponent, {
-        remove: { imports: [SiteHeaderComponent, SiteFooterComponent] },
-        add: { imports: [MockSiteHeaderComponent, MockSiteFooterComponent] },
-      })
-      .compileComponents();
-
-    fixture = TestBed.createComponent(AppComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      // Keep the injector alive for the Umami initialisation the app schedules when idle
+      configureTestBed: (testBed) =>
+        testBed.configureTestingModule({ teardown: { destroyAfterEach: false } }),
+      routes: [],
+    });
   });
 
   it('should create the app component', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
   });
 
   it('should have a header element', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('header')).not.toBeNull();
+    expect(screen.getAllByRole('banner')[0]).toHaveTextContent('Mock Header');
   });
 
   it('should have a main element', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('main')).not.toBeNull();
+    expect(screen.getByRole('main')).toBeInTheDocument();
   });
 
-  it('should have a footer element', () => {
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('footer')).not.toBeNull();
+  it('should have a footer element', async () => {
+    expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    // The footer is the second @defer block in the template.
+    await result.renderDeferBlock(DeferBlockState.Complete, 1);
+    expect(screen.getByText('Mock Footer')).toBeInTheDocument();
   });
 
   it('should have a version ribbon', async () => {
     // The ribbon is the first @defer block in the template; render it to its
     // final state since manual defer behavior does not play through triggers.
-    const ribbonDeferBlock = (await fixture.getDeferBlocks())[0];
-    await ribbonDeferBlock.render(DeferBlockState.Complete);
-    const compiled = fixture.nativeElement as HTMLElement;
-    const ribbon = compiled.querySelector('app-version-ribbon');
+    expect(screen.queryByRole('complementary')).toBeNull();
+    await result.renderDeferBlock(DeferBlockState.Complete, 0);
+    const ribbon = screen.getByRole('complementary');
     expect(ribbon).not.toBeNull();
-    expect(ribbon!.textContent).toContain('Test ribbon');
+    expect(ribbon).toHaveTextContent('Test ribbon');
+  });
+
+  it('should have a link to skip to the content', () => {
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute(
+      'href',
+      '#content',
+    );
   });
 });

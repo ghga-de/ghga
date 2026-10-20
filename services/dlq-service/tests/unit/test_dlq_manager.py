@@ -328,7 +328,7 @@ async def test_preview_pagination_valid_params(skip: int, limit: int):
             service="test", topic="test2", limit=limit, skip=skip
         )
         mock_dao.find_all.assert_called_once_with(
-            mapping={"dlq_info.service": "test", "topic": "test2"},
+            filter_={"dlq_info.service": "test", "topic": "test2"},
             sort=["timestamp"],
             skip=skip,
             limit=limit,

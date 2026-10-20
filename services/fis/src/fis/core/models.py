@@ -71,7 +71,7 @@ class FileUnderInterrogation(BaseFileInformation):
     )
 
     @model_validator(mode="after")
-    def validate_conditional_fields(self) -> "FileUnderInterrogation":
+    def validate_conditional_fields(self) -> FileUnderInterrogation:
         """Validate that conditional fields are set based on passed status."""
         if not self.decrypted_sha256 and self.state not in [
             "init",
@@ -145,7 +145,7 @@ class InterrogationReportWithSecret(InterrogationReport):
     )
 
     @model_validator(mode="after")
-    def validate_conditional_fields(self) -> "InterrogationReportWithSecret":
+    def validate_conditional_fields(self) -> InterrogationReportWithSecret:
         """Validate that conditional fields are set based on passed status."""
         if self.passed:
             for attr in [

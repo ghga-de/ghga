@@ -3,7 +3,7 @@
 Where guidance for coding agents lives and what belongs in each file.
 The decision behind it is [ADR-0042](adrs/adr-0042-agent-instruction-files.md); how to write the text is in the [writing style](style.md), and what the format itself guarantees is at [agents.md](https://agents.md).
 
-## The four kinds of file
+## Kinds of file
 
 | File | Holds | Written for | Loaded |
 |---|---|---|---|
@@ -11,6 +11,7 @@ The decision behind it is [ADR-0042](adrs/adr-0042-agent-instruction-files.md); 
 | `README.md` | what the thing is, how to install and run it; published, so it stands alone | humans first, agents read it too | on demand |
 | `docs/` — [style](style.md), [conventions](conventions.md), ADRs, architecture | the rules themselves | both, written once | on demand, when a task touches them |
 | `.agents/skills/` | the steps of a recurring task | agents only | when the skill is invoked |
+| `.claude/rules/` | a rule no directory scopes | agents first, like `AGENTS.md` | when the agent reads or edits a file its `paths` match |
 
 How a file is written depends on who reads it.
 Who has to follow it is a separate question, answered in [Keeping them true](#keeping-them-true).
@@ -61,11 +62,22 @@ The references are asymmetric.
 `AGENTS.md` links the README freely — that is what keeps it short.
 A README links back once at most: a line telling a human contributor that the file governs agents and is to be kept current.
 
+## Rule files
+
+An `AGENTS.md` scopes its rules by directory, which fits most of them.
+A rule about a kind of file found in several areas, such as every `pyproject.toml`, or about one member inside an area, such as `ghga-event-schemas`, goes into `.claude/rules/<topic>.md` instead.
+Its `paths` frontmatter, a list of globs, makes Claude Code and VS Code load it once the agent reads or edits a matching file.
+
+- Every rule has `paths`: one without it loads in every session and belongs in an `AGENTS.md`.
+- The `AGENTS.md` that would otherwise hold the rule keeps one line linking it, so the tools that read no rule files find it on demand.
+- Area rules stay in `AGENTS.md`: every tool reads that, and only two read rule files.
+- Personal rules are `*.local.md` in the same directory and gitignored ([dev/using-agents.md](dev/using-agents.md#personal-setup)).
+
 ## Placement
 
 - A passage belongs in the root file only if it holds for every area.
   Anything narrower moves down, with a pointer left where an agent would still look for it; anything needed only while doing one named task moves into a skill.
-- Aim at 100 to 150 lines per file.
+- Keep a file under 200 lines, ideally under 150.
   Past that, agents read it less reliably and every line dilutes the ones around it.
 - Everything an agent needs is reachable from an `AGENTS.md`.
   A document nothing links is read in under a tenth of sessions, so a new one either earns a pointer or is not worth writing.
@@ -76,8 +88,21 @@ Reusable task procedures live in `.agents/skills/<name>/SKILL.md`.
 Only a name and a description load until the skill is invoked.
 The folder-with-a-`SKILL.md` shape is the [Agent Skills](https://agentskills.io) standard — open and stewarded like `AGENTS.md`; `.agents/skills/` is its tool-agnostic location, and our own dependencies ship skills there.
 
-Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, which its documentation supports.
-The symlink is a stub for skills, and it goes when Claude Code reads the standard path.
+Shared skills sit in the root `.agents/skills/`, flat, one directory per skill, named after its task.
+A skill for one area says so in its `paths` frontmatter field, a list of globs such as `services/**`: Claude Code and Cursor list it once the agent reads a matching file, and the other tools list it everywhere.
+Only a skill about one member's internals stays nested in that member, as the `libs/ghga-jsonsubschema` ones do, because Copilot CLI, OpenCode and Codex find a nested skill only in a session started there.
+The [skill catalogue](agent-skills.md) is generated from the frontmatter and lists every skill, where it applies and who invokes it.
+
+The frontmatter holds the fields of the [specification](https://agentskills.io/specification): `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
+Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable` and `paths` are allowed, since they only narrow when a skill loads and the other tools ignore them without harm.
+
+A third-party skill, such as Google's `angular-developer`, is a pinned copy in the root `.agents/skills/`, with its source and full commit SHA in `metadata` and our own `paths` and invocation fields.
+Nothing else in it is edited, so a newer copy replaces it whole; the Angular one moves to the branch of [angular/skills](https://github.com/angular/skills) that matches the portal's Angular version when the portal upgrades.
+The Markdown lint and `just prose` skip it.
+Where it disagrees with our docs, a skill of ours names the difference and takes priority, as `data-portal` does.
+
+Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, beside the same `.agents/`: in the root for a root skill, in the member for a nested one.
+Its documentation supports this, and the symlink goes when Claude Code reads the standard path.
 
 The links are relative and committed: git stores a symlink as its target path, so a clone gets working links without a setup step.
 Generating them instead, from a recipe or a container hook, would leave the skills missing for everyone who has not run it.
@@ -87,9 +112,53 @@ A Windows checkout without `core.symlinks` gets text files instead, and the skil
 
 `AGENTS.md` names the directory and says no more about it: the tools list the skills they find, and an index in prose would only duplicate them and go stale.
 The line is there so an agent without skill support knows the directory holds procedures it can read as plain Markdown.
+The catalogue does not count as such an index: it is generated, and only a person opening it loads it.
 
 A passage is a skill when it is only needed while doing one named task and runs to more than a couple of lines — writing an ADR, cutting a release, running the test bed, regenerating the charts.
 It stays in `AGENTS.md` when it changes how any task is done.
+
+### Admitting a skill
+
+Every description the model is offered costs context in each session that sees it, so a skill joins the shared set, committed and model-invoked, only if all of these hold:
+
+- **Frequent:** most devs of its area do the task at least monthly; a root skill counts everyone.
+- **Repo-specific:** it carries our conventions, commands and traps, and no sentence the model would follow unprompted.
+- **Beats the baseline:** on an eval of at least 5 cases with 3 runs per arm, graded by checks fixed before the run, it scores higher than a session without it; a tie is a rejection.
+- **Points, does not restate:** it links the rule in `docs/` or an `AGENTS.md` and holds only the order of steps, the commands and the traps.
+- **Small:** a description under 300 characters with the key use case first, and a body under about 100 lines; longer material goes into `references/` files the body links.
+
+A useful skill that fails the first or the third test is user-invoked instead (`disable-model-invocation: true`): committed, started only by a person, and its description stays out of the model's context.
+Anything else stays personal ([dev/using-agents.md](dev/using-agents.md#personal-setup)).
+
+The budget for what the repo puts into a session before any task, at characters divided by 4:
+
+| Session | Counts | Ceiling |
+|---|---|---|
+| root | the root `AGENTS.md`, the output style, the descriptions of model-invoked root skills without `paths` | 4k tokens |
+| an area | the above, every `AGENTS.md` down to the area, every model-invoked description offered there | 7k tokens |
+| any | the skill descriptions alone | 1.5k tokens |
+
+The last ceiling leaves room for personal skills: Claude Code gives the skill listing 1% of the context window and drops descriptions past it.
+Rule files are not counted, since each loads only with a matching file.
+`just docs-check --budget` prints each session's figures.
+
+A root skill's eval suite is one file, `.agents/skills/<name>/evals.yaml`, and `just skill-eval <name>` expands it into the case directories `claude plugin eval` reads and runs it.
+Each case runs 3 times with the skill and 3 times without it, in a clone at a pinned commit that `scripts/skill-eval-scaffold.sh` prepares without the root skills.
+Neither arm loads the project's settings, hooks or `AGENTS.md`, so each case tells the agent to read the root `AGENTS.md` first.
+A run loads only the plugin under test, so a skill that works next to another, as `data-portal` does next to `angular-developer`, lists `plugins` in its suite: the suite then runs once per plugin, each a set of skills against none.
+A pass is due when the skill's `SKILL.md` changes, and for every suite when `SKILL_EVAL_MODEL` in the justfile moves to a new default model.
+Passes run by hand; a CI workflow follows once a few passes show stable scores.
+A grader changed after a run means rerunning the whole suite, and moving the pin means checking each case's expected values against the new commit.
+
+The PR that adds or changes a shared skill shows the reviewer:
+
+- the evidence for each test above, with the eval result of both arms;
+- that the `name` clashes with no built-in command and no popular public skill, such as `code-review` or `commit`;
+- each frontmatter field beyond `name` and `description`, with its reason;
+- for a third-party skill, its source URL, commit SHA and licence in `license` and `metadata`;
+- the budget figures after the change, and what `/doctor prompt-audit` reports about the skill.
+
+Skills are reviewed each quarter: one unused for two quarters, or no longer beating the baseline after a model change, is removed.
 
 ## Keeping them true
 
@@ -109,3 +178,18 @@ Two limits, because the instinct is always to add a line:
 ## Checks
 
 `scripts/docs_check.py` ([ADR-0041](adrs/adr-0041-docs-linting.md)) fails when a `CLAUDE.md` is committed, the Copilot stub carries content of its own, or an instruction file sits at a path no tool reads.
+It fails, too, when a skill's `name` differs from its directory or leaves the specification's pattern, its description is missing or longer than 1024 characters, its frontmatter has a field not listed above, a relative link in it resolves to nothing, or its `.claude/skills/` symlink is missing or points elsewhere.
+It fails on a rule file outside the root `.claude/rules/`, without `paths`, or linked from no `AGENTS.md`, and on an `AGENTS.md` or rule file past 200 lines.
+It warns, without failing, about a file past 150 lines, a description past 300 characters and a session past its budget, and it regenerates the [skill catalogue](agent-skills.md).
+
+## Not adopted
+
+Options considered and left out, with the signal to look again.
+
+- **Copilot code review.**
+  An automatic review of every PR needs Copilot Business or Enterprise, or premium requests paid by the org, and the team has neither.
+  Look again if the org gets Copilot.
+- **Usage telemetry.**
+  Claude Code can export OpenTelemetry events that name the skill behind each request, which would show the team's skill use for the quarterly review.
+  It needs a collector and an opt-in in each dev's `~/.claude/settings.json`, since committed settings would also export outside contributors' sessions.
+  Look again if the `/skill-doctor` reports leave the review guessing.

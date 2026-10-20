@@ -42,6 +42,22 @@ ERROR_RESPONSES = {
         ),
         "model": http_exceptions.HttpUnknownStorageAliasError.get_body_model(),
     },
+    "boxStatsUnavailable": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- boxStatsUnavailable: The FileUploadBox stats could not be updated."
+            + " Repeat the request."
+        ),
+        "model": http_exceptions.HttpBoxStatsUnavailableError.get_body_model(),
+    },
+    "boxStatsUnavailableVersioned": {
+        "description": (
+            "Exceptions by ID:"
+            + "\n- boxStatsUnavailable: The FileUploadBox stats could not be updated."
+            + " Fetch the box again and repeat the request with its latest version."
+        ),
+        "model": http_exceptions.HttpBoxStatsUnavailableError.get_body_model(),
+    },
     "boxNotFound": {
         "description": (
             "Exceptions by ID:"
@@ -248,6 +264,9 @@ async def create_box(
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxVersionOutdated"]
         | ERROR_RESPONSES["boxMaxSizeTooLow"]
         | ERROR_RESPONSES["incompleteOrFailed"],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES[
+            "boxStatsUnavailableVersioned"
+        ],
     },
 )
 @TRACER.start_as_current_span("routes.update_box")
@@ -316,7 +335,9 @@ async def update_box(  # noqa: C901, PLR0912
         ) from error
     except UploadControllerPort.BoxStatsCalcError as error:
         # The controller already logs the underlying cause, so don't re-log here
-        raise http_exceptions.HttpInternalError() from error
+        raise http_exceptions.HttpBoxStatsUnavailableError(
+            box_id=box_id, versioned=True
+        ) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -554,6 +575,7 @@ async def get_part_upload_url(  # noqa: PLR0913
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES[
             "s3UploadCompletionFailure"
         ],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES["boxStatsUnavailable"],
     },
 )
 @TRACER.start_as_current_span("routes.complete_file_upload")
@@ -605,7 +627,7 @@ async def complete_file_upload(  # noqa: C901
         raise http_exceptions.HttpUploadSizeMismatchError(file_id=file_id) from error
     except UploadControllerPort.BoxStatsCalcError as error:
         # The controller already logs the underlying cause, so don't re-log here
-        raise http_exceptions.HttpInternalError() from error
+        raise http_exceptions.HttpBoxStatsUnavailableError(box_id=box_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error
@@ -725,6 +747,7 @@ async def requeue_all_failed_file_uploads(
         | ERROR_RESPONSES["fileUploadNotFound"],
         status.HTTP_409_CONFLICT: ERROR_RESPONSES["boxStateError"],
         status.HTTP_500_INTERNAL_SERVER_ERROR: ERROR_RESPONSES["uploadAbortError"],
+        status.HTTP_503_SERVICE_UNAVAILABLE: ERROR_RESPONSES["boxStatsUnavailable"],
     },
 )
 @TRACER.start_as_current_span("routes.remove_file_upload")
@@ -764,7 +787,7 @@ async def remove_file_upload(
         raise http_exceptions.HttpUploadAbortError() from error
     except UploadControllerPort.BoxStatsCalcError as error:
         # The controller already logs the underlying cause, so don't re-log here
-        raise http_exceptions.HttpInternalError() from error
+        raise http_exceptions.HttpBoxStatsUnavailableError(box_id=box_id) from error
     except Exception as error:
         log.error(error, exc_info=True)
         raise http_exceptions.HttpInternalError() from error

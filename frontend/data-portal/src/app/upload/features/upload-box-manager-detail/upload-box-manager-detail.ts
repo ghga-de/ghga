@@ -30,9 +30,9 @@ import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
 import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
@@ -60,9 +60,9 @@ import {
   describeRequeueError,
   RequeueErrorNotice,
 } from '@app/upload/utils/requeue-errors';
-import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
-import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
-import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
+import { UploadBoxEditDetailsDialog } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
+import { UploadBoxFilesTable } from '../upload-box-files-table/upload-box-files-table';
+import { UploadBoxMapping } from '../upload-box-mapping/upload-box-mapping';
 
 /** An upload grant annotated with whether it is currently active. */
 interface GrantWithStatus extends UploadGrant {
@@ -85,18 +85,18 @@ interface GrantWithStatus extends UploadGrant {
     RouterLink,
     Capitalise,
     ParseBytes,
-    RefreshButtonComponent,
-    UploadBoxFilesTableComponent,
-    UploadBoxMappingComponent,
+    RefreshButton,
+    UploadBoxFilesTable,
+    UploadBoxMapping,
   ],
   providers: [CommonDatePipe, ParseBytes],
   templateUrl: './upload-box-manager-detail.html',
 })
-export class UploadBoxManagerDetailComponent implements OnInit {
+export class UploadBoxManagerDetail implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #userService = inject(UserService);
-  #location = inject(NavigationTrackingService);
-  #notificationService = inject(NotificationService);
+  #location = inject(NavigationTracker);
+  #notificationService = inject(Notifier);
   #confirmationService = inject(ConfirmationService);
   #parseBytes = inject(ParseBytes);
   #dialog = inject(MatDialog);
@@ -452,7 +452,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   editDetails(): void {
     const box = this.uploadBox();
     if (!box) return;
-    const ref = this.#dialog.open(UploadBoxEditDetailsDialogComponent, {
+    const ref = this.#dialog.open(UploadBoxEditDetailsDialog, {
       data: box,
       width: 'clamp(40em, 85vw, 64em)',
       maxWidth: 'calc(100vw - 2rem)',

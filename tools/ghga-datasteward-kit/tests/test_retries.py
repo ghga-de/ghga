@@ -20,33 +20,41 @@ from tenacity import RetryError
 
 from ghga_datasteward_kit.s3_upload import LegacyConfig
 from ghga_datasteward_kit.s3_upload.http_client import RequestConfigurator, httpx_client
+from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
 from tests.fixtures.config import legacy_config_fixture  # noqa: F401
-from tests.fixtures.mock_api import (
-    ApiMock,
-    MockedEndpoint,
-    ResponseHandler,
-    fail_with,
-    respond,
-)
 
 EXCEPTIONS = [httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.TimeoutException]
 STATUS_CODES = [408, 429, 500, 502, 503, 504]
+BASE_URL = "http://not-a-real-url"
 PATH = "/test"
-URL = f"http://not-a-real-url{PATH}"
+URL = f"{BASE_URL}{PATH}"
 
 
 pytestmark = pytest.mark.asyncio()
 
 
-def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> MockedEndpoint:
-    """Point the client at a mocked endpoint answering with `handler`.
+class EndpointMock(MockApi):
+    """A mock of the one endpoint these tests send requests to."""
 
-    The mock replaces only the innermost transport, so requests still pass through the
-    rate limiting and retry layers under test.
-    """
-    api_mock = ApiMock()
-    endpoint = api_mock.add(method="GET", path=PATH, handler=handler)
-    RequestConfigurator.configure(config, base_transport=api_mock.as_transport())
+    def __init__(self, handler: ResponseHandler) -> None:
+        super().__init__(BASE_URL)
+        self.on_request: ResponseHandler = handler
+        self.route("GET", PATH, "on_request")
+
+
+def fail_with(exception: type[Exception]) -> ResponseHandler:
+    """A handler raising a new `exception` per call, so tracebacks don't chain."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        raise exception("Expected exception")
+
+    return handler
+
+
+def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> EndpointMock:
+    """Point the client at a mock answering with `handler`, below the retry layers."""
+    endpoint = EndpointMock(handler)
+    RequestConfigurator.configure(config, base_transport=endpoint.as_transport())
     return endpoint
 
 
@@ -62,7 +70,7 @@ async def test_retry_handling_retryable_status_codes(
         await _run_request()
 
     # the request was actually retried instead of failing on the first attempt
-    assert endpoint.call_count > 1
+    assert len(endpoint.requests) > 1
 
 
 @pytest.mark.parametrize("exception", EXCEPTIONS)
@@ -76,7 +84,7 @@ async def test_retry_handling_retryable_exceptions(
     config = legacy_config_fixture.model_copy(
         update={"client_reraise_from_retry_error": should_reraise}
     )
-    _configure_client(config, fail_with(exception("Expected exception")))
+    _configure_client(config, fail_with(exception))
 
     with pytest.raises(exception) if should_reraise else pytest.raises(RetryError):
         await _run_request()
@@ -86,16 +94,14 @@ async def test_retry_handling_edge_cases(
     legacy_config_fixture: LegacyConfig,  # noqa: F811
 ):
     """Test if configuration is correctly applied to retry handler"""
-    endpoint = _configure_client(
-        legacy_config_fixture, fail_with(ValueError("Expected exception"))
-    )
+    endpoint = _configure_client(legacy_config_fixture, fail_with(ValueError))
 
     # a non-retryable exception propagates on the first attempt
     with pytest.raises(ValueError):
         await _run_request()
 
     # a successful response is passed through untouched
-    endpoint.handler = respond(200)
+    endpoint.on_request = respond(200)
     response = await _run_request()
     assert response.status_code == 200
 

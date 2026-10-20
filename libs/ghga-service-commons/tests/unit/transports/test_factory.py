@@ -16,7 +16,7 @@
 """Tests for the transport factory, including SSL verification handling."""
 
 import ssl
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -41,7 +41,7 @@ def throwaway_ca_pem(common_name: str) -> bytes:
     """Generate a throwaway, self-signed CA certificate as PEM bytes."""
     key = ec.generate_private_key(ec.SECP256R1())
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     certificate = (
         x509.CertificateBuilder()
         .subject_name(name)

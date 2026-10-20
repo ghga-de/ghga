@@ -96,6 +96,18 @@ class RDUBManagerPort(ABC):
         references a version of the resource that is not current.
         """
 
+    class BoxUpdateConflictError(RuntimeError):
+        """Raised when a change could not be recorded on the ResearchDataUploadBox
+        because it kept being changed by concurrent writes.
+
+        Raised from two places, both on purpose:
+        - By the event consumer, so the event is retried and then dead-lettered
+          rather than committed and lost.
+        - By a core call whose change is already applied elsewhere, where it
+          must not read as a version conflict the caller could retry. It has no
+          handler in the router, so it surfaces as a 500 rather than a 409.
+        """
+
     class BoxIncompleteOrFailedError(RuntimeError):
         """Raised when locking or archiving is rejected because files have incomplete
         uploads. This also includes files that failed interrogation and require some
@@ -318,6 +330,12 @@ class RDUBManagerPort(ABC):
         """Handle FileUploadBox update events from file box service.
 
         Updates the corresponding ResearchDataUploadBox with latest file count and size.
+
+        Other methods can update the same document (e.g. change description), so each
+        attempt is guarded on the version it reads and retried against a fresh copy.
+
+        Raises:
+            BoxUpdateConflictError: If the RDUB kept changing underneath.
         """
 
     @abstractmethod

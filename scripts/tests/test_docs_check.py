@@ -36,9 +36,29 @@ def _epic(title: str, code_name: str, kind: str = "Implementation Epic"):
     return f"# {title} ({code_name})\n**Epic Type:** {kind}\n"
 
 
+def _epic_index(completed: str = "", unfolding: str = "") -> str:
+    return (
+        "# Epics\n\n## Completed\n\n"
+        f"<!-- epic-index:completed:start -->\n{completed}"
+        "<!-- epic-index:completed:end -->\n\n## Unfolding\n\n"
+        f"<!-- epic-index:unfolding:start -->\n{unfolding}"
+        "<!-- epic-index:unfolding:end -->\n"
+    )
+
+
+def _epic_lists(repo: Path) -> tuple[str, str]:
+    """Return the completed and the unfolding list from the epic index."""
+    text = (repo / "docs/epics/README.md").read_text()
+    lists = []
+    for marks in (docs_check.EPIC_COMPLETED_MARKS, docs_check.EPIC_UNFOLDING_MARKS):
+        start, end = (text.index(mark) for mark in marks)
+        lists.append(text[start + len(marks[0]) + 1 : end])
+    return lists[0], lists[1]
+
+
 @pytest.fixture
 def repo(tmp_path):
-    """A git repo with two valid ADRs, two valid epics, and empty indexes."""
+    """A git repo with two valid ADRs, two valid epics, no skills, and empty indexes."""
     adrs = tmp_path / "docs/adrs"
     adrs.mkdir(parents=True)
     (adrs / "adr-template.md").write_text("# ADR-NNNN — {Title}\n" + BODY)
@@ -56,8 +76,10 @@ def repo(tmp_path):
     )
     (epics / "epic-0002-wood-ant/images").mkdir()
     (epics / "epic-0002-wood-ant/images/j.png").write_bytes(b"x")
-    (epics / "README.md").write_text(
-        "# Epics\n\n<!-- epic-index:start -->\n<!-- epic-index:end -->\n"
+    (epics / "README.md").write_text(_epic_index())
+    (tmp_path / "docs/agent-skills.md").write_text(
+        "# Skills\n\n<!-- skill-index:start -->\nNone at the moment.\n"
+        "<!-- skill-index:end -->\n"
     )
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     return tmp_path
@@ -85,10 +107,70 @@ def test_valid_set_regenerates_indexes_once(repo, capsys):
     assert "| [0001](adrs/adr-0001-first.md) | First | accepted | docs |" in readme
     assert "0000" not in readme
     assert readme.endswith("<!-- adr-index:end -->\n\nMore.\n")
-    epics = (repo / "docs/epics/README.md").read_text()
-    assert "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n" in epics
-    assert "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n" in epics
+    assert _epic_lists(repo) == (
+        "None at the moment.\n",
+        "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
+        "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
     assert _run(repo, capsys) == (0, "")
+
+
+def test_moved_epic_stays_completed(repo, capsys):
+    """A line moved into the completed list stays there and is regenerated."""
+    (repo / "docs/epics/README.md").write_text(
+        _epic_index(completed="- [stale](./epic-0001-blob-fish.md): old title\n")
+    )
+    _stage(repo)
+    _run(repo, capsys)
+    assert _epic_lists(repo) == (
+        "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n",
+        "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
+    assert _run(repo, capsys) == (0, "")
+
+
+def test_epic_in_both_lists_counts_as_completed(repo, capsys):
+    """A line copied rather than moved leaves the epic in the completed list only."""
+    line = "1. [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
+    (repo / "docs/epics/README.md").write_text(_epic_index(line, line))
+    _stage(repo)
+    _run(repo, capsys)
+    assert _epic_lists(repo) == (
+        line,
+        "2. [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
+
+
+def test_epic_lists_share_the_style(repo, capsys):
+    """A gap in one list makes both lists bullet lists."""
+    epics = repo / "docs/epics"
+    (epics / "epic-0003-giraffe.md").write_text(_epic("Lifecycle", "Giraffe"))
+    (epics / "README.md").write_text(
+        _epic_index(
+            completed="- (1) [x](./epic-0001-x.md)\n- (3) [y](./epic-0003-y.md)\n"
+        )
+    )
+    _stage(repo)
+    _run(repo, capsys)
+    assert _epic_lists(repo) == (
+        "- (1) [Blob Fish](./epic-0001-blob-fish.md): Catalog\n"
+        "- (3) [Giraffe](./epic-0003-giraffe.md): Lifecycle\n",
+        "- (2) [Wood Ant](./epic-0002-wood-ant/README.md): Identity\n",
+    )
+
+
+def test_epic_index_needs_both_lists(repo, capsys):
+    (repo / "docs/epics/README.md").write_text(
+        "# Epics\n\n<!-- epic-index:completed:start -->\n"
+        "<!-- epic-index:completed:end -->\n"
+    )
+    _stage(repo)
+    code, out = _run(repo, capsys)
+    assert code == 1
+    assert (
+        "docs/epics/README.md: missing <!-- epic-index:unfolding:start -->"
+        " or <!-- epic-index:unfolding:end -->"
+    ) in out.splitlines()
 
 
 def test_epic_index_numbers_gaps(repo, capsys):
@@ -326,6 +408,14 @@ def test_set_check_scans_tracked_files(repo, capsys):
     assert "ADR-0043" not in out
 
 
+def test_references_skip_skill_evals(repo, capsys):
+    suite = repo / ".agents/skills/adr/evals.yaml"
+    suite.parent.mkdir(parents=True)
+    suite.write_text("pattern: superseded-by: [ADR-0045]\n")
+    code, out = _run(repo, capsys, "--refs", ".agents/skills/adr/evals.yaml")
+    assert (code, out) == (0, "")
+
+
 def test_missing_index_markers(repo, capsys):
     (repo / "docs/README.md").write_text("# Docs\n")
     _, out = _run(repo, capsys)
@@ -343,9 +433,22 @@ def agents(repo):
     (repo / ".github/copilot-instructions.md").write_text(COPILOT)
     (repo / "libs").mkdir()
     (repo / "libs/AGENTS.md").write_text("# Agent Instructions for libs\n")
-    (repo / "libs/.agents/skills/qa").mkdir(parents=True)
-    (repo / "libs/.agents/skills/qa/SKILL.md").write_text("---\nname: qa\n---\n")
+    _skill(repo, "libs", "qa")
     return repo
+
+
+def _skill(
+    repo: Path, base: str, name: str, fields: str = "", body: str = "# Skill\n"
+) -> Path:
+    """Write a skill and its Claude Code symlink; return the SKILL.md."""
+    prefix = repo / base if base else repo
+    meta = fields or f"name: {name}\ndescription: Do {name}.\n"
+    path = prefix / ".agents/skills" / name / "SKILL.md"
+    path.parent.mkdir(parents=True)
+    path.write_text(f"---\n{meta}---\n\n{body}")
+    (prefix / ".claude/skills").mkdir(parents=True, exist_ok=True)
+    (prefix / ".claude/skills" / name).symlink_to(f"../../.agents/skills/{name}")
+    return path
 
 
 def _instruction_problems(repo: Path) -> list[str]:
@@ -411,10 +514,10 @@ def test_orphan_instruction_paths(agents):
 
 def test_skill_outside_the_standard_path(agents):
     """Only `.agents/skills/` is read by every tool, so that is where a skill lives."""
-    (agents / "libs/.claude/skills/qa").mkdir(parents=True)
-    (agents / "libs/.claude/skills/qa/SKILL.md").write_text("---\nname: qa\n---\n")
+    (agents / "libs/.claude/skills/lint").mkdir(parents=True)
+    (agents / "libs/.claude/skills/lint/SKILL.md").write_text("---\nname: lint\n---\n")
     assert _instruction_problems(agents) == [
-        "libs/.claude/skills/qa/SKILL.md: a skill belongs under .agents/skills/<name>/"
+        "libs/.claude/skills/lint/SKILL.md: a skill belongs under .agents/skills/<name>/"
     ]
 
 
@@ -423,3 +526,303 @@ def test_a_tracked_stub_missing_from_the_tree_is_skipped(agents):
     _stage(agents)
     (agents / ".github/copilot-instructions.md").unlink()
     assert docs_check.check_instruction_files(agents) == []
+
+
+def _skill_problems(repo: Path) -> tuple[list[str], list[str]]:
+    """Return the problems and the warnings of the skill checks."""
+    _stage(repo)
+    tracked = docs_check._tracked(repo)
+    _, problems, warnings = docs_check.load_skills(repo, tracked)
+    return problems + docs_check.check_skill_links(repo, tracked), warnings
+
+
+def test_conforming_skills(agents):
+    """A skill with name, description and its symlink reports nothing."""
+    _skill(agents, "", "adr", "name: adr\ndescription: Write an ADR.\npaths: [a/**]\n")
+    assert _skill_problems(agents) == ([], [])
+
+
+@pytest.mark.parametrize(
+    "name,fields,expected",
+    [
+        ("adr", "description: x\n", "name None must equal its directory 'adr'"),
+        ("adr", "name: ADR\ndescription: x\n", "name 'ADR' must equal its directory"),
+        ("a--b", "name: a--b\ndescription: x\n", "lowercase letters, digits"),
+        ("a" * 65, f"name: {'a' * 65}\ndescription: x\n", "1 to 64 lowercase"),
+        ("adr", "name: adr\n", "missing description"),
+        ("adr", "name: adr\ndescription: ''\n", "missing description"),
+        ("adr", f"name: adr\ndescription: {'x' * 1025}\n", "1025 characters; at most"),
+        ("adr", "name: adr\ndescription: x\nmodel: haiku\n", "unknown field 'model'"),
+        (
+            "adr",
+            "name: adr\ndescription: x\ndisable-model-invocation: yes please\n",
+            "disable-model-invocation must be true or false",
+        ),
+        ("adr", "name: adr\ndescription: x\npaths: 3\n", "paths must be a glob"),
+        ("adr", "name: [adr\n", "frontmatter must be a YAML mapping"),
+    ],
+)
+def test_skill_frontmatter(agents, name, fields, expected):
+    _skill(agents, "", name, fields)
+    problems, _ = _skill_problems(agents)
+    assert any(expected in p for p in problems), problems
+
+
+def test_skill_without_frontmatter(agents):
+    path = _skill(agents, "", "adr")
+    path.write_text("# ADR\n")
+    problems, _ = _skill_problems(agents)
+    assert problems == [
+        ".agents/skills/adr/SKILL.md: frontmatter must be a YAML mapping between ---"
+    ]
+
+
+def test_long_description_warns(agents, capsys):
+    """Past 300 characters a description crowds the listing, but still loads."""
+    _skill(agents, "", "adr", f"name: adr\ndescription: {'x' * 301}\n")
+    problems, warnings = _skill_problems(agents)
+    assert problems == []
+    assert warnings == [
+        ".agents/skills/adr/SKILL.md: description is 301 characters; keep it under 300"
+    ]
+    _run(agents, capsys)  # regenerate the indexes
+    _stage(agents)
+    code, out = _run(agents, capsys)
+    assert code == 0
+    assert out == f"warning: {warnings[0]}\n"
+
+
+def test_skill_links(agents):
+    """Relative links resolve from the SKILL.md; URLs, anchors and code are skipped."""
+    body = (
+        "[style](../../../docs/README.md#adrs) [gone](../../../docs/gone.md)\n"
+        "[web](https://example.org) [here](#steps) <x@example.org>\n"
+        "```md\n[example](nowhere.md)\n```\n"
+    )
+    _skill(agents, "", "adr", body=body)
+    problems, _ = _skill_problems(agents)
+    assert problems == [
+        ".agents/skills/adr/SKILL.md: link to ../../../docs/gone.md, which does not exist"
+    ]
+
+
+def test_skill_symlink(agents):
+    """Each skill has a relative symlink beside its .agents/, and each link a skill."""
+    _skill(agents, "", "adr")
+    _skill(agents, "", "epic")
+    (agents / ".claude/skills/adr").unlink()
+    (agents / ".claude/skills/epic").unlink()
+    (agents / ".claude/skills/epic").symlink_to(agents / ".agents/skills/epic")
+    (agents / ".claude/skills/gone").symlink_to("../../.agents/skills/gone")
+    problems, _ = _skill_problems(agents)
+    assert problems == [
+        ".claude/skills/adr: missing; link it to ../../.agents/skills/adr",
+        ".claude/skills/epic: must be a symlink to ../../.agents/skills/epic",
+        ".claude/skills/gone: no skill at .agents/skills/gone",
+    ]
+
+
+def test_skill_symlink_must_not_be_a_copy(agents):
+    _skill(agents, "", "adr")
+    (agents / ".claude/skills/adr").unlink()
+    (agents / ".claude/skills/adr").write_text("../../.agents/skills/adr")
+    problems, _ = _skill_problems(agents)
+    assert problems == [
+        ".claude/skills/adr: must be a symlink to ../../.agents/skills/adr"
+    ]
+
+
+def _rule(repo: Path, rel: str, fields: str = "paths: ['**/pyproject.toml']\n") -> None:
+    """Write a rule file and link it from the root AGENTS.md."""
+    (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+    (repo / rel).write_text(f"---\n{fields}---\n\n# Rule\n" if fields else "# Rule\n")
+    with (repo / "AGENTS.md").open("a") as agents_md:
+        agents_md.write(f"\nRead [the rule]({rel}).\n")
+
+
+def _rule_problems(repo: Path) -> list[str]:
+    _stage(repo)
+    return docs_check.check_rules(repo, docs_check._tracked(repo))
+
+
+def test_conforming_rules(agents):
+    """A rule with `paths`, linked from an AGENTS.md, reports nothing."""
+    _rule(agents, ".claude/rules/pyproject.md")
+    _rule(agents, ".claude/rules/libs/schemas.md", "paths: libs/schemas/**, x/**\n")
+    assert _rule_problems(agents) == []
+
+
+def test_rule_linked_from_a_nested_agents_file(agents):
+    """The link may come from the area file, relative to it."""
+    (agents / ".claude/rules").mkdir(parents=True)
+    (agents / ".claude/rules/schemas.md").write_text("---\npaths: libs/s/**\n---\n")
+    (agents / "libs/AGENTS.md").write_text("[rule](../.claude/rules/schemas.md)\n")
+    assert _rule_problems(agents) == []
+
+
+@pytest.mark.parametrize(
+    "fields,expected",
+    [
+        ("", "needs `paths`; a rule for every session belongs in AGENTS.md"),
+        ("paths: []\n", "needs `paths`; a rule for every session belongs in AGENTS.md"),
+        ("paths: a/**\ndescription: x\n", "unknown field 'description'"),
+    ],
+)
+def test_rule_frontmatter(agents, fields, expected):
+    """Without `paths` a rule loads in every session, like an AGENTS.md line."""
+    _rule(agents, ".claude/rules/topic.md", fields)
+    assert _rule_problems(agents) == [f".claude/rules/topic.md: {expected}"]
+
+
+def test_rule_placement_links_and_pointer(agents):
+    """Rules sit at the root, are shared, resolve their links, and are linked."""
+    _rule(agents, "libs/.claude/rules/nested.md")
+    _rule(agents, ".claude/rules/mine.local.md")
+    (agents / ".claude/rules/lost.md").write_text(
+        "---\npaths: a/**\n---\n\n[gone](../../docs/gone.md)\n"
+    )
+    assert _rule_problems(agents) == [
+        ".claude/rules/lost.md: link to ../../docs/gone.md, which does not exist",
+        ".claude/rules/lost.md: no AGENTS.md links it, so only Claude Code"
+        " and VS Code see it",
+        ".claude/rules/mine.local.md: a personal rule is never committed",
+        "libs/.claude/rules/nested.md: shared rules sit in the root .claude/rules/",
+    ]
+
+
+@pytest.mark.parametrize(
+    "lines,problems,warnings",
+    [
+        (150, [], []),
+        (151, [], ["libs/AGENTS.md: 151 lines; keep it under 150"]),
+        (200, [], ["libs/AGENTS.md: 200 lines; keep it under 150"]),
+        (201, ["libs/AGENTS.md: 201 lines; at most 200"], []),
+    ],
+)
+def test_instruction_file_length(agents, lines, problems, warnings):
+    """Past 150 lines an AGENTS.md or rule warns; past 200 it fails."""
+    (agents / "libs/AGENTS.md").write_text("line\n" * lines)
+    _stage(agents)
+    assert docs_check.check_lengths(agents, docs_check._tracked(agents)) == (
+        problems,
+        warnings,
+    )
+
+
+def test_rule_length_is_checked(agents):
+    """A rule file has the same line target, frontmatter included."""
+    _rule(agents, ".claude/rules/long.md", "paths: a/**\n" + "# x\n" * 200)
+    _stage(agents)
+    problems, _ = docs_check.check_lengths(agents, docs_check._tracked(agents))
+    assert problems == [".claude/rules/long.md: 205 lines; at most 200"]
+
+
+def _budgets(repo: Path) -> dict[str, tuple[int, int]]:
+    _stage(repo)
+    tracked = docs_check._tracked(repo)
+    skills, _, _ = docs_check.load_skills(repo, tracked)
+    return {
+        b.area: (b.total, b.descriptions)
+        for b in docs_check.context_budget(repo, tracked, skills)
+    }
+
+
+def test_context_budget(agents):
+    """Each session counts the AGENTS.md chain, the output style, visible descriptions."""
+    (agents / "AGENTS.md").write_text("a" * 400)  # 100 tokens
+    (agents / "libs/AGENTS.md").write_text("b" * 800)  # 200 tokens
+    (agents / ".claude/output-styles").mkdir(parents=True)
+    (agents / docs_check.OUTPUT_STYLE).write_text("c" * 40)  # 10 tokens
+    (agents / "services").mkdir()
+    (agents / "services/AGENTS.md").write_text("d" * 4)  # 1 token
+
+    def fields(name: str, extra: str = "") -> str:
+        return f"name: {name}\ndescription: {'x' * 40}\n{extra}"  # 10 tokens each
+
+    _skill(agents, "", "adr", fields("adr"))
+    _skill(agents, "", "epic", fields("epic", "disable-model-invocation: true\n"))
+    _skill(agents, "", "svc", fields("svc", "paths: services/**/*.py\n"))
+    _skill(agents, "", "toml", fields("toml", "paths: ['**/pyproject.toml']\n"))
+    (agents / "libs/.agents/skills/qa/SKILL.md").write_text(
+        "---\n" + fields("qa", "user-invocable: false\n") + "---\n"
+    )
+    assert _budgets(agents) == {
+        "": (120, 10),  # adr only
+        "libs": (340, 30),  # adr, toml, qa
+        "services": (141, 30),  # adr, svc, toml
+    }
+
+
+@pytest.mark.parametrize(
+    "budget,expected",
+    [
+        (docs_check.Budget("", 4000, 1500), []),
+        (
+            docs_check.Budget("", 4001, 0),
+            ["root session: 4001 tokens always on; the ceiling is 4000"],
+        ),
+        (docs_check.Budget("libs", 7000, 0), []),
+        (
+            docs_check.Budget("libs", 7001, 1501),
+            [
+                "libs/ session: 7001 tokens always on; the ceiling is 7000",
+                "libs/ session: 1501 tokens of skill descriptions; the ceiling is 1500",
+            ],
+        ),
+    ],
+)
+def test_budget_warnings(budget, expected):
+    assert docs_check.budget_warnings([budget]) == expected
+
+
+def test_budget_flag_prints_the_figures(agents, capsys):
+    """A clean run stays quiet; `--budget` prints every session."""
+    _stage(agents)
+    _run(agents, capsys)
+    _stage(agents)
+    assert _run(agents, capsys) == (0, "")
+    assert capsys.readouterr().out == ""
+    docs_check.main(["--budget"], root=agents)
+    assert capsys.readouterr().out.splitlines() == [
+        "root: 5 tokens, 0 of them skill descriptions",
+        "libs/: 14 tokens, 1 of them skill descriptions",
+    ]
+
+
+def test_skill_index(agents, capsys):
+    """The catalogue lists root skills first, with scope and invocation."""
+    _skill(agents, "", "adr", "name: adr\ndescription: Write an ADR.\n")
+    _skill(
+        agents,
+        "",
+        "release",
+        "name: release\ndescription: Cut a | release.\n"
+        "disable-model-invocation: true\n",
+    )
+    _skill(
+        agents,
+        "",
+        "svc",
+        "name: svc\ndescription: >\n  Change a\n  service.\npaths: [services/**]\n"
+        "user-invocable: false\n",
+    )
+    _stage(agents)
+    code, out = _run(agents, capsys)
+    assert code == 1
+    assert "docs/agent-skills.md: regenerated the index; stage the file" in out
+    text = (agents / docs_check.SKILL_INDEX_FILE).read_text()
+    start, end = (text.index(m) for m in docs_check.SKILL_INDEX_MARKS)
+    assert text[start:end].splitlines()[1:] == [
+        "| Skill | Applies | Invoked by | Description |",
+        "|---|---|---|---|",
+        "| [adr](../.agents/skills/adr/SKILL.md) | whole repo | model or `/adr` |"
+        " Write an ADR. |",
+        "| [release](../.agents/skills/release/SKILL.md) | whole repo | `/release` |"
+        " Cut a \\| release. |",
+        "| [svc](../.agents/skills/svc/SKILL.md) | `services/**` | model |"
+        " Change a service. |",
+        "| [qa](../libs/.agents/skills/qa/SKILL.md) | `libs/` | model or `/qa` |"
+        " Do qa. |",
+    ]
+    _stage(agents)
+    assert _run(agents, capsys) == (0, "")

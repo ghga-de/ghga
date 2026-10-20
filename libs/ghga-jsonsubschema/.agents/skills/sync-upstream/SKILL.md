@@ -20,8 +20,7 @@ Or inspect specific commits/PRs without a remote: `gh api repos/ibm/jsonsubschem
 
 ## Translation table (upstream → this fork)
 
-Upstream code does NOT apply verbatim.
-Translate:
+Upstream code does not apply verbatim, because of the renames and the `src/` layout; translate:
 
 | Upstream | Here |
 |---|---|
@@ -31,11 +30,11 @@ Translate:
 | `canonicalizeSchema` | `canonicalize_schema` |
 | `set_debug`/camelCase config setters | see `config.py` for actual names |
 | unittest `TestCase` classes | plain pytest `test_*` functions |
-| Python 3.8+ compatibility code | Python 3.13+ idioms only |
+| Python 3.8+ compatibility code | Python 3.11+ idioms, the member's `requires-python` floor |
 
 Internal helper names in `_checkers.py`/`_canonicalization.py`/`_utils.py` were also PEP 8-ified — grep for the equivalent snake_case name rather than assuming the upstream name exists.
 
-## Known deliberate divergences (do NOT "fix back")
+## Known deliberate divergences (keep them when porting)
 
 - Empty `enum` is treated as an uninhabited schema here (upstream may differ).
 - Packaging: `pyproject.toml` + `uv`, `src/` layout, PyPI name `ghga-jsonsubschema`.

@@ -1,4 +1,4 @@
-# Visual Inspection for Agents
+# Visual inspection for agents
 
 How an agent looks at the running data portal in VS Code's integrated browser.
 

@@ -4,29 +4,26 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 
 import { MAT_SNACK_BAR_DATA, MatSnackBarRef } from '@angular/material/snack-bar';
-import { CustomSnackBarComponent } from './custom-snack-bar';
+import { CustomSnackBar } from './custom-snack-bar';
 
-describe('CustomSnackBarComponent', () => {
-  let component: CustomSnackBarComponent;
-  let fixture: ComponentFixture<CustomSnackBarComponent>;
+describe('CustomSnackBar', () => {
+  let result: RenderResult<CustomSnackBar>;
+  let component: CustomSnackBar;
 
   beforeEach(async () => {
     const matSnackBarData = { message: 'Test message', type: 'ok' };
     const mockMatSnackBarRef = { dismiss: vitest.fn() };
-    await TestBed.configureTestingModule({
-      imports: [CustomSnackBarComponent],
+    result = await render(CustomSnackBar, {
       providers: [
         { provide: MAT_SNACK_BAR_DATA, useValue: matSnackBarData },
         { provide: MatSnackBarRef, useValue: mockMatSnackBarRef },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(CustomSnackBarComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    });
+    component = result.fixture.componentInstance;
   });
 
   it('should create', () => {
@@ -41,15 +38,15 @@ describe('CustomSnackBarComponent', () => {
   });
 
   it('should show the message', () => {
-    const span = fixture.nativeElement.querySelector('span');
-    expect(span).toBeTruthy();
-    expect(span.textContent).toContain('Test message');
+    const message = screen.getByText('Test message');
+    expect(message).toBeTruthy();
+    expect(message).toHaveTextContent(/^Test message$/);
   });
 
-  it('should close the snackbar when close button is clicked', () => {
-    const button = fixture.nativeElement.querySelector('button');
+  it('should close the snackbar when close button is clicked', async () => {
+    const button = screen.getByRole('button', { name: 'Close' });
     expect(button).toBeTruthy();
-    button.click();
+    await userEvent.click(button);
     expect(component.snackBarRef.dismiss).toHaveBeenCalled();
   });
 });

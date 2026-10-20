@@ -35,7 +35,7 @@ import { ConfigService } from '@app/shared/services/config';
   templateUrl: './account-button.html',
   styleUrl: './account-button.scss',
 })
-export class AccountButtonComponent {
+export class AccountButton {
   #router = inject(Router);
   #config = inject(ConfigService);
   #auth = inject(AuthService);

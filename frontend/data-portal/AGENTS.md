@@ -1,26 +1,17 @@
 # Agent Instructions for the Data Portal
 
-This is the primary, tool-agnostic AI entrypoint for any coding agent working in this repository.
+How we work on the Angular data portal, on top of the repo-wide rules in the root [AGENTS.md](../../AGENTS.md).
 
 ## Instruction source of truth
 
-- `AGENTS.md` is the canonical AI entrypoint for this repository.
-- `AGENTS.md` may reference additional project documentation (for example `README.md` and files in `docs/`) that is also authoritative and intended for both human developers and agents.
 - Copilot is covered by the one `.github/copilot-instructions.md` at the repo root.
-- Avoid duplicating AI-specific guidance across files to prevent instruction drift; prefer linking from `AGENTS.md`.
 - [docs/agent-instructions.md](../../docs/agent-instructions.md) says what belongs in an `AGENTS.md`, a README, `docs/` or a skill.
-  Keep always-on rules here and move longer task procedures into skills, which live in `.agents/skills/<name>/SKILL.md` and are symlinked into `.claude/skills/` until Claude Code reads the standard path.
+  Keep always-on rules here and move longer task procedures into skills, which live in the root `.agents/skills/`, scoped to this directory by their `paths` field.
 - Copilot in VS Code finds this file through `chat.useNestedAgentsMdFiles`, set in the repo root's `.vscode/settings.json`; Claude Code loads it once it reads a file in this directory.
-- The dev container's CLI tools and the repo-wide rules are in the root [AGENTS.md](../../AGENTS.md).
 
-## Prime Directive
+## Role and approach
 
 - You are an expert in TypeScript, Angular, and scalable web application development.
-- Write maintainable, performant, and accessible code.
-- Follow Angular and TypeScript best practices.
-- Prefer small, safe, reviewable diffs.
-- Preserve existing architecture and patterns unless asked to change them.
-- Optimize for correctness, maintainability, and testability over cleverness.
 
 ## Tech stack
 
@@ -67,7 +58,8 @@ Follows directly from the mocking philosophy above; see [Automated tests](README
 
 - **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, cache invalidation, state transitions, rendering and event wiring.
   Services are tested against `HttpTestingController`, components against mocked services.
-- **E2E tests in this repo** (Playwright, `tests`): a **smoke layer**, despite the name.
+- **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
+- **E2E tests here** (Playwright, `tests`): a **smoke layer**, despite the name.
   They stop at the network boundary, since the MSW mocks serve them too, but they boot the real app in a real browser with the real services and interceptors.
   Use them for assembly and wiring, not for behaviour.
   Keep them few and cheap.
@@ -79,7 +71,7 @@ Leave those flows to the test bed, which is more expensive to run.
 
 ## Repo commands (pnpm)
 
-This repo uses `pnpm` (not npm) for dependency installation and scripts.
+The data portal uses `pnpm` (not npm) for dependency installation and scripts.
 
 - Prefer pnpm scripts over direct CLI invocation for consistency with repo tooling.
 - Install deps: `just fe-install` from the repo root (`pnpm install --frozen-lockfile`, as CI does), or `pnpm install` here when you are deliberately changing dependencies.
@@ -103,8 +95,7 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
   - Invalid example (causes parsing failures): `ng test --watch=false -- --watch=false --include src/app/...`.
 - E2E tests (Playwright): `pnpm e2e` / `pnpm e2e:ui` / `pnpm e2e:headed` / `pnpm e2e:debug` / `pnpm e2e:report`
   - Default command for e2e tests is always `pnpm e2e`.
-  - Test framework: Playwright
-  - Run individual tests with `playwright test TEST-FILTER`.
+  - Run individual tests with `pnpm e2e <filter>`.
   - You don’t need to start the app manually; Playwright starts it via config in `playwright.config.ts`.
   - Prefer assertions on stable end states (URL/title/visible content) over transient intermediate states.
   - For known flaky UI transitions (menus/dialogs/navigation), use small bounded retries in shared test helpers rather than ad-hoc per-test logic.
@@ -115,7 +106,7 @@ This repo uses `pnpm` (not npm) for dependency installation and scripts.
 ## Visual inspection
 
 The dev server runs at **<http://localhost:8080>** (not the Angular default 4200) and must already be running (`just fe-dev`).
-[Visual Inspection for Agents](docs/visual-inspection.md) has the two browser modes and when the user has to share the page.
+[Visual inspection for agents](docs/visual-inspection.md) has the two browser modes and when the user has to share the page.
 
 ## MCP tools
 
@@ -123,8 +114,7 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 - Claude Code and the Copilot CLI read `.mcp.json` only in the directory the session starts in and its parents, so `angular-cli` reaches a session started here or below, and not one started at the repo root.
   That is deliberate: the server is of no use to backend work.
   Start the session in this directory (the "frontend · data-portal" folder of `ghga.code-workspace`) when you want it.
-- Prefer `angular-cli` for Angular-specific tasks: project/workspace discovery, Angular best practices, Angular documentation and examples, and Angular-focused migrations.
-- Consult `angular-cli` before making assumptions about Angular APIs, templates, or CLI behavior.
+- Use `angular-cli` for workspace discovery, Angular documentation and examples, and migrations, and to check an Angular 22 API, template syntax or CLI behaviour you are not sure of.
 - For non-Angular libraries and tooling (for example Tailwind, Playwright, Vitest, RxJS), look up current docs when API behavior or recommended usage is uncertain, especially for version-sensitive questions.
   A docs server such as Context7 is personal configuration, not part of this repo.
 - If external guidance conflicts with repository conventions, prioritize `AGENTS.md`, `README.md`, relevant files in `docs/`, and existing code patterns in this repository.
@@ -132,14 +122,10 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 ## Execution policy
 
 - For code changes, run the smallest relevant validation first (targeted tests/lint/typecheck where possible), then run `pnpm test` as the default unit-test check.
-- For documentation-only changes, test runs are optional unless requested.
-- Prefer project scripts/tasks over ad-hoc commands.
-- Do not create commits or branches unless explicitly requested.
 
 ## Generated artifacts
 
-- Never manually edit generated output directories: `out-tsc/`, `playwright-report/`, and `test-results/`.
-- Regenerate these artifacts using the appropriate scripts/commands instead.
+- Never edit the generated output directories `out-tsc/`, `playwright-report/` and `test-results/` by hand; rerun the script that produces them.
 
 ## Required file headers
 
@@ -155,9 +141,9 @@ The dev server runs at **<http://localhost:8080>** (not the Angular default 4200
 
 ## TypeScript and Angular style
 
-TypeScript, JSDoc, Angular, component, state, template and service conventions are in [TypeScript and Angular Best Practices](docs/typescript-angular.md).
+TypeScript, JSDoc, Angular, component, state, template and service conventions are in [TypeScript and Angular best practices](docs/typescript-angular.md).
 Read it before writing code.
 Further project-specific guidance:
 
-- [Accessibility and Semantics Best Practices](docs/a11y-semantics.md)
-- [Responsiveness Best Practices](docs/responsiveness.md)
+- [Accessibility and semantics best practices](docs/a11y-semantics.md)
+- [Responsiveness best practices](docs/responsiveness.md)

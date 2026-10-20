@@ -5,6 +5,7 @@
  */
 
 import { signal } from '@angular/core';
+import { of } from 'rxjs';
 // eslint-disable-next-line boundaries/dependencies
 import { accessGrants, accessRequests } from '@app/../mocks/data';
 import { AccessGrantStatus, AccessRequestStatus } from '../models/access-requests';
@@ -81,6 +82,6 @@ export class MockAccessRequestService {
       : undefined;
   setAllAccessGrantsFilter = () => undefined;
   allAccessGrantsFiltered = () => accessGrants;
-  revokeAccessGrant = async () => undefined;
+  revokeAccessGrant = () => of(null);
   loadAccessRequest = () => undefined;
 }

@@ -37,8 +37,8 @@ export interface ConfirmDialogData {
   ],
   templateUrl: './confirm-dialog.html',
 })
-export class ConfirmDialogComponent {
-  #dialogRef = inject(MatDialogRef<ConfirmDialogComponent, boolean>);
+export class ConfirmDialog {
+  #dialogRef = inject(MatDialogRef<ConfirmDialog, boolean>);
   data = inject<ConfirmDialogData>(MAT_DIALOG_DATA);
 
   /**

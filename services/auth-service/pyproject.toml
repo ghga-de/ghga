@@ -9,47 +9,39 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "auth-service"
-version = "10.0.2"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "Authentication adapter and services used for the GHGA data portal"
 license = "Apache-2.0"
 dependencies = [
     "ghga-event-schemas~=13.0.0",
-    "ghga-service-commons[api,auth]>=8,<9",
-    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=9, <10",
+    "ghga-service-commons[api,auth]>=9,<10",
+    "hexkit[mongodb,akafka,opentelemetry-akafka,opentelemetry-mongodb,opentelemetry-fastapi]>=9, <11",
     "pynacl>=1.6,<2",
     "pyotp>=2.9,<3",
     "phonenumbers>=9,<10",
+    "typer>=0.25",
 ]
 
 [project.urls]
 Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
-auth-service = "auth_service.__main__:run"
+auth-service = "auth_service.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = [
     "src",
-]
-
-[tool.pytest.ini_options]
-minversion = "9.0"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
-testpaths = [
-    "tests/unit",
-    "tests/integration",
 ]
 
 [tool.coverage.paths]

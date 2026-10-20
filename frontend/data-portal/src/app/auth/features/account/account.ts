@@ -8,14 +8,14 @@ import { Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
-import { ActiveAccessGrantsListComponent } from '@app/access-requests/features/active-access-grants-list/active-access-grants-list';
-import { PendingAccessRequestsListComponent } from '@app/access-requests/features/pending-access-requests-list/pending-access-requests-list';
+import { ActiveAccessGrantsList } from '@app/access-requests/features/active-access-grants-list/active-access-grants-list';
+import { PendingAccessRequestsList } from '@app/access-requests/features/pending-access-requests-list/pending-access-requests-list';
 import { AuthService } from '@app/auth/services/auth';
-import { UserIvaListComponent } from '@app/ivas/features/user-iva-list/user-iva-list';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
+import { UserIvaList } from '@app/ivas/features/user-iva-list/user-iva-list';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
 // eslint-disable-next-line boundaries/dependencies
-import { UserUploadGrantsListComponent } from '@app/upload/features/user-upload-grants-list/user-upload-grants-list';
+import { UserUploadGrantsList } from '@app/upload/features/user-upload-grants-list/user-upload-grants-list';
 
 /**
  * This Component shows data about the current user and allows managing their IVAs.
@@ -26,16 +26,16 @@ import { UserUploadGrantsListComponent } from '@app/upload/features/user-upload-
     MatCardModule,
     MatIconModule,
     MatChipsModule,
-    PendingAccessRequestsListComponent,
-    ActiveAccessGrantsListComponent,
-    UserIvaListComponent,
-    ExternalLinkDirective,
-    UserUploadGrantsListComponent,
-    RefreshButtonComponent,
+    PendingAccessRequestsList,
+    ActiveAccessGrantsList,
+    UserIvaList,
+    ExternalLink,
+    UserUploadGrantsList,
+    RefreshButton,
   ],
   templateUrl: './account.html',
 })
-export class AccountComponent {
+export class Account {
   #auth = inject(AuthService);
   fullName = this.#auth.fullName;
   roleNames = this.#auth.roleNames;

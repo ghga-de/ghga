@@ -7,7 +7,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { AccessRequestManagerComponent } from './access-request-manager';
+import { AccessRequestManager } from './access-request-manager';
 
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { ActivatedRoute } from '@angular/router';
@@ -24,14 +24,14 @@ const MockConfigService = {
   helpdesk_url: 'https://helpdesk.test',
 };
 
-describe('AccessRequestManagerComponent', () => {
-  let component: AccessRequestManagerComponent;
-  let fixture: ComponentFixture<AccessRequestManagerComponent>;
+describe('AccessRequestManager', () => {
+  let component: AccessRequestManager;
+  let fixture: ComponentFixture<AccessRequestManager>;
   let accessRequestService: AccessRequestService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccessRequestManagerComponent],
+      imports: [AccessRequestManager],
       providers: [
         { provide: AccessRequestService, useClass: MockAccessRequestService },
         { provide: ConfigService, useValue: MockConfigService },
@@ -40,7 +40,7 @@ describe('AccessRequestManagerComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccessRequestManagerComponent);
+    fixture = TestBed.createComponent(AccessRequestManager);
     accessRequestService = TestBed.inject(AccessRequestService);
     accessRequestService.reloadAllAccessRequests = vitest.fn();
     component = fixture.componentInstance;

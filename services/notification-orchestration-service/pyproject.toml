@@ -9,18 +9,18 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "nos"
-version = "9.0.1"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "The Notification Orchestration Service controls the creation of notification events."
 license = "Apache-2.0"
 dependencies = [
@@ -34,17 +34,12 @@ dependencies = [
 Repository = "https://github.com/ghga-de/ghga"
 
 [project.scripts]
-nos = "nos.__main__:run"
+nos = "nos.__main__:cli"
 
 [tool.setuptools.packages.find]
 where = [
     "src",
 ]
-
-[tool.pytest.ini_options]
-minversion = "9.0"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

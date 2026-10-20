@@ -11,8 +11,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth';
 import { BaseRouteService } from '@app/shared/services/base-route';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { AdminMenuComponent } from '../admin-menu/admin-menu';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
+import { AdminMenu } from '../admin-menu/admin-menu';
 
 /**
  * Component for the navigation button components
@@ -23,13 +23,13 @@ import { AdminMenuComponent } from '../admin-menu/admin-menu';
     MatIconModule,
     MatButtonModule,
     RouterLink,
-    AdminMenuComponent,
+    AdminMenu,
     MatMenuModule,
-    ExternalLinkDirective,
+    ExternalLink,
   ],
   templateUrl: './site-header-nav-buttons.html',
 })
-export class SiteHeaderNavButtonsComponent {
+export class SiteHeaderNavButtons {
   #baseRoute = inject(BaseRouteService);
   #route = this.#baseRoute.route;
   #auth = inject(AuthService);

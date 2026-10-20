@@ -16,7 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { form, FormField } from '@angular/forms/signals';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -45,10 +45,10 @@ import {
 
 import { EmFile } from '@app/metadata/models/dataset-information';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import {
-  ConfirmDialogComponent,
+  ConfirmDialog,
   ConfirmDialogData,
 } from '@app/shared/ui/confirm-dialog/confirm-dialog';
 import { ResearchDataUploadBox } from '@app/upload/models/box';
@@ -57,7 +57,7 @@ import { MappedField } from '@app/upload/models/mapping';
 import { Study } from '@app/upload/models/study';
 import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
-import { UploadBoxMappingStateService } from '@app/upload/services/upload-box-mapping-state';
+import { UploadBoxMappingStore } from '@app/upload/services/upload-box-mapping-state';
 import {
   describeUnsettledFiles,
   IncompleteOrFailedConflict,
@@ -65,9 +65,9 @@ import {
 } from '@app/upload/utils/box-conflict';
 import {
   MappingConfirmDialogData,
-  UploadBoxMappingConfirmDialogComponent,
+  UploadBoxMappingConfirmDialog,
 } from './upload-box-mapping-confirm-dialog';
-import { UploadBoxMetadataAlignmentComponent } from './upload-box-metadata-alignment';
+import { UploadBoxMetadataAlignment } from './upload-box-metadata-alignment';
 
 /** The source of the metadata to map or align the upload box files against */
 export type MappingSource = 'study' | 'upload';
@@ -149,7 +149,7 @@ function computeAutoMappings(
 @Component({
   selector: 'app-upload-box-mapping',
   imports: [
-    FormsModule,
+    FormField,
     MatAutocompleteModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -164,19 +164,19 @@ function computeAutoMappings(
     MatSortModule,
     MatTableModule,
     RouterLink,
-    UploadBoxMetadataAlignmentComponent,
+    UploadBoxMetadataAlignment,
   ],
   providers: [MetadataService],
   templateUrl: './upload-box-mapping.html',
 })
-export class UploadBoxMappingComponent implements OnInit {
+export class UploadBoxMapping implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #studyService = inject(StudyService);
   #metadataService = inject(MetadataService);
   #dialog = inject(MatDialog);
-  #notificationService = inject(NotificationService);
-  #mappingStateService = inject(UploadBoxMappingStateService);
-  #navigationService = inject(NavigationTrackingService);
+  #notificationService = inject(Notifier);
+  #mappingStateService = inject(UploadBoxMappingStore);
+  #navigationService = inject(NavigationTracker);
 
   /** The locked upload box */
   box = input.required<ResearchDataUploadBox>();
@@ -205,6 +205,9 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Text used to filter table rows */
   filterText = signal<string>('');
 
+  /** The filter input, bound to the filter text */
+  protected filterField = form(this.filterText);
+
   /**
    * Manual mappings: meta accession → box file ID.
    * A `null` value means the mapping was explicitly cleared.
@@ -216,6 +219,9 @@ export class UploadBoxMappingComponent implements OnInit {
 
   /** The current text value in the inline editor */
   inlineInputValue = signal<string>('');
+
+  /** The inline editor input, bound to its text value */
+  protected inlineInputField = form(this.inlineInputValue);
 
   /** Whether a mapping submission is in progress */
   isSubmitting = signal<boolean>(false);
@@ -382,7 +388,7 @@ export class UploadBoxMappingComponent implements OnInit {
 
   // Table rows
 
-  private readonly boxFileById = computed<Map<string, FileUploadWithAccession>>(() => {
+  readonly #boxFileById = computed<Map<string, FileUploadWithAccession>>(() => {
     return new Map(this.boxFiles().map((bf) => [bf.id, bf]));
   });
 
@@ -391,7 +397,7 @@ export class UploadBoxMappingComponent implements OnInit {
     const effective = this.effectiveMappings();
     const auto = this.autoMappings();
     const manual = this.manualMappings();
-    const byId = this.boxFileById();
+    const byId = this.#boxFileById();
 
     return this.metadataFiles().map((meta) => {
       const boxFileId = effective.get(meta.accession);
@@ -550,8 +556,8 @@ export class UploadBoxMappingComponent implements OnInit {
     }
 
     this.#fieldChangeDialogOpen.set(true);
-    const ref = this.#dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
-      ConfirmDialogComponent,
+    const ref = this.#dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(
+      ConfirmDialog,
       {
         data: {
           title: 'Change mapped field',
@@ -683,8 +689,8 @@ export class UploadBoxMappingComponent implements OnInit {
   /** Clear the selected study and all dependent mapping state */
   onChangeStudy(): void {
     if (this.manualMappings().size > 0) {
-      const ref = this.#dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
-        ConfirmDialogComponent,
+      const ref = this.#dialog.open<ConfirmDialog, ConfirmDialogData, boolean>(
+        ConfirmDialog,
         {
           data: {
             title: 'Change study',
@@ -723,10 +729,10 @@ export class UploadBoxMappingComponent implements OnInit {
       .map((mf) => (field ? (mf[field] ?? mf.accession) : mf.accession));
 
     const ref = this.#dialog.open<
-      UploadBoxMappingConfirmDialogComponent,
+      UploadBoxMappingConfirmDialog,
       MappingConfirmDialogData,
       boolean
-    >(UploadBoxMappingConfirmDialogComponent, {
+    >(UploadBoxMappingConfirmDialog, {
       data: { unmappedBoxFileAliases, unmappedMetaFileNames },
       width: 'clamp(24rem, 90vw, 42rem)',
     });

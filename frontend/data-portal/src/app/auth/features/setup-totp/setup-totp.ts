@@ -30,7 +30,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
   ],
   templateUrl: './setup-totp.html',
 })
-export class SetupTotpComponent {
+export class SetupTotp {
   #authService = inject(AuthService);
   #sessionState = this.#authService.sessionState;
 

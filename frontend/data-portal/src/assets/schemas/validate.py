@@ -4,7 +4,23 @@ import io
 import os
 import sys
 import traceback
+import types
 from contextlib import redirect_stderr, redirect_stdout
+
+# schemapack up to 4.4.1 imports ghga-jsonsubschema at the top level, although it is
+# only its optional `schema-comparison` extra, which validation never uses, so a
+# stand-in module lets schemapack import.
+# The stub can go once schemapack > 4.4.1 is released.
+try:
+    import jsonsubschema  # noqa: F401
+except ImportError:
+    _stub = types.ModuleType("jsonsubschema")
+
+    def _is_equivalent(*_args, **_kwargs):
+        raise ImportError("ghga-jsonsubschema is not installed in the data portal")
+
+    _stub.is_equivalent = _is_equivalent
+    sys.modules["jsonsubschema"] = _stub
 
 original_argv = list(sys.argv)
 schema_filename, in_filename = args_js.to_py()

@@ -27,7 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 // eslint-disable-next-line boundaries/dependencies
-import { DynamicAccessRequestButtonComponent } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button';
+import { DynamicAccessRequestButton } from '@app/access-requests/features/dynamic-access-request-button/dynamic-access-request-button';
 import { Experiment, File, Sample } from '@app/metadata/models/dataset-details';
 import { ValidateDOI } from '@app/metadata/pipes/validate-doi-pipe';
 import { DatasetInformationService } from '@app/metadata/services/dataset-information';
@@ -35,11 +35,11 @@ import { MetadataService } from '@app/metadata/services/metadata';
 import { WellKnownValueService } from '@app/metadata/services/well-known-value';
 import { UnderscoreToSpace } from '@app/shared/pipes/underscore-to-space-pipe';
 import { ConfigService } from '@app/shared/services/config';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { ParagraphsComponent } from '../../../shared/ui/paragraphs/paragraphs';
-import { DatasetDetailsTableComponent } from '../dataset-details-table/dataset-details-table';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
+import { Paragraphs } from '../../../shared/ui/paragraphs/paragraphs';
+import { DatasetDetailsTable } from '../dataset-details-table/dataset-details-table';
 
 /**
  * Component for the dataset details page
@@ -58,23 +58,23 @@ import { DatasetDetailsTableComponent } from '../dataset-details-table/dataset-d
     UnderscoreToSpace,
     MatIconModule,
     ClipboardModule,
-    DynamicAccessRequestButtonComponent,
+    DynamicAccessRequestButton,
     MatTooltipModule,
     RouterLink,
     ValidateDOI,
-    ParagraphsComponent,
-    ExternalLinkDirective,
-    DatasetDetailsTableComponent,
+    Paragraphs,
+    ExternalLink,
+    DatasetDetailsTable,
   ],
   providers: [MetadataService],
   templateUrl: './dataset-details.html',
 })
-export class DatasetDetailsComponent implements OnInit {
+export class DatasetDetailsPage implements OnInit {
   id = input.required<string>();
   #config = inject(ConfigService);
-  #location = inject(NavigationTrackingService);
+  #location = inject(NavigationTracker);
   #title = inject(Title);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #metadata = inject(MetadataService);
   #dins = inject(DatasetInformationService);
   #wkvs = inject(WellKnownValueService);

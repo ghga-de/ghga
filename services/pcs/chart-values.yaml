@@ -9,6 +9,11 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: pcs-rest
 
+migrationInitContainer:
+  executable: pcs
+  executableArgs:
+  - migrate-db
+
 config:
   host: 0.0.0.0
   mongo_dsn:
@@ -18,6 +23,8 @@ config:
   enable_opentelemetry: false
   db_version_collection: "pcsDbVersions"
   migration_wait_sec: 10
+  # replicas waiting on another one's migration fail after this, so a stuck lock shows
+  migration_max_wait_sec: 600
 
 executableArgs:
 - run-rest

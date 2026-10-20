@@ -7,6 +7,7 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: ucs
@@ -75,8 +76,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -221,6 +223,7 @@ config:
   enable_opentelemetry: false
   db_version_collection: "ucsDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: ucs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5

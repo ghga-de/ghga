@@ -57,7 +57,7 @@ just hooks                          # install the git hooks (once)
 just hooks-all                      # everything CI's hygiene job runs
 ```
 
-The member is on the PyPI lane, so the published-combo gate tests it on every version from 3.11 to 3.14 that its `requires-python` allows; changes must work across that range.
+The member is on the PyPI lane, so the published-combo gate tests it on every version from 3.11 to 3.15 that its `requires-python` allows; changes must work across that range.
 Cut feature branches from `dev` and merge them back into `dev` — a pre-commit hook blocks direct commits to `dev` and `main` ([branching](../../docs/conventions.md#branching)).
 
 ## Coding conventions
@@ -81,7 +81,7 @@ Cut feature branches from `dev` and merge them back into `dev` — a pre-commit 
 
 ## Testing conventions
 
-- Plain pytest: module-level `test_*` functions with bare `assert` statements, no test classes and no unittest idioms (the suite was converted from unittest — do not reintroduce it).
+- Plain pytest: module-level `test_*` functions with bare `assert` statements, no test classes and no unittest idioms.
 - Tests are organized by JSON type/feature: `test_string.py`, `test_numeric.py`, `test_object.py`, `test_array.py`, `test_refs.py`, etc.
   Put new tests in the matching file.
 - The typical test builds two inline schema dicts and asserts `is_subschema` / `is_equivalent` in both directions:

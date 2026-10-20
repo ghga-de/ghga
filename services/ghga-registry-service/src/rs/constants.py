@@ -25,6 +25,15 @@ WORK_ORDER_TOKEN_VALID_SECONDS = 30
 FILE_ACCESSION_COLLECTION = "fileAccessions"
 STUDY_COLLECTION = "studies"
 UCS_UPLOADS_PAGE_SIZE = 100
+
+# The RDUB-specific fields are used to look for changes in that subset of an RDUB document
+#  i.e. ignore changes in FUB-only fields. Version is excluded on purpose.
+RDUB_OWNED_FIELDS = frozenset(
+    {"state", "title", "description", "last_changed", "changed_by"}
+)
+
+STAMP_FIELDS = frozenset({"last_changed", "changed_by"})
+
 VALID_STATE_TRANSITIONS = [
     ("open", "locked"),
     ("locked", "open"),
@@ -37,6 +46,7 @@ EXC_ID_ARCHIVAL_PREREQS_NOT_MET = "archivalPrereqsNotMet"
 EXC_ID_BOX_MAX_SIZE_TOO_LOW = "boxMaxSizeTooLow"
 EXC_ID_BOX_NOT_FOUND = "boxNotFound"
 EXC_ID_BOX_STATE_ERROR = "boxStateError"
+EXC_ID_BOX_STATS_UNAVAILABLE = "boxStatsUnavailable"
 EXC_ID_BOX_TITLE_EXISTS = "boxTitleExists"
 EXC_ID_BOX_VERSION_OUTDATED = "boxVersionOutdated"
 EXC_ID_FILE_UPLOAD_NOT_FOUND = "fileUploadNotFound"

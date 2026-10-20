@@ -43,8 +43,8 @@ export interface MappingConfirmDialogData {
   ],
   templateUrl: './upload-box-mapping-confirm-dialog.html',
 })
-export class UploadBoxMappingConfirmDialogComponent {
-  #dialogRef = inject(MatDialogRef<UploadBoxMappingConfirmDialogComponent, boolean>);
+export class UploadBoxMappingConfirmDialog {
+  #dialogRef = inject(MatDialogRef<UploadBoxMappingConfirmDialog, boolean>);
   protected data = inject<MappingConfirmDialogData>(MAT_DIALOG_DATA);
 
   /** Whether the user has ticked the confirmation checkbox */

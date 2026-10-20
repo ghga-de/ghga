@@ -9,11 +9,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { screen } from '@testing-library/angular';
 
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { ConfirmDialogComponent } from './confirm-dialog';
+import { ConfirmDialog } from './confirm-dialog';
 
-describe('ConfirmDialogComponent', () => {
-  let component: ConfirmDialogComponent;
-  let fixture: ComponentFixture<ConfirmDialogComponent>;
+describe('ConfirmDialog', () => {
+  let component: ConfirmDialog;
+  let fixture: ComponentFixture<ConfirmDialog>;
 
   const dialogRef = {
     close: vitest.fn(),
@@ -21,7 +21,7 @@ describe('ConfirmDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ConfirmDialogComponent],
+      imports: [ConfirmDialog],
       providers: [
         {
           provide: MAT_DIALOG_DATA,
@@ -34,7 +34,7 @@ describe('ConfirmDialogComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ConfirmDialogComponent);
+    fixture = TestBed.createComponent(ConfirmDialog);
     component = fixture.componentInstance;
     vitest.clearAllMocks();
     await fixture.whenStable();

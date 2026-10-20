@@ -168,7 +168,7 @@ async def login(  # noqa: C901, PLR0913
             user = None  # user has been deleted
     else:
         try:
-            user = await user_dao.find_one(mapping={"ext_id": session.ext_id})
+            user = await user_dao.find_one(filter_={"ext_id": session.ext_id})
         except NoHitsFoundError:
             user = None  # user is not yet registered
 

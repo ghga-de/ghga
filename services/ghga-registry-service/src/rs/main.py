@@ -25,6 +25,7 @@ import logging
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
 from rs.adapters.outbound.dao import get_box_dao, get_file_accession_dao
 from rs.config import Config
@@ -33,7 +34,7 @@ from rs.inject import (
     prepare_event_subscriber,
     prepare_rest_app,
 )
-from rs.migrations import run_db_migrations
+from rs.migrations import MIGRATION_MAP
 
 log = logging.getLogger(__name__)
 
@@ -44,9 +45,11 @@ async def migrate_db():
     """Run database migrations as a one-off command."""
     config = Config()
     configure_logging(config=config)
-    configure_opentelemetry(service_name=config.service_name, config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 async def run_rest_app():

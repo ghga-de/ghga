@@ -56,7 +56,7 @@ import { FileUploadStatePipe } from '@app/upload/pipes/file-upload-state-pipe';
   providers: [CommonDatePipe],
   templateUrl: './upload-box-files-table.html',
 })
-export class UploadBoxFilesTableComponent {
+export class UploadBoxFilesTable {
   /** The file uploads of the currently shown page, not the whole collection. */
   pageFiles = input.required<FileUploadWithAccession[]>();
 

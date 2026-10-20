@@ -7,7 +7,10 @@ The system was imported (history-preserving) from the `charts` repo.
 helm install my-release oci://registry-1.docker.io/ghga/<chart>-chart --version X.Y.Z
 ```
 
-Chart version/`appVersion` and publishing are not per-merge: they're stamped and pushed as OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via [release.yaml](../.github/workflows/release.yaml), ADR-0027), so a chart version always matches a released set of images.
+Release charts are not per-merge: they're stamped and pushed as OCI artifacts only as part of a platform release (`ghga/X.Y.Z` via [release.yaml](../.github/workflows/release.yaml), ADR-0027), so a release chart version always matches a released set of images.
+
+Every merge to `dev` also publishes the member charts to `oci://ghcr.io/ghga-de/ghga/charts` as a dev release, e.g. `15.3.1-rc.8.dev.19401`, on the mono image and pinned to its digest, for continuous deployment of `dev` ([dev-images.yaml](../.github/workflows/dev-images.yaml), ADR-0045).
+Dev charts are pushed without the `-chart` suffix, and Helm skips prereleases unless told otherwise, so install one by path and exact version: `helm install wps oci://ghcr.io/ghga-de/ghga/charts/wps --version 15.3.1-rc.8.dev.19401`.
 
 Layout:
 
@@ -38,10 +41,10 @@ helm install <release-name> <chart>
 The demo umbrella (`helm install ghga deploy/charts/ghga-demo`) bundles the Envoy Gateway edge (GatewayClass/Gateway/EnvoyProxy, NodePort 30080 by default) with per-route `SecurityPolicy` ext-authz against the auth adapter (headers mirror the prod `envoyExtAuthzHttp` provider verbatim), lightweight infra (in-chart Kafka KRaft/MongoDB on official images, MinIO on Chainguard's build, `aai`), and the app charts behind enable conditions.
 Chart dependencies build bottom-up — `just demo-template` does the ordered dep-up + render smoke check.
 
-Demo wiring so far: auth-service deploys twice (aliases `auth-adapter`/`auth-rest`, selected via `config.provide_apis`) — which is why generated charts flatten the library defaults into their values.yaml at generation time (helm's `import-values` is not processed for aliased instances).
+Demo wiring so far: auth-service deploys four times (aliases `auth-adapter`, `auth-users` and `auth-claims`, selected via `config.provide_apis`, and `auth-consumer`) — which is why generated charts flatten the library defaults into their values.yaml at generation time (helm's `import-values` is not processed for aliased instances).
 The aai issuer routes through the gateway at `/<issuerId>` with no rewrite, so browser and adapter agree on one issuer URL; oidc_* and DSN settings for the enabled slice live in the umbrella values (release name `ghga` assumed — the config block is plain YAML, not templated).
 A pre-install secret-gen Job (ADR-0028/0035) generates the internal auth JWK pair + TOTP key as plain K8s Secrets (idempotent — keys survive upgrades; the adapter consumes the private half, the registry instance the public half), and the demo data steward is seeded via `add_as_data_stewards`.
-MailHog (SMTP sink, UI via port-forward) and Vault dev-mode (functional ekss backend, not secret injection; a sidecar sets up the ekss AppRole as in compose, and again whenever Vault restarted) round out the bundled infra.
+MailHog (SMTP sink, UI via port-forward) and Vault dev-mode (functional ekss backend, not secret injection; the Vault container sets up the ekss AppRole as in compose after every start, since dev mode forgets it on a restart) round out the bundled infra.
 The file + metadata path is wired: ekss/dcs/ucs/fis/ifrs/pcs/wps/rs/metldata with compose-derived configs (single MinIO stands in for both hub localstacks, buckets provisioned by the chart), prod base paths under an /api prefix, ext-authz on every /api/* route, and the full secret matrix (distinct signing pairs per role, per-service tokens, crypt4gh file Secret for ekss).
 The access/metadata/notification path is in too (ars, mass, dins, rts, ns, nos, dlqs; sms ships disabled — testbed-only per ADR-0030 — the testbed profile enables it and adds it to the protected routes), with a wiremock lox24 SMS-gateway mock beside MailHog.
 All 21 deployable services are in the bundle.
