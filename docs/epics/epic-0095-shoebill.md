@@ -9,11 +9,11 @@ Epic planning and implementation follow the [Epic Planning and Marathon SOP](htt
 ### Outline
 
 DHFS re-encrypts files in whatever order FIS returns them, and FIS returns them in no defined order.
-This epic lets a data steward rank research data upload boxes through RS, so that DHFS re-encrypts all files of a higher-ranked box before any file of a lower-ranked one.
+This epic lets a data steward rank research data upload boxes in the Data Portal, so that DHFS re-encrypts all files of a higher-ranked box before any file of a lower-ranked one.
 Files in unranked boxes come after all files in ranked boxes, with no order among them.
 
-RS stores the ranking as one list and publishes it through the outbox.
-FIS consumes it, and its `GET /storages/{storage_alias}/uploads` endpoint returns the waiting files sorted by rank.
+RS stores the box ranking as one list and publishes it through the outbox.
+FIS consumes it, and its existing `GET /storages/{storage_alias}/uploads` endpoint returns the waiting files sorted by rank.
 DHFS processes them in that order, and asks again right after a batch, instead of waiting for the next poll interval.
 
 ### Included/Required
@@ -23,23 +23,24 @@ DHFS processes them in that order, and asks again right after a batch, instead o
   Index 0 is the highest priority.
 - RS must expose the list to data stewards through a read and a replace endpoint (see [API definitions](#api-definitions)).
   The replace endpoint must reject a request whose `version` does not match the stored one, so that two stewards editing at the same time cannot overwrite each other unnoticed.
-- RS must reject a list with duplicate boxes, unknown boxes, or boxes in a state that cannot receive files.
-- RS must remove a box from the list when the box is deleted, archived, or otherwise reaches a state where it can no longer receive files.
-  Each removal increments `version`.
+  Each saved edit increments the `version` counter.
+- RS must reject a list with duplicate boxes, unknown boxes, or boxes that are already `"archived"`.
+- RS must remove a box from the list when the box is deleted or archived.
+  Each removal increments `version` (reiterating that from a few lines above, just to be clear).
 - RS must publish the document through the outbox (`MongoKafkaDaoPublisherFactory`), with a fixed key on a compacted topic, so a FIS instance that starts later still receives the current list.
-- **ghga-event-schemas** must define the event payload schema and a config class for the new topic.
+- **ghga-event-schemas** must define the payload schema for the priority list's event, as well as a config class for the new topic.
 - **FIS** must consume the priority events and store the list, ignoring any event whose `version` is not higher than the stored one.
 - FIS must store `box_id` (the file upload box ID) on each file.
   It is already part of the `FileUpload` event, and FIS currently drops it.
   The field is optional with default `None`, because files stored before this epic lack it until the backfill below.
 - FIS must fill in a missing `box_id` when it receives a `FileUpload` event for a file it already has, even if the event is not newer than the stored file.
   This branch lets a UCS republish backfill the field (see [Rollout](#rollout)).
-- FIS must sort the waiting files with a MongoDB aggregation, as described in [Sorting the waiting files](#sorting-the-waiting-files).
-  It still returns all waiting files of the storage alias.
+- FIS must sort not-yet-interrogated ("waiting") files with a MongoDB aggregation, as described in [Sorting the waiting files](#sorting-the-waiting-files).
 - **DHFS** must process the files in the order FIS returns them.
-  It does so today; this epic makes the order a requirement.
+  It already does so today; this just reiterates that requirement.
 - DHFS must skip the `min_run_interval_seconds` wait after a round in which it concluded at least one file, whether it succeeded or reported a failure.
   It must still wait after a round in which FIS returned no file, or every file ended with an `InconclusiveError`.
+- **Data Portal** must offer a page where data stewards view and edit the list, as described in [Data Portal page](#data-portal-page).
 - **Testbed** must cover the feature end to end, as described in [Testbed](#testbed).
 
 ### Optional
@@ -49,8 +50,6 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 
 ### Not included
 
-- Data Portal UI for viewing and editing the list.
-  Until it exists, data stewards use the RS endpoints directly.
 - Changing priority does not interrupt a batch DHFS is already processing.
   The new order applies from the next batch.
 - Changing how many files FIS returns per request.
@@ -68,18 +67,24 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 
 ### RESTful/Synchronous
 
-RS, data steward role required:
+RS gets two endpoints on a new router.
+Both require the Data Steward role through `StewardAuthContext`, like the existing steward-only RS endpoints, and both answer `401` without a valid token and `403` without the role.
 
 - `GET /upload-box-priority`: return the current priority list.
+  - `200`: the stored document, with `version` and `entries` as in the [event payload](#payload-schemas-for-events).
+    If no list has been saved yet, the body is `{"version": 0, "entries": []}`, so the Data Portal needs no special case.
 - `PUT /upload-box-priority`: replace the priority list.
-  The body holds `version` (the version the steward edited) and `box_ids`, the ordered research data upload box IDs.
+  The body holds `version`, the version the steward edited, and `box_ids`, the ordered research data upload box IDs.
   RS resolves each file upload box ID itself.
-  It returns `409 Conflict` if `version` is stale, and `422` if the list fails validation.
+  - `200`: the stored document with its new `version`.
+    It returns the document instead of `204`, which the other RS write endpoints use, so the Data Portal can take the new `version` without a second request.
+  - `404`: a box ID that does not exist.
+  - `409`: either `version` does not match the stored one, or a box is archived.
+    Each case gets its own `HttpCustomExceptionBase` subclass and `exception_id`, so the Data Portal can tell them apart and offer a reload only for the version conflict.
+  - `422`: a malformed body, or a box ID that appears twice.
 
-FIS, changed:
-
-- `GET /storages/{storage_alias}/uploads`: the response holds the same files as before, sorted by rank.
-  The response schema does not change.
+FIS keeps its endpoints unchanged.
+The order of the list from `GET /storages/{storage_alias}/uploads` was undefined and now follows the rank, which DHFS relies on (see [Sorting the waiting files](#sorting-the-waiting-files)).
 
 ### Payload Schemas for Events
 
@@ -109,14 +114,17 @@ FIS reads only `version` and `entries[].file_upload_box_id`.
 
 ### Why one list
 
-The alternative was a rank field on each research data upload box, propagated to FIS through the existing box events.
+The main alternative was a rank field on each research data upload box, propagated to FIS through the existing box events.
 Moving one box then rewrites the rank of every box between its old and new position, and readers can see a half-updated order, since MongoDB updates several documents without a transaction.
 A single document changes in one write, carries the full state in one event, and lets consumers apply events idempotently.
+
+Another alternative was to relay requests from RS to UCS and update all FileUploads within each affected box.
+However, this is too clumsy and heavy-handed to be seriously considered.
 
 ### Sorting the waiting files
 
 FIS cannot run this through the hexkit DAO protocol, which has no aggregation.
-Add an outbound port, e.g. `WaitingFileFinderPort`, and a MongoDB adapter that uses `ConfiguredMongoClient` directly.
+Add an outbound port, e.g. `InterrogationQueuePort`, and a MongoDB adapter that uses `ConfiguredMongoClient` directly.
 `services/mass/src/mass/adapters/outbound/aggregator.py` and `services/ucs/src/ucs/adapters/outbound/box_stats.py` follow the same pattern.
 
 ```python
@@ -154,6 +162,41 @@ An `InconclusiveError` leaves the file uninterrogated in FIS, so the next reques
 Waiting after a round in which every file was inconclusive keeps DHFS from requesting the same batch in a tight loop.
 A file that stays inconclusive does not block the rest of its batch, as today.
 
+### Data Portal page
+
+Add a page at `/upload-box-manager/priority`, linked from the Upload Box Manager and guarded like it by `guardDataSteward()`; register the route before `:id`, which would otherwise match it.
+The page shows two panels: the ranked boxes in priority order on the left, and the remaining boxes on the right, with a search field and an **Add** button per box.
+Archived boxes appear in neither panel.
+Each ranked row shows its rank, title, storage alias, state and file count, and the steward re-ranks a row by dragging it (Angular CDK `cdkDropList`, already a dependency) or with move up, move down, move to top and remove buttons for keyboard users.
+While a row is dragged, a bar in the gap between two rows marks where it will land; after a move, the row stays highlighted for about 1.5 seconds so the eye can find it again.
+Edits stay local until **Save order** sends `PUT /upload-box-priority` with the version the page loaded; **Discard changes** restores the saved order.
+On a version conflict (`409` with the version conflict's `exception_id`) the page says another steward saved a newer order and offers to reload it; the steward then repeats their edit.
+On a `409` for an archived box, the page reloads the list of boxes, since that box has left the list in the meantime.
+
+```text
+Upload Box Manager / Re-encryption Priority
+Manage Box Priority                       Version 7  [Discard changes] [Save order]
+Files in ranked boxes are re-encrypted first, highest rank first.
+
+| You have unsaved changes to the priority order.                                 |
+
++- Priority order ---------------------------------+ +- Unranked boxes ------------+
+| :: (1) Box B                    [^] [v] [^^] [x] | | [Search by title, storage ] |
+|        Tuebingen - locked - 8 files              | |                             |
+|==================================================| | Box C               [Add]   |
+| :: (2) Box A                    [^] [v] [^^] [x] | |   Heidelberg - 35 files     |
+|        Heidelberg - open - 120 files             | | Box E               [Add]   |
+|                                                  | |   Tuebingen - 12 files      |
+| :: (3) Box D                    [^] [v] [^^] [x] | |                             |
+|        Koeln - open - 60 files                   | | Archived boxes are not      |
+|                                                  | | listed.                     |
+| Drag a row or use the buttons to change its rank.| |                             |
++--------------------------------------------------+ +-----------------------------+
+
+::    drag handle          ===  drop position while dragging
+[^] [v]  move up, down     [^^] move to top          [x] remove from priority
+```
+
 ### Rollout
 
 1. Release ghga-event-schemas with the new schema and config.
@@ -164,6 +207,8 @@ A file that stays inconclusive does not block the rest of its batch, as today.
    Only files still waiting for interrogation need it, since the selection reads no other files.
 4. Deploy DHFS.
    A DHFS from before this epic already processes files in the order FIS returns them, so prioritization works before this step; DHFS only keeps waiting between batches until then.
+5. Deploy the Data Portal.
+   It needs the RS endpoints from step 2.
 
 No database migration is needed: `box_id` defaults to `None`, and the republish fills it in.
 
@@ -174,12 +219,13 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 - FIS: stale priority events are ignored; a republished `FileUpload` event fills in a missing `box_id` and changes nothing else.
 - RS: version conflict, validation errors, and removal of a box from the list when it is archived or deleted.
 - DHFS: the wait is skipped after a round that concluded at least one file, and kept after an empty response or a round in which every file was inconclusive.
+- Data Portal: reordering by drag and by buttons, adding and removing boxes, discard, and the `409` reload path, against a mocked RS.
 
 ### Testbed
 
 The upload features (`testbed/features/20x_*.feature`) go through RS and read FIS's MongoDB directly, so they can check every step up to FIS.
 
-- Add a feature, e.g. `204_upload_box_priority.feature`, in which the data steward reads the list, replaces it, and gets `409` for a stale `version` and `422` for an unknown or duplicate box.
+- Add a feature, e.g. `204_upload_box_priority.feature`, in which the data steward reads the list, replaces it, and gets `409` for a stale `version`, `404` for an unknown box and `422` for a duplicate box.
 - After a replace, assert that FIS's priority document reaches the new `version` within a timeout.
 - Assert that FIS stores `box_id` on files uploaded during the run.
 - Extend the archival scenario in `203_upload_completed.feature` to assert that the archived box is no longer in the list.
@@ -193,4 +239,4 @@ The FIS integration tests cover the sort order in any case.
 
 Number of sprints required: 1
 
-Number of developers required: 1
+Number of developers required: 2
