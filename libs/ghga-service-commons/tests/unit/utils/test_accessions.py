@@ -12,23 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-"""Test the validation of the core models"""
+"""Test the utils.accessions module."""
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from ars.core.models import Accession
+from ghga_service_commons.utils.accessions import DatasetAccession, FileAccession
 
 
 @pytest.mark.parametrize(
     "accession",
     ["GHGAD12345678901234", "GHGA.26.ABC.1.DS.XYZ"],
 )
-def test_good_accession(accession: str):
+def test_good_dataset_accession(accession: str):
     """Test that legacy and new dataset accessions are accepted."""
-    assert TypeAdapter(Accession).validate_python(accession) == accession
+    assert TypeAdapter(DatasetAccession).validate_python(accession) == accession
 
 
 @pytest.mark.parametrize(
@@ -42,7 +41,36 @@ def test_good_accession(accession: str):
         "GHGA.2026.ABC.1.DS.XYZ",
     ],
 )
-def test_bad_accession(accession: str):
+def test_bad_dataset_accession(accession: str):
     """Test that study PIDs, other entities' accessions and malformed ones are rejected."""
     with pytest.raises(ValidationError):
-        TypeAdapter(Accession).validate_python(accession)
+        TypeAdapter(DatasetAccession).validate_python(accession)
+
+
+@pytest.mark.parametrize(
+    "accession",
+    ["GHGAF01", "GHGA.26.ABC.1.file_a", "GHGA.26.ABC.12.file-b"],
+)
+def test_good_file_accession(accession: str):
+    """Test that legacy and study PID file accessions are accepted."""
+    assert TypeAdapter(FileAccession).validate_python(accession) == accession
+
+
+@pytest.mark.parametrize(
+    "accession",
+    [
+        "some_file_id",
+        "GHGA.26.ABC.1",
+        "GHGA.26.AB1.1.file_a",
+        "GHGA.2026.ABC.1.f",
+        "GHGA.26.ABC.12.some.file",
+        "GHGA.26.ABC.1.File_A",
+        "GHGA.26.ABC.1.DS.XYZ",
+    ],
+)
+def test_bad_file_accession(accession: str):
+    """Test that dataset PIDs, unnormalized aliases and malformed accessions are
+    rejected.
+    """
+    with pytest.raises(ValidationError):
+        TypeAdapter(FileAccession).validate_python(accession)

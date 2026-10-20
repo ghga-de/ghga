@@ -17,10 +17,8 @@
 """Test Claims models and show some usage examples."""
 
 import pytest
-from pydantic import TypeAdapter, ValidationError
 
 from auth_service.claims_repository.models.claims import (
-    Accession,
     AuthorityLevel,
     ClaimCreation,
     ClaimMatch,
@@ -31,32 +29,6 @@ from auth_service.claims_repository.models.claims import (
     VisaType,
 )
 from ghga_service_commons.utils.utc_dates import utc_datetime
-
-
-@pytest.mark.parametrize(
-    "accession",
-    ["GHGAD12345678901234", "GHGA.26.ABC.1.DS.XYZ"],
-)
-def test_good_accession(accession: str):
-    """Test that legacy and new dataset accessions are accepted."""
-    assert TypeAdapter(Accession).validate_python(accession) == accession
-
-
-@pytest.mark.parametrize(
-    "accession",
-    [
-        "hello",
-        "GHGA.26",
-        "GHGA.26.ABC.1",
-        "GHGA.26.ABC.1.sample_a",
-        "GHGA.26.AB1.1.DS.XYZ",
-        "GHGA.2026.ABC.1.DS.XYZ",
-    ],
-)
-def test_bad_accession(accession: str):
-    """Test that study PIDs, other entities' accessions and malformed ones are rejected."""
-    with pytest.raises(ValidationError):
-        TypeAdapter(Accession).validate_python(accession)
 
 
 def test_good_visa_type():
