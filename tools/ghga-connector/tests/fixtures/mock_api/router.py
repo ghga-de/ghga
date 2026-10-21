@@ -24,8 +24,12 @@ from typing import Any
 
 import httpx2
 
-from ghga_connector.core.client import get_ratelimiting_retry_transport
-from ghga_service_commons.transports import BaseTransportFactory
+from ghga_connector.config import get_config
+from ghga_service_commons.transports import (
+    AsyncRetryTransport,
+    BaseTransportFactory,
+    CompositeTransportFactory,
+)
 
 __all__ = [
     "MOCK_API_HOST",
@@ -94,6 +98,15 @@ def is_mocked(url: httpx2.URL, base_urls: Sequence[str]) -> bool:
         and url.netloc == base.netloc
         and url.path.startswith(base.path)
         for base in (canonical(httpx2.URL(base_url)) for base_url in base_urls)
+    )
+
+
+def get_ratelimiting_retry_transport(
+    make_base_transport: BaseTransportFactory | None = None,
+) -> AsyncRetryTransport:
+    """Wrap a base transport in the retry and rate limiting layers the connector uses."""
+    return CompositeTransportFactory.create_ratelimiting_retry_transport(
+        get_config(), make_base_transport=make_base_transport
     )
 
 

@@ -54,9 +54,8 @@ def ekss() -> EkssApiMock:
 @pytest_asyncio.fixture
 async def client(ekss: EkssApiMock) -> AsyncGenerator[SecretsClient]:
     """Construct a SecretsClient backed by the configured httpx2 client."""
-    transport = ekss.as_transport()
     async with get_configured_httpx_client(
-        config=HTTP_CONFIG, make_base_transport=lambda _: transport
+        config=HTTP_CONFIG, make_base_transport=lambda _: ekss.as_transport()
     ) as httpx_client:
         yield SecretsClient(config=SECRETS_CONFIG, httpx_client=httpx_client)
 

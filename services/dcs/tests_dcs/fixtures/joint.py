@@ -146,10 +146,9 @@ async def joint_fixture(
     # prepare everything, serving the EKSS API from the mock instead of the network
     # (the retry and rate limiting layers stay in place above it)
     ekss = EkssApiMock(config=config)
-    transport = ekss.as_transport()
     async with (
         prepare_core(
-            config=config, http_make_base_transport=lambda _: transport
+            config=config, http_make_base_transport=lambda _: ekss.as_transport()
         ) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
         prepare_event_subscriber(

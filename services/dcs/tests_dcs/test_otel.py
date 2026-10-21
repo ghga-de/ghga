@@ -248,10 +248,9 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     config = populated_fixture.joint_fixture.config
     receiver_public_key = base64.b64encode(b"test-public-key").decode()
     ekss = EkssApiMock(config=config)
-    transport = instrumentable(ekss.as_transport())
 
     async with get_configured_httpx_client(
-        config=config, make_base_transport=lambda _: transport
+        config=config, make_base_transport=lambda _: instrumentable(ekss.as_transport())
     ) as client:
         secrets_client = SecretsClient(config=config, httpx_client=client)
 

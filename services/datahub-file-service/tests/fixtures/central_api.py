@@ -82,14 +82,17 @@ async def get_mocked_httpx_client(
 
     Other requests raise, unless `passthrough` lets them reach the S3 testcontainer.
     """
-    base_transport: httpx2.AsyncBaseTransport = central_api.as_transport()
-    if passthrough:
-        base_transport = _CentralApiRoutingTransport(
-            mock_transport=central_api.as_transport(),
-            base_url=str(central_api.base_url),
-        )
+
+    def make_base_transport(_: str | None) -> httpx2.AsyncBaseTransport:
+        # a transport per route, as the client closes each route's transport
+        if passthrough:
+            return _CentralApiRoutingTransport(
+                mock_transport=central_api.as_transport(),
+                base_url=str(central_api.base_url),
+            )
+        return central_api.as_transport()
+
     async with get_configured_httpx_client(
-        config=config,
-        make_base_transport=lambda _: base_transport,
+        config=config, make_base_transport=make_base_transport
     ) as client:
         yield client

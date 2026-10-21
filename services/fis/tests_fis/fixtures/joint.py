@@ -73,10 +73,9 @@ async def joint_fixture(
     # the EKSS API is served from the mock instead of the network (the retry and
     # rate limiting layers stay in place above it)
     ekss = EkssApiMock(config=config)
-    transport = ekss.as_transport()
     async with (
         prepare_core(
-            config=config, http_make_base_transport=lambda _: transport
+            config=config, http_make_base_transport=lambda _: ekss.as_transport()
         ) as interrogation_handler,
         prepare_rest_app(config=config, core_override=interrogation_handler) as app,
         prepare_event_subscriber(

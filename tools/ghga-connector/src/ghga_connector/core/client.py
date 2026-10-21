@@ -23,25 +23,9 @@ from ghga_connector.config import get_config
 from ghga_connector.constants import KEEPALIVE_EXPIRY, POOL_HEADROOM, TIMEOUT
 from ghga_service_commons.http.correlation import attach_correlation_id_to_requests
 from ghga_service_commons.transports import (
-    AsyncRetryTransport,
-    BaseTransportFactory,
-    CompositeTransportFactory,
     client_routes,
     default_base_transport_factory,
 )
-
-
-def get_ratelimiting_retry_transport(
-    make_base_transport: BaseTransportFactory | None = None,
-) -> AsyncRetryTransport:
-    """Construct an async rate-limiting retry transport.
-
-    The `make_base_transport` parameter can be used for testing to inject, for example,
-    an httpx2.ASGITransport pointing to a FastAPI app.
-    """
-    return CompositeTransportFactory.create_ratelimiting_retry_transport(
-        get_config(), make_base_transport=make_base_transport
-    )
 
 
 @asynccontextmanager

@@ -54,8 +54,9 @@ def fail_with(exception: type[Exception]) -> ResponseHandler:
 def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> EndpointMock:
     """Point the client at a mock answering with `handler`, below the retry layers."""
     endpoint = EndpointMock(handler)
-    transport = endpoint.as_transport()
-    RequestConfigurator.configure(config, make_base_transport=lambda _: transport)
+    RequestConfigurator.configure(
+        config, make_base_transport=lambda _: endpoint.as_transport()
+    )
     return endpoint
 
 
