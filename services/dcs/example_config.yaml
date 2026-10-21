@@ -66,6 +66,7 @@ log_level: INFO
 log_traceback: true
 migration_max_wait_sec: null
 migration_wait_sec: 10
+min_request_interval: 0.0
 mongo_dsn: '**********'
 mongo_timeout: null
 object_storages:
@@ -79,10 +80,9 @@ object_storages:
       s3_session_token: null
 openapi_url: /openapi.json
 otel_trace_sampling_rate: 1.0
-per_request_jitter: 0.0
+per_request_jitter: 0.05
 port: 8080
 presigned_url_expires_after: 30
-retry_after_applicable_for_num_requests: 1
 retry_after_max: 300
 retry_after_min: 5
 service_instance_id: '001'

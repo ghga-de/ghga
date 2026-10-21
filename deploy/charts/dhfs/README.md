@@ -22,8 +22,8 @@ for the full set of configurable values.
 | `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
 | `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
 | `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.min_request_interval` | Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests. | `0.0` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.05` |
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
 | `config.data_hub_crypt4gh_public_key_path` | Path to the Data Hub's Crypt4GH public key file. Only needed for running `dhfs verify`. | `null` |
 | `config.inbox_bucket_id` | The inbox bucket ID - only needed for running `dhfs verify`. | `null` |
