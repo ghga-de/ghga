@@ -2,9 +2,11 @@
 set -euo pipefail
 
 # Named volumes mount root-owned; chown the mount points back to vscode
-# so uv, Playwright, Claude Code, and gh can write to them.
+# so uv, Playwright, Claude Code, Copilot, and gh can write to them.
 sudo chown vscode:vscode ~/.local ~/.local/share ~/.cache ~/.config
-sudo chown -R vscode:vscode ~/.claude ~/.config/gh ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
+sudo chown -R vscode:vscode ~/.claude ~/.copilot ~/.agents ~/.config/gh ~/.local/share/uv ~/.cache/uv ~/.cache/ms-playwright
+# Copilot creates its directory private, and the volume's mount point would otherwise be 755.
+chmod 700 ~/.copilot
 
 # just and kind come from no feature, and ~/.local/bin is not one of the persisted
 # volumes — so a rebuild loses them and every justfile recipe stops working, including

@@ -25,7 +25,7 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 
 Personal instructions go in one of these, never in a committed file:
 
-- **`~/.claude/CLAUDE.md`** loads in every project and lives on the `ghga-claude` volume, so it survives a container rebuild.
+- **`~/.claude/CLAUDE.md`** loads in every project and lives on the `ghga-claude` volume, so it survives a container rebuild; Copilot's counterpart is `~/.copilot/copilot-instructions.md`.
 - **`.claude/rules/personal.local.md`**, or any `*.local.md` there, loads for this repo only and is gitignored.
   It exists only in the checkout or worktree you create it in.
 - **`CLAUDE.local.md`** works only if you set **Project instructions** to `claude-md-and-agents-md` in `/config`.
@@ -36,6 +36,39 @@ Personal settings go in `.claude/settings.local.json`, which is gitignored.
 To use another output style, set `outputStyle` there; your user settings do not override the project's default.
 If you have Anthropic's `commit-commands` plugin, you need not turn it off, but we recommend it for this repo: `claude plugin disable commit-commands@claude-plugins-official --scope local`.
 `/pr-and-commit` replaces it here, and the model can run the plugin's commands unasked; its `commit-push-pr` pushes without asking, and its commit messages ignore the grammar.
+
+In the dev container, what the agents write themselves survives a rebuild on three named Docker volumes:
+
+| Volume | Path | Holds |
+|---|---|---|
+| `ghga-claude` | `~/.claude` | Claude Code: settings, sessions, auto memory, personal skills |
+| `ghga-copilot` | `~/.copilot` | Copilot: settings, instructions, sessions, saved approvals, login |
+| `ghga-agents` | `~/.agents` | personal skills that Copilot, OpenCode and Codex read, and what `npx skills` installs |
+
+The volumes live in Docker's own storage, not in your checkout: in Docker Desktop's VM on macOS and Windows, under `/var/lib/docker/volumes` on Linux.
+Each stays on its machine and is shared by every checkout there; Docker Desktop's **Clean / Purge data** deletes them.
+Anything else in the home directory is lost on a rebuild, including the rest of OpenCode's and Codex's state, and Copilot's chat history in VS Code.
+
+What you write yourself, and want on every machine, belongs in a dotfiles repository: your own Git repo, which VS Code clones into each new dev container and sets up with its install script.
+Set the VS Code user setting `dotfiles.repository` to it, such as `your-name/dotfiles`; with Settings Sync on, every machine picks that up.
+Let the script link files rather than copy them, so an edit lands in the clone in `~/dotfiles`, ready to commit, and push it before a rebuild, since the clone is not on a volume.
+Logins stay out of it: you log in once per machine, and the volumes keep that.
+For example, with `CLAUDE.md`, `copilot-instructions.md` and a `skills/` folder next to it:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+here=$(cd "$(dirname "$0")" && pwd)
+mkdir -p ~/.agents/skills ~/.claude/skills
+ln -sfn "$here/CLAUDE.md" ~/.claude/CLAUDE.md
+ln -sfn "$here/copilot-instructions.md" ~/.copilot/copilot-instructions.md
+for skill in "$here"/skills/*/; do
+  name=$(basename "$skill")
+  ln -sfn "$here/skills/$name" ~/.agents/skills/"$name"
+  # Claude Code does not read ~/.agents/skills
+  ln -sfn ../../.agents/skills/"$name" ~/.claude/skills/"$name"
+done
+```
 
 Tools worth installing for yourself, none of them shared:
 
