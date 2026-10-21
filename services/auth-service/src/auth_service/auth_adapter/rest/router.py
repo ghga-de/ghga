@@ -126,9 +126,9 @@ add_allowed_routes()
 async def health() -> None:
     """Used to check that this service is alive, without Basic auth.
 
-    ExtAuth checks carry the original request path, so none arrives as a bare
-    `/health`; answering 204 rather than 200 still keeps one that did from reaching
-    a backend without Basic auth.
+    Meant for the kubelet probe. ExtAuth checks carry the original request path, so
+    none arrives as a bare `/health`; answering 204 rather than 200 still keeps one
+    that did from reaching a backend without Basic auth.
     """
 
 
