@@ -46,6 +46,8 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* A class that sets display outranks the hidden attribute; claude.ai's page skeleton has this rule, a local preview does not */
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); -webkit-font-smoothing: antialiased; }
 .page {
   max-width: 920px; margin-inline: auto;

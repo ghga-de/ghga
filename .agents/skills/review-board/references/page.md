@@ -41,4 +41,5 @@ Code, output, comment bodies and suggestions are plain text, which the page esca
 ## Changing the template
 
 Test a change locally (statuses, previews, no console errors) and on one board in claude.ai before it merges.
+A local preview lacks the reset that claude.ai's page skeleton adds, so the template carries its `[hidden]` rule: without it, the filter leaves every finding on screen.
 A script error after the first draw leaves the findings on screen but stops the store and the button without a message.
