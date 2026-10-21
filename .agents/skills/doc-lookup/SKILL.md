@@ -12,7 +12,7 @@ disable-model-invocation: true
    - why, or which decision: `docs/adrs/`; the index in `docs/README.md` gives each ADR's status and tags
    - current flows and components: `docs/architecture/`
    - how we work: `docs/conventions.md`, `docs/style.md`, `docs/releases.md`, `docs/dependencies.md`
-   - a service's configuration, API or events: `services/<name>/README.md` and its `config_schema.json`, never `deploy/charts/*/README.md`, which is generated
+   - a service's configuration, API or events: `services/<name>/README.md` and its `config_schema.json`, never `deploy/charts/<service>/README.md`, which is generated
    - plans: `docs/epics/`, where the README's lists say which epics are completed and which are unfolding; a specification is frozen when its epic starts, so it never says how something works now
 2. Search narrowly, with `rg -il '<term>' <shelf>`, under both the abbreviation and the full name.
    A service's directory is often its abbreviation (`ucs`, `dcs`, `ifrs`) and its README title the full name; the architecture docs also write RS, WPS, DINS, DHFS, ARS and RTS.
