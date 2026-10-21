@@ -31,7 +31,6 @@ from ghga_service_commons.transports.config import CompositeConfig
 from ghga_service_commons.transports.factory import (
     CompositeTransportFactory,
     default_base_transport_factory,
-    fixed_base_transport_factory,
     get_ssl_verify,
 )
 from ghga_service_commons.transports.ratelimiting import AsyncRateLimitingTransport
@@ -184,15 +183,6 @@ def test_default_base_transport_factory_defaults(
     assert "limits" not in proxied
 
 
-def test_fixed_base_transport_factory_serves_every_route():
-    """Every route gets the given transport, whichever proxy it would have used."""
-    base = AsyncHTTPTransport()
-    make_base_transport = fixed_base_transport_factory(transport=base)
-
-    assert make_base_transport(None) is base
-    assert make_base_transport(PROXY_URL) is base
-
-
 def test_create_ratelimiting_retry_transport_layers_transports():
     """Ensure the retry transport wraps a rate limiting transport over an HTTP transport."""
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
@@ -211,7 +201,7 @@ def test_create_ratelimiting_retry_transport_uses_custom_base():
 
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
         CompositeConfig(),
-        make_base_transport=fixed_base_transport_factory(transport=base),
+        make_base_transport=lambda _: base,
     )
 
     ratelimiting = transport._transport

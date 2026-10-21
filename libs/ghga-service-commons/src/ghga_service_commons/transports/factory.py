@@ -87,29 +87,6 @@ def default_base_transport_factory(
     return make_base_transport
 
 
-def fixed_base_transport_factory(
-    *,
-    transport: AsyncBaseTransport,
-) -> BaseTransportFactory:
-    """Serve every route from one already built transport.
-
-    This will ignore proxy settings as they can't be applied to an already created instance.
-
-    Example:
-        ```
-        # In tests, send requests to a MockApi while keeping the retry and rate
-        # limiting layers in place.
-        transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config,
-            make_base_transport=fixed_base_transport_factory(
-                transport=mock_api.as_transport()
-            ),
-        )
-        ```
-    """
-    return lambda _: transport
-
-
 class CompositeTransportFactory:
     """Produces different flavors of httpx2.AsyncHTTPTransports and takes care of wrapping them in the correct order."""
 
