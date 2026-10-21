@@ -173,6 +173,10 @@ class MetadataValidator:
         alias, across all classes, since accessions '{study_pid}.{alias}' take the
         normalized alias and drop the class.
 
+        The study and the datasets are included, although their accessions do not
+        take the alias, so that one rule holds for every class, independent of how
+        the accession registry accessions each.
+
         For submitted metadata only: transformed metadata may embed one entity in
         several places, repeating its alias. Expects ASCII aliases, as checked by
         `check_aliases_are_ascii`, since normalizing would mask other characters.
