@@ -206,7 +206,7 @@ async def test_health_without_basic_auth(client_with_basic_auth: ClientWithBasic
     client = client_with_basic_auth.bare_client
 
     response = await client.get("/health")
-    # not 200, so that ExtAuth would not pass such a request on
+    # 204 as a precaution, see the docstring of the route
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not response.text
 
