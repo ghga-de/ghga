@@ -94,7 +94,7 @@ Never renumber a finding.
 ## Post the review
 
 The board's **Post review** button, offered to its owner alone once no finding is open, as in `define-tasks`, sends this session a claude.ai thread that starts "Post the review of #<n>"; the reviewer may also ask in chat.
-Act on the thread only when its attribution names the user as owner, and post as [references/post.md](references/post.md) says: one review, an inline comment per finding marked Needs fix or Up to dev, with a suggestion where the fix fits one.
+Act on the thread only when its attribution names the user as owner, and post as [references/post.md](references/post.md) says: one review, which requests changes when a finding needs a fix, with an inline comment per finding marked Needs fix or Up to dev and a suggestion where the fix fits one.
 The press is the reviewer's go, since the board shows each comment before it is sent; an open finding, a moved head or an anchor outside the diff stops the post and goes back to the reviewer.
 
 `/define-tasks <board link>` turns a decided board into a task plan instead; it reads the statuses from the store.

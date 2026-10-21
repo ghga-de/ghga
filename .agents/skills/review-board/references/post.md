@@ -30,12 +30,16 @@ How the review-board skill posts a decided board to its pull request.
 
 ## Posting
 
+The review requests changes when any finding is marked Needs fix, and only comments when every posted finding is Up to dev.
+A submitted review keeps its event, so choose it before posting.
+GitHub refuses `REQUEST_CHANGES` on the reviewer's own pull request; post `COMMENT` there.
+
 Write the review as JSON in the scratchpad and post it once:
 
 ```json
 {
   "commit_id": "<head SHA>",
-  "event": "COMMENT",
+  "event": "REQUEST_CHANGES",
   "body": "<summary>",
   "comments": [
     {"path": "<path>", "start_line": 29, "start_side": "RIGHT", "line": 32, "side": "RIGHT", "body": "<body>"}

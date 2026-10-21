@@ -207,7 +207,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   document.getElementById("board-footer").innerHTML = (DATA.footer || []).map(s => `<span>${s}</span>`).join("");
   document.getElementById("post-note").textContent = DATA.dryRun
     ? "Dry run: the button asks the review session to draft the review and show it there. Nothing is posted to the PR."
-    : "The button asks the review session to post one review: an inline comment per finding marked Needs fix or Up to dev, with a suggestion where the fix fits one. Nothing else is posted.";
+    : "The button asks the review session to post one review: an inline comment per finding marked Needs fix or Up to dev, with a suggestion where the fix fits one. It requests changes when a finding is marked Needs fix, and only comments otherwise. Nothing else is posted.";
 
   const statusOf = {};
   FINDINGS.forEach(f => { statusOf[f.id] = "open"; });
@@ -326,6 +326,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   let postState = null, dbRef = null; // the store's review/post document
   let comments = null, canSend = "off", isOwner = false, ownerKnown = false;
   const postBtn = document.getElementById("post-btn"), postWhy = document.getElementById("post-why");
+  function requestsChanges() { return FINDINGS.some(f => statusOf[f.id] === "needs_fix"); }
   function updatePost() {
     const open = FINDINGS.filter(f => statusOf[f.id] === "open").length;
     const toPost = FINDINGS.filter(f => ["needs_fix", "up_to_dev"].includes(statusOf[f.id])).reduce((n, f) => n + f.post.length, 0);
@@ -344,7 +345,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
     else if (canSend === "writers_only") why = "Only editors of this board can ask Claude to post.";
     else if (canSend === "no_session") why = "No Claude session is watching this board right now.";
     else if (canSend !== "available") why = "Sending to Claude is not available in this view.";
-    else { ok = true; why = `Posts ${toPost} inline comment${toPost > 1 ? "s" : ""} and the summary as one review.`; }
+    else { ok = true; why = `Posts ${toPost} inline comment${toPost > 1 ? "s" : ""} and the summary as one review that ${requestsChanges() ? "requests changes" : "comments only"}.`; }
     postBtn.disabled = !ok; postBtn.textContent = POST_LABEL; postWhy.textContent = why;
   }
   async function refreshCanSend() {
@@ -355,7 +356,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   postBtn.addEventListener("click", async () => {
     postBtn.disabled = true;
     const counts = s => FINDINGS.filter(f => statusOf[f.id] === s).map(f => "#" + f.id).join(", ") || "none";
-    const text = (DATA.dryRun ? `Dry run: draft the review of #${PR.number} from this board and show it in the session. Do not post anything to the PR.` : `Post the review of #${PR.number} from this board (review-board skill).`) + ` Needs fix: ${counts("needs_fix")}. Up to dev: ${counts("up_to_dev")}. Won't fix: ${counts("wontfix")}. Fixed: ${counts("fixed")}.`;
+    const text = (DATA.dryRun ? `Dry run: draft the review of #${PR.number} from this board and show it in the session. Do not post anything to the PR.` : `Post the review of #${PR.number} from this board (review-board skill), as ${requestsChanges() ? "REQUEST_CHANGES" : "COMMENT"}.`) + ` Needs fix: ${counts("needs_fix")}. Up to dev: ${counts("up_to_dev")}. Won't fix: ${counts("wontfix")}. Fixed: ${counts("fixed")}.`;
     try {
       const anchor = await comments.anchorFor(document.getElementById("post-panel"));
       await comments.sendToClaude({ anchor, text });
