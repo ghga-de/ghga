@@ -26,7 +26,7 @@ cors_allowed_headers: []
 cors_allowed_methods: []
 cors_allowed_origins: []
 cors_exposed_headers: null
-db_name: dev
+db_name: download-controller
 db_version_collection: dcsDbVersions
 docs_url: /docs
 download_bucket_cache_timeout: 7

@@ -964,15 +964,6 @@
             "null"
           ]
         },
-        "db_name": {
-          "default": "work-packages",
-          "title": "Db Name",
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead."
-        },
         "access_url": {
           "description": "Base URL of the internal access API for download and upload",
           "examples": [
@@ -1192,6 +1183,15 @@
             "integer",
             "null"
           ]
+        },
+        "db_name": {
+          "default": "work-packages",
+          "title": "Db Name",
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead."
         },
         "mongo_timeout": {
           "anyOf": [

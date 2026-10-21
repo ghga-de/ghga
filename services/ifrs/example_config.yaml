@@ -1,4 +1,4 @@
-db_name: dev
+db_name: internal-file-registry
 db_version_collection: ifrsDbVersions
 enable_opentelemetry: false
 file_deleted_topic: file-deletions

@@ -1,7 +1,7 @@
 access_request_topic: access_request_events
 auth_topic: auth
 central_data_stewardship_email: test@test.abc
-db_name: nos
+db_name: notification-orchestration
 db_version_collection: nosDbVersions
 email_notification_type: email_notification
 generate_correlation_id: true

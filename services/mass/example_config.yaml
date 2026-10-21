@@ -5,7 +5,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 cors_exposed_headers: null
-db_name: metadata-store
+db_name: mass
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1
