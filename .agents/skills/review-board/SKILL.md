@@ -80,7 +80,12 @@ Only `fixed` and `wontfix` count as resolved: `up_to_dev` ends the reviewer's wo
 
 ## Build and publish
 
+A PR has one board.
+Before building one, list your artifacts with the Artifact tool and look for the title "Review of #<n>"; failing that, look in your memory, then ask the reviewer.
+An existing board is read back with the Artifact tool, extended, and republished to its link; in a new session, watch it with ArtifactComments, or its button cannot reach the session.
+
 Fill the board template, [assets/board-template.html](assets/board-template.html), as [references/page.md](references/page.md) says, and publish it privately.
+Record the PR, the board's link and the date in your memory, so a later session finds it faster.
 Then set the statuses already known with ArtifactData, give the reviewer the link with what is already marked, and name the probe scripts' paths.
 
 Later findings go into the board's data and the page is republished to the same artifact; the statuses survive in its store.
