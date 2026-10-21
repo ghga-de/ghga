@@ -6,8 +6,8 @@ paths:
   - "services/**/prepare.py"
   - "services/*/chart-values.yaml"
   # The four files that pass `dto_to_event`, which is what declares an outbox edge.
-  # Named one by one: `services/**/dao.py` is 32 files, and a rule that fires on
-  # ordinary persistence work is a rule agents learn to skip.
+  # Named one by one: `services/**/dao.py` matches a DAO module in most services, and a
+  # rule that fires on ordinary persistence work is a rule agents learn to skip.
   - "services/ghga-registry-service/src/rs/adapters/outbound/dao.py"
   - "services/ucs/src/ucs/adapters/outbound/dao.py"
   - "services/access-request-service/src/ars/adapters/outbound/daos.py"
