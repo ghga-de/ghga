@@ -176,7 +176,6 @@ configMap:
 config:
   token_hashes: []
   mongo_dsn:
-  db_name: dlqs
   host: "0.0.0.0"
   service_instance_id: 'dlqs_1'
   service_name: dlqs

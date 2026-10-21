@@ -9,7 +9,7 @@ cors_allowed_methods: []
 cors_allowed_headers: []
 
 mongo_dsn: "mongodb://mongodb:27017"
-db_name: "access-requests"
+db_name: access-request
 migration_wait_sec: 10
 db_version_collection: arsDbVersions
 
