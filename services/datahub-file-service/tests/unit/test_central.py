@@ -38,7 +38,6 @@ from dhfs.config import Config
 from dhfs.core.models import InterrogationReport
 from ghga_service_commons.auth.jwt_auth import JWTAuthConfig, JWTAuthContextProvider
 from ghga_service_commons.http.mock_api import respond
-from ghga_service_commons.transports import fixed_base_transport_factory
 from ghga_service_commons.utils.crypt import decrypt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.utils import now_utc_ms_prec
@@ -96,11 +95,9 @@ async def configured_central_client(
     config: Config, central_api: CentralApiMock
 ) -> AsyncGenerator[CentralClient]:
     """Yields a CentralClient instance talking to the mocked Central API"""
+    transport = central_api.as_transport()
     async with get_configured_httpx_client(
-        config=config,
-        make_base_transport=fixed_base_transport_factory(
-            transport=central_api.as_transport()
-        ),
+        config=config, make_base_transport=lambda _: transport
     ) as httpx_client:
         yield CentralClient(config=config, httpx_client=httpx_client)
 

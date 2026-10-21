@@ -53,7 +53,6 @@ from ghga_event_schemas.pydantic_ import (
     FileRegisteredForDownload,
 )
 from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.transports import fixed_base_transport_factory
 from ghga_service_commons.utils import utc_dates
 from ghga_service_commons.utils.multinode_storage import (
     S3ObjectStorageNodeConfig,
@@ -147,12 +146,10 @@ async def joint_fixture(
     # prepare everything, serving the EKSS API from the mock instead of the network
     # (the retry and rate limiting layers stay in place above it)
     ekss = EkssApiMock(config=config)
+    transport = ekss.as_transport()
     async with (
         prepare_core(
-            config=config,
-            http_make_base_transport=fixed_base_transport_factory(
-                transport=ekss.as_transport()
-            ),
+            config=config, http_make_base_transport=lambda _: transport
         ) as data_repository,
         prepare_rest_app(config=config, data_repo_override=data_repository) as app,
         prepare_event_subscriber(

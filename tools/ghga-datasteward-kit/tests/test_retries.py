@@ -21,7 +21,6 @@ from tenacity import RetryError
 from ghga_datasteward_kit.s3_upload import LegacyConfig
 from ghga_datasteward_kit.s3_upload.http_client import RequestConfigurator, httpx_client
 from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
-from ghga_service_commons.transports import fixed_base_transport_factory
 from tests.fixtures.config import legacy_config_fixture  # noqa: F401
 
 EXCEPTIONS = [httpx2.ConnectError, httpx2.ConnectTimeout, httpx2.TimeoutException]
@@ -55,12 +54,8 @@ def fail_with(exception: type[Exception]) -> ResponseHandler:
 def _configure_client(config: LegacyConfig, handler: ResponseHandler) -> EndpointMock:
     """Point the client at a mock answering with `handler`, below the retry layers."""
     endpoint = EndpointMock(handler)
-    RequestConfigurator.configure(
-        config,
-        make_base_transport=fixed_base_transport_factory(
-            transport=endpoint.as_transport()
-        ),
-    )
+    transport = endpoint.as_transport()
+    RequestConfigurator.configure(config, make_base_transport=lambda _: transport)
     return endpoint
 
 

@@ -33,7 +33,6 @@ from fis.ports.outbound.dao import FileDao
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_service_commons.api.testing import AsyncTestClient
-from ghga_service_commons.transports import fixed_base_transport_factory
 from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
@@ -74,12 +73,10 @@ async def joint_fixture(
     # the EKSS API is served from the mock instead of the network (the retry and
     # rate limiting layers stay in place above it)
     ekss = EkssApiMock(config=config)
+    transport = ekss.as_transport()
     async with (
         prepare_core(
-            config=config,
-            http_make_base_transport=fixed_base_transport_factory(
-                transport=ekss.as_transport()
-            ),
+            config=config, http_make_base_transport=lambda _: transport
         ) as interrogation_handler,
         prepare_rest_app(config=config, core_override=interrogation_handler) as app,
         prepare_event_subscriber(

@@ -25,10 +25,7 @@ from typing import Any
 import httpx2
 
 from ghga_connector.core.client import get_ratelimiting_retry_transport
-from ghga_service_commons.transports import (
-    BaseTransportFactory,
-    fixed_base_transport_factory,
-)
+from ghga_service_commons.transports import BaseTransportFactory
 
 __all__ = [
     "MOCK_API_HOST",
@@ -111,9 +108,7 @@ class MockApiTransport(httpx2.AsyncBaseTransport):
         make_base_transport: BaseTransportFactory | None = None,
     ) -> None:
         self._base_urls = tuple(base_urls)
-        self._mocked = get_ratelimiting_retry_transport(
-            fixed_base_transport_factory(transport=mocks)
-        )
+        self._mocked = get_ratelimiting_retry_transport(lambda _: mocks)
         self._network = get_ratelimiting_retry_transport(make_base_transport)
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:

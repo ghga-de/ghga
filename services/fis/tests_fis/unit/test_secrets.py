@@ -25,7 +25,6 @@ from pydantic import HttpUrl, SecretBytes
 from fis.adapters.outbound.http import HttpClientConfig, get_configured_httpx_client
 from fis.adapters.outbound.secrets import SecretsClient, SecretsClientConfig
 from ghga_service_commons.http.mock_api import ResponseHandler, fail_to_connect, respond
-from ghga_service_commons.transports import fixed_base_transport_factory
 from tests_fis.fixtures.ekss_api import EkssApiMock
 
 pytestmark = pytest.mark.asyncio
@@ -55,9 +54,9 @@ def ekss() -> EkssApiMock:
 @pytest_asyncio.fixture
 async def client(ekss: EkssApiMock) -> AsyncGenerator[SecretsClient]:
     """Construct a SecretsClient backed by the configured httpx2 client."""
+    transport = ekss.as_transport()
     async with get_configured_httpx_client(
-        config=HTTP_CONFIG,
-        make_base_transport=fixed_base_transport_factory(transport=ekss.as_transport()),
+        config=HTTP_CONFIG, make_base_transport=lambda _: transport
     ) as httpx_client:
         yield SecretsClient(config=SECRETS_CONFIG, httpx_client=httpx_client)
 

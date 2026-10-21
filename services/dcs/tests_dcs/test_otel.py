@@ -33,7 +33,6 @@ from dcs.cli import cli
 from dcs.inject import get_persistent_publisher
 from ghga_event_schemas.pydantic_ import FileInternallyRegistered
 from ghga_service_commons.http.mock_api import instrumentable
-from ghga_service_commons.transports import fixed_base_transport_factory
 from hexkit.opentelemetry.testutils import (  # noqa: F401
     otel_fixture,
     otel_provider_fixture,
@@ -249,12 +248,10 @@ async def test_outbound_ekss_call_records_httpx_client_span(
     config = populated_fixture.joint_fixture.config
     receiver_public_key = base64.b64encode(b"test-public-key").decode()
     ekss = EkssApiMock(config=config)
+    transport = instrumentable(ekss.as_transport())
 
     async with get_configured_httpx_client(
-        config=config,
-        make_base_transport=fixed_base_transport_factory(
-            transport=instrumentable(ekss.as_transport())
-        ),
+        config=config, make_base_transport=lambda _: transport
     ) as client:
         secrets_client = SecretsClient(config=config, httpx_client=client)
 
