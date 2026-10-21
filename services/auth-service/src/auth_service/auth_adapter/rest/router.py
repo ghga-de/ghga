@@ -116,20 +116,20 @@ def add_allowed_routes():
 add_allowed_routes()
 
 
-@router.get(
+@router.api_route(
     "/health",
+    methods=["GET", "HEAD"],
     summary="health",
     tags=["health"],
     status_code=status.HTTP_204_NO_CONTENT,
 )
-async def health() -> Response:
+async def health() -> None:
     """Used to check that this service is alive, without Basic auth.
 
-    The gateway also sends requests for its own `/health` here. ExtAuth lets
-    a request pass only on 200, so answering 204 keeps those requests from reaching
+    ExtAuth checks carry the original request path, so none arrives as a bare
+    `/health`; answering 204 rather than 200 still keeps one that did from reaching
     a backend without Basic auth.
     """
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
