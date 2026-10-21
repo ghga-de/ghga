@@ -13,7 +13,7 @@ This epic lets a data steward rank research data upload boxes in the Data Portal
 Files in unranked boxes come after all files in ranked boxes, with no order among them.
 
 RS stores the box ranking as one list and publishes it through the outbox.
-FIS consumes it, and its existing `GET /storages/{storage_alias}/uploads` endpoint returns the waiting files sorted by rank.
+FIS consumes it, and its existing `GET /storages/{storage_alias}/uploads` endpoint returns at most five waiting files, sorted by rank.
 DHFS processes them in that order, and asks again right after a batch, instead of waiting for the next poll interval.
 
 ### Included/Required
@@ -36,6 +36,8 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 - FIS must fill in a missing `box_id` when it receives a `FileUpload` event for a file it already has, even if the event is not newer than the stored file.
   This branch lets a UCS republish backfill the field (see [Rollout](#rollout)).
 - FIS must sort not-yet-interrogated ("waiting") files with a MongoDB aggregation, as described in [Sorting the waiting files](#sorting-the-waiting-files).
+- FIS must return at most five files per request, set by a hardcoded constant, e.g. `MAX_FILES_PER_REQUEST = 5`, not a config setting.
+  At hundreds of thousands of waiting files, an unbounded response would move every file from MongoDB to FIS and on to DHFS on each poll.
 - **DHFS** must process the files in the order FIS returns them.
   It already does so today; this just reiterates that requirement.
 - DHFS must skip the `min_run_interval_seconds` wait after a round in which it concluded at least one file, whether it succeeded or reported a failure.
@@ -52,8 +54,8 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 
 - Changing priority does not interrupt a batch DHFS is already processing.
   The new order applies from the next batch.
-- Changing how many files FIS returns per request.
-  Epic 94 (Leafcutter Ant) switches FIS to single-file responses, together with the changes that switch requires.
+- Single-file responses.
+  Epic 94 (Leafcutter Ant) lowers the cap to one file, together with the changes that requires.
 - No order within a box, and no order among unranked boxes.
   Files of the same rank are ordered by `_id` only, so that the result is deterministic.
 - Running more than one DHFS instance per storage alias.
@@ -83,8 +85,8 @@ Both require the Data Steward role through `StewardAuthContext`, like the existi
     Each case gets its own `HttpCustomExceptionBase` subclass and `exception_id`, so the Data Portal can tell them apart and offer a reload only for the version conflict.
   - `422`: a malformed body, or a box ID that appears twice.
 
-FIS keeps its endpoints unchanged.
-The order of the list from `GET /storages/{storage_alias}/uploads` was undefined and now follows the rank, which DHFS relies on (see [Sorting the waiting files](#sorting-the-waiting-files)).
+FIS keeps its paths and response models unchanged.
+The list from `GET /storages/{storage_alias}/uploads` now holds at most five files, and its order, undefined until now, follows the rank, which DHFS relies on (see [Sorting the waiting files](#sorting-the-waiting-files)).
 
 ### Payload Schemas for Events
 
@@ -123,8 +125,11 @@ However, this is too clumsy and heavy-handed to be seriously considered.
 
 ### Sorting the waiting files
 
-FIS cannot run this through the hexkit DAO protocol, which has no aggregation.
-Add an outbound port, e.g. `InterrogationQueuePort`, and a MongoDB adapter that uses `ConfiguredMongoClient` directly.
+FIS should not use the hexkit DAO protocol to sift through the waiting files.
+We need to perform a `$match` on `state` and `storage_alias`, try to find the box ID's rank in the priority collection (if applicable), and rank file results accordingly.
+This can be done partially with a DAO and partially in memory, but requires either A) loading all waiting files into memory and ranking them there, or B) performing multiple queries (e.g. one for prioritized boxes and one for unprioritized boxes, or similar).
+As the number of waiting files grows, so too does the amount of data we would have to pull back from the DB only to drop 99% of it.
+Instead, we should add an outbound port, e.g. `InterrogationQueuePort`, and a MongoDB adapter that uses `ConfiguredMongoClient` directly, and allow the DB to perform the filtering and sorting.
 `services/mass/src/mass/adapters/outbound/aggregator.py` and `services/ucs/src/ucs/adapters/outbound/box_stats.py` follow the same pattern.
 
 ```python
@@ -141,6 +146,7 @@ pipeline = [
     ]}}},
     {"$set": {"unprioritized": {"$eq": ["$rank", -1]}}},
     {"$sort": {"unprioritized": 1, "rank": 1, "_id": 1}},
+    {"$limit": MAX_FILES_PER_REQUEST},
     {"$project": {"priority": 0, "rank": 0, "unprioritized": 0}},
 ]
 ```
@@ -148,10 +154,15 @@ pipeline = [
 - The `$lookup` does not depend on the file document, so MongoDB runs it once per query.
 - `$indexOfArray` compares BSON types.
   If `file_upload_box_id` and `box_id` are stored with different types, such as a binary UUID and a string, every file counts as unprioritized and no error occurs.
-  A test must cover this with both values written through the hexkit DAOs.
-- The adapter must map `_id` back to `id` itself, and read both collection names from the config the DAOs use.
-- Sorting the full list in Python after a DAO query would perform about the same while FIS returns every waiting file.
-  The aggregation is chosen because epic 94 adds `$limit: 1` to it, so that only one document crosses the network and is validated per request.
+  We could add a test to cover this with both values written through the hexkit DAOs, but it's not necessary.
+  The most likely reason this kind of mixup would happen is a future Migration that writes a string directly to the DB.
+  However, in that case it should be caught by model validation.
+- The adapter must map `_id` back to `id` itself.
+  Define both collection names as constants, as UCS does with `FILE_UPLOADS_COLLECTION`, and pass them to the DAO factory and the adapter alike.
+- The aggregation is chosen because of the `$limit`.
+  MongoDB combines it with the `$sort` and keeps only the top five documents in memory, so five documents cross the network and are validated per request.
+  Sorting in Python after a DAO query would fetch and validate every waiting file first.
+  Epic 94 lowers the limit to one.
 
 ### DHFS loop
 
@@ -161,6 +172,9 @@ pipeline = [
 An `InconclusiveError` leaves the file uninterrogated in FIS, so the next request returns it again.
 Waiting after a round in which every file was inconclusive keeps DHFS from requesting the same batch in a tight loop.
 A file that stays inconclusive does not block the rest of its batch, as today.
+It does take one of the five places in every batch, since it keeps its rank.
+Five such files in the highest ranks fill every batch and stall interrogation for that storage alias, until a file stops failing or a data steward moves its box.
+Epic 94's release backoff removes this; until then, it is a known limitation.
 
 ### Data Portal page
 
@@ -199,15 +213,17 @@ Files in ranked boxes are re-encrypted first, highest rank first.
 
 ### Rollout
 
-1. Release ghga-event-schemas with the new schema and config.
+ghga-event-schemas needs no release of its own: the service images build it from source ([releases](../releases.md)).
+
+1. Deploy DHFS.
+   The new DHFS works against a FIS from before this epic, because it skips the wait only after concluding a file.
+   It goes first because of the cap: a DHFS from before this epic waits out `min_run_interval_seconds` after every batch, so against the new FIS it processes at most five files per interval, about 7,200 files per day at the default of 60 seconds.
 2. Deploy RS and FIS.
    FIS ranks nothing until the first priority event arrives, so the order of these two does not matter.
 3. Run `ucs publish-events --all` to republish every file upload.
    FIS fills in `box_id` for the files it already stores.
    Only files still waiting for interrogation need it, since the selection reads no other files.
-4. Deploy DHFS.
-   A DHFS from before this epic already processes files in the order FIS returns them, so prioritization works before this step; DHFS only keeps waiting between batches until then.
-5. Deploy the Data Portal.
+4. Deploy the Data Portal.
    It needs the RS endpoints from step 2.
 
 No database migration is needed: `box_id` defaults to `None`, and the republish fills it in.
@@ -215,6 +231,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 ### Testing
 
 - FIS: the aggregation over ranked, unranked and missing-priority cases, against `MongoDbFixture`.
+  With more than five waiting files, it returns exactly the five highest-ranked.
   `InMemDao` cannot run the pipeline, so unit tests of the interrogation handler use a fake of the new port.
 - FIS: stale priority events are ignored; a republished `FileUpload` event fills in a missing `box_id` and changes nothing else.
 - RS: version conflict, validation errors, and removal of a box from the list when it is archived or deleted.
