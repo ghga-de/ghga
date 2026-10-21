@@ -22,9 +22,10 @@ import httpx2
 from ghga_datasteward_kit import __version__
 from ghga_datasteward_kit.s3_upload.config import LegacyConfig
 from ghga_service_commons.transports import (
-    AsyncRetryTransport,
-    CompositeTransportFactory,
-    ratelimiting_retry_proxies,
+    BaseTransportFactory,
+    ClientRoutes,
+    client_routes,
+    default_base_transport_factory,
 )
 
 USER_AGENT = f"GHGADatastewardKit/{__version__}"
@@ -34,30 +35,30 @@ class RequestConfigurator:
     """Helper for user configurable httpx2 request parameters."""
 
     timeout: int | None
-    transport: AsyncRetryTransport
-    mounts: dict | None
+    routes: ClientRoutes
 
     @classmethod
     def configure(
         cls,
         config: LegacyConfig,
-        base_transport: httpx2.AsyncBaseTransport | None = None,
+        make_base_transport: BaseTransportFactory | None = None,
     ):
         """Set timeout in seconds
 
-        `base_transport` replaces the innermost transport that actually performs the
-        request. It is meant for tests, which can supply a mock transport that still
-        gets exercised through the rate limiting and retry layers.
+        `make_base_transport` builds the innermost transport that actually performs the
+        request, by default one sized for the configured parallel transfers. It is meant
+        for tests, which can supply a mock transport that still gets exercised through
+        the rate limiting and retry layers.
         """
         cls.timeout = config.client_timeout
         limits = httpx2.Limits(
             max_connections=config.client_max_parallel_transfers,
             max_keepalive_connections=config.client_max_parallel_transfers,
         )
-        cls.transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-            config, base_transport=base_transport, limits=limits
+        make_base_transport = make_base_transport or default_base_transport_factory(
+            limits=limits
         )
-        cls.mounts = ratelimiting_retry_proxies(config, limits)
+        cls.routes = client_routes(config, make_base_transport=make_base_transport)
         # silence httpx2 messages on each request due to setting global level info before
         logging.getLogger("httpx2").setLevel(logging.WARNING)
 
@@ -68,7 +69,6 @@ async def httpx_client():
     async with httpx2.AsyncClient(
         headers=httpx2.Headers({"User-Agent": USER_AGENT}),
         timeout=RequestConfigurator.timeout,
-        transport=RequestConfigurator.transport,
-        mounts=RequestConfigurator.mounts,
+        **RequestConfigurator.routes,
     ) as client:
         yield client

@@ -21,7 +21,7 @@ from pathlib import Path
 from pydantic import Field, NonNegativeInt, PositiveInt, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
-from ghga_service_commons.transports import CompositeConfig
+from ghga_service_commons.transports import TransportConfig
 
 
 def expand_env_vars_in_path(path: Path) -> Path:
@@ -77,7 +77,7 @@ class S3ObjectStoragesConfig(BaseSettings):
     object_storages: dict[str, S3ObjectStorageNodeConfig]
 
 
-class LegacyConfig(S3ObjectStoragesConfig, CompositeConfig):
+class LegacyConfig(S3ObjectStoragesConfig, TransportConfig):
     """Required options for legacy file uploads."""
 
     part_size: int = Field(
