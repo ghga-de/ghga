@@ -16,6 +16,7 @@
 """Testing the metadata validator."""
 
 from contextlib import nullcontext
+from copy import deepcopy
 from typing import Any
 
 import pytest
@@ -24,6 +25,7 @@ from metldata.model_utils.metadata_validator import MetadataValidator
 from tests.fixtures.metadata import (
     INVALID_MINIMAL_METADATA_EXAMPLES,
     VALID_MINIMAL_METADATA_EXAMPLES,
+    VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES,
 )
 from tests.fixtures.metadata_models import (
     MINIMAL_MODEL_WITH_STUDY,
@@ -100,8 +102,19 @@ def test_validate_one_study_per_submission(
             "file_1",
             "2 entities, of the class(es) 'File'",
         ),
+        (
+            "study_1",
+            ["File_1", "file_1 "],
+            "File_1, file_1 ",
+            "2 entities, of the class(es) 'File'",
+        ),
     ],
-    ids=["unique", "shared_across_classes", "shared_within_class"],
+    ids=[
+        "unique",
+        "shared_across_classes",
+        "shared_within_class",
+        "differ_in_case_and_whitespace",
+    ],
 )
 def test_check_alias_uniqueness(
     study_alias: str,
@@ -109,8 +122,9 @@ def test_check_alias_uniqueness(
     shared_alias: str | None,
     expected_message: str | None,
 ):
-    """Test that an alias shared by two entities is rejected, naming the alias and
-    the classes sharing it, whether the entities are of different classes or not.
+    """Test that an alias shared by two entities is rejected, naming the aliases and
+    the classes sharing it, whether the entities are of different classes or not,
+    and whether the aliases are equal or only equal once normalized.
     """
     validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
     metadata = {
@@ -129,3 +143,38 @@ def test_check_alias_uniqueness(
 
     assert f"with value '{shared_alias}'" in str(error.value)
     assert expected_message in str(error.value)
+
+
+def test_check_aliases_are_ascii():
+    """Test that a non-ASCII alias is rejected, naming the alias and its class."""
+    validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
+    metadata = {
+        "studies": [{"alias": "study_1"}],
+        "files": [{"alias": "file_1", "filename": "file_1.fastq"}],
+    }
+    validator.check_aliases_are_ascii(metadata)
+
+    metadata["files"].append({"alias": "fïle_2", "filename": "file_2.fastq"})
+    with pytest.raises(MetadataValidator.ValidationError) as error:
+        validator.check_aliases_are_ascii(metadata)
+
+    assert "with value 'fïle_2'" in str(error.value)
+    assert "of the class 'File' must hold ASCII characters only" in str(error.value)
+
+
+@pytest.mark.parametrize("alias", ["", "  "])
+def test_validate_rejects_blank_alias(alias: str):
+    """Test that an empty or whitespace-only alias is rejected, naming its class,
+    though the model's `required` lets it through.
+    """
+    validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
+    metadata = deepcopy(VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0])
+    validator.validate(metadata)
+
+    metadata["files"][1]["alias"] = alias
+    with pytest.raises(MetadataValidator.ValidationError) as error:
+        validator.validate(metadata)
+
+    assert "of the class 'File' must not be empty or whitespace only" in str(
+        error.value
+    )

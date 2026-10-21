@@ -100,16 +100,20 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Engine: `AccessionRegistry` in `accession_registry/accession_registry.py`.
   A study gets the PID `GHGA.YY.XXX.1`: `YY` is the two-digit UTC year, `XXX` three random RFC 4648 base32 characters, unique within the year.
   Only fresh lineages are minted; the version counter stays at `1` until predecessors can be declared → [changed by the feature](../epics/epic-0093-giraffe.md).
-- A dataset gets `{study_pid}.DS.xxx`, unique within its study; every other entity gets `{study_pid}.{alias}`.
+- A dataset gets `{study_pid}.DS.xxx`, unique within its study; every other entity gets `{study_pid}.{alias}`, with the alias normalized by `normalize_alias` in `metadata_utils.py`.
+  It is stripped and lowercased, and every character other than `a–z`, `0–9`, `_` and `-` becomes `-`, so the accession is safe in URLs and file names and holds no further dot.
+  The metadata and the accession map keep the alias as submitted.
   Which classes are the study and the dataset is set by `study_class_name` and `dataset_class_name` in the config.
 - A random block is drawn up to 100 times; if every draw collides, one is picked from the blocks still unused, and `AccessionGenerationError` is raised when none is left.
-- Aliases must be unique across all entities of a submission, checked by `MetadataValidator.check_alias_uniqueness` before anything is minted.
+- Aliases must hold ASCII characters only and be unique across all entities of a submission once normalized, checked by `MetadataValidator.check_aliases_are_ascii` and `check_alias_uniqueness` before anything is minted.
 - Persisted in **one JSON file** (`accession_store.py`): `years` holds the minted `XXX` blocks per `YY`, and `legacy` holds the flat-scheme accessions (`GHGAS…`, `GHGAF…`) minted before study PIDs.
   Dataset and alias accessions are not stored there, since they are unique once the study PID is.
   The file is an index; the submission store holds which accession belongs to which entity.
 - Alias↔accession stability (`generate_accession_map` in `submission_registry/identifiers.py`): within one submission object, re-upserting the same alias **reuses** its accession; new aliases get new ones; dropped aliases fall out.
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
   **`dskit metadata amend --submission-id <id>` is the way to extend an accessioned submission**: it loads the stored submission, hands its map to `generate_accession_map`, and writes the result back under the same ID, so existing accessions survive and only new aliases are minted.
+  It runs the same alias checks first.
+  A submission whose study still has a flat accession is amended in the flat scheme: the dskit's `legacy_accessioning.py` mints `prefix + 14 digits` for its new aliases and registers them under `legacy`, and checks only that an alias is not repeated within its class.
   It reports preserved/new/dropped before writing and asks for confirmation when accessions would be dropped or none preserved, and refuses such an amendment outright when stdin is not a terminal, so a pipe cannot answer for a steward.
   **It is not file-specific**: it replaces the submission's whole content and applies the same alias matching to every anchored class, so a dataset or sample keeps, gains or loses its accession the same way a file does.
   The study is the exception: it keeps its PID even under a new alias, since every other accession of the submission starts with it.

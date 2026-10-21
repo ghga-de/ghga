@@ -37,6 +37,19 @@ def random_block_at(alphabet: str, random_block_length: int, index: int) -> str:
     return "".join(reversed(characters))
 
 
+def split_study_pid(study_pid: str) -> tuple[str, str] | None:
+    """Return the year and the random block of the study PID 'PREFIX.YY.XXX.V', or
+    None for a flat accession from before study PIDs.
+    """
+    # split from the right, so that the prefix configured today does not matter
+    parts = study_pid.rsplit(".", 3)
+    if len(parts) != 4:
+        return None
+
+    _, year, random_block, _ = parts
+    return year, random_block
+
+
 def find_unused_pid(
     alphabet: str,
     random_block_length: int,

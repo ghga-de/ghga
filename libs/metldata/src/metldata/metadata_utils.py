@@ -16,6 +16,7 @@
 
 """Utilities for handling metadata."""
 
+import re
 from copy import deepcopy
 from typing import cast
 
@@ -64,6 +65,22 @@ def lookup_self_id(*, resource: Json, identifier_slot: str):
         )
 
     return self_id
+
+
+# Do not change: an accession '{study_pid}.{alias}' takes the normalized alias, so
+# under a changed rule the same alias would no longer give the accession already
+# minted for it, e.g. in a later version of the study.
+_ALIAS_REPLACED_CHARACTER = re.compile(r"[^a-z0-9_-]")
+
+
+def normalize_alias(alias: str) -> str:
+    """Normalize an alias for use in an accession.
+
+    Strips surrounding whitespace, lowercases, and replaces every character other
+    than a-z, 0-9, '_' and '-' with '-', so that the accession is safe in URLs and
+    file names and has no dot to pose as a further block of the PID.
+    """
+    return _ALIAS_REPLACED_CHARACTER.sub("-", alias.strip().lower())
 
 
 def lookup_foreign_ids(*, resource: Json, slot: str) -> set[str]:

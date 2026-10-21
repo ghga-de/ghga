@@ -18,19 +18,29 @@
 import io
 import json
 import os
+import re
 import shutil
 import sys
 from collections.abc import Generator
+from itertools import count
 from pathlib import Path
 
 import pytest
 import typer
+import yaml
 
-from ghga_datasteward_kit import amendment
+from ghga_datasteward_kit import amendment, legacy_accessioning
 from ghga_datasteward_kit.amendment import AccessionChanges, AccessionDiff
 from ghga_datasteward_kit.cli.metadata import amend, submit, transform
-from ghga_datasteward_kit.exceptions import AmendmentStatusError
+from ghga_datasteward_kit.exceptions import (
+    AmendmentStatusError,
+    LegacyPrefixMissingError,
+    StudyAccessionMissingError,
+)
+from ghga_datasteward_kit.metadata import MetadataConfig
+from ghga_datasteward_kit.utils import load_config_yaml
 from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.metadata_validator import MetadataValidationError
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
     AMENDED_METADATA_PATH,
@@ -207,6 +217,61 @@ def test_amend_dropped_alias_confirmed(
         accessions_after["sample_files"]["test_sample_01_R1"]
         == accessions_before["sample_files"]["test_sample_01_R1"]
     )
+
+
+def test_amend_dropped_alias_retired(example_workdir: Path):
+    """Test that an alias dropped by one amendment has its accession retired, so that
+    a later amendment bringing the alias back is refused before anything is written.
+    """
+    submission_id, _ = submit_original()
+    config = load_config_yaml(path=METADATA_CONFIG_PATH, config_cls=MetadataConfig)
+
+    amendment.amend_metadata(
+        submission_id=submission_id,
+        metadata=yaml.safe_load(DROPPED_METADATA_PATH.read_text(encoding="utf-8")),
+        config=config,
+    )
+    accessions_dropped = read_accession_map(submission_id=submission_id)
+
+    with pytest.raises(MetadataValidationError, match="never gives out again"):
+        amendment.amend_metadata(
+            submission_id=submission_id,
+            metadata=yaml.safe_load(ORIGINAL_METADATA_PATH.read_text(encoding="utf-8")),
+            config=config,
+        )
+
+    assert read_accession_map(submission_id=submission_id) == accessions_dropped
+
+
+@pytest.mark.parametrize("keep_anchor", [False, True], ids=["no_anchor", "empty"])
+def test_amend_without_study_accession(example_workdir: Path, keep_anchor: bool):
+    """Test that a stored accession map without a study accession is refused with an
+    error naming the submission, whether the study's anchor is missing or empty.
+    """
+    submission_id, _ = submit_original()
+    path = Path("submission_store") / f"{submission_id}.json"
+    submission = json.loads(path.read_text(encoding="utf-8"))
+    accession_map = submission["accession_map"]
+    study_anchor = next(
+        anchor
+        for anchor, accessions in accession_map.items()
+        if any(
+            re.fullmatch(r"GHGA\.\d{2}\.[A-Z2-7]+\.1", accession)
+            for accession in accessions.values()
+        )
+    )
+    if keep_anchor:
+        accession_map[study_anchor] = {}
+    else:
+        del accession_map[study_anchor]
+    path.write_text(json.dumps(submission), encoding="utf-8")
+
+    with pytest.raises(StudyAccessionMissingError, match=submission_id):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
 
 
 def test_amend_unknown_submission(example_workdir: Path):
@@ -410,89 +475,135 @@ def test_amend_refuses_risky_amendment_without_a_terminal(
     assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
 
 
-DUPE_ANCHORS = {
-    "C": AnchorPoint(root_slot="files", target_class="C", identifier_slot="alias")
+@pytest.mark.parametrize(
+    "alias, message",
+    [
+        ("tëst_sample_04_R1", "must hold ASCII characters only"),
+        (" TEST_SAMPLE_03_R1", "must be unique across the submission"),
+    ],
+    ids=["non_ascii", "normalized_clash"],
+)
+def test_amend_runs_the_alias_checks(example_workdir: Path, alias: str, message: str):
+    """Test that amending a submission accessioned under study PIDs runs both alias
+    checks, before anything is written.
+    """
+    submission_id, accessions_before = submit_original()
+
+    metadata = yaml.safe_load(AMENDED_METADATA_PATH.read_text(encoding="utf-8"))
+    metadata["sample_files"].append({**metadata["sample_files"][-1], "alias": alias})
+
+    with pytest.raises(MetadataValidationError, match=message):
+        amendment.amend_metadata(
+            submission_id=submission_id,
+            metadata=metadata,
+            config=load_config_yaml(
+                path=METADATA_CONFIG_PATH, config_cls=MetadataConfig
+            ),
+        )
+
+    assert read_accession_map(submission_id=submission_id) == accessions_before
+
+
+# the flat prefixes for the classes of the test model
+TEST_LEGACY_PREFIXES = {
+    "Study": "GHGAS",
+    "SampleFile": "GHGAF",
+    "ExperimentFile": "GHGAF",
+    "Dataset": "GHGAD",
+    "Sample": "GHGAN",
+    "Experiment": "GHGAX",
 }
 
 
-def plan_with_duplicates(content: dict, existing: dict | None = None):
-    """Plan an amendment over content that may list an alias more than once."""
-    return amendment.plan_accession_changes(
-        content=content,
-        existing_accession_map=existing or {},
-        anchor_points_by_target=DUPE_ANCHORS,
-    )
-
-
-def test_plan_reports_duplicated_aliases():
-    """Test that an alias listed twice is reported, and flagged when the rows differ.
-
-    Nothing upstream rejects a duplicate, and an alias identifies a resource, so the
-    repeats share one accession: the transform stamps it on every row and the loader
-    keys them to one resource. Where the rows differ, one silently replaces the other.
+def make_legacy(*, submission_id: str) -> dict[str, dict[str, str]]:
+    """Give a stored submission flat accessions, as if it was accessioned before
+    study PIDs, and return its new accession map.
     """
-    changes = plan_with_duplicates(
-        {
-            "files": [
-                {"alias": "kept", "size": 1},
-                {"alias": "kept", "size": 999},
-                {"alias": "twin", "size": 5},
-                {"alias": "twin", "size": 5},
-            ]
-        },
-        {"files": {"kept": "ACC1"}},
+    path = Path("submission_store") / f"{submission_id}.json"
+    submission = json.loads(path.read_text(encoding="utf-8"))
+
+    flat_accessions = (f"GHGAT{index:014d}" for index in count())
+    submission["accession_map"] = {
+        anchor: {alias: next(flat_accessions) for alias in accessions}
+        for anchor, accessions in submission["accession_map"].items()
+    }
+    path.write_text(json.dumps(submission), encoding="utf-8")
+
+    return submission["accession_map"]
+
+
+def test_amend_legacy_submission(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that amending a submission accessioned before study PIDs keeps its flat
+    accessions, and mints a flat one for a new alias, registered as legacy.
+    """
+    monkeypatch.setattr(legacy_accessioning, "LEGACY_PREFIXES", TEST_LEGACY_PREFIXES)
+    submission_id, _ = submit_original()
+    accessions_before = make_legacy(submission_id=submission_id)
+
+    amend(
+        submission_id=submission_id,
+        metadata_path=AMENDED_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
     )
 
-    assert changes.duplicated_aliases == {"files": ["kept", "twin"]}
-    # only the differing pair is damaging
-    assert changes.conflicting_aliases == {"files": ["kept"]}
-    assert changes.duplicated_alias_count == 2
-    assert changes.conflicting_alias_count == 1
+    accessions_after = read_accession_map(submission_id=submission_id)
+
+    for anchor, accessions in accessions_before.items():
+        for alias, accession in accessions.items():
+            assert accessions_after[anchor][alias] == accession
+
+    minted = accessions_after["sample_files"]["test_sample_03_R1"]
+    assert re.fullmatch(r"GHGAF\d{14}", minted)
+
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    assert accession_store["legacy"] == [minted]
 
 
-def test_plan_counts_a_duplicated_alias_once():
-    """Test that a repeated alias is counted once, since it receives one accession."""
-    changes = plan_with_duplicates({"files": [{"alias": "new"}, {"alias": "new"}]})
-    assert changes.new_aliases == {"files": ["new"]}
-    assert changes.new_alias_count == 1
+def test_amend_legacy_submission_without_prefix(example_workdir: Path):
+    """Test that amending a submission accessioned before study PIDs is refused when
+    a class of the model has no legacy prefix, before anything is minted or written.
+    """
+    submission_id, _ = submit_original()
+    accessions_before = make_legacy(submission_id=submission_id)
+    accession_store_before = Path("accession_store").read_text(encoding="utf-8")
 
-    changes = plan_with_duplicates(
-        {"files": [{"alias": "old"}, {"alias": "old"}]}, {"files": {"old": "ACC1"}}
+    with pytest.raises(
+        LegacyPrefixMissingError, match="'ExperimentFile', 'SampleFile'"
+    ):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert read_accession_map(submission_id=submission_id) == accessions_before
+    assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+
+
+LEGACY_ANCHORS = {
+    "C": AnchorPoint(root_slot="files", target_class="C", identifier_slot="alias"),
+    "D": AnchorPoint(root_slot="others", target_class="D", identifier_slot="alias"),
+}
+
+
+def test_check_alias_uniqueness_per_class():
+    """Test that an alias repeated within a class is rejected, and one shared across
+    classes is not, since flat accessions hold no alias.
+    """
+    legacy_accessioning.check_alias_uniqueness_per_class(
+        content={"files": [{"alias": "a"}], "others": [{"alias": "a"}]},
+        anchor_points_by_target=LEGACY_ANCHORS,
     )
-    assert changes.preserved == {"files": {"old": "ACC1"}}
-    assert changes.preserved_count == 1
 
-
-def test_duplicated_alias_needs_confirmation():
-    """Test that a duplicate requires confirmation even when nothing is dropped."""
-    changes = plan_with_duplicates(
-        {"files": [{"alias": "old"}, {"alias": "old"}]}, {"files": {"old": "ACC1"}}
-    )
-
-    assert changes.is_lossless
-    assert changes.dropped_count == 0
-    assert amendment.needs_confirmation(changes=changes)
-
-
-def test_report_names_duplicated_aliases():
-    """Test that the report names every duplicate and marks the differing ones."""
-    changes = plan_with_duplicates(
-        {
-            "files": [
-                {"alias": "differs", "size": 1},
-                {"alias": "differs", "size": 2},
-                {"alias": "same", "size": 3},
-                {"alias": "same", "size": 3},
-            ]
-        }
-    )
-
-    report = amendment.format_amendment_report(submission_id="x", changes=changes)
-
-    assert "files / differs" in report
-    assert "rows differ" in report
-    assert "files / same" in report
-    assert "rows identical" in report
+    with pytest.raises(
+        MetadataValidationError, match=r"value 'a': .* 2 entities of the class 'C'"
+    ):
+        legacy_accessioning.check_alias_uniqueness_per_class(
+            content={"files": [{"alias": "a"}, {"alias": "a"}, {"alias": "b"}]},
+            anchor_points_by_target=LEGACY_ANCHORS,
+        )
 
 
 @pytest.mark.parametrize(
@@ -536,7 +647,7 @@ def test_plan_matches_what_the_amendment_applies(
     actually_minted = {anchor: sorted(a) for anchor, a in diff.minted.items()}
     assert promised_new == actually_minted
 
-    # the accessions promised as released are the ones released, with the same values
+    # the accessions promised as retired are the ones retired, with the same values
     assert changes.dropped == diff.dropped
 
     # and the counts the steward read agree with the outcome

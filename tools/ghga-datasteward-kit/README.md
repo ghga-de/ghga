@@ -108,10 +108,6 @@ Two consequences worth knowing before you run it:
   Correcting metadata this way works; it just will not be flagged.
 - Renaming or removing the alias of any resource but the study, a dataset included, drops its accession exactly as it would for a file.
   That is what the confirmation question is for.
-- An alias listed twice within one class is reported and needs confirmation, even when nothing is dropped.
-  An alias identifies a resource, so the repeats share a single accession however much their other fields differ: the transform stamps that one accession on every row, and the next `load` keys them all to one resource, so only one survives.
-  Nothing upstream rejects a duplicate — not the transpiler, not the schema check, not `submit` — so the report marks whether the repeated rows are identical or differ, and the differing ones are the damaging case.
-  Fix those in the metadata rather than amending around them.
 
 Amend deliberately when the change is more than added files, and read the report rather than relying on the prompt to stop you.
 
@@ -123,6 +119,14 @@ ghga-datasteward-kit metadata amend \
 ```
 
 Aliases that already have an accession keep it, and only new aliases get new accessions.
+Before minting anything, the command rejects duplicate aliases; the aliases in the metadata are never changed.
+Under study PIDs, two aliases are duplicates when they are equal or differ only in case, surrounding spaces or special characters, such as `Sample 1` and `sample-1`, even in different classes, since they would get the same accession.
+A non-ASCII alias is rejected too.
+
+A submission accessioned before study PIDs keeps that flat scheme: its new resources get accessions such as `GHGAF` and 14 digits, registered under `legacy` in the accession store.
+There, only the same alias twice within one class is a duplicate.
+The command refuses such a submission when a class of the model has no flat prefix.
+
 The command reports what it will do before writing anything.
 It asks for confirmation when the amendment would drop accessions, or when it would preserve none at all, since both usually mean the wrong submission or the wrong aliases.
 That question cannot be skipped, by design: a dropped accession removes resources from the running system on the next `load`.

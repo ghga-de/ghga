@@ -21,7 +21,8 @@ previous one. Amending instead keeps the accession of every alias that is still
 present and mints accessions only for aliases that are new.
 
 Everything here drives metldata through its public API, so that metldata itself needs
-no changes.
+no changes. A submission accessioned before study PIDs gets flat accessions from
+`legacy_accessioning` instead.
 """
 
 from collections.abc import Callable, Iterable, Mapping
@@ -31,7 +32,17 @@ from typing import TypeAlias
 import yaml
 from pydantic import BaseModel, Field
 
-from ghga_datasteward_kit.exceptions import AmendmentAbortedError, AmendmentStatusError
+from ghga_datasteward_kit.exceptions import (
+    AmendmentAbortedError,
+    AmendmentStatusError,
+    StudyAccessionMissingError,
+)
+from ghga_datasteward_kit.legacy_accessioning import (
+    LegacyAccessionRegistry,
+    LegacyAccessionStore,
+    check_alias_uniqueness_per_class,
+    check_legacy_prefixes,
+)
 from ghga_datasteward_kit.metadata import MetadataConfig
 from ghga_datasteward_kit.utils import load_config_yaml
 from metldata.accession_registry.accession_registry import AccessionRegistry
@@ -93,24 +104,6 @@ class AccessionChanges(BaseModel):
         ),
     )
 
-    duplicated_aliases: dict[str, list[str]] = Field(
-        default_factory=dict,
-        description=(
-            "Aliases listed more than once within the same class, by anchor. An alias"
-            + " identifies a resource, so duplicates share a single accession however"
-            + " much their other fields differ."
-        ),
-    )
-
-    conflicting_aliases: dict[str, list[str]] = Field(
-        default_factory=dict,
-        description=(
-            "Duplicated aliases whose rows are not identical, by anchor. These are the"
-            + " damaging ones: the rows share one accession, so after the transform"
-            + " only one of them survives in the running system."
-        ),
-    )
-
     @property
     def is_lossless(self) -> bool:
         """Whether applying the amendment would drop no accessions at all."""
@@ -130,16 +123,6 @@ class AccessionChanges(BaseModel):
     def new_alias_count(self) -> int:
         """The number of aliases that would receive a new accession."""
         return sum(len(aliases) for aliases in self.new_aliases.values())
-
-    @property
-    def duplicated_alias_count(self) -> int:
-        """The number of aliases listed more than once within their class."""
-        return sum(len(aliases) for aliases in self.duplicated_aliases.values())
-
-    @property
-    def conflicting_alias_count(self) -> int:
-        """The number of duplicated aliases whose rows differ."""
-        return sum(len(aliases) for aliases in self.conflicting_aliases.values())
 
 
 class AccessionDiff(BaseModel):
@@ -168,45 +151,6 @@ class AccessionDiff(BaseModel):
 ConfirmCallback = Callable[[AccessionChanges], bool]
 
 
-def _find_duplicated_aliases(
-    *,
-    content: Json,
-    anchor_points_by_target: dict[str, AnchorPoint],
-) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
-    """Find aliases listed more than once within the same class.
-
-    Returns the duplicated aliases by anchor, and the subset whose rows are not
-    identical. Nothing upstream enforces unique aliases, and an alias identifies a
-    resource, so duplicates collapse onto a single accession: `generate_accession_map`
-    keeps one, the transform stamps it on every row that shares the alias, and the
-    loader then keys those rows to one resource. Where the rows differ, one silently
-    replaces the other.
-    """
-    duplicated: dict[str, list[str]] = {}
-    conflicting: dict[str, list[str]] = {}
-
-    for anchor, resources in content.items():
-        # the aliases come back in row order, so they pair up with the resources
-        aliases = get_aliases_for_resources(
-            resources=resources,
-            root_slot=anchor,
-            anchor_points_by_target=anchor_points_by_target,
-        )
-
-        rows_by_alias: dict[str, list[Json]] = {}
-        for resource, alias in zip(resources, aliases, strict=True):
-            rows_by_alias.setdefault(alias, []).append(resource)
-
-        for alias, rows in rows_by_alias.items():
-            if len(rows) < 2:
-                continue
-            duplicated.setdefault(anchor, []).append(alias)
-            if any(row != rows[0] for row in rows[1:]):
-                conflicting.setdefault(anchor, []).append(alias)
-
-    return duplicated, conflicting
-
-
 def plan_accession_changes(
     *,
     content: Json,
@@ -217,25 +161,20 @@ def plan_accession_changes(
     minting anything.
 
     Mirrors how `generate_accession_map` decides, so the preview matches what applying
-    the amendment actually does. Each alias is reported once however often the content
-    lists it, with repeats collected separately.
+    the amendment actually does. Expects content whose aliases are unique within
+    their class, as the alias checks of `amend_metadata` ensure.
     """
     preserved: AccessionMap = {}
     new_aliases: dict[str, list[str]] = {}
 
     for anchor, resources in content.items():
         accessions_for_anchor = existing_accession_map.get(anchor, {})
-        seen: set[str] = set()
 
         for alias in get_aliases_for_resources(
             resources=resources,
             root_slot=anchor,
             anchor_points_by_target=anchor_points_by_target,
         ):
-            if alias in seen:
-                continue
-            seen.add(alias)
-
             accession = accessions_for_anchor.get(alias)
             if accession:
                 preserved.setdefault(anchor, {})[alias] = accession
@@ -249,16 +188,8 @@ def plan_accession_changes(
             if alias not in preserved_for_anchor:
                 dropped.setdefault(anchor, {})[alias] = accession
 
-    duplicated, conflicting = _find_duplicated_aliases(
-        content=content, anchor_points_by_target=anchor_points_by_target
-    )
-
     return AccessionChanges(
-        preserved=preserved,
-        dropped=dropped,
-        new_aliases=new_aliases,
-        duplicated_aliases=duplicated,
-        conflicting_aliases=conflicting,
+        preserved=preserved, dropped=dropped, new_aliases=new_aliases
     )
 
 
@@ -294,15 +225,9 @@ def needs_confirmation(*, changes: AccessionChanges) -> bool:
 
     Dropping accessions is risky because a later load removes the corresponding
     resources from the running system. Preserving none at all is risky because it
-    usually means the wrong submission or the wrong aliases. A duplicated alias is
-    risky because the rows sharing it also share one accession, so only one of them
-    reaches the running system.
+    usually means the wrong submission or the wrong aliases.
     """
-    return (
-        changes.dropped_count > 0
-        or changes.preserved_count == 0
-        or changes.duplicated_alias_count > 0
-    )
+    return changes.dropped_count > 0 or changes.preserved_count == 0
 
 
 def _format_resource_lines(
@@ -346,7 +271,7 @@ def format_amendment_report(
     if changes.dropped:
         lines += [
             "",
-            "Dropped resources. Their accessions are released, and the next load"
+            "Dropped resources. Their accessions are retired, and the next load"
             " removes",
             "these resources from the running system:",
         ]
@@ -355,29 +280,6 @@ def format_amendment_report(
             f"    {anchor} / {alias}  {accession}"
             for anchor in sorted(changes.dropped)
             for alias, accession in sorted(changes.dropped[anchor].items())
-        ]
-
-    if changes.duplicated_aliases:
-        lines += [
-            "",
-            "Aliases listed more than once. An alias identifies a resource, so each"
-            " repeat",
-            "shares one accession no matter how its other fields differ:",
-        ]
-        for anchor in sorted(changes.duplicated_aliases):
-            conflicting = set(changes.conflicting_aliases.get(anchor, []))
-            for alias in sorted(changes.duplicated_aliases[anchor]):
-                note = (
-                    "  <- rows differ; only one survives the load"
-                    if alias in conflicting
-                    else "  (rows identical)"
-                )
-                lines += [f"    {anchor} / {alias}{note}"]
-        lines += [
-            "",
-            "Fix these in the metadata rather than amending around them: nothing"
-            " upstream",
-            "rejects a duplicate, and the extra rows cannot be told apart afterwards.",
         ]
 
     if changes.preserved_count == 0:
@@ -453,15 +355,18 @@ def amend_metadata(
             when no submission exists for the specified id.
         AmendmentStatusError:
             when the stored submission is not completed.
+        StudyAccessionMissingError:
+            when the stored accession map holds no study accession.
         MetadataValidator.ValidationError:
-            when the provided metadata failed validation against the metadata model.
+            when the provided metadata failed validation against the metadata model
+            or the alias checks.
+        LegacyPrefixMissingError:
+            when the submission was accessioned before study PIDs and a class of the
+            model has no legacy prefix.
         AmendmentAbortedError:
             when the confirm callback declined.
     """
     submission_store = SubmissionStore(config=config)
-    accession_registry = AccessionRegistry(
-        config=config, accession_store=AccessionStore(config=config)
-    )
     source_event_publisher = SourceEventPublisher(
         config=config, provider=FileSystemEventPublisher(config=config)
     )
@@ -472,7 +377,34 @@ def amend_metadata(
     )
 
     # raises ValidationError if not valid, before anything is written:
-    MetadataValidator(model=config.metadata_model).validate(metadata)
+    validator = MetadataValidator(model=config.metadata_model)
+    validator.validate(metadata)
+
+    # the study's accession is the one every new accession derives from
+    study_anchor = anchor_points_by_target[config.study_class_name].root_slot
+    study_accession = next(
+        iter(submission.accession_map.get(study_anchor, {}).values()), None
+    )
+    if study_accession is None:
+        raise StudyAccessionMissingError(submission_id=submission_id)
+
+    accession_registry: AccessionRegistry
+    # a study PID 'PREFIX.YY.XXX.V' holds dots, a flat accession never does
+    if "." not in study_accession:
+        check_legacy_prefixes(anchor_points_by_target=anchor_points_by_target)
+        # a flat accession holds no alias, so only a repeat within a class matters
+        check_alias_uniqueness_per_class(
+            content=metadata, anchor_points_by_target=anchor_points_by_target
+        )
+        accession_registry = LegacyAccessionRegistry(
+            config=config, accession_store=LegacyAccessionStore(config=config)
+        )
+    else:
+        validator.check_aliases_are_ascii(metadata)
+        validator.check_alias_uniqueness(metadata)
+        accession_registry = AccessionRegistry(
+            config=config, accession_store=AccessionStore(config=config)
+        )
 
     changes = plan_accession_changes(
         content=metadata,

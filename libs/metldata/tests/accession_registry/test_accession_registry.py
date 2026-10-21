@@ -146,11 +146,55 @@ def test_dataset_pids_exhausted(
         )
 
 
+def test_retire_accessions(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+):
+    """Retired accessions are stored without the leading study PID under its root,
+    and read back with it; accessions outside the study are not stored.
+    """
+    accession_registry, accession_store = make_registry(config_sub_fixture)
+    study_pid = accession_registry.get_study_accession()
+    match = STUDY_PID_PATTERN.match(study_pid)
+    assert match
+
+    accession_registry.retire_accessions(
+        study_pid=study_pid,
+        accessions={f"{study_pid}.DS.K7Q", f"{study_pid}.sample-a", "GHGA.26.X.1.s"},
+    )
+
+    assert accession_store.get_retired(
+        year=match.group(1), random_block=match.group(2)
+    ) == {"DS.K7Q", "sample-a"}
+    assert accession_registry.get_retired_accessions(study_pid=study_pid) == {
+        f"{study_pid}.DS.K7Q",
+        f"{study_pid}.sample-a",
+    }
+
+
+def test_flat_study_retires_nothing(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+):
+    """A study with a flat accession neither has nor stores retired accessions."""
+    accession_registry, _ = make_registry(config_sub_fixture)
+    store_path = config_sub_fixture.accession_store_path
+    store_before = store_path.read_text(encoding="utf-8")
+
+    accession_registry.retire_accessions(
+        study_pid="GHGAS12345678901234", accessions={"GHGAN12345678901234"}
+    )
+
+    assert (
+        accession_registry.get_retired_accessions(study_pid="GHGAS12345678901234")
+        == set()
+    )
+    assert store_path.read_text(encoding="utf-8") == store_before
+
+
 def test_get_accession_by_class(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """The study takes the study PID, a dataset a dataset PID, and every other
-    resource the accession composed from its alias.
+    resource the accession composed from its normalized alias.
     """
     accession_registry, _ = make_registry(config_sub_fixture)
     study_pid = "GHGA.26.K7Q.1"
@@ -165,4 +209,6 @@ def test_get_accession_by_class(
 
     assert get_accession("Study", "STUDY_1") == study_pid
     assert get_accession("Dataset", "DS_1").startswith(f"{study_pid}.DS.")
-    assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.SAMPLE_1"
+    assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.sample_1"
+    # normalized, an alias cannot pose as a dataset PID
+    assert get_accession("Sample", "DS.ABC") == f"{study_pid}.ds-abc"
