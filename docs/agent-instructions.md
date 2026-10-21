@@ -164,6 +164,19 @@ The PR that adds or changes a shared skill shows the reviewer:
 
 Skills are reviewed each quarter: one unused for two quarters, or no longer beating the baseline after a model change, is removed.
 
+## Hooks
+
+The hooks in `.claude/settings.json` are listed in [dev/using-agents.md](dev/using-agents.md#what-the-repo-sets-up).
+A hook that adds to what the agent reads, rather than blocking a mistake, is admitted as a skill is: on an eval against a session without it, where a tie is a rejection.
+The type check after each Python change passed one on 2026-10-21, with Opus 5.5, 9 cases and 3 runs per arm:
+
+| | with the check | without |
+|---|---|---|
+| end state clean (lint, mypy, tests) | 27/27 | 22/27 |
+| failed check rounds per run | 0.9 | 1.7 |
+| turns per run | 16 | 20 |
+| lines per run added to silence a checker | 0.3 | 0.3 |
+
 ## Keeping them true
 
 The rules in an `AGENTS.md` are the team's rules — branch names, test scoping, the definition of done — so people follow them too.
@@ -197,3 +210,6 @@ Options considered and left out, with the signal to look again.
   Claude Code can export OpenTelemetry events that name the skill behind each request, which would show the team's skill use for the quarterly review.
   It needs a collector and an opt-in in each dev's `~/.claude/settings.json`, since committed settings would also export outside contributors' sessions.
   Look again if the `/skill-doctor` reports leave the review guessing.
+- **A Python language server.**
+  pylsp with mypy and ruff tied with a session without it on an eval on 2026-10-14, since it checks only the files the agent has open and misses the callers a change breaks elsewhere.
+  Look again if a server can report for a whole unit.
