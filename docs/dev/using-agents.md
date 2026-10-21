@@ -12,6 +12,8 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 - **Skills:** task procedures in `.agents/skills/`, listed with where each applies in the [skill catalogue](../agent-skills.md); `/skills` in Claude Code lists the ones your session can use.
 - **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), checks at session start that you run in the dev container and that the git hooks are installed.
   Guards stop edits to generated files, `uv` on the host and commands that skip the git hooks, and an edit to lint configuration asks you first.
+  After each Python change by Edit, Write or a shell command, a check runs mypy on the changed file's unit and on every unit that imports its module, and ruff on the file, and reports the errors to the agent before its next step ([agent-instructions.md](../agent-instructions.md#hooks)).
+  It costs 0.2–0.5 s for an edit inside one service and up to about 8 s cold for a hexkit module that 16 units import; `just typecheck` and the commit hooks stay the authority.
 - **Permissions:** the same file allows the read-only `gh` commands, `rg`, `fd`, `just test`, `just lint`, `just typecheck` and `just affected`.
   It asks before creating or commenting on a PR, before `rm -rf`, before `rg --pre` or `fd --exec`, which run other commands, and before `rg` searches `.env` or gitignored files.
   It denies merges, releases, force pushes, `sudo`, `ssh`, `chmod 777` and reading `.env` files.

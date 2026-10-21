@@ -51,6 +51,23 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/scripts/agent_hooks/guard_bypass.py\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/scripts/agent_hooks/check_units.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/scripts/agent_hooks/check_units.py\"",
+            "timeout": 180
           }
         ]
       }
