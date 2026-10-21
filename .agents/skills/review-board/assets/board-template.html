@@ -227,12 +227,17 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
     return `${post.path.split("/").pop()}:${post.start_line ? post.start_line + "–" : ""}${post.line}${post.suggestion ? " · with a suggestion" : ""}`;
   }
   function summaryText() {
-    const by = k => FINDINGS.filter(f => statusOf[f.id] === k).map(f => "#" + f.id);
+    // Counts comments, not findings, since a finding can post several
+    const posts = k => FINDINGS.filter(f => statusOf[f.id] === k).flatMap(f => f.post);
+    const count = (list, one, many) => {
+      const n = list.length, hints = list.filter(p => p.suggestion).length;
+      const which = !hints ? "" : hints === n ? (n === 1 ? ", with a suggestion" : ", each with a suggestion") : `, ${hints} with a suggestion`;
+      return `${n} ${n === 1 ? one : many}${which}.`;
+    };
     const lines = [`${DATA.summary || "Review"} Each finding was reproduced on ${PR.head.slice(0, 9)}.`];
-    const fix = by("needs_fix"), dev = by("up_to_dev"), skip = by("wontfix").concat(by("fixed"));
-    if (fix.length) lines.push("To fix: " + fix.length + " inline, with suggestions where the fix fits one.");
-    if (dev.length) lines.push("Your call: " + dev.length + " inline, marked q:.");
-    if (skip.length) lines.push("Not raised: " + skip.length + ".");
+    const fix = posts("needs_fix"), dev = posts("up_to_dev");
+    if (fix.length) lines.push(count(fix, "comment asks for a fix", "comments ask for a fix"));
+    if (dev.length) lines.push(count(dev, "comment marked q: leaves the call to you", "comments marked q: leave the call to you"));
     return lines.join("\n\n");
   }
 
