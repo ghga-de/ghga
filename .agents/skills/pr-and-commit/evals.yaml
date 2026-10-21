@@ -260,7 +260,7 @@ cases:
       - name: from-origin-dev
         type: tool_used
         tool: Bash
-        input_match: '(switch|checkout) -[cbB] [^"]*origin/dev|worktree add [^"]*origin/dev|just wt '
+        input_match: '(switch|checkout) (--no-track )?-[cbB] [^"]*origin/dev|worktree add [^"]*origin/dev|just wt '
         min: 1
       - name: branch-name
         type: regex
