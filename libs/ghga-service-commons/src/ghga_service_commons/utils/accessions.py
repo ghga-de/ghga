@@ -24,7 +24,9 @@ __all__ = ["DatasetAccession", "FileAccession"]
 # the study PID and dataset prefixes are not spelled out, as metldata makes them
 # configurable
 BASE32 = r"[A-Z2-7]"  # RFC 4648 alphabet of the random blocks
-STUDY_PID = rf"[^.\s]+\.\d{{2}}\.{BASE32}+\.\d+"  # 'PREFIX.YY.XXX.V'
+# the version V counts from 1, without leading zeros; [0-9] rather than \d, which
+# Python widens to every Unicode digit while JSON Schema in openapi.yaml does not
+STUDY_PID = rf"[^.\s]+\.[0-9]{{2}}\.{BASE32}+\.[1-9][0-9]*"  # 'PREFIX.YY.XXX.V'
 
 LEGACY_DATASET_ACCESSION = r"[A-Z]{1,6}[0-9]{3,18}"  # 'GHGAD12345…'
 DATASET_PID = rf"{STUDY_PID}\.[^.\s]+\.{BASE32}+"  # '{study_pid}.DS.XXX'

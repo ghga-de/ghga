@@ -39,6 +39,9 @@ def test_good_dataset_accession(accession: str):
         "GHGA.26.ABC.1.sample_a",
         "GHGA.26.AB1.1.DS.XYZ",
         "GHGA.2026.ABC.1.DS.XYZ",
+        "GHGA.26.ABC.0.DS.XYZ",
+        "GHGA.26.ABC.01.DS.XYZ",
+        "GHGA.٢٦.ABC.١.DS.XYZ",
     ],
 )
 def test_bad_dataset_accession(accession: str):
@@ -66,6 +69,9 @@ def test_good_file_accession(accession: str):
         "GHGA.26.ABC.12.some.file",
         "GHGA.26.ABC.1.File_A",
         "GHGA.26.ABC.1.DS.XYZ",
+        "GHGA.26.ABC.0.file_a",
+        "GHGA.26.ABC.01.file_a",
+        "GHGA.٢٦.ABC.١.file_a",
     ],
 )
 def test_bad_file_accession(accession: str):
