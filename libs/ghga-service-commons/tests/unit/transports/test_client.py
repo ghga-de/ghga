@@ -35,6 +35,7 @@ from ghga_service_commons.transports import (
 HTTP_PROXY_URL = "http://proxy.invalid:8080"
 HTTPS_PROXY_URL = "https://secure-proxy.invalid:8443"
 SERVICE_HOST = "service.invalid"
+DIRECT_HOST = "direct.invalid"
 
 _UNPACED = TransportConfig(min_request_interval=0.0, per_request_jitter=0.0)
 _STEP = 0.05
@@ -88,14 +89,63 @@ def test_factory_is_called_once_per_route_with_its_proxy(proxy_env: None):
 
 def test_limits_reach_the_proxy_mounts(proxy_env: None):
     """Pool sizing applies to proxied routes, not only to the direct one."""
-    limits = httpx2.Limits(max_connections=7)
+    limits = httpx2.Limits(
+        max_connections=7, max_keepalive_connections=3, keepalive_expiry=11
+    )
     routes = client_routes(
         _UNPACED, make_base_transport=default_base_transport_factory(limits=limits)
     )
 
-    pools = [_base_transport(stack)._pool._max_connections for stack in _stacks(routes)]  # type: ignore[attr-defined]
+    pools = [_base_transport(stack)._pool for stack in _stacks(routes)]  # type: ignore[attr-defined]
 
-    assert pools == [7] * len(pools)
+    assert len(pools) == 3
+    assert all(pool._max_connections == limits.max_connections for pool in pools)
+    assert all(
+        pool._max_keepalive_connections == limits.max_keepalive_connections
+        for pool in pools
+    )
+    assert all(pool._keepalive_expiry == limits.keepalive_expiry for pool in pools)
+
+
+@pytest.mark.asyncio
+async def test_client_options_reach_every_route(
+    proxy_env: None, monkeypatch: pytest.MonkeyPatch
+):
+    """The client's timeout, headers and event hooks apply on every route it sends through."""
+    monkeypatch.setenv("NO_PROXY", DIRECT_HOST)
+    sent: list[tuple[str | None, httpx2.Request]] = []
+    hooked: list[str] = []
+
+    def make_base_transport(proxy: str | None) -> httpx2.AsyncBaseTransport:
+        def respond(request: httpx2.Request) -> httpx2.Response:
+            sent.append((proxy, request))
+            return httpx2.Response(200)
+
+        return httpx2.MockTransport(respond)
+
+    async def hook(request: httpx2.Request) -> None:
+        hooked.append(str(request.url))
+
+    routes = client_routes(_UNPACED, make_base_transport=make_base_transport)
+    async with httpx2.AsyncClient(
+        timeout=12.0,
+        headers={"User-Agent": "routes-test"},
+        event_hooks={"request": [hook]},
+        **routes,
+    ) as client:
+        urls = [
+            f"http://{SERVICE_HOST}/",
+            f"https://{SERVICE_HOST}/",
+            f"https://{DIRECT_HOST}/",
+        ]
+        for url in urls:
+            await client.get(url)
+
+    assert [proxy for proxy, _ in sent] == [HTTP_PROXY_URL, HTTPS_PROXY_URL, None]
+    assert hooked == urls
+    for _, request in sent:
+        assert request.headers["User-Agent"] == "routes-test"
+        assert request.extensions["timeout"]["read"] == 12.0
 
 
 @pytest.mark.asyncio

@@ -24,9 +24,9 @@ from tenacity import RetryError
 
 from dhfs import __version__
 from ghga_service_commons.transports import (
-    CompositeConfig,
-    CompositeTransportFactory,
-    ratelimiting_retry_proxies,
+    BaseTransportFactory,
+    TransportConfig,
+    client_routes,
 )
 
 __all__ = [
@@ -41,7 +41,7 @@ __all__ = [
 USER_AGENT = f"GHGA DataHubFileService/{__version__}"
 
 
-class HttpClientConfig(CompositeConfig):
+class HttpClientConfig(TransportConfig):
     """Configuration for HTTP Client functionality in the DHFS"""
 
     http_request_timeout_seconds: float = Field(
@@ -53,24 +53,20 @@ class HttpClientConfig(CompositeConfig):
 async def get_configured_httpx_client(
     *,
     config: HttpClientConfig,
-    base_transport: httpx2.AsyncBaseTransport | None = None,
+    make_base_transport: BaseTransportFactory | None = None,
 ) -> AsyncGenerator[httpx2.AsyncClient]:
     """Produce an httpx2 AsyncClient with configured rate limiting behavior
 
-    `base_transport` replaces the innermost transport that actually performs the
-    request. It is meant for tests, which can supply a mock transport that still
-    gets exercised through the rate limiting and retry layers.
+    `make_base_transport` builds the innermost transport that actually performs the
+    request, for the direct route and every env proxy mount alike. It is meant for
+    tests, which can supply a mock transport that still gets exercised through the
+    rate limiting and retry layers.
     """
-    transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        config=config, base_transport=base_transport
-    )
     headers = httpx2.Headers({"User-Agent": USER_AGENT})
-    proxies = ratelimiting_retry_proxies(config=config)
     async with httpx2.AsyncClient(
         timeout=config.http_request_timeout_seconds,
         headers=headers,
-        transport=transport,
-        mounts=proxies,
+        **client_routes(config, make_base_transport=make_base_transport),
     ) as client:
         yield client
 

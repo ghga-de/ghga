@@ -18,7 +18,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, nullcontext
 
-import httpx2
 from fastapi import FastAPI
 
 from dcs.adapters.inbound.event_sub import EventSubTranslator
@@ -36,6 +35,7 @@ from dcs.core.data_repository import DataRepository
 from dcs.ports.inbound.bucket_cleanup import BucketCleanerPort
 from dcs.ports.inbound.data_repository import DataRepositoryPort
 from ghga_service_commons.auth.jwt_auth import JWTAuthContextProvider
+from ghga_service_commons.transports import BaseTransportFactory
 from ghga_service_commons.utils.context import asyncnullcontext
 from ghga_service_commons.utils.multinode_storage import S3ObjectStorages
 from hexkit.providers.akafka import KafkaEventPublisher, KafkaEventSubscriber
@@ -73,15 +73,12 @@ async def get_persistent_publisher(
 async def prepare_core(
     *,
     config: Config,
-    http_base_transport: httpx2.AsyncBaseTransport | None = None,
-    http_mount_env_proxies: bool = True,
+    http_make_base_transport: BaseTransportFactory | None = None,
 ) -> AsyncGenerator[DataRepositoryPort]:
     """Constructs and initializes all core components and their outbound dependencies.
 
-    `http_base_transport` is handed to the outbound HTTP client, which lets tests
-    serve the Secrets API from a mock instead of the network. Replacing the network
-    layer rules out the env proxies, so such callers also pass
-    `http_mount_env_proxies=False`.
+    `http_make_base_transport` is handed to the outbound HTTP client, which lets tests
+    serve the Secrets API from a mock instead of the network.
     """
     object_storages = S3ObjectStorages(config=config)
 
@@ -92,8 +89,7 @@ async def prepare_core(
         ) as persistent_pub_provider,
         get_configured_httpx_client(
             config=config,
-            base_transport=http_base_transport,
-            mount_env_proxies=http_mount_env_proxies,
+            make_base_transport=http_make_base_transport,
         ) as httpx_client,
     ):
         drs_object_dao = await get_drs_dao(dao_factory=dao_factory)
