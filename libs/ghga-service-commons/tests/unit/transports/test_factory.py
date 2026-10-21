@@ -18,23 +18,27 @@
 import ssl
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
+import httpcore2
 import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
-from httpx2 import AsyncHTTPTransport
+from httpx2 import AsyncHTTPTransport, Limits
 
 from ghga_service_commons.transports.config import CompositeConfig
 from ghga_service_commons.transports.factory import (
     CompositeTransportFactory,
+    default_base_transport_factory,
     get_ssl_verify,
 )
 from ghga_service_commons.transports.ratelimiting import AsyncRateLimitingTransport
 from ghga_service_commons.transports.retry import AsyncRetryTransport
 
 CA_BUNDLE_CERT_COUNT = 3
+PROXY_URL = "http://proxy.invalid:8080"
 
 
 def throwaway_ca_pem(common_name: str) -> bytes:
@@ -131,6 +135,57 @@ def test_get_ssl_verify_requests_ca_bundle_precedence(
     assert len(verify.get_ca_certs()) == CA_BUNDLE_CERT_COUNT
 
 
+@pytest.mark.parametrize("proxy", [None, PROXY_URL])
+def test_default_base_transport_factory_applies_its_settings(proxy: str | None):
+    """Every route gets the factory's limits and SSL verification.
+
+    Only a proxied route connects through a proxy.
+    """
+    limits = Limits(max_connections=7, max_keepalive_connections=3, keepalive_expiry=11)
+    verify = ssl.create_default_context()
+    make_base_transport = default_base_transport_factory(limits=limits, verify=verify)
+
+    transport = make_base_transport(proxy)
+
+    # httpx2 keeps none of its settings on the transport, only on its connection pool
+    assert isinstance(transport, AsyncHTTPTransport)
+    pool = transport._pool
+    assert pool._ssl_context is verify
+    assert pool._max_connections == limits.max_connections
+    assert pool._max_keepalive_connections == limits.max_keepalive_connections
+    assert pool._keepalive_expiry == limits.keepalive_expiry
+    if proxy is None:
+        assert type(pool) is httpcore2.AsyncConnectionPool
+    else:
+        assert isinstance(pool, httpcore2.AsyncHTTPProxy)
+        assert pool._proxy_url == httpcore2.URL(proxy)
+
+
+def test_default_base_transport_factory_defaults(
+    monkeypatch: pytest.MonkeyPatch, ca_bundle: Path
+):
+    """Without arguments, the factory reads SSL verification from the environment.
+
+    It reads it once, so the direct and the proxied route share one SSL context,
+    and it sets no limits, leaving httpx2 its defaults.
+    """
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(ca_bundle))
+    make_base_transport = default_base_transport_factory()
+
+    with patch(
+        "ghga_service_commons.transports.factory.AsyncHTTPTransport"
+    ) as transport_class:
+        make_base_transport(None)
+        make_base_transport(PROXY_URL)
+
+    direct, proxied = (call.kwargs for call in transport_class.call_args_list)
+    assert isinstance(direct["verify"], ssl.SSLContext)
+    assert proxied["verify"] is direct["verify"]
+    assert "limits" not in direct
+    assert "limits" not in proxied
+
+
 def test_create_ratelimiting_retry_transport_layers_transports():
     """Ensure the retry transport wraps a rate limiting transport over an HTTP transport."""
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
@@ -148,7 +203,8 @@ def test_create_ratelimiting_retry_transport_uses_custom_base():
     base = AsyncHTTPTransport()
 
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        CompositeConfig(), base_transport=base
+        CompositeConfig(),
+        make_base_transport=lambda _: base,
     )
 
     ratelimiting = transport._transport
