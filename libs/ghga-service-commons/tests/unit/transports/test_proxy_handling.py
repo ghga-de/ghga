@@ -308,8 +308,8 @@ async def test_not_hitting_proxy_mount(
                 ]
 
 
-def test_requests_of_one_budget_scope_take_one_route(monkeypatch: pytest.MonkeyPatch):
-    """One transport paces each scope, so a budget per transport covers the whole scope."""
+def test_all_transports_built_with_matching_scopes(monkeypatch: pytest.MonkeyPatch):
+    """Ensure all transports for the given proxies are created and budget scopes are derived correctly."""
     for name in ("http_proxy", "https_proxy", "all_proxy", "no_proxy"):
         monkeypatch.delenv(name, raising=False)
         monkeypatch.delenv(name.upper(), raising=False)
