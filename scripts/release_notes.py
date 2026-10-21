@@ -12,6 +12,8 @@ The notes have two parts. The summaries at the top, new features, changes and bu
 are written by hand, so this script gives only their headings and a hint on what goes
 under each. Below them it lists the pull requests merged since the previous release,
 grouped by the commit type the commit grammar puts in front of each squash commit.
+Between the two, it collects the `Upgrade:` trailers of those commits, what users and
+deployments must do to upgrade, so the release a change lands in is known only once tagged.
 
 Each release lists only the pull requests that touched its own files. For the platform,
 `ghga/X.Y.Z`, those are the services, the front end, the charts and the lock file. The
@@ -81,6 +83,11 @@ CONVENTIONAL = re.compile(
 )
 PR_SUFFIX = re.compile(r"\s*\(#(?P<pr>\d+)\)$")
 BREAKING_FOOTER = re.compile(r"^BREAKING[ -]CHANGE:", re.MULTILINE)
+# A trailer says what an upgrade requires; a long one continues on lines that start
+# with whitespace, as git folds trailers.
+UPGRADE_TRAILER = re.compile(
+    r"^Upgrade:[ \t]*(?P<text>.+(?:\n[ \t]+\S.*)*)", re.MULTILINE
+)
 
 # The subject GitHub gives a merge commit. Squashing is the rule on `dev`, but hotfixes
 # into `main` and some Renovate pull requests are merged this way.
@@ -91,6 +98,11 @@ MERGED_PR = re.compile(
 # A merge from one of these is a release merge or a back-merge, not a change of its own:
 # the pull requests it brings in are listed one by one.
 INTEGRATION_BRANCHES = {"dev", "main"}
+
+UPGRADE_HINT = (
+    "<!-- Collected from the `Upgrade:` trailers. Check each against the charts, the"
+    " config and the CLI before publishing. -->"
+)
 
 INTRO = (
     "<!-- Summarise each section in a few short sentences for users: no pull request"
@@ -110,6 +122,8 @@ class Entry:
     pr: int | None
     breaking: bool
     files: tuple[str, ...]
+    # What an upgrade requires, from the commit's `Upgrade:` trailers.
+    upgrade: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -230,7 +244,8 @@ def _entry(subject: str, body: str, files: list[str], kind: str = "chore") -> En
 
     Args:
         subject: E.g. `feat(ucs)!: add UCS endpoints (#207)`.
-        body: The rest of the message, searched for a `BREAKING CHANGE:` footer.
+        body: The rest of the message, searched for a `BREAKING CHANGE:` footer and
+            `Upgrade:` trailers.
         files: The files the change touched.
         kind: The commit type to use when `subject` does not name one.
     """
@@ -248,7 +263,10 @@ def _entry(subject: str, body: str, files: list[str], kind: str = "chore") -> En
             match["text"],
         )
     breaking = breaking or bool(BREAKING_FOOTER.search(body))
-    return Entry(kind, scope, text, pr, breaking, tuple(files))
+    upgrade = tuple(
+        " ".join(match["text"].split()) for match in UPGRADE_TRAILER.finditer(body)
+    )
+    return Entry(kind, scope, text, pr, breaking, tuple(files), upgrade)
 
 
 def _merged_entry(
@@ -455,19 +473,28 @@ def _line(entry: Entry, name: str) -> str:
     return f"- {breaking}{scope}{text}{pr}"
 
 
+def _upgrade_line(entry: Entry, text: str, name: str) -> str:
+    scope = f"**{entry.scope}:** " if entry.scope and entry.scope != name else ""
+    pr = f" (#{entry.pr})" if entry.pr else ""
+    return f"- {scope}{text}{pr}"
+
+
 def render(
     tag: str,
     previous: str | None,
     changes: list[Entry],
     components: list[str] | None = None,
 ) -> str:
-    """Writes the notes: summary headings to fill in, the libraries and tools that
-    changed, if given, then the pull requests by type."""
+    """Writes the notes: summary headings to fill in, the upgrade notes, the
+    libraries and tools that changed, if given, then the pull requests by type."""
     name = tag.rpartition("/")[0]
     lines = [INTRO, ""]
     for summary in SUMMARIES:
         if previous is None or summary.applies(changes):
             lines += [f"## {summary.heading}", "", summary.hint, ""]
+    upgrade = [_upgrade_line(e, text, name) for e in changes for text in e.upgrade]
+    if upgrade:
+        lines += ["## Upgrade notes", "", UPGRADE_HINT, "", *upgrade, ""]
     if components:
         lines += ["## Libraries and tools", "", *components, ""]
 

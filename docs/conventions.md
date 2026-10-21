@@ -98,6 +98,9 @@ Conventional Commits' `perf`, `ci`, `build` and `style` are not used; they are `
 A solo commit names the member as its scope where one owns the change, and leaves it off where none does.
 A hotfix's merge commit is written the same way.
 Mark a breaking change `feat(upload)!:` with a `BREAKING CHANGE:` footer, and do not repeat the YouTrack key — `(#<PR>)` leads to it.
+A change that needs action on upgrade — a renamed CLI flag, a new or changed config setting, a changed chart value or `openapi.yaml` — gets an `Upgrade:` trailer per action, saying what to do in the terms of whoever upgrades: a deployment or a tool's user.
+The version is unknown when the commit is written; the release notes collect the trailers of each tag's range ([releases.md](releases.md#release-notes)).
+A trailer longer than 72 characters continues on lines indented by two spaces.
 **No `Co-authored-by:` line for an agent in a commit**, whatever the tool says; human co-authors keep their trailers.
 For branch `upload/feat/GSI-1234-add-ucs-endpoints`, merged as #207:
 
@@ -107,6 +110,8 @@ feat(upload): add UCS endpoints (#207)
 - Add POST /uploads and GET /uploads/{id}
 - Resolve the storage alias from the box configuration
 - Cover both routes in the UCS API tests
+
+Upgrade: set `ucs.config.storage_aliases` for each box storage
 ```
 
 **PR descriptions** are written for the reviewer: a few short paragraphs on what changed, why, and what to look at — not a summary of the diff, and not a report on how the work went.

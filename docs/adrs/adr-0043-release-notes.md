@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-09-23
-amended: 2026-09-30
+amended: 2026-10-21
 tags: [release, process]
 related: [ADR-0027, ADR-0038]
 ---
@@ -82,6 +82,11 @@ The notes have two parts:
 2. **Pull requests:** grouped under Features, Fixes, Documentation, Refactoring, Tests and Chores by the commit type.
    Breaking changes are marked and come first in their group.
    A commit outside the grammar is listed under Chores, and empty groups are left out.
+
+**Amended 2026-10-21:** a third part, **Upgrade notes**, sits between the two.
+A deployment or a tool's user needs to know which flag, setting or chart value changed, but the commit that changes it cannot know the release it will land in.
+So the squash commit carries an `Upgrade:` trailer, and the script collects the trailers of the pull requests it lists, so the tag range decides the release.
+A trailer is one line in a commit message, not a file, so it keeps the reasons for rejecting changelog files below.
 
 Only the platform's final releases are marked as the repository's latest release.
 
