@@ -213,3 +213,8 @@ Options considered and left out, with the signal to look again.
 - **A Python language server.**
   pylsp with mypy and ruff tied with a session without it on an eval on 2026-10-14, since it checks only the files the agent has open and misses the callers a change breaks elsewhere.
   Look again if a server can report for a whole unit.
+- **Project subagents in `.claude/agents/`.**
+  Four were measured against a session without them on 2026-10-21: `silent-failure-hunter` and `type-design-analyzer`, ported from Anthropic's pr-review-toolkit, and `member-tester` and `testbed-runner`, which run the checks and hand back only the failures.
+  The session without them found all 25 defects planted in the review cases, so the reviewers could not find more, and the session called them only when the prompt named them.
+  The runners gave the same result at a higher cost: `member-tester` cost 15% more and was called in 4 of 9 runs, and `testbed-runner` was no faster once a headless session was told to wait for the suite in the foreground.
+  Look again if a session starts missing planted defects, or a test-bed run's output no longer fits a session's context.
