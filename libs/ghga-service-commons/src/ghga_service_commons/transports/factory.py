@@ -121,8 +121,7 @@ class CompositeTransportFactory:
 
         Example:
             ```
-            # The client sends a request through `transport` unless one of the
-            # proxy mounts matches its URL.
+            # Create a client with configured normal and proxy transports
             transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
                 config
             )

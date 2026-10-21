@@ -17,9 +17,8 @@ This module provides custom proxy handling. httpx2 gives a custom transport prec
 the proxies it reads from the environment, but custom transports + proxy are a valid use case
 that need some custom logic around this default.
 
-There is no `trust_env` switch: httpx2 ignores the client's `trust_env` for proxies
-once it is handed a transport. To skip the proxies, unset the proxy variables or
-list the hosts in NO_PROXY.
+httpx2 ignores the client's `trust_env` for proxies once it is handed a transport. To skip
+proxies, unset the proxy variables or list the hosts in NO_PROXY.
 Hosts excluded via NO_PROXY are kept as `None` mounts, which tells httpx2 to connect
 directly to them.
 """
@@ -45,9 +44,9 @@ def ratelimiting_retry_proxies(
 
     Example:
         ```
-        # With HTTPS_PROXY=http://proxy.invalid:8080 and NO_PROXY=internal.invalid
+        # With NO_PROXY=internal.invalid
         mounts = ratelimiting_retry_proxies(config)
-        # {"https://": AsyncRetryTransport(...), "all://*internal.invalid": None}
+        # {"all://*internal.invalid": None}
         ```
     """
     factory = make_base_transport or default_base_transport_factory()
