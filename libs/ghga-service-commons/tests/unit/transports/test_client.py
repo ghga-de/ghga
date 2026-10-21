@@ -131,8 +131,8 @@ async def test_retry_after_outlasts_the_retry_backoff():
 
 
 @pytest.mark.asyncio
-async def test_a_proxied_scope_is_paced_like_a_direct_one(proxy_env: None):
-    """Requests of one scope wait for each other on a proxy mount; other scopes do not."""
+async def test_request_pacing_works_for_proxy_mounts(proxy_env: None):
+    """Ensure requests of one scope wait for each other on the same proxy mount."""
     sent: dict[str, list[float]] = {"upload": [], "download": []}
 
     def respond(request: httpx2.Request) -> httpx2.Response:
@@ -152,5 +152,6 @@ async def test_a_proxied_scope_is_paced_like_a_direct_one(proxy_env: None):
         )
 
     uploads = sorted(sent["upload"])
+    # Check pacing, accounting vor some delays so the test isn't flaky
     assert all(later - earlier >= _STEP * 0.9 for earlier, later in pairwise(uploads))
     assert abs(min(sent["download"]) - uploads[0]) < _STEP

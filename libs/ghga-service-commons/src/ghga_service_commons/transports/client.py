@@ -29,7 +29,10 @@ from .proxy_handling import ratelimiting_retry_proxies
 
 
 class ClientRoutes(TypedDict):
-    """The `transport` and `mounts` keyword arguments of an `httpx2.AsyncClient`."""
+    """The `transport` and `mounts` keyword arguments of an `httpx2.AsyncClient`.
+
+    Provided as a `TypedDict`, so they can be directly unwrapped into the client constructor.
+    """
 
     transport: AsyncBaseTransport
     mounts: dict[str, AsyncBaseTransport | None]
@@ -49,8 +52,7 @@ def client_routes(
     The client ignores `verify`, `cert`, `http1`, `http2` and `limits`, as it is always
     handed a transport. Set them in `make_base_transport` instead, for example
     `default_base_transport_factory(limits=limits)`. Set the proxy environment
-    variables instead of passing `proxy` to the client: httpx2 would send every URL
-    that no mount claims through that proxy, without retries or rate limiting.
+    variables instead of passing `proxy` to the client.
 
     Example:
         ```
