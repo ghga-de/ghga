@@ -23,7 +23,6 @@ from .factory import (
     BaseTransportFactory,
     CompositeTransportFactory,
     default_base_transport_factory,
-    fixed_base_transport_factory,
 )
 from .proxy_handling import ratelimiting_retry_proxies
 
@@ -36,6 +35,5 @@ __all__ = [
     "TransportConfig",
     "client_routes",
     "default_base_transport_factory",
-    "fixed_base_transport_factory",
     "ratelimiting_retry_proxies",
 ]

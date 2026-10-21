@@ -28,7 +28,6 @@ from ghga_service_commons.transports import (
     TransportConfig,
     client_routes,
     default_base_transport_factory,
-    fixed_base_transport_factory,
 )
 
 # RFC 6761 reserves .invalid for names that never resolve,
@@ -69,9 +68,7 @@ def _base_transport(stack) -> httpx2.AsyncBaseTransport:
 def test_custom_transport_serves_every_route(proxy_env: None):
     """A supplied transport serves the proxy mounts too, not just the direct route."""
     mock = httpx2.MockTransport(lambda request: httpx2.Response(200))
-    routes = client_routes(
-        _UNPACED, make_base_transport=fixed_base_transport_factory(transport=mock)
-    )
+    routes = client_routes(_UNPACED, make_base_transport=lambda _: mock)
 
     assert all(_base_transport(stack) is mock for stack in _stacks(routes))
 
@@ -123,12 +120,8 @@ async def test_retry_after_outlasts_the_retry_backoff():
         client_num_retries=2,
         client_exponential_backoff_max=0,
     )
-    routes = client_routes(
-        config,
-        make_base_transport=fixed_base_transport_factory(
-            transport=httpx2.MockTransport(respond)
-        ),
-    )
+    mock = httpx2.MockTransport(respond)
+    routes = client_routes(config, make_base_transport=lambda _: mock)
 
     async with httpx2.AsyncClient(**routes) as client:
         response = await client.get(f"http://{SERVICE_HOST}")
@@ -148,9 +141,7 @@ async def test_a_proxied_scope_is_paced_like_a_direct_one(proxy_env: None):
 
     config = TransportConfig(min_request_interval=_STEP, per_request_jitter=0.0)
     mock = httpx2.MockTransport(respond)
-    routes = client_routes(
-        config, make_base_transport=fixed_base_transport_factory(transport=mock)
-    )
+    routes = client_routes(config, make_base_transport=lambda _: mock)
     async with httpx2.AsyncClient(**routes) as client:
         await asyncio.gather(
             *(
