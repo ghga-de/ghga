@@ -191,6 +191,32 @@ async def test_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
     assert response.headers["Authorization"] == ""
 
 
+async def test_health(bare_client: BareClient):
+    """Test the health endpoint when basic authentication is not configured."""
+    response = await bare_client.get("/health")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    response = await bare_client.head("/health")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+async def test_health_without_basic_auth(client_with_basic_auth: ClientWithBasicAuth):
+    """Test that the health endpoint is excluded from basic authentication."""
+    client = client_with_basic_auth.bare_client
+
+    response = await client.get("/health")
+    # 204 as a precaution, see the docstring of the route
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert not response.text
+
+    response = await client.head("/health")
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    response = await client.post("/health")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_allowed_paths(client_with_basic_auth: ClientWithBasicAuth):
     """Test that allowed paths are excluded from authentication."""
     client = client_with_basic_auth.bare_client
