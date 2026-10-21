@@ -23,7 +23,7 @@ from typing import Any
 
 from httpx2 import AsyncBaseTransport, AsyncHTTPTransport, Limits
 
-from .config import CompositeConfig
+from .config import TransportConfig
 from .ratelimiting import AsyncRateLimitingTransport
 from .retry import AsyncRetryTransport
 
@@ -91,33 +91,17 @@ class CompositeTransportFactory:
     """Produces different flavors of httpx2.AsyncHTTPTransports and takes care of wrapping them in the correct order."""
 
     @classmethod
-    def _create_common_transport_layers(
-        cls,
-        config: CompositeConfig,
-        *,
-        make_base_transport: BaseTransportFactory | None = None,
-        proxy: str | None = None,
-    ):
-        """Creates wrapped transports reused between different factory methods.
-
-        If `make_base_transport` is not provided, a default factory using default
-        limits is used.
-        """
-        factory = make_base_transport or default_base_transport_factory()
-        ratelimiting_transport = AsyncRateLimitingTransport(
-            config=config, transport=factory(proxy)
-        )
-        return AsyncRetryTransport(config=config, transport=ratelimiting_transport)
-
-    @classmethod
     def create_ratelimiting_retry_transport(
         cls,
-        config: CompositeConfig,
+        config: TransportConfig,
         *,
         make_base_transport: BaseTransportFactory | None = None,
         proxy: str | None = None,
     ) -> AsyncRetryTransport:
         """Creates a retry transport, wrapping, in sequence, a rate limiting transport and a base transport.
+
+        If `make_base_transport` is not provided, a default factory using default
+        limits is used.
 
         Example:
             ```
@@ -130,8 +114,8 @@ class CompositeTransportFactory:
                 response = await client.get(url)
             ```
         """
-        return cls._create_common_transport_layers(
-            config,
-            make_base_transport=make_base_transport,
-            proxy=proxy,
+        factory = make_base_transport or default_base_transport_factory()
+        ratelimiting_transport = AsyncRateLimitingTransport(
+            config=config, transport=factory(proxy)
         )
+        return AsyncRetryTransport(config=config, transport=ratelimiting_transport)

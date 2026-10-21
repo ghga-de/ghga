@@ -28,7 +28,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 from httpx2 import AsyncHTTPTransport, Limits
 
-from ghga_service_commons.transports.config import CompositeConfig
+from ghga_service_commons.transports.config import TransportConfig
 from ghga_service_commons.transports.factory import (
     CompositeTransportFactory,
     default_base_transport_factory,
@@ -189,7 +189,7 @@ def test_default_base_transport_factory_defaults(
 def test_create_ratelimiting_retry_transport_layers_transports():
     """Ensure the retry transport wraps a rate limiting transport over an HTTP transport."""
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        CompositeConfig()
+        TransportConfig()
     )
 
     assert isinstance(transport, AsyncRetryTransport)
@@ -203,7 +203,7 @@ def test_create_ratelimiting_retry_transport_uses_custom_base():
     base = AsyncHTTPTransport()
 
     transport = CompositeTransportFactory.create_ratelimiting_retry_transport(
-        CompositeConfig(),
+        TransportConfig(),
         make_base_transport=lambda _: base,
     )
 

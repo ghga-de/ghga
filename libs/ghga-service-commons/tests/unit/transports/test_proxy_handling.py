@@ -22,7 +22,7 @@ from unittest.mock import AsyncMock, patch
 import httpx2
 import pytest
 
-from ghga_service_commons.transports.config import CompositeConfig
+from ghga_service_commons.transports.config import TransportConfig
 from ghga_service_commons.transports.factory import CompositeTransportFactory
 from ghga_service_commons.transports.proxy_handling import ratelimiting_retry_proxies
 from ghga_service_commons.transports.ratelimiting import _scope_of
@@ -59,7 +59,7 @@ MULTI_PROXY_CONFIG = {
 @pytest.mark.parametrize(
     "config_class,proxy_fn,expected_transport",
     [
-        (CompositeConfig, ratelimiting_retry_proxies, AsyncRetryTransport),
+        (TransportConfig, ratelimiting_retry_proxies, AsyncRetryTransport),
     ],
 )
 @pytest.mark.parametrize(
@@ -67,7 +67,7 @@ MULTI_PROXY_CONFIG = {
     [*MULTI_PROXY_CONFIG.items()],
 )
 def test_with_single_proxy(
-    config_class: type[CompositeConfig],
+    config_class: type[TransportConfig],
     proxy_fn: Callable,
     expected_transport: type[AsyncRetryTransport],
     protocol_key: str,
@@ -89,11 +89,11 @@ def test_with_single_proxy(
 @pytest.mark.parametrize(
     "config_class,proxy_fn,expected_transport",
     [
-        (CompositeConfig, ratelimiting_retry_proxies, AsyncRetryTransport),
+        (TransportConfig, ratelimiting_retry_proxies, AsyncRetryTransport),
     ],
 )
 def test_with_multiple_proxies(
-    config_class: type[CompositeConfig],
+    config_class: type[TransportConfig],
     proxy_fn: Callable,
     expected_transport: type[AsyncRetryTransport],
 ):
@@ -118,11 +118,11 @@ def test_with_multiple_proxies(
 @pytest.mark.parametrize(
     "config_class,proxy_fn",
     [
-        (CompositeConfig, ratelimiting_retry_proxies),
+        (TransportConfig, ratelimiting_retry_proxies),
     ],
 )
 def test_with_no_proxies(
-    config_class: type[CompositeConfig],
+    config_class: type[TransportConfig],
     proxy_fn: Callable,
 ):
     """Test that empty dict is returned when no proxies are configured."""
@@ -140,11 +140,11 @@ def test_with_no_proxies(
 @pytest.mark.parametrize(
     "config_class,proxy_fn",
     [
-        (CompositeConfig, ratelimiting_retry_proxies),
+        (TransportConfig, ratelimiting_retry_proxies),
     ],
 )
 def test_preserves_no_proxy_values(
-    config_class: type[CompositeConfig],
+    config_class: type[TransportConfig],
     proxy_fn: Callable,
 ):
     """NO_PROXY hosts (None values) are preserved as ``None`` mounts.
@@ -177,7 +177,7 @@ def test_preserves_no_proxy_values(
 @pytest.mark.parametrize(
     "config_class,proxy_fn",
     [
-        (CompositeConfig, ratelimiting_retry_proxies),
+        (TransportConfig, ratelimiting_retry_proxies),
     ],
 )
 @pytest.mark.parametrize(
@@ -205,7 +205,7 @@ def test_preserves_no_proxy_values(
 )
 @pytest.mark.asyncio
 async def test_with_proxy_mount(
-    config_class: type[CompositeConfig],
+    config_class: type[TransportConfig],
     proxy_fn: Callable,
     protocol_key: str,
     proxy_url: str,
@@ -247,7 +247,7 @@ async def test_with_proxy_mount(
 @pytest.mark.parametrize(
     "config_class,proxy_fn",
     [
-        (CompositeConfig, ratelimiting_retry_proxies),
+        (TransportConfig, ratelimiting_retry_proxies),
     ],
 )
 @pytest.mark.parametrize(
@@ -263,7 +263,7 @@ async def test_with_proxy_mount(
 )
 @pytest.mark.asyncio
 async def test_not_hitting_proxy_mount(
-    config_class: type[CompositeConfig],
+    config_class: type[TransportConfig],
     proxy_fn: Callable,
     protocol_key: str,
     proxy_url: str,
@@ -315,7 +315,7 @@ def test_all_transports_built_with_matching_scopes(monkeypatch: pytest.MonkeyPat
         monkeypatch.delenv(name.upper(), raising=False)
     monkeypatch.setenv("HTTPS_PROXY", HTTPS_PROXY_URL)
     monkeypatch.setenv("NO_PROXY", "internal.invalid")
-    config = CompositeConfig()
+    config = TransportConfig()
     client = httpx2.AsyncClient(
         transport=CompositeTransportFactory.create_ratelimiting_retry_transport(config),
         mounts=ratelimiting_retry_proxies(config),
