@@ -363,11 +363,28 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 ### Testbed
 
 The upload features (`testbed/features/20x_*.feature`) go through RS and read FIS's MongoDB directly, so they can check every step up to FIS.
+The features run in number order and share their boxes: 200 creates and deletes boxes, and 203 archives the rest.
+A new feature numbered after 203 therefore finds no box it can rank, so it creates its own, as `502_data_portal_uploads.feature` does.
 
-- Add a feature, e.g. `204_upload_box_priority.feature`, in which the data steward reads the list, replaces it, and gets `409` for a stale `version`, `404` for an unknown box and `422` for a duplicate box.
-- After a replace, assert that FIS's priority document reaches the new `version` within a timeout.
-- Assert that FIS stores `box_id` on files uploaded during the run.
-- Extend the archival scenario in `203_upload_completed.feature` to assert that the archived box is no longer in the list.
+API, in a new feature, e.g. `204_upload_box_priority.feature`, with its own boxes:
+
+- The data steward reads the list, replaces it, and gets the new `version`, their own ID as `changed_by`, and a `last_changed`.
+- Replacing it fails with `409` for a stale `version`, `404` for an unknown box and `422` for a duplicate box.
+- After a replace, FIS's priority document reaches the new `version` within a timeout.
+- FIS stores `box_id` on files uploaded during the run.
+
+Removal, in the existing features, which already archive and delete boxes:
+
+- `200_upload_initiated.feature`: rank the box before the deletion scenario, and assert that it leaves the list afterwards.
+- `203_upload_completed.feature`: rank the box before the archival scenario, and assert that it leaves the list afterwards.
+
+Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps and archives the box:
+
+- The data steward opens **Manage Box Priority**, adds the primary box, moves it once by dragging and once with a button, and saves.
+- The page shows the new version and "Last changed by" with the steward's name.
+- After the archival scenario, the box appears in neither panel.
+
+Audit records are covered by the RS tests; the testbed has no access to them so far.
 
 Asserting the interrogation order is optional.
 DHFS polls on its own schedule and interrogates a file soon after upload, so files of two boxes are rarely waiting at the same time.
