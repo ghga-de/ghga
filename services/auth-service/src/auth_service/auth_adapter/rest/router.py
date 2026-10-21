@@ -113,9 +113,6 @@ def add_allowed_routes():
         add_allowed_route(route, write=True)
 
 
-add_allowed_routes()
-
-
 @router.api_route(
     "/health",
     methods=["GET", "HEAD"],
@@ -130,6 +127,10 @@ async def health() -> None:
     none arrives as a bare `/health`; answering 204 rather than 200 still keeps one
     that did from reaching a backend without Basic auth.
     """
+
+
+# after the health route, so that an allowed path like /* cannot shadow it
+add_allowed_routes()
 
 
 @router.post(
