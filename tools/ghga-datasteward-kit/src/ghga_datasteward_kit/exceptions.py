@@ -35,6 +35,18 @@ class AmendmentStatusError(Exception):
         )
 
 
+class StudyAccessionMissingError(Exception):
+    """Raised when the stored accession map of a submission holds no study accession,
+    so there is none for the new accessions to derive from.
+    """
+
+    def __init__(self, *, submission_id: str):
+        super().__init__(
+            f"The accession map of the submission '{submission_id}' holds no study"
+            " accession, so the submission cannot be amended."
+        )
+
+
 class LegacyPrefixMissingError(Exception):
     """Raised when a class of a submission accessioned before study PIDs has no
     prefix to mint flat accessions with.

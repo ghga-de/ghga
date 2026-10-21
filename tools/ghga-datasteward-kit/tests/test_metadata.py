@@ -35,6 +35,7 @@ from ghga_datasteward_kit.cli.metadata import amend, submit, transform
 from ghga_datasteward_kit.exceptions import (
     AmendmentStatusError,
     LegacyPrefixMissingError,
+    StudyAccessionMissingError,
 )
 from ghga_datasteward_kit.metadata import MetadataConfig
 from ghga_datasteward_kit.utils import load_config_yaml
@@ -216,6 +217,61 @@ def test_amend_dropped_alias_confirmed(
         accessions_after["sample_files"]["test_sample_01_R1"]
         == accessions_before["sample_files"]["test_sample_01_R1"]
     )
+
+
+def test_amend_dropped_alias_retired(example_workdir: Path):
+    """Test that an alias dropped by one amendment has its accession retired, so that
+    a later amendment bringing the alias back is refused before anything is written.
+    """
+    submission_id, _ = submit_original()
+    config = load_config_yaml(path=METADATA_CONFIG_PATH, config_cls=MetadataConfig)
+
+    amendment.amend_metadata(
+        submission_id=submission_id,
+        metadata=yaml.safe_load(DROPPED_METADATA_PATH.read_text(encoding="utf-8")),
+        config=config,
+    )
+    accessions_dropped = read_accession_map(submission_id=submission_id)
+
+    with pytest.raises(MetadataValidationError, match="never gives out again"):
+        amendment.amend_metadata(
+            submission_id=submission_id,
+            metadata=yaml.safe_load(ORIGINAL_METADATA_PATH.read_text(encoding="utf-8")),
+            config=config,
+        )
+
+    assert read_accession_map(submission_id=submission_id) == accessions_dropped
+
+
+@pytest.mark.parametrize("keep_anchor", [False, True], ids=["no_anchor", "empty"])
+def test_amend_without_study_accession(example_workdir: Path, keep_anchor: bool):
+    """Test that a stored accession map without a study accession is refused with an
+    error naming the submission, whether the study's anchor is missing or empty.
+    """
+    submission_id, _ = submit_original()
+    path = Path("submission_store") / f"{submission_id}.json"
+    submission = json.loads(path.read_text(encoding="utf-8"))
+    accession_map = submission["accession_map"]
+    study_anchor = next(
+        anchor
+        for anchor, accessions in accession_map.items()
+        if any(
+            re.fullmatch(r"GHGA\.\d{2}\.[A-Z2-7]+\.1", accession)
+            for accession in accessions.values()
+        )
+    )
+    if keep_anchor:
+        accession_map[study_anchor] = {}
+    else:
+        del accession_map[study_anchor]
+    path.write_text(json.dumps(submission), encoding="utf-8")
+
+    with pytest.raises(StudyAccessionMissingError, match=submission_id):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
 
 
 def test_amend_unknown_submission(example_workdir: Path):
@@ -591,7 +647,7 @@ def test_plan_matches_what_the_amendment_applies(
     actually_minted = {anchor: sorted(a) for anchor, a in diff.minted.items()}
     assert promised_new == actually_minted
 
-    # the accessions promised as released are the ones released, with the same values
+    # the accessions promised as retired are the ones retired, with the same values
     assert changes.dropped == diff.dropped
 
     # and the counts the steward read agree with the outcome

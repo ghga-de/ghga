@@ -79,8 +79,44 @@ def test_file_format_keeps_legacy(
 
     assert json.loads(store_path.read_text(encoding="utf-8")) == {
         "legacy": ["GHGAS12345678901234"],
-        "years": {"26": ["CBR"]},
+        "years": {"26": {"CBR": {"retired": []}}},
     }
+
+
+def test_retire(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+):
+    """Retired accessions are kept per study root, each once, and retiring for
+    another root leaves them alone.
+    """
+    accession_store = AccessionStore(config=config_sub_fixture)
+    accession_store.save(year="26", random_block="CBR")
+    accession_store.save(year="26", random_block="JTF")
+
+    accession_store.retire(year="26", random_block="CBR", retired=["sample-a"])
+    accession_store.retire(
+        year="26", random_block="CBR", retired=["sample-a", "DS.K7Q"]
+    )
+
+    assert accession_store.get_retired(year="26", random_block="CBR") == {
+        "sample-a",
+        "DS.K7Q",
+    }
+    assert accession_store.get_retired(year="26", random_block="JTF") == set()
+
+
+def test_retire_registers_unknown_root(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+):
+    """Retiring for a root the store does not know registers the root, so that it is
+    not minted again either.
+    """
+    accession_store = AccessionStore(config=config_sub_fixture)
+
+    accession_store.retire(year="26", random_block="CBR", retired=["sample-a"])
+
+    assert accession_store.exists(year="26", random_block="CBR")
+    assert accession_store.get_retired(year="26", random_block="CBR") == {"sample-a"}
 
 
 FLAT_STORE = "GHGAS12345678901234\nGHGAF98765432109876\n"
@@ -120,7 +156,7 @@ def test_migrate_legacy_store(
 
     assert json.loads((tmp_path / "accession_store").read_text(encoding="utf-8")) == {
         "legacy": ["GHGAS12345678901234", "GHGAF98765432109876"],
-        "years": {"26": ["CBR"]},
+        "years": {"26": {"CBR": {"retired": []}}},
     }
     assert (tmp_path / "accession_store.bak").read_text(encoding="utf-8") == FLAT_STORE
 

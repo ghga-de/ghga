@@ -83,7 +83,8 @@ def get_accession(
 
     Raises:
         MetadataValidationError: If the new accession is already in `used_accessions`,
-            since an accession must never pass to another entity.
+            held by a dropped alias or retired by the study, since an accession must
+            never pass to another entity.
     """
     accession = lookup_accession(
         anchor=anchor, alias=alias, accession_map=params.accession_map
@@ -101,7 +102,8 @@ def get_accession(
         used_accessions=used_accessions,
     )
     # the study keeps its PID under a new alias; any other accession can only be held
-    # by a dropped alias, since `check_alias_uniqueness` refuses a present one
+    # by a dropped alias, since `check_alias_uniqueness` refuses a present one, or be
+    # retired by the study
     if accession in used_accessions and accession != study_pid:
         previous_aliases = sorted(
             previous_alias
@@ -109,12 +111,18 @@ def get_accession(
             for previous_alias, previous_accession in accessions_by_alias.items()
             if previous_accession == accession
         )
+        reason = (
+            "which belonged to "
+            + ", ".join(f"'{previous_alias}'" for previous_alias in previous_aliases)
+            + " before; keep that alias or choose a different one"
+            if previous_aliases
+            else "which the study dropped before and never gives out again; choose"
+            + " a different alias"
+        )
         raise_on_errors(
             [
                 (
-                    f"the alias would get the accession '{accession}', which belonged"
-                    + f" to the alias '{', '.join(previous_aliases)}' before; choose"
-                    + " a different alias",
+                    f"the alias would get the accession '{accession}', {reason}",
                     "alias",
                     alias,
                 )
@@ -195,12 +203,14 @@ def generate_accession_map(
     new accessions are added for new content resources. Existing accessions are kept if
     the corresponding content resource still exists, otherwise they are removed.
 
-    The study PID is settled first, since every other accession derives from it.
+    The study PID is settled first, since every other accession derives from it. The
+    accessions the existing map loses are retired in the accession registry, so that
+    no later upsert gives them out again.
 
     Raises:
         MissingStudyError: If the content holds no study.
         MetadataValidationError: If a new alias would get the accession of an alias
-            that is no longer present.
+            that is no longer present, or one the study retired.
     """
     if existing_accession_map is None:
         existing_accession_map = {}
@@ -215,18 +225,20 @@ def generate_accession_map(
 
     study_pid = get_study_pid(content=content, params=params)
 
+    existing_accessions = {
+        accession
+        for accessions_by_alias in existing_accession_map.values()
+        for accession in accessions_by_alias.values()
+    }
     get_accession_ = partial(
         get_accession,
         params=params,
         study_pid=study_pid,
-        used_accessions={
-            accession
-            for accessions_by_alias in existing_accession_map.values()
-            for accession in accessions_by_alias.values()
-        },
+        used_accessions=existing_accessions
+        | accession_registry.get_retired_accessions(study_pid=study_pid),
     )
 
-    return {
+    accession_map = {
         anchor: {
             alias: get_accession_(anchor=anchor, alias=alias)
             for alias in get_aliases_for_resources(
@@ -237,3 +249,17 @@ def generate_accession_map(
         }
         for anchor, resources in content.items()
     }
+
+    # compared by accession, not by alias, since the study keeps its PID under a new
+    # alias; retired only once every alias got its accession, so a refused alias
+    # retires nothing
+    kept_accessions = {
+        accession
+        for accessions_by_alias in accession_map.values()
+        for accession in accessions_by_alias.values()
+    }
+    accession_registry.retire_accessions(
+        study_pid=study_pid, accessions=existing_accessions - kept_accessions
+    )
+
+    return accession_map

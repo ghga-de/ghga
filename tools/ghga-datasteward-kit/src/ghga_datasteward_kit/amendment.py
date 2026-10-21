@@ -32,7 +32,11 @@ from typing import TypeAlias
 import yaml
 from pydantic import BaseModel, Field
 
-from ghga_datasteward_kit.exceptions import AmendmentAbortedError, AmendmentStatusError
+from ghga_datasteward_kit.exceptions import (
+    AmendmentAbortedError,
+    AmendmentStatusError,
+    StudyAccessionMissingError,
+)
 from ghga_datasteward_kit.legacy_accessioning import (
     LegacyAccessionRegistry,
     LegacyAccessionStore,
@@ -267,7 +271,7 @@ def format_amendment_report(
     if changes.dropped:
         lines += [
             "",
-            "Dropped resources. Their accessions are released, and the next load"
+            "Dropped resources. Their accessions are retired, and the next load"
             " removes",
             "these resources from the running system:",
         ]
@@ -351,6 +355,8 @@ def amend_metadata(
             when no submission exists for the specified id.
         AmendmentStatusError:
             when the stored submission is not completed.
+        StudyAccessionMissingError:
+            when the stored accession map holds no study accession.
         MetadataValidator.ValidationError:
             when the provided metadata failed validation against the metadata model
             or the alias checks.
@@ -376,7 +382,11 @@ def amend_metadata(
 
     # the study's accession is the one every new accession derives from
     study_anchor = anchor_points_by_target[config.study_class_name].root_slot
-    study_accession = next(iter(submission.accession_map[study_anchor].values()))
+    study_accession = next(
+        iter(submission.accession_map.get(study_anchor, {}).values()), None
+    )
+    if study_accession is None:
+        raise StudyAccessionMissingError(submission_id=submission_id)
 
     accession_registry: AccessionRegistry
     # a study PID 'PREFIX.YY.XXX.V' holds dots, a flat accession never does

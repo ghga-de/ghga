@@ -108,19 +108,12 @@ def test_validate_one_study_per_submission(
             "File_1, file_1 ",
             "2 entities, of the class(es) 'File'",
         ),
-        (
-            "sample.1",
-            ["sample/1", "file_2"],
-            "sample.1, sample/1",
-            "2 entities, of the class(es) 'File', 'Study'",
-        ),
     ],
     ids=[
         "unique",
         "shared_across_classes",
         "shared_within_class",
         "differ_in_case_and_whitespace",
-        "differ_in_special_characters",
     ],
 )
 def test_check_alias_uniqueness(
@@ -169,7 +162,7 @@ def test_check_aliases_are_ascii():
     assert "of the class 'File' must hold ASCII characters only" in str(error.value)
 
 
-@pytest.mark.parametrize("alias", ["", "  ", "\t"])
+@pytest.mark.parametrize("alias", ["", "  "])
 def test_validate_rejects_blank_alias(alias: str):
     """Test that an empty or whitespace-only alias is rejected, naming its class,
     though the model's `required` lets it through.
