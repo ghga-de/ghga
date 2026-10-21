@@ -147,7 +147,7 @@ function render(focus) {
   // changed_by resolves to a display name linking to /user-manager/<id> in the real page
   $("last-change").innerHTML = saved.changedBy
     ? `last changed by <a href="#">${saved.changedBy}</a> on ${saved.lastChanged}`
-    : "never changed";
+    : "no edit history yet";
   $("save").disabled = !isDirty();
   $("discard").disabled = !isDirty();
   if (isDirty() && !$("status").textContent && $("alert").hidden) {

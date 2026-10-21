@@ -231,7 +231,7 @@ Epic 94's release backoff removes this; until then, it is a known limitation.
 ### Data Portal page
 
 Add a page at `/upload-box-manager/priority`, linked from the Upload Box Manager and guarded like it by `guardDataSteward()`; register the route before `:id`, which would otherwise match it.
-The header shows the version and "Last changed by <name> on <date>", resolving `changed_by` to a display name and a link to `/user-manager/<id>` as the upload box detail page does, with the plain ID as fallback; before the first save it shows "Never changed".
+The header shows the version and "Last changed by <name> on <date>", resolving `changed_by` to a display name and a link to `/user-manager/<id>` as the upload box detail page does, with the plain ID as fallback; before the first save it shows "No edit history yet".
 The page shows two panels: the ranked boxes in priority order on the left, and the remaining boxes on the right, with a search field and an **Add** button per box.
 Archived boxes appear in neither panel.
 Each ranked row shows its rank, title, storage alias, state and file count, and the steward re-ranks a row by dragging it (Angular CDK `cdkDropList`, already a dependency) or with move up, move down, move to top and remove buttons for keyboard users.
