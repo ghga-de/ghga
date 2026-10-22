@@ -218,6 +218,7 @@ pipeline = [
 
 `Interrogator.interrogate_new_files()` processes the files of a batch one after another, and `run_interrogator()` in `services/datahub-file-service/src/dhfs/main.py` waits for the rest of `min_run_interval_seconds` after every round.
 `interrogate_new_files()` must tell the caller whether it concluded at least one file, and `run_interrogator()` must skip the wait if it did.
+A priority change applies from DHFS's next request, so at most the five files of the current batch are processed in the old order.
 
 An `InconclusiveError` leaves the file uninterrogated in FIS, so the next request returns it again.
 Waiting after a round in which every file was inconclusive keeps DHFS from requesting the same batch in a tight loop.
@@ -230,6 +231,7 @@ Epic 94's release backoff removes this; until then, it is a known limitation.
 
 Add a page at `/upload-box-manager/priority`, linked from the Upload Box Manager and guarded like it by `guardDataSteward()`; register the route before `:id`, which would otherwise match it.
 The header shows the version and "Last changed by <name> on <date>", resolving `changed_by` to a display name and a link to `/user-manager/<id>` as the upload box detail page does, with the plain ID as fallback; before the first save it shows "No edit history yet".
+The page takes both from the priority document, because it cannot read the audit log.
 The page shows two panels: the ranked boxes in priority order on the left, and the remaining boxes on the right, with a search field and an **Add** button per box.
 Archived boxes appear in neither panel.
 Each ranked row shows its rank, title, storage alias, state and file count, and the steward re-ranks a row by dragging it (Angular CDK `cdkDropList`, already a dependency) or with move up, move down, move to top and remove buttons for keyboard users.
@@ -316,7 +318,6 @@ The prototype shows each of these except loading and load failed.
 | One global list, not one per storage alias | FIS filters by storage alias first, so each Data Hub sees the global order | [Not included](#not-included) |
 | Sort in MongoDB with an aggregation, capped at five files | Only five documents leave MongoDB per request | [Sorting the waiting files](#sorting-the-waiting-files) |
 | Backfill `box_id` by a UCS republish, not a migration | Uses the existing `publish-events --all`; no cross-database access | [Rollout](#rollout) |
-| A priority change does not interrupt a batch | At most five files run with the old order | [Not included](#not-included) |
 | The page shows each box's total file count | No endpoint provides the number of waiting files | [Data Portal page](#data-portal-page) |
 
 ### Open questions
