@@ -321,11 +321,9 @@ The prototype shows each of these except loading and load failed.
 
 ### Open questions
 
-1. **Status code for an archived box in a save:** `409`, as RS uses for other state violations such as `HttpStateChangeError`, or `422`?
-   The spec uses `409`.
-2. **Saving an unchanged order:** should RS increment `version` and publish an event, or return the stored document unchanged?
+1. **Saving an unchanged order:** should RS increment `version` and publish an event, or return the stored document unchanged?
    Recommended: return it unchanged, so FIS receives no event that changes nothing.
-3. **Waiting-file counts on the page:** stewards would see which boxes still have files to re-encrypt, but RS has no such count; it needs data from FIS.
+2. **Waiting-file counts on the page:** stewards would see which boxes still have files to re-encrypt, but RS has no such count; it needs data from FIS.
    Recommended: leave it out of this epic.
 
 ### Rollout
