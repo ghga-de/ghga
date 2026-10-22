@@ -51,11 +51,11 @@ DHFS processes them in that order, and asks again right after a batch, instead o
   It must still wait after a round in which FIS returned no file, or every file ended with an `InconclusiveError`.
 - **Data Portal** must offer a page where data stewards view and edit the list, as described in [Data Portal page](#data-portal-page).
 - **Testbed** must cover the feature end to end, as described in [Testbed](#testbed).
+- The testbed must assert the order in which DHFS interrogates files.
 
 ### Optional
 
 - RS may expose each box's position in the list on the research data upload box responses, so a client can show it without a second request.
-- The testbed may assert the order in which DHFS interrogates files, if that can be made deterministic (see [Testbed](#testbed)).
 
 ### Not included
 
@@ -348,6 +348,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 ### Testing
 
 - FIS: the aggregation over ranked, unranked and missing-priority cases, against `MongoDbFixture`.
+  Files of the same box, and files of unranked boxes, come out in ascending `_id` order.
   With more than five waiting files, it returns exactly the five highest-ranked.
   `InMemDao` cannot run the pipeline, so unit tests of the interrogation handler use a fake of the new port.
 - FIS: stale priority events are ignored; a republished `FileUpload` event fills in a missing `box_id` and changes nothing else.
@@ -384,10 +385,14 @@ Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.
 
-Asserting the interrogation order is optional.
-DHFS polls on its own schedule and interrogates a file soon after upload, so files of two boxes are rarely waiting at the same time.
-A deterministic check needs at least two boxes in one storage, with their files uploaded while DHFS is idle, for example by setting a long `min_run_interval_seconds` for the run.
-The FIS integration tests cover the sort order in any case.
+Interrogation order, in feature 204:
+
+- DHFS polls on its own schedule and interrogates a file soon after upload, so files of two boxes are rarely waiting at the same time.
+  The scenario therefore uploads all its files while DHFS is idle, for example by setting a long `min_run_interval_seconds` for the run.
+- It uses two boxes in one storage, ranks the second one, and uploads two files to each.
+- DHFS interrogates both files of the ranked box first, then both files of the unranked box.
+- Within each box, the files are interrogated in ascending `_id` order.
+- The order is read from `state_updated` of the files in FIS's MongoDB, because DHFS processes one file at a time.
 
 ## Human Resource/Time Estimation
 
