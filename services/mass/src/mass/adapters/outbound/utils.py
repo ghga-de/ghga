@@ -81,10 +81,8 @@ def pipeline_facet_sort_and_paginate(
     """Uses a list of facetable fields to build the subquery for faceting"""
     segment: dict[str, list[JsonObject]] = {}
 
-    for facet in facet_fields:
-        name = facet.name
-        if not name:
-            name = name_from_key(facet.key)
+    # key each facet by position, since a name could clash with count or hits
+    for index, facet in enumerate(facet_fields):
         pipeline: list[JsonObject] = [
             {
                 "$unwind": {
@@ -119,7 +117,7 @@ def pipeline_facet_sort_and_paginate(
                 {"$sort": {"value": 1}},
             )
         )
-        segment[name] = pipeline
+        segment[f"facet_{index}"] = pipeline
 
     # this is the total number of hits, but pagination can mean only a few are returned
     segment["count"] = [{"$count": "total"}]
@@ -150,7 +148,7 @@ def pipeline_project(*, facet_fields: list[models.FieldLabel]) -> JsonObject:
     segment["count"] = {"$arrayElemAt": ["$count.total", 0]}
 
     # add a segment for each facet to summarize the options
-    for facet in facet_fields:
+    for index, facet in enumerate(facet_fields):
         key = facet.key
         name = facet.name
         if not name:
@@ -159,7 +157,7 @@ def pipeline_project(*, facet_fields: list[models.FieldLabel]) -> JsonObject:
             {
                 "key": key,
                 "name": name,
-                "options": f"${name}",
+                "options": f"$facet_{index}",
             }
         )
     return {"$project": segment}
