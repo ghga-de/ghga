@@ -428,6 +428,8 @@ tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
 /* A spinner starts its own line and keeps its text beside it */
 .busy-line, .claude-working { display: flex; align-items: center; gap: 0.45rem; }
 .busy-line .spinner, .claude-working .spinner { flex: none; margin-right: 0; }
+/* A class that sets display outranks the hidden attribute; claude.ai's page skeleton has this rule, a local preview does not */
+[hidden] { display: none !important; }
 .threads .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 .changes { margin-top: 0.75rem; padding: 0 0.9rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 .changes > summary { cursor: pointer; padding: 0.55rem 0; font-weight: 600; font-size: 0.95rem; }
