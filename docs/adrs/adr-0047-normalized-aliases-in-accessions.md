@@ -47,7 +47,7 @@ The rule is fixed: changing it would give an alias already accessioned a differe
 
 ### Consequences
 
-- An alias accession has one lowercase block after the study PID and a dataset PID has two, so a pattern tells them apart without knowing the configurable prefixes.
+- An alias accession has one lowercase block after the study PID and a dataset PID has two, the fixed `DS` and a random block, so a pattern tells them apart.
 - Accessions need no escaping in URLs, file names or object storage keys.
 - Aliases such as `Sample 1` and `sample-1` collide, and the steward renames one.
 - A rename that changes only case or punctuation is refused once the old alias holds an accession; the steward keeps the old spelling.
