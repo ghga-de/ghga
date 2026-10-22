@@ -59,8 +59,6 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 
 ### Not included
 
-- Changing priority does not interrupt a batch DHFS is already processing.
-  The new order applies from the next batch.
 - Single-file responses.
   Epic 94 (Leafcutter Ant) lowers the cap to one file, together with the changes that requires.
 - No order within a box, and no order among unranked boxes.
