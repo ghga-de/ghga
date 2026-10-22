@@ -114,6 +114,11 @@ async def search(  # noqa: PLR0913
     except ValueError as err:
         detail = "Number of fields to order by must match number of sort options"
         raise HTTPException(status_code=422, detail=detail) from err
+    if not query.strip() and any(
+        param.order == models.SortOrder.RELEVANCE for param in sorting_parameters
+    ):
+        detail = "Sorting by relevance requires a query"
+        raise HTTPException(status_code=422, detail=detail)
     try:
         results = await query_handler.handle_query(
             class_name=class_name,

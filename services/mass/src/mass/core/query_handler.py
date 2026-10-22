@@ -78,6 +78,9 @@ class QueryHandler(QueryHandlerPort):
         skip: int = 0,
         limit: int | None = None,
     ) -> models.QueryResults:
+        # a blank query is no query, so it must not imply sorting by relevance
+        query = query.strip()
+
         # set empty list if not provided
         if filters is None:
             filters = []
