@@ -19,17 +19,30 @@ from typing import Annotated
 
 from pydantic import StringConstraints
 
-__all__ = ["DatasetAccession", "FileAccession"]
+__all__ = [
+    "BASE32_ALPHABET",
+    "DATASET_PID_PREFIX",
+    "RANDOM_BLOCK",
+    "RANDOM_BLOCK_LENGTH",
+    "STUDY_PID_PREFIX",
+    "DatasetAccession",
+    "FileAccession",
+]
 
-# the study PID and dataset prefixes are not spelled out, as metldata makes them
-# configurable
-BASE32 = r"[A-Z2-7]"  # RFC 4648 alphabet of the random blocks
+# Not configurable: they build persistent identifiers, so changing one would break
+# every PID already minted.
+STUDY_PID_PREFIX = "GHGA"  # 'GHGA' in 'GHGA.YY.XXX.V'
+DATASET_PID_PREFIX = "DS"  # 'DS' in '{study_pid}.DS.XXX'
+RANDOM_BLOCK_LENGTH = 3  # 'XXX' in both; 32**3 = 32,768 study PIDs per year
+BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"  # RFC 4648, for 'XXX'
+
+RANDOM_BLOCK = rf"[{BASE32_ALPHABET}]{{{RANDOM_BLOCK_LENGTH}}}"
 # the version V counts from 1, without leading zeros; [0-9] rather than \d, which
 # Python widens to every Unicode digit while JSON Schema in openapi.yaml does not
-STUDY_PID = rf"[^.\s]+\.[0-9]{{2}}\.{BASE32}+\.[1-9][0-9]*"  # 'PREFIX.YY.XXX.V'
+STUDY_PID = rf"{STUDY_PID_PREFIX}\.[0-9]{{2}}\.{RANDOM_BLOCK}\.[1-9][0-9]*"
 
 LEGACY_DATASET_ACCESSION = r"[A-Z]{1,6}[0-9]{3,18}"  # 'GHGAD12345…'
-DATASET_PID = rf"{STUDY_PID}\.[^.\s]+\.{BASE32}+"  # '{study_pid}.DS.XXX'
+DATASET_PID = rf"{STUDY_PID}\.{DATASET_PID_PREFIX}\.{RANDOM_BLOCK}"
 
 LEGACY_FILE_ACCESSION = r"GHGAF.+"  # 'GHGAF12345…'
 # the alias part already expects aliases as metldata's `normalize_alias` (GSI-2697)
