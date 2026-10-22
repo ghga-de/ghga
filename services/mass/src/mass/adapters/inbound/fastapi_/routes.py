@@ -78,10 +78,10 @@ async def search(  # noqa: PLR0913
         Query(description="Values(s) that shall be used for filtering results"),
     ] = None,
     skip: Annotated[
-        int, Query(description="The number of results to skip for pagination")
+        int, Query(ge=0, description="The number of results to skip for pagination")
     ] = 0,
     limit: Annotated[
-        int | None, Query(description="Limit the results to this number")
+        int | None, Query(ge=1, description="Limit the results to this number")
     ] = None,
     order_by: Annotated[
         list[str] | None,

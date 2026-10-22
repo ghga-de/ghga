@@ -146,6 +146,21 @@ async def test_search_with_limit(joint_fixture: JointFixture):
     compare(results=results, count=3, hit_length=1, hits=hits)
 
 
+@pytest.mark.parametrize(
+    "params",
+    [{"skip": -1}, {"limit": 0}, {"limit": -1}],
+    ids=["negative skip", "zero limit", "negative limit"],
+)
+async def test_search_with_invalid_pagination(
+    params: QueryParams, joint_fixture: JointFixture
+):
+    """Make sure out-of-range skip and limit values are rejected"""
+    response = await joint_fixture.rest_client.get(
+        url="/search", params={"class_name": CLASS_NAME, **params}
+    )
+    assert response.status_code == 422
+
+
 async def test_search_keywords(joint_fixture: JointFixture):
     """Make sure the query string is passed through intact"""
     params: QueryParams = {"class_name": CLASS_NAME, "query": "hotel"}
