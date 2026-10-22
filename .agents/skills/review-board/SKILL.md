@@ -44,6 +44,7 @@ A finding without observed output is a guess.
 | `output` | The observed output, verbatim, with the last line of a traceback |
 | `verdict` | Optional: what code and output do not show, such as why an escape hatch fails |
 | `fix` | How to fix it, in one of the shapes below |
+| `cost` | The fix's shape as its cost: "one place", "a few places" or "bigger change" |
 | `post` | The comments to post: per comment `path`, `line` and for a range `start_line` on the PR's head, the body, and the suggestion's replacement lines if the fix fits one |
 
 The board is read in one pass, so its prose is sharper than [style.md](../../../docs/style.md) asks: one idea per sentence, about 8 words and never past about 14, active voice, present tense, no asides in parentheses or dashes.
