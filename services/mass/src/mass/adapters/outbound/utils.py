@@ -47,8 +47,8 @@ def pipeline_match_filters_stage(*, filters: list[models.Filter]) -> JsonObject:
         filter_values[item.key].append(item.value)
     segment = []
     for key, values in filter_values.items():
-        if key != "id_":
-            key = "content." + key
+        # the ID is stored as _id, everything else lives under content
+        key = "_id" if key == "id_" else f"content.{key}"
         segment.append(
             {
                 "$or": [
