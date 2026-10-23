@@ -34,3 +34,4 @@ Skip what a tool already catches: ruff, mypy, eslint, rumdl, the pre-commit hook
 4. When nothing reaches 80, say so in one line.
 5. Report in the session and change no file: the author fixes.
    Post to the PR only when asked, with `gh pr review <n> --comment`: at most about ten findings inline, never a `nit:`, the rest in the review's summary.
+6. A reviewer with more than a few findings can put them on a board to work through with `/review-board`.
