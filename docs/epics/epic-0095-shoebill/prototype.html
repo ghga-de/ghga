@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Manage Box Priority (lo-fi prototype)</title>
+</head>
+<body>
+<!--
+  Lo-fi prototype for epic 95 (Shoebill). Open the file in a browser.
+  No backend: RS is simulated in memory, and the "Prototype controls" at the bottom
+  trigger the error paths. Box titles and numbers are placeholders.
+-->
+<header>
+  <p><strong>GHGA Data Portal</strong></p>
+  <nav aria-label="Breadcrumb"><a href="#">Upload Box Manager</a> / Re-encryption Priority</nav>
+</header>
+
+<main>
+  <h1>Manage Box Priority</h1>
+  <p>Files in ranked boxes are re-encrypted first, highest rank first. Changes apply from the next batch each Data Hub starts.</p>
+  <p>Version <span id="version"></span>, <span id="last-change"></span></p>
+  <p>
+    <button type="button" id="discard">Discard changes</button>
+    <button type="button" id="save">Save order</button>
+  </p>
+  <p id="status" role="status"></p>
+  <p id="alert" role="alert" hidden><span id="alert-text"></span> <button type="button" id="reload">Reload latest order</button></p>
+
+  <section aria-labelledby="ranked-heading">
+    <h2 id="ranked-heading">Priority order</h2>
+    <p id="empty-ranked" hidden>No box is ranked. All files are re-encrypted in no particular order.</p>
+    <ol id="ranked"></ol>
+    <p>Drag a row, or use its buttons, to change its rank. Files already being re-encrypted are not interrupted.</p>
+  </section>
+
+  <section aria-labelledby="unranked-heading">
+    <h2 id="unranked-heading">Unranked boxes</h2>
+    <p><label for="search">Find a box by title or storage</label> <input id="search" type="search"></p>
+    <ul id="unranked"></ul>
+    <p id="empty-unranked" hidden>No unranked box matches.</p>
+    <p>Archived boxes are not listed.</p>
+  </section>
+</main>
+
+<hr>
+<fieldset>
+  <legend>Prototype controls (not part of the page)</legend>
+  <p><label><input type="checkbox" id="sim-conflict"> Next save: another steward saved first (409, version conflict)</label></p>
+  <p><label><input type="checkbox" id="sim-gone"> Next save: an added box was archived meanwhile (409, box archived)</label></p>
+  <p><label><input type="checkbox" id="sim-error"> Next save: server error (500)</label></p>
+  <p><button type="button" id="reset">Reset prototype</button></p>
+</fieldset>
+
+<script>
+const INITIAL_BOXES = [
+  { id: "a", title: "Box A", storage: "Heidelberg", state: "open", files: 120 },
+  { id: "b", title: "Box B", storage: "Tuebingen", state: "locked", files: 8 },
+  { id: "c", title: "Box C", storage: "Heidelberg", state: "open", files: 35 },
+  { id: "d", title: "Box D", storage: "Koeln", state: "open", files: 60 },
+  { id: "e", title: "Box E", storage: "Tuebingen", state: "open", files: 12 },
+  { id: "f", title: "Box F", storage: "Koeln", state: "locked", files: 25 },
+  { id: "g", title: "Box G", storage: "Heidelberg", state: "archived", files: 40 },
+];
+// "z" stands for a box deleted after it was ranked: the page drops IDs it cannot match.
+const INITIAL_PRIORITY = {
+  version: 7,
+  boxIds: ["b", "a", "z", "d"],
+  changedBy: "Steward A",
+  lastChanged: "2026-10-14 15:02",
+};
+const CURRENT_STEWARD = "Steward B (you)";
+const now = () => new Date().toISOString().slice(0, 16).replace("T", " ");
+
+let boxes, saved, order, dragId, highlightId, highlightTimer;
+const marker = document.createElement("li");
+marker.setAttribute("aria-hidden", "true");
+marker.append(document.createElement("hr"));
+
+const $ = (id) => document.getElementById(id);
+const boxById = (id) => boxes.find((box) => box.id === id);
+const rankable = (id) => boxById(id) && boxById(id).state !== "archived";
+const isDirty = () => order.join() !== saved.boxIds.join();
+
+function reset() {
+  boxes = INITIAL_BOXES.map((box) => ({ ...box }));
+  loadFromServer({ ...INITIAL_PRIORITY, boxIds: [...INITIAL_PRIORITY.boxIds] });
+  $("status").textContent = "";
+}
+
+function loadFromServer(priority) {
+  saved = { ...priority, boxIds: priority.boxIds.filter(rankable) };
+  order = [...saved.boxIds];
+  $("alert").hidden = true;
+  render();
+}
+
+function setOrder(newOrder, movedId) {
+  order = newOrder;
+  $("status").textContent = "";
+  highlightId = movedId;
+  clearTimeout(highlightTimer);
+  highlightTimer = setTimeout(() => { highlightId = null; render(); }, 1500);
+  render();
+}
+
+function move(from, to) {
+  const next = [...order];
+  const [id] = next.splice(from, 1);
+  next.splice(to, 0, id);
+  setOrder(next, id);
+}
+
+function render(focus) {
+  const ranked = $("ranked");
+  ranked.replaceChildren();
+  order.forEach((id, index) => {
+    const box = boxById(id);
+    const row = document.createElement("li");
+    row.draggable = true;
+    row.dataset.id = id;
+    const title = id === highlightId ? `<mark>${box.title}</mark>` : box.title;
+    row.innerHTML =
+      `<span aria-hidden="true">::</span> <strong>${title}</strong> - ${box.storage} - ${box.state} - ${box.files} files ` +
+      `<button type="button" data-action="up" aria-label="Move ${box.title} up" ${index === 0 ? "disabled" : ""}>Up</button> ` +
+      `<button type="button" data-action="down" aria-label="Move ${box.title} down" ${index === order.length - 1 ? "disabled" : ""}>Down</button> ` +
+      `<button type="button" data-action="top" aria-label="Move ${box.title} to top" ${index === 0 ? "disabled" : ""}>Top</button> ` +
+      `<button type="button" data-action="remove" aria-label="Remove ${box.title} from priority">Remove</button>`;
+    ranked.append(row);
+  });
+  $("empty-ranked").hidden = order.length > 0;
+
+  const query = $("search").value.trim().toLowerCase();
+  const unranked = boxes
+    .filter((box) => box.state !== "archived" && !order.includes(box.id))
+    .filter((box) => `${box.title} ${box.storage}`.toLowerCase().includes(query));
+  $("unranked").replaceChildren(...unranked.map((box) => {
+    const item = document.createElement("li");
+    item.dataset.id = box.id;
+    item.innerHTML =
+      `${box.title} - ${box.storage} - ${box.state} - ${box.files} files ` +
+      `<button type="button" data-action="add" aria-label="Add ${box.title} to priority">Add</button>`;
+    return item;
+  }));
+  $("empty-unranked").hidden = unranked.length > 0;
+
+  $("version").textContent = saved.version;
+  // changed_by resolves to a display name linking to /user-manager/<id> in the real page
+  $("last-change").innerHTML = saved.changedBy
+    ? `last changed by <a href="#">${saved.changedBy}</a> on ${saved.lastChanged}`
+    : "no edit history yet";
+  $("save").disabled = !isDirty();
+  $("discard").disabled = !isDirty();
+  if (isDirty() && !$("status").textContent && $("alert").hidden) {
+    $("status").textContent = "You have unsaved changes.";
+  }
+  if (focus) {
+    const button = document.querySelector(`[data-id="${focus.id}"] [data-action="${focus.action}"]`);
+    if (button && !button.disabled) button.focus();
+  }
+}
+
+// Buttons in the ranked list
+$("ranked").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const id = button.closest("li").dataset.id;
+  const index = order.indexOf(id);
+  const action = button.dataset.action;
+  if (action === "up") move(index, index - 1);
+  if (action === "down") move(index, index + 1);
+  if (action === "top") move(index, 0);
+  if (action === "remove") setOrder(order.filter((other) => other !== id), null);
+  render({ id, action });
+});
+
+// Drag and drop. The marker (an <hr> in its own <li>) sits in the gap where the row
+// will land; the gaps directly above and below the dragged row show no marker,
+// because a drop there changes nothing.
+function gapFor(event) {
+  const row = event.target.closest("li[data-id]");
+  if (!row) return null;
+  const index = order.indexOf(row.dataset.id);
+  const rect = row.getBoundingClientRect();
+  return event.clientY < rect.top + rect.height / 2 ? index : index + 1;
+}
+
+$("ranked").addEventListener("dragstart", (event) => {
+  dragId = event.target.closest("li").dataset.id;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", dragId);
+});
+
+$("ranked").addEventListener("dragover", (event) => {
+  if (!dragId) return;
+  event.preventDefault();
+  const gap = gapFor(event);
+  if (gap === null) return;
+  const from = order.indexOf(dragId);
+  if (gap === from || gap === from + 1) {
+    marker.remove();
+    return;
+  }
+  const rows = [...$("ranked").querySelectorAll("li[data-id]")];
+  $("ranked").insertBefore(marker, rows[gap] || null);
+});
+
+$("ranked").addEventListener("drop", (event) => {
+  event.preventDefault();
+  if (!dragId || !marker.isConnected) return;
+  const rows = [...$("ranked").children];
+  const gap = rows.slice(0, rows.indexOf(marker)).filter((row) => row !== marker).length;
+  const from = order.indexOf(dragId);
+  marker.remove();
+  dragId = null;
+  move(from, gap > from ? gap - 1 : gap);
+});
+
+$("ranked").addEventListener("dragend", () => {
+  marker.remove();
+  dragId = null;
+});
+
+// Unranked list
+$("unranked").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const id = button.closest("li").dataset.id;
+  setOrder([...order, id], id);
+});
+$("search").addEventListener("input", () => render());
+
+// Save and discard: a simulated PUT /upload-box-priority
+$("discard").addEventListener("click", () => loadFromServer(saved));
+
+$("save").addEventListener("click", () => {
+  $("status").textContent = "";
+  $("alert").hidden = true;
+
+  if ($("sim-error").checked) {
+    $("sim-error").checked = false;
+    $("status").textContent = "Saving failed. Your changes are kept; try again.";
+    return;
+  }
+  if ($("sim-conflict").checked) {
+    $("sim-conflict").checked = false;
+    $("alert-text").textContent =
+      `Another data steward saved version ${saved.version + 1} while you were editing. ` +
+      "Reload it and apply your changes again.";
+    $("alert").hidden = false;
+    return;
+  }
+  const added = order.filter((id) => !saved.boxIds.includes(id));
+  if ($("sim-gone").checked && added.length > 0) {
+    $("sim-gone").checked = false;
+    const gone = boxById(added[0]);
+    gone.state = "archived";
+    order = order.filter((id) => id !== gone.id);
+    $("status").textContent =
+      `${gone.title} was archived meanwhile and has been removed from your order. ` +
+      "Your other changes are kept; save again.";
+    render();
+    return;
+  }
+  saved = {
+    version: saved.version + 1,
+    boxIds: [...order],
+    changedBy: CURRENT_STEWARD,
+    lastChanged: now(),
+  };
+  $("status").textContent = `Saved as version ${saved.version}. Data Hubs use it from their next batch.`;
+  render();
+});
+
+$("reload").addEventListener("click", () => {
+  // The simulated newer version from another steward keeps the old order.
+  loadFromServer({
+    version: saved.version + 1,
+    boxIds: saved.boxIds,
+    changedBy: "Steward C",
+    lastChanged: now(),
+  });
+});
+
+$("reset").addEventListener("click", reset);
+
+window.addEventListener("beforeunload", (event) => {
+  if (isDirty()) event.preventDefault();
+});
+
+reset();
+</script>
+</body>
+</html>
