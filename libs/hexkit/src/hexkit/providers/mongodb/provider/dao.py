@@ -583,9 +583,9 @@ class MongoDbDao(Generic[Dto]):
 
         Please see the `Dao` protocol for the arguments and the errors.
         """
-        documents = self._batch_documents(dtos)
-        if not documents:
+        if not dtos:
             return
+        documents = self._batch_documents(dtos)
         with translate_pymongo_errors():
             try:
                 await self._collection.insert_many(documents, ordered=ordered)
