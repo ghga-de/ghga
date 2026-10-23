@@ -707,6 +707,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write # to push the companions' tags and create the draft releases
+      pull-requests: read # the upgrade notes are in the descriptions
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:

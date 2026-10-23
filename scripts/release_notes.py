@@ -12,6 +12,9 @@ The notes have two parts. The summaries at the top, new features, changes and bu
 are written by hand, so this script gives only their headings and a hint on what goes
 under each. Below them it lists the pull requests merged since the previous release,
 grouped by the commit type the commit grammar puts in front of each squash commit.
+Between the two, it collects the `Upgrade:` lines of those pull requests, what users
+and deployments must do to upgrade. The authors write them in the descriptions while the
+release a change lands in is still unknown; the tag range decides it.
 
 Each release lists only the pull requests that touched its own files. For the platform,
 `ghga/X.Y.Z`, those are the services, the front end, the charts and the lock file. The
@@ -39,6 +42,8 @@ Usage (`uv run --script`, so the PEP 723 block above resolves):
 from __future__ import annotations
 
 import argparse
+import dataclasses
+import functools
 import os
 import pathlib
 import re
@@ -51,6 +56,7 @@ from dataclasses import dataclass
 from packaging.version import InvalidVersion, Version
 
 from affected_targets import _canonical
+from check_upgrade_note import upgrade_notes
 from pypi_drift import shipped_prefixes
 from pypi_members import _find_member, _lane, pypi_members
 
@@ -92,6 +98,11 @@ MERGED_PR = re.compile(
 # the pull requests it brings in are listed one by one.
 INTEGRATION_BRANCHES = {"dev", "main"}
 
+UPGRADE_HINT = (
+    "<!-- Collected from the `Upgrade:` lines of the pull requests. Check each against"
+    " the charts, the config and the CLI before publishing. -->"
+)
+
 INTRO = (
     "<!-- Summarise each section in a few short sentences for users: no pull request"
     " numbers, no minor changes or refactorings, and one item for a feature that spans"
@@ -110,6 +121,9 @@ class Entry:
     pr: int | None
     breaking: bool
     files: tuple[str, ...]
+    # What an upgrade requires, from the `Upgrade:` lines of the commit message; see
+    # with_descriptions for those of the pull request.
+    upgrade: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -230,7 +244,8 @@ def _entry(subject: str, body: str, files: list[str], kind: str = "chore") -> En
 
     Args:
         subject: E.g. `feat(ucs)!: add UCS endpoints (#207)`.
-        body: The rest of the message, searched for a `BREAKING CHANGE:` footer.
+        body: The rest of the message, searched for a `BREAKING CHANGE:` footer and
+            `Upgrade:` lines.
         files: The files the change touched.
         kind: The commit type to use when `subject` does not name one.
     """
@@ -248,7 +263,8 @@ def _entry(subject: str, body: str, files: list[str], kind: str = "chore") -> En
             match["text"],
         )
     breaking = breaking or bool(BREAKING_FOOTER.search(body))
-    return Entry(kind, scope, text, pr, breaking, tuple(files))
+    upgrade = tuple(upgrade_notes(body))
+    return Entry(kind, scope, text, pr, breaking, tuple(files), upgrade)
 
 
 def _merged_entry(
@@ -301,6 +317,52 @@ def entries(previous: str, tag: str) -> list[Entry]:
                 result.append(_merged_entry(match, subject, body, files))
             else:
                 result.append(_entry(subject, body, files))
+    return result
+
+
+@functools.cache
+def pr_description(pr: int) -> str:
+    """Fetches the description of pull request `pr` through `gh`."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "ghga-de/ghga")
+    return subprocess.run(
+        ["gh", "api", f"repos/{repo}/pulls/{pr}", "--jq", '.body // ""'],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+def with_descriptions(changes: list[Entry], strict: bool) -> list[Entry]:
+    """Takes the upgrade notes of each pull request from its description.
+
+    The author writes them there, and a commit message has them only if whoever merged
+    copied them over. So the commit message counts only for a commit without a pull
+    request, and when GitHub cannot be reached while the notes are just printed.
+
+    Raises:
+        SystemExit: if `strict` and a description cannot be fetched.
+    """
+    result = []
+    for index, entry in enumerate(changes):
+        if entry.pr is None:
+            result.append(entry)
+            continue
+        try:
+            body = pr_description(entry.pr)
+        except (OSError, subprocess.CalledProcessError) as error:
+            reason = getattr(error, "stderr", None) or error
+            if strict:
+                sys.exit(
+                    f"error: cannot fetch the description of #{entry.pr}: {reason}"
+                )
+            print(
+                f"warning: cannot fetch pull request descriptions ({reason}); the"
+                " upgrade notes come from the commit messages only",
+                file=sys.stderr,
+            )
+            return result + changes[index:]
+        result.append(dataclasses.replace(entry, upgrade=tuple(upgrade_notes(body))))
     return result
 
 
@@ -397,8 +459,14 @@ def component_lines(previous: str, tag: str) -> list[str]:
     return lines
 
 
-def notes(tag: str, previous: str | None = None) -> tuple[str, bool]:
+def notes(
+    tag: str, previous: str | None = None, descriptions: bool | None = None
+) -> tuple[str, bool]:
     """Writes the notes for `tag`, compared with `previous` or the previous tag.
+
+    `descriptions` reads the upgrade notes from the pull request descriptions: True
+    requires them, False reads only the commit messages, and None tries the
+    descriptions and falls back to the commit messages.
 
     Returns:
         The notes, and whether there is anything to release: False only when there is
@@ -409,11 +477,15 @@ def notes(tag: str, previous: str | None = None) -> tuple[str, bool]:
         return render(tag, None, []), True
     name = tag.rpartition("/")[0]
     changes = select(entries(previous, tag), release_prefixes(name))
+    if descriptions is not False:
+        changes = with_descriptions(changes, strict=bool(descriptions))
     components = component_lines(previous, tag) if name == PLATFORM else []
     return render(tag, previous, changes, components), bool(changes)
 
 
-def companion_releases(platform_tag: str) -> list[tuple[str, str, bool]]:
+def companion_releases(
+    platform_tag: str, descriptions: bool | None = None
+) -> list[tuple[str, str, bool]]:
     """Tags the companions at a platform tag, locally, and writes their notes.
 
     A companion with nothing changed since its previous release is left out, and a tag
@@ -430,7 +502,7 @@ def companion_releases(platform_tag: str) -> list[tuple[str, str, bool]]:
         created = not _has_tag(tag)
         if created:
             _git("tag", tag, f"{platform_tag}^{{commit}}")
-        text, changed = notes(tag)
+        text, changed = notes(tag, descriptions=descriptions)
         if changed:
             releases.append((tag, text, created))
         elif created:
@@ -455,19 +527,28 @@ def _line(entry: Entry, name: str) -> str:
     return f"- {breaking}{scope}{text}{pr}"
 
 
+def _upgrade_line(entry: Entry, text: str, name: str) -> str:
+    scope = f"**{entry.scope}:** " if entry.scope and entry.scope != name else ""
+    pr = f" (#{entry.pr})" if entry.pr else ""
+    return f"- {scope}{text}{pr}"
+
+
 def render(
     tag: str,
     previous: str | None,
     changes: list[Entry],
     components: list[str] | None = None,
 ) -> str:
-    """Writes the notes: summary headings to fill in, the libraries and tools that
-    changed, if given, then the pull requests by type."""
+    """Writes the notes: summary headings to fill in, the upgrade notes, the
+    libraries and tools that changed, if given, then the pull requests by type."""
     name = tag.rpartition("/")[0]
     lines = [INTRO, ""]
     for summary in SUMMARIES:
         if previous is None or summary.applies(changes):
             lines += [f"## {summary.heading}", "", summary.hint, ""]
+    upgrade = [_upgrade_line(e, text, name) for e in changes for text in e.upgrade]
+    if upgrade:
+        lines += ["## Upgrade notes", "", UPGRADE_HINT, "", *upgrade, ""]
     if components:
         lines += ["## Libraries and tools", "", *components, ""]
 
@@ -545,9 +626,10 @@ def main(argv: list[str] | None = None) -> int:
     if not args.draft:
         print(notes(args.tag, args.previous)[0], end="")
         return 0
+    # A draft must not lose an upgrade note because GitHub was briefly unreachable.
     # The companions are tagged first, so that the platform's notes can link them.
-    companions = companion_releases(args.tag) if name == PLATFORM else []
-    draft(args.tag, notes(args.tag, args.previous)[0])
+    companions = companion_releases(args.tag, True) if name == PLATFORM else []
+    draft(args.tag, notes(args.tag, args.previous, descriptions=True)[0])
     for tag, companion_text, created in companions:
         if created:
             # Pushed with the workflow token, the tag starts no release run.

@@ -80,6 +80,7 @@ Further rules:
   When they are, read [branching](docs/conventions.md#branching) and [names](docs/conventions.md#names-branches-prs-commits) first.
   Cut the branch from `dev` and target `dev`; `main` carries the latest release and takes hotfixes only.
   Name the branch, the pull request and the commit as the grammar there says.
+- Every pull request description ends in `Upgrade:` lines, or `Upgrade: none`; the [names](docs/conventions.md#names-branches-prs-commits) section says what counts as one.
 - Never put a `Co-authored-by:` line for yourself in a commit message, whatever your own guidance says.
   Credit yourself in the pull request description instead, and only as far as you actually contributed — the [names](docs/conventions.md#names-branches-prs-commits) section says in which words.
 
