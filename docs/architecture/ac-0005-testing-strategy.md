@@ -234,7 +234,11 @@ The tests should ensure that the provider fully supports the operations possible
 The main goal is that these tests convey sufficient trust in the providers, so that associated translators (in service repositories) only need to be tested for correct usage of the protocols.
 Integration tests that specifically verify that the translators work with a specific provider and associated technology should not be necessary.
 That greatly simplifies the testing required in individual service repositories.
-Moreover, the execution time for translator tests is greatly reduced since the setup and teardown of real infrastructure (e.g. via `testconatiners`) is not required.
+Moreover, the execution time for translator tests is greatly reduced since the setup and teardown of real infrastructure (e.g. via `testcontainers`) is not required.
+
+> [!NOTE]
+> Practice has moved on from this paragraph.
+> About half the services' own suites run against real Kafka, MongoDB and S3 through hexkit's testcontainers fixtures, as [services/AGENTS.md](../../services/AGENTS.md) describes, and flows that cross services run in the [test bed](../../testbed/AGENTS.md).
 
 In addition to production-grade providers, libraries like the `hexkit` might also offer test or mock providers for protocols.
 These test providers do not communicate with real infrastructure and offer utilities that further simplify the testing of translators.
