@@ -39,7 +39,7 @@ for the full set of configurable values.
 | `config.work_packages_collection` | The name of the database collection for work packages | `"workPackages"` |
 | `config.accession_maps_collection` | The name of the database collection for file accession maps | `"accessionMaps"` |
 | `config.work_package_valid_days` | How many days a work package (and its access token) stays valid | `30` |
-| `config.db_name` | NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `"work-packages"` |
+| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
 | `config.kafka_servers` | A list of connection strings to connect to Kafka bootstrap servers. | `null` |
 | `config.kafka_security_protocol` | Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. | `"PLAINTEXT"` |

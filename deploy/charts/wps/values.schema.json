@@ -1185,13 +1185,15 @@
           ]
         },
         "db_name": {
-          "default": "work-packages",
+          "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
+          "examples": [
+            "my-database"
+          ],
           "title": "Db Name",
           "type": [
             "string",
             "null"
-          ],
-          "description": "NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead."
+          ]
         },
         "mongo_timeout": {
           "anyOf": [
