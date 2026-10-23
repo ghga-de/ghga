@@ -72,6 +72,26 @@ async def consume_events(run_forever: bool = True) -> None:
         await event_subscriber.run(forever=run_forever)
 
 
+async def publish_events(*, all: bool = False) -> None:
+    """Publish the user changes not yet published, or with `all` every user's state.
+
+    The IVA DAO is left out: it publishes no events of its own.
+    """
+    config = Config()
+    configure_logging(config=config)
+    configure_opentelemetry(service_name=config.service_name, config=config)
+
+    prepare_user_dao_publisher_factory = import_prepare_module(
+        auth_adapter=False
+    ).prepare_user_dao_publisher_factory
+    async with prepare_user_dao_publisher_factory(config=config) as factory:
+        user_dao = await factory.get_user_dao()
+        if all:
+            await user_dao.republish()
+        else:
+            await user_dao.publish_pending()
+
+
 async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()

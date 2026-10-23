@@ -17,6 +17,7 @@
 
 import asyncio
 import sys
+from typing import Annotated
 
 import typer
 
@@ -28,7 +29,7 @@ cli = typer.Typer()
 
 @cli.callback(invoke_without_command=True)
 def require_command(ctx: typer.Context):
-    """Run the auth service's REST APIs or its event consumer, or migrate its database."""
+    """Run the REST APIs or the event consumer, publish events, or migrate the database."""
     # Started without a command, the executable must fail visibly
     # rather than run a service whose migrations may not have run.
     if ctx.invoked_subcommand is None:
@@ -70,6 +71,19 @@ def sync_consume_events(run_forever: bool = True):
     from auth_service.main import consume_events  # noqa: PLC0415
 
     asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="publish-events")
+def sync_publish_events(
+    all: Annotated[
+        bool,
+        typer.Option(help="Set to (re)publish all events regardless of status"),
+    ] = False,
+):
+    """Publish the user changes not yet published as events."""
+    from auth_service.main import publish_events  # noqa: PLC0415
+
+    asyncio.run(publish_events(all=all))
 
 
 @cli.command(name="migrate-db")

@@ -55,6 +55,7 @@ The executable `auth-service` takes one of these commands, and fails without one
 
 - `run-rest` runs the REST APIs set in `provide_apis`
 - `consume-events` runs the claims repository's consumer of dataset events
+- `publish-events` publishes the user changes not yet published, or with `--all` every user's current state, for instance to fill a new consumer
 - `migrate-db` runs the database migrations
 
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
