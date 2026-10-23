@@ -41,7 +41,7 @@ def split_study_pid(study_pid: str) -> tuple[str, str] | None:
     """Return the year and the random block of the study PID 'PREFIX.YY.XXX.V', or
     None for a flat accession from before study PIDs.
     """
-    # split from the right, so that the prefix configured today does not matter
+    # split from the right, so that the prefix does not matter
     parts = study_pid.rsplit(".", 3)
     if len(parts) != 4:
         return None

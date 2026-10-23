@@ -19,32 +19,55 @@ from typing import Annotated
 
 from pydantic import StringConstraints
 
-__all__ = ["DatasetAccession", "FileAccession"]
+__all__ = [
+    "BASE32_ALPHABET",
+    "DATASET_PID_PATTERN",
+    "DATASET_PID_PREFIX",
+    "FILE_ACCESSION_PATTERN",
+    "RANDOM_BLOCK_LENGTH",
+    "RANDOM_BLOCK_PATTERN",
+    "STUDY_PID_PATTERN",
+    "STUDY_PID_PREFIX",
+    "DatasetAccession",
+    "FileAccession",
+]
 
-# the study PID and dataset prefixes are not spelled out, as metldata makes them
-# configurable
-BASE32 = r"[A-Z2-7]"  # RFC 4648 alphabet of the random blocks
+# Not configurable: they build persistent identifiers, so changing one would break
+# every PID already minted.
+STUDY_PID_PREFIX = "GHGA"  # 'GHGA' in 'GHGA.YY.XXX.V'
+DATASET_PID_PREFIX = "DS"  # 'DS' in '{study_pid}.DS.XXX'
+RANDOM_BLOCK_LENGTH = 3  # 'XXX' in both; 32**3 = 32,768 study PIDs per year
+BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"  # RFC 4648, for 'XXX'
+
+BASE32_PATTERN = r"[A-Z2-7]"  # BASE32_ALPHABET, spelled short for openapi.yaml
+RANDOM_BLOCK_PATTERN = rf"{BASE32_PATTERN}{{{RANDOM_BLOCK_LENGTH}}}"
 # the version V counts from 1, without leading zeros; [0-9] rather than \d, which
 # Python widens to every Unicode digit while JSON Schema in openapi.yaml does not
-STUDY_PID = rf"[^.\s]+\.[0-9]{{2}}\.{BASE32}+\.[1-9][0-9]*"  # 'PREFIX.YY.XXX.V'
+STUDY_PID_PATTERN = (
+    rf"{STUDY_PID_PREFIX}\.[0-9]{{2}}\.{RANDOM_BLOCK_PATTERN}\.[1-9][0-9]*"
+)
 
-LEGACY_DATASET_ACCESSION = r"[A-Z]{1,6}[0-9]{3,18}"  # 'GHGAD12345…'
-DATASET_PID = rf"{STUDY_PID}\.[^.\s]+\.{BASE32}+"  # '{study_pid}.DS.XXX'
+LEGACY_DATASET_ACCESSION_PATTERN = r"[A-Z]{1,6}[0-9]{3,18}"  # 'GHGAD12345…'
+DATASET_PID_PATTERN = (
+    rf"{STUDY_PID_PATTERN}\.{DATASET_PID_PREFIX}\.{RANDOM_BLOCK_PATTERN}"
+)
 
-LEGACY_FILE_ACCESSION = r"GHGAF.+"  # 'GHGAF12345…'
-# the alias part already expects aliases as metldata's `normalize_alias` (GSI-2697)
-# writes them; update it whenever that rule changes
-FILE_ACCESSION = rf"{STUDY_PID}\.[a-z0-9_-]+"  # '{study_pid}.{alias}'
+LEGACY_FILE_ACCESSION_PATTERN = r"GHGAF.+"  # 'GHGAF12345…'
+# '{study_pid}.{alias}'; the alias part already expects aliases as metldata's
+# `normalize_alias` (GSI-2697) writes them; update it whenever that rule changes
+FILE_ACCESSION_PATTERN = rf"{STUDY_PID_PATTERN}\.[a-z0-9_-]+"
 
 DatasetAccession = Annotated[
     str,
     StringConstraints(
         strip_whitespace=True,
-        pattern=rf"^(?:{LEGACY_DATASET_ACCESSION}|{DATASET_PID})$",
+        pattern=rf"^(?:{LEGACY_DATASET_ACCESSION_PATTERN}|{DATASET_PID_PATTERN})$",
     ),
 ]
 
 FileAccession = Annotated[
     str,
-    StringConstraints(pattern=rf"^(?:{LEGACY_FILE_ACCESSION}|{FILE_ACCESSION})$"),
+    StringConstraints(
+        pattern=rf"^(?:{LEGACY_FILE_ACCESSION_PATTERN}|{FILE_ACCESSION_PATTERN})$"
+    ),
 ]
