@@ -37,7 +37,7 @@ from ghga_datasteward_kit.amendment.exceptions import (
     StudyAccessionMissingError,
 )
 from ghga_datasteward_kit.cli.metadata import amend, submit, transform
-from ghga_service_commons.utils.accessions import RANDOM_BLOCK, STUDY_PID_PREFIX
+from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import MetadataValidationError
 from metldata.submission_registry.submission_store import SubmissionStore
@@ -51,8 +51,6 @@ from tests.fixtures.metadata import (
     ORIGINAL_METADATA_PATH,
     ORIGINAL_MODEL_PATH,
 )
-
-STUDY_PID_PATTERN = rf"{re.escape(STUDY_PID_PREFIX)}\.\d{{2}}\.{RANDOM_BLOCK}\.1"
 
 
 def workdir_factory(original_model_path: Path):
