@@ -85,6 +85,7 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 | [0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md) | Publish dev charts on the mono image for continuous deployment | accepted | deploy, release |
 | [0046](adrs/adr-0046-platform-version-from-tags.md) | The platform version comes from tags alone | proposed | release |
 | [0048](adrs/adr-0048-architecture-concepts.md) | Numbered architecture concepts with frontmatter | accepted | docs, process |
+| [0049](adrs/adr-0049-microservice-library-over-framework.md) | A library of building blocks instead of a microservice framework | accepted | backend |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)

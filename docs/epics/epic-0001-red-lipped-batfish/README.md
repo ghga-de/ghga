@@ -6,7 +6,26 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/TgFzCQ>
+### Outline
+
+At the end of this epic, we would like to have a system that provides the basic infrastructure for upload as well as download of data and associated metadata.
+
+### Included/Required
+
+- there are inbox and outbox stages that are externally accessible but only hold the bare minimum of files needed for ongoing upload or download activities
+- a permanent file storage contains all the files but is not accessible from the outside
+- a service with a GA4GH DRS-compliant API for download ("DRS3")
+- a service with a GA4GH DRS-inspired API for upload ("Upload Controller")
+- an event-driven service managing the permanent file storage ("Internal File Registry")
+
+### Not included
+
+- user authentication & authorization
+- file encryption
+- file validation (md5 checksum, file format)
+- a schema registry for events/messages transmitted via RabbitMQ
+- notification to users (via email)
+- client software
 
 ## User Journeys
 

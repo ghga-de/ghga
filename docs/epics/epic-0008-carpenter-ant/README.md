@@ -2,9 +2,29 @@
 
 **Epic Type:** Exploratory Epic
 
-## Principal Components of Exploration
+## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/YgFzCQ>
+### Outline
+
+This epic aims at establishing a concept for (authentication and) authorization with a GHGA-oriented interpretation of the GA4GH Passport standard.
+
+### Included/Required
+
+- authorize all "roles" (data requesters, submitters, data stewards, and data access committees) without a dedicated, central authorization service
+- decoupling of visa/auth sources and visa/auth consumers
+- evaluate whether the distribution of visa/auth info via LS AAI as a broker is feasible (legally, technically)
+- or hosting our own passport broker and using LS Login only as IdP
+- authentication of long-running tasks (e.g. download, upload, data processing, etc.)
+- visa/auth revocation strategy
+- evaluation of existing solutions such as REMS
+- feasibility of using EGA for sending permissions to the LS passport broker
+- synchronization with other ELIXIR and GA4GH partners
+
+### Not included
+
+- implementation of the above points
+
+## Principal Components of Exploration
 
 ### Adaptation to latest versions of GA4GH AAI and passport standards
 
@@ -34,8 +54,18 @@ A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/YgFzCQ>
 - [GA4GH AAI background](https://ga4gh.github.io/data-security/1.2-draft-main/aai-introduction)
 - [GA4GH AAI OIDC profile](https://ga4gh.github.io/data-security/1.2-draft-main/aai-openid-connect-profile)
 - [GA4GH Passport V1](https://github.com/ga4gh-duri/ga4gh-duri.github.io/blob/master/researcher_ids/ga4gh_passport_v1.md#ga4gh-passport)
+- [GA4GH Passport standard for digital identity and access permissions](https://www.cell.com/cell-genomics/fulltext/S2666-979X\(21\)00037-9) (Cell Genomics, November 2021)
+- [ELIXIR AAI: Authentication and Authorisation Infrastructure](https://elixir-europe.org/services/compute/aai)
+- [ELIXIR AAI documentation](https://elixir-europe.org/services/compute/aai-documentation)
+- [Common ELIXIR Service for Researcher Authentication and Authorisation](https://f1000research.com/articles/7-1199/v1) (F1000Research)
+- [Registered access: authorizing data access](https://www.nature.com/articles/s41431-018-0219-y) (European Journal of Human Genetics)
 
-More resources can be found here: <https://wiki.verbis.dkfz.de/x/mwv4Bg>
+Webinars:
+
+- [ELIXIR Webinar: de.NBI Cloud Integration to ELIXIR AAI](https://elixir-europe.org/events/elixir-webinar-denbi-cloud-integration-elixir-aai)
+- [ELIXIR Webinar: Access to Sensitive Human Data with the ELIXIR AAI](https://elixir-europe.org/events/webinar-access-to-sensitive-data-aai)
+- [Webinar Recap – GA4GH Passports: Benefits of Integrating a Global Electronic ID for Accessing Biomedical Data (Part 1)](https://www.ga4gh.org/news/webinar-recap-ga4gh-passports-benefits-of-integrating-a-global-electronic-id-for-accessing-biomedical-data-part-1/)
+- [GA4GH Passports webinar series](https://www.ga4gh.org/news/ga4gh-passports-webinar-series), announcing Part 2: Implementing GA4GH Passports and AAI: Technical Deep Dive
 
 ## User Journeys
 
