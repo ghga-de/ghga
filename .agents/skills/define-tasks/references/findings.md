@@ -30,7 +30,7 @@ The same word can say different things, so read it from how the source uses it.
 "Open" means confirmed and not yet fixed in a bug audit, which is a reason to act, and not yet checked in a review, which leaves the finding undecided.
 
 - **Every finding gets a point** in the Findings section, in the source's order, tagged with its state and with the task or decision it leads to.
-  Give the source's own ID in the text where it differs from the ref, since an ID such as `C1` may collide with the ref of another section.
+  Give the source's own ID in the text where it differs from the ref, and write it in `code`: an ID such as `C1` may collide with the ref of another section, and the page links every plain ref.
 - **An undecided finding** becomes a decision of two rows: A acts on it, and B leaves it out.
   Recommend A, so the tasks show what acting takes; recommend B where the code contradicts the finding.
   Findings that one change settles share a decision.

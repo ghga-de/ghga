@@ -35,6 +35,10 @@ How to read one, and what each of its states becomes on the page, is in [referen
 
 ## Steps
 
+A source has one plan.
+Before building one, list your artifacts with the Artifact tool and look for the plan's title; failing that, look in your memory, then ask the user.
+An existing plan is read back with the Artifact tool and republished to its link, as a refine; in a new session, watch it first, as the last trap says.
+
 1. **Read** the source, the root and area `AGENTS.md` files of every member it touches, and the code it names.
    Read a findings artifact as [references/findings.md](references/findings.md#reading-the-artifact) says.
 2. **Carry the findings over**, for a findings artifact only: one point per finding with its state, as [references/findings.md](references/findings.md#states) says.
@@ -70,7 +74,7 @@ How to read one, and what each of its states becomes on the page, is in [referen
    Name pull requests, branches and commits by the [conventions](../../../docs/conventions.md#names-branches-prs-commits).
    Under "After the merge", point out what the release may need to coordinate, such as consumers that pin the member's version, dependencies that must be released first, or a change operators must act on, which makes the next platform release a major one.
 8. **Build the page:** copy the template into the scratchpad and replace every `FILL` marker, keeping the styles and the script, and avoid the [page's traps](references/page.md#traps).
-   Give every point its ref from [Refs](references/page.md#refs) in `data-point` and `id`.
+   Give every point its ref from [Refs](references/page.md#refs) in `data-point` and `id`, and its gist in `data-gist`, as [Gists](references/page.md#gists) says.
    Remove the Findings section and its Contents link for an epic.
 9. **Publish** with the Artifact tool, icon `plan`, a one-sentence description and these capabilities:
 
@@ -78,6 +82,7 @@ How to read one, and what each of its states becomes on the page, is in [referen
    {"comments": {}, "db": {"rules": [{"path": "preferences", "read": "view", "write": "owner"}, {"path": "preferences/{self}", "write": "interact"}, {"path": "comments", "read": "view", "write": "owner"}, {"path": "comments/{self}", "write": "interact"}, {"path": "status", "read": "view", "write": "owner"}, {"path": "tickets", "read": "view", "write": "owner"}]}, "user": {"scopes": ["profile"]}}
    ```
 
+   Record the source, the plan's link and the date in your memory, so a later session finds it faster.
 10. **Create the ticket cards**, one per task, as [references/page.md](references/page.md#ticket-cards) says.
 11. **Check once:** ArtifactComments `read`, and ArtifactData `list` on `preferences`, `comments` and `tickets`, must all answer, and `tickets` must hold one card per task.
     ArtifactComments `watch` without a URL must show the artifact with auto-replies armed, or Refine cannot reach the session.

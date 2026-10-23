@@ -21,6 +21,20 @@ Use no other prefix, and number each one from 1 in page order on the first publi
 
 The `id` of a point is its ref in lower case with dashes for dots, such as `t1-3`.
 
+## Gists
+
+Every ref the page shows links to its point and shows the point's gist on hover: in the "What changed" block, and in the text, tags and question lines of every other point.
+The page's how-to line tells readers so.
+
+- **Give every point a `data-gist`**, except a task or decision head, whose heading serves as its gist.
+  Write what the point does or says in up to ten words, without paths, file names or refs, such as `data-gist="Each transport builds its own budget"`.
+  Write a double quote in it as `&quot;`, since a bare one ends the attribute.
+- **Keep the gist with the point.**
+  Give every new point one in the refine that adds it, and change a gist only when its point's meaning changes.
+- **Write refs as plain text** in the text and tags, and the script links them.
+  A ref inside `code`, a link or an SVG stays text, and so does a point's mention of itself.
+  Write a source's own IDs and words that only look like refs, such as Cloudflare's R2, in `code`, or the page links them to the plan's point of that name.
+
 ## Ticket cards
 
 Each task gets a ticket card: the title and description of its YouTrack ticket, which the owner edits and copies into YouTrack, and the ticket's key once it is filed.
@@ -73,3 +87,5 @@ If the user asks about sharing the plan, name what it exposes before they decide
   A rule at the prefix of a `{self}` rule must set both `read` and `write`.
   A plan published before ticket cards lacks the `tickets` rule: republish it once with the full capabilities from the skill's publish step, then create its cards.
 - **A local preview hides the controls and the ticket cards**, since it has no `window.claude`; add the class `can-pick` to `<html>` to see the pick controls.
+- **The page's own writes show before the server confirms them**, and that pending view can hold only the fields just written.
+  The script merges it over the document's last confirmed body in `settledBody`; read every store document through it, or a reply hides its thread until the server confirms.

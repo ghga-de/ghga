@@ -312,8 +312,9 @@ tr.rec td { background: var(--ok-soft); }
   white-space: nowrap;
 }
 .refine-btn:disabled { background: var(--code); border-color: var(--rule); color: var(--muted); cursor: not-allowed; }
-.refine-text { flex: 1 1 16rem; min-width: 0; margin: 0; font-size: var(--step--1); color: var(--muted); }
+.refine-text { flex: 1 1 16rem; min-width: 0; margin: 0; font-size: var(--step--1); color: var(--muted); display: flex; flex-direction: column; gap: 0.2rem; }
 .refine-text #refine-picks { color: var(--ink); }
+.refine-text #refine-picks:empty { display: none; }
 .to-top {
   position: fixed;
   right: 16px;
@@ -424,6 +425,11 @@ tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-color: var(--accent); } }
 .claude-working { margin: 0; font-size: var(--step--1); color: var(--accent); }
+/* A spinner starts its own line and keeps its text beside it */
+.busy-line, .claude-working { display: flex; align-items: center; gap: 0.45rem; }
+.busy-line .spinner, .claude-working .spinner { flex: none; margin-right: 0; }
+/* A class that sets display outranks the hidden attribute; claude.ai's page skeleton has this rule, a local preview does not */
+[hidden] { display: none !important; }
 .threads .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 .changes { margin-top: 0.75rem; padding: 0 0.9rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 .changes > summary { cursor: pointer; padding: 0.55rem 0; font-weight: 600; font-size: 0.95rem; }
@@ -432,6 +438,10 @@ tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
 .changes ul { margin: 0 0 0.75rem; padding-left: 1.1rem; font-size: 0.95rem; }
 .changes li { margin-bottom: 0.3rem; }
 .changes li .ref { padding: 0; margin-right: 0.3rem; color: var(--accent); }
+.changes li a.ref { text-decoration: none; }
+.changes li a.ref:hover, .changes li a.ref:focus-visible { text-decoration: underline; }
+a.xref { color: inherit; text-decoration: underline dotted; text-underline-offset: 0.15em; }
+a.xref:hover, a.xref:focus-visible { text-decoration-style: solid; }
 
 /* Decision picks */
 .pick {
@@ -617,14 +627,14 @@ dl.facts dd { margin: 0; }
       </dl>
       <div class="refine" id="refine" hidden>
         <button type="button" class="refine-btn" id="refine-btn" disabled>Refine plan</button>
-        <p class="refine-text"><span id="refine-picks"></span> <span class="spinner" id="refine-spinner" aria-hidden="true" hidden></span><span id="refine-state">Checking for a Claude session…</span></p>
+        <p class="refine-text"><span id="refine-picks"></span><span class="busy-line"><span class="spinner" id="refine-spinner" aria-hidden="true" hidden></span><span id="refine-state">Checking for a Claude session…</span></span></p>
       </div>
-      <p class="howto">Every numbered point takes comments. Press <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 3h11v7.5H7l-3 2.5v-2.5H2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg> beside a point to read its comments or add one; a filled button counts the open threads there. Cite refs such as <code>T1.2</code> when a comment spans several points.</p>
+      <p class="howto">Every numbered point takes comments. Press <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2.5 3h11v7.5H7l-3 2.5v-2.5H2.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg> beside a point to read its comments or add one; a filled button counts the open threads there. Cite refs such as <code>T1.2</code> when a comment spans several points. A ref in the text shows its point's gist on hover and jumps to the point when pressed.</p>
       <details class="overview" id="comment-overview" hidden>
         <summary><span id="overview-title">Comments</span></summary>
         <div id="overview-list"></div>
       </details>
-      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. -->
+      <!-- FILL after each refine: unhide, name the revision and the one it was refined from, and list one li per changed point: its ref, then a one-line recap of the change. The script links each ref to its point and shows its gist on hover; a list such as "D9, D10" or a range such as "D1–D7" links to its first point. -->
       <details class="changes" id="refine-changes" hidden>
         <summary>What changed in revision N</summary>
         <p>Refined from revision N-1.</p>
@@ -634,14 +644,14 @@ dl.facts dd { margin: 0; }
       </details>
     </header>
 
-    <!-- FILL: keep this section only when the source is a findings artifact. One li per finding, in the source's order. Tag it with its state in the source's own words, then with the task or decision it leads to; a finding the plan leaves out gets no second tag. Give the source's own ID where it differs from the ref, then what the finding says and what the plan does with it. -->
+    <!-- FILL: keep this section only when the source is a findings artifact. One li per finding, in the source's order. Tag it with its state in the source's own words, then with the task or decision it leads to; a finding the plan leaves out gets no second tag. Give the source's own ID where it differs from the ref, in <code>, since the page links plain refs, then what the finding says and what the plan does with it. -->
     <section id="findings">
       <h2>Findings</h2>
       <p>FILL: What the review or the triage found. Each finding carries its state from there and says what the plan does with it: a task, a decision or nothing.</p>
       <ul class="points">
-        <li class="pt" data-point="F1" id="f1"><span class="ref">F1</span><div class="txt"><span class="tag">FILL: Verified</span><span class="tag d">T1</span>FILL</div></li>
-        <li class="pt" data-point="F2" id="f2"><span class="ref">F2</span><div class="txt"><span class="tag">FILL: Open</span><span class="tag d">D1</span>FILL</div></li>
-        <li class="pt" data-point="F3" id="f3"><span class="ref">F3</span><div class="txt"><span class="tag">FILL: Not an issue</span>FILL</div></li>
+        <li class="pt" data-point="F1" id="f1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">F1</span><div class="txt"><span class="tag">FILL: Verified</span><span class="tag d">T1</span>FILL</div></li>
+        <li class="pt" data-point="F2" id="f2" data-gist="FILL: the point's gist in up to ten words"><span class="ref">F2</span><div class="txt"><span class="tag">FILL: Open</span><span class="tag d">D1</span>FILL</div></li>
+        <li class="pt" data-point="F3" id="f3" data-gist="FILL: the point's gist in up to ten words"><span class="ref">F3</span><div class="txt"><span class="tag">FILL: Not an issue</span>FILL</div></li>
       </ul>
     </section>
 
@@ -650,8 +660,8 @@ dl.facts dd { margin: 0; }
       <p>What it leaves out, leaves open or gets wrong against the current code. Each gap says what the plan does about it: a decision, a rule or a task detail further down.</p>
       <ul class="points">
         <!-- FILL: one li per gap, tagged with its kind: Left out, Left open, Contradicted or Unverifiable. Say what the source says or omits, what the code does, why it matters and what the plan does about it, with refs. Tag "d" links a decision. -->
-        <li class="pt" data-point="G1" id="g1"><span class="ref">G1</span><div class="txt"><span class="tag">Left open</span><span class="tag d">D1</span>FILL</div></li>
-        <li class="pt" data-point="G2" id="g2"><span class="ref">G2</span><div class="txt"><span class="tag">Left out</span>FILL</div></li>
+        <li class="pt" data-point="G1" id="g1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">G1</span><div class="txt"><span class="tag">Left open</span><span class="tag d">D1</span>FILL</div></li>
+        <li class="pt" data-point="G2" id="g2" data-gist="FILL: the point's gist in up to ten words"><span class="ref">G2</span><div class="txt"><span class="tag">Left out</span>FILL</div></li>
       </ul>
     </section>
 
@@ -672,12 +682,12 @@ dl.facts dd { margin: 0; }
           <table class="options">
             <thead><tr><th>Option</th><th>Change</th><th>Cost for consumers</th></tr></thead>
             <tbody>
-              <tr class="pt rec" data-point="D1.A" id="d1-a">
+              <tr class="pt rec" data-point="D1.A" id="d1-a" data-gist="FILL: the point's gist in up to ten words">
                 <td class="opt"><div class="slot"><span class="ref">D1.A</span><span class="pill">Recommended</span><label class="pick" for="pick-d1-a"><input type="radio" name="pick-D1" value="A" id="pick-d1-a"><span class="pick-label">Pick</span></label></div></td>
                 <td>FILL: the concrete change.</td>
                 <td>FILL: measured cost for consumers.</td>
               </tr>
-              <tr class="pt" data-point="D1.B" id="d1-b">
+              <tr class="pt" data-point="D1.B" id="d1-b" data-gist="FILL: the point's gist in up to ten words">
                 <td class="opt"><div class="slot"><span class="ref">D1.B</span><label class="pick" for="pick-d1-b"><input type="radio" name="pick-D1" value="B" id="pick-d1-b"><span class="pick-label">Pick</span></label></div></td>
                 <td>FILL</td>
                 <td>FILL</td>
@@ -700,12 +710,12 @@ dl.facts dd { margin: 0; }
           <table class="options">
             <thead><tr><th>Option</th><th>Change</th><th>Cost for consumers</th></tr></thead>
             <tbody>
-              <tr class="pt rec" data-point="D2.A" id="d2-a">
+              <tr class="pt rec" data-point="D2.A" id="d2-a" data-gist="FILL: the point's gist in up to ten words">
                 <td class="opt"><div class="slot"><span class="ref">D2.A</span><span class="pill">Recommended</span><label class="pick" for="pick-d2-a"><input type="radio" name="pick-D2" value="A" id="pick-d2-a"><span class="pick-label">Pick</span></label></div></td>
                 <td>FILL: the one way.</td>
                 <td>FILL: measured cost for consumers.</td>
               </tr>
-              <tr class="pt" data-point="D2.B" id="d2-b">
+              <tr class="pt" data-point="D2.B" id="d2-b" data-gist="FILL: the point's gist in up to ten words">
                 <td class="opt"><div class="slot"><span class="ref">D2.B</span><label class="pick" for="pick-d2-b"><input type="radio" name="pick-D2" value="B" id="pick-d2-b"><span class="pick-label">Pick</span></label></div></td>
                 <td>Another way, which you name in a comment on D2.B.</td>
                 <td>Set by that way.</td>
@@ -721,7 +731,7 @@ dl.facts dd { margin: 0; }
       <h2>Shared contract</h2>
       <p>Rules every task follows, so the tasks only state what differs.</p>
       <ul class="points">
-        <li class="pt" data-point="C1" id="c1"><span class="ref">C1</span><div class="txt">FILL: e.g. each task passes the checks on its own after merge.</div></li>
+        <li class="pt" data-point="C1" id="c1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">C1</span><div class="txt">FILL: e.g. each task passes the checks on its own after merge.</div></li>
       </ul>
     </section>
 
@@ -746,19 +756,19 @@ dl.facts dd { margin: 0; }
         </div>
         <h4>Changes</h4>
         <ul class="points">
-          <li class="pt" data-point="T1.1" id="t1-1"><span class="ref">T1.1</span><div class="txt"><p>FILL: file and change.</p><pre><code>FILL: the planned code, escaped for HTML. Keep this block only for a change of 3 to 20 lines that handles something non-trivial.</code></pre></div></li>
+          <li class="pt" data-point="T1.1" id="t1-1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">T1.1</span><div class="txt"><p>FILL: file and change.</p><pre><code>FILL: the planned code, escaped for HTML. Keep this block only for a change of 3 to 20 lines that handles something non-trivial.</code></pre></div></li>
         </ul>
         <h4>Acceptance criteria</h4>
         <ul class="points">
-          <li class="pt" data-point="T1.2" id="t1-2"><span class="ref">T1.2</span><div class="txt">FILL: observable behaviour.</div></li>
+          <li class="pt" data-point="T1.2" id="t1-2" data-gist="FILL: the point's gist in up to ten words"><span class="ref">T1.2</span><div class="txt">FILL: observable behaviour.</div></li>
         </ul>
         <h4>Tests</h4>
         <ul class="points">
-          <li class="pt" data-point="T1.3" id="t1-3"><span class="ref">T1.3</span><div class="txt">FILL: test file and the criteria it covers.</div></li>
+          <li class="pt" data-point="T1.3" id="t1-3" data-gist="FILL: the point's gist in up to ten words"><span class="ref">T1.3</span><div class="txt">FILL: test file and the criteria it covers.</div></li>
         </ul>
         <h4>Docs</h4>
         <ul class="points">
-          <li class="pt" data-point="T1.4" id="t1-4"><span class="ref">T1.4</span><div class="txt">FILL: doc page and section.</div></li>
+          <li class="pt" data-point="T1.4" id="t1-4" data-gist="FILL: the point's gist in up to ten words"><span class="ref">T1.4</span><div class="txt">FILL: doc page and section.</div></li>
         </ul>
       </article>
     </section>
@@ -766,22 +776,22 @@ dl.facts dd { margin: 0; }
     <section id="delivery">
       <h2>Delivery</h2>
       <ul class="points">
-        <li class="pt" data-point="P1" id="p1"><span class="ref">P1</span><div class="txt">FILL: pull requests, branches, titles and merge commits by docs/conventions.md.</div></li>
+        <li class="pt" data-point="P1" id="p1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">P1</span><div class="txt">FILL: pull requests, branches, titles and merge commits by docs/conventions.md.</div></li>
       </ul>
       <h4>After the merge</h4>
       <ul class="points">
-        <li class="pt" data-point="P2" id="p2"><span class="ref">P2</span><div class="txt">FILL: what the release may need to coordinate once the changes have landed, such as consumers that pin the member's version.</div></li>
+        <li class="pt" data-point="P2" id="p2" data-gist="FILL: the point's gist in up to ten words"><span class="ref">P2</span><div class="txt">FILL: what the release may need to coordinate once the changes have landed, such as consumers that pin the member's version.</div></li>
       </ul>
     </section>
 
     <section id="risks">
       <h2>Risks and limits</h2>
       <ul class="points">
-        <li class="pt" data-point="R1" id="r1"><span class="ref">R1</span><div class="txt"><strong>FILL.</strong> FILL</div></li>
+        <li class="pt" data-point="R1" id="r1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">R1</span><div class="txt"><strong>FILL.</strong> FILL</div></li>
       </ul>
       <h4>Not in this plan</h4>
       <ul class="points">
-        <li class="pt" data-point="X1" id="x1"><span class="ref">X1</span><div class="txt">FILL</div></li>
+        <li class="pt" data-point="X1" id="x1" data-gist="FILL: the point's gist in up to ten words"><span class="ref">X1</span><div class="txt">FILL</div></li>
       </ul>
     </section>
   </main>
@@ -820,7 +830,142 @@ dl.facts dd { margin: 0; }
     try { document.getElementById("top-heading").focus({ preventScroll: true }); } catch (e) {}
   });
 
+  // Refs link to their point and show its gist on hover; a list or a range such as
+  // "D1–D7" in What changed links to its first point. The gist is the point's
+  // data-gist, else its heading, else its first sentence without paths.
+  function pointText(point) {
+    var gist = point.getAttribute("data-gist");
+    if (gist) return gist;
+    var source = point.querySelector("h3") ||
+      (point.tagName === "TR" ? point.children[1] : null) ||
+      point.querySelector(".txt > p") || point.querySelector(".txt") || point;
+    var copy = source.cloneNode(true);
+    var drop = copy.querySelectorAll(".tag, .ref, button, .threads-host, pre");
+    for (var i = 0; i < drop.length; i++) drop[i].remove();
+    var code = copy.querySelectorAll("code");
+    for (var j = 0; j < code.length; j++) if (/[\/\\]|\.\w{1,4}$/.test(code[j].textContent)) code[j].remove();
+    var text = copy.textContent.replace(/\s+/g, " ").replace(/^[\s:;,.]+/, "").trim();
+    var end = text.search(/\.\s/);
+    return end === -1 ? text : text.slice(0, end + 1);
+  }
+
+  function pointAnchor(point) {
+    return "#" + (point.id || (point.closest("[id]") || {}).id || "");
+  }
+
+  function refLink(label, refs, cls) {
+    var link = document.createElement("a");
+    link.className = cls;
+    link.textContent = label;
+    link.href = pointAnchor(pointEl(refs[0]));
+    link.title = refs.map(function (ref) { return ref + ": " + pointText(pointEl(ref)); }).join("\n");
+    return link;
+  }
+
+  function refsIn(label) {
+    var refs = [];
+    label.split(/\s*,\s*/).forEach(function (part) {
+      var ends = part.split(/\s*[–-]\s*/);
+      var from = /^(.*?)(\d+)$/.exec(ends[0]);
+      var to = ends[1] && /^(.*?)(\d+)$/.exec(/^\d+$/.test(ends[1]) && from ? from[1] + ends[1] : ends[1]);
+      if (from && to && from[1] === to[1] && +from[2] <= +to[2]) {
+        for (var n = +from[2]; n <= +to[2]; n++) refs.push(from[1] + n);
+      } else {
+        refs = refs.concat(ends);
+      }
+    });
+    return refs.filter(function (ref) { return pointEl(ref); });
+  }
+
+  function linkChanges() {
+    var labels = document.querySelectorAll("#refine-changes li > span.ref");
+    for (var i = 0; i < labels.length; i++) {
+      var refs = refsIn(labels[i].textContent.trim());
+      if (refs.length) labels[i].replaceWith(refLink(labels[i].textContent, refs, "ref"));
+    }
+  }
+
+  // Refs in code, labels, links and SVG stay text, as does a point's mention of itself,
+  // so source IDs and ref-like words go in code
+  var REF_PATTERN = /\b(?:[CFGPRX]\d+|D\d+(?:\.[A-Z])?|T\d+(?:\.\d+)?)\b/g;
+  var KEEP_AS_TEXT = "a, code, pre, button, textarea, input, label, h1, svg, .ref";
+
+  function linkRefsInText() {
+    var main = document.querySelector("main");
+    if (!main) return;
+    var walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+    var nodes = [];
+    while (walker.nextNode()) {
+      var node = walker.currentNode;
+      REF_PATTERN.lastIndex = 0;
+      if (REF_PATTERN.test(node.nodeValue) && !node.parentNode.closest(KEEP_AS_TEXT)) nodes.push(node);
+    }
+    nodes.forEach(function (node) {
+      var text = node.nodeValue, home = node.parentNode.closest("[data-point]");
+      var parts = document.createDocumentFragment(), last = 0, m;
+      REF_PATTERN.lastIndex = 0;
+      while ((m = REF_PATTERN.exec(text))) {
+        var target = pointEl(m[0]);
+        if (!target || target === home) continue;
+        parts.appendChild(document.createTextNode(text.slice(last, m.index)));
+        parts.appendChild(refLink(m[0], [m[0]], "xref"));
+        last = m.index + m[0].length;
+      }
+      if (!last) return;
+      parts.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(parts, node);
+    });
+  }
+
+  // The links are a convenience: a failure here must not stop picks, comments or cards
+  try {
+    linkChanges();
+    linkRefsInText();
+  } catch (e) {
+    if (window.console) console.warn("Ref links skipped:", e);
+  }
+  document.addEventListener("click", function (ev) {
+    var link = ev.target && ev.target.closest ? ev.target.closest("a.xref, #refine-changes a.ref") : null;
+    // A modified click opens the link the browser's way, such as in a new tab
+    if (!link || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
+    var target = document.getElementById(link.getAttribute("href").slice(1));
+    if (!target) return;
+    ev.preventDefault();
+    target.scrollIntoView({ block: "start" });
+    // Focus follows, so Tab continues from the point and a screen reader reads it
+    if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+  });
+
   if (!window.claude || typeof window.claude.use !== "function") return;
+
+  // The store shows this page's own write before the server confirms it, and that view
+  // may hold only the written fields. Merging it over the last confirmed body keeps the
+  // rest in view; otherwise a reply hides its thread's root, and with it itself.
+  var confirmedBodies = {};
+
+  function isPlain(value) { return !!value && typeof value === "object" && !Array.isArray(value); }
+
+  function mergeBodies(base, patch) {
+    var out = {};
+    Object.keys(base).forEach(function (k) { out[k] = base[k]; });
+    Object.keys(patch).forEach(function (k) {
+      out[k] = isPlain(out[k]) && isPlain(patch[k]) ? mergeBodies(out[k], patch[k]) : patch[k];
+    });
+    return out;
+  }
+
+  // A document snapshot has its own metadata; a query passes its own as the fallback
+  function settledBody(path, snap, queryMeta) {
+    var body = snap.exists ? snap.data() || {} : null;
+    var meta = snap.metadata || queryMeta;
+    if (!(meta && meta.hasPendingWrites)) {
+      confirmedBodies[path] = body;
+      return body;
+    }
+    var base = confirmedBodies[path];
+    return body && base ? mergeBodies(base, body) : body;
+  }
 
   // Decision picks: each viewer keeps one document, preferences/<their id>.
   var DECISIONS = Array.prototype.slice.call(document.querySelectorAll('input[name^="pick-"]'))
@@ -918,7 +1063,7 @@ dl.facts dd { margin: 0; }
         // A cached first snapshot without the document says nothing yet
         if (!snap.exists && snap.metadata && snap.metadata.fromCache) return;
         prefExists = snap.exists;
-        var data = (snap.exists && snap.data()) || {};
+        var data = settledBody("preferences/" + uid, snap) || {};
         DECISIONS.forEach(function (d) { if (!pendingPicks[d]) picks[d] = validOption(d, data[d]); });
         renderPicks();
       }, function () {
@@ -1047,7 +1192,7 @@ dl.facts dd { margin: 0; }
   function readComments(snap) {
     var list = [];
     snap.docs.forEach(function (doc) {
-      var items = (doc.data() || {}).items;
+      var items = (settledBody("comments/" + doc.id, doc, snap.metadata) || {}).items;
       if (!items || typeof items !== "object") return;
       Object.keys(items).forEach(function (id) {
         var d = items[id] || {};
@@ -1204,7 +1349,7 @@ dl.facts dd { margin: 0; }
     var item = el("li");
     var target = pointEl(c.point);
     var link = el("a");
-    link.href = "#" + (target.id || (target.closest("[id]") || {}).id || "");
+    link.href = pointAnchor(target);
     link.setAttribute("data-goto", c.point);
     link.appendChild(el("span", "ref", c.point));
     item.appendChild(link);
@@ -1426,8 +1571,8 @@ dl.facts dd { margin: 0; }
       return head ? head.parentNode : null;
     }
 
-    function readTicket(doc) {
-      var d = doc.data() || {};
+    function readTicket(doc, queryMeta) {
+      var d = settledBody("tickets/" + doc.id, doc, queryMeta) || {};
       var refs = function (v) { return Array.isArray(v) ? v.filter(function (s) { return typeof s === "string"; }) : []; };
       var regen = d.regenerate && typeof d.regenerate === "object" ? d.regenerate : {};
       return {
@@ -1704,7 +1849,7 @@ dl.facts dd { margin: 0; }
     store.collection("tickets").limit(200).onSnapshot(function (snap) {
       tickets = {};
       snap.docs.forEach(function (doc) {
-        if (/^T\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc);
+        if (/^T\d+$/.test(doc.id)) tickets[doc.id] = readTicket(doc, snap.metadata);
       });
       renderTickets();
       if (!regenTimer && Object.keys(tickets).some(function (ref) { return tickets[ref].regenSentAt; })) {
