@@ -626,9 +626,11 @@ class MongoDbDao(Generic[Dto]):
 
         Please see the `Dao` protocol for the arguments and the errors.
         """
-        documents = self._batch_documents(dtos)
-        if not documents:
+        if not dtos:
             return
+        documents = self._batch_documents(dtos)
+        # No criteria besides the ID ({}), so each document replaces whatever is
+        # stored under its ID, or is inserted where nothing is
         _, failures = await self._bulk_replace(
             documents, {}, upsert=True, ordered=ordered
         )
