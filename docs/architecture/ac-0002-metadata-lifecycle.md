@@ -55,26 +55,30 @@ A submission can have one of the following statuses:
 
 The following status transitions are allowed:
 
-- pending :material-arrow-right: in-review
-- pending :material-arrow-right: canceled
-- in-review :material-arrow-right: completed
-- in-review :material-arrow-right: canceled
-- in-review :material-arrow-right: pending
-- completed :material-arrow-right: published
-- completed :material-arrow-right: deprecated-prepublication
-- completed :material-arrow-right: emptied-prepublication
-- deprecated-prepublication :material-arrow-right: emptied-prepublication
-- published :material-arrow-right: deprecated-postpublication
-- published :material-arrow-right: hidden-postpublication
-- published :material-arrow-right: emptied-postpublication
-- deprecated-postpublication :material-arrow-right: hidden-postpublication
-- deprecated-postpublication :material-arrow-right: emptied-postpublication
-- hidden-postpublication :material-arrow-right: deprecated-postpublication
-- hidden-postpublication :material-arrow-right: emptied-postpublication
+- pending → in-review
+- pending → canceled
+- in-review → completed
+- in-review → canceled
+- in-review → pending
+- completed → published
+- completed → deprecated-prepublication
+- completed → emptied-prepublication
+- deprecated-prepublication → emptied-prepublication
+- published → deprecated-postpublication
+- published → hidden-postpublication
+- published → emptied-postpublication
+- deprecated-postpublication → hidden-postpublication
+- deprecated-postpublication → emptied-postpublication
+- hidden-postpublication → deprecated-postpublication
+- hidden-postpublication → emptied-postpublication
 
 A deprecated submission may or may not be succeeded by a new submission.
 Thereby, the new submission may reuse (a part of) the metadata from the deprecated submission.
 The reused metadata including the already existing accessions is copied over to the new submission so that the contents of the deprecated submission and the new submission can be handled independently, for instance, the deprecated submission being emptied.
+
+> [!NOTE]
+> Only pending and completed are set today: the other statuses are defined but never used, and no submission replaces another yet ([AC-0008](ac-0008-metadata-and-file-journeys.md#the-submission-object--store)).
+> [Epic 0093](../epics/epic-0093-giraffe.md) changes this.
 
 ## Event Sourcing to Generate Artifacts
 
