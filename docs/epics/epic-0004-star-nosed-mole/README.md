@@ -4,7 +4,28 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/fAFzCQ>
+### Outline
+
+The aim of this epic is to build a file up-/download client that talks to the API implemented in the "Red-lipped Batfish" epic.
+Moreover, a proof of concept (POC) study should be conducted to investigate whether our service and client implementation is working with the available S3 services in Tübingen and at the DKFZ.
+Moreover, it should be benchmarked whether these production systems are capable of handling terabyte-sized files.
+
+Benchmarking has been moved to a later epic.
+
+### Included/Required
+
+- a simple CLI client for up-/download of files
+- benchmarking / POC criteria:
+  - is our implementation functional on the Tübingen/DKFZ S3
+  - for large files (e.g. 1 TB):
+    - reliability (occurrence of sporadic errors/unavailabilities?)
+    - throughput (is up- and downloading files reasonably fast?)
+    - scalability (is the experience deteriorating when uploading multiple large files at once?)
+
+### Not included
+
+- user authentication & authorization
+- file encryption
 
 ## User Journeys
 

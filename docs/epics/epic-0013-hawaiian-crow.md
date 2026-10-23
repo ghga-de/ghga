@@ -2,10 +2,6 @@
 
 **Epic Type:** Exploratory Epic
 
-## Scope
-
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/sICcCw>
-
 ## Principal Components of Exploration
 
 This epic covers benchmarking performance and reliability of S3 upload/download using hexkit and CLI functionality.
@@ -21,7 +17,7 @@ Test files consist of four categories:
 - Medium file: ~ 50 GiB
 - Big file: ~ 150 GiB (not bigger than 160 GiB)
 
-Content in the test files consists of sequence data in FASTA format.
+Content in the test files consists of sequence data in FASTA format, either from real data or simulated.
 
 ### Benchmarking Setup
 
@@ -44,10 +40,7 @@ Create a benchmarking script based on the S3 provider implementation in hexkit (
 ## Additional Details
 
 - IBM COS Documentation: <https://cloud.ibm.com/docs/cloud-object-storage>
-- IBM COS expert in Heidelberg: Koray
 - Ceph Documentation: <https://docs.ceph.com/en/quincy/>
-- Ceph Storage in Tübingen deployed by Sardina Systems (<info@sardinasystems.com>)
-- Ceph Storage & de.NBI expert in Tübingen: Moritz
 
 ## Human Resource/Time Estimation
 

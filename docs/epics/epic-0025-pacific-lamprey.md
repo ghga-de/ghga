@@ -6,7 +6,7 @@
 
 ## Scope
 
-The aim of this study is to create a proof of concept implementation of the strategy outlined in <https://docs.ghga-dev.de/main/architecture_concepts/ac002_metadata_lifecycle.html>.
+The aim of this study is to create a proof of concept implementation of the strategy outlined in [AC-0002](../architecture/ac-0002-metadata-lifecycle.md).
 
 ## Additional Implementation Details
 
