@@ -13,7 +13,7 @@ The same charts run the whole platform on a local Kubernetes cluster, created wi
 The services have a hexagonal architecture (ports and adapters), built on our hexkit library: the core logic depends only on interfaces, the ports, and adapters implement them for Kafka, MongoDB and S3.
 They exchange events over Kafka, each keeps its own MongoDB database, and files live in S3 buckets.
 The data portal and the CLIs call the services' REST APIs through one gateway: Istio in staging and production, Envoy Gateway in the demo and the test bed ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)).
-The [architecture overview](../architecture/overview.md) and the [journeys](../architecture/metadata-and-file-journeys.md) have the details.
+The [architecture overview](../architecture/ac-0000-monorepo-overview.md) and the [journeys](../architecture/ac-0008-metadata-and-file-journeys.md) have the details.
 
 ## How it is organised
 
@@ -107,8 +107,8 @@ A tag push builds and verifies; publishing is a separate, deliberate step ([rele
 
 In this order:
 
-1. **[Architecture overview](../architecture/overview.md)**, sections 3.1 to 3.7, for how the repo is built and why.
-2. **[Metadata and file journeys](../architecture/metadata-and-file-journeys.md)**, for how metadata and files flow across the services.
+1. **[Architecture overview](../architecture/ac-0000-monorepo-overview.md)**, sections 3.1 to 3.7, for how the repo is built and why.
+2. **[Metadata and file journeys](../architecture/ac-0008-metadata-and-file-journeys.md)**, for how metadata and files flow across the services.
    Read it before you change submission, upload, file mapping or serving.
 3. **[The ADR index](../README.md#decisions-adrs)**, for the decisions and their reasons; skim the titles and read those in your area.
 4. **[Conventions](../conventions.md)** and the **[writing style](../style.md)**, for names, branches, versions and how docs, comments and pull requests are written.
