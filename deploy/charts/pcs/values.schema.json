@@ -836,17 +836,6 @@
             "null"
           ]
         },
-        "db_name": {
-          "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
-          "examples": [
-            "my-database"
-          ],
-          "title": "Db Name",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "service_instance_id": {
           "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
           "examples": [
@@ -1182,6 +1171,17 @@
           "title": "Kafka Retry Backoff",
           "type": [
             "integer",
+            "null"
+          ]
+        },
+        "db_name": {
+          "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
+          "examples": [
+            "my-database"
+          ],
+          "title": "Db Name",
+          "type": [
+            "string",
             "null"
           ]
         },
