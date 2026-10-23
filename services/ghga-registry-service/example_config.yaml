@@ -19,7 +19,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 cors_exposed_headers: null
-db_name: rs
+db_name: registry
 db_version_collection: rsDbVersions
 docs_url: /docs
 enable_opentelemetry: false

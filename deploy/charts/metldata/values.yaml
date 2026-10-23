@@ -188,7 +188,6 @@ configMap:
 config:
   artifact_infos: []
   mongo_dsn:
-  db_name: metadata_artifacts
   host: 0.0.0.0
   loader_token_hashes:
   primary_artifact_name: embedded_public

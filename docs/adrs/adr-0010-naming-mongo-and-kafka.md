@@ -41,8 +41,9 @@ Therefore, we sought a consistent way to spell these names.
 
 **MongoDB Database Names:**
 
-- Service databases should use the lowercase short form of the service name as the database name (e.g., "auth" for the authentication service or "wps" for the work package service).
-- Do not append a "DB" suffix since it is redundant and the default databases don't use it either.
+- A service database takes the service's name in kebab-case, without a "-service", "-db" or "-DB" suffix (e.g., "work-package" for the work package service), so that whoever maintains the databases can tell them apart and see what each one is for.
+  A database name may also be abbreviated or expanded if it seems more suitable.
+- A service's development config should use the same database name as its deployment.
 - Do not use dots in database names.
   Prefixes for test branches should be separated using a hyphen.
 

@@ -16,7 +16,6 @@ mapping:
 config:
   artifact_infos: []
   mongo_dsn:
-  db_name: metadata_artifacts
   host: 0.0.0.0
   loader_token_hashes:       # <Please fill - The tokens must be the loader token generated using the data steward kit.>
   primary_artifact_name: embedded_public

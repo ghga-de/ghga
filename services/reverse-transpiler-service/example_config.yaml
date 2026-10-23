@@ -6,7 +6,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 cors_exposed_headers: null
-db_name: rts
+db_name: reverse-transpiler
 db_version_collection: rtsDbVersions
 docs_url: /docs
 generate_correlation_id: true

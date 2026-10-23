@@ -117,7 +117,10 @@
       "type": "string"
     },
     "db_name": {
-      "default": "work-packages",
+      "description": "Name of the database located on the MongoDB server.",
+      "examples": [
+        "my-database"
+      ],
       "title": "Db Name",
       "type": "string"
     },
@@ -571,6 +574,7 @@
     "service_instance_id",
     "work_package_signing_key",
     "mongo_dsn",
+    "db_name",
     "db_version_collection",
     "migration_wait_sec",
     "kafka_servers",

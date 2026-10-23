@@ -5,7 +5,7 @@ kafka_servers: ["kafka:9092"]
 kafka_enable_dlq: True
 
 mongo_dsn: "mongodb://mongodb:27017"
-db_name: "dev"
+db_name: dataset-information
 
 dataset_change_topic: metadata-datasets
 dataset_deletion_type: dataset_deleted

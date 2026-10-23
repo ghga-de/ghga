@@ -1,4 +1,4 @@
-db_name: dev_db
+db_name: notification
 db_version_collection: nsDbVersions
 email_notification_type: email_notification
 from_address: test@test.com

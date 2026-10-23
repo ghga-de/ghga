@@ -160,7 +160,14 @@ The service requires the following configuration parameters:
   "mongodb://localhost:27017"
   ```
 
-- <a id="properties/db_name"></a>**`db_name`** *(string)*: Default: `"work-packages"`.
+- <a id="properties/db_name"></a>**`db_name`** *(string, required)*: Name of the database located on the MongoDB server.
+
+  Examples:
+
+  ```json
+  "my-database"
+  ```
+
 - <a id="properties/mongo_timeout"></a>**`mongo_timeout`**: Timeout in seconds for API calls to MongoDB.
   The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution.
   When the timeout expires, PyMongo raises a timeout exception.

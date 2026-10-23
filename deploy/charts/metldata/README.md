@@ -20,7 +20,6 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `config.artifact_infos` | Information for artifacts to be queryable via the Artifacts REST API. | `null` |
 | `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
-| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.host` | IP of the host. | `"127.0.0.1"` |
 | `config.loader_token_hashes` | Hashes of tokens used to authenticate for loading artifact. | `null` |
 | `config.primary_artifact_name` | Name of the artifact from which the information for outgoing change events is derived. | `null` |
@@ -31,6 +30,7 @@ for the full set of configurable values.
 | `config.service_name` | NOTE: this chart's configmap.tpl always overwrites config.service_name with the value computed from `serviceName` - a value set directly under config.service_name is silently discarded. Set `serviceName` instead. | `"metldata"` |
 | `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
 | `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
+| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
 | `config.kafka_servers` | A list of connection strings to connect to Kafka bootstrap servers. | `null` |
 | `config.kafka_security_protocol` | Protocol used to communicate with brokers. Valid values are: PLAINTEXT, SSL. | `"PLAINTEXT"` |

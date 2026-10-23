@@ -183,7 +183,6 @@ configMap:
     enabled: true
 config:
   mongo_dsn:
-  db_name: metadata-store
   host: "0.0.0.0"
   searchable_classes:
     EmbeddedDataset:

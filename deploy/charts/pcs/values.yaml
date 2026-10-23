@@ -169,7 +169,6 @@ configMap:
 config:
   host: 0.0.0.0
   mongo_dsn:
-  db_name: pcs
   service_instance_id: rest.1
   token_hashes: []
   enable_opentelemetry: false
