@@ -11,15 +11,16 @@ metadata:
 
 The board is the reviewer's tool.
 It moves the findings of a review out of the session into a page the reviewer works through, one decision per finding, before anything reaches the pull request.
-For one or two findings, say them in the session instead.
+For one or two findings, say them in the session instead, unless the reviewer asks for a board.
 
 ## Gather
 
 1. The findings come from the session (`/ghga-review`, `/code-review`) or from the reviewer's own list.
    Keep the reviewer's numbers: they are how the pull request refers to the findings.
 2. The change: `gh pr view <n> --json title,headRefName,baseRefName,body` and `gh pr diff <n>`.
-3. Reproduce on the pull request's head, not in the reviewer's checkout: `just wt review/pr-<n> origin/<headRefName>`.
-   Remove it afterwards by its directory name, `just wt-rm pr-<n>`, and delete the branch.
+3. Reproduce on the pull request's head, not in the reviewer's checkout.
+   For code that runs, make a worktree, `just wt review/pr-<n> origin/<headRefName>`, and remove it afterwards by its directory name, `just wt-rm pr-<n>`, and delete the branch.
+   When the pull request changes only files that are read rather than run, such as skills, docs or templates, copy the files you probe into the scratchpad with `git show origin/<headRefName>:<path>` instead.
 
 ## Reproduce every finding
 
@@ -28,8 +29,8 @@ A finding without observed output is a guess.
 - Run the smallest script or test that triggers it, and keep the real output.
 - Write it as the code meets the defect: a real declaration, a real fixture, the domain's names, not calls into private internals.
 - Keep probe scripts in the session's scratchpad, never in the repo; they often become regression tests later.
-- A finding that does not reproduce is dropped, or kept in the lowest band and marked unverified.
-  Never present reasoning as observed behaviour.
+- A finding that does not reproduce is dropped, or kept in the lowest band with `unverified: true`.
+  Never present reasoning as observed behaviour: the board marks such a finding, and the review's summary counts it.
 
 ## Write each finding
 
@@ -42,6 +43,7 @@ A finding without observed output is a guess.
 | `what` | The mechanism, then its consequence |
 | `code` | The usage that triggers it |
 | `output` | The observed output, verbatim, with the last line of a traceback |
+| `unverified` | `true` only when the finding did not reproduce; `output` then says what was tried |
 | `verdict` | Optional: what code and output do not show, such as why an escape hatch fails |
 | `fix` | How to fix it, in one of the shapes below |
 | `cost` | The fix's shape as its cost: "one place", "a few places" or "bigger change" |
