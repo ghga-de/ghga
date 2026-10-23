@@ -236,7 +236,13 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
       const which = !hints ? "" : hints === n ? (n === 1 ? ", with a suggestion" : ", each with a suggestion") : `, ${hints} with a suggestion`;
       return `${n} ${n === 1 ? one : many}${which}.`;
     };
-    const lines = [`${DATA.summary || "Review"} Each finding was reproduced on ${PR.head.slice(0, 9)}.`];
+    // Claims reproduction only for the findings that reproduced
+    const posted = FINDINGS.filter(f => ["needs_fix", "up_to_dev"].includes(statusOf[f.id]));
+    const unverified = posted.filter(f => f.unverified).length, head = PR.head.slice(0, 9);
+    const repro = !unverified ? `Each finding was reproduced on ${head}.`
+      : unverified === posted.length ? `No finding could be reproduced on ${head}; each is reasoned from the code.`
+      : `${posted.length - unverified} of ${posted.length} findings were reproduced on ${head}; ${unverified === 1 ? "the other is" : "the others are"} reasoned from the code.`;
+    const lines = [`${DATA.summary || "Review"} ${repro}`];
     const fix = posts("needs_fix"), dev = posts("up_to_dev");
     if (fix.length) lines.push(count(fix, "comment asks for a fix", "comments ask for a fix"));
     if (dev.length) lines.push(count(dev, "comment marked q: leaves the call to you", "comments marked q: leave the call to you"));
@@ -254,7 +260,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
           <div class="f-top">
             <span class="num">#${f.id}</span>
             <span class="title">${f.title}</span>
-            <span class="cost">${f.cost}</span>
+            <span class="cost">${f.unverified ? "unverified · " : ""}${f.cost}</span>
             <label class="status"><span class="dot" aria-hidden="true"></span>
               <select id="status-${f.id}" aria-label="Status of finding ${f.id}">
                 ${STATUSES.map(s => `<option value="${s.key}">${s.label}</option>`).join("")}

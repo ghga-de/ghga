@@ -33,6 +33,7 @@ Code, output, comment bodies and suggestions are plain text, which the page esca
 
 - Statuses live in the store's `findings` collection, one document per finding at `findings/f<id>`, holding `{status, updatedAt}`; seed known ones with ArtifactData after publishing, never in the page.
 - Under each finding marked Needs fix or Up to dev, **Show the comments to post** shows each comment's anchor and exact text, as [post.md](post.md) builds them, and the panel shows the review's summary.
+- A finding with `unverified: true` shows "unverified" next to its cost, and the summary says how many of the posted findings reproduced instead of claiming all did.
 - The **Post review** button works for the owner alone, as in `define-tasks`, and only when no finding is open and at least one is to be posted.
   A press sends a claude.ai thread starting "Post the review of #<n>" (or "Dry run:" on a test board) and sets `review/post` to `{status: "requested", requestedAt}`; the session sets it to `posted` with the review's `url`, or `failed` with a `reason`, and a request without an answer frees after 30 minutes.
 - Next to the button the page says why it is disabled; a line with each check's result (store, owner, sending to Claude) appears only when one fails, and a permissions button only when a capability is denied.
