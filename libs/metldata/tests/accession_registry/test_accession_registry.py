@@ -21,8 +21,9 @@ import pytest
 
 from ghga_service_commons.utils.accessions import (
     BASE32_ALPHABET,
+    DATASET_PID_PATTERN,
     DATASET_PID_PREFIX,
-    RANDOM_BLOCK,
+    STUDY_PID_PATTERN,
     STUDY_PID_PREFIX,
 )
 from ghga_service_commons.utils.utc_dates import now_as_utc
@@ -31,14 +32,6 @@ from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.config import SubmissionConfig
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
-
-STUDY_PID_PATTERN = re.compile(
-    rf"^{re.escape(STUDY_PID_PREFIX)}\.(\d{{2}})\.({RANDOM_BLOCK})\.1$"
-)
-DATASET_PID_PATTERN = re.compile(
-    rf"^{re.escape(STUDY_PID_PREFIX)}\.\d{{2}}\.{RANDOM_BLOCK}\.1"
-    + rf"\.{re.escape(DATASET_PID_PREFIX)}\.{RANDOM_BLOCK}$"
-)
 
 
 def make_registry(config: SubmissionConfig) -> tuple[AccessionRegistry, AccessionStore]:
@@ -63,10 +56,11 @@ def test_fresh_study_pid(
 
     study_pid = accession_registry.get_study_accession()
 
-    match = STUDY_PID_PATTERN.match(study_pid)
-    assert match
-    assert match.group(1) == now_as_utc().strftime("%y")
-    assert accession_store.get_random_blocks(year=match.group(1)) == {match.group(2)}
+    assert re.fullmatch(STUDY_PID_PATTERN, study_pid)
+    _, year, random_block, version = study_pid.split(".")
+    assert version == "1"
+    assert year == now_as_utc().strftime("%y")
+    assert accession_store.get_random_blocks(year=year) == {random_block}
 
 
 def test_fresh_study_pids_are_unique(
@@ -125,7 +119,7 @@ def test_dataset_pids(
         dataset_pid = accession_registry.get_dataset_accession(
             study_pid=study_pid, used_accessions=used_accessions
         )
-        assert DATASET_PID_PATTERN.match(dataset_pid)
+        assert re.fullmatch(DATASET_PID_PATTERN, dataset_pid)
         assert dataset_pid.startswith(f"{study_pid}.{DATASET_PID_PREFIX}.")
         assert dataset_pid not in used_accessions
         used_accessions.add(dataset_pid)
@@ -165,17 +159,17 @@ def test_retire_accessions(
     """
     accession_registry, accession_store = make_registry(config_sub_fixture)
     study_pid = accession_registry.get_study_accession()
-    match = STUDY_PID_PATTERN.match(study_pid)
-    assert match
+    _, year, random_block, _ = study_pid.split(".")
 
     accession_registry.retire_accessions(
         study_pid=study_pid,
         accessions={f"{study_pid}.DS.K7Q", f"{study_pid}.sample-a", "GHGA.26.X.1.s"},
     )
 
-    assert accession_store.get_retired(
-        year=match.group(1), random_block=match.group(2)
-    ) == {"DS.K7Q", "sample-a"}
+    assert accession_store.get_retired(year=year, random_block=random_block) == {
+        "DS.K7Q",
+        "sample-a",
+    }
     assert accession_registry.get_retired_accessions(study_pid=study_pid) == {
         f"{study_pid}.DS.K7Q",
         f"{study_pid}.sample-a",
