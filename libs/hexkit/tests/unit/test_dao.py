@@ -262,5 +262,5 @@ async def test_ensure_distinct_ids():
     ensure_distinct_ids(["a", "b", 1])
     ensure_distinct_ids([])
 
-    with pytest.raises(ValueError, match=r"more than once: \['a', 1\]$"):
+    with pytest.raises(ValueError, match=r"more than once: \[1, 'a'\]$"):
         ensure_distinct_ids(["a", 1, "b", "a", 1, "a"])

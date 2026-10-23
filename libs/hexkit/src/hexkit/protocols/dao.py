@@ -122,11 +122,12 @@ class PreconditionFailedError(DaoError):
 
 
 class BatchOperationError(DaoError):
-    """Raised when some resources of a batch failed; the unlisted ones were written.
+    """Raised when a batch partly failed: what it names failed, the rest succeeded.
 
     `errors` maps each failed ID to the error a single-resource method would raise.
     `not_attempted` lists, in input order, the IDs an ordered batch skipped after its
-    first failure.
+    first failure. An unordered batch attempts every resource, so for it the list is
+    empty.
     """
 
     def __init__(
@@ -176,13 +177,15 @@ def resolve_filter(
 def ensure_distinct_ids(ids: Iterable[ID]) -> None:
     """Raise a ValueError naming the IDs that occur more than once in a batch."""
     seen: set[ID] = set()
-    duplicates: list[ID] = []
+    duplicates: set[ID] = set()
     for id_ in ids:
-        if id_ in seen and id_ not in duplicates:
-            duplicates.append(id_)
+        if id_ in seen:
+            duplicates.add(id_)
         seen.add(id_)
     if duplicates:
-        raise ValueError(f"The batch holds these IDs more than once: {duplicates}")
+        # Sorted by their text, so the message does not depend on the set's order
+        listed = sorted(duplicates, key=str)
+        raise ValueError(f"The batch holds these IDs more than once: {listed}")
 
 
 class FindError(DaoError):

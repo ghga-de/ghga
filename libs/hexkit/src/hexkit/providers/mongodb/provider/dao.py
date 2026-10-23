@@ -128,9 +128,11 @@ DUPLICATE_KEY_ERROR = 11000
 def _errors_from_bulk_write(
     error: BulkWriteError, ids: Sequence[ID], *, ordered: bool
 ) -> BatchOperationError:
-    """Key the failures of a bulk write by the IDs of the resources that failed.
+    """Turn the failures of a bulk write into an error that names each failed resource.
 
-    `ids` holds the ID of each operation in the order the batch sent them.
+    `ids` holds the ID of each operation, in the order the operations were passed to
+    the bulk write. MongoDB names a failure by its index in that list, whether the
+    batch is ordered or not.
 
     Raises:
         DaoError: when the batch hit a write concern error, which no single resource
@@ -139,19 +141,28 @@ def _errors_from_bulk_write(
     if error.details.get("writeConcernErrors"):
         raise DaoError(str(error)) from error
     errors: dict[ID, DaoError] = {}
+    # Each failure gets the error that the single-resource method raises for it:
+    # - A duplicate key on `_id` means the resource exists already, which `insert`
+    #   reports as ResourceAlreadyExistsError. Without `keyValue` in the failure the
+    #   clashing index is unknown, and `insert` takes it to be the ID's as well.
+    # - A duplicate key on another field breaks a unique index, which `insert` and
+    #   `upsert` report as UniqueConstraintViolationError.
+    # - Any other failure, such as a failed document validation or a document over
+    #   the size limit, has no error of its own and becomes a DaoError.
     for failure in error.details["writeErrors"]:
         id_, key_value = ids[failure["index"]], failure.get("keyValue")
         if failure["code"] != DUPLICATE_KEY_ERROR:
-            # Document validation, size limits and other errors of one document
             errors[id_] = DaoError(failure["errmsg"])
         elif key_value is None or list(key_value) == ["_id"]:
-            # Without keyValue the clashing index is unknown; insert assumes the ID too
             errors[id_] = ResourceAlreadyExistsError(id_=id_)
         else:
             errors[id_] = UniqueConstraintViolationError(unique_fields=key_value)
-    # An ordered batch stops at its only failure and skips everything after it
-    stop = error.details["writeErrors"][0]["index"] if ordered else len(ids)
-    return BatchOperationError(errors=errors, not_attempted=ids[stop + 1 :])
+    # An ordered batch stops at its first failure, its only one, and skips the rest;
+    # an unordered batch attempts every operation, so it skips none
+    not_attempted: Sequence[ID] = ()
+    if ordered:
+        not_attempted = ids[error.details["writeErrors"][0]["index"] + 1 :]
+    return BatchOperationError(errors=errors, not_attempted=not_attempted)
 
 
 FieldName: TypeAlias = str
