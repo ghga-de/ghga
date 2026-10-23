@@ -46,7 +46,7 @@ What you install is what CI tests.
 CI runs the umbrella on kind, and so does the local loop, with kind inside the devcontainer's own Docker daemon.
 Local runs and CI use the same recipes.
 
-The [architecture overview](../architecture/overview.md#35-helm--adopt-ghga-common-app-charts--demo-umbrella) describes what the umbrella contains and how its profiles stack.
+The [architecture overview](../architecture/ac-0000-monorepo-overview.md#35-helm--adopt-ghga-common-app-charts--demo-umbrella) describes what the umbrella contains and how its profiles stack.
 
 ### Consequences
 

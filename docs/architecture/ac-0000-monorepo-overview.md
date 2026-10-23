@@ -1,11 +1,19 @@
-# GHGA Monorepo — Architecture Overview
+---
+status: current
+date: 2026-06-30
+amended: 2026-10-19
+tags: [build, release, deploy, testing]
+related: [ADR-0025, ADR-0026, ADR-0027, ADR-0028, ADR-0031]
+---
+
+# AC-0000 — Monorepo architecture overview
 
 > Status: **Implemented**, and kept as the reference for the architecture it describes — the consolidation of GHGA's ~28 actively-maintained repositories into one polyglot monorepo.
 > The load-bearing decisions are captured as ADRs under [docs/adrs/](../adrs/), whose [index](../README.md#decisions-adrs) carries their current status, and the step-by-step migration is in [docs/migration/runbook.md](../migration/runbook.md).
 > Where a section still reads as a plan, the ADRs are the current answer.
 >
 > This document describes the repository and its build.
-> For how the deployed services behave, read the two current-state references beside it: [metadata-and-file-journeys.md](metadata-and-file-journeys.md) for the metadata and file flows, and [kafka-cascade-map.md](kafka-cascade-map.md) for the event cascades, which the interactive [kafka-cascade-map.html](kafka-cascade-map.html) draws.
+> For how the deployed services behave, read the two current-state references beside it: [ac-0008-metadata-and-file-journeys.md](ac-0008-metadata-and-file-journeys.md) for the metadata and file flows, and [ac-0009-kafka-cascade-map.md](ac-0009-kafka-cascade-map.md) for the event cascades, which the interactive [kafka-cascade-map.html](kafka-cascade-map.html) draws.
 
 ## 1. Goals & non-goals
 
