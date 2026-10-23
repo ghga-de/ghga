@@ -1,4 +1,11 @@
-# Kafka cascades map
+---
+status: current
+date: 2026-10-12
+tags: [events]
+related: [ADR-0009, ADR-0010, AC-0006, AC-0008]
+---
+
+# AC-0009 — Kafka cascades map
 
 [kafka-cascade-map.html](kafka-cascade-map.html) draws every Kafka event cascade in GHGA as a tree per entrypoint: pick the call that publishes first, and the page unfolds which service reacts to which event, and what each one does.
 It also lists every topic with its producer and its subscribers; the page's own header carries the counts, which come from the source.
@@ -51,7 +58,7 @@ The pre-commit hook runs the same script, so a stale page or an edit inside the 
 | The entrypoints | the HTTP route or CLI command that publishes first; the page's `target` field names it |
 | The DLQ and retry edges | hexkit, `providers/akafka/provider/eventsub.py` — the behaviour is the same for every service, so the map draws it as one entrypoint rather than from every node |
 
-The conventions behind the names are in [ADR-0010](../adrs/adr-0010-naming-mongo-and-kafka.md), and the DLQ design in [ADR-0009](../adrs/adr-0009-kafka-dead-letter-queues.md). [metadata-and-file-journeys.md](metadata-and-file-journeys.md) describes the same flows as prose, and is the better read for why a step exists.
+The conventions behind the names are in [ADR-0010](../adrs/adr-0010-naming-mongo-and-kafka.md), and the DLQ design in [ADR-0009](../adrs/adr-0009-kafka-dead-letter-queues.md). [ac-0008-metadata-and-file-journeys.md](ac-0008-metadata-and-file-journeys.md) describes the same flows as prose, and is the better read for why a step exists.
 
 ## Checking it against the code
 

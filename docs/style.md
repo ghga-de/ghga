@@ -65,9 +65,9 @@ Agents read these files as well as people, so every extra paragraph costs contex
 | Pull request description | Up to 3 short paragraphs, about 150 words |
 | Commit message body | 3 to 5 bullets, per the [conventions](conventions.md#names-branches-prs-commits) |
 | Code comment | One line, a few at most |
-| ADR | About 500 words; the Summary alone about 120, at most 150. Long analysis goes into an architecture document that the ADR links to |
-| Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture documents instead of restating them |
-| Architecture document | As long as the subject needs; open with a summary of up to 10 lines and use headings, so a reader can load a single section |
+| ADR | About 500 words; the Summary alone about 120, at most 150. Long analysis goes into an architecture concept that the ADR links to |
+| Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture concepts instead of restating them |
+| [Architecture concept](architecture/README.md) | As long as the subject needs; open with a summary of up to 10 lines and use headings, so a reader can load a single section |
 
 ## Line wrapping
 
@@ -147,4 +147,4 @@ Change that is large enough to replace the decision gets a new ADR that supersed
 
 The index in [`docs/README.md`](README.md#decisions-adrs) is generated from the frontmatter.
 `scripts/docs_check.py` checks these rules and every ADR reference in the tree, and regenerates the index ([ADR-0041](adrs/adr-0041-docs-linting.md)).
-The same script checks the epics and their index; it runs as a pre-commit hook and as `just docs-check`.
+The same script checks the epics, the [architecture concepts](architecture/README.md) and their indexes; it runs as a pre-commit hook and as `just docs-check`.
