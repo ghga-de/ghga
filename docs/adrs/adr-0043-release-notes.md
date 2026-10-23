@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-09-23
-amended: 2026-09-30
+amended: 2026-10-23
 tags: [release, process]
 related: [ADR-0027, ADR-0038]
 ---
@@ -82,6 +82,13 @@ The notes have two parts:
 2. **Pull requests:** grouped under Features, Fixes, Documentation, Refactoring, Tests and Chores by the commit type.
    Breaking changes are marked and come first in their group.
    A commit outside the grammar is listed under Chores, and empty groups are left out.
+
+**Amended 2026-10-23:** a third part, **Upgrade notes**, sits between the two.
+A deployment or a tool's user needs to know which flag, setting or chart value changed, but a pull request cannot know the release it will land in.
+So every pull request description ends in `Upgrade:` lines, or `Upgrade: none`, and a required check blocks the merge until it does.
+The script fetches the descriptions of the pull requests it lists and collects their lines, so the tag range decides the release.
+It reads the description rather than the commit message, which keeps the lines only if whoever merges copies them; a commit without a pull request falls back to its message.
+The lines live in the pull request, not in files, so the reasons for rejecting changelog files below still hold.
 
 Only the platform's final releases are marked as the repository's latest release.
 
