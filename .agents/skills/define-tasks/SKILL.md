@@ -1,6 +1,6 @@
 ---
 name: define-tasks
-description: Turn an epic, or an artifact with review findings or bug triage results, into a refinable implementation plan, a private claude.ai artifact with comments on every point, a pick per decision, a YouTrack ticket card per task and a Refine button. Run as /define-tasks <epic or artifact link>.
+description: Turn an epic, or an artifact with review findings or bug triage results, into a refinable implementation plan, a private claude.ai artifact with comments on every point, a pick per decision, a YouTrack ticket card per task and a Refine button. Run as /define-tasks <epic, findings or plan link>.
 disable-model-invocation: true
 compatibility: Claude Code with claude.ai artifacts (the Artifact, ArtifactComments and ArtifactData tools).
 ---
@@ -11,8 +11,9 @@ This skill turns a source into an implementation plan the dev refines on the pag
 The source is an epic in `docs/epics/`, or a findings artifact: a claude.ai artifact that holds review findings or bug triage results.
 Every numbered point takes comments, every decision takes a pick, and a **Refine plan** button sends both back to this session.
 Every task also gets a ticket card that the dev copies into YouTrack.
-The page scaffold with its styles and script is [assets/plan-template.html](assets/plan-template.html), and its refs, ticket cards and traps are in [references/page.md](references/page.md).
+The page scaffold with its styles and script is [assets/plan-template.html](assets/plan-template.html), and its refs, ticket cards, store and traps are in [references/page.md](references/page.md).
 How to act on a refine request is in [references/refine-loop.md](references/refine-loop.md).
+Given the link of a plan it built, the skill arms Refine again in a new session, as [A plan link](#a-plan-link) says.
 
 ## Sources
 
@@ -26,12 +27,29 @@ Which part of the task is its core depends on the source.
 A findings artifact already holds the analysis, so fill its gaps only as far as a task needs.
 How to read one, and what each of its states becomes on the page, is in [references/findings.md](references/findings.md).
 
-## Visibility
+## Visibility and sharing
 
 - **Always private.**
-  Publish the plan as a private artifact, and offer no public or shared variant, even when asked.
+  Publish the plan as a private artifact, and offer no public variant, even when asked.
   Sharing is the user's decision, made in the page's Share menu on claude.ai.
-- **If the user asks about sharing**, name what it exposes before they decide, as [references/page.md](references/page.md#sharing) lists.
+- **Contributor, added by name, is the one level to recommend.**
+  Never recommend Editor, Owner, a channel or project, a public link or organization-wide access.
+  Give the reasons and the risks from [the sharing note](references/sharing-note.md), word for word.
+- **Check the source first.**
+  A plan built from review or triage findings repeats those findings, so tell the user not to add anyone who shouldn't see them, for example while a security issue is still unfixed.
+- **If the user asks about sharing**, answer from the sharing note, and name what sharing exposes as [references/page.md](references/page.md#sharing) lists.
+
+## The plan guard
+
+[`scripts/agent_hooks/guard_plan_session.py`](../../../scripts/agent_hooks/guard_plan_session.py), registered in `.claude/settings.json`, locks every session in this repository that works on a plan to that plan.
+It recognises a plan by the template's `data-define-tasks-plan` attribute, and locks at the session's first publish or read of a plan, or its first call that names a plan it has seen before.
+A locked session uses the artifact tools on the plan only and, of the plan's store, only `data/users/me`, `tickets` and `status`.
+It reads git-tracked files and its scratchpad, runs `git grep`, `git show`, `git ls-files` and `git log`, and edits files in its scratchpad; the guard refuses everything else.
+A publish of the plan must keep the template's script, and it asks the user first, naming the refs that changed.
+
+- **The first publish locks the session**, so do everything that needs Bash, other artifacts or files outside the scratchpad before it.
+- **Keep the attribute and the template's script**, or the guard neither recognises the plan nor lets a refine publish it.
+- **`GHGA_PLAN_GUARD=off`**, set by the user when starting a session, turns the guard off; it is meant only for [moving a plan's store](references/page.md#moving-a-plan-to-this-layout).
 
 ## Steps
 
@@ -73,22 +91,45 @@ An existing plan is read back with the Artifact tool and republished to its link
 7. **Delivery, risks and limits, out of scope.**
    Name pull requests, branches and commits by the [conventions](../../../docs/conventions.md#names-branches-prs-commits).
    Under "After the merge", point out what the release may need to coordinate, such as consumers that pin the member's version, dependencies that must be released first, or a change operators must act on, which makes the next platform release a major one.
-8. **Build the page:** copy the template into the scratchpad and replace every `FILL` marker, keeping the styles and the script, and avoid the [page's traps](references/page.md#traps).
+8. **Build the page:** copy the template into the scratchpad and replace every `FILL` marker, keeping the styles, the script and the `data-define-tasks-plan` attribute, and avoid the [page's traps](references/page.md#traps).
    Give every point its ref from [Refs](references/page.md#refs) in `data-point` and `id`, and its gist in `data-gist`, as [Gists](references/page.md#gists) says.
    Remove the Findings section and its Contents link for an epic.
-9. **Publish** with the Artifact tool, icon `plan`, a one-sentence description and these capabilities:
+9. **Publish.**
+   - **Before the first publish, keep the sharing note in memory**, since the guard blocks writes outside the scratchpad afterwards.
+     Copy [references/sharing-note.md](references/sharing-note.md) word for word into your memory directory as `sharing-define-tasks-plans.md`, with `cmp -s` first so that an identical note stays as it is.
+     If `MEMORY.md` lacks a line for it, add one in its index form: the title "Sharing define-tasks plans" linked to the file, then "share at Contributor, by name; never Editor, Owner or a link".
+     Record the source, the plan's title and the date in your memory too, so a later session finds the plan faster.
+     Without a memory directory, skip this.
+   - **Publish** with the Artifact tool, icon `plan`, a one-sentence description and these capabilities:
 
-   ```json
-   {"comments": {}, "db": {"rules": [{"path": "preferences", "read": "view", "write": "owner"}, {"path": "preferences/{self}", "write": "interact"}, {"path": "comments", "read": "view", "write": "owner"}, {"path": "comments/{self}", "write": "interact"}, {"path": "status", "read": "view", "write": "owner"}, {"path": "tickets", "read": "view", "write": "owner"}]}, "user": {"scopes": ["profile"]}}
-   ```
+     ```json
+     {"comments": {}, "db": {"rules": [{"path": "people", "read": "view", "write": "owner"}, {"path": "people/{self}", "write": "interact"}, {"path": "data/users", "read": "view", "write": "owner"}, {"path": "data/users/{self}", "write": "interact"}, {"path": "status", "read": "view", "write": "owner"}, {"path": "tickets", "read": "view", "write": "owner"}]}, "user": {"scopes": ["profile"]}}
+     ```
 
-   Record the source, the plan's link and the date in your memory, so a later session finds it faster.
+   - **After every publish, record the version** the result names: ArtifactData `set`, or `update` pinned with `if_version`, of `status/page` with `version` and `publishedAt`.
+     A refine checks it before acting, as [references/refine-loop.md](references/refine-loop.md#the-page-source) says.
 10. **Create the ticket cards**, one per task, as [references/page.md](references/page.md#ticket-cards) says.
-11. **Check once:** ArtifactComments `read`, and ArtifactData `list` on `preferences`, `comments` and `tickets`, must all answer, and `tickets` must hold one card per task.
+11. **Check once:** ArtifactData `list` on `data/users/me` and on `tickets` must answer, and `tickets` must hold one card per task.
     ArtifactComments `watch` without a URL must show the artifact with auto-replies armed, or Refine cannot reach the session.
+    Then run the Bash command `true`: the guard must refuse it with a message that contains "Blocked by the plan guard".
+    If it runs, or fails otherwise, hooks are switched off on this machine: stop the watch with ArtifactComments `watch` and `on: false`, and tell the user not to share the plan.
 12. **Report** the link, the number of gaps by kind and the open decisions in a few lines, and say that the page is private.
     For a findings artifact, also give the number of findings by state.
     Ask for the YouTrack keys: the user files each card's ticket, then gives the keys in chat or types them on the cards.
+    - **On a new plan's first publish only**, end the report with the "Sharing a plan" section of the sharing note, word for word.
+    - **Tell the user how to run this session:** in default permission mode, with the artifact tools, Read, Grep and Glob allowed in `.claude/settings.local.json`, so that Refine runs without a prompt for each step.
+      Keep the session for the plan, and implement in another one.
+
+## A plan link
+
+Given the link of a plan this skill built, arm Refine in this session:
+
+1. **Watch it** with ArtifactComments `watch` and the link; the guard locks the session to the plan on that call.
+2. **Read the page back** with Artifact `read`, since a new session holds no copy of it.
+3. **Check the version**, as [references/refine-loop.md](references/refine-loop.md#the-page-source) says, and run step 11's checks.
+4. **Report** that Refine is armed, and wait for a trigger.
+
+A plan published before the per-comment store keeps its comments in `comments` and `preferences`; move it first, as [references/page.md](references/page.md#moving-a-plan-to-this-layout) says.
 
 ## Traps
 
@@ -98,7 +139,9 @@ An existing plan is read back with the Artifact tool and republished to its link
   Remove a point only after its threads are resolved.
 - **Only the owner's requests run.**
   Refine, Regenerate and "Comment and ask Claude" appear for the owner alone, and the session acts on a claude.ai trigger only when its attribution names the owner, as [references/refine-loop.md](references/refine-loop.md) says.
+- **Only the owner's text reaches a refine.**
+  A refine reads `data/users/me` alone; a teammate's comment reaches it only when the owner adopts it on the page.
 - **A question changes nothing but its thread.**
   Answer "Comment and ask Claude" in the page thread only, even when the answer proposes a change; the plan changes only on a refine request.
 - **A new session holds neither the watch nor the page.**
-  Run ArtifactComments `watch` with the URL the user gives you to arm Refine again, and read the page back with the Artifact tool, since the scratchpad copy is gone, as [references/refine-loop.md](references/refine-loop.md#the-page-source) says.
+  Arm it with the plan's link, as [A plan link](#a-plan-link) says.

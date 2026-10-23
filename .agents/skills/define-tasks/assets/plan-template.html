@@ -1,5 +1,5 @@
 <title>FILL: Code Name Plan</title>
-<!-- Built by the define-tasks skill. Fill the FILL markers; keep the styles and the script as they are. -->
+<!-- Built by the define-tasks skill. Fill the FILL markers; keep the styles, the script and the data-define-tasks-plan attribute, by which the plan guard recognises a plan. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -395,6 +395,18 @@ tr.thread-row > td { background: var(--bg); padding-top: 0.25rem; }
 .form-note { font-size: var(--step--1); color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+/* The owner's actions on comments, removed comments, and everyone's picks */
+.msg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.9rem; margin-top: 0.35rem; }
+.msg-actions .btn-link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+.msg-actions.confirm { padding: 0.45rem 0.6rem; background: var(--accent-soft); border-radius: 5px; font-size: var(--step--1); }
+.confirm-text { flex: 1 1 16rem; min-width: 0; }
+.removed-note { font-style: italic; color: var(--muted); }
+/* An adopted copy: the author's text, taken into the owner's comments */
+.msg.adopted { background: var(--ok-soft); border-left: 3px solid var(--ok); border-radius: 0 5px 5px 0; padding: 0.35rem 0.6rem; }
+.msg.reply.adopted { margin-left: 0.9rem; }
+.adopt-tag { margin-left: 0.4rem; vertical-align: 0.1em; }
+.pick-others { display: block; margin-top: 0.2rem; color: var(--muted); }
+
 /* Comment overview under the header */
 .overview { margin-top: 0.75rem; padding: 0 0.9rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
 .overview > summary { cursor: pointer; padding: 0.55rem 0; font-weight: 600; font-size: 0.95rem; }
@@ -461,7 +473,20 @@ a.xref:hover, a.xref:focus-visible { text-decoration-style: solid; }
 tr.picked td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 tr.picked .pick { color: var(--accent); font-weight: 600; }
 .pick-status { display: none; font-size: var(--step--1); color: var(--muted); margin: -0.4rem 0 0; }
-.can-pick .pick-status { display: block; }
+.can-pick .pick-status, .sees-picks .pick-status { display: block; }
+/* The owner's pick, shown to everyone else on its row */
+.owner-pick {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  white-space: nowrap;
+}
 .pick-status .pick-text { color: var(--ink); }
 button.clear {
   font: inherit;
@@ -595,7 +620,7 @@ dl.facts dd { margin: 0; }
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 </style>
 
-<div class="page">
+<div class="page" data-define-tasks-plan>
   <!-- FILL: one link per section; nest the tasks. Keep the Findings link only when the source is a findings artifact. -->
   <nav class="toc" aria-label="Contents">
     <p>Contents</p>
@@ -967,7 +992,7 @@ dl.facts dd { margin: 0; }
     return body && base ? mergeBodies(base, body) : body;
   }
 
-  // Decision picks: each viewer keeps one document, preferences/<their id>.
+  // Decision picks: each viewer keeps one document in their own area, data/users/<their id>/picks
   var DECISIONS = Array.prototype.slice.call(document.querySelectorAll('input[name^="pick-"]'))
     .map(function (r) { return r.name.slice(5); })
     .filter(function (d, i, all) { return all.indexOf(d) === i; });
@@ -1055,15 +1080,21 @@ dl.facts dd { margin: 0; }
   Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function (caps) {
     var db = caps[0], user = caps[1];
     if (!db || !user) return null;
-    return user.id().then(function (uid) {
-      if (!uid) return;
-      try { prefRef = db.doc("preferences/" + uid); } catch (e) { return; }
+    return Promise.all([user.id(), user.can("data.write")]).then(function (facts) {
+      var uid = facts[0];
+      document.documentElement.classList.add("sees-picks");
+      // A viewer who cannot write sees the owner's picks, and gets no pick controls
+      if (!uid || facts[1] === false) {
+        DECISIONS.forEach(function (d) { statusEl(d).querySelector(".pick-text").textContent = ""; });
+        return;
+      }
+      try { prefRef = db.doc("data/users/" + uid + "/picks"); } catch (e) { return; }
       document.documentElement.classList.add("can-pick");
       prefRef.onSnapshot(function (snap) {
         // A cached first snapshot without the document says nothing yet
         if (!snap.exists && snap.metadata && snap.metadata.fromCache) return;
         prefExists = snap.exists;
-        var data = settledBody("preferences/" + uid, snap) || {};
+        var data = settledBody("data/users/" + uid + "/picks", snap) || {};
         DECISIONS.forEach(function (d) { if (!pendingPicks[d]) picks[d] = validOption(d, data[d]); });
         renderPicks();
       }, function () {
@@ -1168,63 +1199,123 @@ dl.facts dd { margin: 0; }
     });
   }
 
-  // Page comments: each one is a document in comments/, shown under its point for every
-  // viewer. A thread is a root comment (thread: null) plus the replies naming its id.
+  // Page comments: every comment is one document in its author's area of the store,
+  // data/users/<author id>/c-<comment id>, which the access rules let only the author
+  // and the owner write, so the area names the author. A thread is a first comment
+  // (thread: null) plus the replies naming its id; people/<id> lists whose areas to read.
+  var AREA = "data/users/";
+  // A view holds at most 64 subscriptions; the rest go to people, tickets, status and picks
+  var MAX_AREAS = 56;
   var store = null;
   var viewer = null;
   var viewerId = null;
   var canWrite = false;
   var claudeComments = null;
   var pageComments = [];
+  var areaDocs = {};
+  var areaSubs = {};
+  var people = [];
+  var listing = null;
   var names = {};
   var panels = {};
   var writing = false;
-  var ownExists = false;
-  var ownBytes = 0;
   var askTimer = null;
   var viewerIsOwner = false;
-  var commentsSynced = false;
+  // Only the owner talks to Claude, so Claude's replies and the questions waiting for them
+  // count only in the owner's area; status/owner, which only the owner writes, names it
+  var ownerId = null;
+  var ownerRecording = false;
 
   function pointEl(ref) { return document.querySelector('[data-point="' + CSS.escape(ref) + '"]'); }
 
-  // Each person's comments sit in their own document, comments/<their id>, which the
-  // access rules let only them (and the owner) write, so the document names the author
-  function readComments(snap) {
+  function commentRef(owner, id) { return store.doc(AREA + owner + "/c-" + id); }
+
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+
+  function readComments() {
     var list = [];
-    snap.docs.forEach(function (doc) {
-      var items = (settledBody("comments/" + doc.id, doc, snap.metadata) || {}).items;
-      if (!items || typeof items !== "object") return;
-      Object.keys(items).forEach(function (id) {
-        var d = items[id] || {};
-        if (typeof d.point !== "string" || typeof d.text !== "string" || !d.text.trim() || !pointEl(d.point)) return;
+    Object.keys(areaDocs).forEach(function (owner) {
+      var docs = areaDocs[owner];
+      Object.keys(docs).forEach(function (docId) {
+        var d = docs[docId] || {};
+        if (docId.indexOf("c-") !== 0 || typeof d.point !== "string" || !pointEl(d.point)) return;
+        var removed = d.removed === true;
+        if (!removed && (typeof d.text !== "string" || !d.text.trim())) return;
+        var from = d.adoptedFrom && typeof d.adoptedFrom === "object" ? d.adoptedFrom : {};
         list.push({
-          id: id,
-          owner: doc.id,
+          id: docId.slice(2),
+          owner: owner,
           point: d.point,
-          text: d.text.slice(0, 4000),
+          text: removed ? "" : d.text.slice(0, 4000),
           thread: typeof d.thread === "string" ? d.thread : null,
-          byClaude: d.byClaude === true,
-          askedClaude: d.askedClaude === true,
+          byClaude: d.byClaude === true && owner === ownerId,
+          askedClaude: d.askedClaude === true && owner === ownerId,
           createdAt: typeof d.createdAt === "string" ? d.createdAt : "",
-          resolved: d.resolved === true
+          resolved: d.resolved === true,
+          removed: removed,
+          applied: typeof d.applied === "number" ? d.applied : null,
+          adoptedFrom: owner === ownerId && typeof from.author === "string" && typeof from.comment === "string" ? { author: from.author, comment: from.comment } : null
         });
       });
     });
-    return list.sort(function (a, b) { return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0; });
+    return list.sort(byTime);
+  }
+
+  function liveReplies(root) {
+    return pageComments.filter(function (c) { return c.thread === root.id && !c.removed; });
+  }
+
+  function byTime(a, b) { return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0; }
+
+  // An adopted copy stays in the owner's area, where a refine reads it, and off the page while
+  // its original is there with the same text; the original carries the tag instead. When the
+  // original is gone or its text has changed since, the copy shows, so the page always holds
+  // the text a refine applies.
+  function originalOf(copy) {
+    var from = copy.adoptedFrom;
+    return from ? pageComments.filter(function (o) { return o.owner === from.author && o.id === from.comment && !o.removed; })[0] || null : null;
+  }
+
+  function hiddenCopy(c) {
+    var original = c.adoptedFrom && !c.removed ? originalOf(c) : null;
+    return !!original && original.text === c.text;
+  }
+
+  // What is said under a hidden copy, such as Claude's answer, shows in its original's thread
+  function shownReplies(root) {
+    var replies = liveReplies(root);
+    pageComments.forEach(function (copy) {
+      var original = !copy.thread && hiddenCopy(copy) ? originalOf(copy) : null;
+      if (original && (original.thread || original.id) === root.id) replies = replies.concat(liveReplies(copy));
+    });
+    return replies.filter(function (c) { return !hiddenCopy(c); }).sort(byTime);
+  }
+
+  // A removed first comment stays only while it has replies, as a "Comment removed" line
+  function threadsOf(roots) {
+    return roots.filter(function (root) { return !hiddenCopy(root); })
+      .map(function (root) { return { root: root, replies: shownReplies(root) }; })
+      .filter(function (t) { return !t.root.removed || t.replies.length > 0; });
+  }
+
+  function allThreads() {
+    return threadsOf(pageComments.filter(function (c) { return !c.thread; }));
   }
 
   function threadsFor(ref) {
-    return pageComments.filter(function (c) { return c.point === ref && !c.thread; }).map(function (root) {
-      return { root: root, replies: pageComments.filter(function (c) { return c.thread === root.id; }) };
-    });
+    return threadsOf(pageComments.filter(function (c) { return c.point === ref && !c.thread; }));
   }
 
-  // Claude replies through the owner's document, so the owner sees those as Claude;
-  // any other byClaude item names the account it was written through, so a forged one shows whose it is
+  // Claude replies through the owner's area, which only the owner and Claude write; a
+  // byClaude flag anywhere else was dropped in readComments, so the comment reads as its author's.
+  // An adopted copy, also only in the owner's area, names the person who wrote the text.
   function authorLabel(c) {
-    if (c.byClaude && viewerIsOwner && c.owner === viewerId) return "Claude";
-    var name = names[c.owner] || "Someone";
-    return c.byClaude ? "Claude, via " + name : name;
+    if (c.adoptedFrom) return names[c.adoptedFrom.author] || "Someone";
+    return c.byClaude ? "Claude" : names[c.owner] || "Someone";
+  }
+
+  function adoptTag() {
+    return el("span", "pill adopt-tag", viewerIsOwner ? "Adopted by you" : "Adopted by " + (names[ownerId] || "the owner"));
   }
 
   function when(iso) {
@@ -1239,22 +1330,97 @@ dl.facts dd { margin: 0; }
     return node;
   }
 
-  function messageEl(c, isReply) {
-    var msg = el("div", isReply ? "msg reply" : "msg");
+  function button(cls, text, act) {
+    var b = el("button", cls, text);
+    b.type = "button";
+    b.setAttribute("data-act", act);
+    return b;
+  }
+
+  // The owner's copy of a comment; readComments keeps adoptedFrom only in the owner's area
+  function adoptionOf(c) {
+    return pageComments.filter(function (o) {
+      return !o.removed && o.adoptedFrom && o.adoptedFrom.author === c.owner && o.adoptedFrom.comment === c.id;
+    })[0] || null;
+  }
+
+  function rootOf(c) {
+    return c.thread ? pageComments.filter(function (r) { return r.id === c.thread && !r.thread; })[0] || null : null;
+  }
+
+  // A reply reaches a refine without its thread, so adopting one offers the teammate's
+  // first comment it answers as well
+  function rootToOffer(c) {
+    var root = rootOf(c);
+    return root && !root.removed && root.owner !== ownerId && !adoptionOf(root) ? root : null;
+  }
+
+  // The owner's actions on a comment: adopt a teammate's into the owner's area, which is
+  // all a refine reads, and remove any comment after a confirmation on the page itself
+  function ownerActions(c, p) {
+    var row = el("div", "msg-actions");
+    if (p && p.confirmingAdopt === c.id) {
+      var root = rootToOffer(c);
+      row.className = "msg-actions confirm";
+      row.appendChild(el("span", "confirm-text", "This reply answers " + (root ? (names[root.owner] || "a teammate") + "'s" : "the first") +
+        " comment, and a refine reads only what you adopt. Adopt that comment too?"));
+      row.appendChild(button("btn-secondary", "Adopt both", "adopt-both"));
+      row.appendChild(button("btn-link", "Only this reply", "adopt-one"));
+      row.appendChild(button("btn-link", "Cancel", "adopt-cancel"));
+      return row;
+    }
+    if (p && p.confirming === c.id) {
+      row.className = "msg-actions confirm";
+      var kept = !c.thread && liveReplies(c).length > 0;
+      row.appendChild(el("span", "confirm-text", "Remove this comment for everyone?" +
+        (kept ? " Its replies stay under a “Comment removed” line." : "") +
+        " The plan and its “What changed” list keep only the outcome, not the discussion."));
+      row.appendChild(button("btn-secondary", "Remove", "remove-confirm"));
+      row.appendChild(button("btn-link", "Cancel", "remove-cancel"));
+      return row;
+    }
+    if (adoptionOf(c)) {
+      var undo = button("btn-link", "Undo adoption", "unadopt");
+      undo.title = "Delete your copy, so a refine no longer applies it";
+      row.appendChild(undo);
+    } else if (c.owner !== viewerId) {
+      var adopt = button("btn-link", "Adopt", "adopt");
+      adopt.title = "Copy into your comments, so a refine applies it";
+      row.appendChild(adopt);
+    }
+    row.appendChild(button("btn-link", "Remove", "remove"));
+    return row;
+  }
+
+  // An adopted comment is tinted and tagged; so is a copy the page shows, with the reason
+  function messageEl(c, isReply, p) {
+    var copy = c.adoptedFrom ? c : adoptionOf(c);
+    var msg = el("div", (isReply ? "msg reply" : "msg") + (copy ? " adopted" : ""));
+    msg.setAttribute("data-comment", c.id);
     var meta = el("p", "msg-meta");
+    if (c.removed) {
+      meta.appendChild(el("span", "removed-note", "Comment removed"));
+      msg.appendChild(meta);
+      return msg;
+    }
     meta.appendChild(el("span", "who", authorLabel(c)));
+    if (copy) meta.appendChild(adoptTag());
     var time = el("time", "", when(c.createdAt));
     time.setAttribute("datetime", c.createdAt);
     meta.appendChild(document.createTextNode(" · "));
     meta.appendChild(time);
+    var applied = copy ? copy.applied : c.applied;
+    if (applied) meta.appendChild(document.createTextNode(" · applied in revision " + applied));
+    if (c.adoptedFrom) meta.appendChild(document.createTextNode(originalOf(c) ? " · the text you adopted; the original has changed since" : " · the original was removed"));
     msg.appendChild(meta);
     msg.appendChild(el("p", "msg-text", c.text));
+    if (viewerIsOwner) msg.appendChild(ownerActions(c, p));
     return msg;
   }
 
   function askPending(root) {
     if (!root.askedClaude || Date.now() - Date.parse(root.createdAt) > STALE_MS) return false;
-    // Claude answers in the asker's own document, which no other viewer can write
+    // Claude answers in the asker's own area, which no other viewer can write
     return !pageComments.some(function (c) {
       return c.thread === root.id && c.byClaude && c.owner === root.owner && c.createdAt > root.createdAt;
     });
@@ -1269,21 +1435,17 @@ dl.facts dd { margin: 0; }
     return line;
   }
 
-  function threadEl(t) {
+  function threadEl(t, p) {
     var art = el("article", t.root.resolved ? "thread resolved" : "thread");
     art.setAttribute("data-thread", t.root.id);
-    [t.root].concat(t.replies).forEach(function (c, i) { art.appendChild(messageEl(c, i > 0)); });
+    [t.root].concat(t.replies).forEach(function (c, i) { art.appendChild(messageEl(c, i > 0, p)); });
     if (askPending(t.root)) art.appendChild(workingEl("Claude is answering…"));
     if (canWrite) {
       var actions = el("div", "thread-actions");
-      var reply = el("button", "btn-link", "Reply");
-      reply.type = "button";
-      reply.setAttribute("data-act", "reply");
-      var resolve = el("button", "btn-link", t.root.resolved ? "Reopen" : "Resolve");
-      resolve.type = "button";
-      resolve.setAttribute("data-act", t.root.resolved ? "reopen" : "resolve");
-      actions.appendChild(reply);
-      if (t.root.owner === viewerId || viewerIsOwner) actions.appendChild(resolve);
+      actions.appendChild(button("btn-link", "Reply", "reply"));
+      if (t.root.owner === viewerId || viewerIsOwner) {
+        actions.appendChild(button("btn-link", t.root.resolved ? "Reopen" : "Resolve", t.root.resolved ? "reopen" : "resolve"));
+      }
       art.appendChild(actions);
     }
     return art;
@@ -1291,10 +1453,10 @@ dl.facts dd { margin: 0; }
 
   function updateBadges() {
     var open = {}, any = {};
-    pageComments.forEach(function (c) {
-      if (c.thread) return;
-      any[c.point] = (any[c.point] || 0) + 1;
-      if (!c.resolved) open[c.point] = (open[c.point] || 0) + 1;
+    allThreads().forEach(function (t) {
+      var ref = t.root.point;
+      any[ref] = (any[ref] || 0) + 1;
+      if (!t.root.resolved) open[ref] = (open[ref] || 0) + 1;
     });
     var buttons = document.querySelectorAll("[data-point] button.cmt");
     for (var i = 0; i < buttons.length; i++) {
@@ -1317,13 +1479,13 @@ dl.facts dd { margin: 0; }
     var open = threads.filter(function (t) { return !t.root.resolved; });
     var done = threads.filter(function (t) { return t.root.resolved; });
     if (!open.length) p.list.appendChild(el("p", "empty", done.length ? "No open comments on " + ref + "." : "No comments on " + ref + " yet."));
-    open.forEach(function (t) { p.list.appendChild(threadEl(t)); });
+    open.forEach(function (t) { p.list.appendChild(threadEl(t, p)); });
     if (done.length) {
       var details = el("details", "resolved-threads");
       details.open = p.showResolved;
       details.addEventListener("toggle", function () { p.showResolved = details.open; });
       details.appendChild(el("summary", "", done.length + " resolved thread" + (done.length > 1 ? "s" : "")));
-      done.forEach(function (t) { details.appendChild(threadEl(t)); });
+      done.forEach(function (t) { details.appendChild(threadEl(t, p)); });
       p.list.appendChild(details);
     }
     var target = p.replyTo && p.list.querySelector('[data-thread="' + CSS.escape(p.replyTo) + '"]');
@@ -1345,7 +1507,8 @@ dl.facts dd { margin: 0; }
   // Overview: every thread on the page, in page order, each linking to its point
   var showResolvedOverview = false;
 
-  function overviewItem(c) {
+  function overviewItem(t) {
+    var c = t.root;
     var item = el("li");
     var target = pointEl(c.point);
     var link = el("a");
@@ -1353,18 +1516,19 @@ dl.facts dd { margin: 0; }
     link.setAttribute("data-goto", c.point);
     link.appendChild(el("span", "ref", c.point));
     item.appendChild(link);
-    item.appendChild(el("span", "ov-text", c.text.length > 140 ? c.text.slice(0, 140) + "…" : c.text));
-    var replies = pageComments.filter(function (r) { return r.thread === c.id; }).length;
-    var meta = authorLabel(c) + " · " + when(c.createdAt);
+    var text = c.removed ? "Comment removed" : c.text.length > 140 ? c.text.slice(0, 140) + "…" : c.text;
+    item.appendChild(el("span", "ov-text", text));
+    var replies = t.replies.length;
+    var meta = (c.removed ? "" : authorLabel(c) + (c.adoptedFrom ? ", adopted" : "") + " · ") + when(c.createdAt);
     if (replies) meta += " · " + replies + (replies > 1 ? " replies" : " reply");
     if (askPending(c)) meta += " · Claude is answering…";
     item.appendChild(el("span", "ov-meta", meta));
     return item;
   }
 
-  function overviewList(roots) {
+  function overviewList(threads) {
     var list = el("ol", "ov-list");
-    roots.forEach(function (c) { list.appendChild(overviewItem(c)); });
+    threads.forEach(function (t) { list.appendChild(overviewItem(t)); });
     return list;
   }
 
@@ -1374,11 +1538,11 @@ dl.facts dd { margin: 0; }
     var order = {};
     var points = document.querySelectorAll("[data-point]");
     for (var i = 0; i < points.length; i++) order[points[i].getAttribute("data-point")] = i;
-    var roots = pageComments.filter(function (c) { return !c.thread; }).sort(function (a, b) {
-      return (order[a.point] - order[b.point]) || (a.createdAt < b.createdAt ? -1 : 1);
+    var threads = allThreads().sort(function (a, b) {
+      return (order[a.root.point] - order[b.root.point]) || (a.root.createdAt < b.root.createdAt ? -1 : 1);
     });
-    var open = roots.filter(function (c) { return !c.resolved; });
-    var done = roots.filter(function (c) { return c.resolved; });
+    var open = threads.filter(function (t) { return !t.root.resolved; });
+    var done = threads.filter(function (t) { return t.root.resolved; });
     document.getElementById("overview-title").textContent = "Comments · " +
       (open.length ? open.length + " open thread" + (open.length > 1 ? "s" : "") : "no open threads") +
       (done.length ? " · " + done.length + " resolved" : "");
@@ -1394,82 +1558,171 @@ dl.facts dd { margin: 0; }
     }
   }
 
-  function refreshNames() {
-    var ids = pageComments.map(function (c) { return c.owner; }).filter(function (id, i, all) {
-      return id && all.indexOf(id) === i;
+  // The owner's pick is the one a refine applies, so everyone else sees it, on its row and
+  // under the table; the owner sees everyone else's picks instead
+  function ownerPickLine(d) {
+    var picks = ownerId && areaDocs[ownerId] ? areaDocs[ownerId].picks : null;
+    var value = picks ? validOption(d, picks[d]) : null;
+    var radios = document.querySelectorAll('input[name="pick-' + d + '"]');
+    for (var i = 0; i < radios.length; i++) {
+      var slot = radios[i].closest(".slot");
+      var tag = slot.querySelector(".owner-pick");
+      var show = radios[i].value === value;
+      if (show && !tag) slot.insertBefore(el("span", "owner-pick", "Owner's pick"), radios[i].closest(".pick"));
+      if (!show && tag) tag.remove();
+    }
+    if (!ownerId) return "";
+    return value ? "The owner picked " + d + "." + value + "." : "The owner has not picked yet.";
+  }
+
+  function othersPicksLine(d) {
+    var groups = {};
+    Object.keys(areaDocs).forEach(function (id) {
+      var picks = areaDocs[id].picks;
+      var value = id !== viewerId && picks ? validOption(d, picks[d]) : null;
+      if (value) (groups[value] = groups[value] || []).push(names[id] || "Someone");
     });
+    var parts = Object.keys(groups).sort().map(function (v) { return d + "." + v + ": " + groups[v].join(", "); });
+    return parts.length ? "Others' picks: " + parts.join("; ") + "." : "";
+  }
+
+  function renderPickLines() {
+    DECISIONS.forEach(function (d) {
+      var st = statusEl(d);
+      if (!st) return;
+      var span = st.querySelector(".pick-others") || st.appendChild(el("span", "pick-others"));
+      span.textContent = viewerIsOwner ? othersPicksLine(d) : ownerPickLine(d);
+      span.hidden = !span.textContent;
+    });
+  }
+
+  function refreshNames() {
+    var ids = Object.keys(areaDocs);
+    pageComments.forEach(function (c) { if (c.adoptedFrom) ids.push(c.adoptedFrom.author); });
+    ids = ids.filter(function (id, i, all) { return id && all.indexOf(id) === i; });
     if (!ids.length || !viewer) return;
     viewer.profiles(ids).then(function (profiles) {
       ids.forEach(function (id) { names[id] = (profiles[id] && profiles[id].name) || ""; });
       renderAll();
+      renderPickLines();
     });
   }
 
-  // The store answers invalid_argument both to a write the access rules refuse and to a
-  // document over its 256 KiB limit, so the size of the written document tells them apart.
-  // JSON only approximates the store's own count, hence the margin.
-  var DOC_LIMIT = 256 * 1024;
-
-  function byteLength(value) {
-    return new TextEncoder().encode(JSON.stringify(value)).length;
-  }
-
-  function writeError(err, bytesAfter) {
+  function writeError(err) {
     var code = err && err.code;
     if (code === "invalid_argument") {
-      if ((bytesAfter || 0) > DOC_LIMIT * 0.9) return "Not saved: your comments have reached the store's limit of 256 KiB per person.";
       // The rules always let the owner write, so only another viewer can be refused
       if (viewerIsOwner) return "Not saved. Try again.";
       canWrite = false;
       renderAll();
       return "Not saved: your access lets you read comments here, not add them.";
     }
-    if (code === "quota_exceeded") return "Not saved: the page's comment store is full.";
+    if (code === "quota_exceeded") return "Not saved: the page's store is full.";
     if (code === "resource_exhausted") return "Not saved: too many changes at once. Try again in a moment.";
     return "Not saved. Try again.";
+  }
+
+  // The owner's area holds Claude's replies, so every viewer must find it: each person
+  // lists their own area with their first comment, and the owner on their first visit
+  function ensureListed() {
+    if (people.indexOf(viewerId) !== -1) return Promise.resolve();
+    if (!listing) {
+      listing = store.doc("people/" + viewerId).set({ listedAt: new Date().toISOString() })
+        .catch(function (err) { listing = null; throw err; });
+    }
+    return listing;
   }
 
   function askClaude(ref, id, text, note) {
     if (!claudeComments) { note("Saved. Asking Claude is not available here."); return; }
     note("Saved. Asking Claude…");
     claudeComments.anchorFor(pointEl(ref)).then(function (anchor) {
-      return claudeComments.sendToClaude({ anchor: anchor, text: "Question on " + ref + " (page comment " + id + " in comments/" + viewerId + "): " + text.slice(0, 3500) });
+      return claudeComments.sendToClaude({ anchor: anchor, text: "Question on " + ref + " (page comment " + id + " in " + AREA + viewerId + "): " + text.slice(0, 3500) });
     }).then(function () {
       note("Saved and sent to Claude; the answer appears in this thread.");
     }, function (err) {
       note(err && err.code === "claude_unavailable" ? "Saved, but no Claude session could receive it." : "Saved, but not sent to Claude.");
       // Nothing is on its way, so the thread must not wait for an answer
-      var patch = { items: {} };
-      patch.items[id] = { askedClaude: false };
-      store.doc("comments/" + viewerId).update(patch).catch(function () {});
+      commentRef(viewerId, id).update({ askedClaude: false }).catch(function () {});
     });
   }
 
   function save(ref, threadId, textarea, note, toClaude) {
     var text = textarea.value.trim();
     if (!text) { note("Write a comment first."); return; }
-    // Until the server confirms whether the viewer's document exists, a set could replace it
-    if (!ownExists && !commentsSynced) { note("Comments are still loading. Try again in a moment."); return; }
     if (writing) return;
     writing = true;
     note("Saving…");
-    var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    var id = newId();
     var item = { point: ref, thread: threadId, text: text, createdAt: new Date().toISOString() };
     if (!threadId) item.resolved = false;
     if (toClaude) item.askedClaude = true;
-    var patch = { items: {} };
-    patch.items[id] = item;
-    var own = store.doc("comments/" + viewerId);
-    (ownExists ? own.update(patch) : own.set(patch)).then(function () {
+    ensureListed().then(function () { return commentRef(viewerId, id).set(item); }).then(function () {
       writing = false;
-      ownExists = true;
       textarea.value = "";
-      if (toClaude) askClaude(ref, threadId || id, text, note);
+      if (toClaude) askClaude(ref, id, text, note);
       else note("");
       if (threadId && panels[ref]) { panels[ref].replyTo = null; panels[ref].replyForm.hidden = true; }
     }, function (err) {
       writing = false;
-      note(writeError(err, ownBytes + byteLength(patch)));
+      note(writeError(err));
+    });
+  }
+
+  // Adopting copies a teammate's comment into the owner's area as a first comment on the same
+  // point, hidden while the original stands; a refine reads the owner's area alone, so this is how
+  // other people's text reaches it, fixed as the owner saw it. A reply goes under the copy of its
+  // first comment where there is one, so the refine sees what it answers.
+  function adopt(list, note) {
+    list = list.filter(function (c) { return !adoptionOf(c); });
+    if (!viewerIsOwner || writing || !list.length) return;
+    writing = true;
+    note("Adopting…");
+    var at = Date.now(), copies = {};
+    function under(c) {
+      if (!c.thread) return null;
+      if (copies[c.thread]) return copies[c.thread];
+      var first = rootOf(c), copy = first && adoptionOf(first);
+      return copy && !copy.thread ? copy.id : null;
+    }
+    ensureListed().then(function () {
+      // One write at a time, the first comment first, so its copy exists before the reply's
+      return list.reduce(function (done, c, i) {
+        return done.then(function () {
+          var id = newId(), thread = under(c);
+          copies[c.id] = id;
+          var item = { point: c.point, thread: thread, text: c.text, createdAt: new Date(at + i).toISOString(), adoptedFrom: { author: c.owner, comment: c.id } };
+          if (!thread) item.resolved = false;
+          return commentRef(viewerId, id).set(item);
+        });
+      }, Promise.resolve());
+    }).then(function () {
+      writing = false;
+      note(list.length > 1 ? "Adopted both; a refine applies them." : "Adopted; a refine applies it.");
+    }, function (err) {
+      writing = false;
+      note(writeError(err));
+    });
+  }
+
+  // A reply, or a first comment without replies, is deleted; a first comment with
+  // replies keeps its document without text, since the replies point to it
+  function removeComment(c, note) {
+    if (!viewerIsOwner || writing) return;
+    writing = true;
+    var write;
+    if (!c.thread && liveReplies(c).length) {
+      write = commentRef(c.owner, c.id).update({ text: "", removed: true, removedBy: viewerId, removedAt: new Date().toISOString() });
+    } else {
+      var root = c.thread ? pageComments.filter(function (r) { return r.id === c.thread; })[0] : null;
+      write = commentRef(c.owner, c.id).delete().then(function () {
+        var rest = root ? liveReplies(root).filter(function (r) { return r.id !== c.id; }) : [];
+        if (root && root.removed && !rest.length) return commentRef(root.owner, root.id).delete();
+      });
+    }
+    write.then(function () { writing = false; note(""); }, function (err) {
+      writing = false;
+      note(writeError(err));
     });
   }
 
@@ -1513,7 +1766,7 @@ dl.facts dd { margin: 0; }
     var p = panels[ref] = {
       host: host, panel: panel, list: panel.querySelector(".thread-list"),
       replyForm: panel.querySelector(".reply-form"), newForm: panel.querySelector(".new-form"),
-      replyTo: null, showResolved: false
+      replyTo: null, showResolved: false, confirming: null, confirmingAdopt: null
     };
     var newNote = function (t) { p.newForm.querySelector(".form-note").textContent = t; };
     var replyNote = function (t) { p.replyForm.querySelector(".form-note").textContent = t; };
@@ -1527,8 +1780,41 @@ dl.facts dd { margin: 0; }
     });
     panel.addEventListener("click", function (ev) {
       var act = ev.target.getAttribute && ev.target.getAttribute("data-act");
-      var thread = ev.target.closest && ev.target.closest("[data-thread]");
       if (act === "cancel-reply") { p.replyTo = null; p.replyForm.hidden = true; return; }
+      var item = ev.target.closest && ev.target.closest("[data-comment]");
+      var c = item && pageComments.filter(function (x) { return x.id === item.getAttribute("data-comment"); })[0];
+      if (c && act === "unadopt") {
+        if (adoptionOf(c)) removeComment(adoptionOf(c), newNote);
+        return;
+      }
+      if (c && act === "adopt") {
+        if (!rootToOffer(c)) { adopt([c], newNote); return; }
+        p.confirming = null;
+        p.confirmingAdopt = c.id;
+        renderPanel(ref);
+        return;
+      }
+      if (c && (act === "adopt-both" || act === "adopt-one" || act === "adopt-cancel")) {
+        var first = rootToOffer(c);
+        p.confirmingAdopt = null;
+        renderPanel(ref);
+        if (act === "adopt-both") adopt(first ? [first, c] : [c], newNote);
+        if (act === "adopt-one") adopt([c], newNote);
+        return;
+      }
+      if (c && (act === "remove" || act === "remove-cancel")) {
+        p.confirmingAdopt = null;
+        p.confirming = act === "remove" ? c.id : null;
+        renderPanel(ref);
+        return;
+      }
+      if (c && act === "remove-confirm") {
+        p.confirming = null;
+        renderPanel(ref);
+        removeComment(c, newNote);
+        return;
+      }
+      var thread = ev.target.closest && ev.target.closest("[data-thread]");
       if (!thread) return;
       var tid = thread.getAttribute("data-thread");
       if (act === "reply") {
@@ -1538,11 +1824,10 @@ dl.facts dd { margin: 0; }
         p.replyForm.hidden = false;
         p.replyForm.querySelector("textarea").focus();
       } else if (act === "resolve" || act === "reopen") {
-        var root = pageComments.filter(function (c) { return c.id === tid; })[0];
+        var root = pageComments.filter(function (x) { return x.id === tid; })[0];
         if (!root) return;
-        var patch = { items: {} };
-        patch.items[tid] = { resolved: act === "resolve", resolvedBy: viewerId, resolvedAt: new Date().toISOString() };
-        store.doc("comments/" + root.owner).update(patch).catch(function (err) { newNote(writeError(err)); });
+        commentRef(root.owner, tid).update({ resolved: act === "resolve", resolvedBy: viewerId, resolvedAt: new Date().toISOString() })
+          .catch(function (err) { newNote(writeError(err)); });
       }
     });
     if (claudeComments && canWrite && typeof claudeComments.canSendToClaude === "function") {
@@ -1867,6 +2152,7 @@ dl.facts dd { margin: 0; }
       viewerId = facts[0];
       canWrite = !!viewerId && facts[1] !== false;
       viewerIsOwner = facts[2] === true;
+      if (viewerIsOwner) ownerId = viewerId;
       addButtons();
       document.documentElement.classList.add("can-comment");
       startTickets();
@@ -1891,22 +2177,49 @@ dl.facts dd { margin: 0; }
         refinePending = d && d.pending === true && typeof d.sentAt === "string" ? d : null;
         if (!showRefineBusy() && claudeComments) checkRefine(claudeComments);
       }, function () {});
-      store.collection("comments").limit(1000).onSnapshot(function (snap) {
-        pageComments = readComments(snap);
-        if (!(snap.metadata && snap.metadata.fromCache)) commentsSynced = true;
-        var hasOwn = snap.docs.some(function (doc) { return doc.id === viewerId; });
-        // A cached snapshot without the document must not turn the next write into a replacing set
-        if (hasOwn || !(snap.metadata && snap.metadata.fromCache)) ownExists = hasOwn;
-        snap.docs.forEach(function (doc) { if (doc.id === viewerId) ownBytes = byteLength(doc.data()); });
-        if (!askTimer && pageComments.some(function (c) { return c.askedClaude; })) {
-          // Re-render now and then, so an ask past its time limit frees its button again
-          askTimer = setInterval(function () { if (!document.hidden) renderAll(); }, 60000);
+      store.doc("status/owner").onSnapshot(function (snap) {
+        var d = snap.exists ? snap.data() : null;
+        var recorded = d && typeof d.id === "string" ? d.id : null;
+        if (!viewerIsOwner) ownerId = recorded;
+        // The owner records their id once, so every viewer knows which area is the owner's
+        if (viewerIsOwner && viewerId && recorded !== viewerId && !ownerRecording && !(snap.metadata && snap.metadata.fromCache)) {
+          ownerRecording = true;
+          store.doc("status/owner").set({ id: viewerId, recordedAt: new Date().toISOString() })
+            .catch(function () { ownerRecording = false; });
         }
-        renderAll();
-        refreshNames();
+        if (ownerId) watchArea(ownerId);
+        refresh();
+      }, function () {});
+      if (viewerId) watchArea(viewerId);
+      store.collection("people").limit(200).onSnapshot(function (snap) {
+        people = snap.docs.map(function (doc) { return doc.id; });
+        people.forEach(watchArea);
+        if (viewerIsOwner && viewerId && !(snap.metadata && snap.metadata.fromCache)) ensureListed().catch(function () {});
+        refresh();
       }, function () {});
     });
   }, function () {});
+
+  function watchArea(id) {
+    if (areaSubs[id] || Object.keys(areaSubs).length >= MAX_AREAS) return;
+    areaSubs[id] = store.collection(AREA + id).limit(1000).onSnapshot(function (snap) {
+      var docs = {};
+      snap.docs.forEach(function (doc) { docs[doc.id] = settledBody(AREA + id + "/" + doc.id, doc, snap.metadata) || {}; });
+      areaDocs[id] = docs;
+      refresh();
+    }, function () {});
+  }
+
+  function refresh() {
+    pageComments = readComments();
+    if (!askTimer && pageComments.some(function (c) { return c.askedClaude; })) {
+      // Re-render now and then, so an ask past its time limit frees its button again
+      askTimer = setInterval(function () { if (!document.hidden) renderAll(); }, 60000);
+    }
+    renderAll();
+    renderPickLines();
+    refreshNames();
+  }
 
   // Only the owner gets Refine and "Comment and ask Claude": both wake the owner's session.
   // The session checks the sender too, since an editor can send through claude.ai itself.
