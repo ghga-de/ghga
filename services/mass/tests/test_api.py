@@ -24,6 +24,7 @@ import pytest
 from hexkit.providers.mongodb.provider import ConfiguredMongoClient
 from mass.adapters.inbound.fastapi_.configure import get_configured_app
 from mass.core import models
+from mass.inject import prepare_core
 from tests.fixtures.config import get_config
 from tests.fixtures.joint import JointFixture, QueryParams
 
@@ -146,6 +147,21 @@ async def test_search_with_limit(joint_fixture: JointFixture):
     compare(results=results, count=3, hit_length=1, hits=hits)
 
 
+@pytest.mark.parametrize(
+    "params",
+    [{"skip": -1}, {"limit": 0}, {"limit": -1}],
+    ids=["negative skip", "zero limit", "negative limit"],
+)
+async def test_search_with_invalid_pagination(
+    params: QueryParams, joint_fixture: JointFixture
+):
+    """Make sure out-of-range skip and limit values are rejected"""
+    response = await joint_fixture.rest_client.get(
+        url="/search", params={"class_name": CLASS_NAME, **params}
+    )
+    assert response.status_code == 422
+
+
 async def test_search_keywords(joint_fixture: JointFixture):
     """Make sure the query string is passed through intact"""
     params: QueryParams = {"class_name": CLASS_NAME, "query": "hotel"}
@@ -164,6 +180,38 @@ async def test_search_filters(joint_fixture: JointFixture):
 
     results = await joint_fixture.call_search_endpoint(params)
     compare(results=results, count=1, hit_length=1)
+
+
+async def test_facets_named_like_result_fields(joint_fixture: JointFixture):
+    """Make sure facets named count or hits do not clash with the results"""
+    params: QueryParams = {"class_name": CLASS_NAME}
+    expected = await joint_fixture.call_search_endpoint(params)
+
+    # rename the first two facets to the keys the results use themselves
+    config = joint_fixture.config
+    searchable_class = config.searchable_classes[CLASS_NAME]
+    facet_fields = [
+        field.model_copy(update={"name": name})
+        for field, name in zip(
+            searchable_class.facetable_fields, ["count", "hits", ""], strict=True
+        )
+    ]
+    renamed_class = searchable_class.model_copy(
+        update={"facetable_fields": facet_fields}
+    )
+    renamed_config = config.model_copy(
+        update={"searchable_classes": {CLASS_NAME: renamed_class}}
+    )
+
+    async with prepare_core(config=renamed_config) as query_handler:
+        results = await query_handler.handle_query(class_name=CLASS_NAME)
+
+    assert results.count == expected.count
+    assert results.hits == expected.hits
+    assert [facet.name for facet in results.facets] == ["count", "hits", "Object Type"]
+    assert [facet.options for facet in results.facets] == [
+        facet.options for facet in expected.facets
+    ]
 
 
 async def test_search_invalid_class(joint_fixture: JointFixture):

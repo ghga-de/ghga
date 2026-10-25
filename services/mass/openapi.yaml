@@ -261,6 +261,7 @@ paths:
         schema:
           default: 0
           description: The number of results to skip for pagination
+          minimum: 0
           title: Skip
           type: integer
       - description: Limit the results to this number
@@ -269,7 +270,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: integer
+          - minimum: 1
+            type: integer
           - type: 'null'
           description: Limit the results to this number
           title: Limit
