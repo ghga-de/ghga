@@ -567,8 +567,8 @@ class Dao(typing.Protocol[Dto]):
     async def delete_many(self, ids: Collection[ID]) -> None:
         """Delete several resources in one call by providing their IDs.
 
-        IDs that do not exist, and IDs given more than once, are ignored. An empty
-        batch deletes nothing.
+        IDs that do not exist are ignored, and an ID given more than once is deleted
+        once. An empty batch deletes nothing.
 
         Args:
             ids: The IDs of the resources.

@@ -701,7 +701,7 @@ class MongoDbDao(Generic[Dto]):
         if not ids:
             return
         with translate_pymongo_errors():
-            await self._collection.delete_many({"_id": {"$in": list(set(ids))}})
+            await self._collection.delete_many({"_id": {"$in": list(ids)}})
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
