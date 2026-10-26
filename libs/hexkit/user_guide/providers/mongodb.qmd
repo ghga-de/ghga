@@ -236,7 +236,7 @@ A write concern error names every resource it leaves unconfirmed, with `DbTimeou
 A retryable write concern error, such as one after a failover, is the exception: the driver stops the batch at it and sends none of a split batch's later messages, so the batch raises a plain `DaoError` and its outcome is unknown.
 Any other error leaves the outcome unknown, such as a timeout, a lost connection or a failure after the driver sent part of a split batch; `find_all` shows what arrived.
 `upsert_many` can then be repeated safely.
-To undo a partial batch, call `delete_many` on the written IDs.
+To undo a partial `insert_many`, call `delete_many` on the IDs it wrote; the other batch operations overwrite stored resources, which only a copy taken before can restore.
 
 ### Error Handling
 
