@@ -32,6 +32,7 @@ import typer
 from ghga_datasteward_kit.amendment import amendment, legacy_accessioning
 from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import (
+    AccessionNotLegacyError,
     AmendmentStatusError,
     StudyAccessionMissingError,
 )
@@ -287,6 +288,26 @@ def test_amend_without_study_accession(example_workdir: Path, keep_anchor: bool)
             metadata_path=AMENDED_METADATA_PATH,
             config_path=METADATA_CONFIG_PATH,
         )
+
+
+def test_amend_refuses_study_pid_submission(example_workdir: Path):
+    """Test that a submission whose study has a study PID is refused, naming the
+    submission, and that nothing is written or minted.
+    """
+    submission_id, _ = submit_original()
+    submission_path = Path("submission_store") / f"{submission_id}.json"
+    content_before = submission_path.read_bytes()
+    accession_store_before = Path("accession_store").read_text(encoding="utf-8")
+
+    with pytest.raises(AccessionNotLegacyError, match=submission_id):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert submission_path.read_bytes() == content_before
+    assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
 
 
 def test_amend_unknown_submission(example_workdir: Path):

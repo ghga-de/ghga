@@ -17,7 +17,7 @@
 amending a submission accessioned under it.
 
 Amendment is the only user, so this module goes with it: metldata keeps the flat
-accessions in the store's `legacy` list but no longer mints them.
+accessions in the store's `legacy` list but does not mint them.
 """
 
 from collections import Counter
@@ -126,12 +126,20 @@ class LegacyAccessionRegistry(AccessionRegistry):
         `study_pid`. Every other resource gets a new one, registered in the store.
 
         Raises:
-            AccessionGenerationError: If no unused accession was drawn.
+            AccessionGenerationError: If the class has no flat prefix, or no unused
+                accession was drawn.
         """
         if self.is_study_class(class_name):
             return study_pid
 
-        prefix = LEGACY_PREFIXES[class_name]
+        prefix = LEGACY_PREFIXES.get(class_name)
+        if prefix is None:
+            raise self.AccessionGenerationError(
+                f"The class '{class_name}' has no flat accession prefix, so a new"
+                + f" '{class_name}' cannot be accessioned in a flat-accessioned"
+                + " submission."
+            )
+
         for _ in range(MAX_RANDOM_ATTEMPTS):
             accession = prefix + generate_random_block(digits, LEGACY_SUFFIX_LENGTH)
             try:

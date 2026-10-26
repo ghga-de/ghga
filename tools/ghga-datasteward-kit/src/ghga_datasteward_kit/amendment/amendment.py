@@ -136,29 +136,6 @@ class AccessionChanges(BaseModel):
         return sum(len(aliases) for aliases in self.new_aliases.values())
 
 
-class AccessionDiff(BaseModel):
-    """The effect an applied amendment had on the accessions of a submission."""
-
-    preserved: AccessionMap = Field(default_factory=dict)
-    minted: AccessionMap = Field(default_factory=dict)
-    dropped: AccessionMap = Field(default_factory=dict)
-
-    @property
-    def preserved_count(self) -> int:
-        """The number of preserved accessions."""
-        return _count_accessions(accession_map=self.preserved)
-
-    @property
-    def minted_count(self) -> int:
-        """The number of newly minted accessions."""
-        return _count_accessions(accession_map=self.minted)
-
-    @property
-    def dropped_count(self) -> int:
-        """The number of dropped accessions."""
-        return _count_accessions(accession_map=self.dropped)
-
-
 ConfirmCallback = Callable[[AccessionChanges], bool]
 
 
@@ -407,7 +384,7 @@ def amend_metadata(
     metadata: Json,
     config: MetadataConfig,
     confirm: ConfirmCallback | None = None,
-):
+) -> None:
     """Replace the content of a completed submission, keeping the accession of every
     alias that is still present and minting accessions only for new aliases.
 
@@ -491,7 +468,7 @@ def amend_metadata_from_path(
     metadata_path: Path,
     config_path: Path,
     confirm: ConfirmCallback | None = None,
-):
+) -> None:
     """Read metadata and config from the specified paths, then amend the specified
     submission.
     """
