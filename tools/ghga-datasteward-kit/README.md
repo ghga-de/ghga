@@ -98,7 +98,6 @@ A second `submit` creates a new submission with a fresh set of accessions, which
 In the legacy upload path the file accession is also the file's storage ID, and the identifiers derived from it cannot be recovered.
 
 The command refuses a submission whose study has a study PID (`AccessionNotLegacyError`), one without a study accession, and one that is not completed, before anything is validated or minted.
-A submission with study PIDs cannot be amended.
 
 ```text
 ghga-datasteward-kit metadata amend \
