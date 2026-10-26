@@ -141,24 +141,22 @@ def _errors_from_bulk_write(
     if error.details.get("writeConcernErrors"):
         raise DaoError(str(error)) from error
     errors: dict[ID, DaoError] = {}
-    # Each failure gets the error that the single-resource method raises for it:
-    # - A duplicate key on `_id` means the resource exists already, which `insert`
-    #   reports as ResourceAlreadyExistsError. Without `keyValue` in the failure the
-    #   clashing index is unknown, and `insert` takes it to be the ID's as well.
-    # - A duplicate key on another field breaks a unique index, which `insert` and
-    #   `upsert` report as UniqueConstraintViolationError.
-    # - Any other failure, such as a failed document validation or a document over
-    #   the size limit, has no error of its own and becomes a DaoError.
+    # Each failure gets the error that the single-resource method raises for it
     for failure in error.details["writeErrors"]:
         id_, key_value = ids[failure["index"]], failure.get("keyValue")
         if failure["code"] != DUPLICATE_KEY_ERROR:
+            # A failure other than a duplicate key, such as a failed document
+            # validation or a document over the size limit, has no error of its own
             errors[id_] = DaoError(failure["errmsg"])
         elif key_value is None or list(key_value) == ["_id"]:
+            # A duplicate key on `_id` means the resource exists already. Without
+            # `keyValue` in the failure the clashing index is unknown, and `insert`
+            # takes it to be the ID's as well.
             errors[id_] = ResourceAlreadyExistsError(id_=id_)
         else:
+            # A duplicate key on another field breaks a unique index
             errors[id_] = UniqueConstraintViolationError(unique_fields=key_value)
-    # An ordered batch stops at its first failure, its only one, and skips the rest;
-    # an unordered batch attempts every operation, so it skips none
+    # An ordered batch stops at its first failure and skips the rest
     not_attempted: Sequence[ID] = ()
     if ordered:
         not_attempted = ids[error.details["writeErrors"][0]["index"] + 1 :]
