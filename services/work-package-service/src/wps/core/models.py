@@ -18,7 +18,7 @@ in the API.
 """
 
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Literal
 
 from pydantic import (
     UUID4,
@@ -26,11 +26,11 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
-    StringConstraints,
     field_validator,
     model_validator,
 )
 
+from ghga_service_commons.utils.accessions import FileAccession
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import UUID4Field
 from wps.core.crypt import validate_public_key
@@ -58,8 +58,6 @@ __all__ = [
     "WorkPackageType",
     "WorkType",
 ]
-
-FileAccession = Annotated[str, StringConstraints(pattern=r"^GHGAF.+")]
 
 
 class BaseDto(BaseModel):
