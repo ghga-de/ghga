@@ -31,6 +31,7 @@ from auth_service.user_registry.deps import (
     IvaDaoDependency,
     UserDaoDependency,
 )
+from ghga_service_commons.utils.accessions import DatasetAccession
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import NoHitsFoundError, ResourceNotFoundError
 from hexkit.utils import now_utc_ms_prec
@@ -50,7 +51,6 @@ from ..core.claims import (
 from ..core.utils import iva_is_verified, user_is_active, user_with_iva_exists
 from ..deps import ClaimDaoDependency
 from ..models.claims import (
-    Accession,
     ClaimValidity,
     DownloadGrant,
     GrantId,
@@ -264,7 +264,7 @@ async def grant_download_access(  # noqa: PLR0913
         ),
     ],
     dataset_id: Annotated[
-        Accession,
+        DatasetAccession,
         Path(
             ...,
             alias="dataset_id",
@@ -325,7 +325,7 @@ async def check_download_access(
         ),
     ],
     dataset_id: Annotated[
-        Accession,
+        DatasetAccession,
         Path(
             ...,
             alias="dataset_id",
