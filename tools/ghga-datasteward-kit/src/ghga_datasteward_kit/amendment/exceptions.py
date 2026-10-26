@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Exceptions used in ghga_datasteward_kit package."""
+"""Exceptions raised when amending a submission."""
 
 
 class AmendmentAbortedError(Exception):
