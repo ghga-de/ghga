@@ -20,14 +20,14 @@ if ! $K wait --for=condition=Available deploy --all --timeout=60s > /dev/null 2>
 fi
 secret() { $K get secret "$1" -o jsonpath="{.data.$2}" | base64 -d; }
 export TB_CONFIG_YAML="$PWD/testbed/tb.kind.yaml"
-# shellcheck disable=SC2155  # export masks a failed lookup, as the recipe always has
-{
-export TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)
-export TB_PURGE_CONTROLLER_TOKEN=$(secret ghga-harness-tokens PCS_TOKEN)
-export TB_DLQ_TOKEN=$(secret ghga-harness-tokens DLQS_TOKEN)
-export TB_UPLOAD_TOKEN=$(secret ghga-harness-tokens METLDATA_TOKEN)
-export TB_FIS_PUBKEY=$(secret ghga-c4gh-files 'crypt4gh\.pub' | sed -n 2p)
-}
+# assigned before the export, which would otherwise hide a failed lookup from `set -e`
+TB_STATE_MANAGEMENT_TOKEN=$(secret ghga-harness-tokens SMS_TOKEN)
+TB_PURGE_CONTROLLER_TOKEN=$(secret ghga-harness-tokens PCS_TOKEN)
+TB_DLQ_TOKEN=$(secret ghga-harness-tokens DLQS_TOKEN)
+TB_UPLOAD_TOKEN=$(secret ghga-harness-tokens METLDATA_TOKEN)
+TB_FIS_PUBKEY=$(secret ghga-c4gh-files 'crypt4gh\.pub' | sed -n 2p)
+export TB_STATE_MANAGEMENT_TOKEN TB_PURGE_CONTROLLER_TOKEN TB_DLQ_TOKEN TB_UPLOAD_TOKEN \
+  TB_FIS_PUBKEY
 printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
 # per-run test-user crypt4gh keypair (any fresh pair works)
 # the connector needs the RAW 32-byte secret (export_private is PEM-ish and

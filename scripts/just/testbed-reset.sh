@@ -3,7 +3,7 @@
 #
 # The suite's clean slate restores the data steward from its own snapshot, so leftovers
 # from earlier runs (or an out-of-band edit) can leave the claim, user, IVA and
-# notification projection disagreeing. Dropping both databases and restarting lets the
+# notification projection disagreeing. Dropping every service database and restarting lets the
 # services re-seed and rebuild their projections from events.
 set -euo pipefail
 

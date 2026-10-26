@@ -115,7 +115,7 @@ def test_no_target_sweeps_every_member_then_the_non_member_suites(members: Repo)
 
 @pytest.mark.parametrize("target", ["", "."])
 def test_empty_and_dot_mean_everything(members: Repo, target: str):
-    """`.` was the old default and still means the full sweep."""
+    """`.` names the repo root, which is no member, so it means the full sweep."""
     members.run("test.sh", target)
     assert len(members.calls("uv")) == 6
 
