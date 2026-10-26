@@ -82,6 +82,7 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 | [0044](adrs/adr-0044-sentence-per-line-markdown.md) | One sentence per line in Markdown, checked by rumdl | accepted | docs, process |
 | [0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md) | Publish dev charts on the mono image for continuous deployment | accepted | deploy, release |
 | [0046](adrs/adr-0046-platform-version-from-tags.md) | The platform version comes from tags alone | proposed | release |
+| [0047](adrs/adr-0047-normalized-aliases-in-accessions.md) | Normalized aliases in accessions | proposed | data, backend |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)

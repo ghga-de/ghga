@@ -18,7 +18,6 @@
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from functools import partial
 from uuid import uuid4
 
 from pydantic import Json
@@ -75,10 +74,14 @@ def get_accession(
     study_pid: str,
     used_accessions: set[str],
 ) -> str:
-    """Get the accession for a resource with the provided user-defined alias of
-    the class with the provided anchor. If no entry can be found in the provided accession map,
-    a new accession is requested from the provided accession registry and added to
-    `used_accessions`.
+    """Get the accession of the resource with the given alias, in the class under
+    the given anchor.
+
+    The accession in the existing map is kept. An alias without one gets a new
+    accession from the accession registry, which is added to `used_accessions`.
+
+    Raises:
+        AccessionGenerationError: If the accession registry finds no unused accession.
     """
     accession = lookup_accession(
         anchor=anchor, alias=alias, accession_map=params.accession_map
@@ -89,12 +92,13 @@ def get_accession(
     class_name = lookup_class_by_anchor_point(
         root_slot=anchor, target_by_anchor_point=params.target_by_anchor_point
     )
-    accession = params.accession_registry.get_accession(
+    accession = params.accession_registry.generate_accession(
         class_name=class_name,
         alias=alias,
         study_pid=study_pid,
         used_accessions=used_accessions,
     )
+
     used_accessions.add(accession)
 
     return accession
@@ -105,12 +109,9 @@ def get_aliases_for_resources(
     resources: list[Json],
     root_slot: str,
     anchor_points_by_target: dict[str, AnchorPoint],
+    target_by_anchor_point: dict[str, str],
 ) -> Iterable[str]:
     """Get the aliases for the provided resources."""
-    target_by_anchor_point = invert_anchor_points_by_target(
-        anchor_points_by_target=anchor_points_by_target
-    )
-
     class_name = lookup_class_by_anchor_point(
         root_slot=root_slot, target_by_anchor_point=target_by_anchor_point
     )
@@ -151,7 +152,7 @@ def get_study_pid(
         existing_pids = params.accession_map.get(anchor, {}).values()
         return (
             next(iter(existing_pids), None)
-            or params.accession_registry.get_study_accession()
+            or params.accession_registry.generate_study_accession()
         )
 
     raise MissingStudyError("The submission content holds no study.")
@@ -174,6 +175,7 @@ def generate_accession_map(
 
     Raises:
         MissingStudyError: If the content holds no study.
+        AccessionGenerationError: If the accession registry finds no unused accession.
     """
     if existing_accession_map is None:
         existing_accession_map = {}
@@ -188,25 +190,28 @@ def generate_accession_map(
 
     study_pid = get_study_pid(content=content, params=params)
 
-    get_accession_ = partial(
-        get_accession,
-        params=params,
-        study_pid=study_pid,
-        used_accessions={
-            accession
-            for accessions_by_alias in existing_accession_map.values()
-            for accession in accessions_by_alias.values()
-        },
-    )
+    existing_accessions = {
+        accession
+        for accessions_by_alias in existing_accession_map.values()
+        for accession in accessions_by_alias.values()
+    }
 
-    return {
+    accession_map = {
         anchor: {
-            alias: get_accession_(anchor=anchor, alias=alias)
+            alias: get_accession(
+                anchor=anchor,
+                alias=alias,
+                params=params,
+                study_pid=study_pid,
+                used_accessions=existing_accessions,
+            )
             for alias in get_aliases_for_resources(
                 resources=resources,
                 root_slot=anchor,
                 anchor_points_by_target=anchor_points_by_target,
+                target_by_anchor_point=params.target_by_anchor_point,
             )
         }
         for anchor, resources in content.items()
     }
+    return accession_map

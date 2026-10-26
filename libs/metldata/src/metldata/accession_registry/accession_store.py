@@ -45,7 +45,7 @@ class AccessionStoreContent(BaseModel):
     )
     years: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="The random blocks of study PIDs minted per two-digit year.",
+        description="The random blocks of the study PIDs minted, per two-digit year.",
     )
 
 
@@ -125,11 +125,11 @@ class AccessionStore:
             AccessionAlreadyExistsError: If the random block already exists in its year.
         """
         content = self._load()
-        random_blocks = content.years.setdefault(year, [])
-        if random_block in random_blocks:
+        studies = content.years.setdefault(year, [])
+        if random_block in studies:
             raise self.AccessionAlreadyExistsError(year=year, random_block=random_block)
 
-        random_blocks.append(random_block)
+        studies.append(random_block)
         self._dump(content)
 
     def migrate_legacy_store(self) -> None:

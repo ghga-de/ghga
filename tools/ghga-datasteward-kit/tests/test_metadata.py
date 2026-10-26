@@ -18,19 +18,27 @@
 import io
 import json
 import os
+import re
 import shutil
 import sys
 from collections.abc import Generator
+from functools import partial
+from itertools import count
 from pathlib import Path
 
 import pytest
 import typer
 
-from ghga_datasteward_kit import amendment
-from ghga_datasteward_kit.amendment import AccessionChanges, AccessionDiff
+from ghga_datasteward_kit.amendment import amendment, legacy_accessioning
+from ghga_datasteward_kit.amendment.amendment import AccessionChanges
+from ghga_datasteward_kit.amendment.exceptions import (
+    AccessionNotLegacyError,
+    AmendmentStatusError,
+    StudyAccessionMissingError,
+)
 from ghga_datasteward_kit.cli.metadata import amend, submit, transform
-from ghga_datasteward_kit.exceptions import AmendmentStatusError
 from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.metadata_validator import MetadataValidationError
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
     AMENDED_METADATA_PATH,
@@ -111,6 +119,45 @@ def submit_original() -> tuple[str, dict[str, dict[str, str]]]:
     return submission["id"], submission["accession_map"]
 
 
+# the flat prefixes for the classes of the test model
+TEST_LEGACY_PREFIXES = {
+    "Study": "GHGAS",
+    "SampleFile": "GHGAF",
+    "ExperimentFile": "GHGAF",
+    "Dataset": "GHGAD",
+    "Sample": "GHGAN",
+    "Experiment": "GHGAX",
+}
+
+
+def make_legacy(*, submission_id: str) -> dict[str, dict[str, str]]:
+    """Give a stored submission flat accessions, as if it was accessioned before
+    study PIDs, and return its new accession map.
+    """
+    path = Path("submission_store") / f"{submission_id}.json"
+    submission = json.loads(path.read_text(encoding="utf-8"))
+
+    flat_accessions = (f"GHGAT{index:014d}" for index in count())
+    submission["accession_map"] = {
+        anchor: {alias: next(flat_accessions) for alias in accessions}
+        for anchor, accessions in submission["accession_map"].items()
+    }
+    path.write_text(json.dumps(submission), encoding="utf-8")
+
+    return submission["accession_map"]
+
+
+def submit_legacy() -> tuple[str, dict[str, dict[str, str]]]:
+    """Submit the original metadata with flat accessions, as only a submission
+    accessioned before study PIDs can be amended, and return the submission ID and
+    accession map.
+
+    Must be called from within a work directory fixture, like `submit_original`.
+    """
+    submission_id, _ = submit_original()
+    return submission_id, make_legacy(submission_id=submission_id)
+
+
 def read_accession_map(*, submission_id: str) -> dict[str, dict[str, str]]:
     """Read the accession map of a stored submission."""
     path = Path("submission_store") / f"{submission_id}.json"
@@ -133,11 +180,12 @@ def pretend_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sys, "stdin", _TerminalStdin())
 
 
+@pytest.mark.usefixtures("legacy_amendment")
 def test_amend_preserves_accessions(example_workdir: Path):
     """Test that amending a submission with an added file keeps every accession that
     was already assigned, and mints one only for the added alias.
     """
-    submission_id, accessions_before = submit_original()
+    submission_id, accessions_before = submit_legacy()
 
     amend(
         submission_id=submission_id,
@@ -161,13 +209,16 @@ def test_amend_preserves_accessions(example_workdir: Path):
     transform(config_path=METADATA_CONFIG_PATH)
 
 
+@pytest.mark.usefixtures("legacy_amendment")
 def test_amend_dropped_alias_needs_confirmation(
-    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+    example_workdir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ):
     """Test that an amendment dropping an alias is refused unless confirmed, and that
-    refusing it leaves the submission untouched.
+    refusing it leaves the submission untouched and reports no success.
     """
-    submission_id, _ = submit_original()
+    submission_id, _ = submit_legacy()
     submission_path = Path("submission_store") / f"{submission_id}.json"
     content_before = submission_path.read_bytes()
 
@@ -182,15 +233,17 @@ def test_amend_dropped_alias_needs_confirmation(
         )
 
     assert submission_path.read_bytes() == content_before
+    assert "amended." not in capsys.readouterr().out
 
 
+@pytest.mark.usefixtures("legacy_amendment")
 def test_amend_dropped_alias_confirmed(
     example_workdir: Path, monkeypatch: pytest.MonkeyPatch
 ):
     """Test that a confirmed amendment drops the accession of a removed alias and
     keeps all others.
     """
-    submission_id, accessions_before = submit_original()
+    submission_id, accessions_before = submit_legacy()
 
     pretend_terminal(monkeypatch)
     monkeypatch.setattr(typer, "confirm", lambda *args, **kwargs: True)
@@ -209,6 +262,60 @@ def test_amend_dropped_alias_confirmed(
     )
 
 
+@pytest.mark.parametrize("keep_anchor", [False, True], ids=["no_anchor", "empty"])
+def test_amend_without_study_accession(example_workdir: Path, keep_anchor: bool):
+    """Test that a stored accession map without a study accession is refused with an
+    error naming the submission, whether the study's anchor is missing or empty.
+    """
+    submission_id, _ = submit_original()
+    path = Path("submission_store") / f"{submission_id}.json"
+    submission = json.loads(path.read_text(encoding="utf-8"))
+    accession_map = submission["accession_map"]
+    study_anchor = next(
+        anchor
+        for anchor, accessions in accession_map.items()
+        if any(
+            re.fullmatch(r"GHGA\.\d{2}\.[A-Z2-7]+\.1", accession)
+            for accession in accessions.values()
+        )
+    )
+    if keep_anchor:
+        accession_map[study_anchor] = {}
+    else:
+        del accession_map[study_anchor]
+    path.write_text(json.dumps(submission), encoding="utf-8")
+
+    with pytest.raises(StudyAccessionMissingError, match=submission_id):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+
+def test_amend_refuses_study_pid_submission(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Test that a submission whose study has a study PID is refused, naming the
+    submission, and that nothing is written or minted and no success is reported.
+    """
+    submission_id, _ = submit_original()
+    submission_path = Path("submission_store") / f"{submission_id}.json"
+    content_before = submission_path.read_bytes()
+    accession_store_before = Path("accession_store").read_text(encoding="utf-8")
+
+    with pytest.raises(AccessionNotLegacyError, match=submission_id):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert submission_path.read_bytes() == content_before
+    assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+    assert "amended." not in capsys.readouterr().out
+
+
 def test_amend_unknown_submission(example_workdir: Path):
     """Test that amending a submission that does not exist is an error."""
     submit_original()
@@ -221,13 +328,14 @@ def test_amend_unknown_submission(example_workdir: Path):
         )
 
 
+@pytest.mark.usefixtures("legacy_amendment")
 def test_amend_mints_nothing_when_aborted(
     example_workdir: Path, monkeypatch: pytest.MonkeyPatch
 ):
     """Test that planning an amendment does not consume accessions, so declining one
     leaves the accession store untouched.
     """
-    submission_id, _ = submit_original()
+    submission_id, _ = submit_legacy()
     accession_store_before = Path("accession_store").read_text(encoding="utf-8")
 
     pretend_terminal(monkeypatch)
@@ -259,22 +367,6 @@ def test_needs_confirmation():
     assert amendment.needs_confirmation(changes=nothing_preserved)
 
 
-def test_amendment_report_mentions_every_dropped_accession():
-    """Test that the report never truncates dropped accessions, however many there
-    are, since each one is a resource a later load would remove.
-    """
-    dropped = {"files": {f"alias_{index}": f"GHGAF{index}" for index in range(50)}}
-    changes = AccessionChanges(
-        preserved={"files": {"kept": "GHGAF999"}}, dropped=dropped
-    )
-
-    report = amendment.format_amendment_report(submission_id="some-id", changes=changes)
-
-    for alias, accession in dropped["files"].items():
-        assert alias in report
-        assert accession in report
-
-
 ANCHOR_POINTS = {
     "Class1": AnchorPoint(
         root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
@@ -291,7 +383,7 @@ def test_plan_accession_changes():
     Covers an alias that keeps its accession, an alias that needs a new one, an alias
     that loses its accession, and a whole anchor that disappears from the content.
     """
-    changes = amendment.plan_accession_changes(
+    changes = amendment.find_accession_changes(
         content={
             "class1_anchor": [{"alias": "kept"}, {"alias": "added"}],
         },
@@ -300,6 +392,7 @@ def test_plan_accession_changes():
             "class2_anchor": {"orphan": "ACC3"},
         },
         anchor_points_by_target=ANCHOR_POINTS,
+        class_names=ANCHOR_POINTS.keys(),
     )
 
     assert changes.preserved == {"class1_anchor": {"kept": "ACC1"}}
@@ -318,42 +411,16 @@ def test_plan_accession_changes_pure_addition():
     """Test that adding a resource preserves every existing accession and drops none,
     which is the case the amend command exists for.
     """
-    changes = amendment.plan_accession_changes(
+    changes = amendment.find_accession_changes(
         content={"class1_anchor": [{"alias": "old"}, {"alias": "new"}]},
         existing_accession_map={"class1_anchor": {"old": "ACC1"}},
         anchor_points_by_target=ANCHOR_POINTS,
+        class_names=ANCHOR_POINTS.keys(),
     )
 
     assert changes.preserved == {"class1_anchor": {"old": "ACC1"}}
     assert changes.new_aliases == {"class1_anchor": ["new"]}
     assert changes.is_lossless
-
-
-def test_diff_accession_maps():
-    """Test comparing the accession maps from before and after an amendment."""
-    diff = amendment.diff_accession_maps(
-        before={"files": {"kept": "ACC1", "gone": "ACC2", "moved": "ACC3"}},
-        after={"files": {"kept": "ACC1", "added": "ACC4", "moved": "ACC5"}},
-    )
-
-    assert diff.preserved == {"files": {"kept": "ACC1"}}
-    # a changed accession counts as minted and dropped, so it cannot hide:
-    assert diff.minted == {"files": {"added": "ACC4", "moved": "ACC5"}}
-    assert diff.dropped == {"files": {"gone": "ACC2", "moved": "ACC3"}}
-
-
-def test_amendment_result_lists_minted_accessions():
-    """Test that the result names every accession the amendment minted, since those
-    are what the steward needs for the next ingest.
-    """
-    diff = AccessionDiff(
-        preserved={"files": {"old": "ACC1"}}, minted={"files": {"new": "ACC2"}}
-    )
-
-    result = amendment.format_amendment_result(diff=diff)
-
-    assert "1 accessions preserved, 1 minted, 0 dropped" in result
-    assert "files / new  ACC2" in result
 
 
 def test_amend_requires_completed_submission(example_workdir: Path):
@@ -379,6 +446,7 @@ def test_amend_requires_completed_submission(example_workdir: Path):
         )
 
 
+@pytest.mark.usefixtures("legacy_amendment")
 def test_amend_refuses_risky_amendment_without_a_terminal(
     example_workdir: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -388,7 +456,7 @@ def test_amend_refuses_risky_amendment_without_a_terminal(
     `y` would otherwise answer for someone who never saw the report. The prompt is the
     only safeguard against dropping accessions, so it must not be answerable that way.
     """
-    submission_id, _ = submit_original()
+    submission_id, _ = submit_legacy()
     submission_path = Path("submission_store") / f"{submission_id}.json"
     content_before = submission_path.read_bytes()
     accession_store_before = Path("accession_store").read_text(encoding="utf-8")
@@ -410,136 +478,123 @@ def test_amend_refuses_risky_amendment_without_a_terminal(
     assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
 
 
-DUPE_ANCHORS = {
-    "C": AnchorPoint(root_slot="files", target_class="C", identifier_slot="alias")
+# the file classes of the test model, in place of the GHGA model's
+TEST_FILE_CLASS_NAMES = ("SampleFile", "ExperimentFile")
+
+
+@pytest.fixture
+def legacy_amendment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let an amendment run on the test model: mint flat accessions with prefixes for
+    its classes, and compare its file classes.
+    """
+    monkeypatch.setattr(legacy_accessioning, "LEGACY_PREFIXES", TEST_LEGACY_PREFIXES)
+    monkeypatch.setattr(
+        amendment,
+        "find_accession_changes",
+        partial(amendment.find_accession_changes, class_names=TEST_FILE_CLASS_NAMES),
+    )
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_amend_mints_flat_accession(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Test that an amendment mints a flat accession for a new alias, 'GHGAF' and 14
+    digits for a file, registers it as legacy in the accession store, and reports
+    its success last.
+    """
+    submission_id, _ = submit_legacy()
+
+    amend(
+        submission_id=submission_id,
+        metadata_path=AMENDED_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    output_lines = capsys.readouterr().out.splitlines()
+    assert output_lines[-1] == f"Submission {submission_id} amended."
+
+    accessions_after = read_accession_map(submission_id=submission_id)
+    minted = accessions_after["sample_files"]["test_sample_03_R1"]
+    assert re.fullmatch(r"GHGAF\d{14}", minted)
+
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    assert accession_store["legacy"] == [minted]
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_amend_class_without_flat_prefix(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a new resource of a class without a flat prefix is refused with an
+    error naming the class, and that the accession map stays unchanged.
+    """
+    submission_id, accessions_before = submit_legacy()
+    prefixes = {
+        class_name: prefix
+        for class_name, prefix in TEST_LEGACY_PREFIXES.items()
+        if class_name != "SampleFile"
+    }
+    monkeypatch.setattr(legacy_accessioning, "LEGACY_PREFIXES", prefixes)
+
+    with pytest.raises(
+        legacy_accessioning.LegacyAccessionRegistry.AccessionGenerationError,
+        match="'SampleFile'",
+    ):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert read_accession_map(submission_id=submission_id) == accessions_before
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_amend_renamed_study_keeps_its_accession(example_workdir: Path):
+    """Test that a study whose alias changed keeps its accession under the new alias,
+    since a new alias does not make it a new study.
+    """
+    submission_id, accessions_before = submit_legacy()
+    renamed_metadata_path = Path("renamed_metadata.yaml")
+    renamed_metadata_path.write_text(
+        ORIGINAL_METADATA_PATH.read_text(encoding="utf-8").replace(
+            "alias: test_study", "alias: renamed_study"
+        ),
+        encoding="utf-8",
+    )
+
+    amendment.amend_metadata_from_path(
+        submission_id=submission_id,
+        metadata_path=renamed_metadata_path,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    accessions_after = read_accession_map(submission_id=submission_id)
+    assert accessions_after["studies"] == {
+        "renamed_study": accessions_before["studies"]["test_study"]
+    }
+
+
+LEGACY_ANCHORS = {
+    "C": AnchorPoint(root_slot="files", target_class="C", identifier_slot="alias"),
+    "D": AnchorPoint(root_slot="others", target_class="D", identifier_slot="alias"),
 }
 
 
-def plan_with_duplicates(content: dict, existing: dict | None = None):
-    """Plan an amendment over content that may list an alias more than once."""
-    return amendment.plan_accession_changes(
-        content=content,
-        existing_accession_map=existing or {},
-        anchor_points_by_target=DUPE_ANCHORS,
-    )
-
-
-def test_plan_reports_duplicated_aliases():
-    """Test that an alias listed twice is reported, and flagged when the rows differ.
-
-    Nothing upstream rejects a duplicate, and an alias identifies a resource, so the
-    repeats share one accession: the transform stamps it on every row and the loader
-    keys them to one resource. Where the rows differ, one silently replaces the other.
+def test_check_alias_uniqueness_per_class():
+    """Test that an alias repeated within a class is rejected, and one shared across
+    classes is not, since flat accessions hold no alias.
     """
-    changes = plan_with_duplicates(
-        {
-            "files": [
-                {"alias": "kept", "size": 1},
-                {"alias": "kept", "size": 999},
-                {"alias": "twin", "size": 5},
-                {"alias": "twin", "size": 5},
-            ]
-        },
-        {"files": {"kept": "ACC1"}},
+    legacy_accessioning.check_alias_uniqueness_per_class(
+        content={"files": [{"alias": "a"}], "others": [{"alias": "a"}]},
+        anchor_points_by_target=LEGACY_ANCHORS,
     )
 
-    assert changes.duplicated_aliases == {"files": ["kept", "twin"]}
-    # only the differing pair is damaging
-    assert changes.conflicting_aliases == {"files": ["kept"]}
-    assert changes.duplicated_alias_count == 2
-    assert changes.conflicting_alias_count == 1
-
-
-def test_plan_counts_a_duplicated_alias_once():
-    """Test that a repeated alias is counted once, since it receives one accession."""
-    changes = plan_with_duplicates({"files": [{"alias": "new"}, {"alias": "new"}]})
-    assert changes.new_aliases == {"files": ["new"]}
-    assert changes.new_alias_count == 1
-
-    changes = plan_with_duplicates(
-        {"files": [{"alias": "old"}, {"alias": "old"}]}, {"files": {"old": "ACC1"}}
-    )
-    assert changes.preserved == {"files": {"old": "ACC1"}}
-    assert changes.preserved_count == 1
-
-
-def test_duplicated_alias_needs_confirmation():
-    """Test that a duplicate requires confirmation even when nothing is dropped."""
-    changes = plan_with_duplicates(
-        {"files": [{"alias": "old"}, {"alias": "old"}]}, {"files": {"old": "ACC1"}}
-    )
-
-    assert changes.is_lossless
-    assert changes.dropped_count == 0
-    assert amendment.needs_confirmation(changes=changes)
-
-
-def test_report_names_duplicated_aliases():
-    """Test that the report names every duplicate and marks the differing ones."""
-    changes = plan_with_duplicates(
-        {
-            "files": [
-                {"alias": "differs", "size": 1},
-                {"alias": "differs", "size": 2},
-                {"alias": "same", "size": 3},
-                {"alias": "same", "size": 3},
-            ]
-        }
-    )
-
-    report = amendment.format_amendment_report(submission_id="x", changes=changes)
-
-    assert "files / differs" in report
-    assert "rows differ" in report
-    assert "files / same" in report
-    assert "rows identical" in report
-
-
-@pytest.mark.parametrize(
-    "amended_metadata_path",
-    [AMENDED_METADATA_PATH, DROPPED_METADATA_PATH],
-    ids=["addition", "drop"],
-)
-def test_plan_matches_what_the_amendment_applies(
-    example_workdir: Path, amended_metadata_path: Path
-):
-    """Test that the plan shown before confirming matches the amendment applied after.
-
-    The report comes from `plan_accession_changes` and the write from
-    `generate_accession_map`, two separate decisions about every alias. Each is covered
-    on its own elsewhere, so without this the report could promise something the
-    amendment does not do and every other test would still pass.
-    """
-    submission_id, _ = submit_original()
-
-    captured: list[AccessionChanges] = []
-
-    def capture_and_approve(changes: AccessionChanges) -> bool:
-        captured.append(changes)
-        return True
-
-    diff = amendment.amend_metadata_from_path(
-        submission_id=submission_id,
-        metadata_path=amended_metadata_path,
-        config_path=METADATA_CONFIG_PATH,
-        confirm=capture_and_approve,
-    )
-
-    assert len(captured) == 1, "the plan must be offered exactly once"
-    changes = captured[0]
-
-    # the accessions promised as kept are the ones kept, with the same values
-    assert changes.preserved == diff.preserved
-
-    # the aliases promised a new accession are the ones that got one
-    promised_new = {anchor: sorted(a) for anchor, a in changes.new_aliases.items()}
-    actually_minted = {anchor: sorted(a) for anchor, a in diff.minted.items()}
-    assert promised_new == actually_minted
-
-    # the accessions promised as released are the ones released, with the same values
-    assert changes.dropped == diff.dropped
-
-    # and the counts the steward read agree with the outcome
-    assert changes.preserved_count == diff.preserved_count
-    assert changes.new_alias_count == diff.minted_count
-    assert changes.dropped_count == diff.dropped_count
+    with pytest.raises(
+        MetadataValidationError, match=r"value 'a': .* 2 entities of the class 'C'"
+    ):
+        legacy_accessioning.check_alias_uniqueness_per_class(
+            content={"files": [{"alias": "a"}, {"alias": "a"}, {"alias": "b"}]},
+            anchor_points_by_target=LEGACY_ANCHORS,
+        )

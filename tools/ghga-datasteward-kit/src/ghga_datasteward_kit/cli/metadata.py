@@ -21,9 +21,10 @@ from pathlib import Path
 
 import typer
 
-from ghga_datasteward_kit import amendment, metadata
-from ghga_datasteward_kit.amendment import AccessionChanges
-from ghga_datasteward_kit.exceptions import AmendmentAbortedError
+from ghga_datasteward_kit import metadata
+from ghga_datasteward_kit.amendment import amendment
+from ghga_datasteward_kit.amendment.amendment import AccessionChanges
+from ghga_datasteward_kit.amendment.exceptions import AmendmentAbortedError
 from ghga_transpiler.cli import transpile
 
 cli = typer.Typer(no_args_is_help=True)
@@ -117,16 +118,17 @@ def amend(
         readable=True,
     ),
 ):
-    """Replace the content of an already accessioned submission, keeping its accessions.
+    """Replace the content of a submission with flat accessions, keeping its accessions.
 
-    Use this instead of a second 'submit' when a submission gains files: aliases that
-    are already accessioned keep their accession, and only new aliases get new ones.
+    Use this instead of a second 'submit' when a submission accessioned before study
+    PIDs gains files: aliases that are already accessioned keep their accession, and
+    only new aliases get new flat ones. A submission with study PIDs is refused.
 
-    This applies to every metadata class, not only files. The study, its datasets,
-    samples and experiments keep, gain or lose accessions by the same alias matching,
-    and a field changed on an already-accessioned resource is written through without
-    a report entry or a prompt, because it is not an accession change. Keeping an
-    amendment to added files is a rule for its users, not one this command enforces.
+    The report and the confirmation cover the files only. The other classes keep,
+    gain or lose accessions by the same alias matching without a report entry or a
+    prompt, and a field changed on an already-accessioned resource is written through.
+    Keeping an amendment to added files is a rule for its users, not one this command
+    enforces.
     """
     logging.basicConfig(level=logging.CRITICAL)
 
@@ -134,7 +136,7 @@ def amend(
         return _report_and_confirm_amendment(changes, submission_id=submission_id)
 
     try:
-        diff = amendment.amend_metadata_from_path(
+        amendment.amend_metadata_from_path(
             submission_id=submission_id,
             metadata_path=metadata_path,
             config_path=config_path,
@@ -143,8 +145,9 @@ def amend(
     except AmendmentAbortedError as error:
         typer.echo(str(error))
         raise typer.Abort() from error
-
-    typer.echo(amendment.format_amendment_result(diff=diff))
+    else:
+        # only reached once the submission is written and its source event published
+        typer.echo(f"Submission {submission_id} amended.")
 
 
 @cli.command(no_args_is_help=True)

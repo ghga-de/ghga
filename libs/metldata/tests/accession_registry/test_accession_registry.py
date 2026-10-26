@@ -49,7 +49,7 @@ def test_fresh_study_pid(
     """A new study gets 'GHGA.YY.XXX.1' of the current year, its root registered."""
     accession_registry, accession_store = make_registry(config_sub_fixture)
 
-    study_pid = accession_registry.get_study_accession()
+    study_pid = accession_registry.generate_study_accession()
 
     match = STUDY_PID_PATTERN.match(study_pid)
     assert match
@@ -63,7 +63,7 @@ def test_fresh_study_pids_are_unique(
     """Each new study gets its own root."""
     accession_registry, accession_store = make_registry(config_sub_fixture)
 
-    study_pids = {accession_registry.get_study_accession() for _ in range(50)}
+    study_pids = {accession_registry.generate_study_accession() for _ in range(50)}
 
     assert len(study_pids) == 50
     year = now_as_utc().strftime("%y")
@@ -81,7 +81,7 @@ def test_study_pid_fallback_finds_last_unused_root(
     for character in BASE32_ALPHABET[:-1]:
         accession_store.save(year=year, random_block=character)
 
-    study_pid = accession_registry.get_study_accession()
+    study_pid = accession_registry.generate_study_accession()
 
     assert study_pid == f"GHGA.{year}.{BASE32_ALPHABET[-1]}.1"
 
@@ -98,7 +98,7 @@ def test_study_pid_exhausted(
         accession_store.save(year=year, random_block=character)
 
     with pytest.raises(AccessionRegistry.AccessionGenerationError):
-        accession_registry.get_study_accession()
+        accession_registry.generate_study_accession()
 
 
 def test_dataset_pids(
@@ -108,11 +108,11 @@ def test_dataset_pids(
     and nothing is registered in the store.
     """
     accession_registry, accession_store = make_registry(config_sub_fixture)
-    study_pid = accession_registry.get_study_accession()
+    study_pid = accession_registry.generate_study_accession()
     used_accessions: set[str] = set()
 
     for _ in range(50):
-        dataset_pid = accession_registry.get_dataset_accession(
+        dataset_pid = accession_registry.generate_dataset_accession(
             study_pid=study_pid, used_accessions=used_accessions
         )
         assert DATASET_PID_PATTERN.match(dataset_pid)
@@ -134,14 +134,14 @@ def test_dataset_pids_exhausted(
 
     for _ in BASE32_ALPHABET:
         used_accessions.add(
-            accession_registry.get_dataset_accession(
+            accession_registry.generate_dataset_accession(
                 study_pid=study_pid, used_accessions=used_accessions
             )
         )
 
     assert len(used_accessions) == len(BASE32_ALPHABET)
     with pytest.raises(AccessionRegistry.AccessionGenerationError):
-        accession_registry.get_dataset_accession(
+        accession_registry.generate_dataset_accession(
             study_pid=study_pid, used_accessions=used_accessions
         )
 
@@ -150,13 +150,13 @@ def test_get_accession_by_class(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """The study takes the study PID, a dataset a dataset PID, and every other
-    resource the accession composed from its alias.
+    resource the accession composed from its normalized alias.
     """
     accession_registry, _ = make_registry(config_sub_fixture)
     study_pid = "GHGA.26.K7Q.1"
 
     def get_accession(class_name: str, alias: str) -> str:
-        return accession_registry.get_accession(
+        return accession_registry.generate_accession(
             class_name=class_name,
             alias=alias,
             study_pid=study_pid,
@@ -165,4 +165,6 @@ def test_get_accession_by_class(
 
     assert get_accession("Study", "STUDY_1") == study_pid
     assert get_accession("Dataset", "DS_1").startswith(f"{study_pid}.DS.")
-    assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.SAMPLE_1"
+    assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.sample_1"
+    # normalized, an alias cannot pose as a dataset PID
+    assert get_accession("Sample", "DS.ABC") == f"{study_pid}.ds-abc"

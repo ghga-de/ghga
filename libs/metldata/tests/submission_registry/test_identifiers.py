@@ -15,8 +15,15 @@
 #
 """Test the identifiers module."""
 
+import pytest
+
+from metldata.accession_registry import accession_registry as accession_registry_module
+from metldata.accession_registry.accession_registry import AccessionRegistry
+from metldata.accession_registry.accession_store import AccessionStore
+from metldata.config import SubmissionConfig
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.submission_registry.identifiers import generate_accession_map
+from tests.fixtures.config import config_sub_fixture  # noqa: F401
 
 
 class FakeAccessionRegistry:
@@ -30,11 +37,11 @@ class FakeAccessionRegistry:
         """Tell whether the given class is the study class."""
         return class_name == "Study"
 
-    def get_study_accession(self) -> str:
+    def generate_study_accession(self) -> str:
         """Generate the PID of a study."""
         return "generated_study_pid"
 
-    def get_accession(
+    def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Generate the accession of a resource of the specified class in a study."""
@@ -127,4 +134,46 @@ def test_new_study_alias_keeps_pid():
     assert observed_accession_map == {
         "study_anchor": {"new_study_alias": "existing_study_pid"},
         "class1_anchor": {"test_alias1": "existing_study_pid.test_alias1"},
+    }
+
+
+def test_existing_dataset_pid_not_drawn_again(
+    config_sub_fixture: SubmissionConfig,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """A new dataset never gets the PID of a dataset already in the map, even when
+    the random draw hits it.
+    """
+    draws = iter(["K7Q", "M2X"])
+    monkeypatch.setattr(
+        accession_registry_module, "generate_random_block", lambda *_: next(draws)
+    )
+    anchor_points_by_target = {
+        "Study": AnchorPoint(
+            root_slot="study_anchor", target_class="Study", identifier_slot="alias"
+        ),
+        "Dataset": AnchorPoint(
+            root_slot="dataset_anchor", target_class="Dataset", identifier_slot="alias"
+        ),
+    }
+
+    accession_map = generate_accession_map(
+        content={
+            "study_anchor": [{"alias": "test_study"}],
+            "dataset_anchor": [{"alias": "DS_A"}, {"alias": "DS_B"}],
+        },
+        existing_accession_map={
+            "study_anchor": {"test_study": "GHGA.26.ABC.1"},
+            "dataset_anchor": {"DS_A": "GHGA.26.ABC.1.DS.K7Q"},
+        },
+        accession_registry=AccessionRegistry(
+            config=config_sub_fixture,
+            accession_store=AccessionStore(config=config_sub_fixture),
+        ),
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
+    assert accession_map["dataset_anchor"] == {
+        "DS_A": "GHGA.26.ABC.1.DS.K7Q",
+        "DS_B": "GHGA.26.ABC.1.DS.M2X",
     }
