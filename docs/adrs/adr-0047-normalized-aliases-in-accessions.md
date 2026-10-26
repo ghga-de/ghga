@@ -39,8 +39,7 @@ Before anything is minted, metldata refuses:
 
 - an alias that is empty or whitespace only, in `MetadataValidator.validate`;
 - an alias that is not ASCII, since normalizing would hide its characters;
-- two aliases of a submission that are equal once normalized, across all classes;
-- a new alias whose accession a dropped alias held, so that an accession never passes to another entity.
+- two aliases of a submission that are equal once normalized, across all classes.
 
 The rule is fixed: changing it would give an alias already accessioned a different accession in a later revision.
 `FileAccession` in commons accepts exactly this alias block, and changes only together with the rule.
@@ -50,7 +49,6 @@ The rule is fixed: changing it would give an alias already accessioned a differe
 - An alias accession has one lowercase block after the study PID and a dataset PID has two, so a pattern tells them apart without knowing the configurable prefixes.
 - Accessions need no escaping in URLs, file names or object storage keys.
 - Aliases such as `Sample 1` and `sample-1` collide, and the steward renames one.
-- A rename that changes only case or punctuation is refused once the old alias holds an accession; the steward keeps the old spelling.
 - The rule lives in metldata and its pattern in commons, so a reviewer of either checks the other.
 
 ### Alternatives

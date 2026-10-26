@@ -20,7 +20,7 @@
   The file name corresponds to the event key.
   The event type is stored together with the payload in the event file.
 
-- **`accession_store_path`** *(string, format: path)*: A JSON file holding the random blocks of the study PIDs minted so far, by year, so that none is minted twice, the accessions each study retired, so that none is given out again, and the accessions minted before study PIDs.
+- **`accession_store_path`** *(string, format: path)*: A JSON file holding the random blocks of the study PIDs minted so far, by year, so that none is minted twice, and the accessions minted before study PIDs.
 
 - **`study_pid_prefix`** *(string)*: The leading block of the study PID 'PREFIX.YY.XXX.V'.
   Must not contain dots, as they separate the blocks of the PID.

@@ -117,7 +117,7 @@ class LegacyAccessionRegistry(AccessionRegistry):
         super().__init__(config=config, accession_store=accession_store)
         self._legacy_store = accession_store
 
-    def get_accession(
+    def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Get the flat accession of a resource of the given class.

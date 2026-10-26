@@ -23,7 +23,6 @@ from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.accession_registry.accession_registry_utils import (
     find_unused_pid,
     generate_random_block,
-    split_study_pid,
 )
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.metadata_utils import normalize_alias
@@ -83,8 +82,8 @@ class AccessionRegistryConfig(BaseSettings):
 
 
 class AccessionRegistry:
-    """Decides which accessions may be given out: mints new ones and keeps track of
-    those a study retired.
+    """Generates the accessions of new resources, registering study PIDs in the
+    accession store.
     """
 
     class AccessionGenerationError(RuntimeError):
@@ -124,7 +123,7 @@ class AccessionRegistry:
 
         return random_block
 
-    def _mint_fresh_study_pid(self) -> str:
+    def generate_study_accession(self) -> str:
         """Generate and register the PID 'PREFIX.YY.XXX.1' of a new study lineage.
 
         The random block 'XXX' is what gets registered under its year, since it must be
@@ -154,14 +153,6 @@ class AccessionRegistry:
 
         return f"{root}.1"
 
-    def get_study_accession(self) -> str:
-        """Get the PID of a study, which starts a fresh lineage 'PREFIX.YY.XXX.1'.
-
-        Raises:
-            AccessionGenerationError: If every study PID root of the year is taken.
-        """
-        return self._mint_fresh_study_pid()
-
     def _choose_unused_dataset_pid(
         self, *, study_pid: str, used_accessions: set[str]
     ) -> str:
@@ -185,13 +176,13 @@ class AccessionRegistry:
 
         return dataset_pid
 
-    def get_dataset_accession(
+    def generate_dataset_accession(
         self, *, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Generate the PID '{study_pid}.DS.XXX' of a new dataset.
 
-        The random block must be unique among the datasets the study ever had, so the
-        caller passes the accessions given out in it, retired ones included.
+        The random block must be unique among the datasets of the study, so the
+        caller passes the accessions the submission holds.
 
         Raises:
             AccessionGenerationError: If every dataset PID of the study is taken.
@@ -200,7 +191,7 @@ class AccessionRegistry:
         # set is unchanged from the predecessor revision to keep its random block, and
         # (2) a new or changed dataset to get a random block not used anywhere in the
         # lineage. Neither is done yet: every revision draws fresh random blocks,
-        # checked only against the datasets of the same revision and those it retired.
+        # checked only against the datasets of the same revision.
         # For (2), the store will have to keep every dataset block of the lineage.
         for _ in range(MAX_RANDOM_ATTEMPTS):
             random_block = generate_random_block(
@@ -216,63 +207,20 @@ class AccessionRegistry:
             study_pid=study_pid, used_accessions=used_accessions
         )
 
-    def get_alias_accession(self, *, study_pid: str, alias: str) -> str:
+    def generate_alias_accession(self, *, study_pid: str, alias: str) -> str:
         """Compose the accession '{study_pid}.{alias}' of an entity that is neither
         the study nor a dataset, from its normalized alias.
 
         Nothing is drawn or registered: the accession is unique by construction, since
         the study PID is unique and normalized aliases are unique within the study.
-        Whether the study retired it is for the caller to check.
         """
         return f"{study_pid}.{normalize_alias(alias)}"
-
-    def get_retired_accessions(self, *, study_pid: str) -> set[str]:
-        """Get the accessions the study gave out and dropped since, so that none is
-        given out again.
-
-        A study with a flat accession has none, since its store list `legacy` already
-        keeps every flat accession from being minted twice.
-        """
-        root = split_study_pid(study_pid)
-        if root is None:
-            return set()
-
-        year, random_block = root
-        return {
-            f"{study_pid}.{retired}"
-            for retired in self._accession_store.get_retired(
-                year=year, random_block=random_block
-            )
-        }
-
-    def retire_accessions(self, *, study_pid: str, accessions: set[str]) -> None:
-        """Register the accessions the study dropped, so that none is given out
-        again, in one write.
-
-        Nothing is registered for a study with a flat accession, as for
-        `get_retired_accessions`.
-        """
-        root = split_study_pid(study_pid)
-        if root is None or not accessions:
-            return
-
-        year, random_block = root
-        prefix = f"{study_pid}."
-        self._accession_store.retire(
-            year=year,
-            random_block=random_block,
-            retired=(
-                accession.removeprefix(prefix)
-                for accession in accessions
-                if accession.startswith(prefix)
-            ),
-        )
 
     def is_study_class(self, class_name: str) -> bool:
         """Tell whether the given class is the one whose entity takes the study PID."""
         return class_name == self._config.study_class_name
 
-    def get_accession(
+    def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Get the accession of a resource of the given class within a study.
@@ -287,8 +235,8 @@ class AccessionRegistry:
             return study_pid
 
         if class_name == self._config.dataset_class_name:
-            return self.get_dataset_accession(
+            return self.generate_dataset_accession(
                 study_pid=study_pid, used_accessions=used_accessions
             )
 
-        return self.get_alias_accession(study_pid=study_pid, alias=alias)
+        return self.generate_alias_accession(study_pid=study_pid, alias=alias)

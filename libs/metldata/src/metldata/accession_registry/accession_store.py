@@ -14,12 +14,9 @@
 # limitations under the License.
 #
 
-"""Storing and exploring the random blocks of study PIDs already minted, and the
-accessions each study retired.
-"""
+"""Storing and exploring the random blocks of study PIDs already minted."""
 
 import shutil
-from collections.abc import Iterable
 from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError
@@ -33,21 +30,8 @@ class AccessionStoreConfig(BaseSettings):
         ...,
         description=(
             "A JSON file holding the random blocks of the study PIDs minted so far, by"
-            + " year, so that none is minted twice, the accessions each study retired,"
-            + " so that none is given out again, and the accessions minted before"
+            + " year, so that none is minted twice, and the accessions minted before"
             + " study PIDs."
-        ),
-    )
-
-
-class RetiredStudyAccessions(BaseModel):
-    """The accessions a study retired, kept under its study PID root 'PREFIX.YY.XXX'."""
-
-    retired: list[str] = Field(
-        default_factory=list,
-        description=(
-            "The accessions the study gave out and dropped since, without the leading"
-            + " study PID, such as 'DS.K7Q' or 'sample-a'."
         ),
     )
 
@@ -59,7 +43,7 @@ class AccessionStoreContent(BaseModel):
         default_factory=list,
         description="Accessions minted under the flat scheme that predates study PIDs.",
     )
-    years: dict[str, dict[str, RetiredStudyAccessions]] = Field(
+    years: dict[str, list[str]] = Field(
         default_factory=dict,
         description=(
             "The study PIDs minted per two-digit year, keyed by their random block."
@@ -69,8 +53,7 @@ class AccessionStoreContent(BaseModel):
 
 class AccessionStore:
     """Keeps track of the random blocks of study PIDs per year, so that none is
-    minted twice, and of the accessions each study retired, so that none is given
-    out again.
+    minted twice.
 
     It is an index, not the source of truth: the submission store holds the
     accessions and the metadata they belong to.
@@ -131,7 +114,7 @@ class AccessionStore:
 
     def get_random_blocks(self, *, year: str) -> set[str]:
         """Return the random blocks minted so far in the given year."""
-        return set(self._load().years.get(year, {}))
+        return set(self._load().years.get(year, []))
 
     def exists(self, *, year: str, random_block: str) -> bool:
         """Check whether the given random block is already in use in its year."""
@@ -144,36 +127,11 @@ class AccessionStore:
             AccessionAlreadyExistsError: If the random block already exists in its year.
         """
         content = self._load()
-        studies = content.years.setdefault(year, {})
+        studies = content.years.setdefault(year, [])
         if random_block in studies:
             raise self.AccessionAlreadyExistsError(year=year, random_block=random_block)
 
-        studies[random_block] = RetiredStudyAccessions()
-        self._dump(content)
-
-    def get_retired(self, *, year: str, random_block: str) -> set[str]:
-        """Return the accessions the study with the given root retired, without the
-        leading study PID.
-        """
-        study = self._load().years.get(year, {}).get(random_block)
-        return set(study.retired) if study else set()
-
-    def retire(self, *, year: str, random_block: str, retired: Iterable[str]) -> None:
-        """Add accessions, given without the leading study PID, to those the study
-        with the given root retired, in one write.
-
-        A root missing from the store is registered with them, so that it is not
-        minted again either.
-        """
-        content = self._load()
-        study = content.years.setdefault(year, {}).setdefault(
-            random_block, RetiredStudyAccessions()
-        )
-        new_retired = sorted(set(retired) - set(study.retired))
-        if not new_retired:
-            return
-
-        study.retired.extend(new_retired)
+        studies.append(random_block)
         self._dump(content)
 
     def migrate_legacy_store(self) -> None:
