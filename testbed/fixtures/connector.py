@@ -103,7 +103,7 @@ class ConnectorFixture:
 
 
 @fixture(name="connector", scope="session")
-def connector_fixture(config: Config) -> Generator[ConnectorFixture, None, None]:
+def connector_fixture(config: Config) -> Generator[ConnectorFixture]:
     """Pytest fixture for tests using the GHGA Connector."""
     connector_config = ConnectorConfig()
     yield ConnectorFixture(config, connector_config)

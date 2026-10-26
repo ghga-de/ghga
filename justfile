@@ -895,7 +895,8 @@ testbed-up profile="": (demo-load profile)
 testbed-install:
     #!/usr/bin/env bash
     set -euo pipefail
-    uv venv .venv-testbed --allow-existing --python 3.12  # 3.13 breaks the pinned linkml (typing.re)
+    # the tools run from the workspace source, so on the interpreter the workspace runs on
+    uv venv .venv-testbed --allow-existing --python "$(cat .python-version)"
     # uv exports the workspace paths relative to the root; made absolute so the file
     # means the same whichever directory the installer resolves them against
     uv export --frozen --no-hashes --no-dev --no-header \
