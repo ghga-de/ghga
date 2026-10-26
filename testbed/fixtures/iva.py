@@ -112,6 +112,6 @@ class IVAFixture:
 
 
 @fixture(name="iva", scope="session")
-def iva_fixture(config: Config, http: HttpClient) -> Generator[IVAFixture, None, None]:
+def iva_fixture(config: Config, http: HttpClient) -> Generator[IVAFixture]:
     """Pytest fixture for IVA operations"""
     yield IVAFixture(config=config, http=http)
