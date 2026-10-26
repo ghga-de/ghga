@@ -525,7 +525,11 @@ class Dao(typing.Protocol[Dto]):
             BatchOperationError:
                 when some resources failed. Each failed ID maps to
                 `UniqueConstraintViolationError` if it clashes with a unique index over
-                another field.
+                another field, to `DbTimeoutError` if its write timed out, or to a plain
+                `DaoError` for any other failure, such as a failed document validation.
+            DbTimeoutError: when the write concern timed out.
+            DaoError: when the write concern failed otherwise, which no single resource
+                caused.
         """
         ...
 

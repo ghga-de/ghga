@@ -26,6 +26,7 @@ from typing import Any, cast
 import pytest
 from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
 from pymongo import AsyncMongoClient, monitoring
+from pymongo.errors import BulkWriteError
 
 from hexkit.protocols.dao import (
     BatchOperationError,
@@ -1183,6 +1184,7 @@ async def test_dao_upsert_many_unique_index_ordered(mongodb: MongoDbFixture):
         with pytest.raises(BatchOperationError) as caught:
             await dao.upsert_many([first, clashing, last], ordered=True)
 
+        assert isinstance(caught.value.__cause__, BulkWriteError)
         assert list(caught.value.errors) == [clashing.id]
         error = caught.value.errors[clashing.id]
         assert isinstance(error, UniqueConstraintViolationError)
