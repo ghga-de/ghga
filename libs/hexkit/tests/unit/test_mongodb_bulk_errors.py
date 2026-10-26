@@ -23,24 +23,26 @@ from pymongo.errors import BulkWriteError
 
 from hexkit.protocols.dao import (
     DaoError,
+    DbTimeoutError,
     ResourceAlreadyExistsError,
     UniqueConstraintViolationError,
 )
 from hexkit.providers.mongodb.provider.dao import (
     DUPLICATE_KEY_ERROR,
+    MAX_TIME_MS_EXPIRED,
     _errors_from_bulk_write,
 )
 
 IDS = ["a", "b", "c", "d"]
 
 
-def bulk_write_error(*write_errors: dict[str, Any], concern: bool = False):
+def bulk_write_error(
+    *write_errors: dict[str, Any], concern: dict[str, Any] | None = None
+):
     """Build a BulkWriteError with the given write errors, as pymongo reports them."""
     details = {
         "writeErrors": list(write_errors),
-        "writeConcernErrors": [{"code": 64, "errmsg": "waiting timed out"}]
-        if concern
-        else [],
+        "writeConcernErrors": [concern] if concern else [],
         "nInserted": 0,
         "nMatched": 0,
     }
@@ -85,6 +87,15 @@ def test_other_write_error():
     assert str(error.errors["c"]) == "Document failed validation"
 
 
+def test_write_past_its_time_limit():
+    """Test that a write that ran out of its maxTimeMS maps to a timeout."""
+    failure = {"index": 2, "code": MAX_TIME_MS_EXPIRED, "errmsg": "time limit"}
+
+    error = _errors_from_bulk_write(bulk_write_error(failure), IDS, ordered=False)
+
+    assert type(error.errors["c"]) is DbTimeoutError
+
+
 def test_unordered_collects_every_failure():
     """Test that an unordered batch reports all failures and skips nothing."""
     error = _errors_from_bulk_write(
@@ -107,7 +118,24 @@ def test_ordered_lists_skipped_ids():
     assert error.not_attempted == ("c", "d")
 
 
-def test_write_concern_error_fails_the_call():
-    """Test that a write concern error, which no resource caused, fails the call."""
-    with pytest.raises(DaoError, match="waiting timed out"):
-        _errors_from_bulk_write(bulk_write_error(concern=True), IDS, ordered=False)
+WRITE_CONCERN_ERROR = {"code": 64, "errmsg": "waiting timed out"}
+
+
+@pytest.mark.parametrize(
+    "concern, expected",
+    [
+        (WRITE_CONCERN_ERROR, DaoError),
+        (WRITE_CONCERN_ERROR | {"errInfo": {"wtimeout": True}}, DbTimeoutError),
+    ],
+)
+def test_write_concern_error_fails_the_call(
+    concern: dict[str, Any], expected: type[DaoError]
+):
+    """Test that a write concern error, which no resource caused, fails the call.
+
+    A timeout raises the error that a single write raises for it.
+    """
+    with pytest.raises(DaoError, match="waiting timed out") as info:
+        _errors_from_bulk_write(bulk_write_error(concern=concern), IDS, ordered=False)
+
+    assert type(info.value) is expected
