@@ -34,6 +34,7 @@ from hexkit.protocols.dao import (
     Dao,
     DaoError,
     DaoFactoryProtocol,
+    DbTimeoutError,
     Dto,
     FindResult,
     IndexBase,
@@ -123,6 +124,8 @@ async def get_single_hit(
 
 # MongoDB's error code for a write that clashes with a unique index
 DUPLICATE_KEY_ERROR = 11000
+# MongoDB's error code for a write that ran out of its maxTimeMS
+MAX_TIME_MS_EXPIRED = 50
 
 
 def _errors_from_bulk_write(
@@ -135,18 +138,23 @@ def _errors_from_bulk_write(
     batch is ordered or not.
 
     Raises:
-        DaoError: when the batch hit a write concern error, which no single resource
-            caused.
+        DbTimeoutError: when the batch's write concern timed out.
+        DaoError: when the batch hit another write concern error, which no single
+            resource caused.
     """
     if error.details.get("writeConcernErrors"):
+        if error.timeout:
+            raise DbTimeoutError(str(error)) from error
         raise DaoError(str(error)) from error
     errors: dict[ID, DaoError] = {}
     # Each failure gets the error that the single-resource method raises for it
     for failure in error.details["writeErrors"]:
         id_, key_value = ids[failure["index"]], failure.get("keyValue")
-        if failure["code"] != DUPLICATE_KEY_ERROR:
-            # A failure other than a duplicate key, such as a failed document
-            # validation or a document over the size limit, has no error of its own
+        if failure["code"] == MAX_TIME_MS_EXPIRED:
+            errors[id_] = DbTimeoutError(failure["errmsg"])
+        elif failure["code"] != DUPLICATE_KEY_ERROR:
+            # Any other failure, such as a failed document validation or a document
+            # over the size limit, has no error of its own
             errors[id_] = DaoError(failure["errmsg"])
         elif key_value is None or list(key_value) == ["_id"]:
             # A duplicate key on `_id` means the resource exists already. Without
