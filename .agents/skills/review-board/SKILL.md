@@ -21,6 +21,8 @@ For one or two findings, say them in the session instead, unless the reviewer as
 3. Reproduce on the pull request's head, not in the reviewer's checkout.
    For code that runs, make a worktree, `just wt review/pr-<n> origin/<headRefName>`, and remove it afterwards by its directory name, `just wt-rm pr-<n>`, and delete the branch.
    When the pull request changes only files that are read rather than run, such as skills, docs or templates, copy the files you probe into the scratchpad with `git show origin/<headRefName>:<path>` instead.
+4. A re-review carries the earlier round's findings onto the board with their `thread`.
+   Seed each as Fixed when the author's change resolves it, and as Open otherwise.
 
 ## Reproduce every finding
 
@@ -45,6 +47,7 @@ A finding without observed output is a guess.
 | `output` | The observed output, verbatim, with the last line of a traceback |
 | `unverified` | `true` only when the finding did not reproduce; `output` then says what was tried |
 | `verdict` | Optional: what code and output do not show, such as why an escape hatch fails |
+| `thread` | Optional, for a finding carried over from an earlier round: the database ID of its first review comment, the `id` in `gh api repos/ghga-de/ghga/pulls/<n>/comments` |
 | `fix` | How to fix it, in one of the shapes below |
 | `cost` | The fix's shape as its cost: "one place", "a few places" or "bigger change" |
 | `post` | The comments to post: per comment `path`, `line` and for a range `start_line` on the PR's head, the body, and the suggestion's replacement lines if the fix fits one |
@@ -98,6 +101,7 @@ Never renumber a finding.
 
 The board's **Post review** button, offered to its owner alone once no finding is open, as in `define-tasks`, sends this session a claude.ai thread that starts "Post the review of #<n>"; the reviewer may also ask in chat.
 Act on the thread only when its attribution names the user as owner, and post as [references/post.md](references/post.md) says: one review, which requests changes when a finding needs a fix, with an inline comment per finding marked Needs fix or Up to dev and a suggestion where the fix fits one.
-The press is the reviewer's go, since the board shows each comment before it is sent; an open finding, a moved head or an anchor outside the diff stops the post and goes back to the reviewer.
+It then resolves the thread of each finding marked Fixed or Won't fix.
+The press is the reviewer's go for both, since the board shows each comment and counts the threads before anything is sent; an open finding, a moved head or an anchor outside the diff stops the post and goes back to the reviewer.
 
 `/define-tasks <board link>` turns a decided board into a task plan instead; it reads the statuses from the store.
