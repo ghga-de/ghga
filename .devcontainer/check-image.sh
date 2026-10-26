@@ -8,7 +8,9 @@ set -eux
 # The bootstrap interpreter must carry the stdlib, not just python3-minimal:
 # the justfile image recipes and scripts/*.py import tomllib.
 python3 -c "import tomllib, json"
-node --version && pnpm --version && uv --version && just --version
+# just and kind are not in the image: post-create.sh installs them, and
+# `devcontainer build` does not run it.
+node --version && pnpm --version && uv --version
 # Working tools the whole monorepo leans on: fd/rg/bat/jq for navigating and
 # inspecting a tree this size, shellcheck/shfmt for the shell the repo runs on
 # (scripts/just, .devcontainer/post-create.sh, scripts/migration, testbed),

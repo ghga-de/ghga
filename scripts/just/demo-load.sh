@@ -22,11 +22,12 @@ set -euo pipefail
 profile=${1:-}
 reclaim=${2:-false}
 
+# Assignments rather than process substitution, so a failing listing fails the script.
 case "$profile" in
-    "") mapfile -t names < <(python3 scripts/image_members.py --field package) ;;
+    "") names=$(python3 scripts/image_members.py --field package) ;;
     # in the mono profile the Python members are all inside the one image; the members
     # shipping their own Dockerfile still need theirs
-    mono) mapfile -t names < <(python3 scripts/image_members.py --kind frontend --field package; echo platform) ;;
+    mono) names="$(python3 scripts/image_members.py --kind frontend --field package) platform" ;;
     *) echo "error: unknown profile '$profile' (expected 'mono', or nothing)" >&2; exit 1 ;;
 esac
 
@@ -36,7 +37,7 @@ esac
 node_images=$(docker exec ghga-control-plane crictl images 2> /dev/null | awk 'NR>1 {print $1":"$2}' || true)
 loaded=0
 already=0
-for name in "${names[@]}"; do
+for name in $names; do
     ref="$IMAGE_REGISTRY/$name:local"
     if ! docker image inspect "$ref" > /dev/null 2>&1; then
         if printf '%s\n' "$node_images" | grep -Fx "$ref" > /dev/null; then

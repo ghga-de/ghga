@@ -8,6 +8,7 @@ scripts' own logic without a cluster, a registry or a real test run.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -141,6 +142,15 @@ def test_several_targets_run_in_order(members: Repo):
     ]
 
 
+@pytest.mark.parametrize("args", [["-k", "login"], ["services/s", "--lf"]])
+def test_pytest_options_are_refused_as_targets(members: Repo, args: list[str]):
+    """An option is a usage error, not a target run from the root."""
+    result = members.run("test.sh", *args)
+    assert result.returncode == 2
+    assert "is not a target" in result.stderr
+    assert members.calls("uv") == []
+
+
 def test_missing_member_fails_without_running_from_the_root(members: Repo):
     """A typo must not fall back to a tree-wide pytest."""
     result = members.run("test.sh", "libs/nope")
@@ -230,6 +240,14 @@ def test_images_already_on_the_node_count_as_loaded(images: Repo):
     )
     assert result.returncode == 0, result.stderr
     assert "loaded 0 image(s) into the kind node (2 already there)" in result.stdout
+    assert images.calls("kind") == []
+
+
+def test_a_failing_member_listing_fails_the_load(images: Repo):
+    """The listing's failure is the error, not an empty set of images."""
+    images.write("scripts/image_members.py", "raise SystemExit(3)")
+    result = images.run("demo-load.sh", "mono", IMAGE_REGISTRY="r.io/ghga")
+    assert result.returncode == 3
     assert images.calls("kind") == []
 
 
@@ -415,3 +433,58 @@ def test_every_recipe_parses():
             text=True,
         )
         assert result.returncode == 0, (name, result.stderr)
+
+
+def _just(*args: str, stubs: Path) -> subprocess.CompletedProcess:
+    env = {**os.environ, "PATH": f"{stubs}:{os.environ['PATH']}"}
+    env["STUB_LOG"] = str(stubs / "log")
+    return subprocess.run(
+        ["just", *args], cwd=ROOT, env=env, capture_output=True, text=True
+    )
+
+
+@needs_just
+@pytest.mark.parametrize(
+    "recipe, expected",
+    [
+        (
+            ["image", "frontend/data-portal", "ci", "--build-arg", "X=a b"],
+            ["--build-arg", "X=a b", "-t", "docker.io/ghga/data-portal:ci"],
+        ),
+        (
+            ["image", "services/auth-service", "ci", "--pull"],
+            ["--pull", "-t", "docker.io/ghga/auth-service:ci", "."],
+        ),
+        (
+            ["image-mono", "ci", "--build-arg", "X=a b"],
+            ["--build-arg", "X=a b", "-t", "docker.io/ghga/platform:ci", "."],
+        ),
+    ],
+)
+def test_image_recipes_pass_build_flags_through_whole(
+    tmp_path: Path, recipe: list[str], expected: list[str]
+):
+    """A build flag with a space reaches docker as one argument, followed by the tag."""
+    stub = tmp_path / "docker"
+    stub.write_text('#!/usr/bin/env bash\nprintf \'%s\\n\' "$@" > "$STUB_LOG"\n')
+    stub.chmod(0o755)
+    result = _just(*recipe, stubs=tmp_path)
+    assert result.returncode == 0, result.stderr
+    args = (tmp_path / "log").read_text().splitlines()
+    assert any(args[i : i + len(expected)] == expected for i in range(len(args))), args
+
+
+def test_workflows_pin_the_dev_containers_just():
+    """CI runs the recipes with the just the dev container installs."""
+    post_create = (ROOT / ".devcontainer/post-create.sh").read_text()
+    [version] = re.findall(r"^JUST_VERSION=(\S+)$", post_create, re.M)
+    workflows = sorted((ROOT / ".github/workflows").glob("*.yaml"))
+    steps = 0
+    for workflow in workflows:
+        text = workflow.read_text()
+        uses = text.count("uses: extractions/setup-just@")
+        pins = re.findall(r"just-version: (\S+)", text)
+        assert len(pins) == uses, f"{workflow.name}: a setup-just step is unpinned"
+        assert set(pins) <= {version}, f"{workflow.name} pins {pins}, not {version}"
+        steps += uses
+    assert steps > 0

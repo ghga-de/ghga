@@ -92,6 +92,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       - uses: azure/setup-helm@v5
       - uses: helm/kind-action@v1
         with:

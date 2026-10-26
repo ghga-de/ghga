@@ -29,11 +29,10 @@ $K exec "$MPOD" -- mongosh --quiet --eval \
      .filter(n => !["admin","config","local"].includes(n))
      .forEach(n => db.getSiblingDB(n).dropDatabase())' > /dev/null
 echo "$replicas" | while read -r name n; do $K scale deploy "$name" --replicas="$n" > /dev/null; done
-# Name what is being waited on, and what failed. Every app deployment starts at once
-# above while each service re-migrates and rejoins its Kafka consumer group — 240s
-# was not enough on a loaded machine, and a bare `rollout status > /dev/null` under
-# `set -e` then aborted with kubectl's "timed out waiting for the condition" and no
-# clue which of the ~19 deployments it meant.
+# Every app deployment starts at once above while each service re-migrates and rejoins
+# its Kafka consumer group, so the wait is long on a loaded machine. Each deployment is
+# named as it is waited on, because kubectl's own timeout message does not say which of
+# the ~19 it meant.
 total=$(echo "$apps" | wc -l | tr -d ' ')
 i=0
 for d in $apps; do

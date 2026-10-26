@@ -55,7 +55,14 @@ run_target() {
 }
 
 targets=("$@")
-# `.` was this recipe's old default; it still means "everything", not "the root as a member"
+for target in "${targets[@]}"; do
+    if [[ "$target" == -* ]]; then
+        echo "error: '$target' is not a target: \`just test\` takes paths only." >&2
+        echo "For pytest options, run \`uv run pytest\` in the member directory." >&2
+        exit 2
+    fi
+done
+# `.` means everything too, not the root as a member
 if [ ${#targets[@]} -eq 0 ] || [ "${targets[*]}" = "" ] || [ "${targets[*]}" = "." ]; then
     targets=(libs services tools scripts/tests deploy/tests)
 fi

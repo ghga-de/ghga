@@ -77,10 +77,13 @@ lock: _guard-host
 # Two assertions, because CI's one `uv sync --locked` covers two failures that need
 # different fixes here: `--check` reports a stale ENVIRONMENT but passes a stale LOCK
 # straight through, so the lock is checked on its own first.
+# In CI it does nothing: every job builds its environment with `just sync --locked`,
+# which already asserts both.
 # Assert uv.lock and the environment are current, as CI's `uv sync --locked` does.
 sync-check: _guard
     #!/usr/bin/env bash
     set -uo pipefail
+    [ -n "${CI:-}" ] && exit 0
     if ! out=$(uv lock --check 2>&1); then
         echo "$out" >&2
         printf '\nerror: uv.lock is out of date with the pyproject.toml files.\n' >&2
@@ -158,7 +161,7 @@ prose *paths:
         exit 1
     fi
     [ -d .vale/styles/ai-tells ] || vale sync
-    files=({{paths}})
+    files=("$@")
     if [ ${#files[@]} -eq 0 ]; then
         mapfile -t files < <(
             { git diff --name-only --diff-filter=d "$(git merge-base origin/dev HEAD)"
@@ -201,7 +204,7 @@ test *targets: _guard sync-check
 # Defaults to the integration branch, which is what feature branches are cut from (ADR-0038).
 # On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
 affected base="origin/dev":
-    uv run python scripts/affected_targets.py --base {{quote(base)}}
+    uv run python scripts/affected_targets.py --base "$1"
 
 # --- Worktrees (parallel work) ----------------------------------------------------------
 # Worktrees go under .claude/worktrees/ of the main checkout, even when the recipe runs in
@@ -218,11 +221,12 @@ affected base="origin/dev":
 wt branch base="origin/dev": _guard-host
     #!/usr/bin/env bash
     set -euo pipefail
+    branch=$1 base=$2
     main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-    dir="$main/.claude/worktrees/$(basename "{{branch}}")"
+    dir="$main/.claude/worktrees/$(basename "$branch")"
     git fetch origin
     # A branch tracking origin/dev would let a plain push or an editor sync land on dev.
-    git worktree add --no-track "$dir" -b "{{branch}}" "{{base}}"
+    git worktree add --no-track "$dir" -b "$branch" "$base"
     cd "$dir" && just sync && just fe-install
 
 # Leaves the branch: after a squash merge `git branch -d` refuses it, and deleting it with
@@ -232,7 +236,7 @@ wt-rm name: _guard-host
     #!/usr/bin/env bash
     set -euo pipefail
     main=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-    git worktree remove "$main/.claude/worktrees/{{name}}"
+    git worktree remove "$main/.claude/worktrees/$1"
 
 # --- PyPI lane --------------------------------------------------------------------------
 # Run ONE cell of the published-combo matrix (.github/workflows/pypi-matrix.yaml) locally.
@@ -283,24 +287,28 @@ docs member="":
     @scripts/just/docs.sh "$@"
 
 # --- Front end (data-portal, pnpm) ------------------------------------------------------
+# The front-end member the fe-* recipes work in; CI's check-frontend matrix sets it per
+# member, e.g. `just fe_dir=frontend/other fe-check`.
+fe_dir := "frontend/data-portal"
+
 fe-install:
-    cd frontend/data-portal && pnpm install --frozen-lockfile
+    cd {{fe_dir}} && pnpm install --frozen-lockfile
 
 fe-build:
-    cd frontend/data-portal && pnpm build
+    cd {{fe_dir}} && pnpm build
 
 fe-test:
-    cd frontend/data-portal && pnpm test
+    cd {{fe_dir}} && pnpm test
 
 fe-lint:
-    cd frontend/data-portal && pnpm lint
+    cd {{fe_dir}} && pnpm lint
 
 # Prettier owns formatting for the front end (ESLint does not check it).
 fe-format:
-    cd frontend/data-portal && pnpm format
+    cd {{fe_dir}} && pnpm format
 
 fe-format-check:
-    cd frontend/data-portal && pnpm format:check
+    cd {{fe_dir}} && pnpm format:check
 
 # Run every front-end check CI's check-frontend job runs (Playwright E2E is the test bed's).
 fe-check: fe-install fe-format-check fe-lint fe-test fe-build
@@ -315,29 +323,29 @@ fe-check: fe-install fe-format-check fe-lint fe-test fe-build
 # launcher does — that's why the server needs run.js, not plain `ng serve`.)
 # Run the data-portal dev server with MOCKED api + oidc (MSW) — no backend needed.
 fe-dev:
-    cd frontend/data-portal && node run.js --dev
+    cd {{fe_dir}} && node run.js --dev
 
 # For what only a deployment shows: the optimized build and the sws.toml headers, on
 # http://localhost:8080. The production build starts no MSW mocks, so API calls fail.
 # Build the data-portal for production and serve it with static-web-server, as deployed.
 fe-prod: fe-build
-    cd frontend/data-portal && node run.js
+    cd {{fe_dir}} && node run.js
 
 # Run the data-portal against a real backend (default: staging) instead of mocks.
 fe-dev-backend:
-    cd frontend/data-portal && node run.js --dev --with-backend
+    cd {{fe_dir}} && node run.js --dev --with-backend
 
 # Run the data-portal against the real OIDC provider (mock API), on https://<backend host>/.
 fe-dev-oidc: fe-dev-ssl
-    cd frontend/data-portal && node run.js --dev --with-oidc
+    cd {{fe_dir}} && node run.js --dev --with-oidc
 
 # Run the data-portal against both the real backend and the real OIDC provider.
 fe-dev-backend-oidc: fe-dev-ssl
-    cd frontend/data-portal && node run.js --dev --with-backend --with-oidc
+    cd {{fe_dir}} && node run.js --dev --with-backend --with-oidc
 
 # Create the dev server's self-signed certificate (idempotent, reissued per hostname).
 fe-cert:
-    frontend/data-portal/create-cert.sh
+    {{fe_dir}}/create-cert.sh
 
 # What the --with-oidc modes need before they can serve: a certificate, and a node that
 # may bind port 443. The port is not negotiable — the OIDC provider redirects back to a
@@ -376,8 +384,8 @@ sync-mainline *args:
 charts version="":
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ -n "{{version}}" ]; then
-        uv run python deploy/src/create_charts.py --version "{{version}}"
+    if [ -n "$1" ]; then
+        uv run python deploy/src/create_charts.py --version "$1"
     else
         uv run python deploy/src/create_charts.py
     fi
@@ -417,14 +425,16 @@ demo-template:
 image target tag='local' *flags: check-members
     #!/usr/bin/env bash
     set -euo pipefail
+    target=$1 tag=$2
+    shift 2  # the rest are docker build flags
     version="$(python3 scripts/platform_version.py)"
-    if [ -f "{{target}}/package.json" ]; then
-        name=$(python3 -c "import json; print(json.load(open('{{target}}/package.json'))['name'])")
-        docker build -f "{{target}}/Dockerfile" --build-arg PLATFORM_VERSION="$version" {{flags}} -t "{{image_registry}}/$name:{{tag}}" "{{target}}"
+    if [ -f "$target/package.json" ]; then
+        name=$(python3 -c "import json, sys; print(json.load(open(sys.argv[1]))['name'])" "$target/package.json")
+        docker build -f "$target/Dockerfile" --build-arg PLATFORM_VERSION="$version" "$@" -t "{{image_registry}}/$name:$tag" "$target"
     else
-        name=$(python3 -c "import tomllib; print(tomllib.load(open('{{target}}/pyproject.toml','rb'))['project']['name'])")
+        name=$(python3 -c "import tomllib, sys; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['name'])" "$target/pyproject.toml")
         docker build -f docker/Dockerfile --build-arg PACKAGE="$name" --build-arg PLATFORM_VERSION="$version" \
-            --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" {{flags}} -t "{{image_registry}}/$name:{{tag}}" .
+            --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" "$@" -t "{{image_registry}}/$name:$tag" .
     fi
 
 # One build instead of ~22 — the demo/CI image step drops from ~15-20 min to ~1 min.
@@ -434,8 +444,8 @@ image target tag='local' *flags: check-members
 image-mono tag='local' *flags: check-members
     docker build -f docker/Dockerfile --build-arg VARIANT=mono \
       --build-arg PLATFORM_VERSION="$(python3 scripts/platform_version.py)" \
-      --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" {{flags}} \
-      -t {{image_registry}}/platform:{{tag}} .
+      --build-arg GIT_SHA="$(git rev-parse --short=7 HEAD)" "${@:2}" \
+      -t "{{image_registry}}/platform:$1" .
 
 # uv finds workspace members by glob (`libs/*`, `services/*`, `tools/*`) and refuses any
 # match without a pyproject.toml. In a working tree it consults git first and skips matches
@@ -467,7 +477,9 @@ check-members:
 demo-images:
     #!/usr/bin/env bash
     set -euo pipefail
-    for path in $(python3 scripts/image_members.py --field path); do
+    # an assignment, not a for-list, so a failing listing fails the recipe
+    paths=$(python3 scripts/image_members.py --field path)
+    for path in $paths; do
         echo "== building $path =="
         just image "$path"
     done
@@ -478,7 +490,8 @@ demo-images:
 demo-images-mono: image-mono
     #!/usr/bin/env bash
     set -euo pipefail
-    for path in $(python3 scripts/image_members.py --kind frontend --field path); do
+    paths=$(python3 scripts/image_members.py --kind frontend --field path)
+    for path in $paths; do
         echo "== building $path =="
         just image "$path"
     done
@@ -646,15 +659,16 @@ logs name="":
     #!/usr/bin/env bash
     set -euo pipefail
     K="kubectl --context kind-ghga"
-    if [ -z "{{name}}" ]; then
+    name=$1
+    if [ -z "$name" ]; then
         $K get deploy -o custom-columns=NAME:.metadata.name,READY:.status.readyReplicas --no-headers \
           | awk '{sub(/^ghga-/, "", $1); printf "%-28s %s\n", $1, $2}'
         exit 0
     fi
     # `|| true`: a non-matching grep exits 1, and under `set -e` that kills the recipe
     # before the message below ever prints
-    match=$($K get deploy -o name | grep -- "{{name}}" | head -1 || true)
-    [ -n "$match" ] || { echo "error: no deployment matching '{{name}}' — \`just logs\` lists them" >&2; exit 1; }
+    match=$($K get deploy -o name | grep -- "$name" | head -1 || true)
+    [ -n "$match" ] || { echo "error: no deployment matching '$name' — \`just logs\` lists them" >&2; exit 1; }
     echo "== $match ==" >&2
     # --all-containers: several workloads run a sidecar, and the default picks only one
     $K logs -f --tail=100 --all-containers "$match"

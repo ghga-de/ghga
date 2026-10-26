@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ci_discover
@@ -60,9 +62,14 @@ def test_unknown_change_set_builds_every_image():
     assert list(builds) == ["platform", "portal"]
 
 
-def test_unresolvable_base_checks_everything():
+@pytest.mark.parametrize(
+    # the last is what a push that creates a branch reports as `github.event.before`
+    "base",
+    ["", "origin/no-such-ref-for-tests", "0" * 40],
+)
+def test_unresolvable_base_checks_everything(base):
     """A base that does not resolve must mean "check everything", not "check nothing"."""
-    outputs = ci_discover.discover("origin/no-such-ref-for-tests")
+    outputs = ci_discover.discover(base)
     assert json.loads(outputs["devcontainer"]) is True
     assert json.loads(outputs["python"])
     assert "platform" in json.loads(outputs["images"])

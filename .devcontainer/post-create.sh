@@ -13,6 +13,8 @@ chmod 700 ~/.copilot
 # the whole local cluster and test-bed flow. Pinned to the versions the demo and the
 # integration gate are verified against. The arch split is not hypothetical: this runs
 # on arm64 workstations as readily as on an x86 runner.
+# The workflows' setup-just steps pin the same just; scripts/tests/test_just_scripts.py
+# fails when they differ.
 JUST_VERSION=1.57.0
 KIND_VERSION=0.30.0
 case "$(uname -m)" in

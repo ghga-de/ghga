@@ -17,7 +17,6 @@ and that must mean "check everything", never "check nothing".
 
 import argparse
 import json
-import subprocess
 import sys
 
 from affected_targets import BaseRefError, affected, all_targets, changed_files
@@ -49,19 +48,10 @@ def image_builds(changed: list[str] | None, members: list[dict]) -> dict[str, st
     return {"platform": "image-mono", **builds} if mono else builds
 
 
-def _resolves(base: str) -> bool:
-    return (
-        subprocess.run(
-            ["git", "cat-file", "-e", f"{base}^{{commit}}"], capture_output=True
-        ).returncode
-        == 0
-    )
-
-
 def discover(base: str) -> dict[str, str]:
     """The `discover` outputs for the change set since the merge base with `base`."""
     changed: list[str] | None = None
-    if base and _resolves(base):
+    if base:
         try:
             changed = changed_files(base)
         except BaseRefError:

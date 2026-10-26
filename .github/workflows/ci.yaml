@@ -33,6 +33,12 @@ concurrency:
   group: ci-${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
 
+# Explicit `bash` runs every step with pipefail; the default shell does not, so a failing
+# command piped into `tee` would leave its step green.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
   # in one cheap pass; --locked also asserts uv.lock is in sync with the pyprojects.
@@ -45,6 +51,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       - run: just sync --locked
       - run: just lint
 
@@ -87,6 +95,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       - run: just sync --locked
       - name: mypy
         # the shared runner, so CI, `just typecheck` and the pre-commit hook check the
@@ -115,9 +125,9 @@ jobs:
           cache: pnpm
           cache-dependency-path: ${{ matrix.target }}/pnpm-lock.yaml
       - uses: extractions/setup-just@v4
-      # The fe-* recipes name the one front-end member; the matrix stays so the check
-      # keeps its title.
-      - run: just fe-check
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
+      - run: just fe_dir="${{ matrix.target }}" fe-check
 
   # Everything the shared pre-commit config checks that no other job covers: whitespace,
   # YAML/JSON validity, exec bits, private keys, large files. ruff, rumdl, mypy, eslint
@@ -137,6 +147,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       # the full sync: the chart check below imports the generator's dependencies, and
       # `uv run pre-commit` resolves against the same environment
       - run: just sync --locked
@@ -213,6 +225,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       # The hardened bases (dhi.io) are auth-gated — same pattern as dev-images.yaml:
       # skipped when the org secrets are absent, i.e. on PRs from forks. There is no
       # anonymous fallback (dhi.io answers an unauthenticated manifest request with a
@@ -281,6 +295,8 @@ jobs:
         # fails here, naming what to delete. Nobody has to remember.
         run: uv run -q --script scripts/pypi_members.py --check-blocked-cells
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       - name: Assert every changed lane member declares an unpublished version
         env:
           BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
