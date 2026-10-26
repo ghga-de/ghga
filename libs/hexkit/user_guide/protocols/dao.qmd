@@ -162,7 +162,7 @@ The batch operations apply a write to many resources in one call, which the Mong
 
 | Operation | Description | Fails per resource with |
 | --------- | ----------- | ----------------------- |
-| `insert_many(dtos)` | Create new resources. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError` |
+| `insert_many(dtos)` | Create new resources. | `ResourceAlreadyExistsError`, `UniqueConstraintViolationError`, `DbTimeoutError`, `DaoError` |
 
 A batch is not atomic.
 When some resources fail, the others are still written, and the call raises a [`BatchOperationError`](../../reference/protocols.dao.BatchOperationError.qmd).
@@ -257,8 +257,7 @@ The full hierarchy:
     - `NoHitsFoundError`: `find_one` found nothing
     - `MultipleHitsFoundError`: `find_one` found more than one match
   - `DbTimeoutError`: a database operation timed out
-  - `BatchOperationError`: some resources of a batch failed; `errors` holds one of the
-    errors above per failed ID
+  - `BatchOperationError`: some resources of a batch failed; `errors` holds one of the errors above per failed ID
 
 Providers translate their native driver errors into these types, so your error handling stays portable across backends:
 
