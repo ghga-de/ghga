@@ -118,16 +118,17 @@ def amend(
         readable=True,
     ),
 ):
-    """Replace the content of an already accessioned submission, keeping its accessions.
+    """Replace the content of a submission with flat accessions, keeping its accessions.
 
-    Use this instead of a second 'submit' when a submission gains files: aliases that
-    are already accessioned keep their accession, and only new aliases get new ones.
+    Use this instead of a second 'submit' when a submission accessioned before study
+    PIDs gains files: aliases that are already accessioned keep their accession, and
+    only new aliases get new flat ones. A submission with study PIDs is refused.
 
-    This applies to every metadata class, not only files. The study, its datasets,
-    samples and experiments keep, gain or lose accessions by the same alias matching,
-    and a field changed on an already-accessioned resource is written through without
-    a report entry or a prompt, because it is not an accession change. Keeping an
-    amendment to added files is a rule for its users, not one this command enforces.
+    The report and the confirmation cover the files only. The other classes keep,
+    gain or lose accessions by the same alias matching without a report entry or a
+    prompt, and a field changed on an already-accessioned resource is written through.
+    Keeping an amendment to added files is a rule for its users, not one this command
+    enforces.
     """
     logging.basicConfig(level=logging.CRITICAL)
 

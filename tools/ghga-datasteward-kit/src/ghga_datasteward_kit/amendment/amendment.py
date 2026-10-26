@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Extend an already accessioned submission with additional metadata.
+"""Extend a submission accessioned with flat accessions with additional metadata.
 
 A second `metadata submit` always creates a new submission with a fresh set of
 accessions, which breaks every reference to the files already ingested from the
 previous one. Amending instead keeps the accession of every alias that is still
-present and mints accessions only for aliases that are new.
+present and mints flat accessions, from `legacy_accessioning`, only for aliases that
+are new. A submission with study PIDs cannot be amended.
 
 Everything here drives metldata through its public API, so that metldata itself needs
-no changes. A submission accessioned before study PIDs gets flat accessions from
-`legacy_accessioning` instead.
+no changes.
 """
 
 import re
