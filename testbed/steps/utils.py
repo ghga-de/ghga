@@ -27,32 +27,35 @@ from fixtures.config import S3StorageConfig
 from fixtures.state import StateStorage
 from fixtures.utils import write_data_to_yaml
 from ghga_datasteward_kit.loading import LoadConfig
+from ghga_service_commons.utils.accessions import (
+    DATASET_PID_PATTERN,
+    FILE_ACCESSION_PATTERN,
+    STUDY_PID_PATTERN,
+)
 from hexkit.providers.s3.testutils import FileObject
 from pydantic import BaseModel, EmailStr
 from pytest_bdd import parsers
 
 parse: type[parsers.StepParser] = parsers.parse  # pylint: disable=invalid-name
 
-# the accessions metldata mints: the study PID 'GHGA.YY.XXX.V', the dataset PID
-# '{study_pid}.DS.xxx', and '{study_pid}.{alias}' for every other entity
-STUDY_PID = r"GHGA\.\d{2}\.[A-Z2-7]{3}\.\d+"
-DATASET_PID = STUDY_PID + r"\.DS\.[A-Z2-7]{3}"
-ALIAS_ACCESSION = STUDY_PID + r"\..+"
-
 
 def is_study_pid(accession: str) -> bool:
     """Tell whether the accession is a study PID."""
-    return re.fullmatch(STUDY_PID, accession) is not None
+    return re.fullmatch(STUDY_PID_PATTERN, accession) is not None
 
 
 def is_dataset_pid(accession: str) -> bool:
     """Tell whether the accession is a dataset PID."""
-    return re.fullmatch(DATASET_PID, accession) is not None
+    return re.fullmatch(DATASET_PID_PATTERN, accession) is not None
 
 
 def is_alias_accession(accession: str) -> bool:
-    """Tell whether the accession is that of an entity other than a study."""
-    return re.fullmatch(ALIAS_ACCESSION, accession) is not None
+    """Tell whether the accession is that of an entity other than a study or a
+    dataset.
+    """
+    # every entity but the study and its datasets gets '{study_pid}.{alias}', the
+    # shape of a file accession
+    return re.fullmatch(FILE_ACCESSION_PATTERN, accession) is not None
 
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}

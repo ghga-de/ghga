@@ -17,6 +17,8 @@
 
 import re
 
+from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
+
 from .conftest import (
     Config,
     HttpClient,
@@ -27,7 +29,7 @@ from .conftest import (
     then,
     when,
 )
-from .utils import STUDY_PID, get_alias_from_ega_accession, get_dataset_search_summary
+from .utils import get_alias_from_ega_accession, get_dataset_search_summary
 
 scenarios("../features/370_dataset_details.feature")
 
@@ -92,7 +94,7 @@ def request_one_associated_samples(
         ega_accession=ega_accession, config=config, http=http, state=state
     )
     result = response.json()
-    match = re.search(rf"'sample': '({STUDY_PID}\.[^']+)'", repr(result))
+    match = re.search(rf"'sample': '({STUDY_PID_PATTERN}\.[^']+)'", repr(result))
     assert match
     resource_id = match.group(1)
     url = (

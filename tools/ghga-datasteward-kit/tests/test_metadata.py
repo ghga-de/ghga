@@ -37,6 +37,7 @@ from ghga_datasteward_kit.amendment.exceptions import (
     StudyAccessionMissingError,
 )
 from ghga_datasteward_kit.cli.metadata import amend, submit, transform
+from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import MetadataValidationError
 from metldata.submission_registry.submission_store import SubmissionStore
@@ -275,7 +276,7 @@ def test_amend_without_study_accession(example_workdir: Path, keep_anchor: bool)
         anchor
         for anchor, accessions in accession_map.items()
         if any(
-            re.fullmatch(r"GHGA\.\d{2}\.[A-Z2-7]+\.1", accession)
+            re.fullmatch(STUDY_PID_PATTERN, accession)
             for accession in accessions.values()
         )
     )

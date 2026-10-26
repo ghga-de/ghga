@@ -19,42 +19,48 @@ import re
 
 import pytest
 
-from ghga_service_commons.utils.utc_dates import now_as_utc
-from metldata.accession_registry.accession_registry import (
+from ghga_service_commons.utils.accessions import (
     BASE32_ALPHABET,
-    AccessionRegistry,
+    DATASET_PID_PATTERN,
+    DATASET_PID_PREFIX,
+    STUDY_PID_PATTERN,
+    STUDY_PID_PREFIX,
 )
+from ghga_service_commons.utils.utc_dates import now_as_utc
+from metldata.accession_registry import accession_registry as accession_registry_module
+from metldata.accession_registry.accession_registry import AccessionRegistry
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.config import SubmissionConfig
 from tests.fixtures.config import config_sub_fixture  # noqa: F401
 
-STUDY_PID_PATTERN = re.compile(r"^GHGA\.(\d{2})\.([A-Z2-7]{3})\.1$")
-DATASET_PID_PATTERN = re.compile(r"^GHGA\.\d{2}\.[A-Z2-7]{3}\.1\.DS\.[A-Z2-7]{3}$")
 
-
-def make_registry(
-    config: SubmissionConfig, **overrides
-) -> tuple[AccessionRegistry, AccessionStore]:
-    """Build an accession registry and its store from the config with overrides."""
-    config = config.model_copy(update=overrides)
+def make_registry(config: SubmissionConfig) -> tuple[AccessionRegistry, AccessionStore]:
+    """Build an accession registry and its store from the config."""
     accession_store = AccessionStore(config=config)
     return AccessionRegistry(config=config, accession_store=accession_store), (
         accession_store
     )
 
 
+@pytest.fixture
+def one_character_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Shrink the random blocks to one character, so that a test can use up all 32."""
+    monkeypatch.setattr(accession_registry_module, "RANDOM_BLOCK_LENGTH", 1)
+
+
 def test_fresh_study_pid(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
-    """A new study gets 'GHGA.YY.XXX.1' of the current year, its root registered."""
+    """A new study gets 'PREFIX.YY.XXX.1' of the current year, its root registered."""
     accession_registry, accession_store = make_registry(config_sub_fixture)
 
     study_pid = accession_registry.generate_study_accession()
 
-    match = STUDY_PID_PATTERN.match(study_pid)
-    assert match
-    assert match.group(1) == now_as_utc().strftime("%y")
-    assert accession_store.get_random_blocks(year=match.group(1)) == {match.group(2)}
+    assert re.fullmatch(STUDY_PID_PATTERN, study_pid)
+    _, year, random_block, version = study_pid.split(".")
+    assert version == "1"
+    assert year == now_as_utc().strftime("%y")
+    assert accession_store.get_random_blocks(year=year) == {random_block}
 
 
 def test_fresh_study_pids_are_unique(
@@ -70,29 +76,27 @@ def test_fresh_study_pids_are_unique(
     assert len(accession_store.get_random_blocks(year=year)) == 50
 
 
+@pytest.mark.usefixtures("one_character_blocks")
 def test_study_pid_fallback_finds_last_unused_root(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """When the random draws keep colliding, the fallback finds the one root left."""
-    accession_registry, accession_store = make_registry(
-        config_sub_fixture, random_block_length=1
-    )
+    accession_registry, accession_store = make_registry(config_sub_fixture)
     year = now_as_utc().strftime("%y")
     for character in BASE32_ALPHABET[:-1]:
         accession_store.save(year=year, random_block=character)
 
     study_pid = accession_registry.generate_study_accession()
 
-    assert study_pid == f"GHGA.{year}.{BASE32_ALPHABET[-1]}.1"
+    assert study_pid == f"{STUDY_PID_PREFIX}.{year}.{BASE32_ALPHABET[-1]}.1"
 
 
+@pytest.mark.usefixtures("one_character_blocks")
 def test_study_pid_exhausted(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """When every root of the year is taken, minting a study PID fails."""
-    accession_registry, accession_store = make_registry(
-        config_sub_fixture, random_block_length=1
-    )
+    accession_registry, accession_store = make_registry(config_sub_fixture)
     year = now_as_utc().strftime("%y")
     for character in BASE32_ALPHABET:
         accession_store.save(year=year, random_block=character)
@@ -115,8 +119,8 @@ def test_dataset_pids(
         dataset_pid = accession_registry.generate_dataset_accession(
             study_pid=study_pid, used_accessions=used_accessions
         )
-        assert DATASET_PID_PATTERN.match(dataset_pid)
-        assert dataset_pid.startswith(f"{study_pid}.DS.")
+        assert re.fullmatch(DATASET_PID_PATTERN, dataset_pid)
+        assert dataset_pid.startswith(f"{study_pid}.{DATASET_PID_PREFIX}.")
         assert dataset_pid not in used_accessions
         used_accessions.add(dataset_pid)
 
@@ -124,11 +128,12 @@ def test_dataset_pids(
     assert len(accession_store.get_random_blocks(year=year)) == 1
 
 
+@pytest.mark.usefixtures("one_character_blocks")
 def test_dataset_pids_exhausted(
     config_sub_fixture: SubmissionConfig,  # noqa: F811
 ):
     """Every dataset PID of the study is found before minting one more fails."""
-    accession_registry, _ = make_registry(config_sub_fixture, random_block_length=1)
+    accession_registry, _ = make_registry(config_sub_fixture)
     study_pid = "GHGA.26.K.1"
     used_accessions: set[str] = set()
 
@@ -164,7 +169,9 @@ def test_get_accession_by_class(
         )
 
     assert get_accession("Study", "STUDY_1") == study_pid
-    assert get_accession("Dataset", "DS_1").startswith(f"{study_pid}.DS.")
+    assert get_accession("Dataset", "DS_1").startswith(
+        f"{study_pid}.{DATASET_PID_PREFIX}."
+    )
     assert get_accession("Sample", "SAMPLE_1") == f"{study_pid}.sample_1"
     # normalized, an alias cannot pose as a dataset PID
     assert get_accession("Sample", "DS.ABC") == f"{study_pid}.ds-abc"

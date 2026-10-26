@@ -46,7 +46,7 @@ The rule is fixed: changing it would give an alias already accessioned a differe
 
 ### Consequences
 
-- An alias accession has one lowercase block after the study PID and a dataset PID has two, so a pattern tells them apart without knowing the configurable prefixes.
+- An alias accession has one lowercase block after the study PID and a dataset PID has two, the fixed `DS` and a random block, so a pattern tells them apart.
 - Accessions need no escaping in URLs, file names or object storage keys.
 - Aliases such as `Sample 1` and `sample-1` collide, and the steward renames one.
 - dskit's `metadata amend` takes only submissions with flat accessions, so the alias accessions of a study-PID submission are minted once, by `submit`, and never re-derived.

@@ -15,10 +15,28 @@
 
 """Test the utils.accessions module."""
 
+import re
+import string
+
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from ghga_service_commons.utils.accessions import DatasetAccession, FileAccession
+from ghga_service_commons.utils.accessions import (
+    BASE32_ALPHABET,
+    BASE32_PATTERN,
+    DatasetAccession,
+    FileAccession,
+)
+
+
+def test_base32_pattern_matches_the_alphabet():
+    """Test that the hand-written pattern accepts exactly the characters of the
+    alphabet, so the two cannot drift apart.
+    """
+    candidates = string.ascii_uppercase + string.digits
+    matched = {char for char in candidates if re.fullmatch(BASE32_PATTERN, char)}
+
+    assert matched == set(BASE32_ALPHABET)
 
 
 @pytest.mark.parametrize(
@@ -42,6 +60,12 @@ def test_good_dataset_accession(accession: str):
         "GHGA.26.ABC.0.DS.XYZ",
         "GHGA.26.ABC.01.DS.XYZ",
         "GHGA.٢٦.ABC.١.DS.XYZ",
+        "EGA.26.ABC.1.DS.XYZ",
+        "GHGA.26.AB.1.DS.XYZ",
+        "GHGA.26.ABCD.1.DS.XYZ",
+        "GHGA.26.ABC.1.DX.XYZ",
+        "GHGA.26.ABC.1.DS.XY",
+        "GHGA.26.ABC.1.DS.XYZW",
     ],
 )
 def test_bad_dataset_accession(accession: str):
@@ -69,6 +93,8 @@ def test_good_file_accession(accession: str):
         "GHGA.26.ABC.12.some.file",
         "GHGA.26.ABC.1.File_A",
         "GHGA.26.ABC.1.DS.XYZ",
+        "EGA.26.ABC.1.file_a",
+        "GHGA.26.ABCD.1.file_a",
         "GHGA.26.ABC.0.file_a",
         "GHGA.26.ABC.01.file_a",
         "GHGA.٢٦.ABC.١.file_a",
