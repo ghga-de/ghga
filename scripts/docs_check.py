@@ -117,7 +117,7 @@ SKILL_NAME_MAX = 64
 DESCRIPTION_MAX = 1024
 DESCRIPTION_WARN = 300
 # The six fields of the Agent Skills spec, then the Claude Code fields that only
-# optimise and that the other tools ignore without harm.
+# optimise or label and that the other tools ignore without harm.
 SKILL_FIELDS = (
     "name",
     "description",
@@ -128,7 +128,14 @@ SKILL_FIELDS = (
     "disable-model-invocation",
     "user-invocable",
     "paths",
+    "argument-hint",
 )
+SKILL_FIELD_TYPES = {
+    "disable-model-invocation": (bool, "true or false"),
+    "user-invocable": (bool, "true or false"),
+    # YAML reads an unquoted hint like [PR or branch] as a list
+    "argument-hint": (str, "a string; quote one in [ ]"),
+}
 # Rule files, which Claude Code and VS Code load once the agent reads or edits a file
 # matching their `paths`, hold a rule for a kind of file no directory scopes. A rule
 # without `paths` loads in every session, so it belongs in an AGENTS.md; each rule is
@@ -745,9 +752,11 @@ def _skill_meta(skill: Skill, meta: dict, directory: str) -> tuple[list, list]:
                 f" keep it under {DESCRIPTION_WARN}"
             )
     problems += [f"{rel}: unknown field '{k}'" for k in meta if k not in SKILL_FIELDS]
-    for key in ("disable-model-invocation", "user-invocable"):
-        if key in meta and not isinstance(meta[key], bool):
-            problems.append(f"{rel}: {key} must be true or false")
+    problems += [
+        f"{rel}: {key} must be {expected}"
+        for key, (kind, expected) in SKILL_FIELD_TYPES.items()
+        if key in meta and not isinstance(meta[key], kind)
+    ]
     skill.by_model = meta.get("disable-model-invocation") is not True
     skill.by_user = meta.get("user-invocable") is not False
     if "paths" in meta:
