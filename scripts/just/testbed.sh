@@ -32,17 +32,18 @@ printf '%s' "$TB_UPLOAD_TOKEN" > "$HOME/.ghga_data_steward_token.txt"
 # per-run test-user crypt4gh keypair (any fresh pair works)
 # the connector needs the RAW 32-byte secret (export_private is PEM-ish and
 # fails with "PrivateKey must be created from a 32 bytes long raw secret key")
-eval "$(uv run --quiet --package auth-km-jobs python -c "from auth_km_jobs.c4gh import generate_crypt4gh_key_pair; k = generate_crypt4gh_key_pair(); print(f'export TB_USER_PRIVATE_CRYPT4GH_KEY={k.export_private_raw()}'); print(f'export TB_USER_PUBLIC_CRYPT4GH_KEY={k.export_public()}')")"
+# assigned before the eval, which would otherwise hide a failed generation from `set -e`
+keys="$(uv run --quiet --package auth-km-jobs python -c "from auth_km_jobs.c4gh import generate_crypt4gh_key_pair; k = generate_crypt4gh_key_pair(); print(f'export TB_USER_PRIVATE_CRYPT4GH_KEY={k.export_private_raw()}'); print(f'export TB_USER_PUBLIC_CRYPT4GH_KEY={k.export_public()}')")"
+eval "$keys"
 mkdir -p /tmp/submission /tmp/connector
+just testbed-hosts
+# set before the forwards start, so no failure after them leaves one running
+trap 'kill $(jobs -p) 2> /dev/null || true' EXIT
 $K port-forward svc/ghga-mailhog 8025:8025 > /dev/null 2>&1 &
-PF1=$!
 # 18080, not the mock's own 8080, which `just fe-dev` serves the portal on
 $K port-forward svc/ghga-lox24-mock 18080:8080 > /dev/null 2>&1 &
-PF2=$!
 # MinIO needs no forward: kind publishes its S3 node port on the host's 9000
 # (deploy/kind-config.yaml), which is the authority the pre-signed URLs carry —
 # forwarding here would collide with that published port and fail to bind.
-just testbed-hosts
-trap 'kill $PF1 $PF2 2> /dev/null || true' EXIT
 sleep 2
 cd testbed && ../.venv-testbed/bin/pytest -v "$@"

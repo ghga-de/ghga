@@ -113,10 +113,10 @@ def test_no_target_sweeps_every_member_then_the_non_member_suites(members: Repo)
     ]
 
 
-@pytest.mark.parametrize("target", ["", "."])
-def test_empty_and_dot_mean_everything(members: Repo, target: str):
+@pytest.mark.parametrize("targets", [[""], ["."], ["./"], ["libs", "."]])
+def test_empty_and_dot_mean_everything(members: Repo, targets: list[str]):
     """`.` names the repo root, which is no member, so it means the full sweep."""
-    members.run("test.sh", target)
+    members.run("test.sh", *targets)
     assert len(members.calls("uv")) == 6
 
 
@@ -388,6 +388,29 @@ def test_missing_base_fails_instead_of_passing(branch: Repo):
     assert result.returncode == 1
     assert "no base commit to compare against (no-such-ref)" in result.stderr
     assert branch.calls("uv") == []
+
+
+# --- skill-eval.sh -----------------------------------------------------------------------
+
+
+def test_skill_without_eval_targets_runs_no_eval(repo: Repo):
+    """An empty expansion means no run, not one run on an empty target."""
+    repo.stub("uv")
+    repo.stub("claude")
+    result = repo.run("skill-eval.sh", "adr")
+    assert result.returncode == 0, result.stderr
+    assert repo.calls("claude") == []
+
+
+def test_skill_eval_runs_once_per_target(repo: Repo):
+    """Each expanded target gets its own `claude plugin eval`."""
+    repo.stub("uv", '[ "$4" = expand ] && printf "a\\nb\\n"; exit 0')
+    repo.stub("claude")
+    result = repo.run("skill-eval.sh", "adr", "--runs", "1")
+    assert result.returncode == 0, result.stderr
+    runs = [args.split()[2] for _, args in repo.calls("claude")]
+    assert runs == ["a", "b"]
+    assert all(args.endswith("--runs 1") for _, args in repo.calls("claude"))
 
 
 # --- the justfile ------------------------------------------------------------------------

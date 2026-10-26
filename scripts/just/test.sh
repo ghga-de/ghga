@@ -55,15 +55,18 @@ run_target() {
 }
 
 targets=("$@")
+everything=$(( $# == 0 ))
 for target in "${targets[@]}"; do
     if [[ "$target" == -* ]]; then
         echo "error: '$target' is not a target: \`just test\` takes paths only." >&2
         echo "For pytest options, run \`uv run pytest\` in the member directory." >&2
         exit 2
     fi
+    # `.` means everything too, wherever it stands: one pytest over the root would die
+    # on the duplicate module names
+    case "$target" in "" | . | ./) everything=1 ;; esac
 done
-# `.` means everything too, not the root as a member
-if [ ${#targets[@]} -eq 0 ] || [ "${targets[*]}" = "" ] || [ "${targets[*]}" = "." ]; then
+if [ "$everything" = 1 ]; then
     targets=(libs services tools scripts/tests deploy/tests)
 fi
 for target in "${targets[@]}"; do

@@ -108,7 +108,7 @@ jobs:
       - name: Sync the workspace
         # needed by testbed-artifacts (ghga-datasteward-kit) and by the suite runner,
         # which mints a per-run crypt4gh keypair via the auth-km-jobs package
-        run: uv sync --locked --all-packages --all-extras
+        run: just sync --locked
 
       - name: Install the test-bed suite
         run: |

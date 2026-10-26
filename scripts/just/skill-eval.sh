@@ -16,7 +16,8 @@ shift
 # One run per plugin: the skill itself, or each entry of the suite's `plugins`.
 # An assignment first, so a failing expand fails the script.
 expanded=$(uv run python scripts/skill_eval.py expand "$name")
-mapfile -t targets <<< "$expanded"
+# printf, not a here-string, which would make an empty listing one empty target
+mapfile -t targets < <(printf '%s' "$expanded")
 stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
 # Each kept workspace holds a clone and a copied .venv, about 2.5 GB, until `collect`
 # removes it: a pass outgrows the container's /tmp, so the runner works on the disk.
