@@ -19,7 +19,7 @@
 
 | Component | Kind | Owns / does |
 |---|---|---|
-| `tools/ghga-datasteward-kit` (**dskit**) | CLI | Offline driver: transpile xlsx→json, `submit` (mint accessions), `amend` (extend a submission, keeping its accessions), `transform` (run workflow), `load` (push artifacts). `files delete-file` purges a file from all file services. |
+| `tools/ghga-datasteward-kit` (**dskit**) | CLI | Offline driver: transpile xlsx→json, `submit` (mint accessions), `amend` (extend a flat-accessioned submission, keeping its accessions), `transform` (run workflow), `load` (push artifacts). `files delete-file` purges a file from all file services. |
 | `libs/metldata` | library + deployable API | The engine behind dskit. Submission registry, accession registry, transformation workflows, and the **combined loader + artifacts-query API** (`metldata run-api`). |
 | `libs/ghga-event-schemas` | library | Shared Kafka event/payload models (upload boxes, file uploads, searchable resources, dataset overviews, artifacts). |
 | `services/ghga-registry-service` (**RS**) | service | A **new, forward-looking** service (built with the upcoming metadata services in mind). Owns `ResearchDataUploadBox` (RDUB), `FileAccession` mapping records, and a first-class **`Study`** entity that already models lifecycle (`DRAFT`/`ARCHIVED` status, approval provenance, and a `superseded_by_id` deprecation link). Steward-facing box + mapping + grants API. Its Study/FileAccession state is *currently populated* by an interim bridge consuming metldata's `SearchableResource` events — **that ingestion path is the legacy part, not the entity**. |
@@ -60,7 +60,7 @@ Canonical sequence, with a [metadata config](../../tools/ghga-datasteward-kit/me
    ```
 
 3. `metadata submit` — validate + register a submission locally, mint accessions, publish a source event.
-   For a submission that already has accessions and only gained files, `metadata amend --submission-id <id>` instead, which keeps them.
+   For a submission with flat accessions that only gained files, `metadata amend --submission-id <id>` instead, which keeps them.
 
    ```bash
    ghga-datasteward-kit metadata submit --submission-title "<title>" \
@@ -106,8 +106,8 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   Which classes are the study and the dataset is set by `study_class_name` and `dataset_class_name` in the config.
 - A random block is drawn up to 100 times; if every draw collides, one is picked from the blocks still unused, and `AccessionGenerationError` is raised when none is left.
 - Aliases must hold ASCII characters only and be unique across all entities of a submission once normalized, checked by `MetadataValidator.check_aliases_are_ascii` and `check_alias_uniqueness` before anything is minted.
-- Persisted in **one JSON file** (`accession_store.py`): `years` holds the minted `XXX` blocks per `YY`, and `legacy` holds the flat-scheme accessions (`GHGAS…`, `GHGAF…`) minted before study PIDs.
-  Dataset and alias accessions are not stored there, since they are unique once the study PID is.
+- Persisted in **one JSON file** (`accession_store.py`): `years` holds the minted `XXX` blocks per `YY`, and `legacy` holds the flat accessions (`GHGAS…`, `GHGAF…`), those minted before study PIDs and those dskit's `amend` mints.
+  Dataset and alias accessions are not stored there: a dataset's `xxx` is drawn against the accessions its submission already holds, and an alias accession is unique once the study PID is.
   The file is an index; the submission store holds which accession belongs to which entity.
 - Alias↔accession stability (`generate_accession_map` in `submission_registry/identifiers.py`): within one submission object, re-upserting the same alias **reuses** its accession; new aliases get new ones; dropped aliases fall out.
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
@@ -251,7 +251,7 @@ dataset accession → **ARS** access request/grant (`dataset_id: Accession`) →
 
 Collected here as a checklist; details in [`docs/epics/epic-0093-giraffe.md`](../epics/epic-0093-giraffe.md).
 
-1. **Accession format** is `{prefix}{14 random digits}` with no structure/version → studies move to `GHGA.YY.XXX.V`; child entities to `{study_pid}.{alias}`; datasets to `{study_pid}.DS.xxx`.
+1. **Accession format** was `{prefix}{14 random digits}` with no structure/version → done: `submit` mints `GHGA.YY.XXX.1` for studies, `{study_pid}.{alias}` for child entities and `{study_pid}.DS.xxx` for datasets (see [accession generation](#accession-generation-offline-random-study-pids)); only `amend` still mints flat accessions, for submissions accessioned before.
 2. **No cross-submission stability / no versioning** → studies gain a stable lineage (`GHGA.YY.XXX`) with an incrementing version; study-level supersession is **declared by the steward** (`--replaces` / `replace-study`) and recorded by metldata — never inferred from version order, since a predecessor may be a legacy accession that carries no version at all.
    The portal is the only online reader, via metldata's successor endpoint; RS's `superseded_by_id` stays unset and MASS only ever sees the existing `searchable_resource_deleted`.
 3. **File mapping is 1:1 and box-centric, with mapping as a prerequisite for archival** → many-accessions-per-file, study/submission-centric mapping, and the dependency **inverted**: files are archived first, then mapped against archived boxes.
