@@ -45,9 +45,7 @@ class AccessionStoreContent(BaseModel):
     )
     years: dict[str, list[str]] = Field(
         default_factory=dict,
-        description=(
-            "The study PIDs minted per two-digit year, keyed by their random block."
-        ),
+        description="The random blocks of the study PIDs minted, per two-digit year.",
     )
 
 
