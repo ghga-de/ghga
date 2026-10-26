@@ -75,12 +75,11 @@ exclude = [
 ]
 
 [tool.ruff.per-file-target-version]
-# The platform lane and the one library the testbed installs: the testbed venv is built
-# with `--python 3.12` (see `testbed-install`), and it installs these from source, so
-# their floor cannot follow the workspace to 3.14 until that venv moves.
-"libs/ghga-event-schemas/**" = "py312"
-"libs/metldata/**" = "py312"
-"tools/ghga-datasteward-kit/**" = "py312"
+# The platform lane, and ghga-event-schemas, which is on no lane: they run only on the
+# workspace interpreter, in the images and in the test bed's venv (see `testbed-install`)
+"libs/ghga-event-schemas/**" = "py314"
+"libs/metldata/**" = "py314"
+"tools/ghga-datasteward-kit/**" = "py314"
 "services/**" = "py314"
 "tools/auth-km-jobs/**" = "py314"
 # not a member: it runs on the workspace interpreter
