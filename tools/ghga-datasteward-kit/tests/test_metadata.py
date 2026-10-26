@@ -511,6 +511,34 @@ def test_amend_mints_flat_accession(example_workdir: Path):
 
 
 @pytest.mark.usefixtures("legacy_amendment")
+def test_amend_class_without_flat_prefix(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a new resource of a class without a flat prefix is refused with an
+    error naming the class, and that the accession map stays unchanged.
+    """
+    submission_id, accessions_before = submit_legacy()
+    prefixes = {
+        class_name: prefix
+        for class_name, prefix in TEST_LEGACY_PREFIXES.items()
+        if class_name != "SampleFile"
+    }
+    monkeypatch.setattr(legacy_accessioning, "LEGACY_PREFIXES", prefixes)
+
+    with pytest.raises(
+        legacy_accessioning.LegacyAccessionRegistry.AccessionGenerationError,
+        match="'SampleFile'",
+    ):
+        amend(
+            submission_id=submission_id,
+            metadata_path=AMENDED_METADATA_PATH,
+            config_path=METADATA_CONFIG_PATH,
+        )
+
+    assert read_accession_map(submission_id=submission_id) == accessions_before
+
+
+@pytest.mark.usefixtures("legacy_amendment")
 def test_amend_renamed_study_keeps_its_accession(example_workdir: Path):
     """Test that a study whose alias changed keeps its accession under the new alias,
     since a new alias does not make it a new study.
