@@ -15,10 +15,28 @@
 
 """Test the utils.accessions module."""
 
+import re
+import string
+
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from ghga_service_commons.utils.accessions import DatasetAccession, FileAccession
+from ghga_service_commons.utils.accessions import (
+    BASE32_ALPHABET,
+    BASE32_PATTERN,
+    DatasetAccession,
+    FileAccession,
+)
+
+
+def test_base32_pattern_matches_the_alphabet():
+    """Test that the hand-written pattern accepts exactly the characters of the
+    alphabet, so the two cannot drift apart.
+    """
+    candidates = string.ascii_uppercase + string.digits
+    matched = {char for char in candidates if re.fullmatch(BASE32_PATTERN, char)}
+
+    assert matched == set(BASE32_ALPHABET)
 
 
 @pytest.mark.parametrize(

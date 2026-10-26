@@ -50,7 +50,9 @@ def is_dataset_pid(accession: str) -> bool:
 
 
 def is_alias_accession(accession: str) -> bool:
-    """Tell whether the accession is that of an entity other than a study."""
+    """Tell whether the accession is that of an entity other than a study or a
+    dataset.
+    """
     # every entity but the study and its datasets gets '{study_pid}.{alias}', the
     # shape of a file accession
     return re.fullmatch(FILE_ACCESSION_PATTERN, accession) is not None

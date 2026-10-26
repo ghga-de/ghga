@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Pydantic types for the accessions of GHGA datasets and files."""
+"""The GHGA PID scheme: its constants, the patterns of study PIDs, dataset PIDs and
+file accessions, and the Pydantic types for dataset and file accessions.
+"""
 
 from typing import Annotated
 
