@@ -8,6 +8,11 @@ apiVersion: kind.x-k8s.io/v1alpha4
 name: ghga
 nodes:
   - role: control-plane
+    # Pinned, so the Kubernetes version is a choice rather than whatever the kind binary
+    # defaults to: the newest node image built for kind v0.33.0 (its release notes list
+    # them). Only the digest guarantees an image built for that release. The demo and the
+    # integration gate follow the latest kind, not the clusters we deploy to.
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
     extraPortMappings:
       # the demo gateway NodePort, published on the host computer's port 80: the OIDC
       # issuer authority must be byte-identical from the browser and from

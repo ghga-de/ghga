@@ -8,7 +8,6 @@ scripts' own logic without a cluster, a registry or a real test run.
 
 import json
 import os
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -472,19 +471,3 @@ def test_image_recipes_pass_build_flags_through_whole(
     assert result.returncode == 0, result.stderr
     args = (tmp_path / "log").read_text().splitlines()
     assert any(args[i : i + len(expected)] == expected for i in range(len(args))), args
-
-
-def test_workflows_pin_the_dev_containers_just():
-    """CI runs the recipes with the just the dev container installs."""
-    post_create = (ROOT / ".devcontainer/post-create.sh").read_text()
-    [version] = re.findall(r"^JUST_VERSION=(\S+)$", post_create, re.M)
-    workflows = sorted((ROOT / ".github/workflows").glob("*.yaml"))
-    steps = 0
-    for workflow in workflows:
-        text = workflow.read_text()
-        uses = text.count("uses: extractions/setup-just@")
-        pins = re.findall(r"just-version: (\S+)", text)
-        assert len(pins) == uses, f"{workflow.name}: a setup-just step is unpinned"
-        assert set(pins) <= {version}, f"{workflow.name} pins {pins}, not {version}"
-        steps += uses
-    assert steps > 0
