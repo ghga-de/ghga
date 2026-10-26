@@ -538,7 +538,12 @@ def _skill_problems(repo: Path) -> tuple[list[str], list[str]]:
 
 def test_conforming_skills(agents):
     """A skill with name, description and its symlink reports nothing."""
-    _skill(agents, "", "adr", "name: adr\ndescription: Write an ADR.\npaths: [a/**]\n")
+    _skill(
+        agents,
+        "",
+        "adr",
+        "name: adr\ndescription: Write an ADR.\npaths: [a/**]\nargument-hint: <title>\n",
+    )
     assert _skill_problems(agents) == ([], [])
 
 
@@ -559,6 +564,11 @@ def test_conforming_skills(agents):
             "disable-model-invocation must be true or false",
         ),
         ("adr", "name: adr\ndescription: x\npaths: 3\n", "paths must be a glob"),
+        (
+            "adr",
+            "name: adr\ndescription: x\nargument-hint: [title]\n",
+            "argument-hint must be a string",
+        ),
         ("adr", "name: [adr\n", "frontmatter must be a YAML mapping"),
     ],
 )

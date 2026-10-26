@@ -1,6 +1,7 @@
 ---
 name: review-board
 description: Put the findings of a pull request review on a private claude.ai artifact board the reviewer works through, each finding reproduced with code, with its fix and a status every viewer shares. Run as /review-board <PR> after /ghga-review, /code-review or a review of your own.
+argument-hint: <PR>
 disable-model-invocation: true
 compatibility: Claude Code with claude.ai artifacts (the Artifact and ArtifactData tools, the db capability).
 metadata:
@@ -14,6 +15,8 @@ It moves the findings of a review out of the session into a page the reviewer wo
 For one or two findings, say them in the session instead, unless the reviewer asks for a board.
 
 ## Gather
+
+Without a PR number, ask the reviewer for it.
 
 1. The findings come from the session (`/ghga-review`, `/code-review`) or from the reviewer's own list.
    Keep the reviewer's numbers: they are how the pull request refers to the findings.

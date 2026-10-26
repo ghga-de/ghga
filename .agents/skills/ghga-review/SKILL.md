@@ -1,6 +1,7 @@
 ---
 name: ghga-review
 description: Review a branch or pull request against the GHGA standards, the area AGENTS.md files, the writing style and the naming grammar, and against the issue it names. Run as /ghga-review, next to the built-in /code-review, which looks for bugs.
+argument-hint: "[PR or branch]"
 disable-model-invocation: true
 ---
 
@@ -10,6 +11,8 @@ The built-in `/code-review` looks for bugs; this skill checks a change against t
 Run both before asking a person for review.
 
 ## Gather
+
+Without an argument, review the current branch against its base.
 
 1. Find the change: for a PR, `gh pr view <n> --json title,headRefName,baseRefName,body` and `gh pr diff <n>`.
    For a branch, diff against its base: `git diff <base>...HEAD` and `git log <base>..HEAD`, where the base is `origin/dev`, `origin/main` for a hotfix, or the branch below it in a stack.
