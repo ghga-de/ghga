@@ -146,6 +146,7 @@ class SubmissionRegistry:
 
         # raises ValidationError if not valid, before any accession is minted:
         self._metadata_validator.validate(content)
+        self._metadata_validator.check_aliases_are_ascii(content)
         self._metadata_validator.check_alias_uniqueness(content)
 
         updated_accession_map = generate_accession_map(

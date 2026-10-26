@@ -60,7 +60,7 @@ This is performed with the following steps:
    Please see [this section](#metadata) for further details.
 3. **Include in Submission Registry**: The submission JSON is included in a submission registry on the local file system using the `ghga-datasteward-kit metadata submit` command.
    Please see [this section](#metadata) for further details.
-   If the submission has been submitted before and only gained files since, use the `ghga-datasteward-kit metadata amend` command instead, so that the accessions already assigned are kept.
+   If the submission was accessioned with flat accessions, before study PIDs, and only gained files since, use the `ghga-datasteward-kit metadata amend` command instead, so that the accessions already assigned are kept.
    Please see [this section](#metadata-amend) for further details.
 4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions in the submission registry to produce multiple query-specific metadata artifacts using the `ghga-datasteward-kit metadata transform` command.
    Please see [this section](#metadata) for further details.
@@ -90,30 +90,14 @@ A later release removes the command once the production store is converted.
 
 #### metadata amend
 
-Adds to a submission that has already been accessioned, keeping its existing accessions.
+Adds to a completed submission accessioned with flat accessions, keeping its existing accessions.
+A flat accession is `GHGA`, one letter and 14 digits, such as `GHGAF12345678901234`, the scheme used before study PIDs.
 
-Use this, not a second `metadata submit`, whenever a submission gains files.
+Use this, not a second `metadata submit`, whenever such a submission gains files.
 A second `submit` creates a new submission with a fresh set of accessions, which breaks every reference to the files already ingested from that submission.
 In the legacy upload path the file accession is also the file's storage ID, and the identifiers derived from it cannot be recovered.
 
-**The command is not limited to files.**
-It replaces the whole content of the submission and treats every metadata class but the study alike: datasets, samples, experiments and individuals all keep, gain or lose accessions by the same alias matching.
-The study keeps its PID even under a new alias, since every other accession of the submission starts with it.
-Nothing in the tool restricts an amendment to added files — that is a rule for the people using it, not one it enforces.
-
-Two consequences worth knowing before you run it:
-
-- A field changed on a resource that already has an accession is **not** an accession change, so it does not appear in the report and raises no prompt.
-  It is written through, keeps its accession, and the next `load` updates that resource in the running system.
-  Correcting metadata this way works; it just will not be flagged.
-- Renaming or removing the alias of any resource but the study, a dataset included, drops its accession exactly as it would for a file.
-  That is what the confirmation question is for.
-- An alias listed twice within one class is reported and needs confirmation, even when nothing is dropped.
-  An alias identifies a resource, so the repeats share a single accession however much their other fields differ: the transform stamps that one accession on every row, and the next `load` keys them all to one resource, so only one survives.
-  Nothing upstream rejects a duplicate — not the transpiler, not the schema check, not `submit` — so the report marks whether the repeated rows are identical or differ, and the differing ones are the damaging case.
-  Fix those in the metadata rather than amending around them.
-
-Amend deliberately when the change is more than added files, and read the report rather than relying on the prompt to stop you.
+The command refuses a submission whose study has a study PID (`AccessionNotLegacyError`), one without a study accession, and one that is not completed, before anything is validated or minted.
 
 ```text
 ghga-datasteward-kit metadata amend \
@@ -122,16 +106,28 @@ ghga-datasteward-kit metadata amend \
   --config-path <metadata config YAML>
 ```
 
-Aliases that already have an accession keep it, and only new aliases get new accessions.
-The command reports what it will do before writing anything.
-It asks for confirmation when the amendment would drop accessions, or when it would preserve none at all, since both usually mean the wrong submission or the wrong aliases.
-That question cannot be skipped, by design: a dropped accession removes resources from the running system on the next `load`.
+The command replaces the whole content of the submission.
+Aliases that already have an accession keep it, and each new alias gets a new flat accession, such as `GHGAF` and 14 digits for a file, registered under `legacy` in the accession store so that it is never given out twice.
+The study keeps its accession even under a new alias.
+Before minting anything, the command validates the metadata against the model and rejects an alias used twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias.
+
+The command reports what it will do to the files before writing anything: the dropped, new and kept files of the five file classes, each with its count and up to 20 aliases.
+It asks for confirmation when the amendment would drop files, or when it would keep none at all, since both usually mean the wrong submission or the wrong aliases.
+That question cannot be skipped, by design: a dropped file is removed from the running system on the next `load`.
+Once the submission is written, the command prints `Submission <id> amended.`; it does not list the accessions it minted.
 
 Such an amendment can only be applied from a terminal.
 There is no `--yes`, and the prompt cannot be answered through a pipe either: when stdin is not a terminal the command refuses and changes nothing, rather than reading an answer nobody typed.
-An amendment that drops nothing and preserves something is not affected, so adding files stays scriptable.
+An amendment that drops no file and keeps at least one is not affected, so adding files stays scriptable.
 
-Dropping an accession is not just a local change: the next `load` removes the corresponding resources from the running system.
+**Only files are reported.**
+Every other class follows the same alias matching without appearing in the report or raising the prompt:
+
+- Renaming or removing the alias of a dataset, sample, experiment or individual drops its accession, and the next `load` removes that resource from the running system.
+- A field changed on a resource that already has an accession is not an accession change: it is written through, keeps its accession, and the next `load` updates that resource.
+
+Nothing in the tool restricts an amendment to added files; that is a rule for the people using it.
+Compare the metadata with the submitted version before amending when the change is more than added files.
 
 The submission's own record in the submission store is what makes this work: its `accession_map` is the only place an alias is tied to an accession.
 Keep that store backed up.

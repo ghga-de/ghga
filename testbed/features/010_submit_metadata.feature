@@ -13,9 +13,10 @@ Feature: 10 Submit Metadata
     When the metadata is submitted to the submission store
     Then two submission JSON files exist in the local submission store
 
-  Scenario: Amending the submission keeps its accessions
+  Scenario: Amending a submission with study PIDs is refused
     When the submission is amended with the same metadata
-    Then two submission JSON files exist in the local submission store
+    Then the amendment is refused, since the submission has study PIDs
+    And two submission JSON files exist in the local submission store
     And the accessions of the submission are unchanged
 
   Scenario: Finishing the metadata submission
