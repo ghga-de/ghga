@@ -221,15 +221,13 @@ Proposed new config fields.
 All must have safe defaults.
 
 ```python
-# libs/metldata — lifecycle accession scheme
-study_pid_prefix: str = "GHGA"   # leading block of the study PID
-study_pid_random_block_length: int = 3     # base32 chars; 32**3 = 32,768 studies per year
-
 # services/ghga-registry-service — file admin listing
 max_file_listing_page_size: int = 1000     # matches the existing upload-listing cap
 ```
 
-The base32 alphabet is RFC 4648 (`[A-Z2-7]`, no `0/1/8/9`) and is not a config field.
+The parts of the PID scheme are constants in `ghga_service_commons.utils.accessions`, not config fields: the study PID prefix `GHGA`, the dataset marker `DS`, the random block length of 3 (32**3 = 32,768 studies per year) and the base32 alphabet.
+They build persistent identifiers, and the services validate accessions against the same constants, so a deployment must not be able to change them.
+The base32 alphabet is RFC 4648 (`[A-Z2-7]`, no `0/1/8/9`).
 Extending it later is possible in principle — already-minted PIDs stay valid, since a longer alphabet only adds sequences that were never used.
 Removing or reassigning characters is not, as that can invalidate PIDs already minted.
 
@@ -273,7 +271,7 @@ Version continuation is answered there, because it needs the predecessor's submi
 #### Work to be performed
 
 - [ ] Validate the submission before minting — exactly one study, aliases unique across all entities of the revision — naming the offending studies or entities and minting nothing on failure
-- [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the config fields above
+- [ ] Add the lifecycle accessioning path alongside `AccessionRegistry`, with the PID scheme constants above
 - [ ] Restructure `AccessionStore` into per-year buckets plus a flat legacy list
 - [ ] Extend the submission record to carry the assigned PIDs and the lineage that justifies them
 - [ ] Resolve the declared predecessors on both declaration paths — `submit`, before minting, and `replace-study`, which mints nothing: reject an already-replaced predecessor and a cycle-closing declaration

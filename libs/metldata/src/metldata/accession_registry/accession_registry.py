@@ -19,6 +19,12 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+from ghga_service_commons.utils.accessions import (
+    BASE32_ALPHABET,
+    DATASET_PID_PREFIX,
+    RANDOM_BLOCK_LENGTH,
+    STUDY_PID_PREFIX,
+)
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from metldata.accession_registry.accession_registry_utils import (
     find_unused_pid,
@@ -27,42 +33,11 @@ from metldata.accession_registry.accession_registry_utils import (
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.metadata_utils import normalize_alias
 
-# RFC 4648 base32. Not configurable: removing or reassigning a character could
-# invalidate PIDs already minted.
-BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-
 MAX_RANDOM_ATTEMPTS = 100
 
 
 class AccessionRegistryConfig(BaseSettings):
     """Config parameters and their defaults."""
-
-    study_pid_prefix: str = Field(
-        default="GHGA",
-        pattern=r"^[^.]+$",
-        description=(
-            "The leading block of the study PID 'PREFIX.YY.XXX.V'. Must not contain"
-            + " dots, as they separate the blocks of the PID."
-        ),
-    )
-
-    dataset_pid_prefix: str = Field(
-        default="DS",
-        pattern=r"^[^.]+$",
-        description=(
-            "The part of a dataset PID '{study_pid}.DS.XXX' that marks it as a"
-            + " dataset. Must not contain dots, as they separate the blocks of the PID."
-        ),
-    )
-
-    random_block_length: int = Field(
-        default=3,
-        ge=1,
-        description=(
-            "Number of base32 characters (RFC 4648) in the random block of a study PID"
-            + " ('XXX') and of a dataset accession ('DS.xxx')."
-        ),
-    )
 
     study_class_name: str = Field(
         default="Study",
@@ -98,11 +73,11 @@ class AccessionRegistry:
 
     def _compose_study_pid_root(self, *, year: str, random_block: str) -> str:
         """Compose the study PID root 'PREFIX.YY.XXX'."""
-        return f"{self._config.study_pid_prefix}.{year}.{random_block}"
+        return f"{STUDY_PID_PREFIX}.{year}.{random_block}"
 
     def _compose_dataset_pid(self, *, study_pid: str, random_block: str) -> str:
         """Compose the dataset PID '{study_pid}.DS.XXX'."""
-        return f"{study_pid}.{self._config.dataset_pid_prefix}.{random_block}"
+        return f"{study_pid}.{DATASET_PID_PREFIX}.{random_block}"
 
     def _choose_unused_study_random_block(self, *, year: str) -> str:
         """Pick a random block of a study PID still unused in the given year.
@@ -112,7 +87,7 @@ class AccessionRegistry:
         """
         random_block = find_unused_pid(
             alphabet=BASE32_ALPHABET,
-            random_block_length=self._config.random_block_length,
+            random_block_length=RANDOM_BLOCK_LENGTH,
             compose=lambda random_block: random_block,
             used_pids=self._accession_store.get_random_blocks(year=year),
         )
@@ -136,9 +111,7 @@ class AccessionRegistry:
         year = now_as_utc().strftime("%y")
 
         for _ in range(MAX_RANDOM_ATTEMPTS):
-            random_block = generate_random_block(
-                BASE32_ALPHABET, self._config.random_block_length
-            )
+            random_block = generate_random_block(BASE32_ALPHABET, RANDOM_BLOCK_LENGTH)
             try:
                 self._accession_store.save(year=year, random_block=random_block)
             except AccessionStore.AccessionAlreadyExistsError:
@@ -163,7 +136,7 @@ class AccessionRegistry:
         """
         dataset_pid = find_unused_pid(
             alphabet=BASE32_ALPHABET,
-            random_block_length=self._config.random_block_length,
+            random_block_length=RANDOM_BLOCK_LENGTH,
             compose=lambda random_block: self._compose_dataset_pid(
                 study_pid=study_pid, random_block=random_block
             ),
@@ -194,9 +167,7 @@ class AccessionRegistry:
         # checked only against the datasets of the same revision.
         # For (2), the store will have to keep every dataset block of the lineage.
         for _ in range(MAX_RANDOM_ATTEMPTS):
-            random_block = generate_random_block(
-                BASE32_ALPHABET, self._config.random_block_length
-            )
+            random_block = generate_random_block(BASE32_ALPHABET, RANDOM_BLOCK_LENGTH)
             dataset_pid = self._compose_dataset_pid(
                 study_pid=study_pid, random_block=random_block
             )
