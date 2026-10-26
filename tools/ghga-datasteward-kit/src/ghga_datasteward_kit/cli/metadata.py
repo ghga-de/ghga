@@ -21,9 +21,10 @@ from pathlib import Path
 
 import typer
 
-from ghga_datasteward_kit import amendment, metadata
-from ghga_datasteward_kit.amendment import AccessionChanges
-from ghga_datasteward_kit.exceptions import AmendmentAbortedError
+from ghga_datasteward_kit import metadata
+from ghga_datasteward_kit.amendment import amendment
+from ghga_datasteward_kit.amendment.amendment import AccessionChanges
+from ghga_datasteward_kit.amendment.exceptions import AmendmentAbortedError
 from ghga_transpiler.cli import transpile
 
 cli = typer.Typer(no_args_is_help=True)
@@ -134,7 +135,7 @@ def amend(
         return _report_and_confirm_amendment(changes, submission_id=submission_id)
 
     try:
-        diff = amendment.amend_metadata_from_path(
+        amendment.amend_metadata_from_path(
             submission_id=submission_id,
             metadata_path=metadata_path,
             config_path=config_path,
@@ -143,8 +144,6 @@ def amend(
     except AmendmentAbortedError as error:
         typer.echo(str(error))
         raise typer.Abort() from error
-
-    typer.echo(amendment.format_amendment_result(diff=diff))
 
 
 @cli.command(no_args_is_help=True)

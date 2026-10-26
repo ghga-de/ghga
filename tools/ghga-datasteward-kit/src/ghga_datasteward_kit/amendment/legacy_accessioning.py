@@ -23,7 +23,6 @@ accessions in the store's `legacy` list but no longer mints them.
 from collections import Counter
 from string import digits
 
-from ghga_datasteward_kit.exceptions import LegacyPrefixMissingError
 from metldata.accession_registry.accession_registry import (
     MAX_RANDOM_ATTEMPTS,
     AccessionRegistry,
@@ -56,18 +55,6 @@ LEGACY_PREFIXES = {
     "Dataset": "GHGAD",
 }
 LEGACY_SUFFIX_LENGTH = 14
-
-
-def check_legacy_prefixes(*, anchor_points_by_target: dict[str, AnchorPoint]) -> None:
-    """Check that every class of the model has a prefix, so that no accession is
-    minted before a class without one stops the amendment.
-
-    Raises:
-        LegacyPrefixMissingError: naming each class without a prefix.
-    """
-    missing = anchor_points_by_target.keys() - LEGACY_PREFIXES.keys()
-    if missing:
-        raise LegacyPrefixMissingError(class_names=missing)
 
 
 def check_alias_uniqueness_per_class(

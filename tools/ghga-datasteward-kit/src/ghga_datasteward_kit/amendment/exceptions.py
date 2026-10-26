@@ -15,8 +15,6 @@
 
 """Exceptions used in ghga_datasteward_kit package."""
 
-from collections.abc import Iterable
-
 
 class AmendmentAbortedError(Exception):
     """Raised when the user declined to apply an amendment."""
@@ -47,14 +45,14 @@ class StudyAccessionMissingError(Exception):
         )
 
 
-class LegacyPrefixMissingError(Exception):
-    """Raised when a class of a submission accessioned before study PIDs has no
-    prefix to mint flat accessions with.
+class AccessionNotLegacyError(Exception):
+    """Raised when the study accession of a submission is not a flat accession, since
+    only submissions accessioned before study PIDs can be amended.
     """
 
-    def __init__(self, *, class_names: Iterable[str]):
+    def __init__(self, *, submission_id: str, study_accession: str):
         super().__init__(
-            "No legacy prefix for the class(es) "
-            + ", ".join(f"'{class_name}'" for class_name in sorted(class_names))
-            + ", so no flat accession can be minted for them."
+            f"The study accession '{study_accession}' of the submission"
+            f" '{submission_id}' is not a flat accession, so the submission cannot be"
+            " amended."
         )
