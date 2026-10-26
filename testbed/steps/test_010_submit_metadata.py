@@ -103,9 +103,9 @@ def call_data_steward_kit_amend(
     metadata_path: Path,
     metadata_config_path: Path,
     timeout: int = 600,
-):
+) -> subprocess.CompletedProcess:
     """Call cli command 'ghga-datasteward-kit metadata amend'
-    to amend an already accessioned submission
+    to amend an already accessioned submission, and return the finished process
     """
     completed_amend = subprocess.run(  # nosec B607, B603
         [
@@ -131,9 +131,7 @@ def call_data_steward_kit_amend(
     if "ERROR" in completed_amend.stderr or completed_amend.returncode:
         print(completed_amend.stderr)
 
-    # unlike submit, amend reports what it changed on stdout
-    assert "ERROR" not in completed_amend.stderr
-    assert not completed_amend.returncode
+    return completed_amend
 
 
 def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
@@ -150,7 +148,7 @@ def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
     target_fixture="amendment",
 )
 def amend_metadata(fixtures: JointFixture):
-    # the first study's submission stands for all, as amend treats each alike
+    # the first study's submission stands for all, as submit gives each study PIDs
     metadata_json_path = fixtures.dsk.config.submission_metadata_paths[0]
     submission_id = fixtures.state.get_state(f"submission id {metadata_json_path.stem}")
     accessions_before = read_submission(fixtures, submission_id)["accession_map"]
@@ -159,7 +157,7 @@ def amend_metadata(fixtures: JointFixture):
     cwd = os.getcwd()
     os.chdir(workdir)
     try:
-        call_data_steward_kit_amend(
+        completed_amend = call_data_steward_kit_amend(
             submission_id=submission_id,
             metadata_path=metadata_json_path,
             metadata_config_path=fixtures.dsk.config.metadata_config_path,
@@ -170,9 +168,18 @@ def amend_metadata(fixtures: JointFixture):
     submission_after = read_submission(fixtures, submission_id)
 
     return {
+        "completed_amend": completed_amend,
         "accessions_before": accessions_before,
         "submission_after": submission_after,
     }
+
+
+@then("the amendment is refused, since the submission has study PIDs")
+def amendment_refused(amendment: dict):
+    completed_amend = amendment["completed_amend"]
+
+    assert completed_amend.returncode
+    assert "AccessionNotLegacyError" in completed_amend.stderr
 
 
 @then("the accessions of the submission are unchanged")
