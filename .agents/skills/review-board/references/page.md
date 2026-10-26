@@ -24,7 +24,7 @@ The statuses survive in the store.
 | `summary` | The first sentence of the review's summary |
 | `footer` | Lines under the board, such as where the probe scripts are |
 | `bands` | `id`, `title` and `gloss` per band, worst first |
-| `findings` | Per finding the fields in [SKILL.md](../SKILL.md#write-each-finding); `code` takes `codeLang` (default `python`), `fix` is `{text, patches: [{lang, code}]}`, `post` a list of `{path, line, start_line, body, suggestion}`, and `thread` the ID of the first review comment of a finding from an earlier round |
+| `findings` | Per finding the fields in [SKILL.md](../SKILL.md#write-each-finding); `code` takes `codeLang` (default `python`), `fix` is `{text, patches: [{lang, code}]}`, `post` a list of `{path, line, start_line, body, suggestion}` or, for a finding from an earlier round, `{reply_to, body}`, and `threads` the IDs of the first review comments of that finding's threads |
 
 `what`, `verdict`, `fix.text` and the `footer` lines are HTML with `<code>` and `<em>` only.
 Code, output, comment bodies and suggestions are plain text, which the page escapes.
@@ -32,11 +32,13 @@ Code, output, comment bodies and suggestions are plain text, which the page esca
 ## What the template does
 
 - Statuses live in the store's `findings` collection, one document per finding at `findings/f<id>`, holding `{status, updatedAt}`; seed known ones with ArtifactData after publishing, never in the page.
-- Under each finding marked Needs fix or Up to dev, **Show the comments to post** shows each comment's anchor and exact text, as [post.md](post.md) builds them, and the panel shows the review's summary.
+- Under each finding marked Needs fix or Up to dev, **Show the comments to post** shows each comment's anchor, or that it replies in the earlier thread, and its exact text, as [post.md](post.md) builds them.
+  The panel shows the review's summary, or that only threads are resolved.
 - A finding with `unverified: true` shows "unverified" next to its cost, and the summary says how many of the posted findings reproduced instead of claiming all did.
 - The **Post review** button works for the owner alone, as in `define-tasks`, and only when no finding is open and a comment is to be posted or a thread resolved.
-  Its explanation names how many threads the post resolves: those of findings marked Fixed or Won't fix that have a `thread`.
-  A press sends a claude.ai thread starting "Post the review of #<n>" (or "Dry run:" on a test board), listing those findings' numbers, and sets `review/post` to `{status: "requested", requestedAt}`; the session sets it to `posted` with the review's `url`, or `failed` with a `reason`, and a request without an answer frees after 30 minutes.
+  Its explanation names how many threads the post resolves: those of findings marked Fixed or Won't fix that have `threads`.
+  A press sends a claude.ai thread starting "Post the review of #<n>" (or "Dry run:" on a test board), listing those findings' numbers, and sets `review/post` to `{status: "requested", requestedAt}`; the session sets it to `posted` with the review's `url` and the `resolved` and `unresolved` threads, or `failed` with a `reason`, and a request without an answer frees after 30 minutes.
+- The page coerces and escapes what it reads from `review/post`, since any viewer can write the store.
 - Next to the button the page says why it is disabled; a line with each check's result (store, owner, sending to Claude) appears only when one fails, and a permissions button only when a capability is denied.
 - Without the store, statuses stay in the viewer's browser, and the page says so.
 

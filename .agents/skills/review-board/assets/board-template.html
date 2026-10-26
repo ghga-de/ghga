@@ -195,6 +195,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
     { key: "wontfix", label: "Won't fix", color: "var(--s-wont)" }
   ];
   const RESOLVED = new Set(["fixed", "wontfix"]);
+  const POSTED = new Set(["needs_fix", "up_to_dev"]);
 
   let DATA = null;
   try { DATA = JSON.parse(document.getElementById("board-data").textContent); } catch (e) {}
@@ -208,9 +209,12 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   document.getElementById("pr-meta").innerHTML = [`head ${PR.head.slice(0, 9)}`, `base ${PR.base}`, DATA.date]
     .map(s => `<span>${esc(s)}</span>`).join("");
   document.getElementById("board-footer").innerHTML = (DATA.footer || []).map(s => `<span>${s}</span>`).join("");
+  const CARRIED = FINDINGS.some(f => (f.threads || []).length);
   document.getElementById("post-note").textContent = DATA.dryRun
     ? "Dry run: the button asks the review session to draft the review and show it there. Nothing is posted to the PR, and no thread is resolved."
-    : "The button asks the review session to post one review: an inline comment per finding marked Needs fix or Up to dev, with a suggestion where the fix fits one. It requests changes when a finding is marked Needs fix, and only comments otherwise. It then resolves the earlier review thread of each finding marked Fixed or Won't fix. Nothing else is posted.";
+    : "The button asks the review session to post one review: an inline comment per finding marked Needs fix or Up to dev, with a suggestion where the fix fits one. It requests changes when a finding is marked Needs fix, and only comments otherwise."
+      + (CARRIED ? " A finding from an earlier round replies in its thread instead, and the session resolves the threads of those marked Fixed or Won't fix." : "")
+      + " Nothing else is posted.";
 
   const statusOf = {};
   FINDINGS.forEach(f => { statusOf[f.id] = "open"; });
@@ -218,7 +222,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   try { filter = localStorage.getItem(KEY + "-filter") || "all"; } catch (e) {}
   let save = null;
 
-  function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function codeBlock(code, lang) { return `<pre><code class="language-${lang}">${esc(code)}</code></pre>`; }
 
   function commentText(post, status) {
@@ -227,6 +231,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
     return text;
   }
   function anchorText(post) {
+    if (post.reply_to) return "reply in the earlier thread";
     return `${post.path.split("/").pop()}:${post.start_line ? post.start_line + "–" : ""}${post.line}${post.suggestion ? " · with a suggestion" : ""}`;
   }
   function summaryText() {
@@ -238,7 +243,11 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
       return `${n} ${n === 1 ? one : many}${which}.`;
     };
     // Claims reproduction only for the findings that reproduced
-    const posted = FINDINGS.filter(f => ["needs_fix", "up_to_dev"].includes(statusOf[f.id]));
+    const posted = FINDINGS.filter(f => POSTED.has(statusOf[f.id]));
+    if (!posted.length) {
+      const n = threadCount();
+      return n ? `No review is posted: the press only resolves ${n} thread${n > 1 ? "s" : ""}.` : "No review is posted: no finding is marked Needs fix or Up to dev.";
+    }
     const unverified = posted.filter(f => f.unverified).length, head = PR.head.slice(0, 9);
     const repro = !unverified ? `Each finding was reproduced on ${head}.`
       : unverified === posted.length ? `No finding could be reproduced on ${head}; each is reasoned from the code.`
@@ -301,7 +310,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
       const show = filter === "all" || (filter === "done" ? RESOLVED.has(st) : st === filter);
       el.hidden = !show;
       const c = document.getElementById("comment-" + f.id);
-      const posted = st === "needs_fix" || st === "up_to_dev";
+      const posted = POSTED.has(st);
       c.hidden = !posted;
       if (posted) c.querySelectorAll("code[data-post]").forEach(el => { el.textContent = commentText(f.post[Number(el.dataset.post)], st); });
     });
@@ -336,18 +345,25 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   let comments = null, canSend = "off", isOwner = false, ownerKnown = false;
   const postBtn = document.getElementById("post-btn"), postWhy = document.getElementById("post-why");
   function requestsChanges() { return FINDINGS.some(f => statusOf[f.id] === "needs_fix"); }
-  function commentsToPost() { return FINDINGS.filter(f => ["needs_fix", "up_to_dev"].includes(statusOf[f.id])).reduce((n, f) => n + f.post.length, 0); }
-  // A finding carried over from an earlier round names its review thread; deciding it resolves that thread
-  function threadsToResolve() { return FINDINGS.filter(f => f.thread && RESOLVED.has(statusOf[f.id])); }
+  function commentsToPost() { return FINDINGS.filter(f => POSTED.has(statusOf[f.id])).reduce((n, f) => n + f.post.length, 0); }
+  // A finding carried over from an earlier round names its review threads; deciding it resolves them
+  function threadsToResolve() { return FINDINGS.filter(f => (f.threads || []).length && RESOLVED.has(statusOf[f.id])); }
+  function threadCount() { return threadsToResolve().reduce((n, f) => n + f.threads.length, 0); }
   function updatePost() {
     const open = FINDINGS.filter(f => statusOf[f.id] === "open").length;
-    const toPost = commentsToPost(), threads = threadsToResolve().length;
+    const toPost = commentsToPost(), threads = threadCount();
     const fresh = postState && postState.status === "requested" && Date.now() - Date.parse(postState.requestedAt) < 30 * 60 * 1000;
     let why = "", ok = false;
     if (postState && postState.status === "posted") {
-      const done = postState.resolved ? `Resolved ${postState.resolved} thread${postState.resolved > 1 ? "s" : ""}.` : "";
-      why = ""; postWhy.innerHTML = postState.url ? `<span class="post-done">Posted.${done ? " " + done : ""}</span> <a href="${postState.url}">Open the review on GitHub</a>` : `<span class="post-done">${done || "Posted."}</span>`;
-      postBtn.disabled = true; postBtn.textContent = postState.url ? "Review posted" : "Threads resolved"; return;
+      // Any viewer can write the store, so its values are coerced and escaped
+      const n = Number(postState.resolved) || 0;
+      const url = typeof postState.url === "string" && postState.url.startsWith("https://github.com/") ? postState.url : "";
+      const left = (Array.isArray(postState.unresolved) ? postState.unresolved : []).map(Number).filter(Number.isInteger);
+      const done = [url ? "Posted." : "", n ? `Resolved ${n} thread${n > 1 ? "s" : ""}.` : "", !url && !n && !left.length ? "No thread was left to resolve." : ""].filter(Boolean).join(" ");
+      postWhy.innerHTML = `<span class="post-done">${esc(done)}</span>`
+        + (left.length ? ` Not resolved: the threads of ${left.map(id => "#" + id).join(", ")}; ask the session again.` : "")
+        + (url ? ` <a href="${esc(url)}">Open the review on GitHub</a>` : "");
+      postBtn.disabled = true; postBtn.textContent = url ? "Review posted" : n ? "Threads resolved" : "Nothing resolved"; return;
     }
     if (fresh) why = "Sent to the review session. It posts and then marks the review here.";
     else if (postState && postState.status === "failed" && !open && (toPost || threads) && canSend === "available") { ok = true; why = "Posting failed: " + (postState.reason || "no reason given") + ". Try again."; }
@@ -362,7 +378,7 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
       ok = true;
       const resolves = `resolves ${threads} review thread${threads > 1 ? "s" : ""}`;
       why = !toPost ? `Nothing to post; ${resolves}.`
-        : `Posts ${toPost} inline comment${toPost > 1 ? "s" : ""} and the summary as one review that ${requestsChanges() ? "requests changes" : "comments only"}${threads ? `, and ${resolves}` : ""}.`;
+        : `Posts ${toPost} comment${toPost > 1 ? "s" : ""} and the summary as one review that ${requestsChanges() ? "requests changes" : "comments only"}${threads ? `, and ${resolves}` : ""}.`;
     }
     postBtn.disabled = !ok; postBtn.textContent = toPost || !threads ? POST_LABEL : RESOLVE_LABEL; postWhy.textContent = why;
   }
@@ -374,10 +390,10 @@ footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
   postBtn.addEventListener("click", async () => {
     postBtn.disabled = true;
     const counts = s => FINDINGS.filter(f => statusOf[f.id] === s).map(f => "#" + f.id).join(", ") || "none";
-    const threads = threadsToResolve();
+    const threads = threadsToResolve(), n = threadCount();
     const event = commentsToPost() ? `as ${requestsChanges() ? "REQUEST_CHANGES" : "COMMENT"}` : "with nothing to post";
     const text = (DATA.dryRun ? `Dry run: draft the review of #${PR.number} from this board and show it in the session. Do not post anything to the PR, and do not resolve any thread.` : `Post the review of #${PR.number} from this board (review-board skill), ${event}.`) + ` Needs fix: ${counts("needs_fix")}. Up to dev: ${counts("up_to_dev")}. Won't fix: ${counts("wontfix")}. Fixed: ${counts("fixed")}.`
-      + ` Threads to resolve: ${threads.length}${threads.length ? " (" + threads.map(f => "#" + f.id).join(", ") + ")" : ""}.`;
+      + ` Threads to resolve: ${n}${n ? " (of " + threads.map(f => "#" + f.id).join(", ") + ")" : ""}.`;
     try {
       const anchor = await comments.anchorFor(document.getElementById("post-panel"));
       await comments.sendToClaude({ anchor, text });
