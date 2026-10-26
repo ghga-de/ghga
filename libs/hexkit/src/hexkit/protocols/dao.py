@@ -525,9 +525,13 @@ class Dao(typing.Protocol[Dto]):
             ValueError: when two DTOs share an ID; nothing is written then.
             BatchOperationError:
                 when some resources failed. Each failed ID maps to
-                `ResourceNotFoundError` if no resource with that ID exists, or to
+                `ResourceNotFoundError` if no resource with that ID exists, to
                 `UniqueConstraintViolationError` if it clashes with a unique index over
-                another field.
+                another field, to `DbTimeoutError` if its write timed out, or to a plain
+                `DaoError` for any other failure, such as a failed document validation.
+            DbTimeoutError: when the write concern timed out.
+            DaoError: when the write concern failed otherwise, which no single resource
+                caused.
         """
         ...
 

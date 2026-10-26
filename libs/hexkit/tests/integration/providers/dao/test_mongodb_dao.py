@@ -1236,6 +1236,7 @@ async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
         with pytest.raises(BatchOperationError) as caught:
             await dao.update_many([missing, clashing, last_changed], ordered=True)
 
+        assert isinstance(caught.value.__cause__, BulkWriteError)
         assert set(caught.value.errors) == {missing.id, target.id}
         assert isinstance(caught.value.errors[missing.id], ResourceNotFoundError)
         error = caught.value.errors[target.id]

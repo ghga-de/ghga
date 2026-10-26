@@ -673,12 +673,14 @@ class MongoDbDao(Generic[Dto]):
         errors = dict(failures.errors) if failures else {}
         skipped = failures.not_attempted if failures else ()
         ids = [document["_id"] for document in documents]
-        attempted = [id_ for id_ in ids if id_ not in errors and id_ not in skipped]
+        unattempted = set(errors) | set(skipped)
+        attempted = [id_ for id_ in ids if id_ not in unattempted]
         if matched < len(attempted):
             missing = set(attempted) - await self._existing_ids(attempted, extra)
             errors |= {id_: ResourceNotFoundError(id_=id_) for id_ in missing}
         if errors:
-            raise BatchOperationError(errors=errors, not_attempted=skipped)
+            cause = failures.__cause__ if failures else None
+            raise BatchOperationError(errors=errors, not_attempted=skipped) from cause
 
     async def update_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
