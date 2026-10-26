@@ -114,6 +114,7 @@ Before minting anything, the command validates the metadata against the model an
 The command reports what it will do to the files before writing anything: the dropped, new and kept files of the five file classes, each with its count and up to 20 aliases.
 It asks for confirmation when the amendment would drop files, or when it would keep none at all, since both usually mean the wrong submission or the wrong aliases.
 That question cannot be skipped, by design: a dropped file is removed from the running system on the next `load`.
+Once the submission is written, the command prints `Submission <id> amended.`; it does not list the accessions it minted.
 
 Such an amendment can only be applied from a terminal.
 There is no `--yes`, and the prompt cannot be answered through a pipe either: when stdin is not a terminal the command refuses and changes nothing, rather than reading an answer nobody typed.

@@ -145,6 +145,9 @@ def amend(
     except AmendmentAbortedError as error:
         typer.echo(str(error))
         raise typer.Abort() from error
+    else:
+        # only reached once the submission is written and its source event published
+        typer.echo(f"Submission {submission_id} amended.")
 
 
 @cli.command(no_args_is_help=True)

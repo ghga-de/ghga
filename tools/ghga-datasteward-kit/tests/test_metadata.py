@@ -211,10 +211,12 @@ def test_amend_preserves_accessions(example_workdir: Path):
 
 @pytest.mark.usefixtures("legacy_amendment")
 def test_amend_dropped_alias_needs_confirmation(
-    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+    example_workdir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ):
     """Test that an amendment dropping an alias is refused unless confirmed, and that
-    refusing it leaves the submission untouched.
+    refusing it leaves the submission untouched and reports no success.
     """
     submission_id, _ = submit_legacy()
     submission_path = Path("submission_store") / f"{submission_id}.json"
@@ -231,6 +233,7 @@ def test_amend_dropped_alias_needs_confirmation(
         )
 
     assert submission_path.read_bytes() == content_before
+    assert "amended." not in capsys.readouterr().out
 
 
 @pytest.mark.usefixtures("legacy_amendment")
@@ -290,9 +293,11 @@ def test_amend_without_study_accession(example_workdir: Path, keep_anchor: bool)
         )
 
 
-def test_amend_refuses_study_pid_submission(example_workdir: Path):
+def test_amend_refuses_study_pid_submission(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
     """Test that a submission whose study has a study PID is refused, naming the
-    submission, and that nothing is written or minted.
+    submission, and that nothing is written or minted and no success is reported.
     """
     submission_id, _ = submit_original()
     submission_path = Path("submission_store") / f"{submission_id}.json"
@@ -308,6 +313,7 @@ def test_amend_refuses_study_pid_submission(example_workdir: Path):
 
     assert submission_path.read_bytes() == content_before
     assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+    assert "amended." not in capsys.readouterr().out
 
 
 def test_amend_unknown_submission(example_workdir: Path):
@@ -490,9 +496,12 @@ def legacy_amendment(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.usefixtures("legacy_amendment")
-def test_amend_mints_flat_accession(example_workdir: Path):
+def test_amend_mints_flat_accession(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
     """Test that an amendment mints a flat accession for a new alias, 'GHGAF' and 14
-    digits for a file, and registers it as legacy in the accession store.
+    digits for a file, registers it as legacy in the accession store, and reports
+    its success last.
     """
     submission_id, _ = submit_legacy()
 
@@ -501,6 +510,9 @@ def test_amend_mints_flat_accession(example_workdir: Path):
         metadata_path=AMENDED_METADATA_PATH,
         config_path=METADATA_CONFIG_PATH,
     )
+
+    output_lines = capsys.readouterr().out.splitlines()
+    assert output_lines[-1] == f"Submission {submission_id} amended."
 
     accessions_after = read_accession_map(submission_id=submission_id)
     minted = accessions_after["sample_files"]["test_sample_03_R1"]
