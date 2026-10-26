@@ -11,9 +11,10 @@ Read the README's "Structure and Conventions" and "Writing an epic" first; this 
 
 ## Before writing
 
-- **Only new epics.**
-  A specification records the plan as the epic started and is not updated afterwards.
-  Asked to change a started epic, say so and propose an ADR or a code change instead.
+- **A started epic changes rarely.**
+  A specification records the plan as the epic started and is not kept in step with the code.
+  As an exception, it may be adapted or refined later, to correct something the epic design misjudged or missed that only became apparent during implementation, once the team has agreed on the new direction.
+  Asked to change a started epic, ask whether that holds; if not, propose an ADR or a code change instead.
   Marking an epic completed is a change to the README's lists, not to the epic; "The Saga so far" says how.
 - **Pick the type** and start from its template: `docs/epics/epic-template-exploratory/README.md` or `docs/epics/epic-template-implementation/README.md`.
   For an `Exploration and Implementation Epic`, start from the implementation template and add the exploration sections the work needs.

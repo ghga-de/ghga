@@ -1,7 +1,8 @@
 # Epic Documentation
 
 > [!NOTE]
-> Each specification records the plan as it stood when its epic started and is not updated afterwards.
+> Each specification records the plan as it stood when its epic started, and is not kept in step with the code.
+> As an exception, it may be adapted or refined later, to correct something the epic design misjudged or missed that only became apparent during implementation, once the team has agreed on the new direction.
 > For current behaviour and binding rules, see the [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
 
 This directory contains technical specifications for GHGA development epics, documenting the scope and plans for each epic before the epic is started.
