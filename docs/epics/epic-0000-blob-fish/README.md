@@ -6,7 +6,29 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/SwFzCQ>
+### Outline
+
+The goal for this epic is to build a minimal backend for storing, querying, and searching metadata along with a corresponding UI.
+
+### Included/Required
+
+- metadata submission realized via a script
+- metadata storage in MongoDB-based database
+- search metadata items by keyword and by applying filters
+- query full (embedded) metadata for an item given its ID
+- UI for browsing, filtering, and searching the metadata catalog
+
+### Optional
+
+- implement Elasticsearch to power the search API
+
+### Not included
+
+- metadata submission API
+- user authentication & authorization
+- file-handling
+- async messaging via RabbitMQ
+- notification to users (via email)
 
 ## User Journeys
 
@@ -55,7 +77,23 @@ Please make sure the links are pointing to the main branch, even if the file doe
 
 ## Additional Implementation Details
 
-Further questions here: <https://docs.google.com/document/d/1xR6_93E3ySxhucKHKsyZ_1g_Eb5NUsrwsfl1bw8cQhA/edit?usp=sharing>
+Open questions discussed while planning this epic:
+
+- **Searching in the front end instead of a search service.**
+  Possible, but it would shift load to the UI, which had the least development capacity, and reduce both metadata services to one endpoint serving the whole database as JSON.
+  It would also mean writing the search in TypeScript only to move it to a Python service later.
+- **What the search service returns.**
+  Rather than only the IDs of matching items, the Metadata Search API should return a view of the metadata that the data portal can use directly, through an interface that does not depend on the store behind it (MongoDB, Elasticsearch).
+  The JSON can then be restructured without changing how the metadata is stored.
+- **Basic metadata with the search hits.**
+  Search hits can carry some basic metadata, but that scales poorly for thousands or millions of hits; with pagination, the UI queries details only for the items on screen.
+  The exact UI requirements depend on the wireframes.
+- **Clients adapt to the backend API.**
+  One API landscape should serve all clients, rather than one backend per client, even where its endpoints are not ideal for a client.
+  For example, REST has no batch query, so a page of 10 items takes 10 requests.
+- **Filter options.**
+  Filters such as "Experiment Type" can be predefined as enums in the API, which makes it more self-explanatory, or kept as generic strings, with an endpoint such as `GET /filter_options` from which the UI gets the available options.
+  Both designs were considered viable, and the choice was left for discussion.
 
 ## Human Resource/Time Estimation
 

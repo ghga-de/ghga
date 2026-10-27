@@ -2,7 +2,7 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the Epic Planning and Marathon SOP.
 
 ## Scope
 
@@ -12,7 +12,7 @@ This goal of this epic is to implement all the functionality necessary to suppor
 
 ### Included/Required
 
-The implementation must include all changes necessary to support the full functionality described in [GRFC007: User authentication and identification](https://docs.ghga-dev.de/main/grfcs/grfc007_auth_and_identity.html) and in the [white paper on 2FA and identity verification](https://docs.ghga-dev.de/main/white_papers/auth_and_identity.html).
+The implementation must include all changes necessary to support the full functionality described in GRFC007 (User authentication and identification) and in the white paper on 2FA and identity verification.
 
 These changes are outlined in the following sections.
 They affect both the frontend and the backend.

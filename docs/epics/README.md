@@ -22,7 +22,7 @@ Every specification names its own on an `**Epic Type:**` line below the heading,
 
 Please have a look at the templates ([exploratory](./epic-template-exploratory), [implementation](./epic-template-implementation)) and especially the contained technical specifications ([exploratory](./epic-template-exploratory/README.md), [implementation](./epic-template-implementation/README.md)).
 
-These specifications are part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/). (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
+These specifications are part of the Epic Planning and Marathon SOP. (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
 
 ## Writing an epic
 

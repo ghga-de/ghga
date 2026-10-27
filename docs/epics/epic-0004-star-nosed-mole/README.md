@@ -4,7 +4,28 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/fAFzCQ>
+### Outline
+
+The aim of this epic is to build a file up-/download client that talks to the API implemented in the "Red-lipped Batfish" epic.
+Moreover, a proof of concept (POC) study should be conducted to investigate whether our service and client implementation is working with the available S3 services in Tübingen and at the DKFZ.
+Moreover, it should be benchmarked whether these production systems are capable of handling terabyte-sized files.
+
+Benchmarking has been moved to a later epic.
+
+### Included/Required
+
+- a simple CLI client for up-/download of files
+- benchmarking / POC criteria:
+  - is our implementation functional on the Tübingen/DKFZ S3
+  - for large files (e.g. 1 TB):
+    - reliability (occurrence of sporadic errors/unavailabilities?)
+    - throughput (is up- and downloading files reasonably fast?)
+    - scalability (is the experience deteriorating when uploading multiple large files at once?)
+
+### Not included
+
+- user authentication & authorization
+- file encryption
 
 ## User Journeys
 
@@ -95,7 +116,7 @@ stateDiagram-v2
     state "Upload Attempt" as upload_attempt
 
     [*] --> initiate: initiate upload attempt
-    initiate --> uninitiated:
+    initiate --> uninitiated
     note right of uninitiated
     upload attempt for file
     already present
@@ -131,7 +152,7 @@ stateDiagram-v2
 
 - [Typer](https://typer.tiangolo.com/) can be used to implement the CLI interface.
 - Ideally, avoid piping file bytes through python directly as this will slow down the upload/download significantly.
-  Wrappers around C-based tools such as [pycurl](http://pycurl.io/docs/latest/) should be preferred.
+  Wrappers around C-based tools such as [pycurl](https://github.com/pycurl/pycurl) should be preferred.
 - The installation should make as few assumptions about the execution environment as possible to allow its usage on a large variety of compute infrastructures:
   - The package should have minimal dependencies.
   - The existing dependencies should allow maximal flexibility when it comes to versions.

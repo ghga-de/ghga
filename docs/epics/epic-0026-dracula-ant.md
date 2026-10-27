@@ -6,8 +6,7 @@
 
 ## Scope
 
-We want to implement the Work Package Service outlined in
-<https://docs.ghga-dev.de/main/architecture_concepts/ac001_file_validation_and_encryption.html#client-configuration-and-authorization>
+We want to implement the Work Package Service outlined in [AC-0001, client configuration and authorization](../architecture/ac-0001-file-transfer-and-storage.md#client-configuration-and-authorization).
 
 ## Implementation Details
 

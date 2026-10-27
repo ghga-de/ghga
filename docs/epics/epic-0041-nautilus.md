@@ -2,7 +2,7 @@
 
 **Epic Type:** Exploration and Implementation Epic
 
-Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/).
+Epic planning and implementation follow the Epic Planning and Marathon SOP.
 
 **Attention: Please do not put any confidential content here.**
 

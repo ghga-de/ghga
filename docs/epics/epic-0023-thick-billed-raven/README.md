@@ -2,12 +2,16 @@
 
 **Epic Type:** Implementation Epic
 
+## Scope
+
+### Outline
+
 The goal for this epic is to integrate all Backend File Services into the Testbed developed in [*19 - Pied Raven*](../epic-0019-pied-raven/README.md).
 This includes updating dependency versions in all services as well as ironing out possible differences in API usage and event processing to include the complete file upload path.
 
-## Scope
+### Not included
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/pages/viewpage.action?pageId=220790885>
+- the complete download path
 
 ## User Journeys
 

@@ -2,13 +2,13 @@
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html).
+Epic planning and implementation follow the Epic Planning and Marathon SOP.
 
 ## Scope
 
 ### Outline
 
-The goal of this epic is to overhaul the Upload Controller Service (UCS) as part of the new [File Upload concept](https://ghga.pages.hzdr.de/internal.ghga.de/feature_archconcept-file-upload/developer/architecture_concepts/ac007_file_upload/).
+The goal of this epic is to overhaul the Upload Controller Service (UCS) as part of the new [File Upload concept](../../architecture/ac-0007-file-upload.md) (AC-0007).
 While this concept includes references to future services like the Study Repository Service, some of the machinery there is still in the planning phase.
 This epic will therefore rely upon some shortcuts, such as extra Data Steward involvement.
 When the full architectural concept is realized, the appropriate adaptations will follow in a future epic.

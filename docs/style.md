@@ -55,6 +55,8 @@ Docs are rendered on GitHub and read in an editor, so they are GitHub Flavored M
   A heading is a label, not a sentence: a colon belongs on the paragraph or bold lead-in introducing a list, not on the heading.
 - **Bullets for what the reader acts on** — steps, requirements, options — and prose for the reasoning around them.
   A paragraph holding three parallel items is a list.
+- **Link only to pages every reader can open.**
+  The repository is public, so name an internal page — the wiki, the internal docs site, a GRFC, an SOP or a white paper — as plain text instead of linking it.
 
 ## Length
 
