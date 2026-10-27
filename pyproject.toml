@@ -29,7 +29,7 @@ dev = [
     # per-member test deps recovered from the dropped lock/requirements-dev.in files.
     # testcontainers is needed by hexkit's provider testutils across most suites; make it a
     # first-class dev dep so container tests fail on the Docker daemon (not on import).
-    "testcontainers>=4.14",
+    "testcontainers>=4.15",
     "aiosmtpd>=1.4.6",
     "openapi-core>=0.19.5",
     "cryptography>=46",
