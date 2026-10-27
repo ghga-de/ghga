@@ -1248,7 +1248,7 @@ async def test_republishing_stops_under_constant_writes(
     mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
 ):
     """Test that republishing a superseded write gives up after a few rounds when
-    every publish is overtaken by yet another write.
+    every publish is overtaken by yet another write, and leaves the resource pending.
     """
     collection = get_mongo_collection(mongo_kafka, "example")
 
@@ -1283,6 +1283,107 @@ async def test_republishing_stops_under_constant_writes(
     # the first publish plus one per republishing round
     assert publisher.published == 1 + MAX_REPUBLISH_ROUNDS
     assert "Stopped republishing resource" in caplog.text
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is False
+
+
+async def test_republishing_error_is_logged(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a failure while republishing a newer write's state does not fail
+    the write that was overtaken, since that write is already stored and published.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class FailingRepublishPublisher(EventPublisherProtocol):
+        """Simulates a newer write during the first publish, then fails."""
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published > 1:
+                raise RuntimeError("broker unavailable")
+            collection.update_one(
+                {"_id": uuid.UUID(key)},
+                {"$set": {"__metadata__.write_id": uuid.uuid4()}},
+            )
+
+    publisher = FailingRepublishPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+
+    assert publisher.published == 2
+    assert "Could not republish the current state" in caplog.text
+
+
+async def test_legacy_publish_keeps_a_deletion(mongo_kafka: MongoKafkaFixture):
+    """Test that publishing a change written before the write ID existed does not
+    revive the resource when it was deleted meanwhile by a writer that sets no write
+    ID either, as an older service version would.
+    """
+    example = ExampleDto()
+    document = dto_to_document(example, id_field="id")
+    document["__metadata__"] = {
+        "deleted": False,
+        "published": False,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": None,
+    }
+    collection = get_mongo_collection(mongo_kafka, "example")
+    collection.insert_one(document)
+
+    class DeletingEventPublisher(EventPublisherProtocol):
+        """Replaces the resource with a deletion stub during the change event."""
+
+        def __init__(self):
+            self.published: list[str] = []
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published.append(type_)
+            if type_ == CHANGE_EVENT_TYPE:
+                collection.replace_one(
+                    {"_id": uuid.UUID(key)},
+                    {
+                        "__metadata__": {
+                            "deleted": True,
+                            "published": False,
+                            "correlation_id": get_correlation_id(),
+                        }
+                    },
+                )
+
+    publisher = DeletingEventPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.publish_pending()
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(example.id)
+
+    assert publisher.published == [CHANGE_EVENT_TYPE, DELETE_EVENT_TYPE]
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["deleted"] is True
+    assert stored["__metadata__"]["published"] is True
 
 
 async def test_publish_pending_without_write_id(mongo_kafka: MongoKafkaFixture):

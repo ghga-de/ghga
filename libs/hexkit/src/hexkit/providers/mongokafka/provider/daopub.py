@@ -134,21 +134,34 @@ async def mark_published(
     id_: ID,
     *,
     write_id: UUID | None,
-    metadata: dict[str, Any],
+    deleted: bool,
+    event_id: UUID | None,
 ) -> bool:
-    """Set the given metadata fields to mark a write as published.
+    """Mark a write as published by setting only its outbox metadata.
 
-    Only the document still carrying the write's `write_id` is changed. If another
-    write has replaced the document in the meantime, nothing happens, since marking it
-    would revert that newer write. A `write_id` of None also matches documents written
-    before the field existed.
+    Only the document still carrying the write's `write_id` and deletion state is
+    changed. If another write has replaced the document in the meantime, nothing
+    happens, since marking it would revert that newer write. A `write_id` of None also
+    matches documents written before the field existed; the deletion state keeps such
+    a match from turning a deleted resource into an existing one or vice versa.
 
     Returns:
         Whether the write was marked, i.e. no newer write has replaced it.
     """
+    metadata = {
+        "deleted": deleted,
+        "published": True,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": event_id,
+    }
     with translate_pymongo_errors():
         result = await collection.update_one(
-            {"_id": id_, "__metadata__.write_id": write_id},
+            {
+                "_id": id_,
+                "__metadata__.write_id": write_id,
+                # documents without metadata count as not deleted
+                "__metadata__.deleted": True if deleted else {"$ne": True},
+            },
             {"$set": {f"__metadata__.{key}": value for key, value in metadata.items()}},
         )
     return result.matched_count > 0
@@ -160,12 +173,12 @@ def get_change_publish_func(
     dto_to_event: Callable[[Dto], JsonObject | None],
     event_publisher: EventPublisherProtocol,
     collection: AsyncCollection,
-) -> Callable[[Dto, UUID | None], Awaitable[bool]]:
+) -> Callable[[Dto, ID, UUID | None], Awaitable[bool]]:
     """Generate a function that publishes change events for a specific type of resource."""
 
-    async def publish_change(dto: Dto, write_id: UUID | None) -> bool:
+    async def publish_change(dto: Dto, id_: ID, write_id: UUID | None) -> bool:
         """Publishes a change event and marks the write with the given ID as
-        published.
+        published. `id_` is the resource ID as stored in the document.
 
         Returns whether the write could be marked, see `mark_published`.
         """
@@ -182,16 +195,7 @@ def get_change_publish_func(
                 event_id=event_id,
             )
         return await mark_published(
-            collection,
-            # the stored ID, as dto_to_document dumps it
-            dto.model_dump(include={id_field})[id_field],
-            write_id=write_id,
-            metadata={
-                "deleted": False,
-                "published": True,
-                "correlation_id": get_correlation_id(),
-                "last_event_id": event_id,
-            },
+            collection, id_, write_id=write_id, deleted=False, event_id=event_id
         )
 
     return publish_change
@@ -222,15 +226,7 @@ def get_delete_publish_func(
         )
 
         return await mark_published(
-            collection,
-            id_,
-            write_id=write_id,
-            metadata={
-                "deleted": True,
-                "published": True,
-                "correlation_id": get_correlation_id(),
-                "last_event_id": event_id,
-            },
+            collection, id_, write_id=write_id, deleted=True, event_id=event_id
         )
 
     return publish_deletion
@@ -268,7 +264,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         dto_model: type[Dto],
         collection: AsyncCollection,
         dao: MongoDbDao[Dto],
-        publish_change: Callable[[Dto, UUID | None], Awaitable[bool]],
+        publish_change: Callable[[Dto, ID, UUID | None], Awaitable[bool]],
         publish_delete: Callable[[Any, UUID | None], Awaitable[bool]],
         autopublish: bool,
     ):
@@ -287,8 +283,9 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 functionality.
             publish_change:
                 A callable returning an awaitable for publishing the current state of a
-                created or changed resource, given with the ID of the write. The
-                awaitable returns whether the write could be marked as published.
+                created or changed resource, given with its stored ID and the ID of
+                the write. The awaitable returns whether the write could be marked as
+                published.
             publish_delete:
                 A callable returning an awaitable for publishing the deletion of a
                 resource, given with the ID of the write. The awaitable returns
@@ -386,10 +383,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise ResourceNotFoundError(id_=document["_id"])
 
         if self._autopublish:
-            marked = await self._publish_change(
-                dto, document["__metadata__"]["write_id"]
-            )
-            await self._republish_if_superseded(document["_id"], marked=marked)
+            await self.publish_document(document)
 
     async def delete(self, id_: ID) -> None:
         """Delete a resource by providing its ID.
@@ -426,8 +420,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise ResourceNotFoundError(id_=id_)
 
         if self._autopublish:
-            marked = await self._publish_delete(id_, write_id)
-            await self._republish_if_superseded(id_, marked=marked)
+            await self.publish_document(document)
 
     # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
@@ -598,10 +591,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         await self._dao._insert_document(document)
 
         if self._autopublish:
-            marked = await self._publish_change(
-                dto, document["__metadata__"]["write_id"]
-            )
-            await self._republish_if_superseded(document["_id"], marked=marked)
+            await self.publish_document(document)
 
     async def upsert(self, dto: Dto) -> None:
         """Update the provided resource if it already exists, create it otherwise.
@@ -617,16 +607,9 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 field other than the ID field.
         """
         document = self._dao._dto_to_document(dto)
-        try:
-            await self._dao._upsert_document(document)
-        except DuplicateKeyError as error:
-            key_value = error.details.get("keyValue", {})  # type: ignore
-            raise UniqueConstraintViolationError(unique_fields=key_value) from error
+        await self._dao._upsert_document(document)
         if self._autopublish:
-            marked = await self._publish_change(
-                dto, document["__metadata__"]["write_id"]
-            )
-            await self._republish_if_superseded(document["_id"], marked=marked)
+            await self.publish_document(document)
 
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
@@ -644,7 +627,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             dto = document_to_dto(
                 document, id_field=self._id_field, dto_model=self._dto_model
             )
-            return await self._publish_change(dto, write_id)
+            return await self._publish_change(dto, document["_id"], write_id)
 
     async def _republish_if_superseded(self, id_: ID, *, marked: bool) -> None:
         """Publish the current state of a resource if a newer write replaced the one
@@ -653,23 +636,43 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         The event just sent may have reached Kafka after the newer write's own event,
         which would leave an older state as the last event on the topic. Publishing
         the current state again puts the newest state last. Another round is needed
-        only if yet another write replaced the document in the meantime.
+        only if yet another write replaced the document in the meantime. If the
+        rounds run out, the document is flagged as unpublished, so that
+        `publish_pending` sends its state again.
+
+        Errors are logged instead of raised: the caller's own write is already stored
+        and published, and the newer write publishes its own event.
         """
-        for _ in range(MAX_REPUBLISH_ROUNDS):
+        try:
+            for _ in range(MAX_REPUBLISH_ROUNDS):
+                if marked:
+                    return
+                with translate_pymongo_errors():
+                    document = await self._collection.find_one({"_id": id_})
+                if document is None:
+                    return
+                marked = await self._publish_document_once(document)
             if marked:
                 return
             with translate_pymongo_errors():
-                document = await self._collection.find_one({"_id": id_})
-            if document is None:
-                return
-            marked = await self._publish_document_once(document)
-        if not marked:
+                await self._collection.update_one(
+                    # a document without metadata would be hidden by a partial one
+                    {"_id": id_, "__metadata__": {"$exists": True}},
+                    {"$set": {"__metadata__.published": False}},
+                )
+        except Exception:
             log.warning(
-                "Stopped republishing resource %s after %d rounds because newer"
-                + " writes kept replacing it; the last event may show an older state.",
+                "Could not republish the current state of resource %s.",
                 id_,
-                MAX_REPUBLISH_ROUNDS,
+                exc_info=True,
             )
+            return
+        log.warning(
+            "Stopped republishing resource %s after %d rounds because newer writes"
+            + " kept replacing it; it is left for publish_pending.",
+            id_,
+            MAX_REPUBLISH_ROUNDS,
+        )
 
     async def publish_pending(self) -> None:
         """Publishes all non-published changes."""
