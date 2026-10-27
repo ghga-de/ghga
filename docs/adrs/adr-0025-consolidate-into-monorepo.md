@@ -70,7 +70,8 @@ The [manifest](../../scripts/migration/repos.tsv) holds the mapping and the reti
 - The released CLIs match the services they are tested with.
   `datahub-test-bed` keeps using published versions.
 - The repository is large; affected-target CI keeps builds and tests scoped.
-- Nothing stops one service from importing another; that boundary rests on review, and services keep communicating through events and APIs.
+- A service never imports another service; they talk only through events and APIs.
+  Nothing in the build enforces that boundary, so review does.
 - Libraries stay usable on their own: the capability markers decide what each member releases ([ADR-0033](adr-0033-capability-markers-and-placement.md)), and the PyPI lane publishes the libraries individually ([ADR-0027](adr-0027-versioning-and-release-by-tag.md)).
 
 ### Alternatives

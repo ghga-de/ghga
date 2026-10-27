@@ -50,9 +50,9 @@ This epic aims at establishing a concept for (authentication and) authorization 
 
 ## Material and Resources
 
-- [GA4GH Passports and the Authorization and Authentication Infrastructure](https://www.ga4gh.org/news/ga4gh-passports-and-the-authorization-and-authentication-infrastructure/)
-- [GA4GH AAI background](https://ga4gh.github.io/data-security/1.2-draft-main/aai-introduction)
-- [GA4GH AAI OIDC profile](https://ga4gh.github.io/data-security/1.2-draft-main/aai-openid-connect-profile)
+- [GA4GH Passports and the Authorization and Authentication Infrastructure](https://web.archive.org/web/20210125205300/https://www.ga4gh.org/news/ga4gh-passports-and-the-authorization-and-authentication-infrastructure/) (archived)
+- [GA4GH AAI background](https://ga4gh.github.io/aai/)
+- [GA4GH AAI OIDC profile](https://ga4gh.github.io/aai/aai-openid-connect-profile)
 - [GA4GH Passport V1](https://github.com/ga4gh-duri/ga4gh-duri.github.io/blob/master/researcher_ids/ga4gh_passport_v1.md#ga4gh-passport)
 - [GA4GH Passport standard for digital identity and access permissions](https://www.cell.com/cell-genomics/fulltext/S2666-979X\(21\)00037-9) (Cell Genomics, November 2021)
 - [ELIXIR AAI: Authentication and Authorisation Infrastructure](https://elixir-europe.org/services/compute/aai)

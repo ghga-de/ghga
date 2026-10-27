@@ -116,7 +116,7 @@ stateDiagram-v2
     state "Upload Attempt" as upload_attempt
 
     [*] --> initiate: initiate upload attempt
-    initiate --> uninitiated:
+    initiate --> uninitiated
     note right of uninitiated
     upload attempt for file
     already present
@@ -152,7 +152,7 @@ stateDiagram-v2
 
 - [Typer](https://typer.tiangolo.com/) can be used to implement the CLI interface.
 - Ideally, avoid piping file bytes through python directly as this will slow down the upload/download significantly.
-  Wrappers around C-based tools such as [pycurl](http://pycurl.io/docs/latest/) should be preferred.
+  Wrappers around C-based tools such as [pycurl](https://github.com/pycurl/pycurl) should be preferred.
 - The installation should make as few assumptions about the execution environment as possible to allow its usage on a large variety of compute infrastructures:
   - The package should have minimal dependencies.
   - The existing dependencies should allow maximal flexibility when it comes to versions.

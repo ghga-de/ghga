@@ -15,7 +15,7 @@ The aim is to rewrite all existing metldata transformations to use schemapack.
 ### Included/Required
 
 - add possibility to use custom embedding profile to configure the denormalization in schemapack
-- migrating the already schemapack-based transformations to spec version 0.2.0 (see <https://github.com/ghga-de/metldata/tree/poc/src/metldata/schemapack_/builtin_transformations>):
+- migrating the already schemapack-based transformations to spec version 0.2.0 (see <https://github.com/ghga-de/metldata/tree/main/src/metldata/builtin_transformations>):
   - delete_properties
   - infer_relations
 - re-implement the following LinkML-based transformations to use schemapack (see <https://github.com/ghga-de/metldata/tree/poc/src/metldata/builtin_transformations>):

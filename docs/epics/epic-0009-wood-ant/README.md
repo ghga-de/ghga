@@ -41,7 +41,7 @@ The aim of this epic is to understand and satisfy the requirements for using Lif
 
 ## Material and Resources
 
-- [Life Science Login](https://lifescience-ri.eu/ls-login.html) website
+- [Life Science Login](https://www.lifescience-ri.eu/life-science-login/) website
 - [OpenID Connect](https://openid.net/connect/) website
 - [OAuth 2.0 Security Best Current Practice](https://oauth.net/2/oauth-best-practice/)
 

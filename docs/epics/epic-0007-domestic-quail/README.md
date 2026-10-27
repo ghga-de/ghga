@@ -8,8 +8,8 @@
 
 ### Outline
 
-This epic is a pilot study that aims at exploring how to implement the 3-Hex design pattern and at evaluating its feasibility.
-Thereby, a 3-Hex-supporting chassis library shall be implemented that offers an initial set of components needed for event streaming using Apache Kafka.
+This epic is a pilot study that aims at exploring how to implement the triple hexagonal design pattern and at evaluating its feasibility.
+Thereby, a chassis library supporting that pattern shall be implemented that offers an initial set of components needed for event streaming using Apache Kafka.
 
 This epic is classified as both exploratory and implementation type.
 That is because it is a proof of concept study that seeks to explore and evaluate options for implementing the triple hexagonal design pattern in python.

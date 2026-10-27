@@ -27,7 +27,7 @@ Thus Tübingen will be tested from Heidelberg and vice versa.
 
 ### Benchmarking Script
 
-Create a benchmarking script based on the S3 provider implementation in hexkit (<https://github.com/ghga-de/hexkit/blob/main/hexkit/providers/s3/provider.py>) and file operation functions from the CLI (<https://github.com/ghga-de/ghga-connector/blob/main/ghga_connector/core/file_operations.py>).
+Create a benchmarking script based on the S3 provider implementation in hexkit ([objstorage.py](../../libs/hexkit/src/hexkit/providers/s3/provider/objstorage.py)) and file operation functions from the CLI ([file_operations.py](../../tools/ghga-connector/src/ghga_connector/core/file_operations.py)).
 
 ### Benchmarking Goals
 
