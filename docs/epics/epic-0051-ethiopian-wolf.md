@@ -2,7 +2,7 @@
 
 **Epic Type:** Exploratory Epic
 
-Epic planning and implementation follow the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/)
+Epic planning and implementation follow the Epic Planning and Marathon SOP.
 
 **Attention: Please do not put any confidential content here.**
 
@@ -53,7 +53,13 @@ Specifically, the following questions shall be answered:
 
 Materials to be studied (e.g. articles, book chapters, youtube videos, etc.) and any (external) persons/experts to talk to:
 
-- There is an existing [confluence page](https://wiki.verbis.dkfz.de/x/bwDYCg) listing the pro and cons of monoliths but also a list of resources.
+- [Why Google Stores Billions of Lines of Code in a Single Repository](https://dl.acm.org/doi/pdf/10.1145/2854146) (Communications of the ACM, 2016)
+- [Monorepos. For when life isn't already complicated enough.](https://www.ben-morris.com/monorepos-for-when-life-isnt-already-complicated-enough/)
+- [Versioning microservices in GitLab monorepos and polyrepos](https://www.avestura.dev/blog/versioning-microservices-projects)
+- [Benefits and challenges of using monorepo development practices](https://circleci.com/blog/monorepo-dev-practices/)
+- [Monorepo vs. Multi-Repo: Vor- und Nachteile von Code-Repository-Strategien](https://kinsta.com/de/blog/monorepo-vs-multi-repo/) (German)
+- [Monorepos - Vor- und Nachteile](https://www.happycoders.eu/de/java/monorepo-vor-und-nachteile/) (German)
+- [From Chaos to Cohesion: Architecting Your Own Monorepo](https://monadical.com/posts/from-chaos-to-cohesion.html)
 - The [polylith architecture](https://polylith.gitbook.io/polylith) and associated [python tooling](https://davidvujic.github.io/python-polylith-docs/)
 - Talk python episode about [monorepos in python](https://talkpython.fm/episodes/show/399/monorepos-in-python)
 - Using [pants](https://www.pantsbuild.org/) as build system, [podcast episode](https://talkpython.fm/episodes/show/387/build-all-the-things-with-pants-build-system)
