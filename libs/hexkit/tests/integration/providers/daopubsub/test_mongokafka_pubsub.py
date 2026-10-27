@@ -1291,12 +1291,15 @@ async def test_republishing_error_is_logged(
     mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
 ):
     """Test that a failure while republishing a newer write's state does not fail
-    the write that was overtaken, since that write is already stored and published.
+    the write that was overtaken, since that write is already stored and published,
+    and leaves the resource pending.
     """
     collection = get_mongo_collection(mongo_kafka, "example")
 
     class FailingRepublishPublisher(EventPublisherProtocol):
-        """Simulates a newer write during the first publish, then fails."""
+        """Simulates a newer write that is published and marked during the first
+        publish, then fails.
+        """
 
         def __init__(self):
             self.published = 0
@@ -1316,7 +1319,12 @@ async def test_republishing_error_is_logged(
                 raise RuntimeError("broker unavailable")
             collection.update_one(
                 {"_id": uuid.UUID(key)},
-                {"$set": {"__metadata__.write_id": uuid.uuid4()}},
+                {
+                    "$set": {
+                        "__metadata__.write_id": uuid.uuid4(),
+                        "__metadata__.published": True,
+                    }
+                },
             )
 
     publisher = FailingRepublishPublisher()
@@ -1327,6 +1335,8 @@ async def test_republishing_error_is_logged(
 
     assert publisher.published == 2
     assert "Could not republish the current state" in caplog.text
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is False
 
 
 async def test_legacy_publish_keeps_a_deletion(mongo_kafka: MongoKafkaFixture):

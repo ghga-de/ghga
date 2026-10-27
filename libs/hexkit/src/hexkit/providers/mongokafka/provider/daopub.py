@@ -637,8 +637,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         which would leave an older state as the last event on the topic. Publishing
         the current state again puts the newest state last. Another round is needed
         only if yet another write replaced the document in the meantime. If the
-        rounds run out, the document is flagged as unpublished, so that
-        `publish_pending` sends its state again.
+        rounds run out or republishing fails, the document is flagged as unpublished,
+        so that `publish_pending` sends its state again.
 
         Errors are logged instead of raised: the caller's own write is already stored
         and published, and the newer write publishes its own event.
@@ -654,6 +654,20 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 marked = await self._publish_document_once(document)
             if marked:
                 return
+            log.warning(
+                "Stopped republishing resource %s after %d rounds because newer"
+                + " writes kept replacing it; leaving it for publish_pending.",
+                id_,
+                MAX_REPUBLISH_ROUNDS,
+            )
+        except Exception:
+            log.warning(
+                "Could not republish the current state of resource %s; leaving it"
+                + " for publish_pending.",
+                id_,
+                exc_info=True,
+            )
+        try:
             with translate_pymongo_errors():
                 await self._collection.update_one(
                     # a document without metadata would be hidden by a partial one
@@ -662,17 +676,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 )
         except Exception:
             log.warning(
-                "Could not republish the current state of resource %s.",
-                id_,
-                exc_info=True,
+                "Could not flag resource %s as unpublished.", id_, exc_info=True
             )
-            return
-        log.warning(
-            "Stopped republishing resource %s after %d rounds because newer writes"
-            + " kept replacing it; it is left for publish_pending.",
-            id_,
-            MAX_REPUBLISH_ROUNDS,
-        )
 
     async def publish_pending(self) -> None:
         """Publishes all non-published changes."""
