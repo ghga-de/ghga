@@ -8,7 +8,7 @@ docs/architecture/kafka-cascade-map.html, then fails when that changed the file,
 fix is to stage the result. The page's stylesheet and its d3 drawing code are edited by
 hand; only the block between the markers is generated.
 
-docs/architecture/kafka-cascade-map.md says where the topology comes from and how to
+docs/architecture/ac-0009-kafka-cascade-map.md says where the topology comes from and how to
 check it against the code.
 
 Usage:

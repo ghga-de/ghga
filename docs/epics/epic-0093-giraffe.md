@@ -22,7 +22,7 @@ Since mapping is the only way to bind an accession to a file and is always addre
 The long-term plan solves this with schemapack and dedicated backend services (resource-registry, resource-search, em-transformation-service), where the study is the defining scope of a submission and receives a structured PID.
 This epic delivers a smaller step first, on the existing LinkML plus offline `ghga-datasteward-kit` stack, so lifecycle PIDs and study revisions are available before those services land.
 The design is agreed; this document is its full write-up and fixes the scope and the per-component work.
-Read [`docs/architecture/metadata-and-file-journeys.md`](../architecture/metadata-and-file-journeys.md) — the current-state reference for the submission, accession, upload and mapping paths this epic changes — before starting.
+Read [`docs/architecture/ac-0008-metadata-and-file-journeys.md`](../architecture/ac-0008-metadata-and-file-journeys.md) — the current-state reference for the submission, accession, upload and mapping paths this epic changes — before starting.
 
 ### Terminology
 

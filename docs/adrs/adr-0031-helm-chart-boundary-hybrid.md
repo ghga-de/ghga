@@ -45,7 +45,7 @@ The platform layer owns what is cluster-wide: the edge `Gateway`, the edge auth 
 `devops-kubernetes-hub` stays outside this repo.
 
 App charts keep a binding contract, so the platform layer attaches its resources without patching templates.
-The contract is listed in the [architecture overview](../architecture/overview.md#35-helm--adopt-ghga-common-app-charts--demo-umbrella).
+The contract is listed in the [architecture overview](../architecture/ac-0000-monorepo-overview.md#35-helm--adopt-ghga-common-app-charts--demo-umbrella).
 
 ### Consequences
 

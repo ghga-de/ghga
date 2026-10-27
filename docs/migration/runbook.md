@@ -30,7 +30,7 @@ The initial import could use local legacy clones in `.legacy_repos/` (gitignored
    printf '.legacy_repos/\n.migration-work/\n' >> .gitignore   # never track these
    ```
 
-2. Author the root workspace files (see [overview §3.1–3.2](../architecture/overview.md)):
+2. Author the root workspace files (see [overview §3.1–3.2](../architecture/ac-0000-monorepo-overview.md)):
    - root `pyproject.toml` with `[tool.uv.workspace] members = ["libs/*", "services/*", "tools/*"]` and the shared `ruff`/`mypy`/`pytest` config;
    - placeholder `libs/`, `services/`, `tools/`, `frontend/`, `deploy/`, `testbed/`, `docker/` dirs;
    - the consolidated `.github/workflows/` (added in Phase 5).

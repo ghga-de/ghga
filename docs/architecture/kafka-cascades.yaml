@@ -1,6 +1,6 @@
 # The topology drawn by kafka-cascade-map.html, which scripts/kafka_map.py generates
 # from this file. Edit this file, then run `just kafka-map`.
-# kafka-cascade-map.md says where each part comes from and how to check it.
+# ac-0009-kafka-cascade-map.md says where each part comes from and how to check it.
 #
 # services:  short name → full service name, as the page spells it out.
 # labels:    the same lookup, for the names that are not services: what became of
