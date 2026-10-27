@@ -16,9 +16,26 @@
 # inside a member, or a non-member path such as scripts/tests. The first argument that
 # starts with `-` ends the targets: it and everything after it go to every pytest run, so
 # an option's value (`-k "a and b"`) is never mistaken for a target.
+#
+# With options, pytest exits 5 for a run whose tests they all deselect: `just test libs
+# -k dao` should not list every member without a dao test as red. Such a run is listed
+# apart, and only when no run selected any test does the whole call fail.
 set -uo pipefail
 
 failed=()
+unselected=()
+selected=0
+
+# file one run's exit status under the target it ran
+record() {
+    local target=$1 status=$2
+    if [ "$status" = 5 ] && [ ${#opts[@]} -gt 0 ]; then
+        unselected+=("$target")
+        return
+    fi
+    selected=$((selected + 1))
+    [ "$status" = 0 ] || failed+=("$target")
+}
 
 # pytest one member, or a scope inside it given relative to the member
 run_member() {
@@ -41,18 +58,21 @@ run_target() {
                 for member in "$tier"/*/; do
                     member="${member%/}"
                     [ -f "$member/pyproject.toml" ] || continue
-                    run_member "$member" || failed+=("$member")
+                    run_member "$member"
+                    record "$member" $?
                 done
                 return
             fi
             member=$(cut -d/ -f1-2 <<< "$target")
             # anything deeper than the member is a scope *within* its suite
             scope="${target#"$member"}"
-            run_member "$member" "${scope#/}" || failed+=("$target")
+            run_member "$member" "${scope#/}"
+            record "$target" $?
             ;;
         *)
             echo "== pytest $target =="
-            uv run pytest -q --durations=10 "$target" "${opts[@]}" || failed+=("$target")
+            uv run pytest -q --durations=10 "$target" "${opts[@]}"
+            record "$target" $?
             ;;
     esac
 }
@@ -76,7 +96,14 @@ for target in "${targets[@]}"; do
     run_target "$target"
 done
 
+if [ ${#unselected[@]} -gt 0 ]; then
+    echo "no test selected in: ${unselected[*]}"
+fi
 if [ ${#failed[@]} -gt 0 ]; then
     echo "pytest failed in: ${failed[*]}" >&2
     exit 1
+fi
+if [ "$selected" = 0 ] && [ ${#unselected[@]} -gt 0 ]; then
+    echo "error: the pytest options selected no test in any target" >&2
+    exit 5
 fi

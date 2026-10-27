@@ -8,7 +8,8 @@
 #
 # affected_targets.py also reports targets that have no member suite, because it feeds
 # CI's other jobs as well: the front end (check-frontend), and the charts and the test
-# bed (the integration gate). Those are named with the recipe that checks them, not run.
+# bed (the integration gate). Those are named with the recipe that checks them, not run,
+# after the sweep, where its output does not scroll them away.
 set -euo pipefail
 
 json=$(just affected "$1")
@@ -31,20 +32,24 @@ for target in "${targets[@]}"; do
     esac
 done
 
+status=0
+if [ "$(jq -r .all <<< "$json")" = true ]; then
+    echo "a repo-wide file changed, so every member is affected: running the full sweep"
+    just test || status=$?
+elif [ ${#members[@]} -gt 0 ]; then
+    just test "${members[@]}" || status=$?
+else
+    echo "no workspace member affected"
+fi
+
 for target in "${frontend[@]}"; do
     echo "not run: $target -- \`just fe_dir=$target fe-check\` checks it"
 done
-if [ "$charts" -gt 0 ] || [ "$testbed" = 1 ]; then
-    echo "not run: $charts chart(s)$([ "$testbed" = 1 ] && echo " and the test bed")" \
-        "-- \`just testbed\` exercises them"
+deployed=()
+[ "$charts" -eq 0 ] || deployed+=("$charts chart(s)")
+[ "$testbed" = 0 ] || deployed+=("the test bed")
+if [ ${#deployed[@]} -gt 0 ]; then
+    names="${deployed[0]}${deployed[1]:+ and ${deployed[1]}}"
+    echo "not run: $names -- \`just testbed\` exercises them"
 fi
-
-if [ "$(jq -r .all <<< "$json")" = true ]; then
-    echo "a repo-wide file changed, so every member is affected: running the full sweep"
-    exec just test
-fi
-if [ ${#members[@]} -eq 0 ]; then
-    echo "no workspace member affected"
-    exit 0
-fi
-exec just test "${members[@]}"
+exit "$status"

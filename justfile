@@ -105,6 +105,8 @@ lint: _guard
     uv run rumdl check .
 
 # Each tool reads its config, excludes included, from the root pyproject.toml for any path.
+# A named file goes only to the tool for its type: ruff parses any file it is given as
+# Python, and rumdl refuses one that is not Markdown.
 #
 #   just fmt                  # the whole workspace
 #   just fmt libs/hexkit      # one member, so unrelated files stay as they are
@@ -114,14 +116,17 @@ fmt *paths: _guard
     #!/usr/bin/env bash
     set -euo pipefail
     [ $# -gt 0 ] || set -- .
-    uv run ruff format --force-exclude "$@"
-    uv run ruff check --fix --force-exclude "$@"
-    # rumdl refuses a named file that is not Markdown, where ruff just skips it
-    md=()
+    py=() md=()
     for path in "$@"; do
+        if [ -d "$path" ] || [[ "$path" == *.py || "$path" == *.pyi ]]; then py+=("$path"); fi
         if [ -d "$path" ] || [[ "$path" == *.md ]]; then md+=("$path"); fi
     done
+    if [ ${#py[@]} -gt 0 ]; then
+        uv run ruff format --force-exclude "${py[@]}"
+        uv run ruff check --fix --force-exclude "${py[@]}"
+    fi
     if [ ${#md[@]} -gt 0 ]; then uv run rumdl fmt "${md[@]}"; fi
+    if [ ${#py[@]} -eq 0 ] && [ ${#md[@]} -eq 0 ]; then echo "no Python or Markdown path in: $*"; fi
 
 # A single `mypy .` collides on duplicate module names across members, and the result
 # depends on the path set it is given -- so the unit, not the file, is what gets checked.

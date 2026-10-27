@@ -91,8 +91,15 @@ def members(repo: Repo) -> Repo:
     for member in ("libs/a", "libs/b", "services/s", "tools/t"):
         repo.write(f"{member}/pyproject.toml")
     (repo.root / "libs/orphan").mkdir()
-    # `uv run pytest ...` fails when run from the directory named in $FAIL_IN
-    repo.stub("uv", '[ "${FAIL_IN:-}" = "$(basename "$PWD")" ] && exit 1; exit 0')
+    # `uv run pytest ...` fails when run from the directory named in $FAIL_IN, and
+    # selects no test (pytest's exit 5) in the ones named in $EMPTY_IN
+    repo.stub(
+        "uv",
+        'here=$(basename "$PWD")\n'
+        '[ "${FAIL_IN:-}" = "$here" ] && exit 1\n'
+        '[[ " ${EMPTY_IN:-} " == *" $here "* ]] && exit 5\n'
+        "exit 0",
+    )
     return repo
 
 
@@ -191,6 +198,28 @@ def test_a_failing_member_does_not_stop_the_sweep(members: Repo):
     assert [cwd for cwd, _ in members.calls("uv")] == ["libs/a", "libs/b", "services/s"]
 
 
+def test_a_member_the_options_select_nothing_in_is_not_red(members: Repo):
+    """`-k` that matches nothing in one member lists it apart, not as a failure."""
+    result = members.run("test.sh", "libs", "-k", "dao", EMPTY_IN="a")
+    assert result.returncode == 0, result.stderr
+    assert "no test selected in: libs/a" in result.stdout
+    assert "pytest failed" not in result.stderr
+
+
+def test_options_that_select_nothing_anywhere_fail(members: Repo):
+    """A `-k` typo must not pass because every run deselected all its tests."""
+    result = members.run("test.sh", "libs", "-k", "typo", EMPTY_IN="a b")
+    assert result.returncode == 5
+    assert "selected no test in any target" in result.stderr
+
+
+def test_a_member_without_tests_is_red_when_no_options_are_given(members: Repo):
+    """Without options, exit 5 means a suite collected nothing, which CI counts as red."""
+    result = members.run("test.sh", "libs", EMPTY_IN="a")
+    assert result.returncode == 1
+    assert "pytest failed in: libs/a" in result.stderr
+
+
 # --- test-affected.sh --------------------------------------------------------------------
 
 
@@ -200,7 +229,7 @@ def affected(repo: Repo) -> Repo:
     repo.stub(
         "just",
         '[ "$1" = affected ] && { printf "%s\\n" "$AFFECTED"; exit 0; }\n'
-        'exit "${TEST_EXIT:-0}"',
+        'echo "sweep output"; exit "${TEST_EXIT:-0}"',
     )
     return repo
 
@@ -241,7 +270,21 @@ def test_targets_without_a_member_suite_are_named_not_run(affected: Repo):
     assert result.returncode == 0, result.stderr
     assert "`just fe_dir=frontend/p fe-check`" in result.stdout
     assert "2 chart(s) and the test bed -- `just testbed`" in result.stdout
+    # named after the sweep, so its output does not scroll them away
+    assert result.stdout.index("sweep output") < result.stdout.index("not run:")
     assert affected.calls("just")[1:] == [(".", "test libs/a")]
+
+
+def test_only_the_test_bed_is_named_without_a_chart_count(affected: Repo):
+    """No chart affected means no `0 chart(s)` in the line."""
+    result = affected.run(
+        "test-affected.sh",
+        "origin/dev",
+        AFFECTED=_affected(False, "libs/a", "testbed"),
+        TEST_EXIT="1",
+    )
+    assert result.returncode == 1
+    assert "not run: the test bed -- `just testbed`" in result.stdout
 
 
 def test_nothing_affected_runs_nothing(affected: Repo):
@@ -605,18 +648,19 @@ def test_image_recipes_pass_build_flags_through_whole(
     "paths, ruff_paths, rumdl_paths",
     [
         ([], ["."], ["."]),
-        (["libs", "a b.md"], ["libs", "a b.md"], ["libs", "a b.md"]),
-        (["x.py", "docs/y.md"], ["x.py", "docs/y.md"], ["docs/y.md"]),
+        (["libs", "a b.md"], ["libs"], ["libs", "a b.md"]),
+        (["a b.py", "docs/y.md", "s.pyi"], ["a b.py", "s.pyi"], ["docs/y.md"]),
         (["x.py"], ["x.py"], None),
+        (["scripts/just/test.sh", ".pre-commit-config.yaml"], None, None),
     ],
 )
 def test_fmt_hands_its_paths_to_each_tool(
     tmp_path: Path,
     paths: list[str],
-    ruff_paths: list[str],
+    ruff_paths: list[str] | None,
     rumdl_paths: list[str] | None,
 ):
-    """No path means the whole tree; rumdl gets only directories and Markdown files."""
+    """No path means the whole tree; a named file goes only to the tool for its type."""
     stub = tmp_path / "uv"
     # one line per call, each argument followed by a tab, so a space stays visible
     stub.write_text(
@@ -625,13 +669,17 @@ def test_fmt_hands_its_paths_to_each_tool(
     stub.chmod(0o755)
     result = _just("fmt", *paths, stubs=tmp_path)
     assert result.returncode == 0, result.stderr
-    calls = [
-        line.split("\t")[:-1] for line in (tmp_path / "log").read_text().splitlines()
-    ]
-    expected = [
-        ["run", "ruff", "format", "--force-exclude", *ruff_paths],
-        ["run", "ruff", "check", "--fix", "--force-exclude", *ruff_paths],
-    ]
+    log = tmp_path / "log"
+    lines = log.read_text().splitlines() if log.exists() else []
+    calls = [line.split("\t")[:-1] for line in lines]
+    expected = []
+    if ruff_paths is not None:
+        expected.append(["run", "ruff", "format", "--force-exclude", *ruff_paths])
+        expected.append(
+            ["run", "ruff", "check", "--fix", "--force-exclude", *ruff_paths]
+        )
     if rumdl_paths is not None:
         expected.append(["run", "rumdl", "fmt", *rumdl_paths])
     assert calls == expected
+    if not expected:
+        assert "no Python or Markdown path" in result.stdout
