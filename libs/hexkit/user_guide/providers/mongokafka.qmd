@@ -86,6 +86,21 @@ Correlation & Event IDs:
 - Event IDs are generated every time the data is (re)published, and the ID is stored after the event is published.
   This is different from the Persistent Publisher in that the latter will reuse the same event ID.
 
+### One DAO per collection
+
+A collection served by an Outbox Publisher must be read and written only through Outbox Publishers created with the same `dto_model`, `dto_to_event` and `event_topic`.
+The rule applies to the collection in its database, so it binds every service and process that opens the same database, not only the one that created the DAO.
+Collections with the same name in different databases are independent.
+Several instances of that DAO, such as the replicas of a service, may write the collection at the same time.
+Opening the collection with another DAO, such as a plain `MongoDbDao`, or writing it directly is not supported, because such access bypasses the outbox:
+
+- A write publishes no event, so consumers miss the change.
+- A write replaces or omits `__metadata__`, so an unpublished change drops out of `publish_pending()`, and a concurrent publish can no longer tell by the write ID that it was overtaken.
+- An upsert brings a deleted resource back, and a delete removes its stub, so `republish()` can no longer send the deletion.
+- A read does not know deletion stubs, so it fails to validate a stub or returns it as a resource.
+
+Migrations that change documents before the service starts are the exception; they must keep `__metadata__` intact.
+
 ### Usage example
 
 The following shows a contrived example of how to use the Outbox Publisher:
