@@ -104,11 +104,24 @@ lint: _guard
     uv run ruff format --check .
     uv run rumdl check .
 
-# Auto-fix lint + format.
-fmt: _guard
-    uv run ruff format .
-    uv run ruff check --fix .
-    uv run rumdl fmt .
+# Each tool reads its config, excludes included, from the root pyproject.toml for any path.
+#
+#   just fmt                  # the whole workspace
+#   just fmt libs/hexkit      # one member, so unrelated files stay as they are
+#
+# Auto-fix lint + format; optionally scope to paths, e.g. `just fmt libs/hexkit`.
+fmt *paths: _guard
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ $# -gt 0 ] || set -- .
+    uv run ruff format --force-exclude "$@"
+    uv run ruff check --fix --force-exclude "$@"
+    # rumdl refuses a named file that is not Markdown, where ruff just skips it
+    md=()
+    for path in "$@"; do
+        if [ -d "$path" ] || [[ "$path" == *.md ]]; then md+=("$path"); fi
+    done
+    if [ ${#md[@]} -gt 0 ]; then uv run rumdl fmt "${md[@]}"; fi
 
 # A single `mypy .` collides on duplicate module names across members, and the result
 # depends on the path set it is given -- so the unit, not the file, is what gets checked.
@@ -195,16 +208,25 @@ service-docs *args: _guard
 #   just test services/auth-service              # one member
 #   just test services/auth-service/tests/unit   # part of one member's suite
 #   just test scripts/tests deploy/tests         # several targets
+#   just test libs/hexkit/tests/unit -k "dao and not slow" -s   # pytest options after them
 #
 # Run tests; optionally scope to tiers, members or paths, e.g. `just test services/auth-service`.
 test *targets: _guard sync-check
     @scripts/just/test.sh "$@"
 
-# Print the workspace targets affected by the working tree vs a base ref.
 # Defaults to the integration branch, which is what feature branches are cut from (ADR-0038).
 # On a hotfix branch, which is cut from the release branch instead, pass `origin/main`.
+# Prints only the JSON, so it can be piped.
+# Print the workspace targets affected by the working tree vs a base ref.
 affected base="origin/dev":
-    uv run python scripts/affected_targets.py --base "$1"
+    @uv run python scripts/affected_targets.py --base "$1"
+
+# Runs the affected workspace members' suites as `just test` does, with every red member
+# listed at the end; a change that affects everything runs the full `just test` sweep.
+# The front end, the charts and the test bed have no member suite and are only named.
+# Test the members affected by the working tree vs a base ref (as for `affected`).
+test-affected base="origin/dev": _guard
+    @scripts/just/test-affected.sh "$1"
 
 # --- Worktrees (parallel work) ----------------------------------------------------------
 # Worktrees go under .claude/worktrees/ of the main checkout, even when the recipe runs in

@@ -58,13 +58,18 @@ class BaseRefError(Exception):
 
 
 def changed_files(base: str) -> list[str]:
-    """Return files changed vs `base` (three-dot merge-base diff).
+    """Return files changed since the merge base with `base`, committed or not.
 
-    Raises BaseRefError rather than answering from the working tree. Those are different
-    questions: on a branch whose work is committed and whose tree is clean — the normal
-    state when you ask what to test — the working tree is empty no matter what the branch
-    contains, so the fallback reported "nothing affected" for a change set it never looked
-    at. Same rule as --all below: an unknown change set must never mean "check nothing".
+    That is the merge base diffed against the working tree (staged and unstaged edits)
+    plus the untracked files that .gitignore does not hide, so a change is seen before it
+    is committed. CI checks out a clean tree, where this is the plain three-dot diff.
+
+    Raises BaseRefError rather than answering from the working tree alone. Those are
+    different questions: on a branch whose work is committed and whose tree is clean — the
+    normal state when you ask what to test — the working tree is empty no matter what the
+    branch contains, so the fallback reported "nothing affected" for a change set it never
+    looked at. Same rule as --all below: an unknown change set must never mean "check
+    nothing".
     """
 
     def run(args: list[str]) -> list[str] | None:
@@ -79,13 +84,17 @@ def changed_files(base: str) -> list[str]:
             return None
         return [line for line in out.splitlines() if line.strip()]
 
-    # base...HEAD (three-dot = changes since the merge base)
     if run(["rev-parse", "--verify", "--quiet", base]) is None:
         raise BaseRefError(f"base ref {base!r} does not resolve")
-    diff = run(["diff", "--name-only", f"{base}...HEAD"])
-    if diff is None:
-        raise BaseRefError(f"cannot diff {base!r}...HEAD")
-    return diff
+    merge_base = run(["merge-base", base, "HEAD"])
+    if not merge_base:
+        raise BaseRefError(f"{base!r} and HEAD have no merge base")
+    # one commit and no second ref: the diff runs against the working tree
+    diff = run(["diff", "--name-only", merge_base[0]])
+    untracked = run(["ls-files", "--others", "--exclude-standard"])
+    if diff is None or untracked is None:
+        raise BaseRefError(f"cannot diff the working tree against {base!r}")
+    return sorted({*diff, *untracked})
 
 
 def affected(files: list[str]) -> tuple[bool, list[str]]:

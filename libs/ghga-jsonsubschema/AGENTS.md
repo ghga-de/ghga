@@ -51,7 +51,7 @@ Run everything through `just` from the repo root, inside the dev container — t
 ```sh
 just test libs/ghga-jsonsubschema   # run this member's test suite
 just lint                           # lint + format check across the workspace
-just fmt                            # auto-fix lint + format
+just fmt libs/ghga-jsonsubschema    # auto-fix lint + format in this member
 just typecheck                      # type-check every member (src + tests)
 just hooks                          # install the git hooks (once)
 just hooks-all                      # everything CI's hygiene job runs

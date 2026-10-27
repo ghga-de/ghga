@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# `just test [target...]`: run pytest per workspace member, as CI's check-python matrix does.
+# `just test [target...] [pytest option...]`: run pytest per workspace member, as CI's
+# check-python matrix does.
 #
 # Each member runs as its own pytest: 24 of them carry a `tests` package, so ONE pytest
 # over the whole tree dies on the duplicate module names before running anything (the same
@@ -12,7 +13,9 @@
 # from the root. Nothing fails fast: a red target should not hide the state of the others.
 #
 # Targets: nothing (every member, then the non-member suites), a tier, a member, a path
-# inside a member, or a non-member path such as scripts/tests.
+# inside a member, or a non-member path such as scripts/tests. The first argument that
+# starts with `-` ends the targets: it and everything after it go to every pytest run, so
+# an option's value (`-k "a and b"`) is never mistaken for a target.
 set -uo pipefail
 
 failed=()
@@ -22,7 +25,7 @@ run_member() {
     local member=$1 scope=${2:-}
     [ -f "$member/pyproject.toml" ] || { echo "no such member: $member" >&2; return 1; }
     echo "== pytest $member${scope:+/$scope} =="
-    (cd "$member" && uv run pytest -q --durations=10 ${scope:+"$scope"})
+    (cd "$member" && uv run pytest -q --durations=10 ${scope:+"$scope"} "${opts[@]}")
 }
 
 run_target() {
@@ -49,19 +52,19 @@ run_target() {
             ;;
         *)
             echo "== pytest $target =="
-            uv run pytest -q --durations=10 "$target" || failed+=("$target")
+            uv run pytest -q --durations=10 "$target" "${opts[@]}" || failed+=("$target")
             ;;
     esac
 }
 
-targets=("$@")
-everything=$(( $# == 0 ))
+targets=()
+while [ $# -gt 0 ] && [[ "$1" != -* ]]; do
+    targets+=("$1")
+    shift
+done
+opts=("$@")
+everything=$(( ${#targets[@]} == 0 ))
 for target in "${targets[@]}"; do
-    if [[ "$target" == -* ]]; then
-        echo "error: '$target' is not a target: \`just test\` takes paths only." >&2
-        echo "For pytest options, run \`uv run pytest\` in the member directory." >&2
-        exit 2
-    fi
     # `.` means everything too, wherever it stands: one pytest over the root would die
     # on the duplicate module names
     case "$target" in "" | . | ./) everything=1 ;; esac

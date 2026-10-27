@@ -48,7 +48,7 @@ It has its own `pnpm` workspace and lockfile, and the `just fe-*` recipes drive 
   - `just sync` installs the workspace into `.venv`.
   - `just lint` checks lint and formatting, and `just fmt` fixes what it can.
   - `just test services/auth-service` runs one member's tests.
-  - `just affected` lists the members your branch reaches, compared with `origin/dev`.
+  - `just affected` lists the members your branch and your uncommitted changes reach, compared with `origin/dev`, and `just test-affected` runs their tests.
   - `just fe-dev` starts the data portal against mocked APIs, with no backend.
 
   To run the whole platform, `just demo-images-mono` and `just up mono` build it and start it on the local cluster ([demo walkthrough](../../README.md#run-the-demo-locally)).
