@@ -89,10 +89,11 @@ Correlation & Event IDs:
 ### One DAO per collection
 
 A collection served by an Outbox Publisher must be read and written only through Outbox Publishers created with the same `dto_model`, `dto_to_event` and `event_topic`.
+Several instances of that DAO, such as the replicas of a service, may write the collection at the same time.
 The rule applies to the collection in its database, so it binds every service and process that opens the same database, not only the one that created the DAO.
 Collections with the same name in different databases are independent.
-Several instances of that DAO, such as the replicas of a service, may write the collection at the same time.
-Opening the collection with another DAO, such as a plain `MongoDbDao`, or writing it directly is not supported, because such access bypasses the outbox:
+This includes the usual case of a service that consumes the outbox events and keeps a copy of the resources in its own database: the copy is a different collection, so that service may use any DAO for it, such as a plain `MongoDbDao`.
+Opening the outbox collection with another DAO, such as a plain `MongoDbDao`, or writing it directly is not supported, because such access bypasses the outbox:
 
 - A write publishes no event, so consumers miss the change.
 - A write replaces or omits `__metadata__`, so an unpublished change drops out of `publish_pending()`, and a concurrent publish can no longer tell by the write ID that it was overtaken.

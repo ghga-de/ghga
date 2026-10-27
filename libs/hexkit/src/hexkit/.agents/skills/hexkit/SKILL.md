@@ -80,7 +80,8 @@ Look at the stored data, not the event, when choosing between the outbox and the
 - `dto_to_event` decides what leaves the service: drop internal fields there, or return `None` to publish nothing for that change.
   Use one topic per resource type.
 - A deleted resource keeps a stub with a `__metadata__` field in the collection; read and write it only through the DAO.
-- Read and write a collection only through Outbox DAOs with the same model, topic and `dto_to_event`, never also through a plain DAO or directly: such access publishes nothing and breaks the outbox metadata ([One DAO per collection](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/mongokafka.md#one-dao-per-collection)).
+- Read and write a collection only through Outbox DAOs with the same model, topic and `dto_to_event`, never also through a plain DAO or directly: such access publishes nothing and breaks the outbox metadata.
+  A consumer's copy in its own database is a different collection and may use any DAO ([One DAO per collection](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/mongokafka.md#one-dao-per-collection)).
 - Offer `publish_pending()` and `republish()` as a command, such as `publish-events`, run as a job: it publishes what failed to publish, and fills a new consumer.
 - On the consuming side, implement `changed()` as an upsert and let `deleted()` accept a resource that is already gone.
 
