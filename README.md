@@ -192,8 +192,9 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 ## Where to read
 
 - **[docs/dev/getting-started.md](docs/dev/getting-started.md)** — a first read for new developers, with a reading path.
-- **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
+- **[docs/architecture/](docs/architecture/README.md)** — the architecture concepts; the [index](docs/architecture/README.md#index) lists them all.
+- **[docs/architecture/ac-0000-monorepo-overview.md](docs/architecture/ac-0000-monorepo-overview.md)** — the target architecture.
+- **[docs/architecture/ac-0008-metadata-and-file-journeys.md](docs/architecture/ac-0008-metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
 - **[docs/adrs/](docs/adrs/)** — the decisions (and why); the [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 - **[docs/style.md](docs/style.md)** — writing style for coding agents.

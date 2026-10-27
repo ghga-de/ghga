@@ -1,4 +1,11 @@
-# MongoDB migrations in services
+---
+status: current
+date: 2026-10-14
+tags: [backend, data, deploy]
+related: [ADR-0022, ADR-0023]
+---
+
+# AC-0010 — MongoDB migrations in services
 
 A service whose stored documents change shape migrates its database with hexkit's migration framework.
 The framework, its version records and its lock are described on hexkit's [MongoDB Migrations](../../libs/hexkit/user_guide/providers/mongodb_migrations.qmd) page; this page adds how GHGA services use it.
