@@ -246,3 +246,69 @@ def test_the_repos_own_blocked_cells_name_real_members_and_versions():
         assert path in lane_paths, path
         assert python in pypi_members.TEST_PYTHONS, python
         assert blocker
+
+
+def _cell_member(**fields) -> Member:
+    return Member(
+        **{
+            "path": "libs/demo_lib",
+            "package": "demo_lib",
+            "version": "1.0.0",
+            "requires_python": ">=3.13",
+            "internal_deps": ("libs/a", "libs/b"),
+            "train_deps": ("libs/a", "libs/b"),
+            "extras": ("s3", "mongo"),
+            "pythons": ("3.13", "3.14"),
+            "blocked_pythons": (),
+            **fields,
+        }
+    )
+
+
+def test_cell_fields_are_one_per_line():
+    """Package, extras and train deps each take one line, empty ones included."""
+    assert pypi_members.cell_fields(_cell_member(), "3.13") == (
+        "demo_lib\ns3,mongo\nlibs/a libs/b"
+    )
+    bare = _cell_member(extras=(), train_deps=())
+    assert pypi_members.cell_fields(bare, "3.14").split("\n") == ["demo_lib", "", ""]
+
+
+def test_cell_on_a_blocked_python_names_the_blocker():
+    """A dropped cell says which dependency ships no wheel."""
+    member = _cell_member(blocked_pythons=(("3.15", "crypt4gh"),))
+    with pytest.raises(ValueError, match="crypt4gh ships no wheel"):
+        pypi_members.cell_fields(member, "3.15")
+
+
+def test_cell_outside_the_declared_range_lists_where_it_runs():
+    """A version the member does not declare names the ones it does run on."""
+    with pytest.raises(ValueError, match=r"so it runs on: 3\.13, 3\.14"):
+        pypi_members.cell_fields(_cell_member(), "3.11")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--cell", "3.13"],
+        ["--cell", "3.13", "--paths", "libs/a", "libs/b"],
+        ["--cell", "3.13", "--paths", "libs/a", "--members"],
+    ],
+)
+def test_cell_needs_exactly_one_member(argv):
+    with pytest.raises(SystemExit):
+        pypi_members.main(argv)
+
+
+def test_cell_for_a_non_lane_member_points_at_the_marker():
+    with pytest.raises(SystemExit, match="not a PyPI-lane member"):
+        pypi_members.main(["--cell", "3.13", "--paths", "services/auth-service"])
+
+
+def test_dev_requirements_leave_out_the_lint_tools(tmp_path, monkeypatch):
+    """A cell gets the test deps of the root dev group, none of its linters."""
+    monkeypatch.setattr(pypi_members, "ROOT", tmp_path)
+    linters = [f"{tool}>=1" for tool in pypi_members.NON_TEST_TOOLS]
+    dev = json.dumps(["pytest>=9", *linters, "httpx>=0.28"])
+    (tmp_path / "pyproject.toml").write_text(f"[dependency-groups]\ndev = {dev}\n")
+    assert pypi_members.dev_requirements() == ["pytest>=9", "httpx>=0.28"]
