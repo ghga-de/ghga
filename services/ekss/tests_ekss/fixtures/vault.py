@@ -21,8 +21,6 @@ from dataclasses import dataclass
 import hvac
 import pytest
 import requests
-
-# from testcontainers.vault import DockerContainer
 from testcontainers.core.generic import DockerContainer
 
 from ekss.adapters.outbound.vault import VaultClient
