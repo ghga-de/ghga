@@ -19,7 +19,7 @@
 from textwrap import dedent
 from typing import Literal
 
-from testcontainers.kafka import KafkaContainer
+from testcontainers.community.kafka import KafkaContainer
 
 __all__ = ["KafkaSSLContainer"]
 

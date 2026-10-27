@@ -91,24 +91,24 @@ opentelemetry = [
 ]
 test-akafka = [
     "hexkit[akafka]",
-    "testcontainers[kafka] >=4.14, <5",
+    "testcontainers[kafka] >=4.15, <5",
 ]
 test-s3 = [
     "hexkit[s3]",
     "httpx2 >=2.9.1, <3",
-    "testcontainers >=4.14, <5",
+    "testcontainers >=4.15, <5",
 ]
 test-mongodb = [
     "hexkit[mongodb]",
-    "testcontainers[mongodb] >=4.14, <5",
+    "testcontainers[mongodb] >=4.15, <5",
 ]
 test-redis = [
     "hexkit[redis]",
-    "testcontainers[redis] >=4.14, <5",
+    "testcontainers[redis] >=4.15, <5",
 ]
 test-vault = [
     "hexkit[vault]",
-    "testcontainers >=4.14, <5",
+    "testcontainers >=4.15, <5",
 ]
 test = [
     "hexkit[test-akafka,test-s3,test-mongodb,test-vault]",

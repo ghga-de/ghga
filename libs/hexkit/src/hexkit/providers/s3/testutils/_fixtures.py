@@ -34,7 +34,7 @@ except ImportError:  # Python < 3.11
 import pytest
 import pytest_asyncio
 from pydantic import SecretStr
-from testcontainers.localstack import LocalStackContainer
+from testcontainers.community.localstack import LocalStackContainer
 
 from hexkit.custom_types import PytestScope
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
