@@ -56,6 +56,7 @@ Read commands from there, and prefer the recipes over raw uv/pnpm/helm/kubectl â
 Further rules:
 
 - Always scope test runs to the member you touched (e.g. `just test services/auth-service`); a bare `just test` runs every suite in the workspace.
+  Pytest options go after the targets, e.g. `just test services/auth-service/tests/unit -k login -x`.
 - Use `just affected [base]` to decide what to test when a change may cross members, and `just test-affected [base]` to run those suites.
   Both default to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut from `main` instead, pass `origin/main`.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the `config.js` generation the launcher does.
@@ -74,7 +75,7 @@ Further rules:
 
 ## Execution policy
 
-- For code changes, run the smallest relevant validation first (the touched member's tests, `just lint`), then widen via `just affected` when the change crosses members; editing a `libs/` member affects every consumer.
+- For code changes, run the smallest relevant validation first (the touched member's tests, `just lint`), then widen via `just test-affected` when the change crosses members; editing a `libs/` member affects every consumer.
 - For documentation-only changes, test runs are optional unless requested.
 - Do not create commits or branches unless explicitly requested.
   When they are, read [branching](docs/conventions.md#branching) and [names](docs/conventions.md#names-branches-prs-commits) first.

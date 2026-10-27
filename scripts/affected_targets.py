@@ -64,12 +64,10 @@ def changed_files(base: str) -> list[str]:
     plus the untracked files that .gitignore does not hide, so a change is seen before it
     is committed. CI checks out a clean tree, where this is the plain three-dot diff.
 
-    Raises BaseRefError rather than answering from the working tree alone. Those are
-    different questions: on a branch whose work is committed and whose tree is clean — the
-    normal state when you ask what to test — the working tree is empty no matter what the
-    branch contains, so the fallback reported "nothing affected" for a change set it never
-    looked at. Same rule as --all below: an unknown change set must never mean "check
-    nothing".
+    Raises BaseRefError rather than answering from the working tree alone: on a branch
+    whose work is committed and whose tree is clean — the normal state when you ask what
+    to test — the working tree is empty whatever the branch contains. Same rule as --all
+    below: an unknown change set must never mean "check nothing".
     """
 
     def run(args: list[str]) -> list[str] | None:

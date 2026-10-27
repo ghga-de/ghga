@@ -598,3 +598,40 @@ def test_image_recipes_pass_build_flags_through_whole(
     assert result.returncode == 0, result.stderr
     args = (tmp_path / "log").read_text().splitlines()
     assert any(args[i : i + len(expected)] == expected for i in range(len(args))), args
+
+
+@needs_just
+@pytest.mark.parametrize(
+    "paths, ruff_paths, rumdl_paths",
+    [
+        ([], ["."], ["."]),
+        (["libs", "a b.md"], ["libs", "a b.md"], ["libs", "a b.md"]),
+        (["x.py", "docs/y.md"], ["x.py", "docs/y.md"], ["docs/y.md"]),
+        (["x.py"], ["x.py"], None),
+    ],
+)
+def test_fmt_hands_its_paths_to_each_tool(
+    tmp_path: Path,
+    paths: list[str],
+    ruff_paths: list[str],
+    rumdl_paths: list[str] | None,
+):
+    """No path means the whole tree; rumdl gets only directories and Markdown files."""
+    stub = tmp_path / "uv"
+    # one line per call, each argument followed by a tab, so a space stays visible
+    stub.write_text(
+        '#!/usr/bin/env bash\nprintf \'%s\\t\' "$@" >> "$STUB_LOG"; echo >> "$STUB_LOG"\n'
+    )
+    stub.chmod(0o755)
+    result = _just("fmt", *paths, stubs=tmp_path)
+    assert result.returncode == 0, result.stderr
+    calls = [
+        line.split("\t")[:-1] for line in (tmp_path / "log").read_text().splitlines()
+    ]
+    expected = [
+        ["run", "ruff", "format", "--force-exclude", *ruff_paths],
+        ["run", "ruff", "check", "--fix", "--force-exclude", *ruff_paths],
+    ]
+    if rumdl_paths is not None:
+        expected.append(["run", "rumdl", "fmt", *rumdl_paths])
+    assert calls == expected

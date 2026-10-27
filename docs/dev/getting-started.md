@@ -88,7 +88,7 @@ Each level is defined in the root [AGENTS.md](../../AGENTS.md#test-levels) and t
 
 - **Member unit tests** (pytest, `just test <member>`) are the default.
   A service's suite gets real Kafka, MongoDB and S3 from testcontainers, so persistence and event handling are tested there.
-- **Consumers of a library:** after a change under `libs/`, run `just affected` and test what it lists.
+- **Consumers of a library:** after a change under `libs/`, run `just test-affected`, which tests every member `just affected` lists.
 - **Chart tests** (`just charts-test`, `just demo-template`) render the charts; run them for any change under `deploy/`.
 - **Front-end tests** are Vitest unit tests (`just fe-test`) and Playwright smoke tests against mocked APIs ([data portal README](../../frontend/data-portal/README.md#test-levels)).
 - **The test bed** (`just testbed`) runs the whole platform on the local cluster, and is the only level that checks a flow across services.
