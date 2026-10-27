@@ -72,6 +72,7 @@ from hexkit.providers.mongokafka.provider import (
     DELETE_EVENT_TYPE,
     document_to_dto,
 )
+from hexkit.providers.mongokafka.provider.daopub import MAX_REPUBLISH_ROUNDS
 from hexkit.providers.mongokafka.testutils import (
     MongoKafkaFixture,
     mongo_kafka_fixture,  # noqa: F401
@@ -1136,7 +1137,8 @@ async def test_update_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
     """Test that a guarded update is kept when an earlier update finishes publishing
     after it.
 
-    Marking the earlier update as published must not write its stale state back.
+    Marking the earlier update as published must not write its stale state back, and
+    the last event must show the newer state again.
     """
     # field_b serves as the version that the updates use as precondition
     publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 2)
@@ -1157,15 +1159,20 @@ async def test_update_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
         await first_update
 
         assert await dao.get_by_id(example.id) == second
-        assert [payload["field_b"] for _, payload in publisher.published] == [1, 3, 2]
+        assert [payload["field_b"] for _, payload in publisher.published] == [
+            1,
+            3,
+            2,
+            3,
+        ]
         collection = get_mongo_collection(mongo_kafka, "example")
         document = collection.find_one({"_id": example.id})
         assert document and document["__metadata__"]["published"] is True
 
 
 async def test_publish_pending_overtaken_by_update(mongo_kafka: MongoKafkaFixture):
-    """Test that `publish_pending` neither reverts nor marks as published an update
-    made while it was publishing the previous state.
+    """Test that `publish_pending` does not revert an update made while it was
+    publishing the previous state, and publishes that update after it.
     """
     publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 1)
     async with dao_with_publisher(mongo_kafka, publisher, autopublish=False) as dao:
@@ -1182,13 +1189,10 @@ async def test_publish_pending_overtaken_by_update(mongo_kafka: MongoKafkaFixtur
         await publishing
 
         assert await dao.get_by_id(example.id) == updated
+        assert [payload["field_b"] for _, payload in publisher.published] == [1, 2]
         collection = get_mongo_collection(mongo_kafka, "example")
         document = collection.find_one({"_id": example.id})
-        assert document and document["__metadata__"]["published"] is False
-
-        # The update is still pending, so the next run publishes it
-        await dao.publish_pending()
-        assert [payload["field_b"] for _, payload in publisher.published] == [1, 2]
+        assert document and document["__metadata__"]["published"] is True
 
 
 async def test_delete_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
@@ -1211,6 +1215,7 @@ async def test_delete_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
         assert [type_ for type_, _ in publisher.published] == [
             DELETE_EVENT_TYPE,
             CHANGE_EVENT_TYPE,
+            DELETE_EVENT_TYPE,
         ]
 
 
@@ -1233,6 +1238,51 @@ async def test_upsert_overtaking_a_slow_deletion(mongo_kafka: MongoKafkaFixture)
         await deletion
 
         assert await dao.get_by_id(example.id) == recreated
+        assert publisher.published[-2:] == [
+            (DELETE_EVENT_TYPE, {}),
+            (CHANGE_EVENT_TYPE, recreated.model_dump(mode="json")),
+        ]
+
+
+async def test_republishing_stops_under_constant_writes(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that republishing a superseded write gives up after a few rounds when
+    every publish is overtaken by yet another write.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class OvertakenEventPublisher(EventPublisherProtocol):
+        """Simulates a newer write of the resource during every publish."""
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            collection.update_one(
+                {"_id": uuid.UUID(key)},
+                {"$set": {"__metadata__.write_id": uuid.uuid4()}},
+            )
+
+    publisher = OvertakenEventPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+
+    # the first publish plus one per republishing round
+    assert publisher.published == 1 + MAX_REPUBLISH_ROUNDS
+    assert "Stopped republishing resource" in caplog.text
 
 
 async def test_publish_pending_without_write_id(mongo_kafka: MongoKafkaFixture):

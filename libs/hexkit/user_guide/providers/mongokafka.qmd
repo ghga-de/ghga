@@ -65,6 +65,7 @@ Metadata stored on documents:
 - `__metadata__.last_event_id` (UUID | None): Event ID of the last emitted outbox event.
 - `__metadata__.write_id` (UUID): Random ID of the latest write.
   A write is marked as published only while the document still carries its write ID, so a publish that finishes after a newer write neither reverts that write nor marks it as published.
+  Such a publish then repeats with the current state, so that the last event on the topic shows the newest state.
 
 When data is either added or modified deleted, the Outbox Publisher feeds the data into the Factory's `dto_to_event()` method to obtain the desired representation for an event.
 This might match the original data, or it might remove fields, e.g. to avoid transmitting superfluous information.
