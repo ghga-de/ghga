@@ -127,8 +127,8 @@ The following figure lists examples of transformations and resulting artifacts t
 
 ```mermaid
 flowchart TD
-    submitter@{ img: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODg4IiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjkiIHI9IjciLz48cGF0aCBkPSJNMjAgMTZ2MjJNNiAyNGgyOE0yMCAzOGwtMTEgMThNMjAgMzhsMTEgMTgiLz48L3N2Zz4=", label: "Submitter", pos: "b", w: 40, h: 60, constraint: "on" }
-    querying_user@{ img: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA2MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODg4IiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjkiIHI9IjciLz48cGF0aCBkPSJNMjAgMTZ2MjJNNiAyNGgyOE0yMCAzOGwtMTEgMThNMjAgMzhsMTEgMTgiLz48L3N2Zz4=", label: "Querying User", pos: "b", w: 40, h: 60, constraint: "on" }
+    submitter([Submitter])
+    querying_user([Querying User])
 
     submission_store[("<b>Submission Store</b><br/>(the source of truth)")]
 
@@ -173,9 +173,6 @@ flowchart TD
     search_artifact -- query --- querying_user
     cust_embed_artifact -- query --- querying_user
     summary_artifact -- query --- querying_user
-
-    style submitter fill:none,stroke:none
-    style querying_user fill:none,stroke:none
 ```
 
 ## Extendability

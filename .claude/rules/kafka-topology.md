@@ -23,6 +23,7 @@ The cascades map is read out of the code by a person into [kafka-cascades.yaml](
 
 - **If the change moves an edge, edit `kafka-cascades.yaml` in the same change and run `just kafka-map`.**
   An edge moves when a topic or event type is added, renamed or dropped, a subscriber is added or removed, a publish mechanism changes between plain, outbox and persisted, or a subscriber acts differently on an event.
-  A `dto_to_event` that starts or stops returning `None` moves an edge too: the map draws that suppression. [kafka-cascade-map.md](../../docs/architecture/ac-0009-kafka-cascade-map.md) has the steps and says where each part of the topology is read from.
+  A `dto_to_event` that starts or stops returning `None` moves an edge too: the map draws that suppression.
+  [AC-0009](../../docs/architecture/ac-0009-kafka-cascade-map.md) has the steps and says where each part of the topology is read from.
 - **If no edge moves, leave the map alone.**
   Renaming anything but a topic or an event type, refactoring inside a handler, a payload field, a config default that is not a topic or type name, a test, and a route that publishes nothing all leave the drawing correct.

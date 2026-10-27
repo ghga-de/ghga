@@ -10,7 +10,6 @@ Design and migration records for the consolidation of GHGA's ~28 maintained repo
 ## Start here
 
 - **[architecture/](architecture/README.md)** — the architecture concepts, `AC-0000` onwards: how GHGA works and how the monorepo is built, indexed by number, status and tags.
-  The ones below are the first reads.
 - **[architecture/ac-0000-monorepo-overview.md](architecture/ac-0000-monorepo-overview.md)** — the target architecture (layout, uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
 - **[architecture/ac-0008-metadata-and-file-journeys.md](architecture/ac-0008-metadata-and-file-journeys.md)** — current-state reference for how metadata and files flow (submission, accessions, upload, file mapping, serving).
   Read before touching those paths.

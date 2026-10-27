@@ -83,7 +83,7 @@ A diagram illustrating the process of event consumption:
 
 ## Outbox Pattern
 
-> See [this Architecture Decision Request](https://github.com/ghga-de/adrs/blob/main/docs/adrs/adr005_db_event_consistency.md) for information about the decision to use the outbox pattern.
+> See [ADR-0005](../adrs/adr-0005-db-event-consistency.md) for information about the decision to use the outbox pattern.
 
 Sometimes services need to access data owned by another service.
 For example, the Notification Orchestration Service needs to know user account details, which are owned by the Auth Service.

@@ -74,7 +74,7 @@ These additional claims have to be retrieved from the userinfo endpoint, using t
 The EAT also has an expiry date (currently the expiration time is one hour).
 
 In the future, however, we may want to fetch additional information about the user from the userinfo endpoint of LS Login, which can be requested using additional OIDC scopes, in particular the scope for GA4GH Passports.
-A [list of available attributes](https://docs.google.com/document/d/1N8naf9Oaams0S1f6S8igXVm2HjY6fyvwRaggN_5MsrY/) that can be received via LS Login is provided as part of the LS Login [Documentation for Relying Parties](https://lifescience-ri.eu/ls-login/relying-parties/how-to-register-and-integrate-a-relying-party-to-ls-login.html).
+A [list of available attributes](https://docs.google.com/document/d/1N8naf9Oaams0S1f6S8igXVm2HjY6fyvwRaggN_5MsrY/) that can be received via LS Login is provided as part of the LS Login [documentation for service providers](https://www.lifescience-ri.eu/registering-integrating-and-managing-your-service/).
 
 After this process, users are logged in with their first factor (their LS Login account), but not yet fully authenticated.
 A TOTP token is required as their second factor, as described in the next section.

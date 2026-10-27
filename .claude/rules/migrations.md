@@ -5,7 +5,7 @@ paths:
 
 # Rules for service database migrations
 
-A service's MongoDB migrations follow [db-migrations.md](../../docs/architecture/ac-0010-db-migrations.md); read it before adding or changing one.
+A service's MongoDB migrations follow [AC-0010](../../docs/architecture/ac-0010-db-migrations.md); read it before adding or changing one.
 hexkit's [MongoDB Migrations](../../libs/hexkit/user_guide/providers/mongodb_migrations.qmd) page explains the mechanism.
 
 - **Copy the work package service**, `services/work-package-service`, for the layout, the CLI and the tests.
