@@ -94,6 +94,15 @@ repos:
         # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
         entry: shellcheck -x -P SCRIPTDIR
 
+      # Workflow syntax, expressions and action inputs, plus shellcheck over each `run:`
+      # block. Always the whole set: a change to .github/actionlint.yaml affects them all.
+      - id: actionlint
+        name: actionlint (workflows)
+        language: system
+        files: ^\.github/(workflows/.*\.ya?ml|actionlint\.yaml)$
+        pass_filenames: false
+        entry: uv run actionlint
+
       # ---- Markdown (ADR-0044) ---------------------------------------------------------
       # Fixes what it can, one sentence per line among it; pre-commit then fails on the
       # changed files, as with ruff. [tool.rumdl] exclude applies to named files too.

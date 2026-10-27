@@ -22,6 +22,7 @@ dev = [
     "mypy>=2.1",
     "ruff>=0.15.13",
     "rumdl>=0.3.0",
+    "actionlint-py>=1.7.12",  # the workflow hook; it also runs shellcheck on run: blocks
     "httpx>=0.28.1",
     "tomli_w>=1.2",
     "pyyaml>=6",  # scripts/docs_check.py reads ADR frontmatter

@@ -78,8 +78,8 @@ LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
 # What a platform-lane member declares; the build stamps the platform version (ADR-0046)
 PLACEHOLDER = "0.0.0"
 
-# A cell only runs tests, so formatting tools excluded
-NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit")
+# A cell only runs tests, so the lint, format and type tools stay out
+NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit", "rumdl", "actionlint-py")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -402,6 +402,32 @@ def matrix_cells(members: list[Member]) -> list[dict]:
         for member in members
         for python in member.pythons
     ]
+
+
+def cell_fields(member: Member, python: str) -> str:
+    """One cell of the published-combo matrix, as `just published-combo` runs it.
+
+    Three lines: the package, its test extras joined by commas, and the train deps joined
+    by spaces. One field per line rather than tab-separated, because tab is IFS whitespace
+    and bash collapses a run of them, so an empty `extras` would shift train_deps into it.
+    Raises ValueError when the matrix does not run the member on `python`.
+    """
+    blocked = dict(member.blocked_pythons)
+    if python in blocked:
+        raise ValueError(
+            f"the matrix does not run {member.package} on {python}:"
+            f" {blocked[python]} ships no wheel for it, so the cell is dropped"
+            " — see BLOCKED_CELLS in scripts/pypi_members.py"
+        )
+    if python not in member.pythons:
+        runs_on = ", ".join(member.pythons) or "no version in the matrix range"
+        raise ValueError(
+            f"the matrix does not run {member.package} on {python} — it declares"
+            f" {member.requires_python}, so it runs on: {runs_on}"
+        )
+    return "\n".join(
+        [member.package, ",".join(member.extras), " ".join(member.train_deps)]
+    )
 
 
 def dev_requirements() -> list[str]:
@@ -824,6 +850,9 @@ def _reject_ignored_flags(
         if not args.target:
             parser.error("--target needs a package name")
 
+    if args.cell is not None and (args.members or len(args.paths or ()) != 1):
+        parser.error("--cell needs exactly one --paths member and no --members")
+
     # Both shape the test matrix, so only the cell output and --members read them. The
     # plan in particular always asks the index about every lane member, because the
     # closure check has to see candidates outside whatever the caller narrowed to.
@@ -837,6 +866,32 @@ def _reject_ignored_flags(
         parser.error(
             "--paths and --check-pypi only apply to the default cells or --members"
         )
+
+
+def _shipping_paths(lane: list[Member]) -> set[str]:
+    """The paths of the lane members being released, by asking the index.
+
+    Without --check-pypi nothing is known to be shipping, so every `train_deps` stays
+    empty and each cell resolves its whole closure from the index.
+    """
+    candidates = release_candidates(lane)
+    if candidates.unreachable:
+        sys.exit("error: could not reach PyPI to establish what is already released")
+    return {m.path for m in candidates.publishing}
+
+
+def _print_cell(path: str, members: list[Member], python: str) -> int:
+    """Prints the one member's cell for --cell, or exits naming why there is none."""
+    if not members:
+        sys.exit(
+            f"error: {path} is not a PyPI-lane member — check its [tool.ghga] release"
+            " marker (ADR-0033)"
+        )
+    try:
+        print(cell_fields(members[0], python))
+    except ValueError as err:
+        sys.exit(f"error: {err}")
+    return 0
 
 
 def _report(errors: list[str]) -> int:
@@ -893,6 +948,12 @@ def main(argv: list[str] | None = None) -> int:
         help="ask the index which members are being released, so cells build that"
         " closure from the repo instead of resolving it from PyPI",
     )
+    parser.add_argument(
+        "--cell",
+        metavar="PYTHON",
+        help="with one --paths member: print that member's cell on PYTHON as three"
+        " lines (package, extras, train deps) for `just published-combo`",
+    )
     args = parser.parse_args(argv)
     _reject_ignored_flags(parser, args)
 
@@ -925,22 +986,14 @@ def main(argv: list[str] | None = None) -> int:
     # `--paths` only narrows what is printed, so filter rather than walk again.
     lane = pypi_members()
 
-    # Without --check-pypi nothing is known to be shipping, so every `train_deps` stays
-    # empty and each cell resolves its whole closure from the index.
-    release_member_paths: set[str] = set()
-    if args.check_pypi:
-        candidates = release_candidates(lane)
-        if candidates.unreachable:
-            sys.exit(
-                "error: could not reach PyPI to establish what is already released"
-            )
-        release_member_paths = {m.path for m in candidates.publishing}
-
+    release_member_paths = _shipping_paths(lane) if args.check_pypi else set()
     members = [
         m.with_train_deps(release_member_paths)
         for m in lane
         if not args.paths or m.path in args.paths
     ]
+    if args.cell is not None:
+        return _print_cell(args.paths[0], members, args.cell)
     print(
         json.dumps(
             [m.as_json() for m in members] if args.members else matrix_cells(members)
