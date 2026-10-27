@@ -30,7 +30,7 @@ from collections.abc import (
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, contextmanager
 from functools import partial
 from typing import Any, Generic
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from aiokafka import AIOKafkaProducer
 from pymongo import AsyncMongoClient
@@ -117,9 +117,31 @@ def dto_to_document(
         "published": published,
         "correlation_id": correlation_id,
         "last_event_id": None,
+        "write_id": uuid4(),
     }
 
     return document
+
+
+async def mark_published(
+    collection: AsyncCollection,
+    id_: ID,
+    *,
+    write_id: UUID | None,
+    metadata: dict[str, Any],
+) -> None:
+    """Set the given metadata fields to mark a write as published.
+
+    Only the document still carrying the write's `write_id` is changed. If another
+    write has replaced the document in the meantime, nothing happens: marking it would
+    revert that newer write, and that write publishes its own event. A `write_id` of
+    None also matches documents written before the field existed.
+    """
+    with translate_pymongo_errors():
+        await collection.update_one(
+            {"_id": id_, "__metadata__.write_id": write_id},
+            {"$set": {f"__metadata__.{key}": value for key, value in metadata.items()}},
+        )
 
 
 def get_change_publish_func(
@@ -128,13 +150,15 @@ def get_change_publish_func(
     dto_to_event: Callable[[Dto], JsonObject | None],
     event_publisher: EventPublisherProtocol,
     collection: AsyncCollection,
-) -> Callable[[Dto], Awaitable[None]]:
+) -> Callable[[Dto, UUID | None], Awaitable[None]]:
     """Generate a function that publishes change events for a specific type of resource."""
 
-    async def publish_change(dto: Dto) -> None:
-        """Publishes a change event and marks the change as published."""
+    async def publish_change(dto: Dto, write_id: UUID | None) -> None:
+        """Publishes a change event and marks the write with the given ID as
+        published.
+        """
         payload = dto_to_event(dto)
-        document = dto_to_document(dto, id_field=id_field, published=True)
+        event_id = None
         if payload is not None:
             event_id = uuid4()
             await event_publisher.publish(
@@ -145,11 +169,18 @@ def get_change_publish_func(
                 topic=event_topic,
                 event_id=event_id,
             )
-            document["__metadata__"]["last_event_id"] = event_id
-        with translate_pymongo_errors():
-            await collection.replace_one(
-                {"_id": document["_id"]}, document, upsert=True
-            )
+        await mark_published(
+            collection,
+            # the stored ID, as dto_to_document dumps it
+            dto.model_dump(include={id_field})[id_field],
+            write_id=write_id,
+            metadata={
+                "deleted": False,
+                "published": True,
+                "correlation_id": get_correlation_id(),
+                "last_event_id": event_id,
+            },
+        )
 
     return publish_change
 
@@ -158,13 +189,15 @@ def get_delete_publish_func(
     event_topic: str,
     event_publisher: EventPublisherProtocol,
     collection: AsyncCollection,
-) -> Callable[[Any], Awaitable[None]]:
+) -> Callable[[Any, UUID | None], Awaitable[None]]:
     """Generate a function that publishes deletion events for a specific type of
     resource.
     """
 
-    async def publish_deletion(id_: ID) -> None:
-        """Publishes a deletion event and marks the deletion as published."""
+    async def publish_deletion(id_: ID, write_id: UUID | None) -> None:
+        """Publishes a deletion event and marks the deletion with the given write ID
+        as published.
+        """
         event_id = uuid4()
         await event_publisher.publish(
             payload={},
@@ -174,18 +207,17 @@ def get_delete_publish_func(
             event_id=event_id,
         )
 
-        correlation_id = get_correlation_id()  # Get active correlation first
-        document = {
-            "_id": id_,
-            "__metadata__": {
+        await mark_published(
+            collection,
+            id_,
+            write_id=write_id,
+            metadata={
                 "deleted": True,
                 "published": True,
-                "correlation_id": correlation_id,
+                "correlation_id": get_correlation_id(),
                 "last_event_id": event_id,
             },
-        }
-        with translate_pymongo_errors():
-            await collection.replace_one({"_id": document["_id"]}, document)
+        )
 
     return publish_deletion
 
@@ -222,8 +254,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         dto_model: type[Dto],
         collection: AsyncCollection,
         dao: MongoDbDao[Dto],
-        publish_change: Callable[[Dto], Awaitable[None]],
-        publish_delete: Callable[[Any], Awaitable[None]],
+        publish_change: Callable[[Dto, UUID | None], Awaitable[None]],
+        publish_delete: Callable[[Any, UUID | None], Awaitable[None]],
         autopublish: bool,
     ):
         """Initialize the DAO.
@@ -241,10 +273,10 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 functionality.
             publish_change:
                 A callable returning an awaitable for publishing the current state of a
-                created or changed resource.
+                created or changed resource, given with the ID of the write.
             publish_delete:
                 A callable returning an awaitable for publishing the deletion of a
-                resource.
+                resource, given with the ID of the write.
             autopublish:
                 Whether to automatically publish changes.
         """
@@ -338,7 +370,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise ResourceNotFoundError(id_=document["_id"])
 
         if self._autopublish:
-            await self._publish_change(dto)
+            await self._publish_change(dto, document["__metadata__"]["write_id"])
 
     async def delete(self, id_: ID) -> None:
         """Delete a resource by providing its ID.
@@ -350,12 +382,14 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             ResourceNotFoundError: when resource with the specified id_ was not found
         """
         correlation_id = get_correlation_id()
+        write_id = uuid4()
         document = {
             "_id": id_,
             "__metadata__": {
                 "deleted": True,
                 "published": False,
                 "correlation_id": correlation_id,
+                "write_id": write_id,
             },
         }
         with translate_pymongo_errors():
@@ -373,7 +407,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise ResourceNotFoundError(id_=id_)
 
         if self._autopublish:
-            await self._publish_delete(id_)
+            await self._publish_delete(id_, write_id)
 
     # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
@@ -540,10 +574,11 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when inserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        await self._dao.insert(dto=dto)
+        document = self._dao._dto_to_document(dto)
+        await self._dao._insert_document(document)
 
         if self._autopublish:
-            await self._publish_change(dto)
+            await self._publish_change(dto, document["__metadata__"]["write_id"])
 
     async def upsert(self, dto: Dto) -> None:
         """Update the provided resource if it already exists, create it otherwise.
@@ -558,25 +593,28 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when upserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
+        document = self._dao._dto_to_document(dto)
         try:
-            await self._dao.upsert(dto=dto)
+            await self._dao._upsert_document(document)
         except DuplicateKeyError as error:
             key_value = error.details.get("keyValue", {})  # type: ignore
             raise UniqueConstraintViolationError(unique_fields=key_value) from error
         if self._autopublish:
-            await self._publish_change(dto)
+            await self._publish_change(dto, document["__metadata__"]["write_id"])
 
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
-        correlation_id = document.get("__metadata__", {}).get("correlation_id", "")
+        metadata = document.get("__metadata__", {})
+        correlation_id = metadata.get("correlation_id", "")
+        write_id = metadata.get("write_id")
         async with set_correlation_id(correlation_id):
-            if document.get("__metadata__", {}).get("deleted", False):
-                await self._publish_delete(document["_id"])
+            if metadata.get("deleted", False):
+                await self._publish_delete(document["_id"], write_id)
             else:
                 dto = document_to_dto(
                     document, id_field=self._id_field, dto_model=self._dto_model
                 )
-                await self._publish_change(dto)
+                await self._publish_change(dto, write_id)
 
     async def publish_pending(self) -> None:
         """Publishes all non-published changes."""
