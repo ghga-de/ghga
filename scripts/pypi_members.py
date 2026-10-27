@@ -78,8 +78,8 @@ LANE_DEFAULTS = {"libs": "pypi", "tools": "none", "services": "platform"}
 # What a platform-lane member declares; the build stamps the platform version (ADR-0046)
 PLACEHOLDER = "0.0.0"
 
-# A cell only runs tests, so formatting tools excluded
-NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit")
+# A cell only runs tests, so the lint, format and type tools stay out
+NON_TEST_TOOLS = ("ruff", "mypy", "pre-commit", "rumdl", "actionlint-py")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 

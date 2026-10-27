@@ -303,3 +303,12 @@ def test_cell_needs_exactly_one_member(argv):
 def test_cell_for_a_non_lane_member_points_at_the_marker():
     with pytest.raises(SystemExit, match="not a PyPI-lane member"):
         pypi_members.main(["--cell", "3.13", "--paths", "services/auth-service"])
+
+
+def test_dev_requirements_leave_out_the_lint_tools(tmp_path, monkeypatch):
+    """A cell gets the test deps of the root dev group, none of its linters."""
+    monkeypatch.setattr(pypi_members, "ROOT", tmp_path)
+    linters = [f"{tool}>=1" for tool in pypi_members.NON_TEST_TOOLS]
+    dev = json.dumps(["pytest>=9", *linters, "httpx>=0.28"])
+    (tmp_path / "pyproject.toml").write_text(f"[dependency-groups]\ndev = {dev}\n")
+    assert pypi_members.dev_requirements() == ["pytest>=9", "httpx>=0.28"]
