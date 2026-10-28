@@ -14,7 +14,9 @@ members = ["libs/*", "services/*", "tools/*"]
 # Pins mirror the GHGA service template conventions.
 [dependency-groups]
 dev = [
-    "pytest>=9.1",
+    # 9.2 breaks pytest-bdd; lift the bound once a release fixes
+    # https://github.com/pytest-dev/pytest-bdd/issues/850
+    "pytest>=9.1,<9.2",
     "pytest-asyncio>=1.4",
     "pytest-cov>=7.1",
     "pytest-httpx>=0.36",
