@@ -40,8 +40,11 @@ export class UploadBoxFileStates {
   /** The number of files in the box */
   fileCount = input.required<number>();
 
-  /** The number of files per state, undefined if the backend does not provide them */
+  /** The number of files per state, undefined if they are not loaded */
   counts = input<FileUploadStateCounts | undefined>();
+
+  /** Whether the counts are loading, which shows a placeholder for the bar */
+  loading = input(false);
 
   /** The non-empty segments of the bar, from the most to the least finished */
   protected segments = computed<FileStateSegment[]>(() => {

@@ -52,9 +52,6 @@ export interface ResearchDataUploadBox extends ResearchDataUploadBoxBase {
   // Optional because locally created boxes (see UploadBoxService) do not have it
   // yet; the backend always returns it.
   file_upload_box_id?: string;
-  // The number of file uploads per state. Not yet returned by the backend and
-  // only served by the mocks, so the list shows just the file count without it.
-  file_state_counts?: FileUploadStateCounts;
   // Note: the API also returns file_upload_box_version and file_upload_box_state,
   // but these are not used in the frontend.
 }
@@ -67,6 +64,13 @@ export interface ResearchDataUploadBoxUpdate {
   description?: string;
   max_size?: number; // maximum size in bytes
 }
+
+/**
+ * The number of file uploads per state for each upload box, keyed by the box ID.
+ * The RS counts only the states that count toward the file count of a box, so a
+ * box without such files is absent.
+ */
+export type FileStateCountsByBox = Record<string, FileUploadStateCounts>;
 
 /** Response when retrieving Research Data Upload Boxes */
 export interface BoxRetrievalResults {
@@ -105,17 +109,19 @@ export const UploadBoxFileStatesFilterLabel: Record<UploadBoxFileStatesFilter, s
 /**
  * Check whether the files of an upload box meet a condition. Only the check for
  * an empty box works without the state counts.
- * @param box - the upload box with its file count and state counts
+ * @param box - the upload box with its ID and file count
+ * @param countsByBox - the state counts of all boxes, undefined if not loaded
  * @param filter - the condition to check
  * @returns whether the condition is met
  */
 export function matchesFileStatesFilter(
-  box: Pick<ResearchDataUploadBox, 'file_count' | 'file_state_counts'>,
+  box: Pick<ResearchDataUploadBox, 'id' | 'file_count'>,
+  countsByBox: FileStateCountsByBox | undefined,
   filter: UploadBoxFileStatesFilter,
 ): boolean {
   if (filter === 'no_files') return box.file_count === 0;
-  const counts = box.file_state_counts;
-  if (!counts) return false;
+  if (!countsByBox) return false;
+  const counts = countsByBox[box.id] ?? {};
   const ready = countFileUploadStateGroup(counts, 'ready');
   const archived = countFileUploadStateGroup(counts, 'archived');
   const inProgress = countFileUploadStateGroup(counts, 'in_progress');

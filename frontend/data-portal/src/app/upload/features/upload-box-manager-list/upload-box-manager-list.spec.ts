@@ -7,8 +7,9 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { uploadBoxes } from '@app/../mocks/data';
+import { uploadBoxes, uploadBoxFileStateCounts } from '@app/../mocks/data';
 import { Notifier } from '@app/shared/services/notification';
+import { FileStateCountsByBox } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { render, RenderResult, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -26,6 +27,10 @@ class MockUploadBoxService {
     error: this.#error,
   };
   filteredUploadBoxes = () => this.boxRetrievalResults.value().boxes;
+  fileStateCounts = { isLoading: signal(false) };
+  fileStateCountsByBox = signal<FileStateCountsByBox | undefined>(
+    uploadBoxFileStateCounts,
+  );
   getStorageLocationLabel = (storageAlias: string) =>
     ({ TUE01: 'Tübingen 1', HD02: 'Heidelberg 2', TUE03: 'Tübingen 3' })[
       storageAlias
@@ -88,8 +93,27 @@ describe('UploadBoxManagerList', () => {
   it('should show the file states of each upload box', () => {
     const row = screen.getByRole('row', { name: /Upload Box of John/ });
     expect(
-      within(row).getByRole('img', { name: '2 ready, 2 in progress, 1 failed' }),
+      within(row).getByRole('img', { name: '2 ready, 1 in progress, 1 failed' }),
     ).toBeVisible();
+  });
+
+  it('should show placeholders while the file state counts load', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    uploadBoxService.fileStateCounts.isLoading.set(true);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(within(row).getByRole('img', { name: 'Loading file states' })).toBeVisible();
+    expect(screen.queryByRole('img', { name: /ready/ })).not.toBeInTheDocument();
+  });
+
+  it('should show the file counts without bars if the counts failed', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(within(row).queryByRole('img')).not.toBeInTheDocument();
+    expect(within(row).getByText('4')).toBeVisible();
   });
 
   it('should navigate to the details of an upload box', async () => {

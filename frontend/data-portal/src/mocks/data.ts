@@ -14,9 +14,14 @@ import { BaseGlobalSummary } from '@app/metadata/models/global-summary';
 import { SearchResults } from '@app/metadata/models/search-results';
 import { Study } from '@app/metadata/models/study';
 import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
-import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
+import {
+  BoxRetrievalResults,
+  FileStateCountsByBox,
+  UploadBoxState,
+} from '@app/upload/models/box';
 import {
   BoxUploadsPage,
+  FileUploadState,
   FileUploadStateCounts,
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
@@ -1162,7 +1167,7 @@ export const uploadBoxes: BoxRetrievalResults = {
       description: 'Upload box for RNA sequencing files of study GHGAS12345678901234',
       last_changed: '2025-02-01T09:00:00Z',
       changed_by: 'doe@test.dev',
-      file_count: 5,
+      file_count: 4, // without the upload still in progress
       size: 123456789,
       storage_alias: 'TUE01',
       max_size: 10_995_116_277_760, // 10 TiB
@@ -1176,7 +1181,7 @@ export const uploadBoxes: BoxRetrievalResults = {
       description: 'Upload box pending data steward review before archival handover',
       last_changed: '2025-02-02T10:00:00Z',
       changed_by: 'roe@test.dev',
-      file_count: 15,
+      file_count: 14, // without the failed upload
       size: 120259084288, // ~112 GB total
       storage_alias: 'HD02',
       max_size: 16_492_674_416_640, // 15 TiB
@@ -1204,7 +1209,7 @@ export const uploadBoxes: BoxRetrievalResults = {
       description: 'Upload box for proteomics files of study GHGAS12345678901235',
       last_changed: '2025-02-04T09:00:00Z',
       changed_by: 'doe@test.dev',
-      file_count: 15,
+      file_count: 12, // without the three uploads still in progress
       size: 64424509440, // 60 GiB
       storage_alias: 'HD02',
       max_size: 5_497_558_138_880, // 5 TiB
@@ -1218,7 +1223,7 @@ export const uploadBoxes: BoxRetrievalResults = {
       description: 'Upload box for imaging files of study GHGAS12345678901236',
       last_changed: '2025-02-05T09:00:00Z',
       changed_by: 'doe@test.dev',
-      file_count: 2,
+      file_count: 1, // without the upload still in progress
       size: 5368709120, // 5 GiB
       storage_alias: 'TUE03',
       max_size: 5_497_558_138_880, // 5 TiB
@@ -1242,7 +1247,7 @@ export const uploadBoxes: BoxRetrievalResults = {
     },
     {
       // A box with as many files as a large study brings, to check how the list
-      // copes with large numbers. Its state counts are given here instead of
+      // copes with large numbers. Its state counts are given below instead of
       // being derived from file fixtures, so its file table stays empty.
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68007',
       file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68007',
@@ -1256,13 +1261,6 @@ export const uploadBoxes: BoxRetrievalResults = {
       size: 94_885_993_005_875, // ~86.3 TiB
       storage_alias: 'TUE03',
       max_size: 109_951_162_777_600, // 100 TiB
-      file_state_counts: {
-        interrogated: 170000,
-        inbox: 4321,
-        init: 2190,
-        failed_interrogation: 29,
-        failed: 3,
-      },
     },
   ],
 };
@@ -1803,8 +1801,28 @@ export const uploadBox5Uploads = uploadsCollection(uploadBox5FileUploads);
 /** File uploads of box 6 (locked, 3 files, one awaiting a retry) */
 export const uploadBox6Uploads = uploadsCollection(uploadBox6FileUploads);
 
-// The RS will aggregate the file states per box; until it does, derive the
-// counts from the file fixtures so that the box list and the file tables agree.
+// The states the RS counts per box, the same that make up the file count
+const COUNTED_FILE_UPLOAD_STATES: FileUploadState[] = [
+  'inbox',
+  'interrogated',
+  'failed_interrogation',
+  'awaiting_archival',
+  'archived',
+];
+
+/**
+ * The file state counts of all upload boxes as returned by the RS. The counts
+ * of boxes 1 to 6 are derived from their file fixtures so that the box list and
+ * the file tables agree; boxes without counted files are absent.
+ */
+export const uploadBoxFileStateCounts: FileStateCountsByBox = {
+  // Box 7 of the large cohort, which adds up to its file count
+  '0a36607a-b53f-49ed-bf3e-a5f2dbc68007': {
+    interrogated: 170000,
+    inbox: 6514,
+    failed_interrogation: 29,
+  },
+};
 for (const files of [
   uploadBox1FileUploads,
   uploadBox2FileUploads,
@@ -1815,8 +1833,12 @@ for (const files of [
 ]) {
   const box = uploadBoxes.boxes.find((b) => b.file_upload_box_id === files[0].box_id)!;
   const counts: FileUploadStateCounts = {};
-  for (const file of files) counts[file.state] = (counts[file.state] ?? 0) + 1;
-  box.file_state_counts = counts;
+  for (const { state } of files) {
+    if (COUNTED_FILE_UPLOAD_STATES.includes(state)) {
+      counts[state] = (counts[state] ?? 0) + 1;
+    }
+  }
+  if (Object.keys(counts).length) uploadBoxFileStateCounts[box.id] = counts;
 }
 
 /**

@@ -35,5 +35,11 @@
         {{ failedCount() | number }}
       </span>
     }
+  } @else if (loading() && fileCount()) {
+    <span
+      class="h-2.5 w-24 shrink-0 animate-pulse rounded-full bg-gray-200"
+      aria-label="Loading file states"
+      role="img"
+    ></span>
   }
 </div>

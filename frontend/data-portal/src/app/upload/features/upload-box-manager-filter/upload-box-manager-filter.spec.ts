@@ -6,7 +6,11 @@
 
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
+import {
+  FileStateCountsByBox,
+  ResearchDataUploadBox,
+  UploadBoxState,
+} from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -27,12 +31,16 @@ const TEST_UPLOAD_BOX: ResearchDataUploadBox = {
 };
 
 const uploadBoxesSignal = signal<ResearchDataUploadBox[]>([TEST_UPLOAD_BOX]);
+const fileStateCountsSignal = signal<FileStateCountsByBox | undefined>({
+  [TEST_UPLOAD_BOX.id]: { interrogated: 3 },
+});
 
 /**
  * Mock the upload box service as needed by the upload box manager filter component.
  */
 const mockUploadBoxService = {
   uploadBoxes: uploadBoxesSignal.asReadonly(),
+  fileStateCountsByBox: fileStateCountsSignal.asReadonly(),
   uploadBoxesFilter: () => ({
     title: undefined,
     state: undefined,
@@ -51,6 +59,14 @@ const mockUploadBoxService = {
   setUploadBoxes(uploadBoxes: ResearchDataUploadBox[]): void {
     uploadBoxesSignal.set(uploadBoxes);
   },
+
+  /**
+   * Set the file state counts for tests.
+   * @param counts - the counts to expose, undefined while not loaded
+   */
+  setFileStateCounts(counts: FileStateCountsByBox | undefined): void {
+    fileStateCountsSignal.set(counts);
+  },
 };
 
 describe('UploadBoxManagerFilter', () => {
@@ -60,6 +76,9 @@ describe('UploadBoxManagerFilter', () => {
 
   beforeEach(async () => {
     mockUploadBoxService.setUploadBoxes([TEST_UPLOAD_BOX]);
+    mockUploadBoxService.setFileStateCounts({
+      [TEST_UPLOAD_BOX.id]: { interrogated: 3 },
+    });
     mockUploadBoxService.setUploadBoxesFilter.mockClear();
     await TestBed.configureTestingModule({
       imports: [UploadBoxManagerFilter],
@@ -166,6 +185,31 @@ describe('UploadBoxManagerFilter', () => {
       location: undefined,
       fileStates: 'some_failed',
     });
+  });
+
+  it('should offer only no files yet until the file state counts are loaded', async () => {
+    uploadBoxService.setFileStateCounts(undefined);
+    await fixture.whenStable();
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'File states' }));
+    await fixture.whenStable();
+
+    expect(screen.getByRole('option', { name: 'No files yet' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
+    expect(screen.getByRole('option', { name: 'Some files failed' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    uploadBoxService.setFileStateCounts({});
+    await fixture.whenStable();
+
+    expect(screen.getByRole('option', { name: 'Some files failed' })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
   });
 
   it('should clear the filter with the remove buttons', async () => {

@@ -8,19 +8,22 @@ import { describe, expect, it } from 'vitest';
 import { matchesFileStatesFilter, UploadBoxFileStatesFilter } from './box';
 import { FileUploadStateCounts } from './file-upload';
 
+const BOX_ID = 'test-box';
+
 /**
  * Check a condition against a box with the given state counts.
- * @param counts - the number of files per state, undefined if not provided
+ * @param counts - the number of files per state
  * @param filter - the condition to check
  * @returns whether the condition is met
  */
 function matches(
-  counts: FileUploadStateCounts | undefined,
+  counts: FileUploadStateCounts,
   filter: UploadBoxFileStatesFilter,
 ): boolean {
-  const fileCount = Object.values(counts ?? {}).reduce((sum, n) => sum + n, 0);
+  const fileCount = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return matchesFileStatesFilter(
-    { file_count: fileCount, file_state_counts: counts },
+    { id: BOX_ID, file_count: fileCount },
+    { [BOX_ID]: counts },
     filter,
   );
 }
@@ -28,8 +31,10 @@ function matches(
 describe('matchesFileStatesFilter', () => {
   it('should match no files yet only for an empty box', () => {
     expect(matches({}, 'no_files')).toBe(true);
-    expect(matchesFileStatesFilter({ file_count: 0 }, 'no_files')).toBe(true);
-    expect(matchesFileStatesFilter({ file_count: 2 }, 'no_files')).toBe(false);
+    const emptyBox = { id: BOX_ID, file_count: 0 };
+    const fullBox = { id: BOX_ID, file_count: 2 };
+    expect(matchesFileStatesFilter(emptyBox, undefined, 'no_files')).toBe(true);
+    expect(matchesFileStatesFilter(fullBox, undefined, 'no_files')).toBe(false);
   });
 
   it('should match all files ready only if every file is re-encrypted', () => {
@@ -54,7 +59,15 @@ describe('matchesFileStatesFilter', () => {
   });
 
   it('should match no condition on the states without state counts', () => {
-    expect(matchesFileStatesFilter({ file_count: 2 }, 'some_in_progress')).toBe(false);
-    expect(matchesFileStatesFilter({ file_count: 2 }, 'all_ready')).toBe(false);
+    const box = { id: BOX_ID, file_count: 2 };
+    expect(matchesFileStatesFilter(box, undefined, 'some_in_progress')).toBe(false);
+    expect(matchesFileStatesFilter(box, undefined, 'all_ready')).toBe(false);
+  });
+
+  it('should treat a box missing from the loaded counts as one without files', () => {
+    const box = { id: BOX_ID, file_count: 0 };
+    const countsByBox = { 'other-box': { interrogated: 3 } };
+    expect(matchesFileStatesFilter(box, countsByBox, 'all_ready')).toBe(false);
+    expect(matchesFileStatesFilter(box, countsByBox, 'some_not_ready')).toBe(false);
   });
 });

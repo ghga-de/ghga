@@ -83,11 +83,18 @@ export class UploadBoxManagerFilter {
   ];
 
   /**
-   * All conditions on the file states of a box.
+   * All conditions on the file states of a box. Only the check for an empty box
+   * works without the file state counts, so the others stay disabled until the
+   * counts are loaded.
    */
-  fileStateOptions = Object.entries(UploadBoxFileStatesFilterLabel).map(
-    ([value, label]) => ({ value: value as UploadBoxFileStatesFilter, label }),
-  );
+  fileStateOptions = computed(() => {
+    const countsLoaded = !!this.#uploadBoxService.fileStateCountsByBox();
+    return Object.entries(UploadBoxFileStatesFilterLabel).map(([value, label]) => ({
+      value: value as UploadBoxFileStatesFilter,
+      label,
+      disabled: value !== 'no_files' && !countsLoaded,
+    }));
+  });
 
   /**
    * All available upload-box locations including display labels.

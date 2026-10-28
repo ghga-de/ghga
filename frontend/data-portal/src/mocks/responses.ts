@@ -29,6 +29,7 @@ import {
   uploadBox5Uploads,
   uploadBox6Uploads,
   uploadBoxes,
+  uploadBoxFileStateCounts,
   pediatricLeukemiaDatasetDetails,
   pediatricLeukemiaFileIds,
   pediatricLeukemiaStudyData,
@@ -274,6 +275,9 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Fetch all upload boxes
   'GET /api/rs/upload-boxes': uploadBoxes,
+
+  // Fetch the file state counts of all upload boxes
+  'GET /api/rs/upload-boxes/file-state-counts': uploadBoxFileStateCounts,
 
   // Fetch file uploads for a specific box. This endpoint is paginated and sorted
   // by the RS, so the fixtures are the complete file list of each box and the

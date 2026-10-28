@@ -12,10 +12,15 @@ import { UploadBoxFileStates } from './upload-box-file-states';
  * Render the component with the given inputs.
  * @param fileCount - the number of files in the box
  * @param counts - the number of files per state
+ * @param loading - whether the counts are loading
  * @returns the render result
  */
-function renderFileStates(fileCount: number, counts?: FileUploadStateCounts) {
-  return render(UploadBoxFileStates, { inputs: { fileCount, counts } });
+function renderFileStates(
+  fileCount: number,
+  counts?: FileUploadStateCounts,
+  loading = false,
+) {
+  return render(UploadBoxFileStates, { inputs: { fileCount, counts, loading } });
 }
 
 describe('UploadBoxFileStates', () => {
@@ -23,6 +28,23 @@ describe('UploadBoxFileStates', () => {
     await renderFileStates(7);
     expect(screen.getByText('7')).toBeVisible();
     expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('should show a placeholder for the bar while the state counts load', async () => {
+    await renderFileStates(7, undefined, true);
+    expect(screen.getByText('7')).toBeVisible();
+    expect(screen.getByRole('img', { name: 'Loading file states' })).toBeVisible();
+  });
+
+  it('should show no placeholder for an empty box', async () => {
+    await renderFileStates(0, undefined, true);
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
+  it('should show the bar instead of the placeholder once the counts are there', async () => {
+    await renderFileStates(2, { interrogated: 2 }, true);
+    expect(screen.getByRole('img', { name: '2 ready' })).toBeVisible();
+    expect(screen.queryByRole('img', { name: 'Loading file states' })).toBeNull();
   });
 
   it('should show a large file count on one line with thousands separators', async () => {

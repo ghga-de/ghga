@@ -21,6 +21,7 @@ import {
   UploadBoxState,
   UploadBoxStateClass,
 } from '@app/upload/models/box';
+import { FileUploadStateCounts } from '@app/upload/models/file-upload';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { UploadBoxFileStates } from '../upload-box-file-states/upload-box-file-states';
 
@@ -35,6 +36,8 @@ const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
 interface UploadBoxRow extends ResearchDataUploadBox {
   stateClass: string;
   storageLabel: string;
+  /** The number of files per state, undefined if the counts are not loaded */
+  fileStateCounts: FileUploadStateCounts | undefined;
 }
 
 /**
@@ -68,19 +71,29 @@ export class UploadBoxManagerList {
   uploadBoxesAreLoading = this.#uploadBoxResource.isLoading;
   uploadBoxesError = this.#uploadBoxResource.error;
 
+  /** Whether the file state counts are loading and none are there to show yet */
+  fileStateCountsLoading = computed(
+    () =>
+      this.#uploadBoxService.fileStateCounts.isLoading() &&
+      !this.#uploadBoxService.fileStateCountsByBox(),
+  );
+
   /**
    * The upload boxes to display, each annotated with derived display values
    * (state CSS class and human-readable storage label). Deriving these in a
    * computed keeps the mappings out of the template and change detection, and
    * lets the labels react when the storage labels finish loading.
    */
-  #rows = computed<UploadBoxRow[]>(() =>
-    this.uploadBoxes().map((box) => ({
+  #rows = computed<UploadBoxRow[]>(() => {
+    const countsByBox = this.#uploadBoxService.fileStateCountsByBox();
+    return this.uploadBoxes().map((box) => ({
       ...box,
       stateClass: UploadBoxStateClass[box.state],
       storageLabel: this.#uploadBoxService.getStorageLocationLabel(box.storage_alias),
-    })),
-  );
+      // The RS leaves out boxes without counted files
+      fileStateCounts: countsByBox ? (countsByBox[box.id] ?? {}) : undefined,
+    }));
+  });
 
   dataSource = new MatTableDataSource<UploadBoxRow>([]);
 

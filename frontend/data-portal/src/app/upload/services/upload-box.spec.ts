@@ -19,6 +19,7 @@ import { ConfigService } from '@app/shared/services/config';
 import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 import {
   BoxRetrievalResults,
+  FileStateCountsByBox,
   ResearchDataUploadBoxBase,
   ResearchDataUploadBoxUpdate,
   UploadBoxState,
@@ -48,7 +49,6 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       size: 123456789,
       storage_alias: 'TUE01',
       max_size: 10_000_000_000_000,
-      file_state_counts: { interrogated: 2, failed_interrogation: 1 },
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
@@ -62,7 +62,6 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       size: 987654321,
       storage_alias: 'HD02',
       max_size: 15_000_000_000_000,
-      file_state_counts: { interrogated: 10, init: 2 },
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
@@ -79,6 +78,14 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
     },
   ],
 };
+
+// Gamma is empty and therefore absent, as the RS leaves out boxes without files
+const TEST_FILE_STATE_COUNTS: FileStateCountsByBox = {
+  '0a36607a-b53f-49ed-bf3e-a5f2dbc68001': { interrogated: 2, failed_interrogation: 1 },
+  '0a36607a-b53f-49ed-bf3e-a5f2dbc68002': { interrogated: 10, inbox: 2 },
+};
+
+const FILE_STATE_COUNTS_URL = 'http://mock.dev/rs/upload-boxes/file-state-counts';
 
 /**
  * Mock the config service as needed for the upload box service.
@@ -127,6 +134,8 @@ describe('UploadBoxService', () => {
           : false,
       )
       .forEach((req) => req.flush([]));
+    // The file state counts load along with all upload boxes; drain them likewise.
+    httpMock.match(FILE_STATE_COUNTS_URL).forEach((req) => req.flush({}));
 
     httpMock.verify();
   });
@@ -221,6 +230,18 @@ describe('UploadBoxService', () => {
       TEST_BOX_RETRIEVAL_RESULTS.boxes[1],
     ]);
 
+    // Without the state counts, no box matches a condition on the states.
+    service.setUploadBoxesFilter({
+      title: undefined,
+      state: undefined,
+      location: undefined,
+      fileStates: 'some_not_ready',
+    });
+    expect(service.filteredUploadBoxes()).toEqual([]);
+
+    httpMock.expectOne(FILE_STATE_COUNTS_URL).flush(TEST_FILE_STATE_COUNTS);
+    await Promise.resolve();
+
     // Gamma has no state counts, so it matches no condition on the states.
     service.setUploadBoxesFilter({
       title: undefined,
@@ -253,6 +274,79 @@ describe('UploadBoxService', () => {
     expect(service.filteredUploadBoxes()).toEqual([
       TEST_BOX_RETRIEVAL_RESULTS.boxes[2],
     ]);
+  });
+
+  it('should fetch the file state counts along with all upload boxes', async () => {
+    expect(service.fileStateCountsByBox()).toBeUndefined();
+
+    service.loadAllUploadBoxes();
+    testBed.tick();
+
+    httpMock
+      .expectOne('http://mock.dev/rs/upload-boxes')
+      .flush(TEST_BOX_RETRIEVAL_RESULTS);
+    httpMock
+      .expectOne('http://mock.dev/.well-known/values/storage_labels')
+      .flush({ storage_labels: {} });
+    await Promise.resolve();
+
+    // The boxes are there before the counts arrive
+    expect(service.uploadBoxes()).toEqual(TEST_BOX_RETRIEVAL_RESULTS.boxes);
+    expect(service.fileStateCounts.isLoading()).toBe(true);
+    expect(service.fileStateCountsByBox()).toBeUndefined();
+
+    const req = httpMock.expectOne(FILE_STATE_COUNTS_URL);
+    expect(req.request.method).toBe('GET');
+    req.flush(TEST_FILE_STATE_COUNTS);
+    await Promise.resolve();
+
+    expect(service.fileStateCounts.isLoading()).toBe(false);
+    expect(service.fileStateCountsByBox()).toEqual(TEST_FILE_STATE_COUNTS);
+  });
+
+  it('should keep the upload boxes when the file state counts fail', async () => {
+    service.loadAllUploadBoxes();
+    testBed.tick();
+
+    httpMock
+      .expectOne('http://mock.dev/rs/upload-boxes')
+      .flush(TEST_BOX_RETRIEVAL_RESULTS);
+    httpMock
+      .expectOne('http://mock.dev/.well-known/values/storage_labels')
+      .flush({ storage_labels: {} });
+    httpMock
+      .expectOne(FILE_STATE_COUNTS_URL)
+      .flush({ detail: 'UCS unavailable' }, { status: 500, statusText: 'Error' });
+    await Promise.resolve();
+
+    expect(service.fileStateCounts.error()).toBeInstanceOf(HttpErrorResponse);
+    expect(service.fileStateCountsByBox()).toBeUndefined();
+    expect(service.uploadBoxes()).toEqual(TEST_BOX_RETRIEVAL_RESULTS.boxes);
+  });
+
+  it('should fetch the file state counts again when reloading all upload boxes', async () => {
+    service.reloadAllUploadBoxes();
+    testBed.tick();
+
+    httpMock
+      .expectOne('http://mock.dev/rs/upload-boxes')
+      .flush(TEST_BOX_RETRIEVAL_RESULTS);
+    httpMock
+      .expectOne('http://mock.dev/.well-known/values/storage_labels')
+      .flush({ storage_labels: {} });
+    httpMock.expectOne(FILE_STATE_COUNTS_URL).flush(TEST_FILE_STATE_COUNTS);
+    await Promise.resolve();
+
+    service.reloadAllUploadBoxes();
+    testBed.tick();
+
+    httpMock
+      .expectOne('http://mock.dev/rs/upload-boxes')
+      .flush(TEST_BOX_RETRIEVAL_RESULTS);
+    httpMock.expectOne(FILE_STATE_COUNTS_URL).flush({});
+    await Promise.resolve();
+
+    expect(service.fileStateCountsByBox()).toEqual({});
   });
 
   it('should resolve storage aliases to storage location labels', async () => {

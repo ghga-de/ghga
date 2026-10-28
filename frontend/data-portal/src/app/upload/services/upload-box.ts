@@ -15,6 +15,7 @@ import { AccessionMapRequest } from '../models/accession-map';
 import {
   BoxRequeueResult,
   BoxRetrievalResults,
+  FileStateCountsByBox,
   matchesFileStatesFilter,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
@@ -65,12 +66,14 @@ export class UploadBoxService {
   // invalidates all variants of that endpoint at once, which matters for the
   // paginated and sorted file uploads, where the keys are not known upfront.
   #boxesBucket = new CacheBucket();
+  #fileStateCountsBucket = new CacheBucket();
   #boxBucket = new CacheBucket();
   #boxGrantsBucket = new CacheBucket();
   #userGrantsBucket = new CacheBucket();
   #fileUploadsBucket = new CacheBucket();
 
   #boxesContext = volatileCacheContext(this.#boxesBucket);
+  #fileStateCountsContext = volatileCacheContext(this.#fileStateCountsBucket);
   #boxContext = volatileCacheContext(this.#boxBucket);
   #boxGrantsContext = volatileCacheContext(this.#boxGrantsBucket);
   #userGrantsContext = volatileCacheContext(this.#userGrantsBucket);
@@ -108,6 +111,20 @@ export class UploadBoxService {
     {
       defaultValue: this.#emptyBoxResults,
     },
+  );
+
+  /**
+   * Resource for loading the file state counts of all upload boxes. The RS
+   * computes them on request, which takes longer than loading the boxes, so they
+   * come in a request of their own and the list does not wait for them.
+   */
+  fileStateCounts = httpResource<FileStateCountsByBox>(() =>
+    this.#loadAllUploadBoxes()
+      ? {
+          url: `${this.#boxesUrl}/file-state-counts`,
+          context: this.#fileStateCountsContext,
+        }
+      : undefined,
   );
 
   /**
@@ -283,6 +300,14 @@ export class UploadBoxService {
   });
 
   /**
+   * Signal for the file state counts of all upload boxes, keyed by the box ID.
+   * Undefined while they are loading for the first time or if loading failed.
+   */
+  fileStateCountsByBox = computed(() =>
+    this.fileStateCounts.error() ? undefined : this.fileStateCounts.value(),
+  );
+
+  /**
    * The currently active filter applied to `filteredUploadBoxes`.
    */
   uploadBoxesFilter = computed(
@@ -326,7 +351,10 @@ export class UploadBoxService {
 
     const fileStates = filter.fileStates;
     if (fileStates) {
-      boxes = boxes.filter((box) => matchesFileStatesFilter(box, fileStates));
+      const countsByBox = this.fileStateCountsByBox();
+      boxes = boxes.filter((box) =>
+        matchesFileStatesFilter(box, countsByBox, fileStates),
+      );
     }
 
     return boxes;
@@ -360,14 +388,17 @@ export class UploadBoxService {
   }
 
   /**
-   * Fetch all upload boxes again, bypassing the HTTP cache.
+   * Fetch all upload boxes and their file state counts again, bypassing the
+   * HTTP cache.
    * Boxes change outside the portal (files are uploaded with the GHGA Connector),
    * so entering the box list must not rely on what was fetched earlier.
    */
   reloadAllUploadBoxes(): void {
     this.#httpCache.delete(this.#boxesBucket);
+    this.#httpCache.delete(this.#fileStateCountsBucket);
     if (this.#loadAllUploadBoxes()) {
       this.boxRetrievalResults.reload();
+      this.fileStateCounts.reload();
     } else {
       this.loadAllUploadBoxes();
     }
@@ -758,6 +789,7 @@ export class UploadBoxService {
    */
   #invalidateBoxes(): void {
     this.#httpCache.delete(this.#boxesBucket);
+    this.#httpCache.delete(this.#fileStateCountsBucket);
     this.#httpCache.delete(this.#boxBucket);
     this.#httpCache.delete(this.#userGrantsBucket);
   }
