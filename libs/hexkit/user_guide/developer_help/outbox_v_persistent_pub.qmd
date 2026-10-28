@@ -98,7 +98,8 @@ If we were saving data from a `User` class with a `user_id`, `name` and `email` 
     "correlation_id": <UUID4>,
     "published": true,
     "deleted": false,
-    "last_event_id": <UUID4>
+    "last_event_id": <UUID4>,
+    "write_id": <UUID4>
   },
   "_id": <UUID4>, // hexkit converts models' ID field names to the MongoDB `_id`
   "name": "John Doe",

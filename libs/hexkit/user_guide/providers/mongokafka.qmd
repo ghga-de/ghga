@@ -63,6 +63,9 @@ Metadata stored on documents:
 - `__metadata__.published` (bool): Whether the most recent change has been published to Kafka.
 - `__metadata__.correlation_id` (UUID): Correlation ID captured from context when the change was made; reused on (re)publish for tracing.
 - `__metadata__.last_event_id` (UUID | None): Event ID of the last emitted outbox event.
+- `__metadata__.write_id` (UUID): Random ID of the latest write.
+  A write is marked as published only while the document still carries its write ID, so a publish that finishes after a newer write neither reverts that write nor marks it as published.
+  Such a publish then repeats with the current state, so that the last event on the topic shows the newest state.
 
 When data is either added or modified deleted, the Outbox Publisher feeds the data into the Factory's `dto_to_event()` method to obtain the desired representation for an event.
 This might match the original data, or it might remove fields, e.g. to avoid transmitting superfluous information.
@@ -82,6 +85,22 @@ Correlation & Event IDs:
 - During (re)publish, the stored correlation ID is re-applied to the context so downstream consumers see a consistent trace.
 - Event IDs are generated every time the data is (re)published, and the ID is stored after the event is published.
   This is different from the Persistent Publisher in that the latter will reuse the same event ID.
+
+### One DAO per collection
+
+A collection served by an Outbox Publisher must be read and written only through Outbox Publishers created with the same `dto_model`, `dto_to_event` and `event_topic`.
+Several instances of that DAO, such as the replicas of a service, may write the collection at the same time.
+The rule applies to the collection in its database, so it binds every service and process that opens the same database, not only the one that created the DAO.
+Collections with the same name in different databases are independent.
+This includes the usual case of a service that consumes the outbox events and keeps a copy of the resources in its own database: the copy is a different collection, so that service may use any DAO for it, such as a plain `MongoDbDao`.
+Opening the outbox collection with another DAO, such as a plain `MongoDbDao`, or writing it directly is not supported, because such access bypasses the outbox:
+
+- A write publishes no event, so consumers miss the change.
+- A write replaces or omits `__metadata__`, so an unpublished change drops out of `publish_pending()`, and a concurrent publish can no longer tell by the write ID that it was overtaken.
+- An upsert brings a deleted resource back, and a delete removes its stub, so `republish()` can no longer send the deletion.
+- A read does not know deletion stubs, so it fails to validate a stub or returns it as a resource.
+
+Migrations that change documents before the service starts are the exception; they must keep `__metadata__` intact.
 
 ### Usage example
 
