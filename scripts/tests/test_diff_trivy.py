@@ -17,11 +17,21 @@ URLLIB3 = ("lang-pkgs", "CVE-2026-2222", "urllib3")
 JINJA2 = ("lang-pkgs", "CVE-2026-3333", "jinja2")
 
 
+# The Result.Type of each Class, unless a finding names another.
+TYPES = {"os-pkgs": "alpine", "lang-pkgs": "python-pkg"}
+
+
 def _write_report(path, *findings):
-    """Write a Trivy JSON report holding the given (class, id, package) findings."""
-    results: dict[str, list[dict]] = {}
-    for result_class, vuln_id, package in findings:
-        results.setdefault(result_class, []).append(
+    """Write a Trivy JSON report of (class, id, package[, fields]) findings.
+
+    `fields` adds to or overrides the vulnerability's fields; its "Type" is the
+    section's.
+    """
+    results: dict[tuple[str, str], list[dict]] = {}
+    for result_class, vuln_id, package, *rest in findings:
+        fields = dict(rest[0]) if rest else {}
+        result_type = fields.pop("Type", TYPES[result_class])
+        results.setdefault((result_class, result_type), []).append(
             {
                 "VulnerabilityID": vuln_id,
                 "PkgName": package,
@@ -29,12 +39,18 @@ def _write_report(path, *findings):
                 "FixedVersion": "2.0",
                 "Severity": "MEDIUM",
                 "PrimaryURL": f"https://example.org/{vuln_id}",
+                **fields,
             }
         )
     report = {
         "Results": [
-            {"Target": result_class, "Class": result_class, "Vulnerabilities": vulns}
-            for result_class, vulns in results.items()
+            {
+                "Target": result_type,
+                "Class": result_class,
+                "Type": result_type,
+                "Vulnerabilities": vulns,
+            }
+            for (result_class, result_type), vulns in results.items()
         ]
     }
     path.write_text(json.dumps(report))
@@ -50,23 +66,27 @@ def _run(*args):
     ).stdout
 
 
-def _scan(tmp_path, before, after):
-    """Diff then render as the workflow does; return its gate count and report."""
-    before_path = _write_report(tmp_path / "before.json", *before)
-    after_path = _write_report(tmp_path / "after.json", *after)
-    fragment = tmp_path / "fragment.json"
-    report = tmp_path / "report.md"
+def _trivy_fragment(tmp_path, before, after, name="fragment"):
+    """Diff two Trivy reports into the fragment `name`.json."""
+    fragment = tmp_path / f"{name}.json"
     _run(
         "diff",
         "--label",
-        "test",
+        name,
         "--before",
-        str(before_path),
+        str(_write_report(tmp_path / f"{name}-before.json", *before)),
         "--after",
-        str(after_path),
+        str(_write_report(tmp_path / f"{name}-after.json", *after)),
         "--out",
         str(fragment),
     )
+    return fragment
+
+
+def _scan(tmp_path, before, after):
+    """Diff then render as the workflow does; return its gate count and report."""
+    fragment = _trivy_fragment(tmp_path, before, after)
+    report = tmp_path / "report.md"
     gate = _run("render", str(fragment), "--out", str(report))
     return int(gate), report.read_text()
 
@@ -105,7 +125,7 @@ def test_regressions_are_reported(tmp_path):
     assert "CVE-2026-3333" in report
 
 
-# uv audit findings as (id, aliases, package); the CVE alias of PILLOW_GHSA is the
+# uv audit findings as (id, aliases, package[, version]); the CVE alias of PILLOW_GHSA is the
 # ID Trivy reports for the same advisory.
 PILLOW_GHSA = ("GHSA-aaaa-bbbb-cccc", ["CVE-2026-4444"], "pillow")
 PILLOW_TRIVY = ("lang-pkgs", "CVE-2026-4444", "Pillow")
@@ -113,25 +133,28 @@ VIRTUALENV: tuple[str, list[str], str] = ("PYSEC-2026-55", [], "virtualenv")
 
 
 def _write_audit(path, *findings):
-    """Write a uv audit JSON report holding the given (id, aliases, package) findings."""
+    """Write a uv audit JSON report of (id, aliases, package[, version]) findings."""
     vulns = [
         {
             "id": vuln_id,
             "aliases": aliases,
-            "dependency": {"name": package, "version": "1.0"},
+            "dependency": {
+                "name": package,
+                "version": version[0] if version else "1.0",
+            },
             "fix_versions": ["2.0"],
             "link": f"https://example.org/{vuln_id}",
         }
-        for vuln_id, aliases, package in findings
+        for vuln_id, aliases, package, *version in findings
     ]
     path.write_text(json.dumps({"vulnerabilities": vulns}))
     return path
 
 
 def _write_runtime(path, runtime):
-    """Write a `uv export` of the given package names, or of whole lines with a ` ; `."""
+    """Write a `uv export` of the given names at 1.0, or of whole lines with a `=`."""
     path.write_text(
-        "".join(f"{name}\n" if " ; " in name else f"{name}==1.0\n" for name in runtime)
+        "".join(f"{name}\n" if "=" in name else f"{name}==1.0\n" for name in runtime)
     )
     return path
 
@@ -181,25 +204,14 @@ def test_runtime_fixes_from_uv_audit_open_a_pr(tmp_path):
 def test_a_fix_both_scanners_report_counts_once(tmp_path):
     """Trivy names the advisory by its CVE, uv audit by its GHSA ID."""
     audit = _audit_fragment(tmp_path, [PILLOW_GHSA], [], runtime=["pillow"])
-    trivy = tmp_path / "fragment.json"
-    _run(
-        "diff",
-        "--label",
-        "image",
-        "--before",
-        str(_write_report(tmp_path / "before.json", PILLOW_TRIVY, URLLIB3)),
-        "--after",
-        str(_write_report(tmp_path / "after.json")),
-        "--out",
-        str(trivy),
-    )
+    trivy = _trivy_fragment(tmp_path, [PILLOW_TRIVY, URLLIB3], [], name="image")
     gate = _run("render", str(trivy), str(audit), "--out", str(tmp_path / "report.md"))
     assert int(gate) == 2
 
 
-def _render_audit(tmp_path, before, runtime):
-    """Diff a uv audit report against a clean one and render; return gate and report."""
-    fragment = _audit_fragment(tmp_path, before, [], runtime=runtime)
+def _render_audit(tmp_path, before, runtime, after=()):
+    """Diff two uv audit reports, a clean one by default, and render; return gate and report."""
+    fragment = _audit_fragment(tmp_path, before, after, runtime=runtime)
     report = tmp_path / "report.md"
     gate = _run("render", str(fragment), "--out", str(report))
     return int(gate), report.read_text()
@@ -236,18 +248,7 @@ def test_advisories_join_through_a_later_record(tmp_path):
 
 def test_a_fix_both_scanners_report_is_listed_once(tmp_path):
     """The image fragment lists it with Trivy's severity; the audit table points there."""
-    trivy = tmp_path / "fragment.json"
-    _run(
-        "diff",
-        "--label",
-        "image",
-        "--before",
-        str(_write_report(tmp_path / "before.json", PILLOW_TRIVY)),
-        "--after",
-        str(_write_report(tmp_path / "after.json")),
-        "--out",
-        str(trivy),
-    )
+    trivy = _trivy_fragment(tmp_path, [PILLOW_TRIVY], [], name="image")
     audit = _audit_fragment(tmp_path, [PILLOW_GHSA], [], runtime=["pillow"])
     report = tmp_path / "report.md"
     _run("render", str(trivy), str(audit), "--out", str(report))
@@ -304,3 +305,82 @@ def test_exposure_lists_a_finding_without_a_fix(tmp_path):
     assert "2 known vulnerabilities in 3 packages." in text
     assert "| GHSA-aaaa-bbbb-cccc | - | `pillow` | 1.0 | - |" in text
     assert "<summary>In dev-only packages (1)</summary>" in text
+
+
+def test_one_vendor_advisory_keeps_its_cves_apart(tmp_path):
+    """One distribution advisory fixes both CVEs; they are still two findings."""
+    dsa = {"VendorIDs": ["DSA-6001-1"]}
+    _, report = _scan(tmp_path, [(*SQLITE, dsa), (*SQLITE_2, dsa)], [])
+    assert "**Fixed by the refreshed base image, not by this update (2):**" in report
+    assert "CVE-2026-11824" in report
+
+
+def test_a_regression_both_images_share_is_listed_in_each(tmp_path):
+    """Both images carry the base package, so each carries its regression."""
+    first = _trivy_fragment(tmp_path, [], [SQLITE], name="frontend")
+    second = _trivy_fragment(tmp_path, [], [SQLITE], name="platform")
+    report = tmp_path / "report.md"
+    _run("render", str(first), str(second), "--out", str(report))
+    assert report.read_text().count("**Introduced (1):**") == 2
+
+
+def test_an_npm_and_a_pypi_fix_under_one_id_count_twice(tmp_path):
+    """One GHSA can cover both ecosystems, and PEP 503 does not apply to npm."""
+    npm = ("lang-pkgs", "GHSA-gggg-hhhh-iiii", "lodash.merge", {"Type": "pnpm"})
+    frontend = _trivy_fragment(tmp_path, [npm], [], name="frontend")
+    audit = _audit_fragment(
+        tmp_path, [("GHSA-gggg-hhhh-iiii", [], "lodash-merge")], [], ["lodash-merge"]
+    )
+    gate = _run(
+        "render", str(frontend), str(audit), "--out", str(tmp_path / "report.md")
+    )
+    assert int(gate) == 2
+
+
+def test_a_fix_in_the_installed_one_of_two_versions_counts(tmp_path):
+    """uv.lock holds pillow twice; the update fixes the version the images install."""
+    gate, _ = _render_audit(
+        tmp_path,
+        [(*PILLOW_GHSA, "1.0"), (*PILLOW_GHSA, "0.9")],
+        runtime=["pillow"],
+        after=[(*PILLOW_GHSA, "0.9")],
+    )
+    assert gate == 1
+
+
+def test_a_bump_that_stays_vulnerable_is_no_fix(tmp_path):
+    gate, _ = _render_audit(
+        tmp_path,
+        [(*PILLOW_GHSA, "1.0")],
+        runtime=["pillow==1.0", "pillow==1.1"],
+        after=[(*PILLOW_GHSA, "1.1")],
+    )
+    assert gate == 0
+
+
+def test_exposure_lists_adverse_statuses(tmp_path):
+    audit = tmp_path / "audit.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "vulnerabilities": [],
+                "adverse_statuses": [
+                    {
+                        "dependency": {"name": "pyyaml", "version": "6.0"},
+                        "status": "archived",
+                    }
+                ],
+            }
+        )
+    )
+    report = tmp_path / "exposure.md"
+    _run(
+        "exposure",
+        "--report",
+        str(audit),
+        "--runtime",
+        str(_write_runtime(tmp_path / "runtime.txt", ["pyyaml"])),
+        "--out",
+        str(report),
+    )
+    assert '- `pyyaml` 6.0: {"status": "archived"}' in report.read_text()
