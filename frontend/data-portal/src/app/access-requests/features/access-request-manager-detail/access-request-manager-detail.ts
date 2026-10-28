@@ -53,7 +53,7 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { escapeHtml } from '@app/shared/utils/html';
+import { html } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
 
@@ -368,13 +368,18 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     );
     this.#confirmationService.confirm({
       title: 'Confirm approval of the access request',
-      message:
-        '<p>Please confirm that the access request shall be <strong>allowed</strong>' +
-        (startDateInFuture
-          ? ` for the period between <strong>${startDate}</strong> and`
-          : ` until`) +
-        ` <strong>${endDate}</strong>, and coupled to the address ${ivaType}: ${escapeHtml(iva.value)}.` +
-        `</p><p><strong>Once allowed, no further changes can be made to the access request!</strong></p>`,
+      message: html`<p>
+          Please confirm that the access request shall be
+          <strong>allowed</strong>
+          ${startDateInFuture ? html`for the period between <strong>${startDate}</strong> and` : 'until'}
+          <strong>${endDate}</strong>, and coupled to the address ${ivaType}:
+          ${iva.value}.
+        </p>
+        <p>
+          <strong
+            >Once allowed, no further changes can be made to the access request!</strong
+          >
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm allowance',
       confirmClass: 'success',
@@ -390,9 +395,14 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   safeDeny(): void {
     this.#confirmationService.confirm({
       title: 'Confirm denial of the access request',
-      message:
-        '<p>Please confirm that the access request shall be <strong>denied</strong>.' +
-        `</p><p><strong>Once denied, no further changes can be made to the access request!</strong></p>`,
+      message: html`<p>
+          Please confirm that the access request shall be <strong>denied</strong>.
+        </p>
+        <p>
+          <strong
+            >Once denied, no further changes can be made to the access request!</strong
+          >
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm denial',
       confirmClass: 'error',

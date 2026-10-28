@@ -10,8 +10,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { allIvas } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
+import { IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
+import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import { IvaManagerList } from './iva-manager-list';
 
@@ -78,7 +80,12 @@ describe('IvaManagerList', () => {
     const confirm = vitest
       .spyOn(TestBed.inject(ConfirmationService), 'confirm')
       .mockImplementation(() => undefined);
-    const iva = { ...allIvas[0], user_name: 'Jo <b>Bold</b>', value: 'a&b' };
+    const iva = {
+      ...allIvas[0],
+      type: '<i>Type</i>' as IvaType,
+      user_name: 'Jo <b>Bold</b>',
+      value: 'a&b',
+    };
 
     component.invalidateWhenConfirmed(iva);
     component.markAsTransmittedWhenConfirmed(iva);
@@ -86,7 +93,9 @@ describe('IvaManagerList', () => {
 
     expect(confirm).toHaveBeenCalledTimes(3);
     for (const [{ message }] of confirm.mock.calls) {
-      expect(message).toContain('Jo &lt;b&gt;Bold&lt;/b&gt; with address "a&amp;b"');
+      expect(toMarkup(message)).toContain(
+        'the &lt;i&gt;Type&lt;/i&gt; IVA of Jo &lt;b&gt;Bold&lt;/b&gt; with address "a&amp;b"',
+      );
     }
   });
 });

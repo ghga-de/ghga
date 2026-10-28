@@ -21,7 +21,7 @@ import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
-import { escapeHtml } from '@app/shared/utils/html';
+import { Html, html } from '@app/shared/utils/html';
 import { CodeCreationDialog } from '../code-creation-dialog/code-creation-dialog';
 
 /**
@@ -114,12 +114,13 @@ export class IvaManagerList {
   });
 
   /**
-   * Get the display name for the IVA type
+   * Describe the IVA for a confirmation dialog
    * @param iva the IVA in question
-   * @returns the display name for the type
+   * @returns the type, user name and address of the IVA as HTML
    */
-  #ivaTypeName(iva: UserWithIva): string {
-    return this.#ivaTypePipe.transform(iva.type).name;
+  #ivaDescription(iva: UserWithIva): Html {
+    const ivaType = this.#ivaTypePipe.transform(iva.type).name;
+    return html`the ${ivaType} IVA of ${iva.user_name} with address "${iva.value}"`;
   }
 
   /**
@@ -141,13 +142,15 @@ export class IvaManagerList {
    * @param iva - the IVA to invalidate
    */
   invalidateWhenConfirmed(iva: UserWithIva) {
-    const ivaType = this.#ivaTypeName(iva);
     this.#confirm.confirm({
       title: 'Confirm invalidation of IVA',
-      message:
-        `<p>Do you really wish to <strong>invalidate</strong> the ${ivaType} IVA of` +
-        ` ${escapeHtml(iva.user_name)} with address "${escapeHtml(iva.value)}"?` +
-        '</p><p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      message: html`<p>
+          Do you really wish to
+          <strong>invalidate</strong> ${this.#ivaDescription(iva)}?
+        </p>
+        <p>
+          <strong>The user will lose access to any dataset linked to this IVA</strong>.
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm invalidation',
       callback: (confirmed) => {
@@ -179,12 +182,10 @@ export class IvaManagerList {
    * @param iva - the IVA for which the code was transmitted
    */
   markAsTransmittedWhenConfirmed(iva: UserWithIva) {
-    const ivaType = this.#ivaTypeName(iva);
     this.#confirm.confirm({
       title: 'Confirm code transmission',
-      message:
-        'Please confirm the transmission of the verification code' +
-        ` the ${ivaType} IVA of ${escapeHtml(iva.user_name)} with address "${escapeHtml(iva.value)}".`,
+      message: html`Please confirm the transmission of the verification code for
+      ${this.#ivaDescription(iva)}.`,
       cancelText: 'Cancel',
       confirmText: 'Confirm transmission',
       callback: (confirmed) => {
@@ -236,14 +237,16 @@ export class IvaManagerList {
    * @param iva - the IVA to delete
    */
   deleteWhenConfirmed(iva: UserWithIva): void {
-    const ivaType = this.#ivaTypeName(iva);
     this.#confirm.confirm({
       title: 'Confirm deletion of the IVA',
-      message:
-        `<p>Do you really wish to completely <strong>delete</strong> the ${ivaType} IVA of` +
-        ` ${escapeHtml(iva.user_name)} with address "${escapeHtml(iva.value)}"?` +
-        '</p><p>This is not reversible.</p>' +
-        '<p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      message: html`<p>
+          Do you really wish to completely
+          <strong>delete</strong> ${this.#ivaDescription(iva)}?
+        </p>
+        <p>This is not reversible.</p>
+        <p>
+          <strong>The user will lose access to any dataset linked to this IVA</strong>.
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm deletion',
       callback: (confirmed) => {

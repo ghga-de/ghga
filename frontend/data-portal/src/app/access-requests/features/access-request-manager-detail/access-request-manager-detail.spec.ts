@@ -22,6 +22,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
 import { ConfirmationService } from '@app/shared/services/confirmation';
+import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
@@ -174,7 +175,10 @@ describe('AccessRequestManagerDetail', () => {
 
     fixture.componentInstance.safeAllow();
 
-    expect(confirm.mock.calls[0][0].message).toContain(': &lt;b&gt;x&lt;/b&gt;.');
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(toMarkup(confirm.mock.calls[0][0].message)).toContain(
+      ': &lt;b&gt;x&lt;/b&gt;.',
+    );
   });
 
   it('should save the IVA that the data steward selects', async () => {

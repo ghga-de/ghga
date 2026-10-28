@@ -17,6 +17,7 @@ import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTracker } from '@app/shared/services/navigation';
+import { toMarkup } from '@app/shared/utils/html';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import { UserManager } from '../user-manager/user-manager';
 import { UserManagerDetail } from './user-manager-detail';
@@ -136,9 +137,42 @@ describe('UserManagerDetail', () => {
 
     component.safeStatusChange();
 
-    expect(confirm.mock.calls[0][0].message).toContain(
-      'user account of Jo &lt;b&gt;Bold&lt;/b&gt; shall',
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(toMarkup(confirm.mock.calls[0][0].message)).toContain(
+      'Jo &lt;b&gt;Bold&lt;/b&gt; shall',
     );
+  });
+
+  it('should ask for confirmation of a deactivation', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+
+    component.safeStatusChange(false);
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    const options = confirm.mock.calls[0][0];
+    expect(options.title).toBe('Confirm user account deactivation');
+    expect(options.confirmText).toBe('Confirm deactivation');
+    expect(options.confirmClass).toBe('danger');
+    expect(toMarkup(options.message)).toMatch(
+      /<strong>deactivated<\/strong>\. ?<\/p>$/,
+    );
+  });
+
+  it('should ask for confirmation of a reactivation', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+
+    component.safeStatusChange(true);
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    const options = confirm.mock.calls[0][0];
+    expect(options.title).toBe('Confirm user account activation');
+    expect(options.confirmText).toBe('Confirm activation');
+    expect(options.confirmClass).toBe('success');
+    expect(toMarkup(options.message)).toMatch(/<strong>activated<\/strong>\. ?<\/p>$/);
   });
 
   it('should find and display user when ID matches', () => {
