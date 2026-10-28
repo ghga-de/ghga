@@ -24,7 +24,12 @@ from typing import Any
 
 import httpx2
 
-from ghga_connector.core.client import get_ratelimiting_retry_transport
+from ghga_connector.config import get_config
+from ghga_service_commons.transports import (
+    AsyncRetryTransport,
+    BaseTransportFactory,
+    CompositeTransportFactory,
+)
 
 __all__ = [
     "MOCK_API_HOST",
@@ -96,6 +101,15 @@ def is_mocked(url: httpx2.URL, base_urls: Sequence[str]) -> bool:
     )
 
 
+def get_ratelimiting_retry_transport(
+    make_base_transport: BaseTransportFactory | None = None,
+) -> AsyncRetryTransport:
+    """Wrap a base transport in the retry and rate limiting layers the connector uses."""
+    return CompositeTransportFactory.create_ratelimiting_retry_transport(
+        get_config(), make_base_transport=make_base_transport
+    )
+
+
 class MockApiTransport(httpx2.AsyncBaseTransport):
     """Sends calls to the mocks, lets test environment traffic out, refuses the rest."""
 
@@ -104,13 +118,11 @@ class MockApiTransport(httpx2.AsyncBaseTransport):
         mocks: httpx2.MockTransport,
         base_urls: Sequence[str],
         *,
-        limits: httpx2.Limits | None = None,
+        make_base_transport: BaseTransportFactory | None = None,
     ) -> None:
         self._base_urls = tuple(base_urls)
-        self._mocked = get_ratelimiting_retry_transport(
-            base_transport=mocks, limits=limits
-        )
-        self._network = get_ratelimiting_retry_transport(limits=limits)
+        self._mocked = get_ratelimiting_retry_transport(lambda _: mocks)
+        self._network = get_ratelimiting_retry_transport(make_base_transport)
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         """Send the request wherever it is allowed to go, or refuse to send it."""

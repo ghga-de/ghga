@@ -169,7 +169,6 @@ configMap:
 config:
   host: 0.0.0.0
   mongo_dsn:
-  db_name: pcs
   service_instance_id: rest.1
   token_hashes: []
   enable_opentelemetry: false
@@ -179,6 +178,9 @@ config:
 configPrefix: pcs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 environment:
   name: default
 cluster:

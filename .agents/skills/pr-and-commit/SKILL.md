@@ -2,6 +2,9 @@
 name: pr-and-commit
 description: Take a change through its branch by the GHGA naming grammar, one stage at a time (branch, commit, open with title and description, merge with the squash commit and stacks, cleanup of merged branches and worktrees), or reply to a review comment. Use as /pr-and-commit <stage>.
 disable-model-invocation: true
+allowed-tools:
+  - Bash(git branch -D *)
+  - Bash(just wt-rm *)
 ---
 
 # Branches, pull requests and commits
@@ -17,7 +20,8 @@ Do the stage the dev names after the command, or the one the request describes, 
 3. In a stack, the key goes in front of the stack name when the issue covers the whole stack, and in front of the description when it covers only this PR.
 4. Run `git fetch origin` and cut the branch from `origin/dev`, or `origin/main` for a hotfix, never from a local `dev`: it lags behind after every merge.
    In a stack, cut it from the branch below instead.
-5. When the main clone holds other work, `just wt <branch>` gives the branch its own worktree, cut from `origin/dev` (pass `origin/main` as the second argument for a hotfix); otherwise `git switch -c <branch> origin/dev`.
+5. When the main clone holds other work, `just wt <branch>` gives the branch its own worktree, cut from `origin/dev` (pass `origin/main` as the second argument for a hotfix); otherwise `git switch --no-track -c <branch> origin/dev`.
+   Without `--no-track` the branch tracks `origin/dev`, and a plain `git push` or the editor's sync button pushes it onto `dev`; the first `git push -u origin <branch>` sets the right upstream.
 
 ## Commit
 
@@ -65,11 +69,13 @@ The old head is the merged PR's `headRefOid`.
 
 1. Run `git fetch --prune`; `git branch -vv` marks a branch whose remote was deleted `[gone]`, and `git worktree list` shows the worktrees.
 2. Treat a gone branch as merged only when its PR merged (`gh pr list --state merged --head <branch>`, or the dev says so); a remote branch can also be deleted unmerged, so ask about the others.
+   A `pr-<n>` branch fetched from `pull/<n>/head` has no upstream and never shows `[gone]`; check it with `gh pr view <n> --json state`.
 3. For each worktree of a merged branch, show `git -C <path> status --short`.
    Remove a clean one with `just wt-rm <name>`, or `git worktree remove <path>` outside `.claude/worktrees/`, after `git worktree unlock <path>` if it is locked.
    Ask the dev about one with changes, and never pass `--force`, which discards them.
 4. Delete the branch with `git branch -D`: after a squash, `-d` refuses it as unmerged.
-5. Leave `dev`, `main` and the branch the main clone has checked out.
+5. Leave `dev` and `main`.
+   When the branch the main clone has checked out merged and its tree is clean, run `git switch dev && git merge --ff-only origin/dev` first; otherwise leave that branch too.
 
 ## Review replies
 

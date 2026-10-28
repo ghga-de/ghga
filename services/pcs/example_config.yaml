@@ -5,7 +5,7 @@ cors_allowed_headers: null
 cors_allowed_methods: null
 cors_allowed_origins: null
 cors_exposed_headers: null
-db_name: dev
+db_name: purge-controller
 db_version_collection: pcsDbVersions
 docs_url: /docs
 enable_opentelemetry: false

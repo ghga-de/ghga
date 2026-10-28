@@ -5,7 +5,7 @@
 # Members (libs/*, services/*, tools/*) each have their own pyproject.toml + version, and
 # consume internal libraries from source via `[tool.uv.sources] <lib> = { workspace = true }`.
 #
-# See docs/architecture/overview.md and docs/adrs/adr-0026-uv-workspace-source-coupled-libs.md.
+# See docs/architecture/ac-0000-monorepo-overview.md and docs/adrs/adr-0026-uv-workspace-source-coupled-libs.md.
 
 [tool.uv.workspace]
 members = ["libs/*", "services/*", "tools/*"]
@@ -21,7 +21,8 @@ dev = [
     "pre-commit>=4.6",
     "mypy>=2.1",
     "ruff>=0.15.13",
-    "rumdl>=0.2.77",
+    "rumdl>=0.3.0",
+    "actionlint-py>=1.7.12",  # the workflow hook; it also runs shellcheck on run: blocks
     "httpx>=0.28.1",
     "tomli_w>=1.2",
     "pyyaml>=6",  # scripts/docs_check.py reads ADR frontmatter
@@ -29,7 +30,7 @@ dev = [
     # per-member test deps recovered from the dropped lock/requirements-dev.in files.
     # testcontainers is needed by hexkit's provider testutils across most suites; make it a
     # first-class dev dep so container tests fail on the Docker daemon (not on import).
-    "testcontainers>=4.14",
+    "testcontainers>=4.15",
     "aiosmtpd>=1.4.6",
     "openapi-core>=0.19.5",
     "cryptography>=46",
@@ -75,14 +76,22 @@ exclude = [
 ]
 
 [tool.ruff.per-file-target-version]
+# The platform lane and the one library the testbed installs: the testbed venv is built
+# with `--python 3.12` (see `testbed-install`), and it installs these from source, so
+# their floor cannot follow the workspace to 3.14 until that venv moves.
 "libs/ghga-event-schemas/**" = "py312"
 "libs/metldata/**" = "py312"
 "tools/ghga-datasteward-kit/**" = "py312"
-"services/**" = "py313"
-"tools/auth-km-jobs/**" = "py313"
-# not members: they run on the workspace interpreter
-"scripts/**" = "py313"
-"deploy/**" = "py313"
+"services/**" = "py314"
+"tools/auth-km-jobs/**" = "py314"
+# not a member: it runs on the workspace interpreter
+"deploy/**" = "py314"
+# not a member either, and not on the workspace interpreter: the PEP 723 scripts resolve
+# against their own requires-python, and ci.yaml and the justfile call some with a bare
+# `python3` — the image's interpreter, not the workspace's. So the target is the lowest
+# floor any script there declares, or ruff emits syntax one of those cannot parse:
+# PEP 758's unparenthesized `except` is 3.14 only.
+"scripts/**" = "py311"
 
 [tool.ruff.lint]
 # --- ported verbatim from the template ---
@@ -190,9 +199,6 @@ exclude = [
 ]
 # inline HTML is how the READMEs and docs place images, anchors and <details>
 disable = ["MD033"]
-# reported but never fixed: their fixes misread bold URLs, `a * 3 * b` and indented
-# lists, and a person has to choose the right markup instead
-unfixable = ["MD034", "MD037", "MD046"]
 
 [tool.rumdl.per-file-ignores]
 # a template filled in on GitHub

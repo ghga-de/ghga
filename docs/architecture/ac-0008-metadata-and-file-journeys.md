@@ -1,4 +1,12 @@
-# Metadata & File Journeys — Current-State Reference
+---
+status: current
+date: 2026-07-13
+amended: 2026-10-15
+tags: [backend, data, events]
+related: [AC-0001, AC-0002, AC-0007, AC-0009]
+---
+
+# AC-0008 — Metadata and file journeys
 
 > **Purpose.**
 > A durable, implementation-level map of how metadata and files flow through the GHGA platform **as built today** (LinkML + offline metadata management via `ghga-datasteward-kit`).
@@ -11,7 +19,7 @@
 > File:line anchors are provided as entry points.
 > They drift — treat them as "start looking here", not as guarantees.
 >
-> **The same flows as a diagram.** [kafka-cascade-map.html](kafka-cascade-map.html) draws the event cascades these journeys describe, one tree per entrypoint; [kafka-cascade-map.md](kafka-cascade-map.md) says how to open and maintain it.
+> **The same flows as a diagram.** [kafka-cascade-map.html](kafka-cascade-map.html) draws the event cascades these journeys describe, one tree per entrypoint; [ac-0009-kafka-cascade-map.md](ac-0009-kafka-cascade-map.md) says how to open and maintain it.
 
 ---
 

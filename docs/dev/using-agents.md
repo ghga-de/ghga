@@ -12,6 +12,8 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 - **Skills:** task procedures in `.agents/skills/`, listed with where each applies in the [skill catalogue](../agent-skills.md); `/skills` in Claude Code lists the ones your session can use.
 - **Hooks:** in [`.claude/settings.json`](../../.claude/settings.json), checks at session start that you run in the dev container and that the git hooks are installed.
   Guards stop edits to generated files, `uv` on the host and commands that skip the git hooks, and an edit to lint configuration asks you first.
+  After each Python change by Edit, Write or a shell command, a check runs mypy on the changed file's unit and on every unit that imports its module, and ruff on the file, and reports the errors to the agent before its next step ([agent-instructions.md](../agent-instructions.md#hooks)).
+  It costs 0.2–0.5 s for an edit inside one service and up to about 8 s cold for a hexkit module that 16 units import; `just typecheck` and the commit hooks stay the authority.
 - **Permissions:** the same file allows the read-only `gh` commands, `rg`, `fd`, `just test`, `just lint`, `just typecheck` and `just affected`.
   It asks before creating or commenting on a PR, before `rm -rf`, before `rg --pre` or `fd --exec`, which run other commands, and before `rg` searches `.env` or gitignored files.
   It denies merges, releases, force pushes, `sudo`, `ssh`, `chmod 777` and reading `.env` files.
@@ -23,7 +25,7 @@ If you are new to the repo, read [getting-started.md](getting-started.md) first.
 
 Personal instructions go in one of these, never in a committed file:
 
-- **`~/.claude/CLAUDE.md`** loads in every project and lives on the `ghga-claude` volume, so it survives a container rebuild.
+- **`~/.claude/CLAUDE.md`** loads in every project and lives on the `ghga-claude` volume, so it survives a container rebuild; Copilot's counterpart is `~/.copilot/copilot-instructions.md`.
 - **`.claude/rules/personal.local.md`**, or any `*.local.md` there, loads for this repo only and is gitignored.
   It exists only in the checkout or worktree you create it in.
 - **`CLAUDE.local.md`** works only if you set **Project instructions** to `claude-md-and-agents-md` in `/config`.
@@ -34,6 +36,39 @@ Personal settings go in `.claude/settings.local.json`, which is gitignored.
 To use another output style, set `outputStyle` there; your user settings do not override the project's default.
 If you have Anthropic's `commit-commands` plugin, you need not turn it off, but we recommend it for this repo: `claude plugin disable commit-commands@claude-plugins-official --scope local`.
 `/pr-and-commit` replaces it here, and the model can run the plugin's commands unasked; its `commit-push-pr` pushes without asking, and its commit messages ignore the grammar.
+
+In the dev container, what the agents write themselves survives a rebuild on three named Docker volumes:
+
+| Volume | Path | Holds |
+|---|---|---|
+| `ghga-claude` | `~/.claude` | Claude Code: settings, sessions, auto memory, personal skills |
+| `ghga-copilot` | `~/.copilot` | Copilot: settings, instructions, sessions, saved approvals, login |
+| `ghga-agents` | `~/.agents` | personal skills that Copilot, OpenCode and Codex read, and what `npx skills` installs |
+
+The volumes live in Docker's own storage, not in your checkout: in Docker Desktop's VM on macOS and Windows, under `/var/lib/docker/volumes` on Linux.
+Each stays on its machine and is shared by every checkout there; Docker Desktop's **Clean / Purge data** deletes them.
+Anything else in the home directory is lost on a rebuild, including the rest of OpenCode's and Codex's state, and Copilot's chat history in VS Code.
+
+What you write yourself, and want on every machine, belongs in a dotfiles repository: your own Git repo, which VS Code clones into each new dev container and sets up with its install script.
+Set the VS Code user setting `dotfiles.repository` to it, such as `your-name/dotfiles`; with Settings Sync on, every machine picks that up.
+Let the script link files rather than copy them, so an edit lands in the clone in `~/dotfiles`, ready to commit, and push it before a rebuild, since the clone is not on a volume.
+Logins stay out of it: you log in once per machine, and the volumes keep that.
+For example, with `CLAUDE.md`, `copilot-instructions.md` and a `skills/` folder next to it:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+here=$(cd "$(dirname "$0")" && pwd)
+mkdir -p ~/.agents/skills ~/.claude/skills
+ln -sfn "$here/CLAUDE.md" ~/.claude/CLAUDE.md
+ln -sfn "$here/copilot-instructions.md" ~/.copilot/copilot-instructions.md
+for skill in "$here"/skills/*/; do
+  name=$(basename "$skill")
+  ln -sfn "$here/skills/$name" ~/.agents/skills/"$name"
+  # Claude Code does not read ~/.agents/skills
+  ln -sfn ../../.agents/skills/"$name" ~/.claude/skills/"$name"
+done
+```
 
 Tools worth installing for yourself, none of them shared:
 
@@ -85,6 +120,8 @@ For `adr` it runs 42 sessions on your own Claude credential in about 15 minutes,
 
 The [PR template](../../.github/pull_request_template.md) asks for the checks and the credit.
 Before you ask a person for review, run `/ghga-review`, which checks the change against the written rules, and the built-in `/code-review`, which looks for bugs.
+Reviewing someone else's PR, `/review-board <PR>` puts the findings on a private artifact page: each one reproduced with code, with its fix and a status you set as you decide.
+`/define-tasks` turns the decided board into tasks.
 `/pr-and-commit <stage>` takes a change through its branch by the naming grammar: `branch`, `commit`, `open` (title and description, pushed after your go), `merge` (the squash commit, which GitHub's prefill never gets right, and a stack PR by PR) and `cleanup` (merged branches and their worktrees).
 It also drafts replies to review comments.
 Credit an agent in the PR description as the [conventions](../conventions.md#names-branches-prs-commits) say, never with a `Co-authored-by:` trailer.
@@ -93,6 +130,7 @@ Credit an agent in the PR description as the [conventions](../conventions.md#nam
 
 `/release <name> <version>`, such as `/release ghga 15.4.0`, works out the tag and its branch, runs the checks before it, and stops for your go before each step that cannot be undone: pushing the tag and dispatching the publish ([releases.md](../releases.md)).
 Publishing the release notes stays with you, since agents may not edit a release.
+The `hexkit` skill loads for code that uses hexkit; it is the one hexkit's wheel and docs site give every consumer, so it names nothing of this repo.
 The `testbed` skill loads once an agent works under `testbed/`: it places a new feature in the suite's order and debugs a failed run from its symptoms, before any code change.
 
 ## Front end

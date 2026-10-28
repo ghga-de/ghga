@@ -94,12 +94,17 @@ Only a skill about one member's internals stays nested in that member, as the `l
 The [skill catalogue](agent-skills.md) is generated from the frontmatter and lists every skill, where it applies and who invokes it.
 
 The frontmatter holds the fields of the [specification](https://agentskills.io/specification): `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
-Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable` and `paths` are allowed, since they only narrow when a skill loads and the other tools ignore them without harm.
+Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable`, `paths` and `argument-hint` are allowed, since the other tools ignore them without harm.
+The first three only narrow when a skill loads, and `argument-hint` names a skill's argument in the slash-command menu.
 
 A third-party skill, such as Google's `angular-developer`, is a pinned copy in the root `.agents/skills/`, with its source and full commit SHA in `metadata` and our own `paths` and invocation fields.
 Nothing else in it is edited, so a newer copy replaces it whole; the Angular one moves to the branch of [angular/skills](https://github.com/angular/skills) that matches the portal's Angular version when the portal upgrades.
 The Markdown lint and `just prose` skip it.
 Where it disagrees with our docs, a skill of ours names the difference and takes priority, as `data-portal` does.
+
+A library we publish to PyPI ships its consumer skill inside its package, in `src/<package>/.agents/skills/<name>/`, as FastAPI and Typer do: tools that read `site-packages` find it there, and the docs site publishes the same file (great-docs' `skill.file`).
+The root `.agents/skills/<name>` is a committed symlink to that directory, so the repo offers it as a root skill; `MANIFEST.in` lists the `SKILL.md`, and the publish workflow fails a wheel without it or with its eval suite.
+hexkit's is the first.
 
 Claude Code reads `.claude/skills/` only, so each skill gets a symlink, `.claude/skills/<name>` → `../../.agents/skills/<name>`, beside the same `.agents/`: in the root for a root skill, in the member for a nested one.
 Its documentation supports this, and the symlink goes when Claude Code reads the standard path.
@@ -146,7 +151,7 @@ A root skill's eval suite is one file, `.agents/skills/<name>/evals.yaml`, and `
 Each case runs 3 times with the skill and 3 times without it, in a clone at a pinned commit that `scripts/skill-eval-scaffold.sh` prepares without the root skills.
 Neither arm loads the project's settings, hooks or `AGENTS.md`, so each case tells the agent to read the root `AGENTS.md` first.
 A run loads only the plugin under test, so a skill that works next to another, as `data-portal` does next to `angular-developer`, lists `plugins` in its suite: the suite then runs once per plugin, each a set of skills against none.
-A pass is due when the skill's `SKILL.md` changes, and for every suite when `SKILL_EVAL_MODEL` in the justfile moves to a new default model.
+A pass is due when the skill's `SKILL.md` changes, and for every suite when `SKILL_EVAL_MODEL` in `scripts/just/skill-eval.sh` moves to a new default model.
 Passes run by hand; a CI workflow follows once a few passes show stable scores.
 A grader changed after a run means rerunning the whole suite, and moving the pin means checking each case's expected values against the new commit.
 
@@ -159,6 +164,19 @@ The PR that adds or changes a shared skill shows the reviewer:
 - the budget figures after the change, and what `/doctor prompt-audit` reports about the skill.
 
 Skills are reviewed each quarter: one unused for two quarters, or no longer beating the baseline after a model change, is removed.
+
+## Hooks
+
+The hooks in `.claude/settings.json` are listed in [dev/using-agents.md](dev/using-agents.md#what-the-repo-sets-up).
+A hook that adds to what the agent reads, rather than blocking a mistake, is admitted as a skill is: on an eval against a session without it, where a tie is a rejection.
+The type check after each Python change passed one on 2026-10-21, with Opus 5.5, 9 cases and 3 runs per arm:
+
+| | with the check | without |
+|---|---|---|
+| end state clean (lint, mypy, tests) | 27/27 | 22/27 |
+| failed check rounds per run | 0.9 | 1.7 |
+| turns per run | 16 | 20 |
+| lines per run added to silence a checker | 0.3 | 0.3 |
 
 ## Keeping them true
 
@@ -193,3 +211,11 @@ Options considered and left out, with the signal to look again.
   Claude Code can export OpenTelemetry events that name the skill behind each request, which would show the team's skill use for the quarterly review.
   It needs a collector and an opt-in in each dev's `~/.claude/settings.json`, since committed settings would also export outside contributors' sessions.
   Look again if the `/skill-doctor` reports leave the review guessing.
+- **A Python language server.**
+  pylsp with mypy and ruff tied with a session without it on an eval on 2026-10-14, since it checks only the files the agent has open and misses the callers a change breaks elsewhere.
+  Look again if a server can report for a whole unit.
+- **Project subagents in `.claude/agents/`.**
+  Four were measured against a session without them on 2026-10-21: `silent-failure-hunter` and `type-design-analyzer`, ported from Anthropic's pr-review-toolkit, and `member-tester` and `testbed-runner`, which run the checks and hand back only the failures.
+  The session without them found all 25 defects planted in the review cases, so the reviewers could not find more, and the session called them only when the prompt named them.
+  The runners gave the same result at a higher cost: `member-tester` cost 15% more and was called in 4 of 9 runs, and `testbed-runner` was no faster once a headless session was told to wait for the suite in the foreground.
+  Look again if a session starts missing planted defects, or a test-bed run's output no longer fits a session's context.

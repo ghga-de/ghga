@@ -22,7 +22,7 @@ Commit messages, branch names and pull request titles follow the [conventions](c
   The word count is not the test: if you have to read your own sentence twice, split it.
 - **No idioms or figures of speech** ("circle back", "get the ball rolling", "on the same page").
   Name the literal action instead, and the literal thing: base, not substrate; required, not load-bearing.
-- **"X, not Y" only when the reader would assume Y.**
+- **"X, not Y" only when Y is what the reader would assume.**
   Otherwise state X alone.
 - **Every prohibition names the alternative.**
   "Don't X" leaves the reader guessing; say what to do instead.
@@ -55,6 +55,8 @@ Docs are rendered on GitHub and read in an editor, so they are GitHub Flavored M
   A heading is a label, not a sentence: a colon belongs on the paragraph or bold lead-in introducing a list, not on the heading.
 - **Bullets for what the reader acts on** — steps, requirements, options — and prose for the reasoning around them.
   A paragraph holding three parallel items is a list.
+- **Link only to pages every reader can open.**
+  The repository is public, so name an internal page — the wiki, the internal docs site, a GRFC, an SOP or a white paper — as plain text instead of linking it.
 
 ## Length
 
@@ -65,9 +67,9 @@ Agents read these files as well as people, so every extra paragraph costs contex
 | Pull request description | Up to 3 short paragraphs, about 150 words |
 | Commit message body | 3 to 5 bullets, per the [conventions](conventions.md#names-branches-prs-commits) |
 | Code comment | One line, a few at most |
-| ADR | About 500 words; the Summary alone about 120, at most 150. Long analysis goes into an architecture document that the ADR links to |
-| Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture documents instead of restating them |
-| Architecture document | As long as the subject needs; open with a summary of up to 10 lines and use headings, so a reader can load a single section |
+| ADR | About 500 words; the Summary alone about 120, at most 150. Long analysis goes into an architecture concept that the ADR links to |
+| Epic specification | As short as possible, as detailed as the work needs; link to ADRs and architecture concepts instead of restating them |
+| [Architecture concept](architecture/README.md) | As long as the subject needs; open with a summary of up to 10 lines and use headings, so a reader can load a single section |
 
 ## Line wrapping
 
@@ -147,4 +149,4 @@ Change that is large enough to replace the decision gets a new ADR that supersed
 
 The index in [`docs/README.md`](README.md#decisions-adrs) is generated from the frontmatter.
 `scripts/docs_check.py` checks these rules and every ADR reference in the tree, and regenerates the index ([ADR-0041](adrs/adr-0041-docs-linting.md)).
-The same script checks the epics and their index; it runs as a pre-commit hook and as `just docs-check`.
+The same script checks the epics, the [architecture concepts](architecture/README.md) and their indexes; it runs as a pre-commit hook and as `just docs-check`.

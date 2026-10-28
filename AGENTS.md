@@ -18,8 +18,8 @@ What the repository is, its layout, and how to run the demo and test bed are doc
 
 ## Tech stack
 
-- Python 3.13 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always integrated).
-  Members set their own `requires-python` floor — 3.11 on the PyPI lane, 3.13 for the services — and the combo gate tests a PyPI-lane member on every version from 3.11 to 3.14 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
+- Python 3.14 (`.python-version`), one `uv` workspace spanning `libs/`, `services/`, `tools/`, a single `uv.lock`, internal libraries consumed from source (HEAD is always integrated).
+  Members set their own `requires-python` floor — 3.11 on the PyPI lane, 3.14 for the services — and the combo gate tests a PyPI-lane member on every version from 3.11 to 3.15 its floor allows (`TEST_PYTHONS` in `scripts/pypi_members.py`).
 - Services: FastAPI + Pydantic on `hexkit` (ports-and-adapters; Kafka, MongoDB, S3 providers); most run as a rest + consumer pair
 - Lint/format: `ruff` · typecheck: `mypy` · unit tests: `pytest`, each configured **once**, in the root `pyproject.toml`
 - Front end: Angular 22 with its own `pnpm` workspace and lockfile (not a uv member)
@@ -46,7 +46,7 @@ The container puts `rg`, `fd`, `jq`, `bat`, `shellcheck` and `shfmt` on `PATH`; 
 
 Agent sessions belong in the container too, whichever agent it is — their state is per-machine, so a session on the host writes to a home the container cannot see.
 At the start of a session, check for `/.dockerenv`; if it is missing and `CI` and `GHGA_ALLOW_HOST` are unset, tell the dev and ask before running repo tooling.
-Only `~/.claude` persists across rebuilds (the `ghga-claude` volume in `devcontainer.json`); another agent's state needs its own volume there.
+Agent state persists across rebuilds only in `~/.claude`, `~/.copilot` and `~/.agents`, the named volumes in `devcontainer.json`; another agent's state needs its own volume there.
 
 ## Repo commands (just)
 
@@ -106,7 +106,7 @@ Docs, code comments, docstrings, commits and pull requests follow the [writing s
 Markdown files in the repo take one sentence per line; text for a GitHub web form — pull request descriptions, review and issue comments, release notes — takes one line per paragraph, as the [line wrapping](docs/style.md#line-wrapping) rules say.
 Read the section that applies before writing any of them.
 For anything under `docs/`, read [docs/README.md](docs/README.md) first for what each document is for, then the [ADR shape](docs/style.md#architecture-decision-records) or the [epic conventions](docs/epics/README.md).
-An epic specification records the plan as its epic started, so do not update it afterwards; current behaviour belongs in an ADR or the code.
+Before changing a started epic, read the note at the top of the [epic conventions](docs/epics/README.md), which says when that is allowed.
 
 ## Python best practices
 

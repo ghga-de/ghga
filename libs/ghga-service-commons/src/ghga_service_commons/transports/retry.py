@@ -37,8 +37,12 @@ log = getLogger(__name__)
 
 
 def _default_wait_strategy(config: RetryTransportConfig):
-    """Wait strategy using exponential backoff, not waiting for 429 responses."""
-    return wait_exponential_ignore_429(max=config.client_exponential_backoff_max)
+    """Wait strategy using exponential backoff.
+
+    If used in conjunction with an `AsyncRateLimitingTransport`, when handling a 429
+    the longer wait from either layer wins.
+    """
+    return wait_exponential(max=config.client_exponential_backoff_max)
 
 
 def _default_stop_strategy(config: RetryTransportConfig):
@@ -65,7 +69,6 @@ def _log_retry_stats(retry_state: RetryCallState):
         "time_elapsed": round(time.monotonic() - retry_state.start_time, 3),
     }
 
-    # Enrich with details from the current attempt for debugging.
     if (outcome := retry_state.outcome) is not None:
         if outcome.failed:
             exc = outcome.exception()
@@ -103,41 +106,11 @@ def _log_before_attempt(retry_state: RetryCallState):
     )
 
 
-class wait_exponential_ignore_429(wait_exponential):  # noqa: N801
-    """Custom exponential backoff strategy not waiting for 429 responses.
-
-    429 responses need to set the `Should-Wait` header to signal to fall back to using
-    exponential backoff.
-    """
-
-    def __call__(self, retry_state: RetryCallState) -> float:
-        """Copied from base class and adjusted."""
-        # Only read a successful outcome's result. Calling `.result()` pollutes the traceback
-        # if an exception is stored
-        outcome = retry_state.outcome
-        if outcome is not None and not outcome.failed:
-            result = outcome.result()
-            if (
-                isinstance(result, httpx2.Response)
-                and result.status_code == 429
-                and not result.headers.get("Should-Wait")
-            ):
-                return 0
-        try:
-            exp = self.exp_base ** (retry_state.attempt_number - 1)
-            result = self.multiplier * exp
-        except OverflowError:
-            result = self.max
-        return max(max(0, self.min), min(result, self.max))
-
-
 class AsyncRetryTransport(httpx2.AsyncBaseTransport):
     """Custom async Transport adding retry logic on top of AsyncHTTPTransport.
 
-    This adds tenacity based retry logic around HTTP calls.
-    Custom wait and stop strategies and logging after each attempt can be injected.
-    The default wait strategy uses and exponential backoff, but ignores 429 responses,
-    so their retry-after header can be dealt with correctly, if present.
+    The wait and stop strategies and the per-attempt logging can be injected. The
+    default waits with exponential backoff.
     """
 
     def __init__(  # noqa: PLR0913

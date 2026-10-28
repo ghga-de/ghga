@@ -89,7 +89,7 @@ def _extract_exception_id(response: httpx2.Response) -> str | None:
     """
     try:
         return response.json()["exception_id"]
-    except (KeyError, ValueError, TypeError):
+    except KeyError, ValueError, TypeError:
         return None
 
 

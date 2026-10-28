@@ -9,12 +9,12 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
@@ -27,7 +27,7 @@ dependencies = [
     "typer >= 0.26",
     "ghga-service-commons[api,auth,http] >= 9.0, < 10",
     "ghga-event-schemas ~= 13.0",
-    "hexkit[akafka,mongodb,opentelemetry] >= 9.0",
+    "hexkit[akafka,mongodb,opentelemetry] >= 10.0",
 ]
 
 [project.urls]

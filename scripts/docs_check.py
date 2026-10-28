@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Check the ADRs and the epics, and the references to them, across the tree (ADR-0041).
+"""Check the ADRs, the epics and the architecture concepts, and the references to them.
 
-Without arguments it checks both sets: ADR file names, frontmatter, headings and
-supersession, epic names and shape, the shape and length of the instruction files,
-rules and skills for coding agents, and every reference in the tracked text files. It
-then regenerates the ADR index in docs/README.md, the epic index in docs/epics/README.md
-and the skill catalogue in docs/agent-skills.md, and fails when that changed a file, so
-the fix is to stage the result. A session's context budget over its ceiling, or an
+Without arguments it checks all three sets: ADR file names, frontmatter, headings and
+supersession, epic names and shape, concept file names and frontmatter, the shape and
+length of the instruction files, rules and skills for coding agents, and every
+reference in the tracked text files (ADR-0041, ADR-0048). It then regenerates the ADR
+index in docs/README.md, the epic index in docs/epics/README.md, the concept index in
+docs/architecture/README.md and the skill catalogue in docs/agent-skills.md, and fails
+when that changed a file, so the fix is to stage the result. A session's context budget over its ceiling, or an
 instruction file past its line target, is a warning, which leaves the exit code alone;
 `--budget` prints every session's figures. With `--refs` it checks only the references
 in the files given.
 
-The rules are the ones in docs/style.md, docs/epics/README.md and
-docs/agent-instructions.md; a change to one needs a change to the other.
+The rules are the ones in docs/style.md, docs/epics/README.md,
+docs/architecture/README.md and docs/agent-instructions.md; a change to one needs a
+change to the other.
 
 Usage:
     uv run python scripts/docs_check.py
@@ -40,6 +42,8 @@ TEMPLATE = "adr-template.md"
 EPIC_DIR = "docs/epics"
 EPIC_INDEX_FILE = "docs/epics/README.md"
 EPIC_SPEC = "README.md"
+AC_DIR = "docs/architecture"
+AC_INDEX_FILE = "docs/architecture/README.md"
 
 STATUSES = ("proposed", "accepted", "rejected", "deprecated", "superseded")
 TAGS = (
@@ -70,7 +74,7 @@ HEADINGS = (
 FILE_NAME = re.compile(r"^adr-(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 TITLE = re.compile(r"^# ADR-(\d{4}) — (\S.*)$")
 FRONTMATTER = re.compile(r"\A---\n(.*?\n)---\n", re.DOTALL)
-REF_VALUE = re.compile(r"^ADR-(\d{4})$")
+REF_VALUE = re.compile(r"^(ADR|AC)-(\d{4})$")
 
 # `ADR-0028`, and the compound forms `ADR-0028/0035` and `ADR-0031`, en dash, `0035`. A
 # tail of fewer than four digits is reported, since a two-digit tail is ambiguous.
@@ -95,6 +99,17 @@ EPIC_TYPES = (
 EPIC_SIBLING_LINK = re.compile(r"\]\((\.{1,2}/epic-[a-z0-9-]+(?:/README)?\.md)\)")
 EPIC_PATH_LINK = re.compile(r"\bepics/(epic-[a-z0-9-]+(?:/README)?\.md)")
 
+# An architecture concept describes how a part of GHGA works and is kept current, so
+# it takes the ADR frontmatter without supersession and with statuses of its own
+# (docs/architecture/README.md).
+AC_STATUSES = ("draft", "current", "outdated")
+AC_FIELDS = (*REQUIRED_FIELDS, "amended", "related")
+AC_FILE_NAME = re.compile(r"^ac-(\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
+AC_TITLE = re.compile(r"^# AC-(\d{4}) — (\S.*)$")
+AC_REFERENCE = re.compile(r"\bAC-(\d+)\b")
+AC_PATH_LINK = re.compile(r"\barchitecture/(ac-\d{4}-[a-z0-9-]+\.md)")
+AC_SIBLING_LINK = re.compile(r"\]\((ac-\d{4}-[a-z0-9-]+\.md)")
+
 # Instruction files for coding agents (ADR-0042, docs/agent-instructions.md). Claude
 # Code reads AGENTS.md only while no CLAUDE.md sits in the working directory or above
 # it, so none may be committed. The Copilot stub points at AGENTS.md and holds nothing
@@ -106,6 +121,10 @@ COPILOT_STUB = ".github/copilot-instructions.md"
 SKILL_DIR = ".agents/skills"
 SKILL_FILE = "SKILL.md"
 SKILL_PATH = re.compile(r"^(?:(.+)/)?\.agents/skills/([^/]+)/SKILL\.md$")
+# A library ships its skill inside its package, where tools that read site-packages
+# find it; the root .agents/skills/ links to it, so the repo offers it as a root skill.
+PACKAGED_SKILL_PATH = re.compile(r"^(.+/src/[^/]+)/\.agents/skills/([^/]+)/SKILL\.md$")
+SKILL_DIR_ENTRY = re.compile(r"^\.agents/skills/([^/]+)$")
 # Claude Code reads .claude/skills/ only, so each skill has a symlink there.
 CLAUDE_SKILL_ENTRY = re.compile(r"^(?:(.+)/)?\.claude/skills/([^/]+)$")
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -113,7 +132,7 @@ SKILL_NAME_MAX = 64
 DESCRIPTION_MAX = 1024
 DESCRIPTION_WARN = 300
 # The six fields of the Agent Skills spec, then the Claude Code fields that only
-# optimise and that the other tools ignore without harm.
+# optimise or label and that the other tools ignore without harm.
 SKILL_FIELDS = (
     "name",
     "description",
@@ -124,7 +143,14 @@ SKILL_FIELDS = (
     "disable-model-invocation",
     "user-invocable",
     "paths",
+    "argument-hint",
 )
+SKILL_FIELD_TYPES = {
+    "disable-model-invocation": (bool, "true or false"),
+    "user-invocable": (bool, "true or false"),
+    # YAML reads an unquoted hint like [PR or branch] as a list
+    "argument-hint": (str, "a string; quote one in [ ]"),
+}
 # Rule files, which Claude Code and VS Code load once the agent reads or edits a file
 # matching their `paths`, hold a rule for a kind of file no directory scopes. A rule
 # without `paths` loads in every session, so it belongs in an AGENTS.md; each rule is
@@ -168,26 +194,34 @@ EPIC_INDEX_LINK = re.compile(r"\]\(\./epic-(\d{4})-")
 INDEX_EMPTY = "None at the moment.\n"
 SKILL_INDEX_FILE = "docs/agent-skills.md"
 SKILL_INDEX_MARKS = ("<!-- skill-index:start -->", "<!-- skill-index:end -->")
+AC_INDEX_MARKS = ("<!-- ac-index:start -->", "<!-- ac-index:end -->")
 
 # Test data that holds broken ADRs and references on purpose, and skill eval suites,
 # which name the ADRs a run is expected to create.
 REF_EXCLUDED = ("scripts/tests/test_docs_check.py",)
 REF_EXCLUDED_EVALS = re.compile(r"(?:^|/)\.agents/skills/[^/]+/evals\.yaml$")
+# A file without one of these holds no reference worth a line-by-line scan; the git grep
+# for the tracked files uses the same terms.
+REF_TERMS = ("ADR-", "adrs/", "epic-", "AC-", "architecture/ac-")
 
 
 @dataclass
-class Adr:
-    """One parsed ADR file."""
+class Record:
+    """One parsed ADR or architecture concept."""
 
     name: str
     number: str
     title: str = ""
     meta: dict = field(default_factory=dict)
 
-    def refs(self, key: str) -> list[str]:
-        """Return the ADR numbers a reference field names, e.g. `["0024"]`."""
+    def refs(self, key: str, prefix: str = "ADR") -> list[str]:
+        """Return the numbers a reference field names with the prefix, e.g. `["0024"]`."""
         values = self.meta.get(key) or []
-        return [m.group(1) for v in values if (m := REF_VALUE.match(str(v)))]
+        return [
+            m.group(2)
+            for v in values
+            if (m := REF_VALUE.match(str(v))) and m.group(1) == prefix
+        ]
 
 
 @dataclass
@@ -259,15 +293,29 @@ def _check_headings(name: str, body: str) -> list[str]:
     ]
 
 
-def _check_meta(adr: Adr, numbers: set[str]) -> list[str]:
-    """Check the frontmatter fields and their values."""
-    name, meta, problems = adr.name, adr.meta, []
+def _check_meta(
+    record: Record,
+    prefix: str,
+    numbers: dict[str, set[str]],
+    fields: tuple[str, ...] = FIELDS,
+    statuses: tuple[str, ...] = STATUSES,
+) -> list[str]:
+    """Check the frontmatter fields and their values.
+
+    Args:
+        record: The ADR or concept.
+        prefix: `ADR` or `AC`, the kind of the record.
+        numbers: The existing numbers per prefix a reference field may name.
+        fields: The fields the kind knows.
+        statuses: The statuses the kind knows.
+    """
+    name, meta, problems = record.name, record.meta, []
     problems += [
         f"{name}: missing field '{k}'" for k in REQUIRED_FIELDS if k not in meta
     ]
-    problems += [f"{name}: unknown field '{k}'" for k in meta if k not in FIELDS]
-    if "status" in meta and meta["status"] not in STATUSES:
-        problems.append(f"{name}: status '{meta['status']}' is not one of {STATUSES}")
+    problems += [f"{name}: unknown field '{k}'" for k in meta if k not in fields]
+    if "status" in meta and meta["status"] not in statuses:
+        problems.append(f"{name}: status '{meta['status']}' is not one of {statuses}")
     for key in ("date", "amended"):
         if key in meta and not isinstance(meta[key], datetime.date):
             problems.append(f"{name}: {key} must be a YYYY-MM-DD date")
@@ -279,31 +327,35 @@ def _check_meta(adr: Adr, numbers: set[str]) -> list[str]:
             problems += [f"{name}: unknown tag '{t}'" for t in tags if t not in TAGS]
             if len(set(map(str, tags))) != len(tags):
                 problems.append(f"{name}: tags repeat")
-    return problems + _check_ref_fields(adr, numbers)
+    keys = [k for k in REF_FIELDS if k in fields]
+    return problems + _check_ref_fields(record, prefix, numbers, keys)
 
 
-def _check_ref_fields(adr: Adr, numbers: set[str]) -> list[str]:
-    """Check that `supersedes`, `superseded-by` and `related` name existing ADRs."""
-    name, problems = adr.name, []
-    for key in REF_FIELDS:
-        if key not in adr.meta:
+def _check_ref_fields(
+    record: Record, prefix: str, numbers: dict[str, set[str]], keys: list[str]
+) -> list[str]:
+    """Check that the reference fields name existing records of the allowed kinds."""
+    name, problems = record.name, []
+    allowed = " or ".join(f"{p}-NNNN" for p in numbers)
+    for key in keys:
+        if key not in record.meta:
             continue
-        values = adr.meta[key]
+        values = record.meta[key]
         if not isinstance(values, list) or not values:
-            problems.append(f"{name}: {key} must be a non-empty list of ADR-NNNN")
+            problems.append(f"{name}: {key} must be a non-empty list of {allowed}")
             continue
         for value in values:
             match = REF_VALUE.match(str(value))
-            if not match:
-                problems.append(f"{name}: {key} value '{value}' is not ADR-NNNN")
-            elif match.group(1) == adr.number:
-                problems.append(f"{name}: {key} names the ADR itself")
-            elif match.group(1) not in numbers:
+            if not match or match.group(1) not in numbers:
+                problems.append(f"{name}: {key} value '{value}' is not {allowed}")
+            elif (match.group(1), match.group(2)) == (prefix, record.number):
+                problems.append(f"{name}: {key} names the {prefix} itself")
+            elif match.group(2) not in numbers[match.group(1)]:
                 problems.append(f"{name}: {key} names {value}, which does not exist")
     return problems
 
 
-def _check_supersession(adrs: dict[str, Adr]) -> list[str]:
+def _check_supersession(adrs: dict[str, Record]) -> list[str]:
     """Require `supersedes` and `superseded-by` to name each other."""
     problems = []
     for number, adr in adrs.items():
@@ -329,14 +381,14 @@ def _check_supersession(adrs: dict[str, Adr]) -> list[str]:
     return problems
 
 
-def load_adrs(root: pathlib.Path) -> tuple[dict[str, Adr], list[str]]:
+def load_adrs(root: pathlib.Path) -> tuple[dict[str, Record], list[str]]:
     """Parse every ADR and check each file on its own and the set as a whole.
 
     Returns:
         The ADRs by number, the template excluded, and the problems found.
     """
     adr_dir = root / ADR_DIR
-    adrs: dict[str, Adr] = {}
+    adrs: dict[str, Record] = {}
     problems: list[str] = []
     files = sorted(p for p in adr_dir.iterdir() if p.is_file())
     for path in files:
@@ -353,38 +405,90 @@ def load_adrs(root: pathlib.Path) -> tuple[dict[str, Adr], list[str]]:
         if number in adrs:
             problems.append(f"{name}: number {number} is taken by {adrs[number].name}")
             continue
-        adr = Adr(name, number)
-        adrs[number] = adr
-        first = body.lstrip("\n").split("\n", 1)[0]
-        title = TITLE.match(first)
-        if not title or title.group(1) != number:
-            problems.append(f"{name}: first line must be '# ADR-{number} — Title'")
-        else:
-            adr.title = title.group(2).strip()
-        if meta is None:
-            problems.append(f"{name}: no YAML frontmatter")
-        elif "" in meta:
-            problems.append(f"{name}: frontmatter is not a YAML mapping")
-        else:
-            adr.meta = meta
-    numbers = set(adrs)
+        adrs[number], record_problems = _parse(name, number, meta, body, "ADR", TITLE)
+        problems += record_problems
+    numbers = {"ADR": set(adrs)}
     for adr in adrs.values():
-        problems += _check_meta(adr, numbers)
+        problems += _check_meta(adr, "ADR", numbers)
     problems += _check_supersession(adrs)
     return adrs, problems
 
 
+def _parse(
+    name: str,
+    number: str,
+    meta: dict | None,
+    body: str,
+    prefix: str,
+    title: re.Pattern[str],
+) -> tuple[Record, list[str]]:
+    """Read the title and frontmatter that ADRs and concepts share into a record."""
+    record, problems = Record(name, number), []
+    first = body.lstrip("\n").split("\n", 1)[0]
+    match = title.match(first)
+    if not match or match.group(1) != number:
+        problems.append(f"{name}: first line must be '# {prefix}-{number} — Title'")
+    else:
+        record.title = match.group(2).strip()
+    if meta is None:
+        problems.append(f"{name}: no YAML frontmatter")
+    elif "" in meta:
+        problems.append(f"{name}: frontmatter is not a YAML mapping")
+    else:
+        record.meta = meta
+    return record, problems
+
+
+def load_concepts(
+    root: pathlib.Path, adr_numbers: set[str]
+) -> tuple[dict[str, Record], list[str]]:
+    """Parse every architecture concept and check its name, title and frontmatter.
+
+    Every Markdown file in docs/architecture/ but the index is a concept.
+
+    Returns:
+        The concepts by number, and the problems found.
+    """
+    concepts: dict[str, Record] = {}
+    problems: list[str] = []
+    for path in sorted((root / AC_DIR).glob("*.md")):
+        if path == root / AC_INDEX_FILE:
+            continue
+        name = path.name
+        match = AC_FILE_NAME.match(name)
+        if not match:
+            problems.append(f"{name}: file name is not ac-NNNN-kebab-case.md")
+            continue
+        number = match.group(1)
+        if number in concepts:
+            problems.append(
+                f"{name}: number {number} is taken by {concepts[number].name}"
+            )
+            continue
+        meta, body = _split(path.read_text(encoding="utf-8"))
+        concepts[number], record_problems = _parse(
+            name, number, meta, body, "AC", AC_TITLE
+        )
+        problems += record_problems
+    numbers = {"ADR": adr_numbers, "AC": set(concepts)}
+    for concept in concepts.values():
+        problems += _check_meta(concept, "AC", numbers, AC_FIELDS, AC_STATUSES)
+    return concepts, problems
+
+
 def check_references(
-    root: pathlib.Path, paths: list[str], adr_names: set[str]
+    root: pathlib.Path, paths: list[str], adr_names: set[str], ac_names: set[str]
 ) -> list[str]:
-    """Report ADR references in the given files that name no existing ADR.
+    """Report references in the given files that name no existing ADR, epic or concept.
 
     Args:
         root: The repository root the paths are relative to.
         paths: The files to scan; binary and missing files are skipped.
         adr_names: The file names in docs/adrs/, the template included.
+        ac_names: The file names in docs/architecture/.
     """
     numbers = {m.group(1) for n in adr_names if (m := FILE_NAME.match(n))}
+    ac_numbers = {m.group(1) for n in ac_names if (m := AC_FILE_NAME.match(n))}
     problems = []
     for rel in paths:
         if rel in REF_EXCLUDED or REF_EXCLUDED_EVALS.search(rel):
@@ -394,12 +498,36 @@ def check_references(
         except (OSError, UnicodeDecodeError):
             continue
         in_adr_dir = rel.startswith(f"{ADR_DIR}/")
-        if not (in_adr_dir or any(term in text for term in ("ADR-", "adrs/", "epic-"))):
+        in_ac_dir = rel.startswith(f"{AC_DIR}/")
+        if not (in_adr_dir or in_ac_dir or any(t in text for t in REF_TERMS)):
             continue
         for lineno, line in enumerate(text.splitlines(), 1):
             where = f"{rel}:{lineno}"
             problems += _line_problems(where, line, in_adr_dir, adr_names, numbers)
             problems += _epic_link_problems(where, line, rel, root)
+            problems += _concept_problems(where, line, in_ac_dir, ac_names, ac_numbers)
+    return problems
+
+
+def _concept_problems(
+    where: str, line: str, in_ac_dir: bool, ac_names: set[str], numbers: set[str]
+) -> list[str]:
+    """Report the dangling concept mentions and links in one line."""
+    problems = []
+    for match in AC_REFERENCE.finditer(line):
+        part = match.group(1)
+        if len(part) != 4:
+            problems.append(f"{where}: '{match.group(0)}' needs a four-digit number")
+        elif part not in numbers:
+            problems.append(f"{where}: AC-{part} does not exist")
+    links = AC_PATH_LINK.findall(line)
+    if in_ac_dir:
+        links += AC_SIBLING_LINK.findall(line)
+    problems += [
+        f"{where}: link to {AC_DIR}/{target}, which does not exist"
+        for target in links
+        if target not in ac_names
+    ]
     return problems
 
 
@@ -568,7 +696,7 @@ def _epic_link_problems(
     ]
 
 
-def render_index(adrs: dict[str, Adr]) -> str:
+def render_index(adrs: dict[str, Record]) -> str:
     """Render the index table, one row per ADR in number order."""
 
     def link(number: str) -> str:
@@ -585,6 +713,17 @@ def render_index(adrs: dict[str, Adr]) -> str:
         tags = ", ".join(map(str, adr.meta.get("tags") or []))
         title = adr.title.replace("|", "\\|")
         rows.append(f"| {link(number)} | {title} | {status} | {tags} |")
+    return "\n".join(rows) + "\n"
+
+
+def render_concept_index(concepts: dict[str, Record]) -> str:
+    """Render the concept index table, one row per concept in number order."""
+    rows = ["| # | Title | Status | Tags |", "|---|---|---|---|"]
+    for number, concept in sorted(concepts.items()):
+        status = str(concept.meta.get("status", ""))
+        tags = ", ".join(map(str, concept.meta.get("tags") or []))
+        title = concept.title.replace("|", "\\|")
+        rows.append(f"| [{number}]({concept.name}) | {title} | {status} | {tags} |")
     return "\n".join(rows) + "\n"
 
 
@@ -741,9 +880,11 @@ def _skill_meta(skill: Skill, meta: dict, directory: str) -> tuple[list, list]:
                 f" keep it under {DESCRIPTION_WARN}"
             )
     problems += [f"{rel}: unknown field '{k}'" for k in meta if k not in SKILL_FIELDS]
-    for key in ("disable-model-invocation", "user-invocable"):
-        if key in meta and not isinstance(meta[key], bool):
-            problems.append(f"{rel}: {key} must be true or false")
+    problems += [
+        f"{rel}: {key} must be {expected}"
+        for key, (kind, expected) in SKILL_FIELD_TYPES.items()
+        if key in meta and not isinstance(meta[key], kind)
+    ]
     skill.by_model = meta.get("disable-model-invocation") is not True
     skill.by_user = meta.get("user-invocable") is not False
     if "paths" in meta:
@@ -768,7 +909,8 @@ def load_skills(
         match = SKILL_PATH.match(rel)
         if not match or (text := _stub_text(root, rel)) is None:
             continue
-        skill = Skill(match.group(2), match.group(1) or "", rel)
+        packaged = PACKAGED_SKILL_PATH.match(rel)
+        skill = Skill(match.group(2), "" if packaged else match.group(1) or "", rel)
         meta, body = _split(text)
         if meta is None or "" in meta:
             problems.append(f"{rel}: frontmatter must be a YAML mapping between ---")
@@ -791,11 +933,19 @@ def check_skill_links(root: pathlib.Path, tracked: list[str]) -> list[str]:
     """Report a skill without its .claude/skills/ symlink, and a symlink without its skill.
 
     The link sits beside the same .agents/ and is relative, so a clone gets it working
-    without a setup step (docs/agent-instructions.md).
+    without a setup step (docs/agent-instructions.md). A skill shipped in a package
+    gets a root .agents/skills/ link to its directory first, and its .claude/ link
+    beside the root .agents/.
     """
     tracked_set, problems, expected = set(tracked), [], {}
     for rel in tracked:
-        if match := SKILL_PATH.match(rel):
+        if match := PACKAGED_SKILL_PATH.match(rel):
+            name = match.group(2)
+            expected[f"{SKILL_DIR}/{name}"] = (
+                f"../../{match.group(1)}/{SKILL_DIR}/{name}"
+            )
+            expected[f".claude/skills/{name}"] = f"../../{SKILL_DIR}/{name}"
+        elif match := SKILL_PATH.match(rel):
             prefix = f"{match.group(1)}/" if match.group(1) else ""
             name = match.group(2)
             expected[f"{prefix}.claude/skills/{name}"] = f"../../{SKILL_DIR}/{name}"
@@ -809,6 +959,11 @@ def check_skill_links(root: pathlib.Path, tracked: list[str]) -> list[str]:
         f"{rel}: no skill at {SKILL_DIR}/{match.group(2)}"
         for rel in tracked
         if (match := CLAUDE_SKILL_ENTRY.match(rel)) and rel not in expected
+    ]
+    problems += [
+        f"{rel}: links to no skill shipped in a package"
+        for rel in tracked
+        if SKILL_DIR_ENTRY.match(rel) and rel not in expected
     ]
     return sorted(problems)
 
@@ -997,9 +1152,10 @@ def render_skill_index(skills: list[Skill]) -> str:
 
 
 def _tracked_files(root: pathlib.Path) -> list[str]:
-    """Return the tracked text files that could hold a reference to an ADR or an epic."""
+    """Return the tracked text files that could hold a reference to a record."""
+    terms = [arg for term in REF_TERMS for arg in ("-e", term)]
     result = subprocess.run(
-        ["git", "grep", "-lzI", "-e", "ADR-", "-e", "adrs/", "-e", "epic-"],
+        ["git", "grep", "-lzIF", *terms],
         cwd=root,
         capture_output=True,
         text=True,
@@ -1021,13 +1177,16 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
     args = parser.parse_args(argv)
 
     adr_names = {p.name for p in (root / ADR_DIR).iterdir() if p.is_file()}
+    ac_names = {p.name for p in (root / AC_DIR).glob("*.md")}
     warnings: list[str] = []
     if args.refs is not None:
-        problems = check_references(root, args.refs, adr_names)
+        problems = check_references(root, args.refs, adr_names, ac_names)
     else:
         adrs, problems = load_adrs(root)
         epics, epic_problems = load_epics(root)
         problems += epic_problems
+        concepts, concept_problems = load_concepts(root, set(adrs))
+        problems += concept_problems
         problems += check_instruction_files(root)
         tracked = _tracked(root)
         skills, skill_problems, warnings = load_skills(root, tracked)
@@ -1040,9 +1199,11 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         warnings += budget_warnings(budgets)
         if args.budget:
             print(render_budget(budgets), end="")
-        # sibling links inside docs/adrs/ need none of the search terms
+        # sibling links inside docs/adrs/ and docs/architecture/ need none of the
+        # search terms
         paths = set(_tracked_files(root)) | {f"{ADR_DIR}/{n}" for n in adr_names}
-        problems += check_references(root, sorted(paths), adr_names)
+        paths |= {f"{AC_DIR}/{n}" for n in ac_names}
+        problems += check_references(root, sorted(paths), adr_names, ac_names)
         problems += _regenerate(
             root,
             ADR_INDEX_FILE,
@@ -1051,6 +1212,9 @@ def main(argv: list[str] | None = None, root: pathlib.Path = ROOT) -> int:
         epic_index = (root / EPIC_INDEX_FILE).read_text(encoding="utf-8")
         problems += _regenerate(
             root, EPIC_INDEX_FILE, render_epic_lists(epics, epic_index)
+        )
+        problems += _regenerate(
+            root, AC_INDEX_FILE, [(render_concept_index(concepts), AC_INDEX_MARKS)]
         )
         problems += _regenerate(
             root,

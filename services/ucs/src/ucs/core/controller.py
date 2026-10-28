@@ -36,11 +36,11 @@ from hexkit.protocols.dao import (
     NoHitsFoundError,
     PreconditionFailedError,
     UniqueConstraintViolationError,
+    race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
 from ucs.config import Config
 from ucs.constants import MAX_PART_COUNT, MAX_PART_SIZE, MIN_PART_SIZE
-from ucs.core._rc_helper import race_condition_retries
 from ucs.core.models import (
     BoxRequeueResult,
     FileUpload,
@@ -862,7 +862,7 @@ class UploadController(UploadControllerPort):
         async for file_upload in potential_uploads:
             try:
                 await self._requeue_file_upload(file_upload=file_upload)
-            except (self.S3ObjectMissingError, PreconditionFailedError):
+            except self.S3ObjectMissingError, PreconditionFailedError:
                 skipped.append(file_upload.id)
             else:
                 requeued.append(file_upload.id)

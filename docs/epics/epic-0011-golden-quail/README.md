@@ -6,13 +6,11 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/uQAECg>
-
 The following documents might be helpful to understand the context and objective of this epic:
 
-1. [Hexagonal Architecture Design Pattern](https://wiki.verbis.dkfz.de/x/noAlCg)
-2. [Triple Hexagonal Architecture Concept](https://wiki.verbis.dkfz.de/x/MABFCg)
-3. [Reducing Redundancy and Ensuring Consistency between Microservices](https://wiki.verbis.dkfz.de/x/tgFVCg)
+1. [Hexagonal Architecture Design Pattern](https://ghga-de.github.io/ghga/hexkit/user-guide/arch_concepts/hexagonal_arch.html)
+2. [Triple Hexagonal Architecture Concept](https://ghga-de.github.io/ghga/hexkit/user-guide/arch_concepts/triple_hexagonal_arch.html)
+3. [Reducing Redundancy and Ensuring Consistency between Microservices](../../adrs/adr-0049-microservice-library-over-framework.md) (ADR-0049)
 
 ## Implementation Details
 

@@ -70,7 +70,7 @@
     },
     "cronjobs": {
       "type": "object",
-      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
+      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `concurrencyPolicy`, `activeDeadlineSeconds`, `startingDeadlineSeconds`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
       "additionalProperties": true,
       "properties": {
         "default": {
@@ -982,23 +982,23 @@
             "null"
           ]
         },
-        "per_request_jitter": {
+        "min_request_interval": {
           "default": 0.0,
-          "description": "Max amount of jitter (in seconds) to add to each request.",
+          "description": "Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests.",
           "minimum": 0,
-          "title": "Per Request Jitter",
+          "title": "Min Request Interval",
           "type": [
             "number",
             "null"
           ]
         },
-        "retry_after_applicable_for_num_requests": {
-          "default": 1,
-          "description": "Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession.",
-          "exclusiveMinimum": 0,
-          "title": "Retry After Applicable For Num Requests",
+        "per_request_jitter": {
+          "default": 0.05,
+          "description": "Max amount of jitter (in seconds) to add to each request.",
+          "minimum": 0,
+          "title": "Per Request Jitter",
           "type": [
-            "integer",
+            "number",
             "null"
           ]
         },
@@ -1552,6 +1552,19 @@
       "type": "number",
       "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own",
       "default": 5
+    },
+    "concurrencyPolicy": {
+      "type": "string",
+      "description": "Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run",
+      "default": "Forbid"
+    },
+    "activeDeadlineSeconds": {
+      "description": "Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value",
+      "default": null
+    },
+    "startingDeadlineSeconds": {
+      "description": "Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit",
+      "default": null
     },
     "environment": {
       "type": "object",

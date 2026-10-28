@@ -7,7 +7,7 @@
   //     image's identity and the other a bolt-on, which is not how the repo is laid out.
   //   - A Python base image would pin an interpreter that nothing here builds against. uv
   //     owns every interpreter that matters, and the version is declared in the repo, not
-  //     the image tag: .python-version = 3.13, and `uv venv --python 3.12` for the test bed.
+  //     the image tag: .python-version = 3.14, and `uv venv --python 3.12` for the test bed.
   //     Baking a second Python into the image only invites the two to be confused.
   //
   // What the Python code needs from the image is a single bootstrap `python3` for the
@@ -158,6 +158,13 @@
   // and gh's auth token, so `gh auth login` is a one-time step rather than something a
   // rebuild silently undoes.
   //
+  // Coding agents keep what they write themselves there too: Claude Code in ~/.claude,
+  // Copilot in ~/.copilot, and ~/.agents holds the personal skills several tools read. A
+  // volume rather than a gitignored folder in the workspace, because that state includes
+  // login tokens, which do not belong where every agent session and `git clean -x` reach.
+  // What a dev writes themselves, and wants on every machine, goes in a dotfiles repository
+  // (docs/dev/using-agents.md, "Personal setup").
+  //
   // Deliberately NOT here: an X11 socket for headed Playwright runs. Where it lives is a
   // property of the host, not of this repo — /tmp/.X11-unix on Linux, /mnt/wslg/.X11-unix
   // on WSLg, XQuartz over TCP on macOS — and a bind mount whose source is missing fails
@@ -167,6 +174,8 @@
   // See frontend/data-portal/README.md, "Issues relating to headed execution".
   "mounts": [
     "source=ghga-claude,target=/home/vscode/.claude,type=volume",
+    "source=ghga-copilot,target=/home/vscode/.copilot,type=volume",
+    "source=ghga-agents,target=/home/vscode/.agents,type=volume",
     "source=ghga-gh,target=/home/vscode/.config/gh,type=volume",
     "source=ghga-uv-data,target=/home/vscode/.local/share/uv,type=volume",
     "source=ghga-uv-cache,target=/home/vscode/.cache/uv,type=volume",

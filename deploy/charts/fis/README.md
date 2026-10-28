@@ -29,8 +29,8 @@ for the full set of configurable values.
 | `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
 | `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
 | `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.min_request_interval` | Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests. | `0.0` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.05` |
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
@@ -189,6 +189,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"fis"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

@@ -46,13 +46,37 @@ __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
 DTO = TypeVar("DTO", bound=BaseModel)
 Document = dict[str, Any]
 
+
+def _null_safe(compare: Callable[[Any, Any], bool]) -> Callable[[Any, Any], bool]:
+    """Create a version of the `compare` function that won't raise a `TypeError`
+    when encountering `None` values.
+
+    This is done to match MongoDB's behavior. For example, when there is a nullable
+    datetime field on a model, some of the documents might have a timestamp while other
+    documents have a `null`/`None` value. When sorting or ordering on that field, e.g.
+    `$gt: some_date`, MongoDB will skip documents with the null value if the comparison
+    operator is $gt or $lt. By default, Python will raise a TypeError.
+
+    This (_null_safe) will not produce a function with complete parity with MongoDB,
+    it will only match the behavior with regard to null values. For more thorough
+    testing, we recommend using the MongoDB test container.
+    """
+
+    def null_safe_compare(stored_value: Any, target_value: Any) -> bool:
+        if stored_value is None or target_value is None:
+            return stored_value is None and target_value is None and compare(0, 0)
+        return compare(stored_value, target_value)
+
+    return null_safe_compare
+
+
 MQL_COMPARISON_OPERATORS: dict[str, Callable[[Any, Any], bool]] = {
     "$eq": lambda a, b: a == b,
-    "$gt": lambda a, b: a > b,
-    "$gte": lambda a, b: a >= b,
+    "$gt": _null_safe(lambda a, b: a > b),
+    "$gte": _null_safe(lambda a, b: a >= b),
     "$in": lambda a, b: a in b,
-    "$lt": lambda a, b: a < b,
-    "$lte": lambda a, b: a <= b,
+    "$lt": _null_safe(lambda a, b: a < b),
+    "$lte": _null_safe(lambda a, b: a <= b),
     "$ne": lambda a, b: a != b,
     "$nin": lambda a, b: a not in b,
 }
@@ -602,6 +626,12 @@ def new_mock_dao_class(
     use MongoDB query language predicates (e.g. $ne, $in, $ge, etc.). Not all MQL
     operators are supported. Please see `SUPPORTED_MQL_OPERATORS` for a complete list
     of the currently supported MQL operators.
+
+    The MQL support is a testing aid, not an emulation of MongoDB. Operators follow
+    Python semantics, except where MongoDB's behavior is common in service code and
+    simple to match, such as comparing against null or missing fields. Other edge cases,
+    like ordering values of different types, may raise or match differently than
+    MongoDB. Cover those with integration tests against MongoDB instead.
     """
 
     class MockDao(BaseInMemDao[DTO]):

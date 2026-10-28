@@ -13,6 +13,8 @@
 # a lane member's shipped content changed without its version moving past the index, which
 # is what keeps a version number denoting one thing in a platform image and on PyPI.
 # Stage 2 (integration.yaml) runs as its own workflow.
+#
+# A step that has a `just` recipe calls it, so running the recipe locally runs the step.
 name: ci
 
 on:
@@ -31,6 +33,12 @@ concurrency:
   group: ci-${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' }}
 
+# Explicit `bash` runs every step with pipefail; the default shell does not, so a failing
+# command piped into `tee` would leave its step green.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # Repo-wide lint: covers every member plus root-level code (scripts/, docs snippets)
   # in one cheap pass; --locked also asserts uv.lock is in sync with the pyprojects.
@@ -42,10 +50,11 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync --locked --all-packages --all-extras
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run rumdl check .
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
+      - run: just sync --locked
+      - run: just lint
 
   discover:
     runs-on: ubuntu-latest
@@ -61,71 +70,12 @@ jobs:
         with:
           fetch-depth: 0 # full history for the merge-base diff
       - id: affected
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base="origin/${{ github.base_ref }}"
-          else
-            base="${{ github.event.before }}"
-          fi
-          if git cat-file -e "$base^{commit}" 2>/dev/null; then
-            json=$(python3 scripts/affected_targets.py --base "$base")
-            changed=$(git diff --name-only "$base...HEAD")
-          else
-            # branch creation / force push: no usable base -> check everything
-            json=$(python3 scripts/affected_targets.py --all)
-            changed="" # unknown change set -> every image counts as affected, below
-          fi
-          echo "affected: $json"
-          split() { echo "$json" | python3 -c "
-          import json, sys
-          targets = json.load(sys.stdin)['targets']
-          roots = sys.argv[1:]
-          print(json.dumps([t for t in targets if t.split('/')[0] in roots]))
-          " "$@"; }
-          echo "python=$(split libs services tools)" >> "$GITHUB_OUTPUT"
-          echo "frontend=$(split frontend)" >> "$GITHUB_OUTPUT"
-          # testbed / deploy targets are exercised by the integration gate (Stage 2).
-          # The image matrix comes from the RAW diff, not from the target list above:
-          # `docker/` is a repo-wide prefix in affected_targets.py, so every global
-          # change (uv.lock, a workflow, scripts/) expands to all targets and would
-          # look like a base-image change. The dockerfile -> recipe mapping is derived
-          # from scripts/image_members.py, so a new image member is gated the day it
-          # lands; the Python members all share docker/Dockerfile and are covered by
-          # the one mono build (`just image-mono`, VARIANT=mono).
-          # The matrix takes bare image names, so a skipped job's check is titled
-          # plainly; the build recipe for each is looked up in a separate map.
-          builds=$(CHANGED="$changed" python3 -c "
-          import json, os, sys
-          sys.path.insert(0, 'scripts')
-          from image_members import image_members
-          changed = set(os.environ['CHANGED'].split())
-          unknown = not changed
-          out, mono = {}, False
-          for m in image_members():
-              if not (unknown or m['dockerfile'] in changed):
-                  continue
-              if m['kind'] == 'python':
-                  mono = True
-              else:
-                  out[m['package']] = 'image ' + m['path']
-          if mono:
-              out = {'platform': 'image-mono', **out}
-          print(json.dumps(out))
-          ")
-          images=$(echo "$builds" | jq -c 'keys_unsorted')
-          echo "images: $builds"
-          echo "images=$images" >> "$GITHUB_OUTPUT"
-          echo "image-builds=$builds" >> "$GITHUB_OUTPUT"
-
-          # The dev container is not a workspace member, so affected_targets.py does not see
-          # it; diff it directly off the same base. No usable base -> check it, matching the
-          # check-everything fallback above.
-          if git cat-file -e "$base^{commit}" 2> /dev/null \
-            && git diff --quiet "$base" -- .devcontainer; then
-            echo "devcontainer=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "devcontainer=true" >> "$GITHUB_OUTPUT"
-          fi
+        # testbed / deploy targets are exercised by the integration gate (Stage 2), and the
+        # image matrix takes bare image names, so a skipped job's check is titled plainly;
+        # scripts/ci_discover.py says how each output is derived.
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: python3 scripts/ci_discover.py --base "$BASE" | tee -a "$GITHUB_OUTPUT"
 
   check-python:
     # lint is a dependency so its uv sync populates the shared uv cache once;
@@ -144,16 +94,16 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync --locked --all-packages --all-extras
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
+      - run: just sync --locked
       - name: mypy
         # the shared runner, so CI, `just typecheck` and the pre-commit hook check the
         # same thing: the member's src AND its test package(s), in one invocation
-        run: uv run python scripts/typecheck.py "${{ matrix.target }}"
+        run: just typecheck "${{ matrix.target }}"
       - name: pytest
-        # cwd = member dir: each member runs as its own pytest (the `tests`
-        # packages collide across members otherwise); the config is the root one
-        working-directory: ${{ matrix.target }}
-        run: uv run pytest -q --durations=10
+        run: just test "${{ matrix.target }}"
 
   check-frontend:
     needs: discover
@@ -174,14 +124,10 @@ jobs:
           node-version: 24  # held at the LTS line, see docs/dependencies.md
           cache: pnpm
           cache-dependency-path: ${{ matrix.target }}/pnpm-lock.yaml
-      - working-directory: ${{ matrix.target }}
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm format:check
-          pnpm lint
-          pnpm test
-          pnpm build
-        # Playwright E2E is part of the integration gate (Stage 2), not this one.
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
+      - run: just fe_dir="${{ matrix.target }}" fe-check
 
   # Everything the shared pre-commit config checks that no other job covers: whitespace,
   # YAML/JSON validity, exec bits, private keys, large files. ruff, rumdl, mypy, eslint
@@ -200,24 +146,28 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       # the full sync: the chart check below imports the generator's dependencies, and
       # `uv run pre-commit` resolves against the same environment
-      - run: uv sync --locked --all-packages --all-extras
+      - run: just sync --locked
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-      - run: uv run pre-commit run --all-files --show-diff-on-failure --color=always
+      # `hooks-all` skips no-commit-to-branch itself and adds these to it
+      - run: just hooks-all --show-diff-on-failure --color=always
         env:
-          SKIP: no-commit-to-branch,ruff,ruff-format,rumdl,mypy,fe-prettier,fe-eslint
+          SKIP: ruff,ruff-format,rumdl,mypy,fe-prettier,fe-eslint
       # check-python's matrix only covers libs/services/tools, and mypy is SKIPped above,
       # so the Python that belongs to no member would otherwise never be type-checked here.
       - name: mypy (non-member Python)
-        run: uv run python scripts/typecheck.py scripts deploy/src testbed
+        run: just typecheck scripts deploy/src testbed
       # check-python's matrix covers members only, so the suites belonging to no
       # member run here. (testbed's suite is Stage 2's, not this job's.)
       - name: pytest (non-member Python)
-        run: uv run pytest -q scripts/tests deploy/tests
+        run: just test scripts/tests deploy/tests
       # The generated charts must stay a pure function of their sources: if they are not,
       # the whitespace hooks and `just charts` undo each other forever (ADR-0036).
       #
@@ -225,7 +175,7 @@ jobs:
       # a bare run reuses the committed one and fails if the member charts disagree on it.
       - name: charts are reproducible
         run: |
-          uv run python deploy/src/create_charts.py
+          just charts
           git diff --exit-code
 
   # The dev container is otherwise unvalidated by CI, and it is the one artifact that, when
@@ -248,31 +198,8 @@ jobs:
       - run: npm install -g @devcontainers/cli
       - name: Build the dev container image
         run: devcontainer build --workspace-folder . --image-name ghga-devcontainer:ci
-      # The script goes in on stdin via a quoted heredoc rather than `bash -lc '...'`:
-      # inside single quotes an apostrophe in a comment silently ends the string, so the
-      # rest of the assertions are never passed to the container and the failure points
-      # nowhere near the cause. <<'SCRIPT' passes the body through untouched.
       - name: Assert the image provides what the repo assumes
-        run: |
-          docker run --rm -i ghga-devcontainer:ci bash -l -s <<'SCRIPT'
-          set -eux
-          # The bootstrap interpreter must carry the stdlib, not just python3-minimal:
-          # the justfile image recipes and scripts/*.py import tomllib.
-          python3 -c "import tomllib, json"
-          node --version && pnpm --version && uv --version
-          # Working tools the whole monorepo leans on: fd/rg/bat/jq for navigating and
-          # inspecting a tree this size, shellcheck/shfmt for the shell the repo runs on
-          # (justfile recipes, .devcontainer/post-create.sh, scripts/migration, testbed),
-          # dig for the container's several competing sources of name resolution. dig
-          # arrives via docker-in-docker too, so this also catches that feature dropping
-          # it. static-web-server serves the data portal's production build (`just fe-prod`).
-          # One at a time: `command -v a b c` exits 0 even when some are missing.
-          for t in fd bat rg jq shellcheck shfmt dig static-web-server; do command -v "$t"; done
-          # docker/Dockerfile uses `RUN --mount=type=cache`, so the image builds the repo
-          # publishes depend on BuildKit being available, not just a docker CLI.
-          docker buildx version
-          docker compose version
-          SCRIPT
+        run: docker run --rm -i ghga-devcontainer:ci bash -l -s < .devcontainer/check-image.sh
 
   # Build the images whose Dockerfile changed. Nothing else in this workflow runs
   # `docker build`, so a base-image bump (Renovate editing PYTHON_BASE / NODE_BASE) is
@@ -298,6 +225,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       # The hardened bases (dhi.io) are auth-gated — same pattern as dev-images.yaml:
       # skipped when the org secrets are absent, i.e. on PRs from forks. There is no
       # anonymous fallback (dhi.io answers an unauthenticated manifest request with a
@@ -359,37 +288,19 @@ jobs:
         # Platform-lane members declare 0.0.0, and no PyPI-lane member depends on one
         # (ADR-0046).
         run: uv run -q --script scripts/pypi_members.py --check-versions
+      - name: Assert every dropped matrix cell is still blocked
+        # BLOCKED_CELLS drops a (member, Python) cell because a dependency ships no
+        # wheel for it. This job has no `if:`, so the check runs on every PR and the
+        # entry cannot outlive its reason: the first build after the wheel appears
+        # fails here, naming what to delete. Nobody has to remember.
+        run: uv run -q --script scripts/pypi_members.py --check-blocked-cells
+      - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       - name: Assert every changed lane member declares an unpublished version
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base="origin/${{ github.base_ref }}"
-          else
-            base="${{ github.event.before }}"
-          fi
-          # Failing, not skipping: an undeterminable change set is not evidence of no drift.
-          if ! git merge-base "$base" HEAD > /dev/null 2>&1; then
-            echo "::error::drift check failed: no base commit to compare against ($base) — main was force-pushed or newly created"
-            exit 1
-          fi
-          # `::error::` lifts the message onto the GitHubs Checks tab. `--base` is the
-          # merge-base the three-dot diff compares against.
-          if git diff --name-only "$base...HEAD" \
-            | uv run -q --script scripts/pypi_drift.py --base "$(git merge-base "$base" HEAD)" \
-              2> /tmp/drift.err; then
-            exit 0
-          fi
-          # The gate is fail-closed: `pipefail` reds the step whatever failed. But only the
-          # script's stderr is captured, so a failure on the `git diff` side would annotate
-          # nothing — hence a message that at least says the failure was not drift.
-          if [ -s /tmp/drift.err ]; then
-            while IFS= read -r line; do
-              echo "::error::$line"
-            done < /tmp/drift.err
-          else
-            echo "::error::drift check failed without reporting drift — see the step log"
-          fi
-          exit 1
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: just pypi-drift "$BASE"
 
   # The published-combo gate (ADR-0026): the same affected members, tested the way external
   # consumers get them. pypi-matrix.yaml drops everything outside the PyPI lane, so a

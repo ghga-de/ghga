@@ -21,7 +21,7 @@ object_storages:
       s3_secret_access_key: test
 
 mongo_dsn: "mongodb://mongodb:27017"
-db_name: "dev"
+db_name: download-controller
 
 ekss_base_url: http://localhost:8000/ekss
 

@@ -2,3 +2,6 @@ include src/hexkit/py.typed
 include src/hexkit/providers/s3/test_files/*.yaml
 # The tests run in the monorepo; setuptools would ship only tests/test*.py, a broken suite.
 prune tests
+# The agent skill ships in the wheel for tools that read it from site-packages;
+# its eval suite stays out by not being listed.
+include src/hexkit/.agents/skills/hexkit/SKILL.md

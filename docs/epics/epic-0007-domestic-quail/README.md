@@ -6,7 +6,10 @@
 
 ## Scope
 
-A scope definition can be found here: <https://wiki.verbis.dkfz.de/x/tQAECg>
+### Outline
+
+This epic is a pilot study that aims at exploring how to implement the triple hexagonal design pattern and at evaluating its feasibility.
+Thereby, a chassis library supporting that pattern shall be implemented that offers an initial set of components needed for event streaming using Apache Kafka.
 
 This epic is classified as both exploratory and implementation type.
 That is because it is a proof of concept study that seeks to explore and evaluate options for implementing the triple hexagonal design pattern in python.
@@ -14,11 +17,24 @@ So there are many open questions but the result should be a working implementati
 
 The following documents might be helpful to understand the context and objective of this epic:
 
-1. [Hexagonal Architecture Design Pattern](https://wiki.verbis.dkfz.de/x/noAlCg)
-2. [Triple Hexagonal Architecture Concept](https://wiki.verbis.dkfz.de/x/MABFCg)
-3. [Reducing Redundancy and Ensuring Consistency between Microservices](https://wiki.verbis.dkfz.de/x/tgFVCg)
+1. [Hexagonal Architecture Design Pattern](https://ghga-de.github.io/ghga/hexkit/user-guide/arch_concepts/hexagonal_arch.html)
+2. [Triple Hexagonal Architecture Concept](https://ghga-de.github.io/ghga/hexkit/user-guide/arch_concepts/triple_hexagonal_arch.html)
+3. [Reducing Redundancy and Ensuring Consistency between Microservices](../../adrs/adr-0049-microservice-library-over-framework.md) (ADR-0049)
 
 This epic specifically tries to deliver a draft for the library proposed in document 3.
+
+### Included/Required
+
+- chassis lib initial functionality:
+  - event streaming protocol
+  - Kafka-based protocol providers
+  - in-memory "mock" drivers for unit testing
+  - test framework
+- apply newly implemented chassis features to the ULC code base
+
+### Not included
+
+- complete feature set needed from a microservice chassis lib
 
 ## Implementation Details
 
@@ -76,7 +92,7 @@ I.e. the in-memory/mock providers could be used for fast testing that integrates
 Update: *After further prototyping and discussions, it does not seem practical to implement a testing framework that allows to decide on the provider to use at runtime.
 While the protocol definition provides a standardized interface for using different provider implementations, it is not standardized (and difficult to standardize) how to investigate the state of the infrastructure associated with the providers after running a protocol-compliant test operation.
 Moreover, if the providers are sufficiently tested for compliance with the protocol, the value of testing translators with production-ready providers seems limited.
-It seems more practical to only test translators against protocol compliance and thereby use dedicated mock/test provider implementations as further described here: <https://wiki.verbis.dkfz.de/x/GoDtCg>*
+It seems more practical to only test translators against protocol compliance and thereby use dedicated mock/test provider implementations as further described in [AC-0005](../../architecture/ac-0005-testing-strategy.md#making-code-unit-testable).*
 
 ~~With reference to that, it might be also useful to explore whether application states associated with specific protocols could be defined in a standardized specification (YAML or JSON-based) that is applicable to all providers implementing the protocol.
 Specialized tooling might interpret this specification and setup and teardown the application state when running tests but also when deploying a service to a staging environment (that uses the same infrastructure than the production environment).~~

@@ -66,11 +66,22 @@ class MetadataModel(SchemaDefinition):
         return schema_view
 
     def __deepcopy__(self, memo: Any):
-        """Return a deep copy of the model."""
+        """Return a deep copy of the model.
+
+        The copy is built from the instance dict instead of from `deepcopy(super())`:
+        since Python 3.14 a `super` object pickles as `(super, (class, instance))`, so
+        deep copying one copies the instance as an argument and re-enters this method
+        forever. Reconstructing by hand is what `copy` did for us on Python 3.13 and
+        keeps the cached schema view out of the copy, to be rebuilt on demand.
+        """
         schema_view = self._schema_view
         self._schema_view = None
-        copied_model = deepcopy(super())
-        self._schema_view = schema_view
+        try:
+            copied_model = self.__class__.__new__(self.__class__)
+            memo[id(self)] = copied_model
+            copied_model.__dict__.update(deepcopy(self.__dict__, memo))
+        finally:
+            self._schema_view = schema_view
         return copied_model
 
     def __eq__(self, other: object):
@@ -107,7 +118,7 @@ class MetadataModel(SchemaDefinition):
                                 del slot["from_schema"]
                             if "domain_of" in slot:
                                 del slot["domain_of"]
-                            # linkml >=1.10 (the py3.13 workspace can't use metldata's
+                            # linkml >=1.10 (the py3.14 workspace can't use metldata's
                             # upstream linkml==1.6.1) derives these onto slot_usage; not
                             # essential authored content (authored mappings live on the
                             # top-level slot).

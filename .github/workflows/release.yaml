@@ -132,10 +132,12 @@ jobs:
             packages) lane=pypi;     mode=sweep ;;
             *)        lane=pypi;     mode=targeted ;;
           esac
-          echo "name=$name"       >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "lane=$lane"       >> "$GITHUB_OUTPUT"
-          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$name"
+            echo "version=$version"
+            echo "lane=$lane"
+            echo "mode=$mode"
+          } >> "$GITHUB_OUTPUT"
           # A candidate (x.y.z-rc.N) gets no draft release; the regex above vouched for the
           # shape, so a `-` is decisive.
           prerelease=false
@@ -340,8 +342,9 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
-      # arm64 has no native GitHub-hosted runner, so cross-building it on this amd64
-      # runner needs QEMU emulation registered with the kernel, plus a buildx builder
+      # arm64 is emulated so one buildx call pushes the multi-platform index; native arm64
+      # runners (ubuntu-24.04-arm) would need a job per platform and a manifest merge.
+      # Cross-building on this amd64 runner needs QEMU registered, plus a buildx builder
       # that can actually target multiple platforms in one invocation (the default
       # "docker" driver can't) — the same docker-container builder that attestation
       # export requires (see the Build step below), so no separate builder step needed.
@@ -636,7 +639,7 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           work=$(mktemp -d)
-          while read -r name version; do
+          while read -r name _; do
             c="deploy/charts/${name}/"
             rm -rf "${work:?}"/*
             cp -r "$c" "$work/${name}-chart"
