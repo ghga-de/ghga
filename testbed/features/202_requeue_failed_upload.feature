@@ -40,7 +40,7 @@ Feature: 202 Requeue Failed Upload
   Scenario: Data Steward requeues a failed file in the locked box via the portal
 
     Given I am logged in to the Data Portal as "Data Steward"
-    When I open the upload box list in the portal
+    When I load the admin page "Upload Box Manager"
     Then the box for "primary" storage is listed with the file states "4 ready, 3 failed"
 
     When I open the upload box for "primary" storage in the portal

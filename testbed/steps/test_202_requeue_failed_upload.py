@@ -36,6 +36,7 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .conftest_5x import _filter_manager_by_title
 from .utils import UI_TIMEOUT, has_reached
 
 scenarios("../features/202_requeue_failed_upload.feature")
@@ -565,11 +566,17 @@ def check_box_file_state_counts(
         state.strip(): int(count)
         for state, count in (pair.split(":") for pair in expected.split(","))
     }
-    box = _read_stable_box(fixtures, storage_name)
     url = f"{fixtures.config.rs_url}/upload-boxes/file-state-counts"
-    response = fixtures.http.get(url, headers=_headers(fixtures))
-    assert response.status_code == 200, response.text
-    counts = response.json().get(box["id"], {})
+    # The counts come live from UCS, while RS learns the file count from events,
+    # so wait until both have caught up instead of only until the box is stable
+    for _ in range(30):
+        box = _read_stable_box(fixtures, storage_name)
+        response = fixtures.http.get(url, headers=_headers(fixtures))
+        assert response.status_code == 200, response.text
+        counts = response.json().get(box["id"], {})
+        if counts == expected_counts and sum(counts.values()) == box["file_count"]:
+            break
+        time.sleep(1)
     assert counts == expected_counts, (
         f"Expected the file states {expected_counts} in the {storage_name} box,"
         f" got {counts}"
@@ -597,15 +604,6 @@ def requeue_failed_file(
     return fixtures.http.post(url, headers=_headers(fixtures, full_name))
 
 
-@when("I open the upload box list in the portal")
-def open_box_list_in_portal(fixtures: JointFixture):
-    """Open the list of upload boxes in the Upload Box Manager."""
-    page = fixtures.playwright.page
-    url = fixtures.config.data_portal_url.rstrip("/")
-    page.goto(f"{url}/upload-box-manager")
-    expect(page).to_have_title("Upload Box Manager | GHGA Data Portal")
-
-
 @then(
     parse(
         'the box for "{storage_name}" storage is listed with the file states'
@@ -619,6 +617,8 @@ def check_box_file_states_listed(
     rdub = fixtures.state.get_state(f"rdub_{storage_name}")
     assert rdub, f"No upload box in state for {storage_name} storage"
     page = fixtures.playwright.page
+    # The list is paginated, so filter it down to the box first
+    _filter_manager_by_title(fixtures, rdub["title"])
     row = page.locator("main table tbody tr").filter(
         has=page.get_by_role("cell", name=rdub["title"], exact=True)
     )
