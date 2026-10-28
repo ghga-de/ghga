@@ -1059,19 +1059,11 @@ paths:
                     - failed_interrogation
                     - awaiting_archival
                     - archived
-                    - init
-                    - inbox
-                    - failed
-                    - cancelled
-                    - interrogated
-                    - failed_interrogation
-                    - awaiting_archival
-                    - archived
                   type: object
                 propertyNames:
                   format: uuid4
-                title: Response 200 Get File State Counts Upload Boxes File State
-                  Counts Get
+                title: Response Get File State Counts Upload Boxes File State Counts
+                  Get
                 type: object
           description: File state counts successfully retrieved.
         '401':

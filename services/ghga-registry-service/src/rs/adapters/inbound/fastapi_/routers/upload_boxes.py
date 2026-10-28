@@ -406,10 +406,9 @@ async def get_storage_overview(
     + " absent. Requires the Data Steward role.",
     response_model=dict[UUID4, FileStateCounts],
     responses={
-        200: {
-            "model": dict[UUID4, FileStateCounts],
-            "description": "File state counts successfully retrieved.",
-        },
+        # No "model" here: with response_model set, FastAPI would list the enum
+        # of the state names twice in the OpenAPI spec
+        200: {"description": "File state counts successfully retrieved."},
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
     },
