@@ -96,6 +96,14 @@ describe('UploadBoxFileStates', () => {
     );
   });
 
+  it('should format large counts in the label and tooltip like the file count', async () => {
+    await renderFileStates(171234, { interrogated: 170000, inbox: 1234 });
+    const bar = screen.getByRole('img', { name: '170,000 ready, 1,234 in progress' });
+    expect(bar).toHaveAccessibleDescription(
+      '170,000 re-encrypted\n1,234 re-encrypting',
+    );
+  });
+
   it('should show the failed count with an icon next to the bar', async () => {
     const { container } = await renderFileStates(3, {
       interrogated: 1,

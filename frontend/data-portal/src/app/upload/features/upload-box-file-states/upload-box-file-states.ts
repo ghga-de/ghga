@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { DecimalPipe } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { DecimalPipe, formatNumber } from '@angular/common';
+import { Component, computed, inject, input, LOCALE_ID } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
@@ -37,6 +37,8 @@ interface FileStateSegment {
   templateUrl: './upload-box-file-states.html',
 })
 export class UploadBoxFileStates {
+  #locale = inject(LOCALE_ID);
+
   /** The number of files in the box */
   fileCount = input.required<number>();
 
@@ -66,7 +68,7 @@ export class UploadBoxFileStates {
   /** The groups as a sentence for screen readers, e.g. "38 ready, 1 failed" */
   protected summary = computed(() =>
     this.segments()
-      .map((segment) => `${segment.count} ${segment.label}`)
+      .map((segment) => `${this.#format(segment.count)} ${segment.label}`)
       .join(', '),
   );
 
@@ -81,8 +83,17 @@ export class UploadBoxFileStates {
       .filter((state) => counts[state])
       .map(
         (state) =>
-          `${counts[state]} ${FileUploadStatePrintable[state].replace(/…$/, '')}`,
+          `${this.#format(counts[state]!)} ${FileUploadStatePrintable[state].replace(/…$/, '')}`,
       )
       .join('\n');
   });
+
+  /**
+   * Format a count like the number pipe does for the visible file count.
+   * @param count - the count to format
+   * @returns the count with thousands separators
+   */
+  #format(count: number): string {
+    return formatNumber(count, this.#locale);
+  }
 }

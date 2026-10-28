@@ -26,7 +26,7 @@
       <span
         class="text-error flex items-center gap-0.5 tabular-nums"
         aria-hidden="true"
-        [matTooltip]="failedCount() + ' failed'"
+        [matTooltip]="(failedCount() | number) + ' failed'"
       >
         <mat-icon
           fontIcon="dangerous"
