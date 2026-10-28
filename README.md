@@ -179,7 +179,7 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 
 | area | recipes |
 |---|---|
-| Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck [targets]`, `test [targets]`, `affected [base]` |
+| Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt [paths]`, `typecheck [targets]`, `test [targets] [pytest options]`, `affected [base]`, `test-affected [base]` |
 | PyPI lane | `published-combo <member> [python]`, `pypi-drift [base]` |
 | Parallel work | `wt <branch> [base]`, `wt-rm <name>` |
 | Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `service-docs`, `prose [paths]` |

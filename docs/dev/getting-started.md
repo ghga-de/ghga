@@ -48,7 +48,7 @@ It has its own `pnpm` workspace and lockfile, and the `just fe-*` recipes drive 
   - `just sync` installs the workspace into `.venv`.
   - `just lint` checks lint and formatting, and `just fmt` fixes what it can.
   - `just test services/auth-service` runs one member's tests.
-  - `just affected` lists the members your branch reaches, compared with `origin/dev`.
+  - `just affected` lists the members your branch and your uncommitted changes reach, compared with `origin/dev`, and `just test-affected` runs their tests.
   - `just fe-dev` starts the data portal against mocked APIs, with no backend.
 
   To run the whole platform, `just demo-images-mono` and `just up mono` build it and start it on the local cluster ([demo walkthrough](../../README.md#run-the-demo-locally)).
@@ -88,7 +88,7 @@ Each level is defined in the root [AGENTS.md](../../AGENTS.md#test-levels) and t
 
 - **Member unit tests** (pytest, `just test <member>`) are the default.
   A service's suite gets real Kafka, MongoDB and S3 from testcontainers, so persistence and event handling are tested there.
-- **Consumers of a library:** after a change under `libs/`, run `just affected` and test what it lists.
+- **Consumers of a library:** after a change under `libs/`, run `just test-affected`, which tests every member `just affected` lists.
 - **Chart tests** (`just charts-test`, `just demo-template`) render the charts; run them for any change under `deploy/`.
 - **Front-end tests** are Vitest unit tests (`just fe-test`) and Playwright smoke tests against mocked APIs ([data portal README](../../frontend/data-portal/README.md#test-levels)).
 - **The test bed** (`just testbed`) runs the whole platform on the local cluster, and is the only level that checks a flow across services.

@@ -56,8 +56,9 @@ Read commands from there, and prefer the recipes over raw uv/pnpm/helm/kubectl â
 Further rules:
 
 - Always scope test runs to the member you touched (e.g. `just test services/auth-service`); a bare `just test` runs every suite in the workspace.
-- Use `just affected [base]` to decide what to test when a change may cross members.
-  It defaults to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut from `main` instead, pass `origin/main`.
+  Pytest options go after the targets, e.g. `just test services/auth-service/tests/unit -k login -x`.
+- Use `just affected [base]` to decide what to test when a change may cross members, and `just test-affected [base]` to run those suites.
+  Both default to `origin/dev`, the branch features are cut from; on a hotfix branch, which is cut from `main` instead, pass `origin/main`.
 - Use `just fe-dev` for the front-end dev server, bare `pnpm start` skips the `config.js` generation the launcher does.
   For anything beyond the `just fe-*` recipes, work in `frontend/data-portal` under its own `AGENTS.md`.
 - For parallel work, create a worktree with `just wt <branch>`, which syncs its `.venv`; a worktree from Claude Code's `--worktree` gets a branch name outside the [grammar](docs/conventions.md#names-branches-prs-commits), so rename it before pushing.
@@ -74,7 +75,7 @@ Further rules:
 
 ## Execution policy
 
-- For code changes, run the smallest relevant validation first (the touched member's tests, `just lint`), then widen via `just affected` when the change crosses members; editing a `libs/` member affects every consumer.
+- For code changes, run the smallest relevant validation first (the touched member's tests, `just lint`), then widen via `just test-affected` when the change crosses members; editing a `libs/` member affects every consumer.
 - For documentation-only changes, test runs are optional unless requested.
 - Do not create commits or branches unless explicitly requested.
   When they are, read [branching](docs/conventions.md#branching) and [names](docs/conventions.md#names-branches-prs-commits) first.
@@ -86,7 +87,7 @@ Further rules:
 ## Definition of done
 
 1. Unit tests cover the change and the touched member's suite passes (`just test <member>`), with `just lint` clean.
-2. `just affected` is green when the change crosses members.
+2. `just test-affected` is green when the change crosses members.
 3. Generated artifacts are regenerated, never hand-edited (`just charts`, `just lock`).
 4. The feature branch is peer reviewed and meets every requirement of the story.
 
