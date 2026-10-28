@@ -673,12 +673,25 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 id_,
                 exc_info=True,
             )
+        await self._flag_unpublished(id_)
+
+    async def _flag_unpublished(self, id_: ID) -> None:
+        """Flag a resource as unpublished, so that `publish_pending` sends it again.
+
+        The new write ID keeps the mark of a newer write that is still in flight from
+        setting the flag back, so that write republishes the current state instead.
+        """
         try:
             with translate_pymongo_errors():
                 await self._collection.update_one(
                     # a document without metadata would be hidden by a partial one
                     {"_id": id_, "__metadata__": {"$exists": True}},
-                    {"$set": {"__metadata__.published": False}},
+                    {
+                        "$set": {
+                            "__metadata__.published": False,
+                            "__metadata__.write_id": uuid4(),
+                        }
+                    },
                 )
         except Exception:
             log.warning(

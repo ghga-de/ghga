@@ -72,7 +72,10 @@ from hexkit.providers.mongokafka.provider import (
     DELETE_EVENT_TYPE,
     document_to_dto,
 )
-from hexkit.providers.mongokafka.provider.daopub import MAX_REPUBLISH_ROUNDS
+from hexkit.providers.mongokafka.provider.daopub import (
+    MAX_REPUBLISH_ROUNDS,
+    mark_published,
+)
 from hexkit.providers.mongokafka.testutils import (
     MongoKafkaFixture,
     mongo_kafka_fixture,  # noqa: F401
@@ -1337,6 +1340,129 @@ async def test_republishing_error_is_logged(
     assert "Could not republish the current state" in caplog.text
     stored = collection.find_one({"_id": example.id})
     assert stored and stored["__metadata__"]["published"] is False
+
+
+async def test_late_mark_after_failed_republish(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a newer write cannot clear the pending flag when its mark lands
+    after a failed republish of its state set the flag, so that it republishes the
+    current state itself.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+    newer_write_id = uuid.uuid4()
+
+    class FailingRepublishPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is not yet marked during the first publish,
+        then fails the republish of its state.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published == 2:
+                raise RuntimeError("broker unavailable")
+            if self.published == 1:
+                collection.update_one(
+                    {"_id": uuid.UUID(key)},
+                    {"$set": {"__metadata__.write_id": newer_write_id}},
+                )
+
+    publisher = FailingRepublishPublisher()
+    async with (
+        dao_with_publisher(mongo_kafka, publisher) as dao,
+        ConfiguredMongoClient(config=mongo_kafka.config) as client,
+    ):
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+        assert publisher.published == 2
+        assert "Could not republish the current state" in caplog.text
+
+        # the mark of the newer write arrives only now and must miss
+        async_collection = client.get_database(mongo_kafka.config.db_name)["example"]
+        marked = await mark_published(
+            async_collection,
+            example.id,
+            write_id=newer_write_id,
+            deleted=False,
+            event_id=None,
+        )
+        assert marked is False
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is False
+        assert stored["__metadata__"]["write_id"] != newer_write_id
+
+        # so the newer write republishes the current state, as publish_pending does
+        await dao.publish_pending()
+        assert publisher.published == 3
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is True
+
+
+async def test_failed_publish_of_a_superseded_write_leaves_it_pending(
+    mongo_kafka: MongoKafkaFixture,
+):
+    """Test that a write whose publish fails after a newer write replaced and
+    published the resource leaves it pending, since the failed write's event may
+    already be on the topic behind the newer write's event.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class FailingPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is published and marked during the first
+        publish, which then fails.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published == 1:
+                collection.update_one(
+                    {"_id": uuid.UUID(key)},
+                    {
+                        "$set": {
+                            "__metadata__.write_id": uuid.uuid4(),
+                            "__metadata__.published": True,
+                        }
+                    },
+                )
+                raise RuntimeError("broker unavailable")
+
+    publisher = FailingPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with pytest.raises(RuntimeError):
+            await dao.insert(example)
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is False
+
+        await dao.publish_pending()
+        assert publisher.published == 2
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is True
 
 
 async def test_legacy_publish_keeps_a_deletion(mongo_kafka: MongoKafkaFixture):
