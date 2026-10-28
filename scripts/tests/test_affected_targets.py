@@ -108,6 +108,11 @@ def branch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _verdict() -> tuple[bool, list[str]]:
+    """What the branch affects: (everything?, the affected targets).
+
+    The flag is True only when a repo-wide file changed; the targets are the member
+    directories the change set reaches, dependents included.
+    """
     return affected_targets.affected(affected_targets.changed_files("base"))
 
 

@@ -199,18 +199,18 @@ def test_a_failing_member_does_not_stop_the_sweep(members: Repo):
 
 
 def test_a_member_the_options_select_nothing_in_is_not_red(members: Repo):
-    """`-k` that matches nothing in one member lists it apart, not as a failure."""
+    """Options that select no test in one member list it apart, not as a failure."""
     result = members.run("test.sh", "libs", "-k", "dao", EMPTY_IN="a")
     assert result.returncode == 0, result.stderr
-    assert "no test selected in: libs/a" in result.stdout
+    assert "no test selected for: libs/a" in result.stdout
     assert "pytest failed" not in result.stderr
 
 
 def test_options_that_select_nothing_anywhere_fail(members: Repo):
-    """A `-k` typo must not pass because every run deselected all its tests."""
-    result = members.run("test.sh", "libs", "-k", "typo", EMPTY_IN="a b")
+    """Options that select no test in any member fail the call, with pytest's exit 5."""
+    result = members.run("test.sh", "libs", "-k", "nothing", EMPTY_IN="a b")
     assert result.returncode == 5
-    assert "selected no test in any target" in result.stderr
+    assert "selected no test for any target" in result.stderr
 
 
 def test_a_member_without_tests_is_red_when_no_options_are_given(members: Repo):

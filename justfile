@@ -226,8 +226,9 @@ test *targets: _guard sync-check
 affected base="origin/dev":
     @uv run python scripts/affected_targets.py --base "$1"
 
-# Runs the affected workspace members' suites as `just test` does, with every red member
-# listed at the end; a change that affects everything runs the full `just test` sweep.
+# Runs the affected workspace members' suites as `just test` does, with every failing
+# member listed at the end; a change that affects everything runs the full `just test`
+# sweep.
 # The front end, the charts and the test bed have no member suite and are only named.
 # Test the members affected by the working tree vs a base ref (as for `affected`).
 test-affected base="origin/dev": _guard

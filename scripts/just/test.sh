@@ -17,9 +17,9 @@
 # starts with `-` ends the targets: it and everything after it go to every pytest run, so
 # an option's value (`-k "a and b"`) is never mistaken for a target.
 #
-# With options, pytest exits 5 for a run whose tests they all deselect: `just test libs
-# -k dao` should not list every member without a dao test as red. Such a run is listed
-# apart, and only when no run selected any test does the whole call fail.
+# With options, pytest exits 5 for a run in which they select no test. Such a member is
+# listed apart, not failed: `just test libs -k dao` must not fail every member without a
+# dao test. The call fails only when the options selected no test in any run.
 set -uo pipefail
 
 failed=()
@@ -97,13 +97,13 @@ for target in "${targets[@]}"; do
 done
 
 if [ ${#unselected[@]} -gt 0 ]; then
-    echo "no test selected in: ${unselected[*]}"
+    echo "no test selected for: ${unselected[*]}"
 fi
 if [ ${#failed[@]} -gt 0 ]; then
     echo "pytest failed in: ${failed[*]}" >&2
     exit 1
 fi
 if [ "$selected" = 0 ] && [ ${#unselected[@]} -gt 0 ]; then
-    echo "error: the pytest options selected no test in any target" >&2
+    echo "error: the pytest options selected no test for any target" >&2
     exit 5
 fi

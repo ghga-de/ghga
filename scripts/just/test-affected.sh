@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # `just test-affected [base]`: run `just test` over the members `just affected` reports.
 #
-# One `just test` takes every affected member, so a red member does not stop the others
-# and the failed ones are listed at the end. A change to a repo-wide file affects
+# One `just test` takes every affected member, so a failing member does not stop the
+# others and the failures are listed at the end. A change to a repo-wide file affects
 # everything, scripts/ included, so it runs the full sweep, which adds the non-member
 # suites a target list would miss.
 #
-# affected_targets.py also reports targets that have no member suite, because it feeds
-# CI's other jobs as well: the front end (check-frontend), and the charts and the test
-# bed (the integration gate). Those are named with the recipe that checks them, not run,
-# after the sweep, where its output does not scroll them away.
+# The front end, the charts and the test bed have no member suite. When they are
+# affected, they are not checked but named after the sweep, with the recipe that checks
+# them.
 set -euo pipefail
 
 json=$(just affected "$1")
