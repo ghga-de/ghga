@@ -47,6 +47,7 @@ from rs.core.models import (
     BoxRetrievalResults,
     BoxUploadsPage,
     CreateUploadBoxRequest,
+    FileStateCounts,
     FileUploadWithAccession,
     HubStorageSummary,
     ResearchDataUploadBox,
@@ -393,6 +394,40 @@ async def get_storage_overview(
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to get storage overview") from err
+
+
+# Registered before "/{box_id}", which would otherwise match this path
+@box_router.get(
+    "/file-state-counts",
+    summary="Get the file state counts of all upload boxes",
+    description="Returns the number of file uploads per state for every upload box,"
+    + " keyed by the box ID. Only the states that count toward a box's file_count are"
+    + " included. Boxes without such file uploads and states without file uploads are"
+    + " absent. Requires the Data Steward role.",
+    response_model=dict[UUID4, FileStateCounts],
+    responses={
+        200: {
+            "model": dict[UUID4, FileStateCounts],
+            "description": "File state counts successfully retrieved.",
+        },
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+    },
+)
+@TRACER.start_as_current_span("routes.get_file_state_counts")
+async def get_file_state_counts(
+    registry: dummies.RegistryDummy,
+    auth_context: StewardAuthContext,
+) -> dict[UUID4, FileStateCounts]:
+    """Get the number of file uploads per state for every upload box.
+
+    Requires Data Steward role.
+    """
+    try:
+        return await registry.rdub_manager.get_file_state_counts()
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to get file state counts") from err
 
 
 @box_router.get(

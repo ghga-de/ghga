@@ -22,6 +22,7 @@ from pydantic import UUID4, PositiveInt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.core.models import (
     BoxRequeueResult,
+    FileStateCounts,
     FileUploadWithAccession,
     GrantId,
     UploadGrant,
@@ -256,6 +257,21 @@ class FileBoxClientPort(ABC):
 
         If the FileUploadBox does not exist and `missing_box_ok` is set to True, this
         method will return an empty list. Otherwise it will raise an OperationError.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+
+    @abstractmethod
+    async def get_file_state_counts(
+        self, *, box_ids: list[UUID4]
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state in each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included. Boxes
+        without such file uploads, including unknown ones, are absent from the result,
+        as are states without file uploads.
 
         Raises:
             OperationError if there's a problem with the operation.

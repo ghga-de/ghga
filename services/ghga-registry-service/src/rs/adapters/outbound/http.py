@@ -23,7 +23,7 @@ from uuid import UUID
 
 import httpx2
 from jwcrypto import jwk
-from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
+from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr, TypeAdapter
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -46,12 +46,14 @@ from rs.core.models import (
     CreateFileBoxWorkOrder,
     DeleteFileBoxWorkOrder,
     DeleteFileUploadWorkOrder,
+    FileStateCounts,
     FileUploadWithAccession,
     GrantId,
     RequeueAllFailedWorkOrder,
     RequeueFailedFileWorkOrder,
     ResizeFileBoxWorkOrder,
     UploadGrant,
+    ViewFileBoxStatsWorkOrder,
     ViewFileBoxWorkOrder,
 )
 from rs.core.tokens import sign_work_order_token
@@ -63,6 +65,8 @@ from rs.ports.outbound.http import (
 log = logging.getLogger(__name__)
 
 DEFAULT_HTTPX_TIMEOUT = 60.0
+
+_file_state_counts_adapter = TypeAdapter(dict[UUID4, FileStateCounts])
 
 
 @asynccontextmanager
@@ -710,6 +714,45 @@ class FileBoxClient(FileBoxClientPort):
                 break
 
         return file_uploads
+
+    async def get_file_state_counts(
+        self, *, box_ids: list[UUID4]
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state in each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included. Boxes
+        without such file uploads, including unknown ones, are absent from the result,
+        as are states without file uploads.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+        wot = ViewFileBoxStatsWorkOrder()
+        headers = self._auth_header(wot)
+        response = await self._client.post(
+            f"{self._ucs_url}/rpc/boxes/file-state-counts",
+            headers=headers,
+            json={"box_ids": [str(box_id) for box_id in box_ids]},
+            timeout=self._standard_timeout,
+        )
+        if response.status_code != 200:
+            log.warning(
+                "Error getting file state counts for %i FileUploadBoxes.",
+                len(box_ids),
+                extra={
+                    "status_code": response.status_code,
+                    "response_text": response.text,
+                },
+            )
+            raise self.OperationError("Failed to get FileUploadBox file state counts.")
+
+        try:
+            return _file_state_counts_adapter.validate_json(response.content)
+        except Exception as err:
+            msg = "Failed to extract file state counts from response body."
+            log.error(msg, exc_info=True)
+            raise self.OperationError(msg) from err
 
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive a FileUploadBox in the owning service.

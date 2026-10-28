@@ -17,9 +17,11 @@
 
 # for convenience: forward errors that may be thrown by DAO instances:
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 
 from pydantic import UUID4
 
+from ghga_event_schemas.pydantic_ import FileUploadState
 from hexkit.protocols.dao import Dao, ResourceAlreadyExistsError, ResourceNotFoundError
 from hexkit.protocols.daopub import DaoPublisher
 from ucs.core import models
@@ -52,6 +54,16 @@ class BoxStatsAggregatorPort(ABC):
         """Return a `(file_count, total_decrypted_size)` tuple aggregated over the
         FileUploads in the given box that count toward its stats (i.e. the states in
         `COUNTED_UPLOAD_STATES`).
+        """
+
+    @abstractmethod
+    async def compute_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        """Return the number of FileUploads per state for each of the given boxes,
+        counting only the states in `COUNTED_UPLOAD_STATES`.
+
+        Boxes without counted FileUploads and states without FileUploads are absent.
         """
 
 

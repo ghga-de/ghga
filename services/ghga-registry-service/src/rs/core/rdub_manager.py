@@ -37,6 +37,7 @@ from rs.core.models import (
     BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
+    FileStateCounts,
     FileUploadBox,
     FileUploadWithAccession,
     GrantId,
@@ -1045,6 +1046,33 @@ class RDUBManager(RDUBManagerPort):
             boxes = boxes[:limit]
 
         return BoxRetrievalResults(count=count, boxes=boxes)
+
+    async def get_file_state_counts(self) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state for every research data upload
+        box, keyed by the box ID.
+
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such file uploads are
+        absent from the result, as are states without file uploads.
+
+        Raises:
+            OperationError: If there's a problem querying the file box service.
+        """
+        box_ids_by_file_upload_box_id = {
+            box.file_upload_box_id: box.id
+            async for box in self._box_dao.find_all(filter_={})
+        }
+        if not box_ids_by_file_upload_box_id:
+            return {}
+
+        counts = await self._file_upload_box_client.get_file_state_counts(
+            box_ids=list(box_ids_by_file_upload_box_id)
+        )
+        return {
+            box_ids_by_file_upload_box_id[file_upload_box_id]: box_counts
+            for file_upload_box_id, box_counts in counts.items()
+            if file_upload_box_id in box_ids_by_file_upload_box_id
+        }
 
     async def get_storage_overview(self) -> list[HubStorageSummary]:
         """Aggregate upload box storage statistics per data hub (storage alias)."""

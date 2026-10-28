@@ -89,3 +89,59 @@ async def test_box_stats_aggregation(joint_fixture: JointFixture):
     file_count, total_size = await box_stats_aggregator.compute_box_stats(box_id=box_id)
     assert file_count == len(COUNTED_UPLOAD_STATES) - 1
     assert total_size == sum(counted_sizes_by_file_id.values())
+
+
+async def test_file_state_counts_aggregation(joint_fixture: JointFixture):
+    """Test MongoDbBoxStatsAggregator.compute_file_state_counts against a real MongoDB
+    instance.
+    """
+    controller = joint_fixture.upload_controller
+    assert isinstance(controller, UploadController)
+    box_stats_aggregator = controller._box_stats_aggregator
+    file_upload_dao = controller._file_upload_dao
+
+    box_id = uuid4()
+    other_box_id = uuid4()
+    empty_box_id = uuid4()
+    unrequested_box_id = uuid4()
+
+    assert await box_stats_aggregator.compute_file_state_counts(box_ids=[]) == {}
+    assert await box_stats_aggregator.compute_file_state_counts(box_ids=[box_id]) == {}
+
+    # Insert a different number of FileUploads per state into the first box
+    async with set_correlation_id(uuid4()):
+        for index, state in enumerate(
+            COUNTED_UPLOAD_STATES + NOT_COUNTED_UPLOAD_STATES
+        ):
+            for number in range(index + 1):
+                file_upload = utils.make_file_upload(state=state)
+                file_upload.box_id = box_id
+                file_upload.alias = f"file_{state}_{number}"
+                await file_upload_dao.insert(file_upload)
+
+        # The second box gets one counted and one uncounted FileUpload
+        for state in ("archived", "init"):
+            file_upload = utils.make_file_upload(state=state)
+            file_upload.box_id = other_box_id
+            file_upload.alias = f"file_{state}"
+            await file_upload_dao.insert(file_upload)
+
+        # The empty box only gets uncounted FileUploads
+        for state in NOT_COUNTED_UPLOAD_STATES:
+            file_upload = utils.make_file_upload(state=state)
+            file_upload.box_id = empty_box_id
+            file_upload.alias = f"file_{state}"
+            await file_upload_dao.insert(file_upload)
+
+        # A box that is not requested must not show up
+        file_upload = utils.make_file_upload(state="inbox")
+        file_upload.box_id = unrequested_box_id
+        await file_upload_dao.insert(file_upload)
+
+    counts = await box_stats_aggregator.compute_file_state_counts(
+        box_ids=[box_id, other_box_id, empty_box_id, uuid4()]
+    )
+    assert counts == {
+        box_id: {state: index + 1 for index, state in enumerate(COUNTED_UPLOAD_STATES)},
+        other_box_id: {"archived": 1},
+    }

@@ -474,6 +474,53 @@ async def test_get_all_file_uploads_missing_box(
         )
 
 
+async def test_get_file_state_counts(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    work_order_jwk: JWK,
+):
+    """Test the get_file_state_counts function"""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    other_box_id = uuid4()
+
+    # Happy path - verify request body and WOT work_type
+    file_box_api.on_get_file_state_counts = respond(
+        200,
+        json={
+            str(TEST_BOX_ID): {"inbox": 2, "archived": 3},
+            str(other_box_id): {"failed_interrogation": 1},
+        },
+    )
+    counts = await file_upload_box_client.get_file_state_counts(
+        box_ids=[TEST_BOX_ID, other_box_id]
+    )
+    assert counts == {
+        TEST_BOX_ID: {"inbox": 2, "archived": 3},
+        other_box_id: {"failed_interrogation": 1},
+    }
+    request = file_box_api.requests[0]
+    assert json.loads(request.content) == {
+        "box_ids": [str(TEST_BOX_ID), str(other_box_id)]
+    }
+    raw_token = request.headers["authorization"].removeprefix("Bearer ")
+    wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
+    assert wot_claims["work_type"] == "view_stats"
+    assert "box_id" not in wot_claims
+
+    # Check off-normal status code
+    file_box_api.on_get_file_state_counts = respond(500, json="Some error occurred.")
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.get_file_state_counts(box_ids=[TEST_BOX_ID])
+
+    # Check with successful status code but garbled response body
+    file_box_api.on_get_file_state_counts = respond(
+        200, json={str(TEST_BOX_ID): {"no_such_state": 1}}
+    )
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.get_file_state_counts(box_ids=[TEST_BOX_ID])
+
+
 async def test_archive_file_upload_box(
     config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
 ):

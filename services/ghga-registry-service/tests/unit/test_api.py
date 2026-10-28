@@ -171,6 +171,46 @@ async def test_get_storage_overview(
         assert response.status_code == 500
 
 
+async def test_get_file_state_counts(
+    config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
+):
+    """Test the GET /upload-boxes/file-state-counts endpoint"""
+    registry = AsyncMock()
+    async with (
+        prepare_rest_app(config=config, registry_override=registry) as app,
+        AsyncTestClient(app=app) as rest_client,
+    ):
+        url = "/upload-boxes/file-state-counts"
+
+        # unauthenticated
+        response = await rest_client.get(url)
+        assert response.status_code == 401
+
+        # bad credentials
+        response = await rest_client.get(url, headers=bad_auth_headers)
+        assert response.status_code == 401
+
+        # normal response but user is not a data steward (no data_steward role)
+        response = await rest_client.get(url, headers=user_auth_headers)
+        assert response.status_code == 403
+
+        # normal response with data steward role, not shadowed by GET /{box_id}
+        box_id = uuid4()
+        registry.rdub_manager.get_file_state_counts.return_value = {
+            box_id: {"inbox": 2, "archived": 3}
+        }
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 200
+        assert response.json() == {str(box_id): {"inbox": 2, "archived": 3}}
+        registry.rdub_manager.get_research_data_upload_box.assert_not_called()
+
+        # handle other exception
+        registry.reset_mock()
+        registry.rdub_manager.get_file_state_counts.side_effect = TypeError()
+        response = await rest_client.get(url, headers=ds_auth_headers)
+        assert response.status_code == 500
+
+
 async def test_create_research_data_upload_box(
     config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
 ):

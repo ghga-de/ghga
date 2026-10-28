@@ -1033,6 +1033,56 @@ paths:
       summary: Create upload box
       tags:
       - ResearchDataUploadBoxes
+  /upload-boxes/file-state-counts:
+    get:
+      description: Returns the number of file uploads per state for every upload box,
+        keyed by the box ID. Only the states that count toward a box's file_count
+        are included. Boxes without such file uploads and states without file uploads
+        are absent. Requires the Data Steward role.
+      operationId: get_file_state_counts_upload_boxes_file_state_counts_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  additionalProperties:
+                    minimum: 0.0
+                    type: integer
+                  propertyNames:
+                    enum:
+                    - init
+                    - inbox
+                    - failed
+                    - cancelled
+                    - interrogated
+                    - failed_interrogation
+                    - awaiting_archival
+                    - archived
+                    - init
+                    - inbox
+                    - failed
+                    - cancelled
+                    - interrogated
+                    - failed_interrogation
+                    - awaiting_archival
+                    - archived
+                  type: object
+                propertyNames:
+                  format: uuid4
+                title: Response 200 Get File State Counts Upload Boxes File State
+                  Counts Get
+                type: object
+          description: File state counts successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+      security:
+      - HTTPBearer: []
+      summary: Get the file state counts of all upload boxes
+      tags:
+      - ResearchDataUploadBoxes
   /upload-boxes/{box_id}:
     delete:
       description: Delete a research data upload box and its files. Requires the Data

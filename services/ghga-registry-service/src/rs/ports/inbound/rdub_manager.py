@@ -26,6 +26,7 @@ from rs.core.models import (
     BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
+    FileStateCounts,
     FileUploadBox,
     GrantId,
     GrantWithBoxInfo,
@@ -373,6 +374,20 @@ class RDUBManagerPort(ABC):
         with a chosen state.
 
         Returns a BoxRetrievalResults instance with the boxes and unpaginated count.
+        """
+        ...
+
+    @abstractmethod
+    async def get_file_state_counts(self) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state for every research data upload
+        box, keyed by the box ID.
+
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such file uploads are
+        absent from the result, as are states without file uploads.
+
+        Raises:
+            OperationError: If there's a problem querying the file box service.
         """
         ...
 
