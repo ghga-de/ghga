@@ -15,19 +15,21 @@
 # body carries each published image's revision label so the reader can judge how
 # much of the delta is staleness. The front end's dependency graph is
 # additionally compared at lockfile level (current vs updated pnpm-lock.yaml),
-# since its image ships only bundled JS that Trivy cannot see.
+# since its image ships only bundled JS that Trivy cannot see. uv.lock is compared
+# at lockfile level too, by `just audit` (uv audit against OSV): Trivy cannot parse
+# a virtual-workspace-root lock (no [project] at the root -> zero packages
+# inventoried; verified).
 #
-# Reported vs. gating: every fix reaches the tables, but only fixes in packages a
-# lockfile controls (Trivy's lang-pkgs) open a PR. OS-package fixes come with any
-# rebuild of :dev, so no lockfile update can claim them (scripts/diff_trivy.py).
+# Reported vs. gating: every fix reaches the tables, but only fixes in runtime
+# packages a lockfile controls open a PR. OS-package fixes come with any rebuild of
+# :dev, so no lockfile update can claim them. uv audit checks every dependency group
+# and extra, but only fixes in packages the mono image installs (`uv export --no-dev
+# --all-packages`, no extras) count; the dev toolchain (ruff, pytest, pre-commit's
+# virtualenv, ...) never ships, so its fixes are listed only. A fix that Trivy and
+# uv audit both report, under a CVE and a GHSA or PYSEC ID, counts once
+# (scripts/diff_trivy.py).
 #
 # Deliberate scanning gaps:
-#   - uv.lock is NOT fs-scanned: Trivy cannot parse a virtual-workspace-root
-#     lock (no [project] at the root -> zero packages inventoried; verified).
-#     The mono image scan subsumes it — its venv holds every member's runtime
-#     dependencies as installed dist-infos.
-#   - The mono venv is built --no-dev, so CVEs in the dev toolchain (ruff,
-#     pytest, mypy, ...) are out of scope on purpose: they never ship.
 #   - A PR needs content: where the lockfile update is a no-op, or fixes nothing a
 #     lockfile controls, no PR opens even if a rebuild alone would fix things; an
 #     open one from an earlier run is closed instead. Base-digest pinning is the
@@ -217,8 +219,32 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      # No fs scan of uv.lock here: Trivy inventories NOTHING from a virtual-
-      # workspace-root lock, so the image scan below is the real Python signal.
+      # No Trivy fs scan of uv.lock: Trivy inventories nothing from a virtual-workspace-root
+      # lock. uv audit reads it instead, every group and extra included, and the export
+      # lists what the mono image installs (docker/Dockerfile), which tells runtime from
+      # dev-only findings. Exit 1 only means findings. An OSV outage or a change to the
+      # preview JSON schema fails the step, not the job, so the lockfile PR still opens.
+      - name: Audit the current uv.lock
+        id: audit-before
+        continue-on-error: true
+        run: |
+          just audit --output-format json --preview-features json-output \
+            > "$SCAN/audit-before.json" || [ $? -eq 1 ]
+          uv export --frozen --no-dev --all-packages --no-emit-workspace \
+            --no-header --no-hashes --no-annotate > "$SCAN/runtime.txt"
+          {
+            echo "## uv.lock — current exposure (uv audit, every group and extra)"
+            echo
+            jq -r '
+              "\(.summary.vulnerabilities) known vulnerabilities in \(.summary.audited_packages) packages.",
+              (select(.vulnerabilities != [])
+                | "", "| Vulnerability | Package | Installed | Fixed in |", "| --- | --- | --- | --- |",
+                  (.vulnerabilities[]
+                    | "| \(if .link then "[\(.id)](\(.link))" else .id end) | `\(.dependency.name)` "
+                      + "| \(.dependency.version) | \(.fix_versions | join(", ") | if . == "" then "-" else . end) |"))
+            ' "$SCAN/audit-before.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Update the lockfile
         id: update
         run: |
@@ -246,6 +272,23 @@ jobs:
               --out "$OUT/python-frag-image.json"
           fi
           cp uv.lock "$OUT/uv.lock"
+
+      # The runtime list is appended to, so a package the update adds to the image still
+      # counts as runtime when one of its findings is introduced.
+      - name: Audit the updated uv.lock and diff against current
+        if: ${{ steps.update.outputs.changed == 'true' && steps.audit-before.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          just audit --output-format json --preview-features json-output \
+            > "$SCAN/audit-after.json" || [ $? -eq 1 ]
+          uv export --frozen --no-dev --all-packages --no-emit-workspace \
+            --no-header --no-hashes --no-annotate >> "$SCAN/runtime.txt"
+          python3 scripts/diff_trivy.py diff --format uv-audit \
+            --label "uv.lock (uv audit, every group and extra) — current vs updated" \
+            --before "$SCAN/audit-before.json" \
+            --after "$SCAN/audit-after.json" \
+            --runtime "$SCAN/runtime.txt" \
+            --out "$OUT/python-frag-audit.json"
 
       - uses: actions/upload-artifact@v6
         with:
@@ -503,10 +546,11 @@ jobs:
               fi
             done
             echo
-            echo "The front-end dependency graph is additionally compared at lockfile"
-            echo "level, since the data-portal image ships only bundled JS; the Python"
-            echo "graph is covered by the platform image scan (the mono venv holds"
-            echo "every service's runtime dependencies)."
+            echo "Both dependency graphs are additionally compared at lockfile level:"
+            echo "the data-portal image ships only bundled JS, and uv audit checks"
+            echo "uv.lock with its dev groups and extras. Fixes in packages the"
+            echo "images do not install are listed but not counted, and a fix that"
+            echo "Trivy and uv audit both report is counted once."
             echo
             cat "$RUNNER_TEMP/report.md"
             echo
