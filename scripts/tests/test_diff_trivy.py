@@ -128,10 +128,17 @@ def _write_audit(path, *findings):
     return path
 
 
+def _write_runtime(path, runtime):
+    """Write a `uv export` of the given package names, or of whole lines with a ` ; `."""
+    path.write_text(
+        "".join(f"{name}\n" if " ; " in name else f"{name}==1.0\n" for name in runtime)
+    )
+    return path
+
+
 def _audit_fragment(tmp_path, before, after, runtime):
     """Diff two uv audit reports, with `runtime` as the images' package names."""
-    runtime_path = tmp_path / "runtime.txt"
-    runtime_path.write_text("".join(f"{name}==1.0\n" for name in runtime))
+    runtime_path = _write_runtime(tmp_path / "runtime.txt", runtime)
     fragment = tmp_path / "audit-fragment.json"
     _run(
         "diff",
@@ -188,3 +195,112 @@ def test_a_fix_both_scanners_report_counts_once(tmp_path):
     )
     gate = _run("render", str(trivy), str(audit), "--out", str(tmp_path / "report.md"))
     assert int(gate) == 2
+
+
+def _render_audit(tmp_path, before, runtime):
+    """Diff a uv audit report against a clean one and render; return gate and report."""
+    fragment = _audit_fragment(tmp_path, before, [], runtime=runtime)
+    report = tmp_path / "report.md"
+    gate = _run("render", str(fragment), "--out", str(report))
+    return int(gate), report.read_text()
+
+
+def test_one_advisory_under_two_osv_ids_counts_once(tmp_path):
+    """OSV returns an advisory under its GHSA and its PYSEC ID, aliasing each other."""
+    gate, report = _render_audit(
+        tmp_path,
+        [
+            ("GHSA-aaaa-bbbb-cccc", ["PYSEC-2026-1"], "pillow"),
+            ("PYSEC-2026-1", ["GHSA-aaaa-bbbb-cccc"], "pillow"),
+        ],
+        runtime=["pillow"],
+    )
+    assert gate == 1
+    assert "**Fixed by the dependency update (1):**" in report
+    assert "1 known vulnerabilities before" in report
+
+
+def test_advisories_join_through_a_later_record(tmp_path):
+    """The third record links the first two, which share no ID with each other."""
+    gate, _ = _render_audit(
+        tmp_path,
+        [
+            ("GHSA-aaaa-bbbb-cccc", [], "pillow"),
+            ("PYSEC-2026-1", [], "pillow"),
+            ("CVE-2026-4444", ["GHSA-aaaa-bbbb-cccc", "PYSEC-2026-1"], "pillow"),
+        ],
+        runtime=["pillow"],
+    )
+    assert gate == 1
+
+
+def test_a_fix_both_scanners_report_is_listed_once(tmp_path):
+    """The image fragment lists it with Trivy's severity; the audit table points there."""
+    trivy = tmp_path / "fragment.json"
+    _run(
+        "diff",
+        "--label",
+        "image",
+        "--before",
+        str(_write_report(tmp_path / "before.json", PILLOW_TRIVY)),
+        "--after",
+        str(_write_report(tmp_path / "after.json")),
+        "--out",
+        str(trivy),
+    )
+    audit = _audit_fragment(tmp_path, [PILLOW_GHSA], [], runtime=["pillow"])
+    report = tmp_path / "report.md"
+    _run("render", str(trivy), str(audit), "--out", str(report))
+    text = report.read_text()
+    assert "| MEDIUM | `Pillow` |" in text
+    assert "GHSA-aaaa-bbbb-cccc" not in text
+    assert "1 more already listed above, under another ID." in text
+
+
+def test_a_package_for_another_platform_is_dev_only(tmp_path):
+    """colorama is in the export, but only for Windows, which the images are not."""
+    gate, _ = _render_audit(
+        tmp_path,
+        [("GHSA-dddd-eeee-ffff", [], "colorama")],
+        runtime=["colorama==0.4.6 ; sys_platform == 'win32'"],
+    )
+    assert gate == 0
+
+
+def test_exposure_lists_a_finding_without_a_fix(tmp_path):
+    """uv audit reports `fix_versions: null` for an advisory with no fixed release."""
+    audit = tmp_path / "audit.json"
+    audit.write_text(
+        json.dumps(
+            {
+                "summary": {"audited_packages": 3},
+                "vulnerabilities": [
+                    {
+                        "id": "GHSA-aaaa-bbbb-cccc",
+                        "dependency": {"name": "pillow", "version": "1.0"},
+                        "fix_versions": None,
+                        "link": None,
+                    },
+                    {
+                        "id": "PYSEC-2026-55",
+                        "dependency": {"name": "virtualenv", "version": "1.0"},
+                        "fix_versions": ["2.0"],
+                    },
+                ],
+            }
+        )
+    )
+    report = tmp_path / "exposure.md"
+    _run(
+        "exposure",
+        "--report",
+        str(audit),
+        "--runtime",
+        str(_write_runtime(tmp_path / "runtime.txt", ["pillow"])),
+        "--out",
+        str(report),
+    )
+    text = report.read_text()
+    assert "2 known vulnerabilities in 3 packages." in text
+    assert "| GHSA-aaaa-bbbb-cccc | - | `pillow` | 1.0 | - |" in text
+    assert "<summary>In dev-only packages (1)</summary>" in text

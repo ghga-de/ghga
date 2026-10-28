@@ -148,6 +148,9 @@ jobs:
     permissions:
       contents: read
       packages: read # pull :dev from GHCR
+    outputs:
+      # A failed audit reports no fixes, and that silence must not close the PR.
+      audited: ${{ steps.audit-before.outcome == 'success' && steps.audit-after.outcome != 'failure' }}
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
       # The commit this run scanned — NOT $GITHUB_SHA, which names the event's ref (the
@@ -219,11 +222,17 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          # uv audit and its JSON output are previews in 0.13, so a newer uv may change
+          # the format diff_trivy.py reads. Bump this on purpose, after a dispatch run.
+          version: "0.13.4"
       # No Trivy fs scan of uv.lock: Trivy inventories nothing from a virtual-workspace-root
       # lock. uv audit reads it instead, every group and extra included, and the export
       # lists what the mono image installs (docker/Dockerfile), which tells runtime from
-      # dev-only findings. Exit 1 only means findings. An OSV outage or a change to the
-      # preview JSON schema fails the step, not the job, so the lockfile PR still opens.
+      # dev-only findings. Exit 1 only means findings. An OSV outage or a format change
+      # fails the step, not the job, so the lockfile PR still opens, and the warning step
+      # below says the audit is missing. diff_trivy.py evaluates the export's environment
+      # markers for the interpreter it runs on, which is Linux CPython from
+      # .python-version, as in the images.
       - name: Audit the current uv.lock
         id: audit-before
         continue-on-error: true
@@ -232,17 +241,13 @@ jobs:
             > "$SCAN/audit-before.json" || [ $? -eq 1 ]
           uv export --frozen --no-dev --all-packages --no-emit-workspace \
             --no-header --no-hashes --no-annotate > "$SCAN/runtime.txt"
+          uv run --no-project --with packaging python scripts/diff_trivy.py exposure \
+            --report "$SCAN/audit-before.json" --runtime "$SCAN/runtime.txt" \
+            --out "$SCAN/audit-before.md"
           {
             echo "## uv.lock — current exposure (uv audit, every group and extra)"
             echo
-            jq -r '
-              "\(.summary.vulnerabilities) known vulnerabilities in \(.summary.audited_packages) packages.",
-              (select(.vulnerabilities != [])
-                | "", "| Vulnerability | Package | Installed | Fixed in |", "| --- | --- | --- | --- |",
-                  (.vulnerabilities[]
-                    | "| \(if .link then "[\(.id)](\(.link))" else .id end) | `\(.dependency.name)` "
-                      + "| \(.dependency.version) | \(.fix_versions | join(", ") | if . == "" then "-" else . end) |"))
-            ' "$SCAN/audit-before.json"
+            cat "$SCAN/audit-before.md"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Update the lockfile
@@ -274,8 +279,10 @@ jobs:
           cp uv.lock "$OUT/uv.lock"
 
       # The runtime list is appended to, so a package the update adds to the image still
-      # counts as runtime when one of its findings is introduced.
+      # counts as runtime when one of its findings is introduced. The fragment's name sorts
+      # after the image's, so a fix both report is listed with Trivy's severity.
       - name: Audit the updated uv.lock and diff against current
+        id: audit-after
         if: ${{ steps.update.outputs.changed == 'true' && steps.audit-before.outcome == 'success' }}
         continue-on-error: true
         run: |
@@ -283,12 +290,20 @@ jobs:
             > "$SCAN/audit-after.json" || [ $? -eq 1 ]
           uv export --frozen --no-dev --all-packages --no-emit-workspace \
             --no-header --no-hashes --no-annotate >> "$SCAN/runtime.txt"
-          python3 scripts/diff_trivy.py diff --format uv-audit \
+          uv run --no-project --with packaging python scripts/diff_trivy.py diff \
+            --format uv-audit \
             --label "uv.lock (uv audit, every group and extra) — current vs updated" \
             --before "$SCAN/audit-before.json" \
             --after "$SCAN/audit-after.json" \
             --runtime "$SCAN/runtime.txt" \
-            --out "$OUT/python-frag-audit.json"
+            --out "$OUT/python-frag-lockfile.json"
+
+      - name: Warn that uv audit failed
+        if: ${{ steps.audit-before.outcome == 'failure' || steps.audit-after.outcome == 'failure' }}
+        run: |
+          msg="uv audit failed, so this run does not check uv.lock and closes no PR."
+          echo "::warning::$msg The failed audit step's log has the error."
+          echo "## $msg" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v6
         with:
@@ -518,6 +533,8 @@ jobs:
       # introduced — are attributable at a glance.
       - name: Compose the PR body
         if: ${{ steps.verdict.outputs.fixed > 0 }}
+        env:
+          AUDITED: ${{ needs.python.outputs.audited }}
         run: |
           {
             echo "Automated dependency update from the daily security scan."
@@ -551,6 +568,10 @@ jobs:
             echo "uv.lock with its dev groups and extras. Fixes in packages the"
             echo "images do not install are listed but not counted, and a fix that"
             echo "Trivy and uv audit both report is counted once."
+            if [ "$AUDITED" != "true" ]; then
+              echo
+              echo "uv audit failed in this run, so fixes that only it reports are missing."
+            fi
             echo
             cat "$RUNNER_TEMP/report.md"
             echo
@@ -663,12 +684,14 @@ jobs:
             "with the next rebuild of :dev on their own." >> "$GITHUB_STEP_SUMMARY"
 
       # A PR outlives its finding once dev gets those fixes another way — every
-      # merge rebuilds :dev off a fresh base. Gated on both scans succeeding: a
-      # failed ecosystem reports no fixes, and that silence must not close the PR.
+      # merge rebuilds :dev off a fresh base. Gated on both scans and uv audit
+      # succeeding: a failed one reports no fixes, and that silence must not close the PR.
+      # The audit steps cannot fail the python job, hence its own output.
       - name: Close a PR that has nothing left to fix
         if: >-
           ${{ (steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0')
-          && needs.python.result == 'success' && needs.frontend.result == 'success' }}
+          && needs.python.result == 'success' && needs.frontend.result == 'success'
+          && needs.python.outputs.audited == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.SECURITY_PR_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
