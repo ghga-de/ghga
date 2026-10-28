@@ -472,7 +472,10 @@ class MongoDbDao(Generic[Dto]):
                 when inserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        document = self._dto_to_document(dto)
+        await self._insert_document(self._dto_to_document(dto))
+
+    async def _insert_document(self, document: dict[str, Any]) -> None:
+        """Insert an already converted document, see `insert`."""
         with translate_pymongo_errors():
             try:
                 await self._collection.insert_one(document)
@@ -497,7 +500,10 @@ class MongoDbDao(Generic[Dto]):
                 when upserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        document = self._dto_to_document(dto)
+        await self._upsert_document(self._dto_to_document(dto))
+
+    async def _upsert_document(self, document: dict[str, Any]) -> None:
+        """Upsert an already converted document, see `upsert`."""
         with translate_pymongo_errors():
             try:
                 await self._collection.replace_one(
