@@ -58,6 +58,19 @@ def is_alias_accession(accession: str) -> bool:
     return re.fullmatch(FILE_ACCESSION_PATTERN, accession) is not None
 
 
+def is_legacy_accession(accession: str) -> bool:
+    """Tell whether the accession is a flat one from before study PIDs."""
+    # spelled out instead of imported from dskit, so a drift there fails the test
+    return re.fullmatch(r"GHGA[A-Z][0-9]{14}", accession) is not None
+
+
+def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
+    """Read a submission JSON from the local submission store."""
+    submission_path = fixtures.dsk.config.submission_store / f"{submission_id}.json"
+    with open(submission_path, encoding="utf-8") as submission_file:
+        return json.load(submission_file)
+
+
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}
 DATASET_SEARCH_RESULT_KEYS = {"accession", "title", "ega_accession", "alias"}
 FILE_OVERVIEW_KEYS = {

@@ -48,11 +48,11 @@ def wps_database_is_empty(config: Config, mongo: MongoFixture, state: StateStora
 
 @given("the test datasets have been announced")
 def announce_dataset(config: Config, mongo: MongoFixture):
-    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
+    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=3)
     assert datasets
-    assert len(datasets) == 2
+    assert len(datasets) == 3
     titles = {dataset["title"][4:-8] for dataset in datasets}
-    assert titles == {"complete-A", "complete-B"}
+    assert titles == {"complete-A", "complete-B", "complete-X"}
 
 
 @when(parse('"{full_name}" lists the datasets'), target_fixture="response")
