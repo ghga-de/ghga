@@ -29,9 +29,11 @@ ARG VARIANT=single
 # hadolint ignore=DL3006
 FROM ${BASE}-sfw-dev AS workspace
 # Toolchain for source-building native wheels where musllinux wheels are unavailable.
+# No `apk upgrade` here: the runner stage below starts from the plain base again and takes
+# only the venv, so an upgrade would not reach the image, and with `--available` it breaks
+# whenever dhi.io and the Alpine CDN carry different builds of the same package version.
 # hadolint ignore=DL3018
-RUN apk upgrade --no-cache --available && \
-    apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev
+RUN apk add --no-cache build-base gcc g++ libffi-dev zlib-dev python3-dev
 # uv ships a static (musl-compatible) binary.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
