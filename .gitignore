@@ -5,13 +5,15 @@
 # Python / uv
 __pycache__/
 *.py[cod]
-.venv/
+# also .venv-docs and .venv-testbed; the ignore file uv writes inside is gone during a rebuild
+.venv*/
 venv/
 *.egg-info/
 build/
 dist/
 .mypy_cache/
 .ruff_cache/
+.rumdl_cache/
 .pytest_cache/
 .coverage
 coverage.xml
