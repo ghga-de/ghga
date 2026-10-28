@@ -132,6 +132,9 @@ PILLOW_TRIVY = ("lang-pkgs", "CVE-2026-4444", "Pillow")
 VIRTUALENV: tuple[str, list[str], str] = ("PYSEC-2026-55", [], "virtualenv")
 
 
+SCHEMA = {"version": "preview"}
+
+
 def _write_audit(path, *findings):
     """Write a uv audit JSON report of (id, aliases, package[, version]) findings."""
     vulns = [
@@ -147,7 +150,7 @@ def _write_audit(path, *findings):
         }
         for vuln_id, aliases, package, *version in findings
     ]
-    path.write_text(json.dumps({"vulnerabilities": vulns}))
+    path.write_text(json.dumps({"schema": SCHEMA, "vulnerabilities": vulns}))
     return path
 
 
@@ -255,7 +258,7 @@ def test_a_fix_both_scanners_report_is_listed_once(tmp_path):
     text = report.read_text()
     assert "| MEDIUM | `Pillow` |" in text
     assert "GHSA-aaaa-bbbb-cccc" not in text
-    assert "1 more already listed above, under another ID." in text
+    assert "1 more already listed above." in text
 
 
 def test_a_package_for_another_platform_is_dev_only(tmp_path):
@@ -274,6 +277,7 @@ def test_exposure_lists_a_finding_without_a_fix(tmp_path):
     audit.write_text(
         json.dumps(
             {
+                "schema": SCHEMA,
                 "summary": {"audited_packages": 3},
                 "vulnerabilities": [
                     {
@@ -363,6 +367,7 @@ def test_exposure_lists_adverse_statuses(tmp_path):
     audit.write_text(
         json.dumps(
             {
+                "schema": SCHEMA,
                 "vulnerabilities": [],
                 "adverse_statuses": [
                     {
@@ -384,3 +389,68 @@ def test_exposure_lists_adverse_statuses(tmp_path):
         str(report),
     )
     assert '- `pyyaml` 6.0: {"status": "archived"}' in report.read_text()
+
+
+def test_a_dev_only_version_does_not_take_a_runtime_pair(tmp_path):
+    """pillow 1.1 is still vulnerable; the dev-only 0.9 must not pair with it."""
+    gate, _ = _render_audit(
+        tmp_path,
+        [(*PILLOW_GHSA, "0.9"), (*PILLOW_GHSA, "1.0")],
+        runtime=["pillow==1.0", "pillow==1.1"],
+        after=[(*PILLOW_GHSA, "1.1")],
+    )
+    assert gate == 0
+
+
+def test_markers_hold_on_either_image_machine(tmp_path):
+    """The images are built for amd64 and arm64, so both packages ship."""
+    gate, _ = _render_audit(
+        tmp_path,
+        [("GHSA-1111-2222-3333", [], "amd"), ("GHSA-4444-5555-6666", [], "arm")],
+        runtime=[
+            "amd==1.0 ; platform_machine == 'x86_64'",
+            "arm==1.0 ; platform_machine == 'aarch64'",
+        ],
+    )
+    assert gate == 2
+
+
+def _diff_audit_report(tmp_path, report):
+    """Run the uv-audit diff with `report` as the before report; return the process."""
+    before = tmp_path / "unknown.json"
+    before.write_text(json.dumps(report))
+    return subprocess.run(
+        [
+            sys.executable,
+            str(DIFF_TRIVY),
+            "diff",
+            "--format",
+            "uv-audit",
+            "--label",
+            "uv.lock",
+            "--before",
+            str(before),
+            "--after",
+            str(_write_audit(tmp_path / "after.json")),
+            "--runtime",
+            str(_write_runtime(tmp_path / "runtime.txt", [])),
+            "--out",
+            str(tmp_path / "fragment.json"),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_a_report_of_another_schema_fails(tmp_path):
+    """A format change must not read as "no findings", which could close a PR."""
+    result = _diff_audit_report(
+        tmp_path, {"schema": {"version": "1"}, "vulnerabilities": []}
+    )
+    assert result.returncode != 0
+    assert "schema '1'" in result.stderr
+
+
+def test_a_report_without_vulnerabilities_fails(tmp_path):
+    result = _diff_audit_report(tmp_path, {"schema": SCHEMA, "findings": []})
+    assert result.returncode != 0
