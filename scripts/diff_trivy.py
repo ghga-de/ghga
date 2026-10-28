@@ -40,6 +40,13 @@ DEV_ONLY = "dev-only"
 PYPI = "pypi"
 PYTHON_TYPES = {"python-pkg", "pip", "pipenv", "poetry", "uv"}
 
+# The uv audit JSON schema this script reads. A report of any other fails, so a format
+# change cannot read as "no findings" and close a PR.
+UV_AUDIT_SCHEMA = "preview"
+
+# The machines the images are built for (dev-images.yaml, release.yaml).
+IMAGE_MACHINES = ("x86_64", "aarch64")
+
 
 def _read_json(path):
     return json.loads(pathlib.Path(path).read_text())
@@ -60,23 +67,19 @@ def _ids(record):
     return {record["id"], *record.get("aliases", [])}
 
 
-def _same_advisory(a, b):
-    return (
-        a["ecosystem"] == b["ecosystem"]
-        and _name(a) == _name(b)
-        and bool(_ids(a) & _ids(b))
-    )
+def _package(record):
+    """The key records must share to be paired: ecosystem, name and class."""
+    return record["ecosystem"], _name(record), record["class"]
 
 
-def _group(records, by_version):
-    """Partition records into advisories, as lists in first-seen order.
+def _advisories(records, by_version):
+    """Label each record with its advisory, a number the records of one advisory share.
 
     Records of one package whose IDs or aliases overlap, directly or through another
     record, are one advisory: OSV returns one under its GHSA and its PYSEC ID, and
     Trivy names it by its CVE. With `by_version`, each installed version of a
-    package is a group of its own.
+    package is an advisory of its own.
     """
-    records = list(records)
     parent = list(range(len(records)))
 
     def find(i):
@@ -90,16 +93,17 @@ def _group(records, by_version):
         package = (r["ecosystem"], _name(r), r["installed"] if by_version else "")
         for vuln_id in _ids(r):
             parent[find(i)] = find(owner.setdefault((*package, vuln_id), i))
-    groups: dict[int, list[dict[str, Any]]] = {}
-    for i, r in enumerate(records):
-        groups.setdefault(find(i), []).append(r)
-    return list(groups.values())
+    return [find(i) for i in range(len(records))]
 
 
 def _merge(records):
     """Collapse each advisory into its first record, carrying the others' IDs as aliases."""
+    records = list(records)
+    groups: dict[int, list[dict[str, Any]]] = {}
+    for label, r in zip(_advisories(records, by_version=True), records, strict=True):
+        groups.setdefault(label, []).append(r)
     merged = []
-    for first, *rest in _group(records, by_version=True):
+    for first, *rest in groups.values():
         ids = dict.fromkeys(i for r in (first, *rest) for i in sorted(_ids(r)))
         fixed_in = dict.fromkeys(
             v for r in (first, *rest) for v in r["fixed_in"].split(", ") if v
@@ -150,26 +154,50 @@ def _load_trivy(path):
     return list(vulns.values())
 
 
-def _load_runtime(path):
-    """Read the (name, version) pairs from a `uv export` requirements file.
+def _load_runtime(paths):
+    """Read the (name, version) pairs from `uv export` requirements files.
 
-    A line whose environment marker does not hold for this interpreter is left out,
-    so the workflow runs this on the Linux CPython version the images ship. A line
-    without an exact pin, a URL dependency, counts for every version, as None.
+    A line is left out where its environment marker holds on no image: Linux on one
+    of IMAGE_MACHINES, with the Python of this interpreter, so the workflow runs this
+    on the CPython version the images ship. A line without an exact pin, a URL
+    dependency, counts for every version, as None.
     """
     # Imported here: only uv-audit modes need it, and the PR job runs bare python3.
     from packaging.requirements import Requirement
 
+    # evaluate() lays these over this interpreter's environment.
+    images = [
+        {"sys_platform": "linux", "platform_system": "Linux", "platform_machine": m}
+        for m in IMAGE_MACHINES
+    ]
+    lines = [
+        line for path in paths for line in pathlib.Path(path).read_text().splitlines()
+    ]
     pairs = set()
-    for line in pathlib.Path(path).read_text().splitlines():
+    for line in lines:
         if not re.match(r"[A-Za-z0-9]", line):
             continue
         requirement = Requirement(line)
-        if requirement.marker is not None and not requirement.marker.evaluate():
+        marker = requirement.marker
+        if marker is not None and not any(marker.evaluate(env) for env in images):
             continue
         pins = [s.version for s in requirement.specifier if s.operator == "=="]
         pairs.add((_normalize(requirement.name), pins[0] if len(pins) == 1 else None))
     return pairs
+
+
+def _read_uv_audit(path):
+    """Parse a uv audit report, failing unless it has the schema this script reads."""
+    report = _read_json(path)
+    version = (report.get("schema") or {}).get("version")
+    if version != UV_AUDIT_SCHEMA or not isinstance(
+        report.get("vulnerabilities"), list
+    ):
+        raise SystemExit(
+            f"{path}: not a uv audit report of schema {UV_AUDIT_SCHEMA!r} "
+            f"(schema {version!r}); check the format, then update UV_AUDIT_SCHEMA"
+        )
+    return report
 
 
 def _load_uv_audit(report, runtime):
@@ -179,7 +207,7 @@ def _load_uv_audit(report, runtime):
     (name, version) pairs the published images install, is classed DEV_ONLY.
     """
     vulns: dict[tuple[str, str, str], dict[str, Any]] = {}
-    for v in report.get("vulnerabilities") or []:
+    for v in report["vulnerabilities"]:
         package = v["dependency"]["name"]
         version = v["dependency"].get("version", "")
         installed = runtime & {
@@ -224,32 +252,39 @@ def _adverse(report):
 
 
 def _pair(before, after):
-    """Pair each record with one of the same advisory, the same version first.
+    """Pair each record with one of the same package, class and advisory.
 
     Returns the unpaired records of each side: those of `before` were fixed, those
     of `after` were introduced. Pairing across versions keeps a bump that is still
     vulnerable from counting as a fix; pairing the same version first keeps one of
-    two installed versions that the update did fix from hiding behind the other.
+    two installed versions that the update did fix from hiding behind the other. The
+    class must match too, or a dev-only version could take the pair of a runtime one.
     """
-    left_before, left_after = list(before), list(after)
+    after = list(after)
+    candidates: dict[tuple[str, str, str], list[int]] = {}
+    for j, o in enumerate(after):
+        candidates.setdefault(_package(o), []).append(j)
+    taken = [False] * len(after)
+    left = list(before)
     for same_version in (True, False):
         unpaired = []
-        for r in left_before:
+        for r in left:
             match = next(
                 (
-                    o
-                    for o in left_after
-                    if _same_advisory(r, o)
-                    and (not same_version or o["installed"] == r["installed"])
+                    j
+                    for j in candidates.get(_package(r), [])
+                    if not taken[j]
+                    and _ids(r) & _ids(after[j])
+                    and (not same_version or after[j]["installed"] == r["installed"])
                 ),
                 None,
             )
             if match is None:
                 unpaired.append(r)
             else:
-                left_after.remove(match)
-        left_before = unpaired
-    return left_before, left_after
+                taken[match] = True
+        left = unpaired
+    return left, [o for j, o in enumerate(after) if not taken[j]]
 
 
 def _by_severity(records):
@@ -268,8 +303,8 @@ def _diff(args):
     adverse: list[str] = []
     if args.format == "uv-audit":
         runtime = _load_runtime(args.runtime)
-        after_report = _read_json(args.after)
-        before = _load_uv_audit(_read_json(args.before), runtime)
+        after_report = _read_uv_audit(args.after)
+        before = _load_uv_audit(_read_uv_audit(args.before), runtime)
         after = _load_uv_audit(after_report, runtime)
         adverse = _adverse(after_report)
     else:
@@ -320,27 +355,26 @@ def _list_once(record_lists):
     its fix or regression.
     """
     record_lists = [list(records) for records in record_lists]
-    pypi = (r for records in record_lists for r in records if r["ecosystem"] == PYPI)
-    group_of: dict[int, object] = {
-        id(r): (PYPI, n)
-        for n, members in enumerate(_group(pypi, by_version=False))
-        for r in members
-    }
-    first: dict[object, int] = {}
-    kept = [
-        [r for r in records if first.setdefault(group_of.get(id(r), id(r)), n) == n]
-        for n, records in enumerate(record_lists)
-    ]
-    return kept, len(first)
+    flat = [(n, r) for n, records in enumerate(record_lists) for r in records]
+    # Every record is an advisory of its own, except where PyPI records share one.
+    advisory: list[tuple[str, int]] = [("own", i) for i in range(len(flat))]
+    pypi = [i for i, (_, r) in enumerate(flat) if r["ecosystem"] == PYPI]
+    labels = _advisories([flat[i][1] for i in pypi], by_version=False)
+    for i, label in zip(pypi, labels, strict=True):
+        advisory[i] = (PYPI, label)
+    listed_in: dict[tuple[str, int], int] = {}
+    kept: list[list[dict[str, Any]]] = [[] for _ in record_lists]
+    for (n, r), a in zip(flat, advisory, strict=True):
+        if listed_in.setdefault(a, n) == n:
+            kept[n].append(r)
+    return kept, len(listed_in)
 
 
 def _section(heading, records, listed_above=0):
     lines = [f"**{heading} ({len(records)}):**", ""]
     lines.extend(_table(records) if records else ["none"])
     if listed_above:
-        lines.extend(
-            ["", f"{listed_above} more already listed above, under another ID."]
-        )
+        lines.extend(["", f"{listed_above} more already listed above."])
     lines.append("")
     return lines
 
@@ -411,7 +445,7 @@ def _render(args):
 
 
 def _exposure(args):
-    report = _read_json(args.report)
+    report = _read_uv_audit(args.report)
     deps, dev, _ = _split_by_origin(
         _by_severity(_load_uv_audit(report, _load_runtime(args.runtime)))
     )
@@ -440,7 +474,8 @@ def main():
     diff.add_argument("--after", required=True, help="JSON report (after)")
     diff.add_argument(
         "--runtime",
-        help="uv export of the packages the images install (required for uv-audit)",
+        nargs="+",
+        help="uv exports of the packages the images install (required for uv-audit)",
     )
     diff.add_argument("--out", required=True, help="fragment JSON output path")
     diff.set_defaults(func=_diff)
@@ -451,7 +486,10 @@ def main():
     exposure = sub.add_parser("exposure", help="render one uv audit report to markdown")
     exposure.add_argument("--report", required=True, help="uv audit JSON report")
     exposure.add_argument(
-        "--runtime", required=True, help="uv export of the packages the images install"
+        "--runtime",
+        nargs="+",
+        required=True,
+        help="uv exports of the packages the images install",
     )
     exposure.add_argument("--out", required=True, help="markdown output path")
     exposure.set_defaults(func=_exposure)

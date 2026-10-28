@@ -222,27 +222,21 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          # uv audit and its JSON output are previews in 0.13, so a newer uv may change
-          # the format diff_trivy.py reads. Bump this on purpose, after a dispatch run.
-          version: "0.13.4"
       # No Trivy fs scan of uv.lock: Trivy inventories nothing from a virtual-workspace-root
       # lock. uv audit reads it instead, every group and extra included, and the export
       # lists what the mono image installs (docker/Dockerfile), which tells runtime from
-      # dev-only findings. Exit 1 only means findings. An OSV outage or a format change
-      # fails the step, not the job, so the lockfile PR still opens, and the warning step
-      # below says the audit is missing. diff_trivy.py evaluates the export's environment
-      # markers for the interpreter it runs on, which is Linux CPython from
-      # .python-version, as in the images.
+      # dev-only findings. An OSV outage, or a report in a schema diff_trivy.py does not
+      # know (uv audit is a preview), fails the step, not the job, so the lockfile PR still
+      # opens, and the warning step below says the audit is missing. diff_trivy.py
+      # evaluates the export's environment markers for Linux on both image machines, with
+      # the Python it runs on: CPython from .python-version, as in the images.
       - name: Audit the current uv.lock
         id: audit-before
         continue-on-error: true
         run: |
-          just audit --output-format json --preview-features json-output \
-            > "$SCAN/audit-before.json" || [ $? -eq 1 ]
-          uv export --frozen --no-dev --all-packages --no-emit-workspace \
-            --no-header --no-hashes --no-annotate > "$SCAN/runtime.txt"
+          scripts/audit-uv-lock.sh "$SCAN/audit-before"
           uv run --no-project --with packaging python scripts/diff_trivy.py exposure \
-            --report "$SCAN/audit-before.json" --runtime "$SCAN/runtime.txt" \
+            --report "$SCAN/audit-before.json" --runtime "$SCAN/audit-before-runtime.txt" \
             --out "$SCAN/audit-before.md"
           {
             echo "## uv.lock — current exposure (uv audit, every group and extra)"
@@ -263,25 +257,22 @@ jobs:
 
       # Runs right after the update, not after the rebuild, so both audits query OSV
       # minutes apart at most: an advisory published in between would otherwise count as
-      # introduced by the update. The runtime list is appended to, so a package the
-      # update adds to the image still counts as runtime when one of its findings is
-      # introduced. The fragment's name sorts after the image's, so a fix both report is
-      # listed with Trivy's severity.
+      # introduced by the update. Both runtime lists count, so a package the update adds
+      # to the image still counts as runtime when one of its findings is introduced. The
+      # fragment's name sorts after the image's, so a fix both report is listed with
+      # Trivy's severity.
       - name: Audit the updated uv.lock and diff against current
         id: audit-after
         if: ${{ steps.update.outputs.changed == 'true' && steps.audit-before.outcome == 'success' }}
         continue-on-error: true
         run: |
-          just audit --output-format json --preview-features json-output \
-            > "$SCAN/audit-after.json" || [ $? -eq 1 ]
-          uv export --frozen --no-dev --all-packages --no-emit-workspace \
-            --no-header --no-hashes --no-annotate >> "$SCAN/runtime.txt"
+          scripts/audit-uv-lock.sh "$SCAN/audit-after"
           uv run --no-project --with packaging python scripts/diff_trivy.py diff \
             --format uv-audit \
             --label "uv.lock (uv audit, every group and extra) — current vs updated" \
             --before "$SCAN/audit-before.json" \
             --after "$SCAN/audit-after.json" \
-            --runtime "$SCAN/runtime.txt" \
+            --runtime "$SCAN/audit-before-runtime.txt" "$SCAN/audit-after-runtime.txt" \
             --out "$OUT/python-frag-lockfile.json"
 
       # The rebuild doubles as a gate: an updated lockfile that no longer builds
@@ -301,8 +292,11 @@ jobs:
           fi
           cp uv.lock "$OUT/uv.lock"
 
+      # Also after a failed rebuild, which would otherwise hide the audit's failure.
       - name: Warn that uv audit failed
-        if: ${{ steps.audit-before.outcome == 'failure' || steps.audit-after.outcome == 'failure' }}
+        if: >-
+          ${{ !cancelled()
+          && (steps.audit-before.outcome == 'failure' || steps.audit-after.outcome == 'failure') }}
         run: |
           msg="uv audit failed, so this run does not check uv.lock and closes no PR."
           echo "::warning::$msg The failed audit step's log has the error."
@@ -537,8 +531,8 @@ jobs:
       - name: Compose the PR body
         if: ${{ steps.verdict.outputs.fixed > 0 }}
         env:
-          # Only a python job that ran to the end can say its audit failed.
-          AUDIT_FAILED: ${{ needs.python.result == 'success' && needs.python.outputs.audited != 'true' }}
+          PYTHON_RESULT: ${{ needs.python.result }}
+          AUDITED: ${{ needs.python.outputs.audited }}
         run: |
           {
             echo "Automated dependency update from the daily security scan."
@@ -567,14 +561,19 @@ jobs:
               fi
             done
             echo
-            echo "Both dependency graphs are additionally compared at lockfile level:"
-            echo "the data-portal image ships only bundled JS, and uv audit checks"
-            echo "uv.lock with its dev groups and extras. Fixes in packages the"
-            echo "images do not install are listed but not counted, and a fix that"
-            echo "Trivy and uv audit both report is counted once."
-            if [ "$AUDIT_FAILED" = "true" ]; then
-              echo
-              echo "uv audit failed in this run, so fixes that only it reports are missing."
+            echo "The front-end dependency graph is additionally compared at lockfile"
+            echo "level, since the data-portal image ships only bundled JS."
+            if [ "$PYTHON_RESULT" != "success" ]; then
+              echo "The python job failed, so this run checked neither the platform"
+              echo "image nor uv.lock."
+            elif [ "$AUDITED" = "true" ]; then
+              echo "uv audit compares uv.lock the same way, with its dev groups and"
+              echo "extras. Fixes in packages the images do not install are listed but"
+              echo "not counted, and a fix that Trivy and uv audit both report is"
+              echo "counted once."
+            else
+              echo "uv audit failed in this run, so fixes in uv.lock that only it"
+              echo "reports are missing."
             fi
             echo
             cat "$RUNNER_TEMP/report.md"
