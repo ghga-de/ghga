@@ -32,11 +32,13 @@ export class ParseBytes implements PipeTransform {
     if (bytes === null || bytes === undefined) return '';
     const parsedBytes = PREFIXES.flatMap((prefix, index) => {
       const calculatedVal = bytes / Math.pow(MULTIPLIER, index);
-      if (calculatedVal < 1000 && calculatedVal >= 0.1) {
-        const value =
-          fractionDigits === undefined || !prefix
-            ? String(Math.round(calculatedVal * 100) / 100)
-            : calculatedVal.toFixed(fractionDigits);
+      const value =
+        fractionDigits === undefined || !prefix
+          ? String(Math.round(calculatedVal * 100) / 100)
+          : calculatedVal.toFixed(fractionDigits);
+      // Check the rounded value, so that 999.95 KiB moves on to 1.0 MiB
+      // instead of showing as 1000.0 KiB
+      if (Number(value) < 1000 && calculatedVal >= 0.1) {
         return value + `\u00A0${prefix}${prefix ? 'i' : ''}B`;
       } else return null;
     });

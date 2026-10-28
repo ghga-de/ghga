@@ -89,6 +89,9 @@
                     }}</mat-option>
                   }
                 </mat-select>
+                @if (fileStatesHint()) {
+                  <mat-hint>{{ fileStatesHint() }}</mat-hint>
+                }
               </mat-form-field>
               <button
                 mat-icon-button

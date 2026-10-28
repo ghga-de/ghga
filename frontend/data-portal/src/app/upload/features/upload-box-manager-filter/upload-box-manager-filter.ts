@@ -97,6 +97,16 @@ export class UploadBoxManagerFilter {
   });
 
   /**
+   * Why the conditions on the file states are not available, if they are not.
+   */
+  fileStatesHint = computed(() => {
+    if (this.#uploadBoxService.fileStateCountsByBox()) return '';
+    const counts = this.#uploadBoxService.fileStateCounts;
+    if (counts.error()) return 'The file states could not be loaded.';
+    return counts.isLoading() ? 'Loading the file states…' : '';
+  });
+
+  /**
    * All available upload-box locations including display labels.
    */
   locationOptions = this.#uploadBoxService.uploadBoxLocationOptions;

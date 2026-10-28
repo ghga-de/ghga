@@ -43,6 +43,13 @@ describe('ParseBytesPipe', () => {
     expect(pipe.transform(117.74 * 2 ** 20, 1)).toBe('117.7\u00A0MiB');
   });
 
+  it('should move on to the next prefix when rounding reaches 1000', () => {
+    const pipe = new ParseBytes();
+    expect(pipe.transform(1023949, 1)).toBe('1.0\u00A0MiB');
+    expect(pipe.transform(999.996 * 2 ** 10)).toBe('0.98\u00A0MiB');
+    expect(pipe.transform(999.94 * 2 ** 10, 1)).toBe('999.9\u00A0KiB');
+  });
+
   it('should never return decimals for plain bytes', () => {
     const pipe = new ParseBytes();
     expect(pipe.transform(750, 1)).toBe('750\u00A0B');

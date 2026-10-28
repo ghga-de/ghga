@@ -41,6 +41,10 @@ const fileStateCountsSignal = signal<FileStateCountsByBox | undefined>({
 const mockUploadBoxService = {
   uploadBoxes: uploadBoxesSignal.asReadonly(),
   fileStateCountsByBox: fileStateCountsSignal.asReadonly(),
+  fileStateCounts: {
+    error: signal<Error | undefined>(undefined),
+    isLoading: signal(false),
+  },
   uploadBoxesFilter: () => ({
     title: undefined,
     state: undefined,
@@ -79,6 +83,8 @@ describe('UploadBoxManagerFilter', () => {
     mockUploadBoxService.setFileStateCounts({
       [TEST_UPLOAD_BOX.id]: { interrogated: 3 },
     });
+    mockUploadBoxService.fileStateCounts.error.set(undefined);
+    mockUploadBoxService.fileStateCounts.isLoading.set(false);
     mockUploadBoxService.setUploadBoxesFilter.mockClear();
     await TestBed.configureTestingModule({
       imports: [UploadBoxManagerFilter],
@@ -210,6 +216,21 @@ describe('UploadBoxManagerFilter', () => {
       'aria-disabled',
       'false',
     );
+  });
+
+  it('should say why the file states are not available', async () => {
+    expect(screen.queryByText('Loading the file states…')).toBeNull();
+    expect(screen.queryByText('The file states could not be loaded.')).toBeNull();
+
+    uploadBoxService.setFileStateCounts(undefined);
+    uploadBoxService.fileStateCounts.isLoading.set(true);
+    await fixture.whenStable();
+    expect(screen.getByText('Loading the file states…')).toBeVisible();
+
+    uploadBoxService.fileStateCounts.isLoading.set(false);
+    uploadBoxService.fileStateCounts.error.set(new Error('UCS unavailable'));
+    await fixture.whenStable();
+    expect(screen.getByText('The file states could not be loaded.')).toBeVisible();
   });
 
   it('should clear the filter with the remove buttons', async () => {

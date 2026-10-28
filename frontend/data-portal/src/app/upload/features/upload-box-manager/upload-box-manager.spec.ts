@@ -47,7 +47,7 @@ class MockUploadBoxService {
   });
   uploadBoxLocationOptions = () => [];
   filteredUploadBoxes = () => this.#uploadBoxes();
-  fileStateCounts = { isLoading: () => false };
+  fileStateCounts = { isLoading: () => false, error: () => undefined };
   fileStateCountsByBox = () => ({});
   storageLabels = {
     value: () => ({}),
