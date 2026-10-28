@@ -613,7 +613,13 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
-        marked = await self._publish_document_once(document)
+        try:
+            marked = await self._publish_document_once(document)
+        except Exception:
+            # The event may already be on the topic behind a newer write's event,
+            # so leave the current state for publish_pending
+            await self._flag_unpublished(document["_id"])
+            raise
         await self._republish_if_superseded(document["_id"], marked=marked)
 
     async def _publish_document_once(self, document: dict[str, Any]) -> bool:
