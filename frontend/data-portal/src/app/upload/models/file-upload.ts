@@ -58,6 +58,9 @@ export interface FileUploadStateGroupInfo {
 /**
  * The state groups from the most to the least finished. Deleted (cancelled)
  * uploads belong to no group, since they no longer count as files of the box.
+ * The RS counts only the states that make up the file count of a box, so the
+ * counts it returns never hold `init` or `failed` uploads; the groups keep both
+ * so that counting them later needs no change here.
  */
 export const FILE_UPLOAD_STATE_GROUPS: FileUploadStateGroupInfo[] = [
   {
