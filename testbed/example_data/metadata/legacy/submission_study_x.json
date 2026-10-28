@@ -1,0 +1,218 @@
+{
+    "title": "Legacy Submission X",
+    "description": "Submitted with dskit 5.4.2, before study PIDs",
+    "id": "f4269552-4eee-4cd8-8025-a0dbd82f3813",
+    "content": {
+        "analyses": [],
+        "analysis_method_supporting_files": [],
+        "analysis_methods": [],
+        "data_access_committees": [
+            {
+                "alias": "DAC_X",
+                "ega_accession": "EGADAC1234X",
+                "email": "dac_institute_a@dac.dac",
+                "institute": "institute_a"
+            }
+        ],
+        "data_access_policies": [
+            {
+                "alias": "DAP_X",
+                "data_access_committee": "DAC_X",
+                "data_use_modifier_ids": [
+                    "DUO:0000026"
+                ],
+                "data_use_modifier_terms": [
+                    "USER_SPECIFIC_RESTRICTION"
+                ],
+                "data_use_permission_id": "DUO:0000004",
+                "data_use_permission_term": "NO_RESTRICTION",
+                "description": "A Data Access Policy 2",
+                "ega_accession": "EGADAP1234X",
+                "name": "DAP 2",
+                "policy_text": "This is a very strict DAP",
+                "policy_url": "http://some/other/policy"
+            }
+        ],
+        "datasets": [
+            {
+                "alias": "DS_X",
+                "data_access_policy": "DAP_X",
+                "description": "An interesting dataset X of complete example set",
+                "ega_accession": "EGADATASET000X",
+                "study": "STUDY_X",
+                "title": "The complete-X dataset",
+                "types": [
+                    "And another Type"
+                ]
+            }
+        ],
+        "experiment_method_supporting_files": [],
+        "experiment_methods": [
+            {
+                "alias": "EXP_METHOD_X",
+                "description": "Experiment method 1 is conducted like this.",
+                "ega_accession": "EGAEXPERIMENTMETHOD1234X",
+                "end_bias": "FULL_LENGTH",
+                "flow_cell_id": "ID_Cell 1_Lane_1",
+                "flow_cell_type": "ILLUMINA_NOVA_SEQ_S4",
+                "instrument_model": "454_GS",
+                "library_preparation": "PCR-amplification",
+                "library_preparation_kit_manufacturer": "Illumina",
+                "library_preparation_kit_retail_name": "10X_GENOMICS_CHROMIUM_SINGLE_CELL_3_V2",
+                "library_selection_methods": [
+                    "UNSPECIFIED"
+                ],
+                "library_type": "WGS",
+                "name": "Experiment Method 1",
+                "primer": "GENE_SPECIFIC",
+                "sample_barcode_read": "INDEX1",
+                "sequencing_center": "Center A",
+                "sequencing_layout": "SE",
+                "sequencing_read_length": "long",
+                "target_coverage": "x50",
+                "target_regions": [
+                    "chr6:123456-12345678"
+                ],
+                "type": "DNA-seq"
+            }
+        ],
+        "experiments": [
+            {
+                "alias": "EXP_X",
+                "description": "Experiment 2 is done like this.",
+                "ega_accession": "EGAEXP1234X",
+                "experiment_method": "EXP_METHOD_X",
+                "sample": "SAMPLE_X",
+                "title": "Experiment 2",
+                "type": "Experiment Type 2"
+            }
+        ],
+        "individual_supporting_files": [],
+        "individuals": [
+            {
+                "alias": "INDV_X",
+                "ancestry_ids": [
+                    "HANCESTRO:0005"
+                ],
+                "ancestry_terms": [
+                    "European"
+                ],
+                "diagnosis_ids": [
+                    "ICD-10:C92"
+                ],
+                "diagnosis_terms": [
+                    "Myeloid leukaemia"
+                ],
+                "geographical_region_id": "NCIT:C16761",
+                "geographical_region_term": "Italy",
+                "phenotypic_features_ids": [
+                    "HP:0001909"
+                ],
+                "phenotypic_features_terms": [
+                    "Leukemia"
+                ],
+                "sex": "MALE"
+            }
+        ],
+        "process_data_files": [],
+        "publications": [],
+        "research_data_files": [
+            {
+                "alias": "RESEARCH_DATA_FILE_X1",
+                "dataset": "DS_X",
+                "ega_accession": "EGAFILE1234X",
+                "experiments": [
+                    "EXP_X"
+                ],
+                "format": "FASTQ",
+                "included_in_submission": true,
+                "name": "SAMPLE_X_SPECIMEN_1_FILE_X1.fastq.gz",
+                "sequencing_lane_id": "LANE_126",
+                "technical_replicate": 1
+            }
+        ],
+        "samples": [
+            {
+                "alias": "SAMPLE_X",
+                "biological_replicate": 1,
+                "biospecimen_age_at_sampling": "66_TO_70",
+                "biospecimen_description": "Subcutaneous fat biospecimen",
+                "biospecimen_isolation": "SURGICAL_REMOVAL",
+                "biospecimen_name": "Another biospecimen material",
+                "biospecimen_storage": "REFRIGERATOR",
+                "biospecimen_tissue_id": "BTO:0004042",
+                "biospecimen_tissue_term": "subcutaneous adipose tissue",
+                "biospecimen_type": "Subcutaneous fat",
+                "biospecimen_vital_status_at_sampling": "ALIVE",
+                "case_control_status": "CONTROL",
+                "description": "white adipose tissue sample 1",
+                "disease_or_healthy": "HEALTHY",
+                "ega_accession": "EGASAMPLE1234X",
+                "individual": "INDV_X",
+                "name": "GHGAS_tissue_sample1",
+                "storage": "ULTRA_LOW_FREEZER",
+                "type": "CF_DNA"
+            }
+        ],
+        "studies": [
+            {
+                "affiliations": [
+                    "Some Institute"
+                ],
+                "alias": "STUDY_X",
+                "description": "A study that is the X study",
+                "ega_accession": "EGASTUDY1234X",
+                "title": "The X Study",
+                "types": [
+                    "WHOLE_GENOME_SEQUENCING"
+                ]
+            }
+        ]
+    },
+    "accession_map": {
+        "analyses": {},
+        "analysis_method_supporting_files": {},
+        "analysis_methods": {},
+        "data_access_committees": {
+            "DAC_X": "GHGAC96423109243968"
+        },
+        "data_access_policies": {
+            "DAP_X": "GHGAP64912449775552"
+        },
+        "datasets": {
+            "DS_X": "GHGAD43020964342524"
+        },
+        "experiment_method_supporting_files": {},
+        "experiment_methods": {
+            "EXP_METHOD_X": "GHGAQ86696529363986"
+        },
+        "experiments": {
+            "EXP_X": "GHGAX77997504180788"
+        },
+        "individual_supporting_files": {},
+        "individuals": {
+            "INDV_X": "GHGAI69689795824941"
+        },
+        "process_data_files": {},
+        "publications": {},
+        "research_data_files": {
+            "RESEARCH_DATA_FILE_X1": "GHGAF59003763280724"
+        },
+        "samples": {
+            "SAMPLE_X": "GHGAN02960678906945"
+        },
+        "studies": {
+            "STUDY_X": "GHGAS36140732388018"
+        }
+    },
+    "status_history": [
+        {
+            "timestamp": "2026-10-28T13:18:14.868472Z",
+            "new_status": "pending"
+        },
+        {
+            "timestamp": "2026-10-28T13:18:15.047290Z",
+            "new_status": "completed"
+        }
+    ]
+}

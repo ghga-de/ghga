@@ -39,39 +39,39 @@ def check_summary_statistics(response: Response):
     assert result["id"] == "global"
     resource_stats = result["resource_stats"]
     assert resource_stats == {
-        "DataAccessCommittee": {"count": 2},
-        "Experiment": {"count": 3},
+        "DataAccessCommittee": {"count": 3},
+        "Experiment": {"count": 4},
         "IndividualSupportingFile": {
             "count": 1,
             "stats": {"format": [{"count": 1, "value": "JSON"}]},
         },
-        "Individual": {"count": 2, "stats": {"sex": [{"count": 2, "value": "MALE"}]}},
+        "Individual": {"count": 3, "stats": {"sex": [{"count": 3, "value": "MALE"}]}},
         "Analysis": {"count": 2},
-        "Dataset": {"count": 2},
-        "Sample": {"count": 3, "stats": {"type": [{"count": 3, "value": "CF_DNA"}]}},
+        "Dataset": {"count": 3},
+        "Sample": {"count": 4, "stats": {"type": [{"count": 4, "value": "CF_DNA"}]}},
         "ExperimentMethod": {
-            "count": 2,
-            "stats": {"instrument_model": [{"count": 2, "value": "454_GS"}]},
+            "count": 3,
+            "stats": {"instrument_model": [{"count": 3, "value": "454_GS"}]},
         },
-        "Study": {"count": 2},
+        "Study": {"count": 3},
         "ProcessDataFile": {
             "count": 2,
             "stats": {"format": [{"count": 2, "value": "VCF"}]},
         },
         "ResearchDataFile": {
-            "count": 9,
-            "stats": {"format": [{"count": 9, "value": "FASTQ"}]},
+            "count": 11,
+            "stats": {"format": [{"count": 11, "value": "FASTQ"}]},
         },
         "ExperimentMethodSupportingFile": {
             "count": 1,
             "stats": {"format": [{"count": 1, "value": "TXT"}]},
         },
-        "EmbeddedDataset": {"count": 2},
+        "EmbeddedDataset": {"count": 3},
         "Publication": {"count": 2},
         "AnalysisMethod": {"count": 2},
         "AnalysisMethodSupportingFile": {
             "count": 1,
             "stats": {"format": [{"count": 1, "value": "TXT"}]},
         },
-        "DataAccessPolicy": {"count": 2},
+        "DataAccessPolicy": {"count": 3},
     }

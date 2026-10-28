@@ -25,7 +25,7 @@ Feature: 23 Filter Datasets
 
     When I filter datasets with the study type "WHOLE_GENOME_SEQUENCING"
     Then the response status code is "200"
-    And  I get "2" search results
+    And  I get "3" search results
 
   Scenario: Filter datasets by diagnosis
     When I filter datasets containing the diagnosis "Lymphocytic leukemia"
@@ -34,7 +34,7 @@ Feature: 23 Filter Datasets
 
     When I filter datasets containing the diagnosis "Myeloid leukaemia"
     Then the response status code is "200"
-    And  I get "2" search results
+    And  I get "3" search results
 
   Scenario: Filter datasets by platform
     When I filter datasets using the platform "ILLUMINA_HISEQ_X"
@@ -43,12 +43,12 @@ Feature: 23 Filter Datasets
 
     When I filter datasets using the platform "454_GS"
     Then the response status code is "200"
-    And  I get "2" search results
+    And  I get "3" search results
 
   Scenario: Filter datasets by FASTQ file format
     When I filter datasets with "FASTQ" research data format
     Then the response status code is "200"
-    And  I get "2" search results
+    And  I get "3" search results
 
  Scenario: Filter datasets by BAM file format
     When I filter datasets with "BAM" research data format
