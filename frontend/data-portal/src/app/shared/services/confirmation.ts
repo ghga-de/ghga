@@ -6,6 +6,7 @@
 
 import { inject, Service } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { Html } from '@app/shared/utils/html';
 // eslint-disable-next-line boundaries/dependencies
 import { ConfirmDialog } from '../ui/confirm-dialog/confirm-dialog';
 
@@ -20,7 +21,7 @@ export class ConfirmationService {
    * Show confirmation dialog and call a function when confirmed
    * @param opts - dialog options
    * @param opts.title - optional title of the dialog
-   * @param opts.message - message to display in the dialog
+   * @param opts.message - message to display in the dialog, as text or as HTML built with the `html` tag
    * @param opts.cancelText - optional text for the cancel button
    * @param opts.confirmText - optional text for the confirm button
    * @param opts.confirmClass - optional class for the confirm button
@@ -40,7 +41,7 @@ export class ConfirmationService {
     callback,
   }: {
     title?: string;
-    message: string;
+    message: Html | string;
     cancelText?: string;
     confirmText?: string;
     confirmClass?: string;

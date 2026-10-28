@@ -11,6 +11,7 @@ import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
+import { toMarkup } from '@app/shared/utils/html';
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
@@ -145,6 +146,36 @@ describe('UserIvaList', () => {
     expect(mockConfirmationService.confirm.mock.calls[0][0].message).toContain(
       '+49123456789',
     );
+  });
+
+  it('should escape the address in the SMS consent dialog', async () => {
+    await clickRequestVerification({ ...testIva, value: '<b>+49</b>' });
+
+    expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+    const { message } = mockConfirmationService.confirm.mock.calls[0][0];
+    expect(toMarkup(message)).toContain('phone number &lt;b&gt;+49&lt;/b&gt;.');
+  });
+
+  it('should escape the address in the verification request dialog', async () => {
+    await clickRequestVerification({
+      ...testIva,
+      type: IvaType.PostalAddress,
+      value: '<b>Main St</b>',
+    });
+
+    expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+    const { message } = mockConfirmationService.confirm.mock.calls[0][0];
+    expect(toMarkup(message)).toContain(
+      '(Postal Address:\u00a0&lt;b&gt;Main St&lt;/b&gt;)',
+    );
+  });
+
+  it('should escape the address in the deletion dialog', () => {
+    component.deleteWhenConfirmed({ ...testIva, value: 'a&b' });
+
+    expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+    const { message } = mockConfirmationService.confirm.mock.calls[0][0];
+    expect(toMarkup(message)).toContain('deleting the SMS:\u00a0a&amp;b.');
   });
 
   it('should not ask for SMS consent for other IVA types', async () => {

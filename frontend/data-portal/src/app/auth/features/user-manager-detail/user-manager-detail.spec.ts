@@ -15,7 +15,9 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaService } from '@app/ivas/services/iva';
+import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTracker } from '@app/shared/services/navigation';
+import { toMarkup } from '@app/shared/utils/html';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import { UserManager } from '../user-manager/user-manager';
 import { UserManagerDetail } from './user-manager-detail';
@@ -124,6 +126,53 @@ describe('UserManagerDetail', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should escape the display name in the status change dialog', async () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+    mockUserService.userValue.set({ ...JOHN_DOE, displayName: 'Jo <b>Bold</b>' });
+    await fixture.whenStable();
+
+    component.safeStatusChange();
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(toMarkup(confirm.mock.calls[0][0].message)).toContain(
+      'Jo &lt;b&gt;Bold&lt;/b&gt; shall',
+    );
+  });
+
+  it('should ask for confirmation of a deactivation', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+
+    component.safeStatusChange(false);
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    const options = confirm.mock.calls[0][0];
+    expect(options.title).toBe('Confirm user account deactivation');
+    expect(options.confirmText).toBe('Confirm deactivation');
+    expect(options.confirmClass).toBe('danger');
+    expect(toMarkup(options.message)).toMatch(
+      /<strong>deactivated<\/strong>\. ?<\/p>$/,
+    );
+  });
+
+  it('should ask for confirmation of a reactivation', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+
+    component.safeStatusChange(true);
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    const options = confirm.mock.calls[0][0];
+    expect(options.title).toBe('Confirm user account activation');
+    expect(options.confirmText).toBe('Confirm activation');
+    expect(options.confirmClass).toBe('success');
+    expect(toMarkup(options.message)).toMatch(/<strong>activated<\/strong>\. ?<\/p>$/);
   });
 
   it('should find and display user when ID matches', () => {

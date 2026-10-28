@@ -21,6 +21,8 @@ import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
+import { ConfirmationService } from '@app/shared/services/confirmation';
+import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
@@ -30,8 +32,9 @@ import { of } from 'rxjs';
  */
 class MockIvaService {
   loadUserIvas = () => undefined;
+  ivas = allIvasOfDoe;
   userIvas = {
-    value: () => allIvasOfDoe,
+    value: () => this.ivas,
     isLoading: signal(false),
     error: () => undefined,
   };
@@ -161,6 +164,21 @@ describe('AccessRequestManagerDetail', () => {
     expect(links).toHaveLength(2);
     const hrefs = links.map((link) => link.getAttribute('href'));
     expect(hrefs).toContain('/access-grant-manager/grant-ghga-8c4b9d5a1f0b');
+  });
+
+  it('should escape the address in the approval dialog', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+    const ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
+    ivaService.ivas = allIvasOfDoe.map((iva) => ({ ...iva, value: '<b>x</b>' }));
+
+    fixture.componentInstance.safeAllow();
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(toMarkup(confirm.mock.calls[0][0].message)).toContain(
+      ': &lt;b&gt;x&lt;/b&gt;.',
+    );
   });
 
   it('should save the IVA that the data steward selects', async () => {

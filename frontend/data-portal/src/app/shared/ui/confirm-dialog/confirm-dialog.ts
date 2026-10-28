@@ -14,10 +14,11 @@ import {
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
+import { Html, toMarkup } from '@app/shared/utils/html';
 
 export interface ConfirmDialogData {
   title?: string;
-  message: string;
+  message: Html | string;
   cancelText?: string;
   confirmText?: string;
   confirmClass?: string;
@@ -50,11 +51,11 @@ export class ConfirmDialog {
   }
 
   /**
-   * Dialog content
-   * @returns specified or default message
+   * Dialog content, with a plain string message escaped as text
+   * @returns markup of the specified or default message
    */
   get message(): string {
-    return this.data.message || 'Do you really want to continue?';
+    return toMarkup(this.data.message || 'Do you really want to continue?');
   }
 
   /**

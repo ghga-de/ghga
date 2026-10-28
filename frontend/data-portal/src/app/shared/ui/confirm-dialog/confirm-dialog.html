@@ -1,5 +1,5 @@
 <h1 mat-dialog-title>{{ title }}</h1>
-<!-- 'Angular recognizes the [innerHTML] value as unsafe and automatically sanitizes it'  -->
+<!-- a plain string message is escaped already, and Angular sanitizes the rest -->
 <div mat-dialog-content [innerHTML]="message"></div>
 <div mat-dialog-actions cdkTrapFocus>
   <button

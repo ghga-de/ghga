@@ -37,7 +37,7 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { escapeHtml } from '@app/shared/utils/html';
+import { html } from '@app/shared/utils/html';
 import {
   ResearchDataUploadBox,
   UploadBoxState,
@@ -403,15 +403,21 @@ export class UploadBoxManagerDetail implements OnInit {
   deleteBox(): void {
     const box = this.uploadBox();
     if (!box || box.state === UploadBoxState.archived) return;
+    const files = `${box.file_count} file${box.file_count === 1 ? '' : 's'}`;
+    const size = this.#parseBytes.transform(box.size);
     const message =
       box.file_count > 0
-        ? `<p>This box currently contains <strong>${box.file_count} ` +
-          `file${box.file_count === 1 ? '' : 's'}</strong> with a total size of ` +
-          `<strong>${this.#parseBytes.transform(box.size)}</strong>.</p>` +
-          '<p>Deleting the box will <strong>permanently remove all files</strong> ' +
-          'it contains. This action <strong>cannot be undone</strong>.</p>'
-        : '<p>This box is currently empty. Deleting it ' +
-          '<strong>cannot be undone</strong>.</p>';
+        ? html`<p>
+              This box currently contains <strong>${files}</strong> with a total size of
+              <strong>${size}</strong>.
+            </p>
+            <p>
+              Deleting the box will <strong>permanently remove all files</strong> it
+              contains. This action <strong>cannot be undone</strong>.
+            </p>`
+        : html`<p>
+            This box is currently empty. Deleting it <strong>cannot be undone</strong>.
+          </p>`;
     this.#confirmationService.confirm({
       title: 'Delete upload box?',
       message,
@@ -524,9 +530,10 @@ export class UploadBoxManagerDetail implements OnInit {
     if (file.state !== 'init') {
       this.#confirmationService.confirm({
         title: 'Confirm file deletion',
-        message:
-          `<p>Please confirm that the file <strong>${escapeHtml(file.alias)}</strong> shall be ` +
-          '<strong>deleted</strong> from this upload box.</p>',
+        message: html`<p>
+          Please confirm that the file <strong>${file.alias}</strong> shall be
+          <strong>deleted</strong> from this upload box.
+        </p>`,
         cancelText: 'Cancel',
         confirmText: 'Delete file',
         confirmClass: 'error',
@@ -581,9 +588,10 @@ export class UploadBoxManagerDetail implements OnInit {
     if (!box) return;
     this.#confirmationService.confirm({
       title: 'Retry re-encryption?',
-      message:
-        `<p>This will requeue the file <strong>${escapeHtml(file.alias)}</strong> for re-encryption ` +
-        'without requiring the submitter to upload it again.</p>',
+      message: html`<p>
+        This will requeue the file <strong>${file.alias}</strong> for re-encryption
+        without requiring the submitter to upload it again.
+      </p>`,
       cancelText: 'Cancel',
       confirmText: 'Retry',
       callback: (confirmed) => {

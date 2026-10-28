@@ -22,6 +22,7 @@ import {
 import { UploadGrant } from '@app/upload/models/grant';
 import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { UploadBoxMapping } from '../upload-box-mapping/upload-box-mapping';
@@ -441,7 +442,7 @@ describe('UploadBoxManagerDetail', () => {
       await fixture.whenStable();
 
       const { message } = mockDialog.open.mock.calls[0][1].data;
-      expect(message).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
+      expect(toMarkup(message)).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
     });
 
     it('should ask for confirmation and delete on confirm for a re-encrypted file', async () => {
@@ -545,7 +546,7 @@ describe('UploadBoxManagerDetail', () => {
       await fixture.whenStable();
 
       const { message } = mockDialog.open.mock.calls[0][1].data;
-      expect(message).toContain('<strong>a&amp;b.bam</strong>');
+      expect(toMarkup(message)).toContain('<strong>a&amp;b.bam</strong>');
     });
 
     it('should not requeue a file when the confirmation is cancelled', async () => {
