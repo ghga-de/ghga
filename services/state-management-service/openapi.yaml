@@ -473,7 +473,8 @@ paths:
       description: Delete all secrets from the specified vault.
       operationId: delete_secrets
       parameters:
-      - in: path
+      - description: The path to the vault
+        in: path
         name: vault_path
         required: true
         schema:
@@ -502,7 +503,8 @@ paths:
       description: Returns a list of secrets in the specified vault
       operationId: get_secrets
       parameters:
-      - in: path
+      - description: The path to the vault
+        in: path
         name: vault_path
         required: true
         schema:
