@@ -261,26 +261,12 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # The rebuild doubles as a gate: an updated lockfile that no longer builds
-      # never reaches a PR.
-      - name: Rebuild with the updated lockfile and diff against published
-        if: ${{ steps.update.outputs.changed == 'true' }}
-        run: |
-          just image-mono updated --pull
-          if [ -f "$SCAN/published-image.json" ]; then
-            trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
-              "$REGISTRY/platform:updated"
-            python3 scripts/diff_trivy.py diff \
-              --label "platform image (all Python services, mono build) — published :dev vs updated rebuild" \
-              --before "$SCAN/published-image.json" \
-              --after "$SCAN/updated-image.json" \
-              --out "$OUT/python-frag-image.json"
-          fi
-          cp uv.lock "$OUT/uv.lock"
-
-      # The runtime list is appended to, so a package the update adds to the image still
-      # counts as runtime when one of its findings is introduced. The fragment's name sorts
-      # after the image's, so a fix both report is listed with Trivy's severity.
+      # Runs right after the update, not after the rebuild, so both audits query OSV
+      # minutes apart at most: an advisory published in between would otherwise count as
+      # introduced by the update. The runtime list is appended to, so a package the
+      # update adds to the image still counts as runtime when one of its findings is
+      # introduced. The fragment's name sorts after the image's, so a fix both report is
+      # listed with Trivy's severity.
       - name: Audit the updated uv.lock and diff against current
         id: audit-after
         if: ${{ steps.update.outputs.changed == 'true' && steps.audit-before.outcome == 'success' }}
@@ -297,6 +283,23 @@ jobs:
             --after "$SCAN/audit-after.json" \
             --runtime "$SCAN/runtime.txt" \
             --out "$OUT/python-frag-lockfile.json"
+
+      # The rebuild doubles as a gate: an updated lockfile that no longer builds
+      # never reaches a PR.
+      - name: Rebuild with the updated lockfile and diff against published
+        if: ${{ steps.update.outputs.changed == 'true' }}
+        run: |
+          just image-mono updated --pull
+          if [ -f "$SCAN/published-image.json" ]; then
+            trivy image --scanners vuln -f json -o "$SCAN/updated-image.json" \
+              "$REGISTRY/platform:updated"
+            python3 scripts/diff_trivy.py diff \
+              --label "platform image (all Python services, mono build) — published :dev vs updated rebuild" \
+              --before "$SCAN/published-image.json" \
+              --after "$SCAN/updated-image.json" \
+              --out "$OUT/python-frag-image.json"
+          fi
+          cp uv.lock "$OUT/uv.lock"
 
       - name: Warn that uv audit failed
         if: ${{ steps.audit-before.outcome == 'failure' || steps.audit-after.outcome == 'failure' }}
@@ -534,7 +537,8 @@ jobs:
       - name: Compose the PR body
         if: ${{ steps.verdict.outputs.fixed > 0 }}
         env:
-          AUDITED: ${{ needs.python.outputs.audited }}
+          # Only a python job that ran to the end can say its audit failed.
+          AUDIT_FAILED: ${{ needs.python.result == 'success' && needs.python.outputs.audited != 'true' }}
         run: |
           {
             echo "Automated dependency update from the daily security scan."
@@ -568,7 +572,7 @@ jobs:
             echo "uv.lock with its dev groups and extras. Fixes in packages the"
             echo "images do not install are listed but not counted, and a fix that"
             echo "Trivy and uv audit both report is counted once."
-            if [ "$AUDITED" != "true" ]; then
+            if [ "$AUDIT_FAILED" = "true" ]; then
               echo
               echo "uv audit failed in this run, so fixes that only it reports are missing."
             fi
