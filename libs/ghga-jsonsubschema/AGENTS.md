@@ -51,7 +51,7 @@ Run everything through `just` from the repo root, inside the dev container — t
 ```sh
 just test libs/ghga-jsonsubschema   # run this member's test suite
 just lint                           # lint + format check across the workspace
-just fmt                            # auto-fix lint + format
+just fmt libs/ghga-jsonsubschema    # auto-fix lint + format in this member
 just typecheck                      # type-check every member (src + tests)
 just hooks                          # install the git hooks (once)
 just hooks-all                      # everything CI's hygiene job runs
@@ -63,7 +63,7 @@ Cut feature branches from `dev` and merge them back into `dev` — a pre-commit 
 ## Coding conventions
 
 - **Formatting/linting**: ruff, configured once in the repo root's [pyproject.toml](../../pyproject.toml) — never add a member-local `[tool.ruff]`, which would override it for this subtree.
-  Run `just fmt` before committing; pre-commit enforces it.
+  Run `just fmt libs/ghga-jsonsubschema` before committing; pre-commit enforces it.
   Max McCabe complexity is 10; prefer extracting helpers over adding `noqa` suppressions.
 - **Docstrings**: pydocstyle PEP 257 convention is enforced for all public and private functions/classes in `src/` (tests are exempt from D101–D103).
 - **Use `is_top()` / `is_bot()` to test schema-valued slots in `_checkers.py`.**

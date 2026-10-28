@@ -1,6 +1,6 @@
 <!-- What changed and why, in up to three short paragraphs. Then what to look at first. -->
 
-- [ ] `just test <member>` and `just lint` pass; `just affected` if this crosses members
+- [ ] `just lint` and `just test <member>` pass (`just test-affected` instead if this crosses members)
 - [ ] Generated files regenerated, not edited (`just lock`, `just charts`, `just docs-check`)
 - [ ] A changed API, event schema or cross-service flow updates its docs, or says why not
 - [ ] If deployments must change too (a changed `openapi.yaml`, config setting or chart value), a comment mentions `@ghga-de/devops-engineers` to tell them what to change
