@@ -147,6 +147,22 @@ describe('UserIvaList', () => {
     );
   });
 
+  it('should escape the address in the SMS consent dialog', async () => {
+    await clickRequestVerification({ ...testIva, value: '<b>+49</b>' });
+
+    expect(mockConfirmationService.confirm.mock.calls[0][0].message).toContain(
+      'phone number &lt;b&gt;+49&lt;/b&gt;.',
+    );
+  });
+
+  it('should escape the address in the deletion dialog', () => {
+    component.deleteWhenConfirmed({ ...testIva, value: 'a&b' });
+
+    expect(mockConfirmationService.confirm.mock.calls[0][0].message).toContain(
+      'deleting the SMS:\u00a0a&amp;b.',
+    );
+  });
+
   it('should not ask for SMS consent for other IVA types', async () => {
     await clickRequestVerification({
       ...testIva,

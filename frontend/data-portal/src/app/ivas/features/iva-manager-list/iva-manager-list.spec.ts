@@ -11,6 +11,7 @@ import { ActivatedRoute } from '@angular/router';
 import { allIvas } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { IvaService } from '@app/ivas/services/iva';
+import { ConfirmationService } from '@app/shared/services/confirmation';
 import { screen } from '@testing-library/angular';
 import { IvaManagerList } from './iva-manager-list';
 
@@ -70,6 +71,22 @@ describe('IvaManagerList', () => {
     expect(otherRows).toHaveLength(6);
     for (const row of otherRows) {
       expect(row.querySelector(`[title="${WARN_TITLE}"]`)).toBeNull();
+    }
+  });
+
+  it('should escape the user name and address in the confirmation dialogs', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+    const iva = { ...allIvas[0], user_name: 'Jo <b>Bold</b>', value: 'a&b' };
+
+    component.invalidateWhenConfirmed(iva);
+    component.markAsTransmittedWhenConfirmed(iva);
+    component.deleteWhenConfirmed(iva);
+
+    expect(confirm).toHaveBeenCalledTimes(3);
+    for (const [{ message }] of confirm.mock.calls) {
+      expect(message).toContain('Jo &lt;b&gt;Bold&lt;/b&gt; with address "a&amp;b"');
     }
   });
 });

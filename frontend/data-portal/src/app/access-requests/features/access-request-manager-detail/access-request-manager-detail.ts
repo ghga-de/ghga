@@ -53,6 +53,7 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { escapeHtml } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
 
@@ -372,7 +373,7 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
         (startDateInFuture
           ? ` for the period between <strong>${startDate}</strong> and`
           : ` until`) +
-        ` <strong>${endDate}</strong>, and coupled to the address ${ivaType}: ${iva.value}.` +
+        ` <strong>${endDate}</strong>, and coupled to the address ${ivaType}: ${escapeHtml(iva.value)}.` +
         `</p><p><strong>Once allowed, no further changes can be made to the access request!</strong></p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm allowance',

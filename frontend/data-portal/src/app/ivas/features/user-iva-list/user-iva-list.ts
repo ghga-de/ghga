@@ -15,6 +15,7 @@ import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
+import { escapeHtml } from '@app/shared/utils/html';
 import { NewIvaDialog } from '../new-iva-dialog/new-iva-dialog';
 import { VerificationDialog } from '../verification-dialog/verification-dialog';
 
@@ -101,7 +102,7 @@ export class UserIvaList implements OnInit {
     // Sending an SMS needs the user's explicit consent, given by the confirm button.
     const smsTexts = {
       title: 'Send verification code by SMS',
-      message: `We will send a verification code by SMS to your phone number ${iva.value}.
+      message: `We will send a verification code by SMS to your phone number ${escapeHtml(iva.value)}.
       By clicking "Send SMS", you agree to receive this message.`,
       cancelText: 'Cancel',
       confirmText: 'Send SMS',
@@ -111,7 +112,7 @@ export class UserIvaList implements OnInit {
     const otherTexts = {
       title: 'Request verification of your address',
       message: `We will send a verification code to the address selected for
-      verification (${this.#ivaAddress(iva)}), you should receive it shortly.`,
+      verification (${escapeHtml(this.#ivaAddress(iva))}), you should receive it shortly.`,
     };
     this.#confirm.confirm({
       ...(iva.type === IvaType.Phone ? smsTexts : otherTexts),
@@ -190,7 +191,7 @@ export class UserIvaList implements OnInit {
     this.#confirm.confirm({
       title: 'Confirm deletion of IVA',
       message:
-        `<p>Please confirm deleting the ${address}.` +
+        `<p>Please confirm deleting the ${escapeHtml(address)}.` +
         '</p><p><strong>Remember that you will lose access to any datasets' +
         ' whose access was linked to that address</strong>.</p>',
       cancelText: 'Cancel',

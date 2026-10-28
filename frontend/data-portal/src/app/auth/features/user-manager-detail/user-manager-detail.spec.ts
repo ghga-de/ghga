@@ -15,6 +15,7 @@ import { MockAccessRequestService } from '@app/access-requests/services/access-r
 import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaService } from '@app/ivas/services/iva';
+import { ConfirmationService } from '@app/shared/services/confirmation';
 import { NavigationTracker } from '@app/shared/services/navigation';
 import { render, RenderResult, screen } from '@testing-library/angular';
 import { UserManager } from '../user-manager/user-manager';
@@ -124,6 +125,20 @@ describe('UserManagerDetail', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should escape the display name in the status change dialog', async () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+    mockUserService.userValue.set({ ...JOHN_DOE, displayName: 'Jo <b>Bold</b>' });
+    await fixture.whenStable();
+
+    component.safeStatusChange();
+
+    expect(confirm.mock.calls[0][0].message).toContain(
+      'user account of Jo &lt;b&gt;Bold&lt;/b&gt; shall',
+    );
   });
 
   it('should find and display user when ID matches', () => {

@@ -21,6 +21,7 @@ import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
+import { escapeHtml } from '@app/shared/utils/html';
 import { CodeCreationDialog } from '../code-creation-dialog/code-creation-dialog';
 
 /**
@@ -145,7 +146,7 @@ export class IvaManagerList {
       title: 'Confirm invalidation of IVA',
       message:
         `<p>Do you really wish to <strong>invalidate</strong> the ${ivaType} IVA of` +
-        ` ${iva.user_name} with address "${iva.value}"?` +
+        ` ${escapeHtml(iva.user_name)} with address "${escapeHtml(iva.value)}"?` +
         '</p><p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
       cancelText: 'Cancel',
       confirmText: 'Confirm invalidation',
@@ -183,7 +184,7 @@ export class IvaManagerList {
       title: 'Confirm code transmission',
       message:
         'Please confirm the transmission of the verification code' +
-        ` the ${ivaType} IVA of ${iva.user_name} with address "${iva.value}".`,
+        ` the ${ivaType} IVA of ${escapeHtml(iva.user_name)} with address "${escapeHtml(iva.value)}".`,
       cancelText: 'Cancel',
       confirmText: 'Confirm transmission',
       callback: (confirmed) => {
@@ -240,7 +241,7 @@ export class IvaManagerList {
       title: 'Confirm deletion of the IVA',
       message:
         `<p>Do you really wish to completely <strong>delete</strong> the ${ivaType} IVA of` +
-        ` ${iva.user_name} with address "${iva.value}"?` +
+        ` ${escapeHtml(iva.user_name)} with address "${escapeHtml(iva.value)}"?` +
         '</p><p>This is not reversible.</p>' +
         '<p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
       cancelText: 'Cancel',

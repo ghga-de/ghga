@@ -39,6 +39,7 @@ import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { escapeHtml } from '@app/shared/utils/html';
 import { DeletionConfirmationDialog } from '../deletion-confirmation-dialog/deletion-confirmation-dialog';
 
 /**
@@ -240,7 +241,7 @@ export class UserManagerDetail implements OnInit {
   safeStatusChange(isDeactivated: boolean = false): void {
     this.#confirmationService.confirm({
       title: 'Confirm user account deactivation',
-      message: `<p>Please confirm that the user account of ${this.user()!.displayName} shall be <strong>${!isDeactivated ? 'de' : ''}activated</strong>.`,
+      message: `<p>Please confirm that the user account of ${escapeHtml(this.user()!.displayName)} shall be <strong>${!isDeactivated ? 'de' : ''}activated</strong>.`,
       cancelText: 'Cancel',
       confirmText: `Confirm ${!isDeactivated ? 'de' : ''}activation`,
       confirmClass: 'danger',
