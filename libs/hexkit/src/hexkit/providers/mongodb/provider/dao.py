@@ -585,7 +585,12 @@ class MongoDbDao(Generic[Dto]):
         """
         if not dtos:
             return
-        documents = self._batch_documents(dtos)
+        await self._insert_documents(self._batch_documents(dtos), ordered=ordered)
+
+    async def _insert_documents(
+        self, documents: list[dict[str, Any]], *, ordered: bool
+    ) -> None:
+        """Insert already converted documents, see `insert_many`."""
         with translate_pymongo_errors():
             try:
                 await self._collection.insert_many(documents, ordered=ordered)
@@ -630,7 +635,12 @@ class MongoDbDao(Generic[Dto]):
         """
         if not dtos:
             return
-        documents = self._batch_documents(dtos)
+        await self._upsert_documents(self._batch_documents(dtos), ordered=ordered)
+
+    async def _upsert_documents(
+        self, documents: list[dict[str, Any]], *, ordered: bool
+    ) -> None:
+        """Upsert already converted documents, see `upsert_many`."""
         # No criteria besides the ID ({}), so each document replaces whatever is
         # stored under its ID, or is inserted where nothing is
         _, failures = await self._bulk_replace(

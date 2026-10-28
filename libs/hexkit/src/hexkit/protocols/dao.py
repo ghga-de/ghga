@@ -575,6 +575,12 @@ class Dao(typing.Protocol[Dto]):
 
         Raises:
             TypeError: when `ids` is a single string instead of a collection of IDs.
+            BatchOperationError:
+                when some resources could not be deleted. Each failed ID maps to
+                `DbTimeoutError` if its write timed out, or to another `DaoError`.
+            DbTimeoutError: when the write or its write concern timed out.
+            DaoError: when the write concern failed otherwise, which no single resource
+                caused.
         """
         ...
 
