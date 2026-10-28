@@ -150,6 +150,24 @@ describe('UploadBoxManagerFilter', () => {
     });
   });
 
+  it('should set the filter after selecting a group of file states', async () => {
+    const combobox = screen.getByRole('combobox', { name: 'File states' });
+
+    await userEvent.click(combobox);
+    await fixture.whenStable();
+
+    const option = screen.getByRole('option', { name: 'Some files failed' });
+    await userEvent.click(option);
+    await fixture.whenStable();
+
+    expect(uploadBoxService.setUploadBoxesFilter).toHaveBeenCalledWith({
+      title: undefined,
+      state: 'not_archived',
+      location: undefined,
+      fileStates: 'some_failed',
+    });
+  });
+
   it('should clear the filter with the remove buttons', async () => {
     const textbox = screen.getByRole('textbox', { name: 'Upload box title' });
     await userEvent.type(textbox, 'Upload Box');

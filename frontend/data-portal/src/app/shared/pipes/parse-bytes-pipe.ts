@@ -23,17 +23,21 @@ export class ParseBytes implements PipeTransform {
   /**
    * This function converts a number of bytes to a human-readable string
    * @param bytes Bytes as number
+   * @param fractionDigits Fixed number of decimals, so that values in a column
+   *   line up at the decimal point; up to two decimals without trailing zeros
+   *   if not given. Plain bytes never get decimals.
    * @returns Human readable size string, e.g. 5 KiB
    */
-  transform(bytes: number | null | undefined): string {
+  transform(bytes: number | null | undefined, fractionDigits?: number): string {
     if (bytes === null || bytes === undefined) return '';
     const parsedBytes = PREFIXES.flatMap((prefix, index) => {
       const calculatedVal = bytes / Math.pow(MULTIPLIER, index);
       if (calculatedVal < 1000 && calculatedVal >= 0.1) {
-        return (
-          String(Math.round(calculatedVal * 100) / 100) +
-          `\u00A0${prefix}${prefix ? 'i' : ''}B`
-        );
+        const value =
+          fractionDigits === undefined || !prefix
+            ? String(Math.round(calculatedVal * 100) / 100)
+            : calculatedVal.toFixed(fractionDigits);
+        return value + `\u00A0${prefix}${prefix ? 'i' : ''}B`;
       } else return null;
     });
     return parsedBytes.find((parsing) => parsing !== null) || String(bytes) + '\u00A0B';

@@ -85,6 +85,13 @@ describe('UploadBoxManagerList', () => {
     expect(screen.queryByText('TUE01')).not.toBeInTheDocument();
   });
 
+  it('should show the file states of each upload box', () => {
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(
+      within(row).getByRole('img', { name: '2 ready, 2 in progress, 1 failed' }),
+    ).toBeVisible();
+  });
+
   it('should navigate to the details of an upload box', async () => {
     const box = uploadBoxes.boxes[0];
     const row = screen.getByRole('row', { name: new RegExp(box.title) });

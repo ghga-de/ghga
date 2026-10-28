@@ -4,6 +4,8 @@
  * @license Apache-2.0
  */
 
+import { countFileUploadStateGroup, FileUploadStateCounts } from './file-upload';
+
 /** All possible research upload box states */
 export enum UploadBoxState {
   open = 'open',
@@ -50,6 +52,9 @@ export interface ResearchDataUploadBox extends ResearchDataUploadBoxBase {
   // Optional because locally created boxes (see UploadBoxService) do not have it
   // yet; the backend always returns it.
   file_upload_box_id?: string;
+  // The number of file uploads per state. Not yet returned by the backend and
+  // only served by the mocks, so the list shows just the file count without it.
+  file_state_counts?: FileUploadStateCounts;
   // Note: the API also returns file_upload_box_version and file_upload_box_state,
   // but these are not used in the frontend.
 }
@@ -83,9 +88,55 @@ export type UploadBoxVirtualFilter = `not_${UploadBoxState}`;
 /** All possible state filter values: real states and virtual negations */
 export type UploadBoxStateFilter = UploadBoxState | UploadBoxVirtualFilter;
 
+/** Conditions on the file states of an upload box */
+export type UploadBoxFileStatesFilter =
+  'no_files' | 'some_in_progress' | 'some_failed' | 'some_not_ready' | 'all_ready';
+
+/** Display labels of the conditions on the file states */
+export const UploadBoxFileStatesFilterLabel: Record<UploadBoxFileStatesFilter, string> =
+  {
+    no_files: 'No files yet',
+    some_in_progress: 'Some files in progress',
+    some_failed: 'Some files failed',
+    some_not_ready: 'Some files not ready',
+    all_ready: 'All files ready',
+  };
+
+/**
+ * Check whether the files of an upload box meet a condition. Only the check for
+ * an empty box works without the state counts.
+ * @param box - the upload box with its file count and state counts
+ * @param filter - the condition to check
+ * @returns whether the condition is met
+ */
+export function matchesFileStatesFilter(
+  box: Pick<ResearchDataUploadBox, 'file_count' | 'file_state_counts'>,
+  filter: UploadBoxFileStatesFilter,
+): boolean {
+  if (filter === 'no_files') return box.file_count === 0;
+  const counts = box.file_state_counts;
+  if (!counts) return false;
+  const ready = countFileUploadStateGroup(counts, 'ready');
+  const archived = countFileUploadStateGroup(counts, 'archived');
+  const inProgress = countFileUploadStateGroup(counts, 'in_progress');
+  const failed = countFileUploadStateGroup(counts, 'failed');
+  switch (filter) {
+    case 'all_ready':
+      return ready > 0 && archived + inProgress + failed === 0;
+    case 'some_not_ready':
+      return inProgress + failed > 0;
+    case 'some_in_progress':
+      return inProgress > 0;
+    case 'some_failed':
+      return failed > 0;
+  }
+}
+
 /** Filters for upload box management */
 export interface UploadBoxFilter {
   title: string | undefined;
   state: UploadBoxStateFilter | undefined;
   location: string | undefined;
+  /** Keep only boxes whose file states meet this condition */
+  fileStates?: UploadBoxFileStatesFilter;
 }

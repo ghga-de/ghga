@@ -324,6 +324,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68004': uploadBoxes.boxes[3],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68005': uploadBoxes.boxes[4],
   'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68006': uploadBoxes.boxes[5],
+  'GET /api/rs/upload-boxes/0a36607a-b53f-49ed-bf3e-a5f2dbc68007': uploadBoxes.boxes[6],
 
   // Unknown upload box (catch-all, must stay after nested routes above)
   'GET /api/rs/upload-boxes/*': 404,

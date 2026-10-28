@@ -17,6 +17,7 @@ import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import { BoxRetrievalResults, UploadBoxState } from '@app/upload/models/box';
 import {
   BoxUploadsPage,
+  FileUploadStateCounts,
   FileUploadWithAccession,
 } from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
@@ -1150,7 +1151,7 @@ export const datasetInformation: DatasetInformation = {
  */
 
 export const uploadBoxes: BoxRetrievalResults = {
-  count: 6,
+  count: 7,
   boxes: [
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
@@ -1238,6 +1239,30 @@ export const uploadBoxes: BoxRetrievalResults = {
       size: 8589934592, // 8 GiB
       storage_alias: 'HD02',
       max_size: 5_497_558_138_880, // 5 TiB
+    },
+    {
+      // A box with as many files as a large study brings, to check how the list
+      // copes with large numbers. Its state counts are given here instead of
+      // being derived from file fixtures, so its file table stays empty.
+      id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68007',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68007',
+      version: 12,
+      state: UploadBoxState.open,
+      title: 'Research Data Upload Box of a Large Cohort',
+      description: 'Upload box for the whole-genome files of a large cohort study',
+      last_changed: '2025-02-07T09:00:00Z',
+      changed_by: 'doe@test.dev',
+      file_count: 176543,
+      size: 94_885_993_005_875, // ~86.3 TiB
+      storage_alias: 'TUE03',
+      max_size: 109_951_162_777_600, // 100 TiB
+      file_state_counts: {
+        interrogated: 170000,
+        inbox: 4321,
+        init: 2190,
+        failed_interrogation: 29,
+        failed: 3,
+      },
     },
   ],
 };
@@ -1630,12 +1655,19 @@ export const uploadBox3FileUploads: FileUploadWithAccession[] = Array.from(
   }),
 );
 
-// 15 files so the file table paginates (paginator shows for more than 10 files).
+// 15 files so the file table paginates (paginator shows for more than 10 files),
+// two of them failed so that the box list shows more than one failed file.
 export const uploadBox4FileUploads: FileUploadWithAccession[] = Array.from(
   { length: 15 },
   (_, i) => {
     const state = (
-      i % 5 === 3 ? 'inbox' : i % 5 === 4 ? 'init' : 'interrogated'
+      i % 5 === 3
+        ? 'inbox'
+        : i % 5 === 4
+          ? 'init'
+          : i === 2 || i === 7
+            ? 'failed_interrogation'
+            : 'interrogated'
     ) as FileUploadWithAccession['state'];
     const decrypted_size = (i + 1) * 536870912; // 0.5–7.5 GiB per file
     return {
@@ -1762,7 +1794,7 @@ export const uploadBox2Uploads = uploadsCollection(uploadBox2FileUploads);
 /** File uploads of box 3 (archived, 28 files, i.e. three pages) */
 export const uploadBox3Uploads = uploadsCollection(uploadBox3FileUploads);
 
-/** File uploads of box 4 (open, 15 files) */
+/** File uploads of box 4 (open, 15 files, two failed) */
 export const uploadBox4Uploads = uploadsCollection(uploadBox4FileUploads);
 
 /** File uploads of box 5 (open, 2 files) */
@@ -1770,6 +1802,22 @@ export const uploadBox5Uploads = uploadsCollection(uploadBox5FileUploads);
 
 /** File uploads of box 6 (locked, 3 files, one awaiting a retry) */
 export const uploadBox6Uploads = uploadsCollection(uploadBox6FileUploads);
+
+// The RS will aggregate the file states per box; until it does, derive the
+// counts from the file fixtures so that the box list and the file tables agree.
+for (const files of [
+  uploadBox1FileUploads,
+  uploadBox2FileUploads,
+  uploadBox3FileUploads,
+  uploadBox4FileUploads,
+  uploadBox5FileUploads,
+  uploadBox6FileUploads,
+]) {
+  const box = uploadBoxes.boxes.find((b) => b.file_upload_box_id === files[0].box_id)!;
+  const counts: FileUploadStateCounts = {};
+  for (const file of files) counts[file.state] = (counts[file.state] ?? 0) + 1;
+  box.file_state_counts = counts;
+}
 
 /**
  * WPS API

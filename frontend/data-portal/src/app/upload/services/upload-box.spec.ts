@@ -48,6 +48,7 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       size: 123456789,
       storage_alias: 'TUE01',
       max_size: 10_000_000_000_000,
+      file_state_counts: { interrogated: 2, failed_interrogation: 1 },
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
@@ -61,6 +62,7 @@ const TEST_BOX_RETRIEVAL_RESULTS: BoxRetrievalResults = {
       size: 987654321,
       storage_alias: 'HD02',
       max_size: 15_000_000_000_000,
+      file_state_counts: { interrogated: 10, init: 2 },
     },
     {
       id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68003',
@@ -163,7 +165,7 @@ describe('UploadBoxService', () => {
     expect(service.uploadBoxes()).toEqual(TEST_BOX_RETRIEVAL_RESULTS.boxes);
   });
 
-  it('should filter upload boxes by title, state, and location', async () => {
+  it('should filter upload boxes by title, state, location and file states', async () => {
     service.loadAllUploadBoxes();
     testBed.tick();
 
@@ -217,6 +219,39 @@ describe('UploadBoxService', () => {
     expect(service.filteredUploadBoxes()).toEqual([
       TEST_BOX_RETRIEVAL_RESULTS.boxes[0],
       TEST_BOX_RETRIEVAL_RESULTS.boxes[1],
+    ]);
+
+    // Gamma has no state counts, so it matches no condition on the states.
+    service.setUploadBoxesFilter({
+      title: undefined,
+      state: undefined,
+      location: undefined,
+      fileStates: 'some_failed',
+    });
+    expect(service.filteredUploadBoxes()).toEqual([
+      TEST_BOX_RETRIEVAL_RESULTS.boxes[0],
+    ]);
+
+    service.setUploadBoxesFilter({
+      title: undefined,
+      state: undefined,
+      location: undefined,
+      fileStates: 'some_not_ready',
+    });
+    expect(service.filteredUploadBoxes()).toEqual([
+      TEST_BOX_RETRIEVAL_RESULTS.boxes[0],
+      TEST_BOX_RETRIEVAL_RESULTS.boxes[1],
+    ]);
+
+    // An empty box is found by its file count alone.
+    service.setUploadBoxesFilter({
+      title: undefined,
+      state: undefined,
+      location: undefined,
+      fileStates: 'no_files',
+    });
+    expect(service.filteredUploadBoxes()).toEqual([
+      TEST_BOX_RETRIEVAL_RESULTS.boxes[2],
     ]);
   });
 

@@ -22,6 +22,7 @@ import {
   UploadBoxStateClass,
 } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { UploadBoxFileStates } from '../upload-box-file-states/upload-box-file-states';
 
 /** Sort order for upload box states: locked first, then open, then archived */
 const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
@@ -52,6 +53,7 @@ interface UploadBoxRow extends ResearchDataUploadBox {
     ParseBytes,
     Capitalise,
     DatePipe,
+    UploadBoxFileStates,
   ],
   providers: [providePaginatorIntl('Upload boxes per page')],
   templateUrl: './upload-box-manager-list.html',

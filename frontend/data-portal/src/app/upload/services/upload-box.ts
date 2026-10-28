@@ -15,6 +15,7 @@ import { AccessionMapRequest } from '../models/accession-map';
 import {
   BoxRequeueResult,
   BoxRetrievalResults,
+  matchesFileStatesFilter,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
   ResearchDataUploadBoxUpdate,
@@ -321,6 +322,11 @@ export class UploadBoxService {
       boxes = boxes.filter(
         (box) => box.storage_alias.trim().toLowerCase() === location,
       );
+    }
+
+    const fileStates = filter.fileStates;
+    if (fileStates) {
+      boxes = boxes.filter((box) => matchesFileStatesFilter(box, fileStates));
     }
 
     return boxes;
