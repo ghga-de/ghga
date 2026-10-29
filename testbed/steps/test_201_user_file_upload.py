@@ -39,6 +39,7 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .conftest_2x import _read_stable_box, _session_headers
 from .utils import has_reached
 
 scenarios("../features/201_user_file_upload.feature")
@@ -167,35 +168,10 @@ def check_uploaded_files_in_storage(
 def lock_upload_box(full_name: str, storage_name: str, fixtures: JointFixture):
     """Lock the data upload box for the specified storage scope."""
     assert storage_name in ["primary", "secondary"], f"Unknown storage: {storage_name}"
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    rdub_id = rdub["id"]
-    session = fixtures.auth.get_saved_session(
-        name=full_name, state_store=fixtures.state
-    )
-    assert session, f"No session found for {full_name}"
-    assert session.user_id, f"user_id is missing for {full_name}"
-
-    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub_id}"
-    headers = fixtures.auth.headers(session=session)
-
-    # The box version is a counter that advances oncevery upload and delete,
-    # it can diverge from the uploaded-file count (see the interrupted-upload scenario).
-    # Read the live version from the server instead of assuming version.
-    # The registry learns about uploads from events, so wait until its view has
-    # caught up (the version stops advancing) before locking — otherwise the
-    # lock is rejected with an out-of-date file upload box version.
-    version = None
-    for _ in range(30):
-        box = fixtures.http.get(url, headers=headers).json()
-        if box["version"] == version:
-            break
-        version = box["version"]
-        time.sleep(1)
-    assert version is not None
-    rdub["version"] = version
-    fixtures.state.set_state(f"rdub_{storage_name}", rdub)
-
-    data = {"version": version, "state": "locked"}
+    box = _read_stable_box(fixtures, storage_name, full_name)
+    url = f"{fixtures.config.rs_url}/upload-boxes/{box['id']}"
+    headers = _session_headers(fixtures, full_name)
+    data = {"version": box["version"], "state": "locked"}
     return fixtures.http.patch(url, headers=headers, json=data)
 
 

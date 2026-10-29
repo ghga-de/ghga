@@ -36,6 +36,7 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .conftest_2x import _read_stable_box
 from .conftest_5x import _filter_manager_by_title
 from .utils import UI_TIMEOUT, has_reached
 
@@ -101,33 +102,6 @@ def _retry_button(page: Page, alias: str) -> Locator:
 def _retry_all_button(page: Page) -> Locator:
     """Return the portal's button that requeues every failed file of the box."""
     return page.get_by_role("button", name="Retry failed re-encryptions")
-
-
-def _read_stable_box(
-    fixtures: JointFixture, storage_name: str, full_name: str = "Data Steward"
-) -> dict[str, Any]:
-    """Read the upload box back from RS once its version has stopped advancing.
-
-    RS learns about uploads and deletions from events, so a version read right after
-    a change is often already out of date, which gets the next update rejected.
-    """
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    assert rdub, f"No upload box in state for {storage_name} storage"
-    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}"
-    headers = _headers(fixtures, full_name)
-
-    box: dict[str, Any] = {}
-    version = None
-    for _ in range(30):
-        box = fixtures.http.get(url, headers=headers).json()
-        if box.get("version") == version:
-            break
-        version = box.get("version")
-        time.sleep(1)
-    assert version is not None, f"Could not read the {storage_name} upload box"
-
-    fixtures.state.set_state(f"rdub_{storage_name}", box)
-    return box
 
 
 def _set_box_state(
