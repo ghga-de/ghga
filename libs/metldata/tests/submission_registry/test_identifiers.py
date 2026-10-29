@@ -37,6 +37,10 @@ class FakeAccessionRegistry:
         """Tell whether the given class is the study class."""
         return class_name == "Study"
 
+    def is_dataset_class(self, class_name: str) -> bool:
+        """Tell whether the given class is the dataset class."""
+        return class_name == "Dataset"
+
     def generate_study_accession(self) -> str:
         """Generate the PID of a study."""
         return "generated_study_pid"
@@ -57,39 +61,38 @@ class FakeAccessionRegistry:
 
 
 def test_generate_accession_map():
-    """Test generating an accession map for a given content."""
+    """Test that the accession map holds the study and dataset accessions only: a
+    dataset still in the content keeps its accession, a new one gets one, a removed
+    one is dropped, and a class that is neither study nor dataset is left out.
+    """
     accession_registry = FakeAccessionRegistry()
     content = {
         "study_anchor": [{"alias": "test_study"}],
+        "dataset_anchor": [{"alias": "DS_A"}, {"alias": "DS_B"}],
         "class1_anchor": [{"alias": "test_alias1"}],
-        "class2_anchor": [{"alias": "test_alias2"}, {"alias": "test_alias3"}],
     }
     anchor_points_by_target = {
         "Study": AnchorPoint(
             root_slot="study_anchor", target_class="Study", identifier_slot="alias"
         ),
+        "Dataset": AnchorPoint(
+            root_slot="dataset_anchor", target_class="Dataset", identifier_slot="alias"
+        ),
         "Class1": AnchorPoint(
             root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
         ),
-        "Class2": AnchorPoint(
-            root_slot="class2_anchor", target_class="Class2", identifier_slot="alias"
-        ),
-        "Class3": AnchorPoint(
-            root_slot="class3_anchor", target_class="Class3", identifier_slot="alias"
-        ),
     }
     existing_accession_map = {
-        "class2_anchor": {"test_alias2": "existing_class2_accession1"},
-        "class3_anchor": {"test_alias3": "existing_class3_accession2"},
+        "dataset_anchor": {
+            "DS_A": "existing_dataset_accession1",
+            "DS_C": "existing_dataset_accession2",
+        },
     }
     expected_accession_map = {
         "study_anchor": {"test_study": "generated_study_pid"},
-        "class1_anchor": {
-            "test_alias1": "generated_study_pid.generated_class1_accession1"
-        },
-        "class2_anchor": {
-            "test_alias2": "existing_class2_accession1",
-            "test_alias3": "generated_study_pid.generated_class2_accession2",
+        "dataset_anchor": {
+            "DS_A": "existing_dataset_accession1",
+            "DS_B": "generated_study_pid.generated_dataset_accession1",
         },
     }
 
@@ -105,23 +108,23 @@ def test_generate_accession_map():
 
 def test_new_study_alias_keeps_pid():
     """A study given a new alias between two upserts keeps its PID, now under the
-    new alias, so the other accessions keep their prefix.
+    new alias, so the dataset accessions keep their prefix.
     """
     content = {
         "study_anchor": [{"alias": "new_study_alias"}],
-        "class1_anchor": [{"alias": "test_alias1"}],
+        "dataset_anchor": [{"alias": "DS_A"}],
     }
     anchor_points_by_target = {
         "Study": AnchorPoint(
             root_slot="study_anchor", target_class="Study", identifier_slot="alias"
         ),
-        "Class1": AnchorPoint(
-            root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
+        "Dataset": AnchorPoint(
+            root_slot="dataset_anchor", target_class="Dataset", identifier_slot="alias"
         ),
     }
     existing_accession_map = {
         "study_anchor": {"test_study": "existing_study_pid"},
-        "class1_anchor": {"test_alias1": "existing_study_pid.test_alias1"},
+        "dataset_anchor": {"DS_A": "existing_study_pid.DS.ABC"},
     }
 
     observed_accession_map = generate_accession_map(
@@ -133,7 +136,7 @@ def test_new_study_alias_keeps_pid():
 
     assert observed_accession_map == {
         "study_anchor": {"new_study_alias": "existing_study_pid"},
-        "class1_anchor": {"test_alias1": "existing_study_pid.test_alias1"},
+        "dataset_anchor": {"DS_A": "existing_study_pid.DS.ABC"},
     }
 
 

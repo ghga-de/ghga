@@ -35,7 +35,9 @@ class SubmissionAnnotation(BaseModel):
             + " Please note that the user-defined alias might only be unique within"
             + " the scope of the corresponding class and this submission. By contrast,"
             + " the system-generated accession is unique across all classes and"
-            + " submissions."
+            + " submissions. A submission with a study PID holds the study and dataset"
+            + " classes only, since every other accession is composed from the study"
+            + " PID and the alias. A flat-accessioned submission holds every class."
         ),
     )
 
