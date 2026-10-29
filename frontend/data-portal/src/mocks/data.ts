@@ -17,6 +17,7 @@ import { BaseStorageLabels } from '@app/metadata/models/well-known-values';
 import {
   BoxRetrievalResults,
   FileStateCountsByBox,
+  needsFileStateCounts,
   UploadBoxState,
 } from '@app/upload/models/box';
 import {
@@ -1811,9 +1812,10 @@ const COUNTED_FILE_UPLOAD_STATES: FileUploadState[] = [
 ];
 
 /**
- * The file state counts of all upload boxes as returned by the RS. The counts
- * of boxes 1 to 6 are derived from their file fixtures so that the box list and
- * the file tables agree; boxes without counted files are absent.
+ * The file state counts of all open and locked upload boxes as returned by the
+ * RS. The counts of boxes 1 to 6 are derived from their file fixtures so that
+ * the box list and the file tables agree; boxes without counted files are absent.
+ * The mock ignores the boxes a request asks for, which only adds counts unused.
  */
 export const uploadBoxFileStateCounts: FileStateCountsByBox = {
   // Box 7 of the large cohort, which adds up to its file count
@@ -1832,6 +1834,8 @@ for (const files of [
   uploadBox6FileUploads,
 ]) {
   const box = uploadBoxes.boxes.find((b) => b.file_upload_box_id === files[0].box_id)!;
+  // The RS counts no archived boxes, since all their files are archived
+  if (!needsFileStateCounts(box)) continue;
   const counts: FileUploadStateCounts = {};
   for (const { state } of files) {
     if (COUNTED_FILE_UPLOAD_STATES.includes(state)) {

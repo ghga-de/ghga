@@ -31,6 +31,7 @@ class MockUploadBoxService {
   fileStateCountsByBox = signal<FileStateCountsByBox | undefined>(
     uploadBoxFileStateCounts,
   );
+  showFileStateCountsOf = vitest.fn();
   getStorageLocationLabel = (storageAlias: string) =>
     ({ TUE01: 'Tübingen 1', HD02: 'Heidelberg 2', TUE03: 'Tübingen 3' })[
       storageAlias
@@ -95,6 +96,23 @@ describe('UploadBoxManagerList', () => {
     expect(
       within(row).getByRole('img', { name: '2 ready, 1 in progress, 1 failed' }),
     ).toBeVisible();
+  });
+
+  it('should load the file state counts of the boxes on the page', async () => {
+    // All boxes fit on one page; the service picks the ones that need counts
+    const boxIds = uploadBoxes.boxes.map((box) => box.id).sort();
+    await vitest.waitFor(() => {
+      const boxes = uploadBoxService.showFileStateCountsOf.mock.lastCall?.[0] ?? [];
+      expect(boxes.map((box: { id: string }) => box.id).sort()).toEqual(boxIds);
+    });
+  });
+
+  it('should count all files of an archived box as archived', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of Joan/ });
+    expect(within(row).getByRole('img', { name: '28 archived' })).toBeVisible();
   });
 
   it('should show placeholders while the file state counts load', async () => {

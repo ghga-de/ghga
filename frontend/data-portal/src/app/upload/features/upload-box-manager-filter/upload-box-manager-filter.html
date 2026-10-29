@@ -83,10 +83,8 @@
                 <!-- Raise Material's 275px cap so that all six options fit without scrolling. -->
                 <mat-select [formField]="filterForm.fileStates" panelClass="!max-h-80">
                   <mat-option value="">Any file states</mat-option>
-                  @for (opt of fileStateOptions(); track opt.value) {
-                    <mat-option [value]="opt.value" [disabled]="opt.disabled">{{
-                      opt.label
-                    }}</mat-option>
+                  @for (opt of fileStateOptions; track opt.value) {
+                    <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                   }
                 </mat-select>
                 @if (fileStatesHint()) {

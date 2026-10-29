@@ -571,7 +571,9 @@ def check_box_file_state_counts(
     # so wait until both have caught up instead of only until the box is stable
     for _ in range(30):
         box = _read_stable_box(fixtures, storage_name)
-        response = fixtures.http.get(url, headers=_headers(fixtures))
+        response = fixtures.http.get(
+            url, headers=_headers(fixtures), params={"box_id": box["id"]}
+        )
         assert response.status_code == 200, response.text
         counts = response.json().get(box["id"], {})
         if counts == expected_counts and sum(counts.values()) == box["file_count"]:

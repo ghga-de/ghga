@@ -16,6 +16,7 @@
 """Port definition for the RDUBManager."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 
 from pydantic import UUID4, PositiveInt
 
@@ -378,13 +379,17 @@ class RDUBManagerPort(ABC):
         ...
 
     @abstractmethod
-    async def get_file_state_counts(self) -> dict[UUID4, FileStateCounts]:
-        """Get the number of file uploads per state for every research data upload
-        box, keyed by the box ID.
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4] | None = None
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state for the open and locked research
+        data upload boxes, keyed by the box ID.
 
+        If `box_ids` is given, only the boxes among them are counted, else all of them.
         Only the states that count toward a box's `file_count` are included, so each
-        box's counts add up to its `file_count`. Boxes without such file uploads are
-        absent from the result, as are states without file uploads.
+        box's counts add up to its `file_count`. Boxes without such file uploads and
+        states without file uploads are absent from the result. Archived boxes are
+        absent too, since all their files are archived.
 
         Raises:
             OperationError: If there's a problem querying the file box service.

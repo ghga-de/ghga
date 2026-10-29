@@ -49,6 +49,7 @@ class MockUploadBoxService {
   filteredUploadBoxes = () => this.#uploadBoxes();
   fileStateCounts = { isLoading: () => false, error: () => undefined };
   fileStateCountsByBox = () => ({});
+  showFileStateCountsOf = vitest.fn();
   storageLabels = {
     value: () => ({}),
     isLoading: () => false,

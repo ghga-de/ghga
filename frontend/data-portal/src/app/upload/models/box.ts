@@ -67,10 +67,37 @@ export interface ResearchDataUploadBoxUpdate {
 
 /**
  * The number of file uploads per state for each upload box, keyed by the box ID.
- * The RS counts only the states that count toward the file count of a box, so a
- * box without such files is absent.
+ * The RS counts only the states that count toward the file count of a box, and
+ * only for open and locked boxes with files, so other boxes are absent.
  */
 export type FileStateCountsByBox = Record<string, FileUploadStateCounts>;
+
+/**
+ * Check whether the file state counts of an upload box must be loaded from the
+ * RS. An empty box has none, and archiving a box archives all of its files.
+ * @param box - the upload box with its state and file count
+ * @returns whether the counts must be loaded
+ */
+export function needsFileStateCounts(
+  box: Pick<ResearchDataUploadBox, 'state' | 'file_count'>,
+): boolean {
+  return box.state !== UploadBoxState.archived && box.file_count > 0;
+}
+
+/**
+ * Get the number of file uploads per state in an upload box.
+ * @param box - the upload box with its ID, state and file count
+ * @param countsByBox - the state counts loaded from the RS, undefined if none are
+ * @returns the counts, undefined if they are not loaded
+ */
+export function fileStateCountsOf(
+  box: Pick<ResearchDataUploadBox, 'id' | 'state' | 'file_count'>,
+  countsByBox: FileStateCountsByBox | undefined,
+): FileUploadStateCounts | undefined {
+  if (!box.file_count) return {};
+  if (box.state === UploadBoxState.archived) return { archived: box.file_count };
+  return countsByBox?.[box.id];
+}
 
 /** Response when retrieving Research Data Upload Boxes */
 export interface BoxRetrievalResults {
@@ -107,21 +134,21 @@ export const UploadBoxFileStatesFilterLabel: Record<UploadBoxFileStatesFilter, s
   };
 
 /**
- * Check whether the files of an upload box meet a condition. Only the check for
- * an empty box works without the state counts.
- * @param box - the upload box with its ID and file count
- * @param countsByBox - the state counts of all boxes, undefined if not loaded
+ * Check whether the files of an upload box meet a condition. A box whose state
+ * counts are not loaded meets none but the check for an empty box.
+ * @param box - the upload box with its ID, state and file count
+ * @param countsByBox - the state counts loaded from the RS, undefined if none are
  * @param filter - the condition to check
  * @returns whether the condition is met
  */
 export function matchesFileStatesFilter(
-  box: Pick<ResearchDataUploadBox, 'id' | 'file_count'>,
+  box: Pick<ResearchDataUploadBox, 'id' | 'state' | 'file_count'>,
   countsByBox: FileStateCountsByBox | undefined,
   filter: UploadBoxFileStatesFilter,
 ): boolean {
   if (filter === 'no_files') return box.file_count === 0;
-  if (!countsByBox) return false;
-  const counts = countsByBox[box.id] ?? {};
+  const counts = fileStateCountsOf(box, countsByBox);
+  if (!counts) return false;
   const ready = countFileUploadStateGroup(counts, 'ready');
   const archived = countFileUploadStateGroup(counts, 'archived');
   const inProgress = countFileUploadStateGroup(counts, 'in_progress');

@@ -193,37 +193,29 @@ describe('UploadBoxManagerFilter', () => {
     });
   });
 
-  it('should offer only no files yet until the file state counts are loaded', async () => {
+  it('should offer all conditions before the file state counts are loaded', async () => {
     uploadBoxService.setFileStateCounts(undefined);
     await fixture.whenStable();
 
     await userEvent.click(screen.getByRole('combobox', { name: 'File states' }));
     await fixture.whenStable();
 
-    expect(screen.getByRole('option', { name: 'No files yet' })).toHaveAttribute(
-      'aria-disabled',
-      'false',
-    );
-    expect(screen.getByRole('option', { name: 'Some files failed' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-
-    uploadBoxService.setFileStateCounts({});
-    await fixture.whenStable();
-
-    expect(screen.getByRole('option', { name: 'Some files failed' })).toHaveAttribute(
-      'aria-disabled',
-      'false',
-    );
+    for (const name of ['No files yet', 'Some files failed', 'All files ready']) {
+      expect(screen.getByRole('option', { name })).toHaveAttribute(
+        'aria-disabled',
+        'false',
+      );
+    }
   });
 
-  it('should say why the file states are not available', async () => {
-    expect(screen.queryByText('Loading the file states…')).toBeNull();
-    expect(screen.queryByText('The file states could not be loaded.')).toBeNull();
-
+  it('should say why a chosen condition on the file states finds no boxes yet', async () => {
     uploadBoxService.setFileStateCounts(undefined);
     uploadBoxService.fileStateCounts.isLoading.set(true);
+    await fixture.whenStable();
+    expect(screen.queryByText('Loading the file states…')).toBeNull();
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'File states' }));
+    await userEvent.click(screen.getByRole('option', { name: 'Some files failed' }));
     await fixture.whenStable();
     expect(screen.getByText('Loading the file states…')).toBeVisible();
 
@@ -231,6 +223,12 @@ describe('UploadBoxManagerFilter', () => {
     uploadBoxService.fileStateCounts.error.set(new Error('UCS unavailable'));
     await fixture.whenStable();
     expect(screen.getByText('The file states could not be loaded.')).toBeVisible();
+
+    // An empty box is found without the counts
+    await userEvent.click(screen.getByRole('combobox', { name: 'File states' }));
+    await userEvent.click(screen.getByRole('option', { name: 'No files yet' }));
+    await fixture.whenStable();
+    expect(screen.queryByText('The file states could not be loaded.')).toBeNull();
   });
 
   it('should clear the filter with the remove buttons', async () => {

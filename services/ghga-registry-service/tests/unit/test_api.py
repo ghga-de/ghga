@@ -203,6 +203,32 @@ async def test_get_file_state_counts(
         assert response.status_code == 200
         assert response.json() == {str(box_id): {"inbox": 2, "archived": 3}}
         registry.rdub_manager.get_research_data_upload_box.assert_not_called()
+        registry.rdub_manager.get_file_state_counts.assert_awaited_once_with(
+            box_ids=None
+        )
+
+        # only the given boxes
+        other_box_id = uuid4()
+        registry.reset_mock()
+        response = await rest_client.get(
+            url,
+            headers=ds_auth_headers,
+            params={"box_id": [str(box_id), str(other_box_id)]},
+        )
+        assert response.status_code == 200
+        registry.rdub_manager.get_file_state_counts.assert_awaited_once_with(
+            box_ids=[box_id, other_box_id]
+        )
+
+        # too many boxes for one request
+        registry.reset_mock()
+        response = await rest_client.get(
+            url,
+            headers=ds_auth_headers,
+            params={"box_id": [str(uuid4()) for _ in range(101)]},
+        )
+        assert response.status_code == 422
+        registry.rdub_manager.get_file_state_counts.assert_not_called()
 
         # handle other exception
         registry.reset_mock()

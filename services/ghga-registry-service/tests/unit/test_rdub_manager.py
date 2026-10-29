@@ -1011,32 +1011,44 @@ async def test_get_storage_overview_no_boxes(rig: JointRig):
     assert await rig.rdub_manager.get_storage_overview() == []
 
 
+async def _insert_counts_box(
+    rig: JointRig, *, state: models.UploadBoxState = "open", file_count: int = 1
+) -> models.ResearchDataUploadBox:
+    """Insert a box for the file state counts tests."""
+    box = models.ResearchDataUploadBox(
+        version=0,
+        state=state,
+        title=f"Counts Box {uuid4()}",
+        description="A box for the file state counts test",
+        last_changed=now_utc_ms_prec(),
+        changed_by=TEST_DS_ID,
+        file_upload_box_id=uuid4(),
+        file_upload_box_version=0,
+        file_upload_box_state=state,
+        file_count=file_count,
+        storage_alias="HD01",
+        max_size=TEST_MAX_SIZE,
+    )
+    await rig.box_dao.insert(box)
+    return box
+
+
 async def test_get_file_state_counts(rig: JointRig):
     """Test that the file state counts are requested for the FileUploadBoxes of all
-    boxes and returned keyed by the box IDs.
+    open and locked boxes with files and returned keyed by the box IDs.
     """
-    boxes = []
-    for i in range(3):
-        box = models.ResearchDataUploadBox(
-            version=0,
-            state="open",
-            title=f"Counts Box {i}",
-            description="A box for the file state counts test",
-            last_changed=now_utc_ms_prec(),
-            changed_by=TEST_DS_ID,
-            file_upload_box_id=uuid4(),
-            file_upload_box_version=0,
-            file_upload_box_state="open",
-            storage_alias="HD01",
-            max_size=TEST_MAX_SIZE,
-        )
-        await rig.box_dao.insert(box)
-        boxes.append(box)
+    boxes = [
+        await _insert_counts_box(rig),
+        await _insert_counts_box(rig, state="locked"),
+        await _insert_counts_box(rig),
+    ]
+    await _insert_counts_box(rig, state="archived")
+    await _insert_counts_box(rig, file_count=0)
 
     # The file box service knows nothing of the last box, but of one the RS lacks
     client = rig.file_upload_box_client
     client.get_file_state_counts.return_value = {  # type: ignore
-        boxes[0].file_upload_box_id: {"inbox": 2, "archived": 3},
+        boxes[0].file_upload_box_id: {"inbox": 2, "interrogated": 3},
         boxes[1].file_upload_box_id: {"failed_interrogation": 1},
         uuid4(): {"interrogated": 4},
     }
@@ -1044,12 +1056,43 @@ async def test_get_file_state_counts(rig: JointRig):
     counts = await rig.rdub_manager.get_file_state_counts()
 
     assert counts == {
-        boxes[0].id: {"inbox": 2, "archived": 3},
+        boxes[0].id: {"inbox": 2, "interrogated": 3},
         boxes[1].id: {"failed_interrogation": 1},
     }
     client.get_file_state_counts.assert_awaited_once()  # type: ignore
     requested_ids = client.get_file_state_counts.call_args.kwargs["box_ids"]  # type: ignore
     assert sorted(requested_ids) == sorted(box.file_upload_box_id for box in boxes)
+
+
+async def test_get_file_state_counts_of_given_boxes(rig: JointRig):
+    """Test that only the open and locked boxes with files among the given ones are
+    counted.
+    """
+    open_box = await _insert_counts_box(rig)
+    await _insert_counts_box(rig)
+    archived_box = await _insert_counts_box(rig, state="archived")
+    empty_box = await _insert_counts_box(rig, file_count=0)
+
+    client = rig.file_upload_box_client
+    client.get_file_state_counts.return_value = {  # type: ignore
+        open_box.file_upload_box_id: {"inbox": 1}
+    }
+
+    counts = await rig.rdub_manager.get_file_state_counts(
+        box_ids=[open_box.id, archived_box.id, empty_box.id, uuid4()]
+    )
+
+    assert counts == {open_box.id: {"inbox": 1}}
+    client.get_file_state_counts.assert_awaited_once_with(  # type: ignore
+        box_ids=[open_box.file_upload_box_id]
+    )
+
+
+async def test_get_file_state_counts_of_archived_boxes(rig: JointRig):
+    """Test that the file box service is not asked when only archived boxes are given."""
+    box = await _insert_counts_box(rig, state="archived")
+    assert await rig.rdub_manager.get_file_state_counts(box_ids=[box.id]) == {}
+    rig.file_upload_box_client.get_file_state_counts.assert_not_called()  # type: ignore
 
 
 async def test_get_file_state_counts_no_boxes(rig: JointRig):

@@ -17,6 +17,7 @@ import {
   BoxRetrievalResults,
   FileStateCountsByBox,
   matchesFileStatesFilter,
+  needsFileStateCounts,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
   ResearchDataUploadBoxUpdate,
@@ -80,6 +81,8 @@ export class UploadBoxService {
   #fileUploadsContext = volatileCacheContext(this.#fileUploadsBucket);
 
   #loadAllUploadBoxes = signal<boolean>(false);
+  // Sorted, so that the same boxes in another order make the same request
+  #visibleBoxIds = signal<string[]>([]);
   #loadStorageLabels = signal<boolean>(false);
   #uploadBoxesFilter = signal<UploadBoxFilter | undefined>(undefined);
   #loadSingleBox = signal<string>('');
@@ -114,18 +117,44 @@ export class UploadBoxService {
   );
 
   /**
-   * Resource for loading the file state counts of all upload boxes. The RS
+   * The upload boxes to load the file state counts of: the IDs of the boxes on
+   * the current page of the list that need them, or 'all' while the list is
+   * filtered by the file states, since that needs the counts beyond the page.
+   * The equality check keeps an unchanged set of boxes from loading again.
+   */
+  #fileStateCountsBoxIds = computed<string[] | 'all' | undefined>(
+    () => {
+      if (!this.#loadAllUploadBoxes()) return undefined;
+      const fileStates = this.#uploadBoxesFilter()?.fileStates;
+      if (fileStates && fileStates !== 'no_files') return 'all';
+      const boxIds = this.#visibleBoxIds();
+      return boxIds.length ? boxIds : undefined;
+    },
+    {
+      equal: (a, b) =>
+        a === b ||
+        (Array.isArray(a) &&
+          Array.isArray(b) &&
+          a.length === b.length &&
+          a.every((id, index) => id === b[index])),
+    },
+  );
+
+  /**
+   * Resource for loading the file state counts of the open and locked upload
+   * boxes with files; the others need none (see `fileStateCountsOf`). The RS
    * computes them on request, which takes longer than loading the boxes, so they
    * come in a request of their own and the list does not wait for them.
    */
-  fileStateCounts = httpResource<FileStateCountsByBox>(() =>
-    this.#loadAllUploadBoxes()
-      ? {
-          url: `${this.#boxesUrl}/file-state-counts`,
-          context: this.#fileStateCountsContext,
-        }
-      : undefined,
-  );
+  fileStateCounts = httpResource<FileStateCountsByBox>(() => {
+    const boxIds = this.#fileStateCountsBoxIds();
+    if (!boxIds) return undefined;
+    return {
+      url: `${this.#boxesUrl}/file-state-counts`,
+      params: boxIds === 'all' ? undefined : { box_id: boxIds },
+      context: this.#fileStateCountsContext,
+    };
+  });
 
   /**
    * Resource for loading human-readable storage labels.
@@ -300,8 +329,10 @@ export class UploadBoxService {
   });
 
   /**
-   * Signal for the file state counts of all upload boxes, keyed by the box ID.
-   * Undefined while they are loading for the first time or if loading failed.
+   * Signal for the file state counts loaded from the RS, keyed by the box ID.
+   * Undefined while those of other boxes than before load, or if loading failed.
+   * Use `fileStateCountsOf` to get the counts of a box, which also covers the
+   * boxes that are not loaded.
    */
   fileStateCountsByBox = computed(() =>
     this.fileStateCounts.error() ? undefined : this.fileStateCounts.value(),
@@ -378,6 +409,22 @@ export class UploadBoxService {
    */
   loadStorageLabels(): void {
     this.#loadStorageLabels.set(true);
+  }
+
+  /**
+   * Load the file state counts of the upload boxes on the current page of the
+   * list, as far as they need them.
+   * @param boxes - the upload boxes on the current page
+   */
+  showFileStateCountsOf(
+    boxes: Pick<ResearchDataUploadBox, 'id' | 'state' | 'file_count'>[],
+  ): void {
+    this.#visibleBoxIds.set(
+      boxes
+        .filter(needsFileStateCounts)
+        .map((box) => box.id)
+        .sort(),
+    );
   }
 
   /**
