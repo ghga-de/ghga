@@ -13,7 +13,7 @@ The same charts run the whole platform on a local Kubernetes cluster, created wi
 The services have a hexagonal architecture (ports and adapters), built on our hexkit library: the core logic depends only on interfaces, the ports, and adapters implement them for Kafka, MongoDB and S3.
 They exchange events over Kafka, each keeps its own MongoDB database, and files live in S3 buckets.
 The data portal and the CLIs call the services' REST APIs through one gateway: Istio in staging and production, Envoy Gateway in the demo and the test bed ([ADR-0032](../adrs/adr-0032-self-contained-edge-envoy-gateway.md)).
-The [architecture overview](../architecture/overview.md) and the [journeys](../architecture/metadata-and-file-journeys.md) have the details.
+The [architecture overview](../architecture/ac-0000-monorepo-overview.md) and the [journeys](../architecture/ac-0008-metadata-and-file-journeys.md) have the details.
 
 ## How it is organised
 
@@ -48,7 +48,7 @@ It has its own `pnpm` workspace and lockfile, and the `just fe-*` recipes drive 
   - `just sync` installs the workspace into `.venv`.
   - `just lint` checks lint and formatting, and `just fmt` fixes what it can.
   - `just test services/auth-service` runs one member's tests.
-  - `just affected` lists the members your branch reaches, compared with `origin/dev`.
+  - `just affected` lists the members your branch and your uncommitted changes reach, compared with `origin/dev`, and `just test-affected` runs their tests.
   - `just fe-dev` starts the data portal against mocked APIs, with no backend.
 
   To run the whole platform, `just demo-images-mono` and `just up mono` build it and start it on the local cluster ([demo walkthrough](../../README.md#run-the-demo-locally)).
@@ -88,7 +88,7 @@ Each level is defined in the root [AGENTS.md](../../AGENTS.md#test-levels) and t
 
 - **Member unit tests** (pytest, `just test <member>`) are the default.
   A service's suite gets real Kafka, MongoDB and S3 from testcontainers, so persistence and event handling are tested there.
-- **Consumers of a library:** after a change under `libs/`, run `just affected` and test what it lists.
+- **Consumers of a library:** after a change under `libs/`, run `just test-affected`, which tests every member `just affected` lists.
 - **Chart tests** (`just charts-test`, `just demo-template`) render the charts; run them for any change under `deploy/`.
 - **Front-end tests** are Vitest unit tests (`just fe-test`) and Playwright smoke tests against mocked APIs ([data portal README](../../frontend/data-portal/README.md#test-levels)).
 - **The test bed** (`just testbed`) runs the whole platform on the local cluster, and is the only level that checks a flow across services.
@@ -107,8 +107,8 @@ A tag push builds and verifies; publishing is a separate, deliberate step ([rele
 
 In this order:
 
-1. **[Architecture overview](../architecture/overview.md)**, sections 3.1 to 3.7, for how the repo is built and why.
-2. **[Metadata and file journeys](../architecture/metadata-and-file-journeys.md)**, for how metadata and files flow across the services.
+1. **[Architecture overview](../architecture/ac-0000-monorepo-overview.md)**, sections 3.1 to 3.7, for how the repo is built and why.
+2. **[Metadata and file journeys](../architecture/ac-0008-metadata-and-file-journeys.md)**, for how metadata and files flow across the services.
    Read it before you change submission, upload, file mapping or serving.
 3. **[The ADR index](../README.md#decisions-adrs)**, for the decisions and their reasons; skim the titles and read those in your area.
 4. **[Conventions](../conventions.md)** and the **[writing style](../style.md)**, for names, branches, versions and how docs, comments and pull requests are written.

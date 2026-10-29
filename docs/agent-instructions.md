@@ -94,7 +94,8 @@ Only a skill about one member's internals stays nested in that member, as the `l
 The [skill catalogue](agent-skills.md) is generated from the frontmatter and lists every skill, where it applies and who invokes it.
 
 The frontmatter holds the fields of the [specification](https://agentskills.io/specification): `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
-Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable` and `paths` are allowed, since they only narrow when a skill loads and the other tools ignore them without harm.
+Of Claude Code's own fields, only `disable-model-invocation`, `user-invocable`, `paths` and `argument-hint` are allowed, since the other tools ignore them without harm.
+The first three only narrow when a skill loads, and `argument-hint` names a skill's argument in the slash-command menu.
 
 A third-party skill, such as Google's `angular-developer`, is a pinned copy in the root `.agents/skills/`, with its source and full commit SHA in `metadata` and our own `paths` and invocation fields.
 Nothing else in it is edited, so a newer copy replaces it whole; the Angular one moves to the branch of [angular/skills](https://github.com/angular/skills) that matches the portal's Angular version when the portal upgrades.
@@ -150,7 +151,7 @@ A root skill's eval suite is one file, `.agents/skills/<name>/evals.yaml`, and `
 Each case runs 3 times with the skill and 3 times without it, in a clone at a pinned commit that `scripts/skill-eval-scaffold.sh` prepares without the root skills.
 Neither arm loads the project's settings, hooks or `AGENTS.md`, so each case tells the agent to read the root `AGENTS.md` first.
 A run loads only the plugin under test, so a skill that works next to another, as `data-portal` does next to `angular-developer`, lists `plugins` in its suite: the suite then runs once per plugin, each a set of skills against none.
-A pass is due when the skill's `SKILL.md` changes, and for every suite when `SKILL_EVAL_MODEL` in the justfile moves to a new default model.
+A pass is due when the skill's `SKILL.md` changes, and for every suite when `SKILL_EVAL_MODEL` in `scripts/just/skill-eval.sh` moves to a new default model.
 Passes run by hand; a CI workflow follows once a few passes show stable scores.
 A grader changed after a run means rerunning the whole suite, and moving the pin means checking each case's expected values against the new commit.
 

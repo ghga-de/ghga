@@ -66,7 +66,9 @@ class DaoPublisherFactoryProtocol(DaoFactoryBase, ABC, typing.Generic[Index]):
         Args:
             name:
                 The name of the resource type (roughly equivalent to the name of a
-                database table or collection).
+                database table or collection). The storage must be accessed only
+                through Outbox DAOs created with the same arguments, never through
+                a plain DAO, since that bypasses the outbox.
             dto_model:
                 A DTO (Data Transfer Object) model describing the shape of resources.
             id_field:

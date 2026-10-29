@@ -94,6 +94,15 @@ repos:
         # -x -P SCRIPTDIR so sourced siblings (scripts/migration/lib.sh) are followed
         entry: shellcheck -x -P SCRIPTDIR
 
+      # Workflow syntax, expressions and action inputs, plus shellcheck over each `run:`
+      # block. Always the whole set: a change to .github/actionlint.yaml affects them all.
+      - id: actionlint
+        name: actionlint (workflows)
+        language: system
+        files: ^\.github/(workflows/.*\.ya?ml|actionlint\.yaml)$
+        pass_filenames: false
+        entry: uv run actionlint
+
       # ---- Markdown (ADR-0044) ---------------------------------------------------------
       # Fixes what it can, one sentence per line among it; pre-commit then fails on the
       # changed files, as with ruff. [tool.rumdl] exclude applies to named files too.
@@ -104,18 +113,18 @@ repos:
         require_serial: true
         entry: uv run rumdl check --fix
 
-      # ---- ADRs, epics and instruction files (ADR-0041, ADR-0042) ---------------------------
-      # The set hook checks both sets, the instruction files, the skills and the
+      # ---- ADRs, epics, concepts and instruction files (ADR-0041, ADR-0042, ADR-0048) -----
+      # The set hook checks the three sets, the instruction files, the skills and the
       # references across the tree, since most rules span files; it regenerates the
-      # three indexes and fails when that changed a file. The reference hook checks only
+      # four indexes and fails when that changed a file. The reference hook checks only
       # the committed files, so every commit pays little.
       - id: docs-set
-        name: ADR, epic, instruction-file and skill sets
+        name: ADR, epic, concept, instruction-file and skill sets
         language: system
         # the orphan paths the check polices are part of the shape, so a commit that
         # adds one has to run the hook that rejects it; the output style counts toward
         # the context budget
-        files: ^(docs/(adrs/|epics/|README\.md$|agent-skills\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|(.*/)?\.(agents|claude)/skills/|\.claude/output-styles/|\.github/(copilot-instructions\.md$|instructions/)|(.*/)?\.(copilot|cursor/rules)/|(.*/)?\.(cursorrules|clinerules|windsurfrules|aider\.conf\.yml)$|scripts/docs_check\.py$)
+        files: ^(docs/(adrs/|epics/|architecture/|README\.md$|agent-skills\.md$)|(.*/)?(AGENTS|CLAUDE|SKILL)\.md$|(.*/)?\.(agents|claude)/skills/|\.claude/output-styles/|\.github/(copilot-instructions\.md$|instructions/)|(.*/)?\.(copilot|cursor/rules)/|(.*/)?\.(cursorrules|clinerules|windsurfrules|aider\.conf\.yml)$|scripts/docs_check\.py$)
         # a .claude/skills/ entry is a symlink, which the default `types: [file]` skips
         types: []
         types_or: [file, symlink]
@@ -136,7 +145,7 @@ repos:
         entry: uv run python scripts/kafka_map.py
 
       - id: docs-refs
-        name: ADR and epic references
+        name: ADR, epic and concept references
         language: system
         types: [text]
         require_serial: true

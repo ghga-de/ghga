@@ -41,7 +41,7 @@ from aiokafka import AIOKafkaConsumer, TopicPartition
 from aiokafka.admin import AIOKafkaAdminClient, RecordsToDelete
 from aiokafka.errors import KafkaError
 from pydantic import UUID4
-from testcontainers.kafka import KafkaContainer
+from testcontainers.community.kafka import KafkaContainer
 
 from hexkit.custom_types import Ascii, JsonObject, PytestScope
 from hexkit.providers.akafka import KafkaConfig

@@ -120,6 +120,8 @@ For `adr` it runs 42 sessions on your own Claude credential in about 15 minutes,
 
 The [PR template](../../.github/pull_request_template.md) asks for the checks and the credit.
 Before you ask a person for review, run `/ghga-review`, which checks the change against the written rules, and the built-in `/code-review`, which looks for bugs.
+Reviewing someone else's PR, `/review-board <PR>` puts the findings on a private artifact page: each one reproduced with code, with its fix and a status you set as you decide.
+`/define-tasks` turns the decided board into tasks.
 `/pr-and-commit <stage>` takes a change through its branch by the naming grammar: `branch`, `commit`, `open` (title and description, pushed after your go), `merge` (the squash commit, which GitHub's prefill never gets right, and a stack PR by PR) and `cleanup` (merged branches and their worktrees).
 It also drafts replies to review comments.
 Credit an agent in the PR description as the [conventions](../conventions.md#names-branches-prs-commits) say, never with a `Co-authored-by:` trailer.

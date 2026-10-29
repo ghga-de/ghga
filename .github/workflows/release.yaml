@@ -132,10 +132,12 @@ jobs:
             packages) lane=pypi;     mode=sweep ;;
             *)        lane=pypi;     mode=targeted ;;
           esac
-          echo "name=$name"       >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "lane=$lane"       >> "$GITHUB_OUTPUT"
-          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$name"
+            echo "version=$version"
+            echo "lane=$lane"
+            echo "mode=$mode"
+          } >> "$GITHUB_OUTPUT"
           # A candidate (x.y.z-rc.N) gets no draft release; the regex above vouched for the
           # shape, so a `-` is decisive.
           prerelease=false
@@ -637,7 +639,7 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           work=$(mktemp -d)
-          while read -r name version; do
+          while read -r name _; do
             c="deploy/charts/${name}/"
             rm -rf "${work:?}"/*
             cp -r "$c" "$work/${name}-chart"

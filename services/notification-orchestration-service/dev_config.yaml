@@ -3,7 +3,7 @@ central_data_stewardship_email: "test@test.abc"
 helpdesk_email: "test@test.def"
 portal_url: "https://data.ghga.de"
 mongo_dsn: mongodb://localhost:27017
-db_name: nos
+db_name: notification-orchestration
 kafka_servers: ["kafka:9092"]
 access_request_topic: access_request_events
 email_notification_type: email_notification

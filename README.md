@@ -179,21 +179,26 @@ Pass `mono` to `just up` / `just testbed-up` to deploy against it — that overl
 
 | area | recipes |
 |---|---|
-| Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt`, `typecheck`, `test [target]`, `affected [base]` |
+| Python workspace | `sync`, `sync-check`, `lock`, `lint`, `fmt [paths]`, `typecheck [targets]`, `test [targets] [pytest options]`, `affected [base]`, `test-affected [base]` |
+| PyPI lane | `published-combo <member> [python]`, `pypi-drift [base]` |
 | Parallel work | `wt <branch> [base]`, `wt-rm <name>` |
 | Git hooks and docs | `hooks`, `hooks-all`, `hooks-update`, `docs-check`, `service-docs`, `prose [paths]` |
-| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-prod`, `fe-cert` |
+| Front end | `fe-install`, `fe-build`, `fe-test`, `fe-lint`, `fe-check`, `fe-dev`, `fe-dev-backend`, `fe-dev-oidc`, `fe-dev-backend-oidc`, `fe-prod`, `fe-cert` |
 | Helm charts | `charts [version]`, `charts-test`, `demo-template` |
 | Images | `image <target>`, `image-mono`, `demo-images`, `demo-images-mono`, `docker-prune` |
 | Cluster & demo | `cluster`, `up [profile]`, `demo-load [profile] [reclaim]`, `wait-ready`, `down`, `net-fix`, `logs [name]` |
 | Test bed | `testbed-install`, `testbed-artifacts`, `testbed-up [profile]`, `testbed`, `testbed-reset`, `testbed-hosts`, `testbed-trace [file]` |
 | Migration | `import-from-snapshot`, `sync-mainline` |
 
+Recipes longer than a few lines keep their body in a script under `scripts/just/`, where shellcheck reaches it.
+CI calls the same recipes, so a recipe run locally is the CI step.
+
 ## Where to read
 
 - **[docs/dev/getting-started.md](docs/dev/getting-started.md)** — a first read for new developers, with a reading path.
-- **[docs/architecture/overview.md](docs/architecture/overview.md)** — the target architecture.
-- **[docs/architecture/metadata-and-file-journeys.md](docs/architecture/metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
+- **[docs/architecture/](docs/architecture/README.md)** — the architecture concepts; the [index](docs/architecture/README.md#index) lists them all.
+- **[docs/architecture/ac-0000-monorepo-overview.md](docs/architecture/ac-0000-monorepo-overview.md)** — the target architecture.
+- **[docs/architecture/ac-0008-metadata-and-file-journeys.md](docs/architecture/ac-0008-metadata-and-file-journeys.md)** — how metadata and files flow across the platform.
 - **[docs/adrs/](docs/adrs/)** — the decisions (and why); the [index](docs/README.md#decisions-adrs) carries their status and supersession.
 - **[docs/migration/runbook.md](docs/migration/runbook.md)** — the phased migration plan.
 - **[docs/style.md](docs/style.md)** — writing style for coding agents.

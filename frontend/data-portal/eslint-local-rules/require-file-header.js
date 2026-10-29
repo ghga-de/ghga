@@ -67,11 +67,14 @@ export default {
           lines[4] === ' ';
 
         if (!valid) {
-          // Report on the Program node (first real token) rather than the
-          // comment, so a file-level `eslint-disable-next-line` placed before
-          // the first statement can suppress a deliberately custom header.
+          // Report on the first real token rather than the comment, so a
+          // file-level `eslint-disable-next-line` placed before the first
+          // statement can suppress a deliberately custom header. Not on the
+          // Program node: parsers disagree on whether it starts at a leading
+          // comment.
           context.report({
             node,
+            loc: (sourceCode.getFirstToken(node) ?? node).loc,
             messageId: 'malformed',
             fix(fixer) {
               // Preserve an existing valid description; otherwise use the placeholder.

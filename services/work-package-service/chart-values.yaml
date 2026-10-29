@@ -18,7 +18,6 @@ migrationInitContainer:
 config:
   auth_key: '{}'
   mongo_dsn:
-  db_name: wps
   access_url: http://claims-repository:8080
   host: "0.0.0.0"
   service_instance_id: 'wps_1'

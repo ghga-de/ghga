@@ -9,12 +9,13 @@ Design and migration records for the consolidation of GHGA's ~28 maintained repo
 
 ## Start here
 
-- **[architecture/overview.md](architecture/overview.md)** — the target architecture (layout, uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
-- **[architecture/metadata-and-file-journeys.md](architecture/metadata-and-file-journeys.md)** — current-state reference for how metadata and files flow (submission, accessions, upload, file mapping, serving).
+- **[architecture/](architecture/README.md)** — the architecture concepts, `AC-0000` onwards: how GHGA works and how the monorepo is built, indexed by number, status and tags.
+- **[architecture/ac-0000-monorepo-overview.md](architecture/ac-0000-monorepo-overview.md)** — the target architecture (layout, uv workspace, versioning, Helm, test bed, CI/CD), key tensions and their resolutions.
+- **[architecture/ac-0008-metadata-and-file-journeys.md](architecture/ac-0008-metadata-and-file-journeys.md)** — current-state reference for how metadata and files flow (submission, accessions, upload, file mapping, serving).
   Read before touching those paths.
-- **[architecture/kafka-cascade-map.md](architecture/kafka-cascade-map.md)** — the Kafka cascades map: one tree per entrypoint showing which service reacts to which event, plus every topic with its producer and subscribers.
+- **[architecture/ac-0009-kafka-cascade-map.md](architecture/ac-0009-kafka-cascade-map.md)** — the Kafka cascades map: one tree per entrypoint showing which service reacts to which event, plus every topic with its producer and subscribers.
   The page is [kafka-cascade-map.html](architecture/kafka-cascade-map.html); the document says how to open it, where the topology comes from and how to keep it current.
-- **[architecture/db-migrations.md](architecture/db-migrations.md)** — how services migrate their MongoDB databases: the `migrations/` package, the `migrate-db` init container, the version check, and how to write and test a migration.
+- **[architecture/ac-0010-db-migrations.md](architecture/ac-0010-db-migrations.md)** — how services migrate their MongoDB databases: the `migrations/` package, the `migrate-db` init container, the version check, and how to write and test a migration.
 - **[migration/runbook.md](migration/runbook.md)** — phased, executable migration with a cutover checklist.
 - **[../scripts/migration/](../scripts/migration/)** — the import + one-way-sync tooling and the [`repos.tsv`](../scripts/migration/repos.tsv) source-of-truth mapping.
 - **[releases.md](releases.md)** — how a release is cut, built and published: the two lanes, their tags, version stamping, the PyPI upload plan and the publish targets.
@@ -82,6 +83,8 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 | [0044](adrs/adr-0044-sentence-per-line-markdown.md) | One sentence per line in Markdown, checked by rumdl | accepted | docs, process |
 | [0045](adrs/adr-0045-dev-charts-for-continuous-deployment.md) | Publish dev charts on the mono image for continuous deployment | accepted | deploy, release |
 | [0046](adrs/adr-0046-platform-version-from-tags.md) | The platform version comes from tags alone | proposed | release |
+| [0048](adrs/adr-0048-architecture-concepts.md) | Numbered architecture concepts with frontmatter | accepted | docs, process |
+| [0049](adrs/adr-0049-microservice-library-over-framework.md) | A library of building blocks instead of a microservice framework | accepted | backend |
 <!-- adr-index:end -->
 
 ## Phased roadmap (high level)
@@ -98,7 +101,7 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 
 ## Open items (tracked, non-blocking)
 
-See [architecture/overview.md §6](architecture/overview.md).
+See [architecture/ac-0000-monorepo-overview.md §6](architecture/ac-0000-monorepo-overview.md).
 Notably: confirming the Envoy Gateway `SecurityPolicy.extAuth` ↔ prod `envoyExtAuthzHttp` header mapping; whether to maintain an optional full-Istio umbrella profile; demo observability target.
 
 > The earlier edge/boundary/secrets/placement/task-runner open items are now resolved (ADR-0031–0035).

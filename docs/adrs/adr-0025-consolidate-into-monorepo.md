@@ -11,7 +11,7 @@ related: [ADR-0026]
 
 In the context of **about 30 GHGA repositories, most of them kept in line by syncing files from a template repository**
 
-facing **toolchain changes that had to reach 25 repositories, cross-cutting changes that were never atomic, and no single place where all of GHGA was tested together**
+facing **coding agents that work best with the whole system in view, toolchain changes that had to reach 25 repositories, cross-cutting changes that were never atomic, and no single place where all of GHGA was tested together**
 
 we decided for **one monorepo at `ghga-de/ghga` holding everything except `datahub-test-bed`, imported with its history and synced one way until each old repository is retired**
 
@@ -24,6 +24,11 @@ accepting that **commit SHAs change, old `#NNN` references dangle, and a member'
 ## Details
 
 ### Context
+
+The main force was AI-assisted development.
+A coding agent works best when it can see the whole system: follow an event from its producer to every consumer, change a library and all its consumers together, and run the tests that cover them.
+Spread over separate repositories, it sees one component at a time.
+An earlier comparison of monorepos and multirepos had kept the multirepo layout, before coding agents tipped the balance.
 
 GHGA maintained about 30 repositories.
 About 25 were generated from `microservice-repository-template` and kept consistent by a `.template/` file sync with a CI check in each repository.
@@ -65,6 +70,9 @@ The [manifest](../../scripts/migration/repos.tsv) holds the mapping and the reti
 - The released CLIs match the services they are tested with.
   `datahub-test-bed` keeps using published versions.
 - The repository is large; affected-target CI keeps builds and tests scoped.
+- A service never imports another service; they talk only through events and APIs.
+  Nothing in the build enforces that boundary, so review does.
+- Libraries stay usable on their own: the capability markers decide what each member releases ([ADR-0033](adr-0033-capability-markers-and-placement.md)), and the PyPI lane publishes the libraries individually ([ADR-0027](adr-0027-versioning-and-release-by-tag.md)).
 
 ### Alternatives
 

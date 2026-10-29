@@ -71,6 +71,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       # great-docs renders through Quarto, which is a standalone binary rather than a
       # Python dependency, so the docs group cannot supply it.
       - uses: quarto-dev/quarto-actions/setup@v2

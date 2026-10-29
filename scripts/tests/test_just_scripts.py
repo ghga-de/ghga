@@ -1,0 +1,685 @@
+"""Tests for the recipe scripts in scripts/just/, run against stubbed external commands.
+
+Each test builds a throwaway repo tree, puts fake `uv`, `docker`, `kind`, `helm` and
+`just` executables first on PATH, runs the real script there, and checks the calls the
+stubs logged: which command, from which directory, with which arguments. That covers the
+scripts' own logic without a cluster, a registry or a real test run.
+"""
+
+import json
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+SCRIPTS = Path(__file__).resolve().parents[1] / "just"
+ROOT = SCRIPTS.parents[1]
+
+# Logs `<name> <cwd> <args>` per call, tab-separated, then runs the per-stub body.
+STUB = """#!/usr/bin/env bash
+printf '%s\\t%s\\t%s\\n' "$(basename "$0")" "$PWD" "$*" >> "$STUB_LOG"
+{body}
+"""
+
+
+class Repo:
+    """A throwaway repo root with stubbed commands on PATH."""
+
+    def __init__(self, root: Path):
+        self.root = root
+        self.bin = root / ".stubs"
+        self.bin.mkdir()
+        self.log = root / ".stub-log"
+        self.log.touch()
+
+    def write(self, path: str, text: str = "") -> Path:
+        """Create a file under the root, with its parent directories."""
+        target = self.root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text)
+        return target
+
+    def stub(self, name: str, body: str = "") -> None:
+        """Put a fake `name` on PATH that logs its call and then runs `body`."""
+        path = self.bin / name
+        path.write_text(STUB.format(body=body))
+        path.chmod(0o755)
+
+    def run(self, script: str, *args: str, **env: str) -> subprocess.CompletedProcess:
+        """Run scripts/just/<script> from the root."""
+        environ = {
+            **os.environ,
+            "PATH": f"{self.bin}:{os.environ['PATH']}",
+            "STUB_LOG": str(self.log),
+            **env,
+        }
+        environ.pop("GITHUB_ACTIONS", None)
+        environ.update(env)
+        return subprocess.run(
+            [str(SCRIPTS / script), *args],
+            cwd=self.root,
+            env=environ,
+            capture_output=True,
+            text=True,
+        )
+
+    def calls(self, name: str) -> list[tuple[str, str]]:
+        """The (cwd relative to the root, args) of every logged call to `name`."""
+        result = []
+        for line in self.log.read_text().splitlines():
+            command, cwd, args = line.split("\t")
+            if command == name:
+                rel = os.path.relpath(cwd, self.root)
+                result.append((rel, args))
+        return result
+
+
+@pytest.fixture
+def repo(tmp_path: Path) -> Repo:
+    """An empty repo root."""
+    return Repo(tmp_path)
+
+
+# --- test.sh -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def members(repo: Repo) -> Repo:
+    """A workspace with two libs, one service and a member directory left over."""
+    for member in ("libs/a", "libs/b", "services/s", "tools/t"):
+        repo.write(f"{member}/pyproject.toml")
+    (repo.root / "libs/orphan").mkdir()
+    # `uv run pytest ...` fails when run from the directory named in $FAIL_IN, and
+    # selects no test (pytest's exit 5) in the ones named in $EMPTY_IN
+    repo.stub(
+        "uv",
+        'here=$(basename "$PWD")\n'
+        '[ "${FAIL_IN:-}" = "$here" ] && exit 1\n'
+        '[[ " ${EMPTY_IN:-} " == *" $here "* ]] && exit 5\n'
+        "exit 0",
+    )
+    return repo
+
+
+PYTEST = "run pytest -q --durations=10"
+
+
+def test_no_target_sweeps_every_member_then_the_non_member_suites(members: Repo):
+    """Each member runs from its own directory; scripts and deploy run from the root."""
+    result = members.run("test.sh")
+    assert result.returncode == 0, result.stderr
+    assert members.calls("uv") == [
+        ("libs/a", PYTEST),
+        ("libs/b", PYTEST),
+        ("services/s", PYTEST),
+        ("tools/t", PYTEST),
+        (".", f"{PYTEST} scripts/tests"),
+        (".", f"{PYTEST} deploy/tests"),
+    ]
+
+
+@pytest.mark.parametrize("targets", [[""], ["."], ["./"], ["libs", "."]])
+def test_empty_and_dot_mean_everything(members: Repo, targets: list[str]):
+    """`.` names the repo root, which is no member, so it means the full sweep."""
+    members.run("test.sh", *targets)
+    assert len(members.calls("uv")) == 6
+
+
+def test_tier_sweeps_only_its_members(members: Repo):
+    """A bare tier runs each of its members and skips directories without a manifest."""
+    members.run("test.sh", "libs//")
+    assert members.calls("uv") == [("libs/a", PYTEST), ("libs/b", PYTEST)]
+
+
+def test_scope_inside_a_member_runs_from_the_member(members: Repo):
+    """A path below a member is passed on relative to the member directory."""
+    members.run("test.sh", "services/s/tests/unit/")
+    assert members.calls("uv") == [("services/s", f"{PYTEST} tests/unit")]
+
+
+def test_several_targets_run_in_order(members: Repo):
+    """Members and non-member paths can be mixed."""
+    members.run("test.sh", "tools/t", "scripts/tests")
+    assert members.calls("uv") == [
+        ("tools/t", PYTEST),
+        (".", f"{PYTEST} scripts/tests"),
+    ]
+
+
+def test_pytest_options_follow_a_scope_inside_a_member(members: Repo):
+    """An option and its value reach pytest whole, after the scope."""
+    members.run("test.sh", "services/s/tests/unit", "-k", "login and not slow", "-s")
+    assert members.calls("uv") == [
+        ("services/s", f"{PYTEST} tests/unit -k login and not slow -s")
+    ]
+    # the stub log joins arguments with spaces, so the last one is checked on its own
+    members.stub("uv", 'printf "%s\\n" "${@: -1}" > "$STUB_LOG.last"')
+    members.run("test.sh", "services/s", "-k", "login and not slow")
+    assert (members.root / ".stub-log.last").read_text() == "login and not slow\n"
+
+
+def test_option_values_are_not_targets(members: Repo):
+    """Everything from the first option on goes to pytest, even what looks like a path."""
+    members.run("test.sh", "tools/t", "--deselect", "libs/a", "scripts/tests")
+    assert members.calls("uv") == [
+        ("tools/t", f"{PYTEST} --deselect libs/a scripts/tests")
+    ]
+
+
+def test_options_without_a_target_reach_every_run_of_the_sweep(members: Repo):
+    """The full sweep hands the options to each member and each non-member suite."""
+    members.run("test.sh", "--lf")
+    calls = members.calls("uv")
+    assert len(calls) == 6
+    assert all(args.endswith(" --lf") for _, args in calls)
+    members.log.write_text("")
+    members.run("test.sh", "libs", "-x")
+    assert members.calls("uv") == [
+        ("libs/a", f"{PYTEST} -x"),
+        ("libs/b", f"{PYTEST} -x"),
+    ]
+
+
+def test_missing_member_fails_without_running_from_the_root(members: Repo):
+    """A typo must not fall back to a tree-wide pytest."""
+    result = members.run("test.sh", "libs/nope")
+    assert result.returncode == 1
+    assert "no such member: libs/nope" in result.stderr
+    assert members.calls("uv") == []
+
+
+def test_a_failing_member_does_not_stop_the_sweep(members: Repo):
+    """Like CI's matrix, a red member is reported at the end, after all the others ran."""
+    result = members.run("test.sh", "libs", "services", FAIL_IN="a")
+    assert result.returncode == 1
+    assert "pytest failed in: libs/a" in result.stderr
+    assert [cwd for cwd, _ in members.calls("uv")] == ["libs/a", "libs/b", "services/s"]
+
+
+def test_a_member_the_options_select_nothing_in_is_not_red(members: Repo):
+    """Options that select no test in one member list it apart, not as a failure."""
+    result = members.run("test.sh", "libs", "-k", "dao", EMPTY_IN="a")
+    assert result.returncode == 0, result.stderr
+    assert "no test selected for: libs/a" in result.stdout
+    assert "pytest failed" not in result.stderr
+
+
+def test_options_that_select_nothing_anywhere_fail(members: Repo):
+    """Options that select no test in any member fail the call, with pytest's exit 5."""
+    result = members.run("test.sh", "libs", "-k", "nothing", EMPTY_IN="a b")
+    assert result.returncode == 5
+    assert "selected no test for any target" in result.stderr
+
+
+def test_a_member_without_tests_is_red_when_no_options_are_given(members: Repo):
+    """Without options, exit 5 means a suite collected nothing, which CI counts as red."""
+    result = members.run("test.sh", "libs", EMPTY_IN="a")
+    assert result.returncode == 1
+    assert "pytest failed in: libs/a" in result.stderr
+
+
+# --- test-affected.sh --------------------------------------------------------------------
+
+
+@pytest.fixture
+def affected(repo: Repo) -> Repo:
+    """`just affected` prints $AFFECTED; `just test` exits with $TEST_EXIT."""
+    repo.stub(
+        "just",
+        '[ "$1" = affected ] && { printf "%s\\n" "$AFFECTED"; exit 0; }\n'
+        'echo "sweep output"; exit "${TEST_EXIT:-0}"',
+    )
+    return repo
+
+
+def _affected(is_all: bool, *targets: str) -> str:
+    return json.dumps({"all": is_all, "targets": list(targets)})
+
+
+def test_affected_members_run_in_one_test_call(affected: Repo):
+    """The members go to one `just test`, which lists the red ones at the end."""
+    result = affected.run(
+        "test-affected.sh",
+        "origin/main",
+        AFFECTED=_affected(False, "libs/a", "services/s", "tools/t"),
+        TEST_EXIT="1",
+    )
+    assert result.returncode == 1
+    assert affected.calls("just") == [
+        (".", "affected origin/main"),
+        (".", "test libs/a services/s tools/t"),
+    ]
+
+
+def test_targets_without_a_member_suite_are_named_not_run(affected: Repo):
+    """The front end, the charts and the test bed get the recipe that checks them."""
+    result = affected.run(
+        "test-affected.sh",
+        "origin/dev",
+        AFFECTED=_affected(
+            False,
+            "deploy/charts/a",
+            "deploy/charts/b",
+            "frontend/p",
+            "libs/a",
+            "testbed",
+        ),
+    )
+    assert result.returncode == 0, result.stderr
+    assert "`just fe_dir=frontend/p fe-check`" in result.stdout
+    assert "2 chart(s) and the test bed -- `just testbed`" in result.stdout
+    # named after the sweep, so its output does not scroll them away
+    assert result.stdout.index("sweep output") < result.stdout.index("not run:")
+    assert affected.calls("just")[1:] == [(".", "test libs/a")]
+
+
+def test_only_the_test_bed_is_named_without_a_chart_count(affected: Repo):
+    """No chart affected means no `0 chart(s)` in the line."""
+    result = affected.run(
+        "test-affected.sh",
+        "origin/dev",
+        AFFECTED=_affected(False, "libs/a", "testbed"),
+        TEST_EXIT="1",
+    )
+    assert result.returncode == 1
+    assert "not run: the test bed -- `just testbed`" in result.stdout
+
+
+def test_nothing_affected_runs_nothing(affected: Repo):
+    """No member affected is a pass, not a full sweep."""
+    result = affected.run("test-affected.sh", "origin/dev", AFFECTED=_affected(False))
+    assert result.returncode == 0
+    assert "no workspace member affected" in result.stdout
+    assert affected.calls("just") == [(".", "affected origin/dev")]
+
+
+def test_everything_affected_runs_the_full_sweep(affected: Repo):
+    """A repo-wide change runs bare `just test`, which adds the non-member suites."""
+    affected.run(
+        "test-affected.sh", "origin/dev", AFFECTED=_affected(True, "libs/a", "testbed")
+    )
+    assert affected.calls("just")[1:] == [(".", "test")]
+
+
+def test_an_unknown_target_kind_fails(affected: Repo):
+    """A new kind of target must be handled here before it is silently skipped."""
+    result = affected.run(
+        "test-affected.sh", "origin/dev", AFFECTED=_affected(False, "docs/x", "libs/a")
+    )
+    assert result.returncode == 2
+    assert "docs/x" in result.stderr
+    assert affected.calls("just") == [(".", "affected origin/dev")]
+
+
+# --- demo-load.sh ------------------------------------------------------------------------
+
+IMAGE_MEMBERS = """\
+import sys
+python, frontend = ["ars", "dhfs"], ["data-portal"]
+print("\\n".join(frontend if "--kind" in sys.argv else python + frontend))
+"""
+
+
+@pytest.fixture
+def images(repo: Repo) -> Repo:
+    """Image members ars, dhfs (Python) and data-portal (front end).
+
+    The docker store holds the images listed in $PRESENT; the node lists those in $NODE.
+    """
+    repo.write("scripts/image_members.py", IMAGE_MEMBERS)
+    repo.stub(
+        "docker",
+        """case "$1 $2" in
+    "image inspect") [[ " ${PRESENT:-} " == *" $3 "* ]] ;;
+    "exec ghga-control-plane")
+        echo "IMAGE TAG ID SIZE"
+        for ref in ${NODE:-}; do echo "${ref%:*} ${ref##*:} id 1MB"; done ;;
+esac""",
+    )
+    repo.stub("kind")
+    return repo
+
+
+def _ref(name: str) -> str:
+    return f"r.io/ghga/{name}:local"
+
+
+def test_default_profile_loads_every_member_image(images: Repo):
+    """Without a profile every per-member image present is loaded."""
+    present = " ".join(_ref(n) for n in ("ars", "dhfs", "data-portal", "platform"))
+    result = images.run("demo-load.sh", IMAGE_REGISTRY="r.io/ghga", PRESENT=present)
+    assert result.returncode == 0, result.stderr
+    loaded = [args.split()[-1] for _, args in images.calls("kind")]
+    assert loaded == [_ref("ars"), _ref("dhfs"), _ref("data-portal")]
+    assert "loaded 3 image(s)" in result.stdout
+
+
+def test_mono_profile_loads_the_platform_image_and_the_front_end(images: Repo):
+    """The mono profile skips the per-member Python images even when they are built."""
+    present = " ".join(_ref(n) for n in ("ars", "dhfs", "data-portal", "platform"))
+    images.run("demo-load.sh", "mono", IMAGE_REGISTRY="r.io/ghga", PRESENT=present)
+    loaded = [args.split()[-1] for _, args in images.calls("kind")]
+    assert loaded == [_ref("data-portal"), _ref("platform")]
+
+
+def test_reclaim_drops_each_docker_copy_after_loading(images: Repo):
+    """reclaim=true removes the docker store's copy of every image it loaded."""
+    images.run(
+        "demo-load.sh",
+        "mono",
+        "true",
+        IMAGE_REGISTRY="r.io/ghga",
+        PRESENT=_ref("platform"),
+    )
+    assert (".", f"image rm {_ref('platform')}") in images.calls("docker")
+
+
+def test_images_already_on_the_node_count_as_loaded(images: Repo):
+    """A store emptied by an earlier reclaim is not mistaken for "never built"."""
+    result = images.run(
+        "demo-load.sh",
+        "mono",
+        IMAGE_REGISTRY="r.io/ghga",
+        NODE=f"{_ref('platform')} {_ref('data-portal')}",
+    )
+    assert result.returncode == 0, result.stderr
+    assert "loaded 0 image(s) into the kind node (2 already there)" in result.stdout
+    assert images.calls("kind") == []
+
+
+def test_a_failing_member_listing_fails_the_load(images: Repo):
+    """The listing's failure is the error, not an empty set of images."""
+    images.write("scripts/image_members.py", "raise SystemExit(3)")
+    result = images.run("demo-load.sh", "mono", IMAGE_REGISTRY="r.io/ghga")
+    assert result.returncode == 3
+    assert images.calls("kind") == []
+
+
+def test_nothing_built_names_the_build_recipes(images: Repo):
+    """No image anywhere is an error that says what to run."""
+    result = images.run("demo-load.sh", IMAGE_REGISTRY="r.io/ghga")
+    assert result.returncode == 1
+    assert "just demo-images" in result.stderr
+
+
+def test_unknown_profile_is_rejected(images: Repo):
+    """Only `mono` or nothing is a profile."""
+    result = images.run("demo-load.sh", "mnoo", IMAGE_REGISTRY="r.io/ghga")
+    assert result.returncode == 1
+    assert "unknown profile 'mnoo'" in result.stderr
+
+
+# --- install-demo.sh ---------------------------------------------------------------------
+
+CHART = "deploy/charts/ghga-demo"
+
+
+@pytest.fixture
+def chart(repo: Repo) -> Repo:
+    """The umbrella chart's values files, with stubbed helm and just."""
+    repo.write(f"{CHART}/values-local.yaml")
+    repo.write(f"{CHART}/values-mono.yaml")
+    repo.stub("helm")
+    repo.stub("just", '[ "$1" = _local-image-ids ] && echo "{}"; exit 0')
+    return repo
+
+
+def _values_files(repo: Repo) -> list[str]:
+    [(_, args)] = repo.calls("helm")
+    words = args.split()
+    return [words[i + 1] for i, word in enumerate(words) if word == "-f"]
+
+
+def test_install_renders_installs_and_waits(chart: Repo):
+    """The chart is rendered first, and the install is followed by the readiness wait."""
+    result = chart.run("install-demo.sh", "")
+    assert result.returncode == 0, result.stderr
+    assert [args for _, args in chart.calls("just")] == [
+        "demo-template",
+        "_local-image-ids",
+        "wait-ready",
+    ]
+    assert _values_files(chart) == [f"{CHART}/values-local.yaml"]
+
+
+def test_mono_overlay_comes_after_the_values_passed_in(chart: Repo):
+    """The mono overlay is last, so it wins over the test-bed values."""
+    chart.run("install-demo.sh", "mono", "-f", f"{CHART}/values-testbed.yaml")
+    assert _values_files(chart) == [
+        f"{CHART}/values-local.yaml",
+        f"{CHART}/values-testbed.yaml",
+        f"{CHART}/values-mono.yaml",
+    ]
+
+
+def test_missing_mono_overlay_says_to_generate_the_charts(chart: Repo):
+    """values-mono.yaml is generated, so its absence points at `just charts`."""
+    (chart.root / CHART / "values-mono.yaml").unlink()
+    result = chart.run("install-demo.sh", "mono")
+    assert result.returncode == 1
+    assert "just charts" in result.stderr
+    assert chart.calls("helm") == []
+
+
+def test_unknown_install_profile_is_rejected(chart: Repo):
+    """A misspelt profile fails before anything is installed."""
+    result = chart.run("install-demo.sh", "mnoo")
+    assert result.returncode == 1
+    assert chart.calls("helm") == []
+
+
+# --- pypi-drift.sh -----------------------------------------------------------------------
+
+
+def _git(repo: Repo, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", *args],
+        cwd=repo.root,
+        check=True,
+        capture_output=True,
+    )
+
+
+@pytest.fixture
+def branch(repo: Repo) -> Repo:
+    """A repo whose `feature` branch changed libs/a/x.py since `base`.
+
+    The stubbed drift script fails with the lines in $DRIFT, and passes without it.
+    """
+    _git(repo, "init", "-q", "-b", "base")
+    repo.write("README.md")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-qm", "base")
+    _git(repo, "checkout", "-qb", "feature")
+    repo.write("libs/a/x.py")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-qm", "change")
+    repo.stub(
+        "uv",
+        'cat > "$STUB_LOG.stdin"; [ -z "${DRIFT:-}" ] || { echo "$DRIFT" >&2; exit 1; }',
+    )
+    return repo
+
+
+def test_no_drift_passes_and_hands_over_the_changed_files(branch: Repo):
+    """The drift script gets the three-dot diff and the merge base."""
+    result = branch.run("pypi-drift.sh", "base")
+    assert result.returncode == 0, result.stderr
+    [(_, args)] = branch.calls("uv")
+    assert args.startswith("run -q --script scripts/pypi_drift.py --base ")
+    stdin = Path(f"{branch.log}.stdin").read_text()
+    assert stdin.splitlines() == ["libs/a/x.py"]
+
+
+def test_drift_is_reported_as_errors(branch: Repo):
+    """Locally every line the script reports becomes an `error:` line."""
+    result = branch.run("pypi-drift.sh", "base", DRIFT="libs/a changed")
+    assert result.returncode == 1
+    assert "error: libs/a changed" in result.stderr
+
+
+def test_drift_is_annotated_on_github(branch: Repo):
+    """On GitHub Actions the lines become `::error::` annotations."""
+    result = branch.run(
+        "pypi-drift.sh", "base", DRIFT="libs/a changed", GITHUB_ACTIONS="true"
+    )
+    assert result.returncode == 1
+    assert "::error::libs/a changed" in result.stdout
+
+
+def test_missing_base_fails_instead_of_passing(branch: Repo):
+    """An unknown change set is no evidence of no drift."""
+    result = branch.run("pypi-drift.sh", "no-such-ref")
+    assert result.returncode == 1
+    assert "no base commit to compare against (no-such-ref)" in result.stderr
+    assert branch.calls("uv") == []
+
+
+# --- skill-eval.sh -----------------------------------------------------------------------
+
+
+def test_skill_without_eval_targets_runs_no_eval(repo: Repo):
+    """An empty expansion means no run, not one run on an empty target."""
+    repo.stub("uv")
+    repo.stub("claude")
+    result = repo.run("skill-eval.sh", "adr")
+    assert result.returncode == 0, result.stderr
+    assert repo.calls("claude") == []
+
+
+def test_skill_eval_runs_once_per_target(repo: Repo):
+    """Each expanded target gets its own `claude plugin eval`."""
+    repo.stub("uv", '[ "$4" = expand ] && printf "a\\nb\\n"; exit 0')
+    repo.stub("claude")
+    result = repo.run("skill-eval.sh", "adr", "--runs", "1")
+    assert result.returncode == 0, result.stderr
+    runs = [args.split()[2] for _, args in repo.calls("claude")]
+    assert runs == ["a", "b"]
+    assert all(args.endswith("--runs 1") for _, args in repo.calls("claude"))
+
+
+# --- the justfile ------------------------------------------------------------------------
+
+needs_just = pytest.mark.skipif(shutil.which("just") is None, reason="just not on PATH")
+
+
+@needs_just
+def test_every_recipe_script_is_called_and_executable():
+    """No script in scripts/just/ is orphaned, and each one can run."""
+    justfile = (ROOT / "justfile").read_text()
+    for script in SCRIPTS.glob("*.sh"):
+        assert f"scripts/just/{script.name}" in justfile or any(
+            f"scripts/just/{script.name}" in other.read_text()
+            for other in SCRIPTS.glob("*.sh")
+        ), f"{script.name} is called by no recipe"
+        assert os.access(script, os.X_OK), f"{script.name} is not executable"
+
+
+@needs_just
+def test_every_recipe_parses():
+    """`just --dry-run` evaluates each recipe, given a placeholder per required parameter."""
+    dump = subprocess.run(
+        ["just", "--dump", "--dump-format", "json"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    recipes = json.loads(dump)["recipes"]
+    assert "test" in recipes
+    for name, recipe in recipes.items():
+        args = [
+            "x"
+            for param in recipe["parameters"]
+            if param["kind"] == "singular" and param["default"] is None
+        ]
+        result = subprocess.run(
+            ["just", "--dry-run", "--no-deps", name, *args],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, (name, result.stderr)
+
+
+def _just(*args: str, stubs: Path) -> subprocess.CompletedProcess:
+    env = {**os.environ, "PATH": f"{stubs}:{os.environ['PATH']}"}
+    env["STUB_LOG"] = str(stubs / "log")
+    return subprocess.run(
+        ["just", *args], cwd=ROOT, env=env, capture_output=True, text=True
+    )
+
+
+@needs_just
+@pytest.mark.parametrize(
+    "recipe, expected",
+    [
+        (
+            ["image", "frontend/data-portal", "ci", "--build-arg", "X=a b"],
+            ["--build-arg", "X=a b", "-t", "docker.io/ghga/data-portal:ci"],
+        ),
+        (
+            ["image", "services/auth-service", "ci", "--pull"],
+            ["--pull", "-t", "docker.io/ghga/auth-service:ci", "."],
+        ),
+        (
+            ["image-mono", "ci", "--build-arg", "X=a b"],
+            ["--build-arg", "X=a b", "-t", "docker.io/ghga/platform:ci", "."],
+        ),
+    ],
+)
+def test_image_recipes_pass_build_flags_through_whole(
+    tmp_path: Path, recipe: list[str], expected: list[str]
+):
+    """A build flag with a space reaches docker as one argument, followed by the tag."""
+    stub = tmp_path / "docker"
+    stub.write_text('#!/usr/bin/env bash\nprintf \'%s\\n\' "$@" > "$STUB_LOG"\n')
+    stub.chmod(0o755)
+    result = _just(*recipe, stubs=tmp_path)
+    assert result.returncode == 0, result.stderr
+    args = (tmp_path / "log").read_text().splitlines()
+    assert any(args[i : i + len(expected)] == expected for i in range(len(args))), args
+
+
+@needs_just
+@pytest.mark.parametrize(
+    "paths, ruff_paths, rumdl_paths",
+    [
+        ([], ["."], ["."]),
+        (["libs", "a b.md"], ["libs"], ["libs", "a b.md"]),
+        (["a b.py", "docs/y.md", "s.pyi"], ["a b.py", "s.pyi"], ["docs/y.md"]),
+        (["x.py"], ["x.py"], None),
+        (["scripts/just/test.sh", ".pre-commit-config.yaml"], None, None),
+    ],
+)
+def test_fmt_hands_its_paths_to_each_tool(
+    tmp_path: Path,
+    paths: list[str],
+    ruff_paths: list[str] | None,
+    rumdl_paths: list[str] | None,
+):
+    """No path means the whole tree; a named file goes only to the tool for its type."""
+    stub = tmp_path / "uv"
+    # one line per call, each argument followed by a tab, so a space stays visible
+    stub.write_text(
+        '#!/usr/bin/env bash\nprintf \'%s\\t\' "$@" >> "$STUB_LOG"; echo >> "$STUB_LOG"\n'
+    )
+    stub.chmod(0o755)
+    result = _just("fmt", *paths, stubs=tmp_path)
+    assert result.returncode == 0, result.stderr
+    log = tmp_path / "log"
+    lines = log.read_text().splitlines() if log.exists() else []
+    calls = [line.split("\t")[:-1] for line in lines]
+    expected = []
+    if ruff_paths is not None:
+        expected.append(["run", "ruff", "format", "--force-exclude", *ruff_paths])
+        expected.append(
+            ["run", "ruff", "check", "--fix", "--force-exclude", *ruff_paths]
+        )
+    if rumdl_paths is not None:
+        expected.append(["run", "rumdl", "fmt", *rumdl_paths])
+    assert calls == expected
+    if not expected:
+        assert "no Python or Markdown path" in result.stdout
