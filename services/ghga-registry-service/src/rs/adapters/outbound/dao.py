@@ -116,6 +116,8 @@ async def get_box_dao(
         indexes=[
             MongoDbIndex(fields="file_upload_box_id"),
             MongoDbIndex(fields="title", properties={"unique": True, "sparse": True}),
+            # Serves the sort order of the box list, so that a page needs no full scan
+            MongoDbIndex(fields={"state": -1, "last_changed": -1, "id": 1}),
         ],
     )
 

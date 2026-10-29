@@ -997,54 +997,24 @@ class RDUBManager(RDUBManagerPort):
             )
             limit = None
 
-        # Check if user is a data steward
-        is_ds = is_data_steward(auth_context)
-
-        # Filter by state if specified
-        filter_ = {"state": state} if state is not None else {}
-
-        if is_ds:
-            # Data stewards can see all boxes
-            boxes = await self._box_dao.find_all(filter_=filter_).to_list()
-        else:
-            # Regular users can only see boxes they have access to
-            user_id = UUID(auth_context.id)
+        filter_: dict[str, Any] = {"state": state} if state is not None else {}
+        if not is_data_steward(auth_context):
+            # Regular users can only see boxes they have access to. A grant may
+            # reference a box that has since been deleted, which the filter skips.
             accessible_box_ids = await self._access_client.get_accessible_upload_boxes(
-                user_id=user_id
+                user_id=UUID(auth_context.id)
             )
+            filter_["id"] = {"$in": accessible_box_ids}
 
-            # Generally very few boxes per user, so make distinct call for each. A grant
-            # may reference a box that has since been deleted (e.g. a race with deletion
-            # or a not-yet-revoked grant). Suppress the error and opt for a warning log.
-            boxes = []
-            for box_id in accessible_box_ids:
-                try:
-                    boxes.append(await self._box_dao.get_by_id(box_id))
-                except ResourceNotFoundError:
-                    log.warning(
-                        "User %s has access to box %s, but it doesn't exist in RS."
-                        + " Skipping it.",
-                        user_id,
-                        box_id,
-                        extra={"user_id": user_id, "box_id": box_id},
-                    )
-            if state is not None:
-                boxes = [x for x in boxes if x.state == state]
-
-        count = len(boxes)
-        boxes.sort(
-            key=lambda x: (
-                tuple(-ord(c) for c in x.state),  # Reverse alphabetical
-                -x.last_changed.timestamp(),  # DESC by last_changed
-                x.id,  # ASC by ID
-            )
+        # "-state" sorts the open boxes first, then the locked and the archived ones
+        find_result = self._box_dao.find_all(
+            filter_=filter_,
+            skip=skip,
+            limit=limit or None,  # 0 means no limit, like None
+            sort=["-state", "-last_changed", "id"],
         )
-
-        if skip:
-            boxes = boxes[skip:]
-
-        if limit:
-            boxes = boxes[:limit]
+        boxes = await find_result.to_list()
+        count = await find_result.total_count()
 
         return BoxRetrievalResults(count=count, boxes=boxes)
 
