@@ -104,6 +104,7 @@ export class UploadBoxManagerList {
    * The rows on the current page, after filtering, sorting and paginating. The
    * delay lets the paginator attach before the first page counts, and lets a
    * quick succession of page or sort changes load the file states only once.
+   * Paged by the RS, the page would be its response and this would not be needed.
    */
   #pageRows = toSignal(this.dataSource.connect().pipe(debounceTime(PAGE_ROWS_DELAY)), {
     initialValue: [],

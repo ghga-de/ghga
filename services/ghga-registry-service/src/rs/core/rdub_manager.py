@@ -1006,7 +1006,8 @@ class RDUBManager(RDUBManagerPort):
             )
             filter_["id"] = {"$in": accessible_box_ids}
 
-        # "-state" sorts the open boxes first, then the locked and the archived ones
+        # "-state" sorts the open boxes first, then the locked and the archived ones.
+        # The data portal pages the list itself for now, so asks without skip or limit.
         find_result = self._box_dao.find_all(
             filter_=filter_,
             skip=skip,
@@ -1014,7 +1015,8 @@ class RDUBManager(RDUBManagerPort):
             sort=["-state", "-last_changed", "id"],
         )
         boxes = await find_result.to_list()
-        count = await find_result.total_count()
+        # Only a page needs the extra count query; the whole list is its own count
+        count = await find_result.total_count() if skip or limit else len(boxes)
 
         return BoxRetrievalResults(count=count, boxes=boxes)
 

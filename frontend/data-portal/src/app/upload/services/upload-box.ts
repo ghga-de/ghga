@@ -105,6 +105,10 @@ export class UploadBoxService {
 
   /**
    * Resource for loading all upload boxes.
+   * The list filters, sorts and pages them in the browser, which is cheap while
+   * there are a few hundred boxes. The RS can page the boxes in its database
+   * (`skip`, `limit` and `state`), but would need the other filters and sort
+   * orders of the list as well before the list could page there.
    */
   boxRetrievalResults = httpResource<BoxRetrievalResults>(
     () =>
