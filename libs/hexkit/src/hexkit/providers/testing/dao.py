@@ -624,13 +624,13 @@ class BaseInMemDao(Generic[DTO]):
         dtos: Collection[DTO],
         write: Callable[[DTO], Awaitable[None]],
         *,
-        expected: type[DaoError],
-        stop: bool,
+        expected: type[DaoError] | tuple[type[DaoError], ...] = (),
+        stop: bool = False,
     ) -> None:
         """Write the DTOs one by one, collecting `expected` errors per ID.
 
         With `stop`, the first expected error ends the batch, like a write error in an
-        ordered MongoDB bulk write.
+        ordered MongoDB bulk write. Without `expected`, a write cannot fail per ID.
         """
         dtos = list(dtos)
         ids = [getattr(dto, self._id_field) for dto in dtos]
@@ -659,6 +659,15 @@ class BaseInMemDao(Generic[DTO]):
         await self._write_each(
             dtos, self.insert, expected=ResourceAlreadyExistsError, stop=ordered
         )
+
+    async def upsert_many(
+        self, dtos: Collection[DTO], *, ordered: bool = False
+    ) -> None:
+        """Upsert resources one by one.
+
+        Without unique indexes an upsert cannot fail here, so `ordered` changes nothing.
+        """
+        await self._write_each(dtos, self.upsert)
 
 
 def new_mock_dao_class(
