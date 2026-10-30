@@ -73,10 +73,14 @@ CONTACT_EMAIL_LINE = "Contact email for this request: {contact_email}"
 
 LS_LOGIN_EMAIL_LINE = "LS Login email address of the user: {ls_login_email}"
 
-DIFFERENT_EMAILS_NOTE = """The requester entered the contact email for this request.
-It should belong to the institution the request is made for, but it has not been
-verified. The LS Login email belongs to the requester's account, but can be a private
-address or one from another institution."""
+# One sentence per line, since the plain-text body is not reflowed by every mail client
+DIFFERENT_EMAILS_NOTE = (
+    "The requester entered the contact email for this request.\n"
+    "It should belong to the institution the request is made for,"
+    " but it has not been verified.\n"
+    "The LS Login email belongs to the requester's account,"
+    " but can be a private address or one from another institution."
+)
 
 
 def requester_emails(*, contact_email: str | None, ls_login_email: str) -> str:
