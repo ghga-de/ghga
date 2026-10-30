@@ -25,7 +25,7 @@ Each file contains multiple scenarios executed sequentially.
 Corresponding step definitions are found in the `steps` directory.
 Pytest fixtures are stored in the `fixtures` directory.
 The `example_data/metadata/legacy/` directory holds the submission record and accession store of a study submitted before study PIDs.
-dskit 5.4.2 from `main` at `8dd922f86` (release 15.3.1) wrote both; do not edit them by hand.
+dskit 5.4.2 from `main` at `8dd922f86` (release 15.3.1) wrote both; to change them, run that dskit again instead of editing them by hand.
 
 ### Execution
 
