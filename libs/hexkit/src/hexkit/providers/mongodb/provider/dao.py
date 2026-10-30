@@ -693,6 +693,18 @@ class MongoDbDao(Generic[Dto]):
             return
         await self._replace_existing(self._batch_documents(dtos), {}, ordered=ordered)
 
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Delete several resources in one call; unknown IDs are ignored.
+
+        Please see the `Dao` protocol for the arguments.
+        """
+        if isinstance(ids, str):
+            raise TypeError("delete_many takes a collection of IDs, not a single ID")
+        if not ids:
+            return
+        with translate_pymongo_errors():
+            await self._collection.delete_many({"_id": {"$in": list(ids)}})
+
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
     """A MongoDB-based provider implementing the DaoFactoryProtocol."""

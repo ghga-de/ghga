@@ -1148,7 +1148,9 @@ async def test_dao_batch_duplicate_ids(method: str, mongodb: MongoDbFixture):
         assert counter.writes == []
 
 
-@pytest.mark.parametrize("method", ["insert_many", "update_many", "upsert_many"])
+@pytest.mark.parametrize(
+    "method", ["insert_many", "update_many", "upsert_many", "delete_many"]
+)
 async def test_dao_batch_empty(method: str, mongodb: MongoDbFixture):
     """Test that an empty batch sends no command and raises nothing."""
     async with counted_dao(mongodb) as (dao, counter):
@@ -1244,3 +1246,41 @@ async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
         assert caught.value.not_attempted == (last.id,)
         assert await dao.get_by_id(target.id) == target
         assert await dao.get_by_id(last.id) == last
+
+
+async def test_dao_delete_many(mongodb: MongoDbFixture):
+    """Test that delete_many deletes in one write command and ignores unknown and
+    repeated IDs.
+    """
+    async with counted_dao(mongodb) as (dao, counter):
+        kept, gone_1, gone_2 = ExampleDto(), ExampleDto(), ExampleDto()
+        for dto in (kept, gone_1, gone_2):
+            await dao.insert(dto)
+        counter.writes.clear()
+
+        await dao.delete_many([gone_1.id, uuid.uuid4(), gone_2.id, gone_1.id])
+
+        assert counter.writes == ["delete"]
+        assert await dao.get_by_id(kept.id) == kept
+        for dto in (gone_1, gone_2):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.get_by_id(dto.id)
+
+
+async def test_dao_delete_many_rejects_a_single_id(mongodb: MongoDbFixture):
+    """Test that delete_many rejects one string ID instead of deleting the resources
+    named by its characters.
+    """
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDtoWithStrID, id_field="custom_id"
+    )
+    named = ExampleDtoWithStrID(custom_id="ab")
+    by_character = ExampleDtoWithStrID(custom_id="a")
+    for dto in (named, by_character):
+        await dao.insert(dto)
+
+    with pytest.raises(TypeError):
+        await dao.delete_many("ab")
+
+    for dto in (named, by_character):
+        assert await dao.get_by_id(dto.custom_id) == dto

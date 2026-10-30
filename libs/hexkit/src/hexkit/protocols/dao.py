@@ -564,6 +564,20 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Delete several resources in one call by providing their IDs.
+
+        IDs that do not exist are ignored, and an ID given more than once is deleted
+        once. An empty batch deletes nothing.
+
+        Args:
+            ids: The IDs of the resources.
+
+        Raises:
+            TypeError: when `ids` is a single string instead of a collection of IDs.
+        """
+        ...
+
 
 class DaoFactoryBase:
     """A base for Data Access Objects (DAO) Factory protocols."""
