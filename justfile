@@ -68,6 +68,15 @@ sync *flags: _guard-host
 lock: _guard-host
     uv lock
 
+# The default scope is the whole lock, every group and extra: `just sync` installs the dev
+# group and every extra, and `just docs-install` the `docs` group into `.venv-docs`.
+# Narrow it with `--no-dev`, `--no-group <name>` or `--no-extra <name>`.
+# --frozen audits uv.lock as it is, without resolving it again first. The command is a
+# preview in uv 0.13, and the flag opts in to it instead of printing a warning.
+# Check uv.lock against the OSV vulnerability database (exits 1 on findings).
+audit *flags: _guard-host
+    uv audit --frozen --preview-features audit-command "$@"
+
 # `uv run` syncs the environment but does not prune it, so a distribution that is no longer
 # in uv.lock stays installed and can shadow a workspace member's source -- the suite then
 # tests code that is not in the repo. CI cannot drift that way: it builds the environment
