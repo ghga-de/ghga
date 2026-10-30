@@ -84,7 +84,8 @@ Look at the stored data, not the event, when choosing between the outbox and the
 - A deleted resource keeps a stub with a `__metadata__` field in the collection; read and write it only through the DAO.
 - Read and write a collection only through Outbox DAOs with the same model, topic and `dto_to_event`, never also through a plain DAO or directly: such access publishes nothing and breaks the outbox metadata.
   A consumer's copy in its own database is a different collection and may use any DAO ([One DAO per collection](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/mongokafka.md#one-dao-per-collection)).
-- A batch publishes its events one by one after its write and never fails on them: a failed event is logged, two in a row end the publishing, and `publish_pending()` sends what is left.
+- A batch publishes its events one by one after its write and raises at the first failed one, as a single write does; `publish_pending()` sends what is left.
+  When the write failed for some IDs, the batch logs the failed publish and raises its `BatchOperationError` instead.
   Publishing takes milliseconds per resource, so expect seconds for thousands ([Publishing a batch](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/mongokafka.md#publishing-a-batch)).
 - Offer `publish_pending()` and `republish()` as a command, such as `publish-events`, run as a job: it publishes what failed to publish, and fills a new consumer.
 - On the consuming side, implement `changed()` as an upsert and let `deleted()` accept a resource that is already gone.
