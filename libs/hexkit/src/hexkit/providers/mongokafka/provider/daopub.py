@@ -697,7 +697,12 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         more than once is deleted once. The bulk write does not say which documents it
         matched, so the live IDs are looked up before it. A resource that another writer
         deletes between the lookup and the write gets the batch's delete event, and then
-        its stored state. Please see the `Dao` protocol for the errors.
+        its stored state. Please see the `Dao` protocol for the other errors.
+
+        Raises:
+            BatchOperationError:
+                when some resources could not be deleted. Each failed ID maps to
+                `DbTimeoutError` if its write timed out, or to another `DaoError`.
         """
         unique_ids = list(dict.fromkeys(ids))
         if not unique_ids:
