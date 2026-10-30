@@ -294,6 +294,7 @@ reference:
       - protocols.dao.MultipleHitsFoundError
       - protocols.dao.NoHitsFoundError
       - protocols.dao.DbTimeoutError
+      - protocols.dao.BatchOperationError
       - protocols.dao.race_condition_retries
       - protocols.dao.RaceConditionAttempt
 

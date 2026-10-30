@@ -19,19 +19,22 @@
 Utilities for testing are located in `../testutils.py`.
 """
 
-from collections.abc import AsyncIterator, Callable, Collection, Mapping
+from collections.abc import AsyncIterator, Callable, Collection, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any, Generic, Literal, TypeAlias
 
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import BulkWriteError, DuplicateKeyError
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
+    DaoError,
     DaoFactoryProtocol,
+    DbTimeoutError,
     Dto,
     FindResult,
     IndexBase,
@@ -117,6 +120,55 @@ async def get_single_hit(
         return dto
 
     raise MultipleHitsFoundError(filter_=mapping)
+
+
+# MongoDB's error code for a write that clashes with a unique index
+DUPLICATE_KEY_ERROR = 11000
+# MongoDB's error code for a write that ran out of its maxTimeMS
+MAX_TIME_MS_EXPIRED = 50
+
+
+def _errors_from_bulk_write(
+    error: BulkWriteError, ids: Sequence[ID], *, ordered: bool
+) -> BatchOperationError:
+    """Turn the failures of a bulk write into an error that names each failed resource.
+
+    `ids` holds the ID of each operation, in the order the operations were passed to
+    the bulk write. MongoDB names a failure by its index in that list, whether the
+    batch is ordered or not.
+
+    Raises:
+        DbTimeoutError: when the batch's write concern timed out.
+        DaoError: when the batch hit another write concern error, which no single
+            resource caused.
+    """
+    if error.details.get("writeConcernErrors"):
+        if error.timeout:
+            raise DbTimeoutError(str(error)) from error
+        raise DaoError(str(error)) from error
+    errors: dict[ID, DaoError] = {}
+    # Each failure gets the error that the single-resource method raises for it
+    for failure in error.details["writeErrors"]:
+        id_, key_value = ids[failure["index"]], failure.get("keyValue")
+        if failure["code"] == MAX_TIME_MS_EXPIRED:
+            errors[id_] = DbTimeoutError(failure["errmsg"])
+        elif failure["code"] != DUPLICATE_KEY_ERROR:
+            # Any other failure, such as a failed document validation or a document
+            # over the size limit, has no error of its own
+            errors[id_] = DaoError(failure["errmsg"])
+        elif key_value is None or list(key_value) == ["_id"]:
+            # A duplicate key on `_id` means the resource exists already. Without
+            # `keyValue` in the failure the clashing index is unknown, and `insert`
+            # takes it to be the ID's as well.
+            errors[id_] = ResourceAlreadyExistsError(id_=id_)
+        else:
+            # A duplicate key on another field breaks a unique index
+            errors[id_] = UniqueConstraintViolationError(unique_fields=key_value)
+    # An ordered batch stops at its first failure and skips the rest
+    not_attempted: Sequence[ID] = ()
+    if ordered:
+        not_attempted = ids[error.details["writeErrors"][0]["index"] + 1 :]
+    return BatchOperationError(errors=errors, not_attempted=not_attempted)
 
 
 FieldName: TypeAlias = str
