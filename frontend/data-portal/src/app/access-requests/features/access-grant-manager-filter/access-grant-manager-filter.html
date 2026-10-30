@@ -31,12 +31,12 @@
         >
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
-              <mat-label>Name or Email</mat-label>
+              <mat-label>Name or LS Login email</mat-label>
               <input matInput type="text" [formField]="filterForm.user" />
             </mat-form-field>
             <button
               mat-icon-button
-              aria-label="Remove filter for name and email"
+              aria-label="Remove filter for name and LS Login email"
               [class.invisible]="!filterForm.user().value()"
               (click)="filterForm.user().value.set('')"
               data-umami-event="Access Grant Filters User Clear Clicked"

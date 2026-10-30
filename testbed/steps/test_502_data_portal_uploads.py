@@ -146,7 +146,7 @@ def grant_upload_access(user_name: str, storage_name: str, fixtures: JointFixtur
     _, name = fixtures.auth.split_title(user_name)
 
     # Search for the user, then pick them from the result table
-    search_field = main.get_by_label("Search by name, email or external ID")
+    search_field = main.get_by_label("Search by name, LS Login email or LS ID")
     expect(search_field).to_be_visible(timeout=UI_TIMEOUT)
     search_field.fill(name)
     user_row = main.get_by_role("button").filter(has_text=name)

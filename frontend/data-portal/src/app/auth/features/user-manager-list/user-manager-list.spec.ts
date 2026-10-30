@@ -19,7 +19,8 @@ import { ConfigService } from '@app/shared/services/config';
 import { screen } from '@testing-library/angular';
 import { UserManagerList } from './user-manager-list';
 
-const WARN_TITLE = 'There are multiple user accounts with this name and email address.';
+const WARN_TITLE =
+  'There are multiple user accounts with this name and LS Login email.';
 /**
  * Mock ConfigService for testing
  */

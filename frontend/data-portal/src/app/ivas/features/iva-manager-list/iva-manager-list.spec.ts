@@ -17,7 +17,8 @@ import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import { IvaManagerList } from './iva-manager-list';
 
-const WARN_TITLE = 'There are multiple user accounts with this name and email address.';
+const WARN_TITLE =
+  'There are multiple user accounts with this name and LS Login email.';
 
 /**
  * Mock the IVA service as needed by the IVA Manager list component
@@ -48,6 +49,12 @@ describe('IvaManagerList', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should name the LS Login email in the user column header', () => {
+    expect(
+      screen.getByRole('columnheader', { name: 'User (LS Login email)' }),
+    ).toBeVisible();
   });
 
   it('should show IVA values', () => {

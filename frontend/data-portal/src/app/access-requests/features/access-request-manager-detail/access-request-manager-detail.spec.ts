@@ -74,7 +74,7 @@ describe('AccessRequestManagerDetail', () => {
     TestBed.tick();
     const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev');
     expect(req.request.method).toBe('GET');
-    req.flush({ ext_id: 'ls-id-of-joe@ls-aai.dev' });
+    req.flush({ ext_id: 'ls-id-of-joe@ls-aai.dev', email: 'joe@login.org' });
 
     await fixture.whenStable();
   });
@@ -93,11 +93,18 @@ describe('AccessRequestManagerDetail', () => {
     expect(a).toBeVisible();
   });
 
-  it('should show the requester with email in two links', () => {
+  it('should show the requester and the contact email in two links', () => {
     const a = screen.getByRole('link', { name: 'Dr. John Doe' });
     expect(a).toBeVisible();
     const email = screen.getByRole('link', { name: 'doe@home.org' });
     expect(email).toBeVisible();
+    expect(email.closest('p')).toHaveTextContent(/^\s*Contact email:/);
+  });
+
+  it('should load the LS Login email and show it in a link', () => {
+    const email = screen.getByRole('link', { name: 'joe@login.org' });
+    expect(email).toBeVisible();
+    expect(email.closest('p')).toHaveTextContent(/^\s*LS Login email:/);
   });
 
   it('should load the LD ID and show it in a code', () => {

@@ -82,7 +82,7 @@ describe('AccessGrantRevocationDialog', () => {
   });
 
   it('should call the grant revocation method when confirmed after confirming the user and dataset', async () => {
-    const nameInput = screen.getByPlaceholderText('Confirm email of user');
+    const nameInput = screen.getByPlaceholderText('Confirm LS Login email of user');
     await userEvent.type(nameInput, 'doe@home.org');
     const datasetInput = screen.getByPlaceholderText('Confirm dataset accession');
     await userEvent.type(datasetInput, 'GHGAD12345678901234');
@@ -101,7 +101,7 @@ describe('AccessGrantRevocationDialog', () => {
     const button = screen.getByRole('button', { name: 'Confirm revocation' });
     expect(button).toBeDisabled();
     await userEvent.type(
-      screen.getByPlaceholderText('Confirm email of user'),
+      screen.getByPlaceholderText('Confirm LS Login email of user'),
       'doe@home.org',
     );
     expect(button).toBeDisabled();

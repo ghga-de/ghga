@@ -102,23 +102,37 @@
             </p>
             <p class="flex">
               <strong class="inline-block min-w-50">Requester:</strong>
+              <span class="italic"
+                ><a [routerLink]="`/user-manager/${ar.user_id}`">{{
+                  ar.full_user_name
+                }}</a></span
+              >
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-50">Contact email:</strong>
               <span>
-                <span class="italic"
-                  ><a [routerLink]="`/user-manager/${ar.user_id}`">{{
-                    ar.full_user_name
-                  }}</a></span
-                >
-                -
                 <a [href]="'mailto:' + ar.email" tabindex="-1">{{ ar.email }}</a>
+              </span>
+            </p>
+            <p class="flex">
+              <strong class="inline-block min-w-50">LS Login email:</strong>
+              <span>
+                @if (requester.isLoading()) {
+                  <em class="text-gray-400">Loading...</em>
+                } @else if (!requester.error() && requester.value(); as user) {
+                  <a [href]="'mailto:' + user.email" tabindex="-1">{{ user.email }}</a>
+                } @else {
+                  <em class="text-red-600">Could not be retrieved</em>
+                }
               </span>
             </p>
             <p class="flex">
               <strong class="inline-block min-w-50">LS ID:</strong>
               <span>
-                @if (userExtId.isLoading()) {
+                @if (requester.isLoading()) {
                   <em class="text-gray-400">Loading...</em>
-                } @else if (userExtId.error() || !userExtId.value()) {
-                  <em class="text-red-600">could not be retrieved</em>
+                } @else if (requester.error() || !requester.value()) {
+                  <em class="text-red-600">Could not be retrieved</em>
                 } @else {
                   <code class="text-base">{{ userExtIdText() }}</code>
                 }
