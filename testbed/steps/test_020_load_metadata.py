@@ -16,7 +16,6 @@
 
 """Step definitions for loading metadata artifacts with the datasteward-kit"""
 
-import subprocess
 from collections import Counter
 
 from fixtures.utils import temporary_file
@@ -29,6 +28,7 @@ from steps.utils import (
     is_study_pid,
     load_config_as_file,
     read_submission,
+    run_dskit,
 )
 
 from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
@@ -50,37 +50,19 @@ def run_the_load_command(fixtures: JointFixture):
 
     upload_token = fixtures.config.upload_token
     with temporary_file(fixtures.config.dsk_token_path, upload_token):
-        completed_upload = subprocess.run(  # nosec B607, B603
-            [
-                "ghga-datasteward-kit",
-                "load",
-                "--config-path",
-                load_config_path,
-            ],
-            capture_output=True,
-            check=False,
-            encoding="utf-8",
-            text=True,
-            timeout=10 * 60,
-        )
-
-        if completed_upload.stdout:
-            print(completed_upload.stdout)
-        if "ERROR" in completed_upload.stderr or completed_upload.returncode:
-            print(completed_upload.stderr)
+        completed_upload = run_dskit("load", "--config-path", load_config_path)
 
         assert not completed_upload.stdout
         assert not "ERROR" in completed_upload.stderr
         assert not completed_upload.returncode
 
 
-def legacy_dataset_accession(fixtures: JointFixture) -> str:
-    """Get the dataset accession of study X from its amended submission."""
+def legacy_accession_map(fixtures: JointFixture) -> dict:
+    """Get the accession map of study X from its amended submission."""
     submission_id = fixtures.state.get_state(
         f"submission id {fixtures.dsk.config.legacy_metadata_path.stem}"
     )
-    accession_map = read_submission(fixtures, submission_id)["accession_map"]
-    return accession_map["datasets"]["DS_X"]
+    return read_submission(fixtures, submission_id)["accession_map"]
 
 
 @then("the stats for the datasets exist in the database")
@@ -93,7 +75,7 @@ def check_stats_in_metldata_database(
     assert datasets
     assert len(datasets) == 3  # A and B from the example metadata, X amended
     # the embedded dataset step sets "dataset_accessions" only after this one
-    legacy_accession = legacy_dataset_accession(fixtures)
+    legacy_accession = legacy_accession_map(fixtures)["datasets"]["DS_X"]
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
@@ -276,10 +258,7 @@ def check_accession_schemes(
 ):
     # named per dataset, so a PID study getting flat accessions fails instead of
     # passing a check that accepts either scheme
-    submission_id = fixtures.state.get_state(
-        f"submission id {fixtures.dsk.config.legacy_metadata_path.stem}"
-    )
-    accession_map = read_submission(fixtures, submission_id)["accession_map"]
+    accession_map = legacy_accession_map(fixtures)
     dataset_accession = accession_map["datasets"]["DS_X"]
     study_accession = accession_map["studies"]["STUDY_X"]
     file_accessions = set(accession_map["research_data_files"].values())
