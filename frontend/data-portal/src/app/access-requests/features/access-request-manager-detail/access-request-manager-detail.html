@@ -122,7 +122,7 @@
                 } @else if (!requester.error() && requester.value(); as user) {
                   <a [href]="'mailto:' + user.email" tabindex="-1">{{ user.email }}</a>
                 } @else {
-                  <em class="text-red-600">could not be retrieved</em>
+                  <em class="text-red-600">Could not be retrieved</em>
                 }
               </span>
             </p>
@@ -132,7 +132,7 @@
                 @if (requester.isLoading()) {
                   <em class="text-gray-400">Loading...</em>
                 } @else if (requester.error() || !requester.value()) {
-                  <em class="text-red-600">could not be retrieved</em>
+                  <em class="text-red-600">Could not be retrieved</em>
                 } @else {
                   <code class="text-base">{{ userExtIdText() }}</code>
                 }

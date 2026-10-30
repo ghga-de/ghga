@@ -187,7 +187,7 @@ describe('UploadGrantCreation', () => {
 
   it('should show the search input before a user is selected', () => {
     expect(
-      screen.getByLabelText(/search by name, LS Login email or external id/i),
+      screen.getByLabelText(/search by name, LS Login email or LS ID/i),
     ).toBeVisible();
   });
 
@@ -214,7 +214,7 @@ describe('UploadGrantCreation', () => {
 
       it('should hide the search input', () => {
         expect(
-          screen.queryByLabelText(/search by name, LS Login email or external id/i),
+          screen.queryByLabelText(/search by name, LS Login email or LS ID/i),
         ).not.toBeInTheDocument();
       });
 
@@ -246,7 +246,7 @@ describe('UploadGrantCreation', () => {
 
         it('should show the search input again', () => {
           expect(
-            screen.getByLabelText(/search by name, LS Login email or external id/i),
+            screen.getByLabelText(/search by name, LS Login email or LS ID/i),
           ).toBeVisible();
         });
       });
