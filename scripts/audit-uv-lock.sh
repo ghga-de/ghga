@@ -14,8 +14,16 @@ set -euo pipefail
 
 prefix=$1
 
-# Exit 1 only means findings; anything else, an OSV outage say, fails the script.
+# Exit 1 means findings only when a report came out: the host guard and an argument
+# error exit 1 too, and must not pass an empty report on. Anything else, an OSV
+# outage say, fails the script.
+status=0
 just audit --output-format json --preview-features json-output >"$prefix.json" ||
-  [ $? -eq 1 ]
+  status=$?
+if [ "$status" -gt 1 ] ||
+  { [ "$status" -eq 1 ] && ! jq -e 'has("vulnerabilities")' "$prefix.json" >/dev/null 2>&1; }; then
+  echo "error: uv audit failed (exit $status) without a report in $prefix.json" >&2
+  exit 1
+fi
 uv export --frozen --no-dev --all-packages --no-emit-workspace \
   --no-header --no-hashes --no-annotate >"$prefix-runtime.txt"

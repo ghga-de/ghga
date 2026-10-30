@@ -229,7 +229,18 @@ jobs:
       # know (uv audit is a preview), fails the step, not the job, so the lockfile PR still
       # opens, and the warning step below says the audit is missing. diff_trivy.py
       # evaluates the export's environment markers for Linux on both image machines, with
-      # the Python it runs on: CPython from .python-version, as in the images.
+      # the images' Python: the version of PYTHON_BASE in docker/Dockerfile, which can
+      # differ in its patch from the CPython uv runs it on. Reading it is a step of its
+      # own, without continue-on-error, so a changed Dockerfile fails the job under its
+      # own name instead of passing as a failed audit.
+      - name: Read the images' Python version
+        run: |
+          python=$(sed -n 's/^ARG PYTHON_BASE=\([0-9][0-9.]*\).*/\1/p' docker/Dockerfile)
+          if [ -z "$python" ]; then
+            echo "::error::no PYTHON_BASE version in docker/Dockerfile"
+            exit 1
+          fi
+          echo "IMAGE_PYTHON=$python" >> "$GITHUB_ENV"
       - name: Audit the current uv.lock
         id: audit-before
         continue-on-error: true
@@ -237,7 +248,7 @@ jobs:
           scripts/audit-uv-lock.sh "$SCAN/audit-before"
           uv run --no-project --with packaging python scripts/diff_trivy.py exposure \
             --report "$SCAN/audit-before.json" --runtime "$SCAN/audit-before-runtime.txt" \
-            --out "$SCAN/audit-before.md"
+            --python "$IMAGE_PYTHON" --out "$SCAN/audit-before.md"
           {
             echo "## uv.lock — current exposure (uv audit, every group and extra)"
             echo
@@ -257,8 +268,8 @@ jobs:
 
       # Runs right after the update, not after the rebuild, so both audits query OSV
       # minutes apart at most: an advisory published in between would otherwise count as
-      # introduced by the update. Both runtime lists count, so a package the update adds
-      # to the image still counts as runtime when one of its findings is introduced. The
+      # introduced by the update. Each report is classed by its own runtime list, so a
+      # package the update moves into the image counts as runtime on the after side. The
       # fragment's name sorts after the image's, so a fix both report is listed with
       # Trivy's severity.
       - name: Audit the updated uv.lock and diff against current
@@ -272,7 +283,9 @@ jobs:
             --label "uv.lock (uv audit, every group and extra) — current vs updated" \
             --before "$SCAN/audit-before.json" \
             --after "$SCAN/audit-after.json" \
-            --runtime "$SCAN/audit-before-runtime.txt" "$SCAN/audit-after-runtime.txt" \
+            --before-runtime "$SCAN/audit-before-runtime.txt" \
+            --after-runtime "$SCAN/audit-after-runtime.txt" \
+            --python "$IMAGE_PYTHON" \
             --out "$OUT/python-frag-lockfile.json"
 
       # The rebuild doubles as a gate: an updated lockfile that no longer builds
@@ -682,9 +695,11 @@ jobs:
       - name: Summary when no PR is warranted
         if: ${{ steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0' }}
         run: |
-          echo "Lockfiles are up to date, or the updated rebuild fixes nothing the" \
-            "lockfiles control — no PR opened. Base-image fixes reported above arrive" \
-            "with the next rebuild of :dev on their own." >> "$GITHUB_STEP_SUMMARY"
+          echo "Lockfiles are up to date, or neither the updated rebuild nor uv audit" \
+            "finds a fix in a runtime package the lockfiles control — no PR opened." \
+            "Base-image fixes reported above arrive with the next rebuild of :dev on" \
+            "their own, and fixes in dev-only packages do not count toward a PR." \
+            >> "$GITHUB_STEP_SUMMARY"
 
       # A PR outlives its finding once dev gets those fixes another way — every
       # merge rebuilds :dev off a fresh base. Gated on both scans and uv audit

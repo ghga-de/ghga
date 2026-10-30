@@ -162,9 +162,17 @@ def _write_runtime(path, runtime):
     return path
 
 
-def _audit_fragment(tmp_path, before, after, runtime):
-    """Diff two uv audit reports, with `runtime` as the images' package names."""
-    runtime_path = _write_runtime(tmp_path / "runtime.txt", runtime)
+def _audit_fragment(tmp_path, before, after, runtime, after_runtime=None, python=None):
+    """Diff two uv audit reports, with `runtime` as the images' package names.
+
+    `after_runtime` is what the images install after the update, `runtime` if not
+    given; `python` is the images' Python version.
+    """
+    before_path = _write_runtime(tmp_path / "runtime-before.txt", runtime)
+    after_path = _write_runtime(
+        tmp_path / "runtime-after.txt",
+        runtime if after_runtime is None else after_runtime,
+    )
     fragment = tmp_path / "audit-fragment.json"
     _run(
         "diff",
@@ -176,8 +184,11 @@ def _audit_fragment(tmp_path, before, after, runtime):
         str(_write_audit(tmp_path / "audit-before.json", *before)),
         "--after",
         str(_write_audit(tmp_path / "audit-after.json", *after)),
-        "--runtime",
-        str(runtime_path),
+        "--before-runtime",
+        str(before_path),
+        "--after-runtime",
+        str(after_path),
+        *(["--python", python] if python else []),
         "--out",
         str(fragment),
     )
@@ -212,9 +223,12 @@ def test_a_fix_both_scanners_report_counts_once(tmp_path):
     assert int(gate) == 2
 
 
-def _render_audit(tmp_path, before, runtime, after=()):
-    """Diff two uv audit reports, a clean one by default, and render; return gate and report."""
-    fragment = _audit_fragment(tmp_path, before, after, runtime=runtime)
+def _render_audit(tmp_path, before, runtime, after=(), **kwargs):
+    """Diff two uv audit reports, a clean one by default, and render; return gate and report.
+
+    `kwargs` go to `_audit_fragment`.
+    """
+    fragment = _audit_fragment(tmp_path, before, after, runtime=runtime, **kwargs)
     report = tmp_path / "report.md"
     gate = _run("render", str(fragment), "--out", str(report))
     return int(gate), report.read_text()
@@ -432,8 +446,10 @@ def _diff_audit_report(tmp_path, report):
             str(before),
             "--after",
             str(_write_audit(tmp_path / "after.json")),
-            "--runtime",
+            "--before-runtime",
             str(_write_runtime(tmp_path / "runtime.txt", [])),
+            "--after-runtime",
+            str(tmp_path / "runtime.txt"),
             "--out",
             str(tmp_path / "fragment.json"),
         ],
@@ -454,3 +470,140 @@ def test_a_report_of_another_schema_fails(tmp_path):
 def test_a_report_without_vulnerabilities_fails(tmp_path):
     result = _diff_audit_report(tmp_path, {"schema": SCHEMA, "findings": []})
     assert result.returncode != 0
+
+
+def test_fixes_in_two_installed_versions_count_as_listed(tmp_path):
+    """The images install pillow twice, by marker; the gate counts the rows listed."""
+    gate, report = _render_audit(
+        tmp_path,
+        [(*PILLOW_GHSA, "1.0"), (*PILLOW_GHSA, "0.9")],
+        runtime=["pillow==1.0", "pillow==0.9"],
+    )
+    assert gate == 2
+    assert "**Fixed by the dependency update (2):**" in report
+
+
+def test_a_package_moved_into_the_images_is_introduced(tmp_path):
+    """pillow 1.0 was dev-only; the update installs it in the images, still vulnerable."""
+    gate, report = _render_audit(
+        tmp_path,
+        [PILLOW_GHSA],
+        runtime=[],
+        after=[PILLOW_GHSA],
+        after_runtime=["pillow"],
+    )
+    assert gate == 0
+    assert "**Introduced (1):**" in report
+
+
+def test_dev_only_regressions_are_folded_away(tmp_path):
+    gate, report = _render_audit(tmp_path, [], runtime=["pillow"], after=[VIRTUALENV])
+    assert gate == 0
+    assert "<summary>Introduced in dev-only packages (1)</summary>" in report
+    assert "**Introduced" not in report
+
+
+def test_markers_hold_for_the_images_python(tmp_path):
+    """The marker holds for the images' Python only, not for the one running the script."""
+    gate, _ = _render_audit(
+        tmp_path,
+        [("GHSA-1111-2222-3333", [], "older")],
+        runtime=["older==1.0 ; python_full_version == '3.13.1'"],
+        python="3.13.1",
+    )
+    assert gate == 1
+
+
+def test_only_adverse_statuses_the_update_introduced_are_listed(tmp_path):
+    def audit(name, *packages):
+        path = tmp_path / name
+        statuses = [
+            {"dependency": {"name": p, "version": "1.0"}, "status": "yanked"}
+            for p in packages
+        ]
+        path.write_text(
+            json.dumps(
+                {"schema": SCHEMA, "vulnerabilities": [], "adverse_statuses": statuses}
+            )
+        )
+        return path
+
+    runtime = _write_runtime(tmp_path / "runtime.txt", [])
+    fragment = tmp_path / "fragment.json"
+    _run(
+        "diff",
+        "--format",
+        "uv-audit",
+        "--label",
+        "uv.lock",
+        "--before",
+        str(audit("before.json", "pyyaml")),
+        "--after",
+        str(audit("after.json", "pyyaml", "attrs")),
+        "--before-runtime",
+        str(runtime),
+        "--after-runtime",
+        str(runtime),
+        "--out",
+        str(fragment),
+    )
+    assert json.loads(fragment.read_text())["adverse"] == [
+        '`attrs` 1.0: {"status": "yanked"}'
+    ]
+
+
+def test_an_advisory_trivy_lists_under_two_ids_counts_once(tmp_path):
+    """Only uv audit's alias joins Trivy's CVE and GHSA rows of one pillow version."""
+    trivy = _trivy_fragment(
+        tmp_path,
+        [PILLOW_TRIVY, ("lang-pkgs", "GHSA-aaaa-bbbb-cccc", "pillow")],
+        [],
+        name="image",
+    )
+    audit = _audit_fragment(tmp_path, [PILLOW_GHSA], [], runtime=["pillow"])
+    gate = _run("render", str(trivy), str(audit), "--out", str(tmp_path / "report.md"))
+    assert int(gate) == 1
+
+
+def test_a_status_kept_through_a_version_bump_is_not_introduced(tmp_path):
+    def audit(name, version):
+        path = tmp_path / name
+        status = {"dependency": {"name": "pyyaml", "version": version}, "status": "x"}
+        path.write_text(
+            json.dumps(
+                {"schema": SCHEMA, "vulnerabilities": [], "adverse_statuses": [status]}
+            )
+        )
+        return path
+
+    runtime = _write_runtime(tmp_path / "runtime.txt", [])
+    fragment = tmp_path / "fragment.json"
+    _run(
+        "diff",
+        "--format",
+        "uv-audit",
+        "--label",
+        "uv.lock",
+        "--before",
+        str(audit("before.json", "6.0")),
+        "--after",
+        str(audit("after.json", "6.1")),
+        "--before-runtime",
+        str(runtime),
+        "--after-runtime",
+        str(runtime),
+        "--out",
+        str(fragment),
+    )
+    assert json.loads(fragment.read_text())["adverse"] == []
+
+
+def test_a_dev_only_regression_does_not_hide_a_shipped_one(tmp_path):
+    """The audit's dev-only row comes first, but the image's row is still listed."""
+    audit = _audit_fragment(tmp_path, [], [PILLOW_GHSA], runtime=[], after_runtime=[])
+    trivy = _trivy_fragment(tmp_path, [], [PILLOW_TRIVY], name="image")
+    report = tmp_path / "report.md"
+    _run("render", str(audit), str(trivy), "--out", str(report))
+    text = report.read_text()
+    assert "**Introduced (1):**" in text
+    assert "already listed above" not in text
