@@ -21,6 +21,7 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Path, Query, status
 from pydantic import UUID4
 
+from ghga_event_schemas.pydantic_ import FileUploadState
 from ucs.adapters.inbound.fastapi_ import (
     dummies,
     http_authorization,
@@ -408,6 +409,38 @@ async def get_box_uploads(  # noqa: PLR0913
         raise http_exceptions.HttpInternalError() from error
 
     return rest_models.BoxUploadsPage(items=file_uploads, total_count=total_count)
+
+
+@router.post(
+    "/rpc/boxes/file-state-counts",
+    summary="Count the file uploads per state in the given boxes",
+    operation_id="getFileStateCounts",
+    status_code=status.HTTP_200_OK,
+    response_model=dict[UUID4, dict[FileUploadState, int]],
+    response_description=(
+        "The number of file uploads per state for each box. Only the states that count"
+        + " toward a box's file_count are included. Boxes without such uploads and"
+        + " states without uploads are absent."
+    ),
+)
+@TRACER.start_as_current_span("routes.get_file_state_counts")
+async def get_file_state_counts(
+    request: rest_models.FileStateCountsRequest,
+    work_order: Annotated[
+        rest_models.ViewFileBoxStatsWorkOrder,
+        http_authorization.require_view_file_box_stats_work_order,
+    ],
+    upload_controller: dummies.UploadControllerDummy,
+) -> dict[UUID4, dict[FileUploadState, int]]:
+    """Count the FileUploads per state in each of the given FileUploadBoxes.
+
+    Unknown box IDs are ignored. Requires a ViewFileBoxStatsWorkOrder token from the RS.
+    """
+    try:
+        return await upload_controller.get_file_state_counts(box_ids=request.box_ids)
+    except Exception as error:
+        log.error(error, exc_info=True)
+        raise http_exceptions.HttpInternalError() from error
 
 
 @router.post(

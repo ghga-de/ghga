@@ -1,0 +1,45 @@
+<div class="flex items-center gap-2">
+  <!-- Wide enough for 99,999 files, so that the bars line up in all common rows. -->
+  <span class="min-w-14 text-right whitespace-nowrap tabular-nums">{{
+    fileCount() | number
+  }}</span>
+  @if (segments().length) {
+    <!-- Focusable so that keyboard users can open the tooltip as well. -->
+    <div
+      role="img"
+      tabindex="0"
+      class="flex h-2.5 w-24 shrink-0 gap-px overflow-hidden rounded-full"
+      [attr.aria-label]="summary()"
+      [matTooltip]="details()"
+      matTooltipClass="whitespace-pre-line"
+    >
+      @for (segment of segments(); track segment.group) {
+        <!-- The minimum width keeps a single file visible next to thousands. -->
+        <span
+          class="min-w-1 basis-0 {{ segment.barClass }}"
+          [style.flex-grow]="segment.count"
+        ></span>
+      }
+    </div>
+    @if (failedCount()) {
+      <!-- Hidden from screen readers, since the label of the bar includes it. -->
+      <span
+        class="text-error flex items-center gap-0.5 tabular-nums"
+        aria-hidden="true"
+        [matTooltip]="(failedCount() | number) + ' failed'"
+      >
+        <mat-icon
+          fontIcon="dangerous"
+          class="!size-5 !text-xl !leading-none"
+        ></mat-icon>
+        {{ failedCount() | number }}
+      </span>
+    }
+  } @else if (loading() && fileCount()) {
+    <span
+      class="h-2.5 w-24 shrink-0 animate-pulse rounded-full bg-gray-200"
+      aria-label="Loading file states"
+      role="img"
+    ></span>
+  }
+</div>

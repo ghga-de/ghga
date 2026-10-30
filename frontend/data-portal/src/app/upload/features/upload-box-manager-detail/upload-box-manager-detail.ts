@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe as CommonDatePipe } from '@angular/common';
+import { DatePipe as CommonDatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -77,6 +77,7 @@ interface GrantWithStatus extends UploadGrant {
   selector: 'app-upload-box-manager-detail',
   imports: [
     DatePipe,
+    DecimalPipe,
     MatButtonModule,
     MatCardModule,
     MatIcon,

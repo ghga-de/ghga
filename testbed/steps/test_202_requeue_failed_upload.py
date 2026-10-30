@@ -36,6 +36,8 @@ from .conftest import (
     when,
     write_upload_tsv,
 )
+from .conftest_2x import _read_stable_box
+from .conftest_5x import _filter_manager_by_title
 from .utils import UI_TIMEOUT, has_reached
 
 scenarios("../features/202_requeue_failed_upload.feature")
@@ -100,33 +102,6 @@ def _retry_button(page: Page, alias: str) -> Locator:
 def _retry_all_button(page: Page) -> Locator:
     """Return the portal's button that requeues every failed file of the box."""
     return page.get_by_role("button", name="Retry failed re-encryptions")
-
-
-def _read_stable_box(
-    fixtures: JointFixture, storage_name: str, full_name: str = "Data Steward"
-) -> dict[str, Any]:
-    """Read the upload box back from RS once its version has stopped advancing.
-
-    RS learns about uploads and deletions from events, so a version read right after
-    a change is often already out of date, which gets the next update rejected.
-    """
-    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
-    assert rdub, f"No upload box in state for {storage_name} storage"
-    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}"
-    headers = _headers(fixtures, full_name)
-
-    box: dict[str, Any] = {}
-    version = None
-    for _ in range(30):
-        box = fixtures.http.get(url, headers=headers).json()
-        if box.get("version") == version:
-            break
-        version = box.get("version")
-        time.sleep(1)
-    assert version is not None, f"Could not read the {storage_name} upload box"
-
-    fixtures.state.set_state(f"rdub_{storage_name}", box)
-    return box
 
 
 def _set_box_state(
@@ -551,6 +526,43 @@ def check_box_file_count(count: int, storage_name: str, fixtures: JointFixture):
     )
 
 
+@then(parse('the file states of the box for "{storage_name}" storage are "{expected}"'))
+def check_box_file_state_counts(
+    storage_name: str, expected: str, fixtures: JointFixture
+):
+    """Assert the file state counts that RS gets from UCS for the box.
+
+    The expected counts are given as "state: count" pairs separated by commas.
+    They must add up to the file count of the box, since the deleted (cancelled)
+    uploads count toward neither.
+    """
+    expected_counts = {
+        state.strip(): int(count)
+        for state, count in (pair.split(":") for pair in expected.split(","))
+    }
+    url = f"{fixtures.config.rs_url}/upload-boxes/file-state-counts"
+    # The counts come live from UCS, while RS learns the file count from events,
+    # so wait until both have caught up instead of only until the box is stable
+    for _ in range(30):
+        box = _read_stable_box(fixtures, storage_name)
+        response = fixtures.http.get(
+            url, headers=_headers(fixtures), params={"box_id": box["id"]}
+        )
+        assert response.status_code == 200, response.text
+        counts = response.json().get(box["id"], {})
+        if counts == expected_counts and sum(counts.values()) == box["file_count"]:
+            break
+        time.sleep(1)
+    assert counts == expected_counts, (
+        f"Expected the file states {expected_counts} in the {storage_name} box,"
+        f" got {counts}"
+    )
+    assert sum(counts.values()) == box["file_count"], (
+        f"The file states {counts} do not add up to the file count"
+        f" {box['file_count']} of the {storage_name} box"
+    )
+
+
 @when(
     parse('"{full_name}" requeues the "{ordinal}" file in "{storage_name}" storage'),
     target_fixture="response",
@@ -566,6 +578,29 @@ def requeue_failed_file(
         f"/uploads/{file_id}/requeue"
     )
     return fixtures.http.post(url, headers=_headers(fixtures, full_name))
+
+
+@then(
+    parse(
+        'the box for "{storage_name}" storage is listed with the file states'
+        ' "{summary}"'
+    )
+)
+def check_box_file_states_listed(
+    storage_name: str, summary: str, fixtures: JointFixture
+):
+    """Check the bar of file states, which the portal loads after the box list."""
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    assert rdub, f"No upload box in state for {storage_name} storage"
+    page = fixtures.playwright.page
+    # The list is paginated, so filter it down to the box first
+    _filter_manager_by_title(fixtures, rdub["title"])
+    row = page.locator("main table tbody tr").filter(
+        has=page.get_by_role("cell", name=rdub["title"], exact=True)
+    )
+    expect(row.get_by_role("img", name=summary, exact=True)).to_be_visible(
+        timeout=UI_TIMEOUT
+    )
 
 
 @when(parse('I open the upload box for "{storage_name}" storage in the portal'))

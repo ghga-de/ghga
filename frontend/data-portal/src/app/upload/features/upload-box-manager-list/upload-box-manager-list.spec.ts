@@ -7,8 +7,9 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { uploadBoxes } from '@app/../mocks/data';
+import { uploadBoxes, uploadBoxFileStateCounts } from '@app/../mocks/data';
 import { Notifier } from '@app/shared/services/notification';
+import { FileStateCountsByBox } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { render, RenderResult, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -26,6 +27,11 @@ class MockUploadBoxService {
     error: this.#error,
   };
   filteredUploadBoxes = () => this.boxRetrievalResults.value().boxes;
+  fileStateCounts = { isLoading: signal(false) };
+  fileStateCountsByBox = signal<FileStateCountsByBox | undefined>(
+    uploadBoxFileStateCounts,
+  );
+  showFileStateCountsOf = vitest.fn();
   getStorageLocationLabel = (storageAlias: string) =>
     ({ TUE01: 'Tübingen 1', HD02: 'Heidelberg 2', TUE03: 'Tübingen 3' })[
       storageAlias
@@ -83,6 +89,49 @@ describe('UploadBoxManagerList', () => {
     expect(screen.getByText('Tübingen 1')).toBeVisible();
     expect(screen.getAllByText('Heidelberg 2')).toHaveLength(3);
     expect(screen.queryByText('TUE01')).not.toBeInTheDocument();
+  });
+
+  it('should show the file states of each upload box', () => {
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(
+      within(row).getByRole('img', { name: '2 ready, 1 in progress, 1 failed' }),
+    ).toBeVisible();
+  });
+
+  it('should load the file state counts of the boxes on the page', async () => {
+    // All boxes fit on one page; the service picks the ones that need counts
+    const boxIds = uploadBoxes.boxes.map((box) => box.id).sort();
+    await vitest.waitFor(() => {
+      const boxes = uploadBoxService.showFileStateCountsOf.mock.lastCall?.[0] ?? [];
+      expect(boxes.map((box: { id: string }) => box.id).sort()).toEqual(boxIds);
+    });
+  });
+
+  it('should count all files of an archived box as archived', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of Joan/ });
+    expect(within(row).getByRole('img', { name: '28 archived' })).toBeVisible();
+  });
+
+  it('should show placeholders while the file state counts load', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    uploadBoxService.fileStateCounts.isLoading.set(true);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(within(row).getByRole('img', { name: 'Loading file states' })).toBeVisible();
+    expect(screen.queryByRole('img', { name: /ready/ })).not.toBeInTheDocument();
+  });
+
+  it('should show the file counts without bars if the counts failed', async () => {
+    uploadBoxService.fileStateCountsByBox.set(undefined);
+    await result.fixture.whenStable();
+
+    const row = screen.getByRole('row', { name: /Upload Box of John/ });
+    expect(within(row).queryByRole('img')).not.toBeInTheDocument();
+    expect(within(row).getByText('4')).toBeVisible();
   });
 
   it('should navigate to the details of an upload box', async () => {

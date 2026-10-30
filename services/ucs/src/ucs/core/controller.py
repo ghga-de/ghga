@@ -17,6 +17,7 @@
 
 import contextlib
 import logging
+from collections.abc import Collection
 from datetime import timedelta
 from math import ceil
 from typing import Any
@@ -26,6 +27,7 @@ from pydantic import UUID4
 
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
+    FileUploadState,
     InterrogationFailure,
     InterrogationSuccess,
 )
@@ -1471,6 +1473,20 @@ class UploadController(UploadControllerPort):
             ]
         total_count = await find_result.total_count()
         return file_uploads, total_count
+
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        """Return the number of FileUploads per state for each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such FileUploads are
+        absent from the result, as are states without FileUploads.
+        """
+        return await self._box_stats_aggregator.compute_file_state_counts(
+            box_ids=box_ids
+        )
 
     async def process_interrogation_success(
         self, *, report: InterrogationSuccess

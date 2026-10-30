@@ -37,6 +37,12 @@ test('can use Upload Box manager when logged in', async ({ adminPage: page }) =>
   const firstRow = table.locator('tbody tr').first();
   await expect(firstRow).toBeVisible();
 
+  // the file states arrive in a request of their own and show as a bar
+  const johnsRow = table.getByRole('row', { name: /Upload Box of John/ });
+  await expect(
+    johnsRow.getByRole('img', { name: '2 ready, 1 in progress, 1 failed' }),
+  ).toBeVisible();
+
   // Check for filter controls. On large viewports the filter panel is always visible (no toggle button),
   // while on small viewports a toggle button is used.
   const filterToggle = page.getByRole('button', { name: 'Filter upload boxes' });

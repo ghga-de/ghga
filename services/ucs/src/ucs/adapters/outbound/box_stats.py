@@ -15,9 +15,12 @@
 
 """MongoDB adapter for aggregating FileUploadBox statistics."""
 
+from collections.abc import Collection
+
 from pydantic import UUID4
 from pymongo import AsyncMongoClient
 
+from ghga_event_schemas.pydantic_ import FileUploadState
 from ucs.constants import COUNTED_UPLOAD_STATES
 from ucs.ports.outbound.dao import BoxStatsAggregatorPort
 
@@ -28,7 +31,7 @@ class MongoDbBoxStatsAggregator(BoxStatsAggregatorPort):
     This bypasses the hexkit DAO deliberately: the DAO would deserialize each matching
     FileUpload document (including its large per-part checksum lists) into a Pydantic
     model just to read `decrypted_size`. The aggregation instead sums the values inside
-    MongoDB and returns only the two resulting numbers.
+    MongoDB and returns only the resulting numbers.
     """
 
     def __init__(self, *, client: AsyncMongoClient, db_name: str, collection_name: str):
@@ -57,3 +60,34 @@ class MongoDbBoxStatsAggregator(BoxStatsAggregatorPort):
         async for group in cursor:
             return group["file_count"], group["size"]
         return 0, 0
+
+    async def compute_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        """Return the number of FileUploads per state for each of the given boxes,
+        counting only the states in `COUNTED_UPLOAD_STATES`.
+
+        Boxes without counted FileUploads and states without FileUploads are absent.
+        """
+        # Matching on box_id and state and grouping by them only lets MongoDB serve
+        #  the whole aggregation from the (box_id, state, decrypted_size) index
+        pipeline: list[dict] = [
+            {
+                "$match": {
+                    "box_id": {"$in": list(box_ids)},
+                    "state": {"$in": list(COUNTED_UPLOAD_STATES)},
+                }
+            },
+            {
+                "$group": {
+                    "_id": {"box_id": "$box_id", "state": "$state"},
+                    "count": {"$sum": 1},
+                }
+            },
+        ]
+        counts: dict[UUID4, dict[FileUploadState, int]] = {}
+        cursor = await self._collection.aggregate(pipeline)
+        async for group in cursor:
+            key = group["_id"]
+            counts.setdefault(key["box_id"], {})[key["state"]] = group["count"]
+        return counts

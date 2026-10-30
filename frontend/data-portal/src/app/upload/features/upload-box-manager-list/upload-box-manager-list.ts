@@ -6,6 +6,7 @@
 
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -17,11 +18,18 @@ import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
 import {
+  fileStateCountsOf,
   ResearchDataUploadBox,
   UploadBoxState,
   UploadBoxStateClass,
 } from '@app/upload/models/box';
+import { FileUploadStateCounts } from '@app/upload/models/file-upload';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { debounceTime } from 'rxjs';
+import { UploadBoxFileStates } from '../upload-box-file-states/upload-box-file-states';
+
+/** Milliseconds the rows on the current page must stay unchanged to count */
+const PAGE_ROWS_DELAY = 100;
 
 /** Sort order for upload box states: locked first, then open, then archived */
 const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
@@ -34,6 +42,8 @@ const STATE_SORT_ORDER: Record<UploadBoxState, number> = {
 interface UploadBoxRow extends ResearchDataUploadBox {
   stateClass: string;
   storageLabel: string;
+  /** The number of files per state, undefined if the counts are not loaded */
+  fileStateCounts: FileUploadStateCounts | undefined;
 }
 
 /**
@@ -52,6 +62,7 @@ interface UploadBoxRow extends ResearchDataUploadBox {
     ParseBytes,
     Capitalise,
     DatePipe,
+    UploadBoxFileStates,
   ],
   providers: [providePaginatorIntl('Upload boxes per page')],
   templateUrl: './upload-box-manager-list.html',
@@ -66,23 +77,42 @@ export class UploadBoxManagerList {
   uploadBoxesAreLoading = this.#uploadBoxResource.isLoading;
   uploadBoxesError = this.#uploadBoxResource.error;
 
+  /** Whether file state counts are loading, which matters for rows without them */
+  fileStateCountsLoading = this.#uploadBoxService.fileStateCounts.isLoading;
+
   /**
    * The upload boxes to display, each annotated with derived display values
    * (state CSS class and human-readable storage label). Deriving these in a
    * computed keeps the mappings out of the template and change detection, and
    * lets the labels react when the storage labels finish loading.
    */
-  #rows = computed<UploadBoxRow[]>(() =>
-    this.uploadBoxes().map((box) => ({
+  #rows = computed<UploadBoxRow[]>(() => {
+    const countsByBox = this.#uploadBoxService.fileStateCountsByBox();
+    return this.uploadBoxes().map((box) => ({
       ...box,
       stateClass: UploadBoxStateClass[box.state],
       storageLabel: this.#uploadBoxService.getStorageLocationLabel(box.storage_alias),
-    })),
-  );
+      fileStateCounts: fileStateCountsOf(box, countsByBox),
+    }));
+  });
 
   dataSource = new MatTableDataSource<UploadBoxRow>([]);
 
   #updateDataSourceEffect = effect(() => (this.dataSource.data = this.#rows()));
+
+  /**
+   * The rows on the current page, after filtering, sorting and paginating. The
+   * delay lets the paginator attach before the first page counts, and lets a
+   * quick succession of page or sort changes load the file states only once.
+   * Paged by the RS, the page would be its response and this would not be needed.
+   */
+  #pageRows = toSignal(this.dataSource.connect().pipe(debounceTime(PAGE_ROWS_DELAY)), {
+    initialValue: [],
+  });
+
+  #loadFileStateCountsEffect = effect(() =>
+    this.#uploadBoxService.showFileStateCountsOf(this.#pageRows()),
+  );
 
   #uploadBoxErrorEffect = effect(() => {
     if (this.uploadBoxesError()) {
