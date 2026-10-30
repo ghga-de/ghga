@@ -16,13 +16,20 @@
 
 """Step definitions for loading metadata artifacts with the datasteward-kit"""
 
-import subprocess
 from collections import Counter
 
 from fixtures.utils import temporary_file
 from ghga_datasteward_kit.loading import LoadConfig
 
-from steps.utils import is_alias_accession, is_dataset_pid, load_config_as_file
+from steps.utils import (
+    is_alias_accession,
+    is_dataset_pid,
+    is_legacy_accession,
+    is_study_pid,
+    load_config_as_file,
+    read_submission,
+    run_dskit,
+)
 
 from .conftest import Config, JointFixture, MongoFixture, scenarios, then, when
 
@@ -43,41 +50,37 @@ def run_the_load_command(fixtures: JointFixture):
 
     upload_token = fixtures.config.upload_token
     with temporary_file(fixtures.config.dsk_token_path, upload_token):
-        completed_upload = subprocess.run(  # nosec B607, B603
-            [
-                "ghga-datasteward-kit",
-                "load",
-                "--config-path",
-                load_config_path,
-            ],
-            capture_output=True,
-            check=False,
-            encoding="utf-8",
-            text=True,
-            timeout=10 * 60,
-        )
-
-        if completed_upload.stdout:
-            print(completed_upload.stdout)
-        if "ERROR" in completed_upload.stderr or completed_upload.returncode:
-            print(completed_upload.stderr)
+        completed_upload = run_dskit("load", "--config-path", load_config_path)
 
         assert not completed_upload.stdout
         assert not "ERROR" in completed_upload.stderr
         assert not completed_upload.returncode
 
 
+def legacy_accession_map(fixtures: JointFixture) -> dict:
+    """Get the accession map of study X from its amended submission."""
+    submission_id = fixtures.state.get_state(
+        f"submission id {fixtures.dsk.config.legacy_metadata_path.stem}"
+    )
+    return read_submission(fixtures, submission_id)["accession_map"]
+
+
 @then("the stats for the datasets exist in the database")
-def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
+def check_stats_in_metldata_database(
+    fixtures: JointFixture, config: Config, mongo: MongoFixture
+):
     datasets = mongo.wait_for_documents(
-        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}
+        config.metldata_db_name, "art_stats_public_class_DatasetStats", {}, number=3
     )
     assert datasets
-    assert len(datasets) == 2  # 2 from the example metadata
+    assert len(datasets) == 3  # A and B from the example metadata, X amended
+    # the embedded dataset step sets "dataset_accessions" only after this one
+    legacy_accession = legacy_accession_map(fixtures)["datasets"]["DS_X"]
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
-        assert is_dataset_pid(accession)
+        legacy = accession == legacy_accession
+        assert (is_legacy_accession if legacy else is_dataset_pid)(accession)
         content = dataset["content"]
         assert content["accession"] == accession
         simplified_dataset = {
@@ -97,6 +100,11 @@ def check_stats_in_metldata_database(config: Config, mongo: MongoFixture):
             "files": 7,
             "studies": 1,
         },
+        "The complete-X dataset": {
+            "types": "And another Type",
+            "files": 2,
+            "studies": 1,
+        },
     }
 
 
@@ -105,14 +113,17 @@ def check_datasets_in_metldata_database(
     fixtures: JointFixture, config: Config, mongo: MongoFixture
 ):
     datasets = mongo.wait_for_documents(
-        config.metldata_db_name, "art_embedded_public_class_EmbeddedDataset", {}
+        config.metldata_db_name,
+        "art_embedded_public_class_EmbeddedDataset",
+        {},
+        number=3,
     )
     assert datasets
-    assert len(datasets) == 2  # 2 from the example metadata
+    assert len(datasets) == 3  # A and B from the example metadata, X amended
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset["_id"]
-        assert is_dataset_pid(accession)
+        assert is_dataset_pid(accession) or is_legacy_accession(accession)
         content = dataset["content"]
         assert content["accession"] == accession
         simplified_dataset = {
@@ -132,6 +143,11 @@ def check_datasets_in_metldata_database(
             "files": 7,
             "title": "The complete-B dataset",
         },
+        "DS_X": {
+            "description": "An interesting dataset X of complete example set",
+            "files": 2,
+            "title": "The complete-X dataset",
+        },
     }
     accession_map = {
         d["content"]["alias"]: {
@@ -143,19 +159,25 @@ def check_datasets_in_metldata_database(
     }
     assert "DS_A" in accession_map
     assert "DS_B" in accession_map
+    assert "DS_X" in accession_map
     fixtures.state.set_state("dataset_accessions", accession_map)
 
 
 @then("the test datasets are known to the work package service")
-def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
-    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=2)
+def check_datasets_in_wps_database(
+    fixtures: JointFixture, config: Config, mongo: MongoFixture
+):
+    datasets = mongo.wait_for_documents(config.wps_db_name, "datasets", {}, number=3)
     assert datasets
-    assert len(datasets) == 2
+    assert len(datasets) == 3
+    dataset_accessions = fixtures.state.get_state("dataset_accessions")
+    legacy_accession = dataset_accessions["DS_X"]["dataset_accession"]
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset.get("_id")
         assert isinstance(accession, str)
-        assert is_dataset_pid(accession)
+        legacy = accession == legacy_accession
+        assert (is_legacy_accession if legacy else is_dataset_pid)(accession)
         assert dataset.get("stage") == "download"
         title = dataset.get("title")
         assert title
@@ -163,7 +185,8 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
         files = dataset.get("files")
         assert isinstance(files, list)
         assert all(isinstance(file_.get("accession"), str) for file_ in files)
-        assert all(is_alias_accession(file_["accession"]) for file_ in files)
+        is_file_accession = is_legacy_accession if legacy else is_alias_accession
+        assert all(is_file_accession(file_["accession"]) for file_ in files)
         extensions = Counter(file.get("extension") for file in files)
         simplified_datasets[title] = {"description": description, "files": extensions}
     assert simplified_datasets == {
@@ -175,19 +198,28 @@ def check_datasets_in_wps_database(config: Config, mongo: MongoFixture):
             "description": "An interesting dataset B of complete example set",
             "files": Counter({".fastq.gz": 6, ".txt": 1}),
         },
+        "The complete-X dataset": {
+            "description": "An interesting dataset X of complete example set",
+            "files": Counter({".fastq.gz": 2}),
+        },
     }
 
 
 @then("the test datasets are known to the access request service")
-def check_datasets_in_ars_database(config: Config, mongo: MongoFixture):
-    datasets = mongo.wait_for_documents(config.ars_db_name, "datasets", {}, number=2)
+def check_datasets_in_ars_database(
+    fixtures: JointFixture, config: Config, mongo: MongoFixture
+):
+    datasets = mongo.wait_for_documents(config.ars_db_name, "datasets", {}, number=3)
     assert datasets
-    assert len(datasets) == 2
+    assert len(datasets) == 3
+    dataset_accessions = fixtures.state.get_state("dataset_accessions")
+    legacy_accession = dataset_accessions["DS_X"]["dataset_accession"]
     simplified_datasets = {}
     for dataset in datasets:
         accession = dataset.get("_id")
         assert isinstance(accession, str)
-        assert is_dataset_pid(accession)
+        legacy = accession == legacy_accession
+        assert (is_legacy_accession if legacy else is_dataset_pid)(accession)
         title = dataset.get("title")
         assert title
         description = dataset.get("description")
@@ -212,4 +244,42 @@ def check_datasets_in_ars_database(config: Config, mongo: MongoFixture):
             "dac_alias": "DAC_1",
             "dac_email": "dac_institute_a@dac.dac",
         },
+        "The complete-X dataset": {
+            "description": "An interesting dataset X of complete example set",
+            "dac_alias": "DAC_X",
+            "dac_email": "dac_institute_a@dac.dac",
+        },
     }
+
+
+@then("only the legacy dataset carries flat accessions")
+def check_accession_schemes(
+    fixtures: JointFixture, config: Config, mongo: MongoFixture
+):
+    # named per dataset, so a PID study getting flat accessions fails instead of
+    # passing a check that accepts either scheme
+    accession_map = legacy_accession_map(fixtures)
+    dataset_accession = accession_map["datasets"]["DS_X"]
+    study_accession = accession_map["studies"]["STUDY_X"]
+    file_accessions = set(accession_map["research_data_files"].values())
+    assert is_legacy_accession(dataset_accession)
+    assert is_legacy_accession(study_accession)
+    assert file_accessions and all(map(is_legacy_accession, file_accessions))
+
+    dataset = mongo.wait_for_document(
+        config.metldata_db_name,
+        "art_embedded_public_class_EmbeddedDataset",
+        {"_id": dataset_accession},
+        extend_mapping=False,  # the _id field type is string, not UUID
+    )
+    assert dataset
+    content = dataset["content"]
+    assert content["alias"] == "DS_X"
+    assert content["study"]["accession"] == study_accession
+    # the embedded dataset lists its files as plain accessions
+    assert set(content["files"]) == file_accessions
+
+    dataset_accessions = fixtures.state.get_state("dataset_accessions")
+    for alias in ("DS_A", "DS_B"):
+        assert is_dataset_pid(dataset_accessions[alias]["dataset_accession"])
+        assert is_study_pid(dataset_accessions[alias]["study_accession"])

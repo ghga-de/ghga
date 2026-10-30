@@ -17,6 +17,7 @@
 
 import json
 import re
+import subprocess
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -56,6 +57,40 @@ def is_alias_accession(accession: str) -> bool:
     # every entity but the study and its datasets gets '{study_pid}.{alias}', the
     # shape of a file accession
     return re.fullmatch(FILE_ACCESSION_PATTERN, accession) is not None
+
+
+def is_legacy_accession(accession: str) -> bool:
+    """Tell whether the accession is a flat one from before study PIDs."""
+    # pins the 14 digits dskit mints; service-commons' LEGACY_* patterns are looser
+    return re.fullmatch(r"GHGA[A-Z][0-9]{14}", accession) is not None
+
+
+def run_dskit(*args: str | Path, timeout: int = 600) -> subprocess.CompletedProcess:
+    """Run a 'ghga-datasteward-kit' command with the given arguments, print what
+    it reported, and return the finished process.
+    """
+    completed = subprocess.run(  # nosec B607, B603
+        ["ghga-datasteward-kit", *args],
+        capture_output=True,
+        check=False,
+        encoding="utf-8",
+        text=True,
+        timeout=timeout,
+    )
+
+    if completed.stdout:
+        print(completed.stdout)
+    if "ERROR" in completed.stderr or completed.returncode:
+        print(completed.stderr)
+
+    return completed
+
+
+def read_submission(fixtures: JointFixture, submission_id: str) -> dict:
+    """Read a submission JSON from the local submission store."""
+    submission_path = fixtures.dsk.config.submission_store / f"{submission_id}.json"
+    with open(submission_path, encoding="utf-8") as submission_file:
+        return json.load(submission_file)
 
 
 DATASET_OVERVIEW_KEYS = {"accession", "title", "description"}

@@ -24,7 +24,12 @@ from .conftest import (
     then,
     when,
 )
-from .utils import get_alias_from_ega_accession, is_dataset_pid, search_dataset
+from .utils import (
+    get_alias_from_ega_accession,
+    is_dataset_pid,
+    is_legacy_accession,
+    search_dataset,
+)
 
 scenarios("../features/320_search_datasets.feature")
 
@@ -35,46 +40,50 @@ SEARCH_ALL_DATASETS = {
             "name": "Study type",
             "options": [
                 {"value": "SYNTHETIC_GENOMICS", "count": 1},
-                {"value": "WHOLE_GENOME_SEQUENCING", "count": 2},
+                {"value": "WHOLE_GENOME_SEQUENCING", "count": 3},
             ],
         },
         {
             "key": "experiment_methods.instrument_model",
             "name": "Platform",
-            "options": [{"value": "454_GS", "count": 2}],
+            "options": [{"value": "454_GS", "count": 3}],
         },
         {
             "key": "experiment_methods.type",
             "name": "Experiment",
-            "options": [{"value": "DNA-seq", "count": 2}],
+            "options": [{"value": "DNA-seq", "count": 3}],
         },
         {
             "key": "experiment_methods.library_type",
             "name": "Analysis level",
-            "options": [{"value": "WGS", "count": 2}],
+            "options": [{"value": "WGS", "count": 3}],
         },
         {
             "key": "experiment_methods.sequencing_layout",
             "name": "Sequencing mode",
-            "options": [{"value": "SE", "count": 2}],
+            "options": [{"value": "SE", "count": 3}],
         },
         {
             "key": "individuals.diagnosis_terms",
             "name": "Diagnosis",
-            "options": [{"value": "Myeloid leukaemia", "count": 2}],
+            "options": [{"value": "Myeloid leukaemia", "count": 3}],
         },
         {
             "key": "data_access_policy.alias",
             "name": "Access policy",
-            "options": [{"value": "DAP_1", "count": 1}, {"value": "DAP_2", "count": 1}],
+            "options": [
+                {"value": "DAP_1", "count": 1},
+                {"value": "DAP_2", "count": 1},
+                {"value": "DAP_X", "count": 1},
+            ],
         },
         {
             "key": "data_access_policy.data_access_committee.institute",
             "name": "Controller Institution",
-            "options": [{"value": "institute_a", "count": 2}],
+            "options": [{"value": "institute_a", "count": 3}],
         },
     ],
-    "count": 2,
+    "count": 3,
     "hits": [
         {
             "ega_accession": "EGADATASET000A",
@@ -85,6 +94,11 @@ SEARCH_ALL_DATASETS = {
             "ega_accession": "EGADATASET000B",
             "title": "The complete-B dataset",
             "alias": "DS_B",
+        },
+        {
+            "ega_accession": "EGADATASET000X",
+            "title": "The complete-X dataset",
+            "alias": "DS_X",
         },
     ],
 }
@@ -111,7 +125,7 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
     datasets = {}  # mapping from alias to search summary
     for i, hit in enumerate(hits):
         accession = hit.pop("id_")
-        assert is_dataset_pid(accession)
+        assert is_dataset_pid(accession) or is_legacy_accession(accession)
         hit = hit.pop("content")
         hits[i] = hit
         summary = hit.copy()
@@ -126,6 +140,16 @@ def check_search_without_keyword_results(state: StateStorage, response: Response
     assert results == SEARCH_ALL_DATASETS
     # memorize the overview of all datasets as mapping from alias to search summary
     state.set_state("all available datasets", datasets)
+
+
+@then("only the legacy dataset is found with flat accession")
+def check_search_accession_schemes(state: StateStorage):
+    datasets = state.get_state("all available datasets")
+    # named per dataset, so a PID dataset getting a flat accession fails instead of
+    # passing a check that accepts either scheme
+    assert is_legacy_accession(datasets["DS_X"]["accession"])
+    for alias in ("DS_A", "DS_B"):
+        assert is_dataset_pid(datasets[alias]["accession"])
 
 
 @when(

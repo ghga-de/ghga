@@ -17,10 +17,10 @@
 """Step definitions for transforming metadata via the data-steward-kit"""
 
 import os
-import subprocess
 from pathlib import Path
 
 from .conftest import JointFixture, scenarios, then, when
+from .utils import run_dskit
 
 scenarios("../features/011_transform_metadata.feature")
 
@@ -32,23 +32,13 @@ def call_data_steward_kit_transform(
     """Call cli command 'ghga-datasteward-kit metadata transform'
     to run the transformation workflow on submitted metadata
     """
-    completed_transform = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "metadata",
-            "transform",
-            "--config-path",
-            str(metadata_config_path),
-        ],
-        capture_output=True,
-        check=True,
-        encoding="utf-8",
-        text=True,
-        timeout=timeout,
+    completed_transform = run_dskit(
+        "metadata", "transform", "--config-path", metadata_config_path, timeout=timeout
     )
 
     assert not completed_transform.stdout
     assert "ERROR" not in completed_transform.stderr
+    assert not completed_transform.returncode
 
 
 @when("submitted metadata is transformed")

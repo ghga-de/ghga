@@ -47,6 +47,11 @@ class DskConfig(BaseSettings):
         metadata_dir / "metadata_study_a.json",
         metadata_dir / "metadata_study_b.json",
     )
+    # a submission accessioned by dskit 5.4.2, before study PIDs, with the accession
+    # store as written then, and the metadata that amends it with one more file
+    legacy_metadata_path: Path = metadata_dir / "metadata_study_x.json"
+    legacy_submission_path: Path = metadata_dir / "legacy" / "submission_study_x.json"
+    legacy_accession_store_path: Path = metadata_dir / "legacy" / "accession_store"
 
     metadata_model_file: str = "metadata_model.yaml"
     metadata_file_fields: tuple = (
