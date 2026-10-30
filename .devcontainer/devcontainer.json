@@ -99,6 +99,11 @@
   // but never answers, and the loop burns ~200 MB/s until the client gives up. Playwright's
   // `reuseExistingServer` probe hits exactly that: it concludes a dev server is already up,
   // never starts one, and waits forever with no output while memory drains.
+  // VS Code also forwards ports on its own when it sees them in use, which recreates the
+  // loop, so auto-forwarding is off for every port.
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
 
   // Share the host's network namespace. The demo cluster (kind, running in this
   // container's own docker) publishes its gateway on port 80, and only host networking
@@ -117,6 +122,10 @@
   //     Desktop and rebuild. Without it the VM forwards only PUBLISHED ports (-p), which
   //     host networking by definition does not use, so port 80 stays inside the VM.
   //   - OrbStack: nothing; it forwards host-network ports on its own.
+  // A runtime that forwards ports out of a VM may forward only those bound to all
+  // addresses, which leaves out the data-portal dev server on 127.0.0.1. There, set
+  // data_portal_host=0.0.0.0 in frontend/data-portal/local.env. That stays per
+  // developer: on Docker Engine it would put the dev server on the LAN.
   // Verify from the host with `curl -I http://localhost/` once `just up` reports ready.
   // Map the in-cluster MinIO name to the loopback address kind publishes its S3 node
   // port on (see deploy/kind-config.yaml). Docker regenerates /etc/hosts on every
