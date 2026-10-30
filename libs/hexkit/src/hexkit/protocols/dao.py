@@ -550,6 +550,9 @@ class Dao(typing.Protocol[Dto]):
 
         Args:
             ids: The IDs of the resources.
+
+        Raises:
+            TypeError: when `ids` is a single string instead of a collection of IDs.
         """
         ...
 
