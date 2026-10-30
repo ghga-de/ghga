@@ -112,10 +112,9 @@ A batch publishes its events one after another, each the way a single write does
 A bulk write does not say which documents it matched, so `update_many` and `delete_many` first look up which documents still carry their write ID and publish only those.
 A resource that another writer created, changed or deleted in the meantime is left to that writer, which publishes its own event.
 
-Publishing a batch is best effort, because its write already succeeded: an event that cannot be published is logged as a warning instead of failing the call, and the batch goes on with the next one.
-Two failed events in a row end the batch's publishing.
+A batch raises at its first failed publish, as a single write does, although its write is stored.
 The resources not published keep `__metadata__.published == False`, so `publish_pending()` sends them later.
-So one event that keeps failing, such as one over the size limit, holds up no other, and a broker that is down costs two send timeouts, not one per resource.
+When the write failed for some IDs, the batch logs the failed publish as a warning and raises its `BatchOperationError` instead, since that error names the writes that were lost.
 A send already retries by itself when a connection drops or a partition moves to another broker, until the producer's request timeout of 40 s runs out.
 
 Each resource costs one send and one mark write.

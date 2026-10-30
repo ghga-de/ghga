@@ -2115,63 +2115,81 @@ async def test_delete_many_publishes_before_raising(mongo_kafka: MongoKafkaFixtu
         assert await dao.get_by_id(kept.id) == kept
 
 
-async def test_batch_publish_stops_after_two_failures_in_a_row(
-    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
-):
-    """Test that a failed publish is logged and fails neither the batch call nor the
-    next publish, that two failed publishes in a row stop the batch's publishing, and
-    that publish_pending sends what the batch left.
+class FailingPublisher(EventPublisherProtocol):
+    """Records the keys of published and failed events, and fails the first publish
+    of each key in `fail_keys`.
     """
 
-    class FailingPublisher(EventPublisherProtocol):
-        """Records the keys of published and failed events, and fails the first
-        publish of each key in `fail_keys`.
-        """
+    def __init__(self, fail_keys: set[str]):
+        self.fail_keys = fail_keys
+        self.published: list[str] = []
+        self.failed: list[str] = []
 
-        def __init__(self, fail_keys: set[str]):
-            self.fail_keys = fail_keys
-            self.published: list[str] = []
-            self.failed: list[str] = []
+    async def _publish_validated(
+        self,
+        *,
+        payload: JsonObject,
+        type_: str,
+        key: str,
+        topic: str,
+        event_id: uuid.UUID,
+        headers: Mapping[str, str],
+    ) -> None:
+        if key in self.fail_keys:
+            self.fail_keys.remove(key)
+            self.failed.append(key)
+            raise RuntimeError("broker unavailable")
+        self.published.append(key)
 
-        async def _publish_validated(
-            self,
-            *,
-            payload: JsonObject,
-            type_: str,
-            key: str,
-            topic: str,
-            event_id: uuid.UUID,
-            headers: Mapping[str, str],
-        ) -> None:
-            if key in self.fail_keys:
-                self.fail_keys.remove(key)
-                self.failed.append(key)
-                raise RuntimeError("broker unavailable")
-            self.published.append(key)
 
-    dtos = [ExampleDto() for _ in range(6)]
-    first, alone, middle, second_last, last_failing, after = dtos
-    failing = [alone, second_last, last_failing]
-    publisher = FailingPublisher(fail_keys={str(dto.id) for dto in failing})
+async def test_batch_raises_at_first_failed_publish(mongo_kafka: MongoKafkaFixture):
+    """Test that a batch raises at its first failed publish, as a single write does,
+    and that publish_pending sends what the batch left.
+    """
+    first, failing, after = ExampleDto(), ExampleDto(), ExampleDto()
+    publisher = FailingPublisher(fail_keys={str(failing.id)})
     async with dao_with_publisher(mongo_kafka, publisher) as dao:
-        with caplog.at_level("WARNING"):
-            await dao.insert_many(dtos)
+        with pytest.raises(RuntimeError, match="broker unavailable"):
+            await dao.insert_many([first, failing, after])
 
-        assert publisher.published == [str(first.id), str(middle.id)]
-        assert publisher.failed == [str(dto.id) for dto in failing]
-        for dto in failing:
-            assert f"Could not publish the event for {dto.id}" in caplog.text
-        assert (
-            "Stopped publishing the batch after 2 failed events in a row; leaving 1"
-            " more" in caplog.text
-        )
-        for dto in dtos:
-            assert is_published(mongo_kafka, dto.id) is (dto in (first, middle))
+        assert publisher.published == [str(first.id)]
+        assert publisher.failed == [str(failing.id)]
+        for dto in (first, failing, after):
+            assert await dao.get_by_id(dto.id) == dto
+            assert is_published(mongo_kafka, dto.id) is (dto == first)
 
         await dao.publish_pending()
-        assert set(publisher.published[2:]) == {
-            str(dto.id) for dto in [*failing, after]
-        }
+        assert set(publisher.published[1:]) == {str(failing.id), str(after.id)}
+
+
+async def test_batch_with_write_errors_logs_failed_publish(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a batch whose write failed for some IDs logs a failed publish and
+    raises its BatchOperationError instead, and that publish_pending sends what the
+    batch left.
+    """
+    existing, failing, after = ExampleDto(), ExampleDto(), ExampleDto()
+    publisher = FailingPublisher(fail_keys={str(failing.id)})
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.insert(existing)
+        with (
+            caplog.at_level("WARNING"),
+            pytest.raises(BatchOperationError) as caught,
+        ):
+            await dao.insert_many([existing, failing, after])
+
+        assert list(caught.value.errors) == [existing.id]
+        assert publisher.failed == [str(failing.id)]
+        assert (
+            f"Could not publish the event for {failing.id}; leaving it and the rest"
+            " of the batch to publish_pending." in caplog.text
+        )
+        for dto in (failing, after):
+            assert not is_published(mongo_kafka, dto.id)
+
+        await dao.publish_pending()
+        assert set(publisher.published[1:]) == {str(failing.id), str(after.id)}
 
 
 async def test_batch_without_autopublish(mongo_kafka: MongoKafkaFixture):

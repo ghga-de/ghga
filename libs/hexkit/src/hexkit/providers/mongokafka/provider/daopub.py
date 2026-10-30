@@ -74,10 +74,6 @@ log = logging.getLogger(__name__)
 # How often a publish is repeated when newer writes keep replacing the document
 MAX_REPUBLISH_ROUNDS = 5
 
-# How many publishes of a batch may fail in a row before it leaves the rest to
-# publish_pending: one failing event holds up no other, a down broker costs two timeouts
-MAX_FAILED_PUBLISHES_IN_A_ROW = 2
-
 # Matches documents that are not soft-deleted, including ones without outbox metadata
 NOT_DELETED: dict[str, Any] = {
     "$or": [{"__metadata__": {"$exists": False}}, {"__metadata__.deleted": False}]
@@ -637,10 +633,11 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         """Publish the documents a batch wrote, one after another.
 
         The documents of the failed and skipped IDs are left out, and with `look_up`
-        also the ones no longer stored with their write ID. A batch call must not fail
-        after its write, so a failed publish is logged, and two in a row end the loop:
-        the documents not published keep `published: False`, and `publish_pending`
-        sends them.
+        also the ones no longer stored with their write ID. As in a single write, the
+        first failed publish ends the loop and is raised: the documents not published
+        keep `published: False`, and `publish_pending` sends them. If the write failed
+        for some IDs, the failed publish is logged instead, so that the caller gets the
+        batch's error, which names the writes that were lost.
         """
         if not self._autopublish:
             return
@@ -653,26 +650,17 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if look_up:
             written = await self._still_written(written)
         # One send at a time: the mongokafka guide's "Publishing a batch" says why
-        failed_in_a_row = 0
-        for index, document in enumerate(written):
+        for document in written:
             try:
                 await self.publish_document(document)
             except Exception:
-                failed_in_a_row += 1
+                if error is None:
+                    raise
                 log.warning(
-                    "Could not publish the event for %s; leaving it to publish_pending.",
+                    "Could not publish the event for %s; leaving it and the rest of"
+                    + " the batch to publish_pending.",
                     document["_id"],
                     exc_info=True,
-                )
-            else:
-                failed_in_a_row = 0
-            remaining = len(written) - index - 1
-            if failed_in_a_row == MAX_FAILED_PUBLISHES_IN_A_ROW and remaining:
-                log.warning(
-                    "Stopped publishing the batch after %d failed events in a row;"
-                    + " leaving %d more to publish_pending.",
-                    failed_in_a_row,
-                    remaining,
                 )
                 return
 
