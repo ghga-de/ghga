@@ -2071,6 +2071,37 @@ async def test_update_many_publishes_its_write_after_a_failed_concurrent_publish
         assert is_published(mongo_kafka, example.id)
 
 
+async def test_update_many_with_failed_lookup_publishes_nothing(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that update_many raises and publishes nothing when its lookup of the
+    missing IDs fails, and that publish_pending then sends only what it wrote.
+    """
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        stored = ExampleDto()
+        await dao.insert(stored)
+        changed = stored.model_copy(update={"field_b": 7})
+
+        async def failing_lookup(*args: Any, **kwargs: Any) -> set[Any]:
+            raise RuntimeError("lookup failed")
+
+        monkeypatch.setattr(MongoDbDao, "_existing_ids", failing_lookup)
+        with pytest.raises(RuntimeError, match="lookup failed"):
+            await dao.update_many([changed, ExampleDto()])
+
+        assert publisher.published == [
+            (CHANGE_EVENT_TYPE, stored.model_dump(mode="json"))
+        ]
+        assert not is_published(mongo_kafka, changed.id)
+
+        monkeypatch.undo()
+        await dao.publish_pending()
+        assert publisher.published[1:] == [
+            (CHANGE_EVENT_TYPE, changed.model_dump(mode="json"))
+        ]
+
+
 async def test_delete_many_tombstones_live_ids(mongo_kafka: MongoKafkaFixture):
     """Test that delete_many tombstones the live resources and publishes one delete
     each in input order, and nothing for missing, deleted or repeated IDs.
