@@ -41,6 +41,7 @@ from pymongo.errors import DuplicateKeyError
 from hexkit.correlation import get_correlation_id, set_correlation_id
 from hexkit.custom_types import ID, JsonObject
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
     Dto,
     FindResult,
@@ -72,6 +73,24 @@ log = logging.getLogger(__name__)
 
 # How often a publish is repeated when newer writes keep replacing the document
 MAX_REPUBLISH_ROUNDS = 5
+
+# Matches documents that are not soft-deleted, including ones without outbox metadata
+NOT_DELETED: dict[str, Any] = {
+    "$or": [{"__metadata__": {"$exists": False}}, {"__metadata__.deleted": False}]
+}
+
+
+def _tombstone(id_: ID) -> dict[str, Any]:
+    """The document that marks a resource deleted until its delete event goes out."""
+    return {
+        "_id": id_,
+        "__metadata__": {
+            "deleted": True,
+            "published": False,
+            "correlation_id": get_correlation_id(),
+            "write_id": uuid4(),
+        },
+    }
 
 
 class ResourceDeletedError(RuntimeError):
@@ -345,13 +364,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         correlation_id = get_correlation_id()
         document = self._dao._dto_to_document(dto)
         document.setdefault("__metadata__", {})["correlation_id"] = correlation_id
-        existing_filter: dict[str, Any] = {
-            "_id": document["_id"],
-            "$or": [
-                {"__metadata__": {"$exists": False}},
-                {"__metadata__.deleted": False},
-            ],
-        }
+        existing_filter: dict[str, Any] = {"_id": document["_id"], **NOT_DELETED}
         doc_filter = existing_filter
 
         # If precondition is supplied, validate it and add it to the doc_filter
@@ -394,27 +407,10 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         Raises:
             ResourceNotFoundError: when resource with the specified id_ was not found
         """
-        correlation_id = get_correlation_id()
-        write_id = uuid4()
-        document = {
-            "_id": id_,
-            "__metadata__": {
-                "deleted": True,
-                "published": False,
-                "correlation_id": correlation_id,
-                "write_id": write_id,
-            },
-        }
+        document = _tombstone(id_)
         with translate_pymongo_errors():
             result = await self._collection.replace_one(
-                {
-                    "_id": document["_id"],
-                    "$or": [
-                        {"__metadata__": {"$exists": False}},
-                        {"__metadata__.deleted": False},
-                    ],
-                },
-                document,
+                {"_id": document["_id"], **NOT_DELETED}, document
             )
         if result.matched_count == 0:
             raise ResourceNotFoundError(id_=id_)
@@ -520,17 +516,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         # Ensure we don't retrieve deleted docs. Documents lacking outbox metadata are
         # treated as valid (matching update/delete), and the $and wrapper avoids
         # clobbering any caller-supplied $or in the filter.
-        filter_without_deleted = {
-            "$and": [
-                dict(filter_),
-                {
-                    "$or": [
-                        {"__metadata__": {"$exists": False}},
-                        {"__metadata__.deleted": False},
-                    ]
-                },
-            ]
-        }
+        filter_without_deleted = {"$and": [dict(filter_), NOT_DELETED]}
 
         # Convert generic sort spec to MongoDB-specific sort spec
         mongodb_sort: list[tuple[str, int]] = []
@@ -611,27 +597,128 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if self._autopublish:
             await self.publish_document(document)
 
+    async def _publish_written(
+        self,
+        documents: list[dict[str, Any]],
+        error: BatchOperationError | None,
+    ) -> None:
+        """Publish the documents a batch wrote, one after another.
+
+        The documents of the failed and skipped IDs are left out. As in a single write,
+        the first failed publish ends the loop and is raised: the documents not
+        published keep `published: False`, and `publish_pending` sends them. If the
+        write failed for some IDs, the failed publish is logged instead, so that the
+        caller gets the batch's error, which names the writes that were lost.
+        """
+        if not self._autopublish:
+            return
+        unwritten: set[ID] = set()
+        if error:
+            unwritten = set(error.errors) | set(error.not_attempted)
+        written = [
+            document for document in documents if document["_id"] not in unwritten
+        ]
+        # One send at a time: the mongokafka guide's "Publishing a batch" says why
+        for document in written:
+            try:
+                await self.publish_document(document)
+            except Exception:
+                if error is None:
+                    raise
+                log.warning(
+                    "Could not publish the event for %s; leaving it and the rest of"
+                    + " the batch to publish_pending.",
+                    document["_id"],
+                    exc_info=True,
+                )
+                return
+
+    async def _write_and_publish(
+        self,
+        dtos: Collection[Dto],
+        write: Callable[[list[dict[str, Any]]], Awaitable[None]],
+    ) -> None:
+        """Write a batch with `write`, then publish each document it wrote.
+
+        A `BatchOperationError` from the write is raised after the documents it does
+        not name are published. An empty batch writes and publishes nothing.
+        """
+        if not dtos:
+            return
+        documents = self._dao._batch_documents(dtos)
+        try:
+            await write(documents)
+        except BatchOperationError as error:
+            await self._publish_written(documents, error)
+            raise
+        await self._publish_written(documents, None)
+
     async def insert_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
     ) -> None:
-        """Not implemented: the DAO publisher does not support batch writes yet."""
-        raise NotImplementedError
+        """Create several resources in one call and publish each one written.
+
+        An ID that a publisher deletion left as a tombstone counts as existing, as in
+        `insert`; `upsert_many` recreates it. Please see the `Dao` protocol for the
+        arguments and the errors.
+        """
+        write = partial(self._dao._insert_documents, ordered=ordered)
+        await self._write_and_publish(dtos, write)
 
     async def upsert_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
     ) -> None:
-        """Not implemented: the DAO publisher does not support batch writes yet."""
-        raise NotImplementedError
+        """Create or replace several resources in one call and publish each one written.
+
+        A tombstone left by a publisher deletion is replaced, as in `upsert`. Please see
+        the `Dao` protocol for the arguments and the errors.
+        """
+        write = partial(self._dao._upsert_documents, ordered=ordered)
+        await self._write_and_publish(dtos, write)
 
     async def update_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
     ) -> None:
-        """Not implemented: the DAO publisher does not support batch writes yet."""
-        raise NotImplementedError
+        """Replace several existing resources in one call and publish each one written.
+
+        Tombstones stay as they are, and their IDs count as missing, as in `update`.
+        Every ID not reported missing or failed gets an event. A resource that another
+        writer creates between the write and the lookup of the missing IDs counts as
+        written: it gets the batch's event, which was never stored, and then its stored
+        state. Please see the `Dao` protocol for the arguments and the errors.
+        """
+        write = partial(self._dao._replace_existing, extra=NOT_DELETED, ordered=ordered)
+        await self._write_and_publish(dtos, write)
 
     async def delete_many(self, ids: Collection[ID]) -> None:
-        """Not implemented: the DAO publisher does not support batch writes yet."""
-        raise NotImplementedError
+        """Tombstone the live resources among the IDs and publish a delete for each.
+
+        Missing and already deleted IDs are ignored and publish nothing, and an ID given
+        more than once is deleted once. The bulk write does not say which documents it
+        matched, so the live IDs are looked up before it. A resource that another writer
+        deletes between the lookup and the write gets the batch's delete event, and then
+        its stored state. Please see the `Dao` protocol for the other errors.
+
+        Raises:
+            BatchOperationError:
+                when some resources could not be deleted. Each failed ID maps to
+                `DbTimeoutError` if its write timed out, or to another `DaoError`.
+        """
+        if isinstance(ids, str):
+            raise TypeError("delete_many takes a collection of IDs, not a single ID")
+        unique_ids = list(dict.fromkeys(ids))
+        if not unique_ids:
+            return
+        live = await self._dao._existing_ids(unique_ids, NOT_DELETED)
+        tombstones = [_tombstone(id_) for id_ in unique_ids if id_ in live]
+        if not tombstones:
+            return
+        _, failures = await self._dao._bulk_replace(
+            tombstones, NOT_DELETED, upsert=False, ordered=False
+        )
+        await self._publish_written(tombstones, failures)
+        if failures:
+            raise failures
 
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
