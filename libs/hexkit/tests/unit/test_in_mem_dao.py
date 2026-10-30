@@ -1066,3 +1066,17 @@ async def test_delete_many():
     await dao.delete_many(["Wrench", "Unknown", "Hammer", "Wrench"])
 
     assert await stored_titles(dao) == ["Candle"]
+
+
+async def test_delete_many_rejects_a_single_id():
+    """Test that delete_many rejects one string ID instead of deleting the items
+    named by its characters.
+    """
+    dao = DaoClass()
+    for item in (WRENCH, CANDLE, HAMMER):
+        await dao.insert(item)
+
+    with pytest.raises(TypeError):
+        await dao.delete_many("Wrench")
+
+    assert await stored_titles(dao) == ["Wrench", "Candle", "Hammer"]

@@ -188,6 +188,7 @@ Every batch also follows these rules:
 - No two DTOs in a batch may share an ID.
   Such a batch raises `ValueError` before anything is written.
   `delete_many` deletes a repeated ID once instead.
+- `delete_many` rejects a single string with `TypeError`, since a string is also a collection of its characters.
 - An empty batch writes nothing and raises nothing.
 
 `update_many` names the missing IDs with one lookup after its write.

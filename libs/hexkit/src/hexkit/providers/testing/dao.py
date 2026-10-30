@@ -682,6 +682,8 @@ class BaseInMemDao(Generic[DTO]):
 
     async def delete_many(self, ids: Collection[ID]) -> None:
         """Delete resources by ID, ignoring the ones that do not exist."""
+        if isinstance(ids, str):
+            raise TypeError("delete_many takes a collection of IDs, not a single ID")
         for id_ in dict.fromkeys(ids):
             with suppress(ResourceNotFoundError):
                 await self.delete(id_)

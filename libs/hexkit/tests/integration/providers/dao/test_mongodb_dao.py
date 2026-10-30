@@ -1265,3 +1265,22 @@ async def test_dao_delete_many(mongodb: MongoDbFixture):
         for dto in (gone_1, gone_2):
             with pytest.raises(ResourceNotFoundError):
                 await dao.get_by_id(dto.id)
+
+
+async def test_dao_delete_many_rejects_a_single_id(mongodb: MongoDbFixture):
+    """Test that delete_many rejects one string ID instead of deleting the resources
+    named by its characters.
+    """
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDtoWithStrID, id_field="custom_id"
+    )
+    named = ExampleDtoWithStrID(custom_id="ab")
+    by_character = ExampleDtoWithStrID(custom_id="a")
+    for dto in (named, by_character):
+        await dao.insert(dto)
+
+    with pytest.raises(TypeError):
+        await dao.delete_many("ab")
+
+    for dto in (named, by_character):
+        assert await dao.get_by_id(dto.custom_id) == dto
