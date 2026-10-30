@@ -633,6 +633,26 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 )
                 return
 
+    async def _write_and_publish(
+        self,
+        dtos: Collection[Dto],
+        write: Callable[[list[dict[str, Any]]], Awaitable[None]],
+    ) -> None:
+        """Write a batch with `write`, then publish each document it wrote.
+
+        A `BatchOperationError` from the write is raised after the documents it does
+        not name are published. An empty batch writes and publishes nothing.
+        """
+        if not dtos:
+            return
+        documents = self._dao._batch_documents(dtos)
+        try:
+            await write(documents)
+        except BatchOperationError as error:
+            await self._publish_written(documents, error)
+            raise
+        await self._publish_written(documents, None)
+
     async def insert_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
     ) -> None:
@@ -642,15 +662,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         `insert`; `upsert_many` recreates it. Please see the `Dao` protocol for the
         arguments and the errors.
         """
-        if not dtos:
-            return
-        documents = self._dao._batch_documents(dtos)
-        try:
-            await self._dao._insert_documents(documents, ordered=ordered)
-        except BatchOperationError as error:
-            await self._publish_written(documents, error)
-            raise
-        await self._publish_written(documents, None)
+        write = partial(self._dao._insert_documents, ordered=ordered)
+        await self._write_and_publish(dtos, write)
 
     async def upsert_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
@@ -660,15 +673,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         A tombstone left by a publisher deletion is replaced, as in `upsert`. Please see
         the `Dao` protocol for the arguments and the errors.
         """
-        if not dtos:
-            return
-        documents = self._dao._batch_documents(dtos)
-        try:
-            await self._dao._upsert_documents(documents, ordered=ordered)
-        except BatchOperationError as error:
-            await self._publish_written(documents, error)
-            raise
-        await self._publish_written(documents, None)
+        write = partial(self._dao._upsert_documents, ordered=ordered)
+        await self._write_and_publish(dtos, write)
 
     async def update_many(
         self, dtos: Collection[Dto], *, ordered: bool = False
@@ -681,13 +687,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         written: it gets the batch's event, which was never stored, and then its stored
         state. Please see the `Dao` protocol for the arguments and the errors.
         """
-        documents = self._dao._batch_documents(dtos)
-        try:
-            await self._dao._replace_existing(documents, NOT_DELETED, ordered=ordered)
-        except BatchOperationError as error:
-            await self._publish_written(documents, error)
-            raise
-        await self._publish_written(documents, None)
+        write = partial(self._dao._replace_existing, extra=NOT_DELETED, ordered=ordered)
+        await self._write_and_publish(dtos, write)
 
     async def delete_many(self, ids: Collection[ID]) -> None:
         """Tombstone the live resources among the IDs and publish a delete for each.

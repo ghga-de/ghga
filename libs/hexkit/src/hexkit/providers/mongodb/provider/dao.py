@@ -675,8 +675,6 @@ class MongoDbDao(Generic[Dto]):
         Raises:
             BatchOperationError: when some documents were missing or failed.
         """
-        if not documents:
-            return
         matched, failures = await self._bulk_replace(
             documents, extra, upsert=False, ordered=ordered
         )
