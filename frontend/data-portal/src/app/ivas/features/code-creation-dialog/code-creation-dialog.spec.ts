@@ -60,6 +60,11 @@ describe('CodeCreationDialog', () => {
     expect(content.textContent).toContain('doe@home.org');
   });
 
+  it('should label the email of the user as the LS Login email', () => {
+    const row = screen.getByText('doe@home.org').closest('tr');
+    expect(row).toHaveTextContent(/^\s*LS Login email:\s*doe@home\.org\s*$/);
+  });
+
   it('should display the IVA type', () => {
     const compiled = fixture.nativeElement;
     const content = compiled.querySelector('.mat-mdc-dialog-content');

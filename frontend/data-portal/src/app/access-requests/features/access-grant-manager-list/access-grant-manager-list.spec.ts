@@ -41,6 +41,12 @@ describe('AccessGrantManagerList', () => {
     ).toHaveAttribute('href', `/dataset/${accessGrants[0].dataset_id}`);
   });
 
+  it('should name the LS Login email in the grantee column header', () => {
+    expect(
+      screen.getByRole('columnheader', { name: 'Grantee (LS Login email)' }),
+    ).toBeVisible();
+  });
+
   it('should navigate to the details of a grant', async () => {
     const [details] = screen.getAllByRole('button', { name: 'View user details' });
     await userEvent.click(details);

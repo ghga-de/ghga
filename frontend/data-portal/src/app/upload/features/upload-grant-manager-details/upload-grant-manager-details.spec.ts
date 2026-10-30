@@ -94,6 +94,13 @@ describe('UploadGrantManagerDetails', () => {
     ).toHaveAttribute('href', `/user-manager/${testGrant.user_id}`);
   });
 
+  it('should label the grantee email as the LS Login email', () => {
+    const email = screen.getByText(testGrant.user_email);
+    expect(email.closest('p')).toHaveTextContent(
+      new RegExp(`LS Login email:\\s*${testGrant.user_email}`),
+    );
+  });
+
   it('should resolve the upload box', () => {
     expect(component.box()).toEqual(testBox);
     expect(screen.getByRole('link', { name: testBox.title })).toHaveAttribute(

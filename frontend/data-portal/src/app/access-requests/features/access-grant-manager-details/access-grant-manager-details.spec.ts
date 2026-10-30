@@ -47,6 +47,13 @@ describe('AccessGrantManagerDetails', () => {
     ).toBeVisible();
   });
 
+  it('should label the grantee email as the LS Login email', () => {
+    const email = screen.getByText(accessGrants[0].user_email);
+    expect(email.closest('p')).toHaveTextContent(
+      new RegExp(`LS Login email:\\s*${accessGrants[0].user_email}`),
+    );
+  });
+
   it('should show an error message when the IVA could not be loaded', async () => {
     expect(screen.queryByText(/The IVA could not be loaded/)).toBeNull();
 

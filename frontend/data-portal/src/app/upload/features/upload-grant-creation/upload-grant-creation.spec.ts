@@ -222,8 +222,12 @@ describe('UploadGrantCreation', () => {
         expect(screen.getByText('Dr. John Doe')).toBeVisible();
       });
 
-      it('should display the selected user email', () => {
-        expect(screen.getByText('doe@home.org')).toBeVisible();
+      it('should display the selected user email as the LS Login email', () => {
+        const email = screen.getByText('doe@home.org');
+        expect(email).toBeVisible();
+        expect(email.parentElement).toHaveTextContent(
+          /^\s*LS Login email:\s*doe@home\.org/,
+        );
       });
 
       it('should show the IVA selection card', () => {
