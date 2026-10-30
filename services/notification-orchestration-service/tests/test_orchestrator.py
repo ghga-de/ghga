@@ -51,11 +51,7 @@ def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str
             notifications.ACCESS_REQUEST_CREATED_TO_DS,
             {
                 "full_user_name": TEST_USER.name,
-                "requester_emails": (
-                    f"Contact email for this request: {TEST_USER.email}\n"
-                    f"LS Login email (preferred address in LS Login): {TEST_USER.email}"
-                    f"\n\n{notifications.SAME_EMAILS_NOTE}"
-                ),
+                "requester_emails": f"Email address of the user: {TEST_USER.email}",
                 "dataset_id": DATASET_ID,
                 "dataset_title": "A Great Dataset",
                 "dac_alias": "Some DAC",

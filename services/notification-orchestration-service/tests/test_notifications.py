@@ -15,37 +15,28 @@
 
 """Tests for the content of the notifications."""
 
-from nos.core.notifications import (
-    DIFFERENT_EMAILS_NOTE,
-    SAME_EMAILS_NOTE,
-    requester_emails,
-)
-
-LS_LOGIN_LINE = "LS Login email (preferred address in LS Login): doe@home.org"
+from nos.core.notifications import DIFFERENT_EMAILS_NOTE, requester_emails
 
 
 def test_requester_emails_different():
-    """Test that differing emails are both shown with an explanation."""
+    """Test that differing emails are both named, with an explanation."""
     text = requester_emails(
         contact_email="doe@institute.org", ls_login_email="doe@home.org"
     )
     assert text == (
         "Contact email for this request: doe@institute.org\n"
-        f"{LS_LOGIN_LINE}\n\n{DIFFERENT_EMAILS_NOTE}"
+        "LS Login email address of the user: doe@home.org\n\n"
+        f"{DIFFERENT_EMAILS_NOTE}"
     )
 
 
 def test_requester_emails_same_ignoring_case():
-    """Test that emails differing only in case count as the same."""
+    """Test that emails differing only in case are shown as one email."""
     text = requester_emails(contact_email="Doe@Home.org", ls_login_email="doe@home.org")
-    assert text == (
-        "Contact email for this request: Doe@Home.org\n"
-        f"{LS_LOGIN_LINE}\n\n{SAME_EMAILS_NOTE}"
-    )
+    assert text == "Email address of the user: Doe@Home.org"
 
 
 def test_requester_emails_without_contact_email():
-    """Test that only the LS Login email is shown without a contact email."""
-    assert requester_emails(contact_email=None, ls_login_email="doe@home.org") == (
-        LS_LOGIN_LINE
-    )
+    """Test that the LS Login email is shown as the only email without a contact email."""
+    text = requester_emails(contact_email=None, ls_login_email="doe@home.org")
+    assert text == "Email address of the user: doe@home.org"

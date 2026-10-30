@@ -67,35 +67,29 @@ You should be contacted by one of our Data Stewards within the next three workin
 """,
 )
 
-LS_LOGIN_EMAIL_LINE = "LS Login email (preferred address in LS Login): {ls_login_email}"
+EMAIL_LINE = "Email address of the user: {email}"
 
 CONTACT_EMAIL_LINE = "Contact email for this request: {contact_email}"
 
-SAME_EMAILS_NOTE = "The requester uses their LS Login email as contact email."
+LS_LOGIN_EMAIL_LINE = "LS Login email address of the user: {ls_login_email}"
 
-DIFFERENT_EMAILS_NOTE = """The two emails differ.
-The requester entered the contact email for this request. It should belong to the
-institution the request is made for, but it has not been verified.
-The LS Login email belongs to the requester's account, but can be a private address
-or one from another institution."""
+DIFFERENT_EMAILS_NOTE = """The requester entered the contact email for this request.
+It should belong to the institution the request is made for, but it has not been
+verified. The LS Login email belongs to the requester's account, but can be a private
+address or one from another institution."""
 
 
 def requester_emails(*, contact_email: str | None, ls_login_email: str) -> str:
     """Describe the emails of a requester for the data steward notification.
 
-    Without a contact email, as in requests published before the contact email was
-    part of the event, only the LS Login email is shown.
+    The two emails are told apart only when they differ. Requests published before
+    the contact email was part of the event have only the LS Login email.
     """
-    ls_login_line = LS_LOGIN_EMAIL_LINE.format(ls_login_email=ls_login_email)
-    if not contact_email:
-        return ls_login_line
-    note = (
-        SAME_EMAILS_NOTE
-        if contact_email.lower() == ls_login_email.lower()
-        else DIFFERENT_EMAILS_NOTE
-    )
+    if not contact_email or contact_email.lower() == ls_login_email.lower():
+        return EMAIL_LINE.format(email=contact_email or ls_login_email)
     contact_line = CONTACT_EMAIL_LINE.format(contact_email=contact_email)
-    return f"{contact_line}\n{ls_login_line}\n\n{note}"
+    ls_login_line = LS_LOGIN_EMAIL_LINE.format(ls_login_email=ls_login_email)
+    return f"{contact_line}\n{ls_login_line}\n\n{DIFFERENT_EMAILS_NOTE}"
 
 
 ACCESS_REQUEST_CREATED_TO_DS = Notification(
@@ -178,7 +172,7 @@ IVA_CODE_REQUESTED_TO_DS = Notification(
     """
 {full_user_name} has requested an IVA verification code.
 
-The user's LS Login email (preferred address in LS Login) is: {email}.
+LS Login email address of the user: {email}
 """,
 )
 
@@ -209,7 +203,7 @@ IVA_UNVERIFIED_TO_DS = Notification(
 The '{type}' IVA of {full_user_name} has been marked as unverified, due to too
 many failed verification attempts.
 
-The user's LS Login email (preferred address in LS Login) is: {email}.
+LS Login email address of the user: {email}
 """,
 )
 
