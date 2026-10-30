@@ -277,6 +277,9 @@ describe('UploadBoxManagerDetail', () => {
       uploadBoxService.setBoxGrants(uploadGrants);
       await fixture.whenStable();
       expect(screen.getAllByText('John Doe (doe@home.org)')).toHaveLength(3);
+      expect(
+        screen.getByRole('columnheader', { name: 'Grantee (LS Login email)' }),
+      ).toBeVisible();
     });
 
     it('should mark a grant as active while today is within its validity period', async () => {
