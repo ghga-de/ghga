@@ -2127,6 +2127,33 @@ async def test_delete_many_tombstones_live_ids(mongo_kafka: MongoKafkaFixture):
         assert collection.find_one({"_id": missing}) is None
 
 
+async def test_delete_many_rejects_a_single_id(mongo_kafka: MongoKafkaFixture):
+    """Test that delete_many rejects one string ID instead of tombstoning the
+    resources named by its characters and publishing their deletion.
+    """
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDtoWithStrID,
+            id_field="custom_id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+        )
+        named = ExampleDtoWithStrID(custom_id="ab")
+        by_character = ExampleDtoWithStrID(custom_id="a")
+        for dto in (named, by_character):
+            await dao.insert(dto)
+
+        async with mongo_kafka.kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(TypeError):
+                await dao.delete_many("ab")
+
+        for dto in (named, by_character):
+            assert await dao.get_by_id(dto.custom_id) == dto
+
+
 @pytest.mark.parametrize("recreate", [False, True])
 async def test_delete_many_republishes_resource_deleted_meanwhile(
     recreate: bool, mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch

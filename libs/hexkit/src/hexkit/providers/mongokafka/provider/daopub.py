@@ -704,6 +704,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when some resources could not be deleted. Each failed ID maps to
                 `DbTimeoutError` if its write timed out, or to another `DaoError`.
         """
+        if isinstance(ids, str):
+            raise TypeError("delete_many takes a collection of IDs, not a single ID")
         unique_ids = list(dict.fromkeys(ids))
         if not unique_ids:
             return
