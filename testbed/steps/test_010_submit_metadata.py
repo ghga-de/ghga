@@ -30,6 +30,29 @@ from .utils import is_legacy_accession, read_submission
 scenarios("../features/010_submit_metadata.feature")
 
 
+def run_dskit_metadata(
+    *args: str | Path, timeout: int = 600
+) -> subprocess.CompletedProcess:
+    """Run a 'ghga-datasteward-kit metadata' command with the given arguments,
+    print what it reported, and return the finished process.
+    """
+    completed = subprocess.run(  # nosec B607, B603
+        ["ghga-datasteward-kit", "metadata", *args],
+        capture_output=True,
+        check=False,
+        encoding="utf-8",
+        text=True,
+        timeout=timeout,
+    )
+
+    if completed.stdout:
+        print(completed.stdout)
+    if "ERROR" in completed.stderr or completed.returncode:
+        print(completed.stderr)
+
+    return completed
+
+
 def call_data_steward_kit_submit(
     metadata_path: Path,
     metadata_config_path: Path,
@@ -40,31 +63,18 @@ def call_data_steward_kit_submit(
     """Call cli command 'ghga-datasteward-kit metadata submit'
     to submit metadata
     """
-    completed_submit = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "metadata",
-            "submit",
-            "--submission-title",
-            submission_title,
-            "--submission-description",
-            submission_description,
-            "--metadata-path",
-            metadata_path,
-            "--config-path",
-            metadata_config_path,
-        ],
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-        text=True,
+    completed_submit = run_dskit_metadata(
+        "submit",
+        "--submission-title",
+        submission_title,
+        "--submission-description",
+        submission_description,
+        "--metadata-path",
+        metadata_path,
+        "--config-path",
+        metadata_config_path,
         timeout=timeout,
     )
-
-    if completed_submit.stdout:
-        print(completed_submit.stdout)
-    if "ERROR" in completed_submit.stderr or completed_submit.returncode:
-        print(completed_submit.stderr)
 
     assert not completed_submit.stdout
     assert "ERROR" not in completed_submit.stderr
@@ -96,42 +106,14 @@ def seed_legacy_submission(fixtures: JointFixture):
     )
 
 
-def call_data_steward_kit_migrate(
-    metadata_config_path: Path, timeout: int = 600
-) -> subprocess.CompletedProcess:
-    """Call cli command 'ghga-datasteward-kit metadata migrate-accession-store'
-    to convert an accession store from before study PIDs, and return the finished
-    process
-    """
-    completed_migrate = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "metadata",
-            "migrate-accession-store",
-            "--config-path",
-            metadata_config_path,
-        ],
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-        text=True,
-        timeout=timeout,
-    )
-
-    if completed_migrate.stdout:
-        print(completed_migrate.stdout)
-    if "ERROR" in completed_migrate.stderr or completed_migrate.returncode:
-        print(completed_migrate.stderr)
-
-    return completed_migrate
-
-
 @when("the accession store is migrated")
 def migrate_accession_store(fixtures: JointFixture):
     # the config names the store relative to the submission registry
     with chdir(fixtures.dsk.config.submission_registry):
-        completed_migrate = call_data_steward_kit_migrate(
-            metadata_config_path=fixtures.dsk.config.metadata_config_path
+        completed_migrate = run_dskit_metadata(
+            "migrate-accession-store",
+            "--config-path",
+            fixtures.dsk.config.metadata_config_path,
         )
 
     assert not completed_migrate.returncode, completed_migrate.stderr
@@ -164,42 +146,6 @@ def submit_metadata(fixtures: JointFixture):
         fixtures.state.set_state(f"submission id {metadata_json_path.stem}", new_id)
 
 
-def call_data_steward_kit_amend(
-    submission_id: str,
-    metadata_path: Path,
-    metadata_config_path: Path,
-    timeout: int = 600,
-) -> subprocess.CompletedProcess:
-    """Call cli command 'ghga-datasteward-kit metadata amend'
-    to amend an already accessioned submission, and return the finished process
-    """
-    completed_amend = subprocess.run(  # nosec B607, B603
-        [
-            "ghga-datasteward-kit",
-            "metadata",
-            "amend",
-            "--submission-id",
-            submission_id,
-            "--metadata-path",
-            metadata_path,
-            "--config-path",
-            metadata_config_path,
-        ],
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-        text=True,
-        timeout=timeout,
-    )
-
-    if completed_amend.stdout:
-        print(completed_amend.stdout)
-    if "ERROR" in completed_amend.stderr or completed_amend.returncode:
-        print(completed_amend.stderr)
-
-    return completed_amend
-
-
 def amend_submission(
     fixtures: JointFixture, *, submission_id: str, metadata_path: Path
 ) -> dict:
@@ -209,10 +155,14 @@ def amend_submission(
     accessions_before = read_submission(fixtures, submission_id)["accession_map"]
 
     with chdir(fixtures.dsk.config.submission_registry):
-        completed_amend = call_data_steward_kit_amend(
-            submission_id=submission_id,
-            metadata_path=metadata_path,
-            metadata_config_path=fixtures.dsk.config.metadata_config_path,
+        completed_amend = run_dskit_metadata(
+            "amend",
+            "--submission-id",
+            submission_id,
+            "--metadata-path",
+            metadata_path,
+            "--config-path",
+            fixtures.dsk.config.metadata_config_path,
         )
 
     return {
@@ -295,6 +245,10 @@ def added_file_accessioned(amendment: dict, fixtures: JointFixture):
     }
 
     assert set(added) == {("research_data_files", "RESEARCH_DATA_FILE_X2")}
+    content = amendment["submission_after"]["content"]
+    assert "RESEARCH_DATA_FILE_X2" in {
+        file_["alias"] for file_ in content["research_data_files"]
+    }
     [accession] = added.values()
     assert accession.startswith("GHGAF") and is_legacy_accession(accession)
     with open(fixtures.dsk.config.accession_store, encoding="utf-8") as store_file:

@@ -60,7 +60,7 @@ def is_alias_accession(accession: str) -> bool:
 
 def is_legacy_accession(accession: str) -> bool:
     """Tell whether the accession is a flat one from before study PIDs."""
-    # spelled out instead of imported from dskit, so a drift there fails the test
+    # pins the 14 digits dskit mints; service-commons' LEGACY_* patterns are looser
     return re.fullmatch(r"GHGA[A-Z][0-9]{14}", accession) is not None
 
 
