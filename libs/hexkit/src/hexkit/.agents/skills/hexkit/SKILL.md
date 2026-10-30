@@ -53,7 +53,7 @@ Look at the stored data, not the event, when choosing between the outbox and the
 - Bind each DAO to a frozen Pydantic DTO that carries its own ID (`UUID4Field()` generates one); change a resource with `model_copy(update=...)` and write it back.
 - `insert` fails on an existing ID, `update` and `delete` on a missing one; use `upsert` only where create-or-replace is meant.
 - `insert_many`, `update_many` and `upsert_many` write a batch in one call; they are not atomic, and their `BatchOperationError` maps each failed ID to the error that `insert`, `update` or `upsert` raises.
-  `delete_many` ignores unknown IDs, and its `BatchOperationError` names the IDs it could not delete.
+  `delete_many` ignores unknown IDs.
 - Filter with `filter_=`; the old `mapping=` still works with a `DeprecationWarning` and goes in hexkit 11.
 - `find_all` is not awaited: it returns a lazy `FindResult` with `to_list()` and `total_count()`.
   Always pass `sort` with `skip` and `limit`.
@@ -86,6 +86,7 @@ Look at the stored data, not the event, when choosing between the outbox and the
   A consumer's copy in its own database is a different collection and may use any DAO ([One DAO per collection](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/mongokafka.md#one-dao-per-collection)).
 - A batch publishes its events one by one after its write and raises at the first failed one, as a single write does; `publish_pending()` sends what is left.
   When the write failed for some IDs, the batch logs the failed publish and raises its `BatchOperationError` instead.
+  The publisher's `delete_many` raises one too, for the IDs it could not tombstone.
   Publishing takes milliseconds per resource, so expect seconds for thousands ([Publishing a batch](https://ghga-de.github.io/ghga/hexkit/user-guide/providers/mongokafka.md#publishing-a-batch)).
 - Offer `publish_pending()` and `republish()` as a command, such as `publish-events`, run as a job: it publishes what failed to publish, and fills a new consumer.
 - On the consuming side, implement `changed()` as an upsert and let `deleted()` accept a resource that is already gone.

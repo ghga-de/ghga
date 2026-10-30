@@ -107,6 +107,7 @@ Migrations that change documents before the service starts are the exception; th
 The batch operations publish one event per resource they wrote, after their write, as the single-resource methods do.
 `insert_many` treats a tombstoned ID as taken, as `insert` does, and `upsert_many` recreates a tombstoned resource, as `upsert` does.
 `update_many` leaves tombstones alone and reports their IDs as missing, as `update` does, and `delete_many` tombstones only the resources that are not deleted yet.
+When some tombstones cannot be written, `delete_many` raises a `BatchOperationError` that maps each of those IDs to `DbTimeoutError` if its write timed out, or to another `DaoError`.
 
 A batch publishes its events one after another, each the way a single write does: it sends the event, then marks the write as published by its write ID, or publishes the current state again if a newer write replaced it.
 A bulk write reports only how many documents it matched, not which: `update_many` looks up the missing IDs when fewer matched than it sent, and `delete_many` looks up the live IDs before its write.
