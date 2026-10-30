@@ -31,6 +31,9 @@ from tests.fixtures.utils import ACCESS_REQUEST_ID, DATASET_ID, make_access_requ
 
 pytestmark = pytest.mark.asyncio()
 
+# Differs from the LS Login email, so that both must reach the data steward notification
+CONTACT_EMAIL = "doe@institute.org"
+
 
 def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str, Any]:
     """Succinctly create the payload for an IVA state change event."""
@@ -51,7 +54,9 @@ def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str
             notifications.ACCESS_REQUEST_CREATED_TO_DS,
             {
                 "full_user_name": TEST_USER.name,
-                "email": TEST_USER.email,
+                "requester_emails": notifications.requester_emails(
+                    contact_email=CONTACT_EMAIL, ls_login_email=TEST_USER.email
+                ),
                 "dataset_id": DATASET_ID,
                 "dataset_title": "A Great Dataset",
                 "dac_alias": "Some DAC",
@@ -134,7 +139,9 @@ async def test_access_request(
     ]
 
     # Create the kafka event that would be published by the access request service
-    payload = make_access_request(test_user.user_id, status).model_dump()
+    payload = make_access_request(
+        test_user.user_id, status, contact_email=CONTACT_EMAIL
+    ).model_dump()
     await joint_fixture.kafka.publish_event(
         payload=payload,
         type_="upserted",
