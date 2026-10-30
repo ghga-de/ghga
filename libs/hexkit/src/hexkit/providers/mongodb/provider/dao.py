@@ -734,8 +734,6 @@ class MongoDbDao(Generic[Dto]):
             BatchOperationError: when some documents were missing or failed.
             DaoError: when the lookup failed; a note names the batch's own failures.
         """
-        if not documents:
-            return
         matched, failures = await self._bulk_replace(
             documents, ids, extra, upsert=False, ordered=ordered
         )
