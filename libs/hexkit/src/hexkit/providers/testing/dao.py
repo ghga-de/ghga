@@ -659,10 +659,7 @@ class BaseInMemDao(Generic[DTO]):
 
         Without unique indexes an upsert cannot fail here, so `ordered` changes nothing.
         """
-        dtos = list(dtos)
-        ensure_distinct_ids(getattr(dto, self._id_field) for dto in dtos)
-        for dto in dtos:
-            await self.upsert(dto)
+        await self._write_each(dtos, self.upsert, ordered=False)
 
 
 def new_mock_dao_class(
