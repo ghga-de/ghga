@@ -20,37 +20,13 @@ import glob
 import json
 import os
 import shutil
-import subprocess
 from contextlib import chdir
 from pathlib import Path
 
 from .conftest import JointFixture, given, parse, scenarios, then, when
-from .utils import is_legacy_accession, read_submission
+from .utils import is_legacy_accession, read_submission, run_dskit
 
 scenarios("../features/010_submit_metadata.feature")
-
-
-def run_dskit_metadata(
-    *args: str | Path, timeout: int = 600
-) -> subprocess.CompletedProcess:
-    """Run a 'ghga-datasteward-kit metadata' command with the given arguments,
-    print what it reported, and return the finished process.
-    """
-    completed = subprocess.run(  # nosec B607, B603
-        ["ghga-datasteward-kit", "metadata", *args],
-        capture_output=True,
-        check=False,
-        encoding="utf-8",
-        text=True,
-        timeout=timeout,
-    )
-
-    if completed.stdout:
-        print(completed.stdout)
-    if "ERROR" in completed.stderr or completed.returncode:
-        print(completed.stderr)
-
-    return completed
 
 
 def call_data_steward_kit_submit(
@@ -63,7 +39,8 @@ def call_data_steward_kit_submit(
     """Call cli command 'ghga-datasteward-kit metadata submit'
     to submit metadata
     """
-    completed_submit = run_dskit_metadata(
+    completed_submit = run_dskit(
+        "metadata",
         "submit",
         "--submission-title",
         submission_title,
@@ -110,7 +87,8 @@ def seed_legacy_submission(fixtures: JointFixture):
 def migrate_accession_store(fixtures: JointFixture):
     # the config names the store relative to the submission registry
     with chdir(fixtures.dsk.config.submission_registry):
-        completed_migrate = run_dskit_metadata(
+        completed_migrate = run_dskit(
+            "metadata",
             "migrate-accession-store",
             "--config-path",
             fixtures.dsk.config.metadata_config_path,
@@ -126,7 +104,7 @@ def accession_store_migrated(fixtures: JointFixture):
 
     with open(config.accession_store, encoding="utf-8") as store_file:
         assert json.load(store_file) == {"legacy": frozen_store.split(), "years": {}}
-    backup = config.accession_store.with_name("accession_store.bak")
+    backup = config.accession_store.with_name(f"{config.accession_store.name}.bak")
     assert backup.read_text(encoding="utf-8") == frozen_store
 
 
@@ -149,13 +127,14 @@ def submit_metadata(fixtures: JointFixture):
 def amend_submission(
     fixtures: JointFixture, *, submission_id: str, metadata_path: Path
 ) -> dict:
-    """Amend the submission with the metadata, and return the finished process
-    with the accession map before and the submission after the amendment.
+    """Amend the submission with the metadata, and return its ID, the finished
+    process, the accession map before and the submission after the amendment.
     """
     accessions_before = read_submission(fixtures, submission_id)["accession_map"]
 
     with chdir(fixtures.dsk.config.submission_registry):
-        completed_amend = run_dskit_metadata(
+        completed_amend = run_dskit(
+            "metadata",
             "amend",
             "--submission-id",
             submission_id,
@@ -251,8 +230,12 @@ def added_file_accessioned(amendment: dict, fixtures: JointFixture):
     }
     [accession] = added.values()
     assert accession.startswith("GHGAF") and is_legacy_accession(accession)
-    with open(fixtures.dsk.config.accession_store, encoding="utf-8") as store_file:
-        assert accession in json.load(store_file)["legacy"]
+    # the frozen accessions must survive too, or a later amend could mint a used one
+    config = fixtures.dsk.config
+    frozen = config.legacy_accession_store_path.read_text(encoding="utf-8").split()
+    with open(config.accession_store, encoding="utf-8") as store_file:
+        legacy = set(json.load(store_file)["legacy"])
+    assert {*frozen, accession} <= legacy
 
 
 @then(parse("{num} submission JSON file exists in the local submission store"))
