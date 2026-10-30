@@ -109,8 +109,8 @@ The batch operations publish one event per resource they wrote, after their writ
 `update_many` leaves tombstones alone and reports their IDs as missing, as `update` does, and `delete_many` tombstones only the resources that are not deleted yet.
 
 A batch publishes its events one after another, each the way a single write does: it sends the event, then marks the write as published by its write ID, or publishes the current state again if a newer write replaced it.
-A bulk write does not say which documents it matched, so `update_many` and `delete_many` first look up which documents still carry their write ID and publish only those.
-A resource that another writer created, changed or deleted in the meantime is left to that writer, which publishes its own event.
+A bulk write reports only how many documents it matched, not which: `update_many` looks up the missing IDs when fewer matched than it sent, and `delete_many` looks up the live IDs before its write.
+A resource that another writer creates or deletes around these lookups can get the batch's event although the batch did not write it, followed by its stored state, so the last event on the topic is still right.
 
 A batch raises at its first failed publish, as a single write does, although its write is stored.
 The resources not published keep `__metadata__.published == False`, so `publish_pending()` sends them later.

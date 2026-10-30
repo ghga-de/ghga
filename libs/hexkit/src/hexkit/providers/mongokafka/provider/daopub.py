@@ -597,47 +597,18 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if self._autopublish:
             await self.publish_document(document)
 
-    async def _still_written(
-        self, documents: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """Return the documents that are still stored with their write ID.
-
-        The others were not written, because their write matched nothing, or another
-        writer replaced them since and publishes its own event. If the lookup fails,
-        none is returned, and `publish_pending` sends the written ones later.
-        """
-        if not documents:
-            return []
-        write_ids = [document["__metadata__"]["write_id"] for document in documents]
-        try:
-            stored = await self._dao._existing_ids(
-                [document["_id"] for document in documents],
-                {"__metadata__.write_id": {"$in": write_ids}},
-            )
-        except Exception:
-            log.warning(
-                "Could not look up which documents the batch wrote; leaving their"
-                + " events to publish_pending.",
-                exc_info=True,
-            )
-            return []
-        return [document for document in documents if document["_id"] in stored]
-
     async def _publish_written(
         self,
         documents: list[dict[str, Any]],
         error: BatchOperationError | None,
-        *,
-        look_up: bool = False,
     ) -> None:
         """Publish the documents a batch wrote, one after another.
 
-        The documents of the failed and skipped IDs are left out, and with `look_up`
-        also the ones no longer stored with their write ID. As in a single write, the
-        first failed publish ends the loop and is raised: the documents not published
-        keep `published: False`, and `publish_pending` sends them. If the write failed
-        for some IDs, the failed publish is logged instead, so that the caller gets the
-        batch's error, which names the writes that were lost.
+        The documents of the failed and skipped IDs are left out. As in a single write,
+        the first failed publish ends the loop and is raised: the documents not
+        published keep `published: False`, and `publish_pending` sends them. If the
+        write failed for some IDs, the failed publish is logged instead, so that the
+        caller gets the batch's error, which names the writes that were lost.
         """
         if not self._autopublish:
             return
@@ -647,8 +618,6 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         written = [
             document for document in documents if document["_id"] not in unwritten
         ]
-        if look_up:
-            written = await self._still_written(written)
         # One send at a time: the mongokafka guide's "Publishing a batch" says why
         for document in written:
             try:
@@ -707,33 +676,39 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         """Replace several existing resources in one call and publish each one written.
 
         Tombstones stay as they are, and their IDs count as missing, as in `update`.
-        Only the documents still stored with their write ID after the write get an
-        event, since the bulk write does not say which documents it matched. Please see
-        the `Dao` protocol for the arguments and the errors.
+        Every ID not reported missing or failed gets an event. A resource that another
+        writer creates between the write and the lookup of the missing IDs counts as
+        written: it gets the batch's event, which was never stored, and then its stored
+        state. Please see the `Dao` protocol for the arguments and the errors.
         """
         documents = self._dao._batch_documents(dtos)
         try:
             await self._dao._replace_existing(documents, NOT_DELETED, ordered=ordered)
         except BatchOperationError as error:
-            await self._publish_written(documents, error, look_up=True)
+            await self._publish_written(documents, error)
             raise
-        await self._publish_written(documents, None, look_up=True)
+        await self._publish_written(documents, None)
 
     async def delete_many(self, ids: Collection[ID]) -> None:
         """Tombstone the live resources among the IDs and publish a delete for each.
 
         Missing and already deleted IDs are ignored and publish nothing, and an ID given
-        more than once is deleted once. Only the tombstones still stored with their
-        write ID after the write get an event, since the bulk write does not say which
-        documents it matched. Please see the `Dao` protocol for the errors.
+        more than once is deleted once. The bulk write does not say which documents it
+        matched, so the live IDs are looked up before it. A resource that another writer
+        deletes between the lookup and the write gets the batch's delete event, and then
+        its stored state. Please see the `Dao` protocol for the errors.
         """
-        tombstones = [_tombstone(id_) for id_ in dict.fromkeys(ids)]
+        unique_ids = list(dict.fromkeys(ids))
+        if not unique_ids:
+            return
+        live = await self._dao._existing_ids(unique_ids, NOT_DELETED)
+        tombstones = [_tombstone(id_) for id_ in unique_ids if id_ in live]
         if not tombstones:
             return
         _, failures = await self._dao._bulk_replace(
             tombstones, NOT_DELETED, upsert=False, ordered=False
         )
-        await self._publish_written(tombstones, failures, look_up=True)
+        await self._publish_written(tombstones, failures)
         if failures:
             raise failures
 
