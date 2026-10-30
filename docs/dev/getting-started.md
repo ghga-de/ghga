@@ -79,6 +79,7 @@ Because of these fixed ports, only one checkout or worktree at a time can run th
 Three problems come up most often:
 
 - **Docker Desktop** forwards host-network ports only with *Settings → Resources → Network → Enable host networking* turned on; OrbStack and Docker Engine on Linux need nothing ([devcontainer.json](../../.devcontainer/devcontainer.json)).
+  Where `just fe-dev` still does not load, the runtime forwards only ports bound to all addresses: set `data_portal_host=0.0.0.0` in `local.env` ([data-portal README](../../frontend/data-portal/README.md#local-development)).
 - **No network from inside the cluster** after a VM restart, on hosts whose firewall drops forwarded traffic: run `just net-fix`.
 - **`context "kind-ghga" does not exist`** after a container rebuild: run `just cluster`, or see the [README](../../README.md#run-the-demo-locally).
 
