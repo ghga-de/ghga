@@ -149,8 +149,11 @@ jobs:
       contents: read
       packages: read # pull :dev from GHCR
     outputs:
-      # A failed audit reports no fixes, and that silence must not close the PR.
-      audited: ${{ steps.audit-before.outcome == 'success' && steps.audit-after.outcome != 'failure' }}
+      # A failed audit reports no fixes, and that silence must not close the PR. An
+      # unchanged uv.lock holds no fix for a failed audit to miss, so it counts as audited.
+      audited: >-
+        ${{ steps.update.outputs.changed == 'false'
+        || (steps.audit-before.outcome == 'success' && steps.audit-after.outcome != 'failure') }}
     env:
       DHI_USER: ${{ secrets.DOCKERHUB_USERNAME }}
       # The commit this run scanned — NOT $GITHUB_SHA, which names the event's ref (the
@@ -310,8 +313,11 @@ jobs:
         if: >-
           ${{ !cancelled()
           && (steps.audit-before.outcome == 'failure' || steps.audit-after.outcome == 'failure') }}
+        env:
+          CHANGED: ${{ steps.update.outputs.changed }}
         run: |
-          msg="uv audit failed, so this run does not check uv.lock and closes no PR."
+          msg="uv audit failed, so this run does not check uv.lock"
+          if [ "$CHANGED" = "false" ]; then msg="$msg."; else msg="$msg and closes no PR."; fi
           echo "::warning::$msg The failed audit step's log has the error."
           echo "## $msg" >> "$GITHUB_STEP_SUMMARY"
 
@@ -704,7 +710,8 @@ jobs:
       # A PR outlives its finding once dev gets those fixes another way — every
       # merge rebuilds :dev off a fresh base. Gated on both scans and uv audit
       # succeeding: a failed one reports no fixes, and that silence must not close the PR.
-      # The audit steps cannot fail the python job, hence its own output.
+      # The audit steps cannot fail the python job, hence its own output, which also
+      # holds when uv.lock did not change.
       - name: Close a PR that has nothing left to fix
         if: >-
           ${{ (steps.verdict.outcome == 'skipped' || steps.verdict.outputs.fixed == '0')

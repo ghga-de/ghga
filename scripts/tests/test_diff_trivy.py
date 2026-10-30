@@ -607,3 +607,13 @@ def test_a_dev_only_regression_does_not_hide_a_shipped_one(tmp_path):
     text = report.read_text()
     assert "**Introduced (1):**" in text
     assert "already listed above" not in text
+
+
+def test_a_merge_into_a_still_vulnerable_version_is_no_fix(tmp_path):
+    gate, _ = _render_audit(
+        tmp_path,
+        [(*PILLOW_GHSA, "1.0"), (*PILLOW_GHSA, "1.1")],
+        runtime=["pillow==1.0", "pillow==1.1", "pillow==1.2"],
+        after=[(*PILLOW_GHSA, "1.2")],
+    )
+    assert gate == 0

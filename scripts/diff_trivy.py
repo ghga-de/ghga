@@ -5,9 +5,9 @@ Used by .github/workflows/security-scan.yaml in three modes:
 
   diff      two reports of one kind (before/after a lockfile update) into a
             "fragment": the vulnerabilities the update fixed and the ones it
-            introduced. Records are paired by package and advisory, the same
-            version first, so a version bump of a still-vulnerable package does
-            not count as a fix.
+            introduced. Records are paired by package, advisory and version, and
+            an advisory the other side still has at another version is neither,
+            so a bump of a still-vulnerable package does not count as a fix.
   render    one or more fragments into a markdown report (the PR body / job
             summary) and print the number of fixed DEPENDENCY vulnerabilities to
             stdout, which the workflow uses as its open-a-PR gate.
@@ -259,36 +259,42 @@ def _pair(before, after):
     """Pair each record with one of the same package, class and advisory.
 
     Returns the unpaired records of each side: those of `before` were fixed, those
-    of `after` were introduced. Pairing across versions keeps a bump that is still
-    vulnerable from counting as a fix; pairing the same version first keeps one of
-    two installed versions that the update did fix from hiding behind the other. The
-    class must match too, or a dev-only version could take the pair of a runtime one.
+    of `after` were introduced. Records pair at the same version only, so one of two
+    installed versions that the update did fix cannot hide behind the other. An
+    unpaired record whose advisory the other side still has, at any version, is
+    neither, so a bump that is still vulnerable is no fix. The class must match too,
+    or a dev-only version could take the pair of a runtime one.
     """
     after = list(after)
     candidates: dict[tuple[str, str, str], list[int]] = {}
     for j, o in enumerate(after):
         candidates.setdefault(_package(o), []).append(j)
     taken = [False] * len(after)
-    left = list(before)
-    for same_version in (True, False):
-        unpaired = []
-        for r in left:
-            match = next(
-                (
-                    j
-                    for j in candidates.get(_package(r), [])
-                    if not taken[j]
-                    and _ids(r) & _ids(after[j])
-                    and (not same_version or after[j]["installed"] == r["installed"])
-                ),
-                None,
-            )
-            if match is None:
-                unpaired.append(r)
-            else:
-                taken[match] = True
-        left = unpaired
-    return left, [o for j, o in enumerate(after) if not taken[j]]
+    left = []
+    for r in before:
+        match = next(
+            (
+                j
+                for j in candidates.get(_package(r), [])
+                if not taken[j]
+                and _ids(r) & _ids(after[j])
+                and after[j]["installed"] == r["installed"]
+            ),
+            None,
+        )
+        if match is None:
+            left.append(r)
+        else:
+            taken[match] = True
+    right = [o for j, o in enumerate(after) if not taken[j]]
+
+    # Across versions, an advisory the other side still has is neither fixed nor introduced.
+    def remains(r, others):
+        return any(_package(o) == _package(r) and _ids(r) & _ids(o) for o in others)
+
+    return [r for r in left if not remains(r, right)], [
+        o for o in right if not remains(o, left)
+    ]
 
 
 def _by_severity(records):
