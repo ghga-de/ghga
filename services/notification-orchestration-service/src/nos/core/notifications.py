@@ -67,11 +67,39 @@ You should be contacted by one of our Data Stewards within the next three workin
 """,
 )
 
+EMAIL_LINE = "Email address of the user: {email}"
+
+CONTACT_EMAIL_LINE = "Contact email for this request: {contact_email}"
+
+LS_LOGIN_EMAIL_LINE = "LS Login email address of the user: {ls_login_email}"
+
+# One sentence per line, since the plain-text body is not reflowed by every mail client
+DIFFERENT_EMAILS_NOTE = (
+    "The requester entered the contact email for this request.\n"
+    "It should belong to the institution the request is made for,"
+    " but it has not been verified.\n"
+    "The LS Login email belongs to the requester's account,"
+    " but can be a private address or one from another institution."
+)
+
+
+def requester_emails(*, contact_email: str | None, ls_login_email: str) -> str:
+    """Describe the emails of a requester for the data steward notification.
+
+    The two emails are told apart only when they differ. Requests published before
+    the contact email was part of the event have only the LS Login email.
+    """
+    if not contact_email or contact_email.lower() == ls_login_email.lower():
+        return EMAIL_LINE.format(email=contact_email or ls_login_email)
+    contact_line = CONTACT_EMAIL_LINE.format(contact_email=contact_email)
+    ls_login_line = LS_LOGIN_EMAIL_LINE.format(ls_login_email=ls_login_email)
+    return f"{contact_line}\n{ls_login_line}\n\n{DIFFERENT_EMAILS_NOTE}"
+
+
 ACCESS_REQUEST_CREATED_TO_DS = Notification(
     "{dataset_id} - New Data Access Request by {full_user_name}",
     """
-{full_user_name} ({email})
-requested to download the following dataset:
+{full_user_name} requested to download the following dataset:
 
 Dataset ID: {dataset_id}
 Title: {dataset_title}
@@ -80,7 +108,7 @@ DAC: {dac_alias} ({dac_email})
 Full message from requester:
 {request_text}
 
-The specified contact email address is: {email}
+{requester_emails}
 
 Link to the Access Request in the Data Portal:
 {request_url}
@@ -148,7 +176,7 @@ IVA_CODE_REQUESTED_TO_DS = Notification(
     """
 {full_user_name} has requested an IVA verification code.
 
-The specified contact email address is: {email}.
+LS Login email address of the user: {email}
 """,
 )
 
@@ -179,7 +207,7 @@ IVA_UNVERIFIED_TO_DS = Notification(
 The '{type}' IVA of {full_user_name} has been marked as unverified, due to too
 many failed verification attempts.
 
-The specified contact email address is: {email}.
+LS Login email address of the user: {email}
 """,
 )
 
