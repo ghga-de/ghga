@@ -740,6 +740,8 @@ class MongoDbDao(Generic[Dto]):
 
         Please see the `Dao` protocol for the arguments and the errors.
         """
+        if not dtos:
+            return
         await self._replace_existing(self._batch_documents(dtos), {}, ordered=ordered)
 
 
