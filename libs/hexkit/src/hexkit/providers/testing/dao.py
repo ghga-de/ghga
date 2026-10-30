@@ -624,13 +624,13 @@ class BaseInMemDao(Generic[DTO]):
         dtos: Collection[DTO],
         write: Callable[[DTO], Awaitable[None]],
         *,
-        expected: type[DaoError],
-        stop: bool,
+        expected: type[DaoError] | tuple[type[DaoError], ...] = (),
+        stop: bool = False,
     ) -> None:
         """Write the DTOs one by one, collecting `expected` errors per ID.
 
         With `stop`, the first expected error ends the batch, like a write error in an
-        ordered MongoDB bulk write.
+        ordered MongoDB bulk write. Without `expected`, a write cannot fail per ID.
         """
         dtos = list(dtos)
         ids = [getattr(dto, self._id_field) for dto in dtos]
@@ -667,10 +667,7 @@ class BaseInMemDao(Generic[DTO]):
 
         Without unique indexes an upsert cannot fail here, so `ordered` changes nothing.
         """
-        dtos = list(dtos)
-        ensure_distinct_ids(getattr(dto, self._id_field) for dto in dtos)
-        for dto in dtos:
-            await self.upsert(dto)
+        await self._write_each(dtos, self.upsert)
 
 
 def new_mock_dao_class(
