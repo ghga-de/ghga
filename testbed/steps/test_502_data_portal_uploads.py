@@ -30,6 +30,7 @@ from .conftest import (
     then,
     when,
 )
+from .conftest_5x import _filter_manager_by_title
 from .utils import UI_TIMEOUT
 
 scenarios("../features/502_data_portal_uploads.feature")
@@ -43,16 +44,6 @@ INGEST_INTERVAL, INGEST_TIMEOUT = 1, 30  # seconds
 def _box_title(storage_name: str) -> str:
     assert storage_name in STORAGE_LABELS, f"Unknown storage: {storage_name}"
     return UI_BOX_TITLE.format(storage=storage_name)
-
-
-def _filter_manager_by_title(fixtures: JointFixture, title: str):
-    """Open the manager filter (if collapsed) and filter the list by box title."""
-    page = fixtures.playwright.page
-    main = page.locator("main")
-    filter_toggle = page.get_by_role("button", name="Filter upload boxes")
-    if filter_toggle.is_visible():
-        filter_toggle.click()
-    main.get_by_label("Upload box title").first.fill(title)
 
 
 def _upload_grant_row(fixtures, box_title):

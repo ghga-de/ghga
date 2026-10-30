@@ -131,6 +131,16 @@ def open_dataset_details(fixtures: JointFixture, alias: str):
     expect(page).to_have_url(re.compile(f".*/dataset/{accession}"))
 
 
+def _filter_manager_by_title(fixtures: JointFixture, title: str):
+    """Open the manager filter (if collapsed) and filter the list by box title."""
+    page = fixtures.playwright.page
+    main = page.locator("main")
+    filter_toggle = page.get_by_role("button", name="Filter upload boxes")
+    if filter_toggle.is_visible():
+        filter_toggle.click()
+    main.get_by_label("Upload box title").first.fill(title)
+
+
 @when(parse('I load the admin page "{admin_page}"'))
 def open_admin_page(fixtures: JointFixture, admin_page: str):
     """Open a specific admin page."""

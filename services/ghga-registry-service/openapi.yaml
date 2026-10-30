@@ -1033,6 +1033,67 @@ paths:
       summary: Create upload box
       tags:
       - ResearchDataUploadBoxes
+  /upload-boxes/file-state-counts:
+    get:
+      description: Returns the number of file uploads per state for the open and locked
+        upload boxes, keyed by the box ID, either for the given boxes or for all of
+        them. Only the states that count toward a box's file_count are included. Boxes
+        without such file uploads and states without file uploads are absent. Archived
+        boxes are absent as well, since all their files are archived. Requires the
+        Data Steward role.
+      operationId: get_file_state_counts_upload_boxes_file_state_counts_get
+      parameters:
+      - description: The IDs of the upload boxes to count; all if none are given
+        in: query
+        name: box_id
+        required: false
+        schema:
+          anyOf:
+          - items:
+              format: uuid4
+              type: string
+            maxItems: 100
+            type: array
+          - type: 'null'
+          description: The IDs of the upload boxes to count; all if none are given
+          title: Box Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  additionalProperties:
+                    minimum: 0
+                    type: integer
+                  propertyNames:
+                    enum:
+                    - init
+                    - inbox
+                    - failed
+                    - cancelled
+                    - interrogated
+                    - failed_interrogation
+                    - awaiting_archival
+                    - archived
+                  type: object
+                propertyNames:
+                  format: uuid4
+                title: Response Get File State Counts Upload Boxes File State Counts
+                  Get
+                type: object
+          description: File state counts successfully retrieved.
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized.
+        '422':
+          description: Validation error in query parameters.
+      security:
+      - HTTPBearer: []
+      summary: Get the file state counts of the open and locked upload boxes
+      tags:
+      - ResearchDataUploadBoxes
   /upload-boxes/{box_id}:
     delete:
       description: Delete a research data upload box and its files. Requires the Data

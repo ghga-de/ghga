@@ -39,6 +39,65 @@ export const FileUploadStateClass: Record<FileUploadState, string> = {
   cancelled: 'text-error',
 };
 
+/** Number of file uploads per state in an upload box; absent states count zero */
+export type FileUploadStateCounts = Partial<Record<FileUploadState, number>>;
+
+/** Coarse groups of file upload states, used where the eight states take too much room */
+export type FileUploadStateGroup = 'archived' | 'ready' | 'in_progress' | 'failed';
+
+/** A group of file upload states with how it is displayed */
+export interface FileUploadStateGroupInfo {
+  group: FileUploadStateGroup;
+  label: string;
+  /** The states in the group, in the order of the upload lifecycle */
+  states: FileUploadState[];
+  /** Background class of the group's segment in a stacked bar */
+  barClass: string;
+}
+
+/**
+ * The state groups from the most to the least finished. Deleted (cancelled)
+ * uploads belong to no group, since they no longer count as files of the box.
+ * The RS counts only the states that make up the file count of a box, so the
+ * counts it returns never hold `init` or `failed` uploads; the groups keep both
+ * so that counting them later needs no change here.
+ */
+export const FILE_UPLOAD_STATE_GROUPS: FileUploadStateGroupInfo[] = [
+  {
+    group: 'archived',
+    label: 'archived',
+    states: ['archived'],
+    barClass: 'bg-gray-400',
+  },
+  { group: 'ready', label: 'ready', states: ['interrogated'], barClass: 'bg-success' },
+  {
+    group: 'in_progress',
+    label: 'in progress',
+    states: ['init', 'inbox', 'awaiting_archival'],
+    barClass: 'bg-warning',
+  },
+  {
+    group: 'failed',
+    label: 'failed',
+    states: ['failed', 'failed_interrogation'],
+    barClass: 'bg-error',
+  },
+];
+
+/**
+ * Count the file uploads in a group of states.
+ * @param counts - the number of file uploads per state
+ * @param group - the group of states to count
+ * @returns the number of file uploads in any state of the group
+ */
+export function countFileUploadStateGroup(
+  counts: FileUploadStateCounts,
+  group: FileUploadStateGroup,
+): number {
+  const states = FILE_UPLOAD_STATE_GROUPS.find((info) => info.group === group)!.states;
+  return states.reduce((sum, state) => sum + (counts[state] ?? 0), 0);
+}
+
 /** A file upload with its accession number */
 export interface FileUploadWithAccession {
   /** Unique identifier for the file upload */

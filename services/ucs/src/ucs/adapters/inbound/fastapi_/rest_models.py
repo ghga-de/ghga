@@ -184,6 +184,7 @@ WorkType = Literal[
     "archive",
     "resize",
     "view",
+    "view_stats",
     "upload",
     "close",
     "delete",
@@ -217,6 +218,15 @@ class ViewFileBoxWorkOrder(BaseWorkOrderToken[Literal["view"]]):
     """WOT schema authorizing a user to view a FileUploadBox and its FileUploads"""
 
     box_id: UUID4
+
+
+class ViewFileBoxStatsWorkOrder(BaseWorkOrderToken[Literal["view_stats"]]):
+    """WOT schema authorizing the RS to view the file state counts of FileUploadBoxes.
+
+    The token names no box, since the RS asks for the counts of all its boxes at once.
+    The work type is 'view_stats' rather than 'view' so that a ViewFileBoxWorkOrder,
+    whose box_id would be ignored, can never validate as this token.
+    """
 
 
 class CreateFileWorkOrder(BaseWorkOrderToken[Literal["create"]]):
@@ -286,6 +296,15 @@ class RequeueAllFailedResponse(BaseModel):
         ),
     )
     model_config = ConfigDict(title="Requeue All Failed Response")
+
+
+class FileStateCountsRequest(BaseModel):
+    """Request body for counting the FileUploads per state in FileUploadBoxes."""
+
+    box_ids: list[UUID4] = Field(
+        ..., description="The IDs of the FileUploadBoxes whose FileUploads are counted"
+    )
+    model_config = ConfigDict(title="File State Counts Request")
 
 
 class BoxUploadsPage(BaseModel):

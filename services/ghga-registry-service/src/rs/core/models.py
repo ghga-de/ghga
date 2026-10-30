@@ -36,6 +36,7 @@ from pydantic import (
 from ghga_event_schemas.pydantic_ import (
     FileUpload,
     FileUploadBox,
+    FileUploadState,
     ResearchDataUploadBox,
     UploadBoxState,
 )
@@ -56,8 +57,10 @@ __all__ = [
     "DeleteFileBoxWorkOrder",
     "DeleteFileUploadWorkOrder",
     "FileAccession",
+    "FileStateCounts",
     "FileUpload",
     "FileUploadBox",
+    "FileUploadState",
     "FileUploadWithAccession",
     "GrantAccessRequest",
     "GrantId",
@@ -73,6 +76,7 @@ __all__ = [
     "UpdateUploadBoxRequest",
     "UploadBoxState",
     "UploadGrant",
+    "ViewFileBoxStatsWorkOrder",
     "ViewFileBoxWorkOrder",
 ]
 
@@ -202,6 +206,16 @@ class ViewFileBoxWorkOrder(BaseWorkOrderToken):
 
     work_type: Literal["view"] = "view"
     box_id: UUID4 = Field(..., description="ID of the box to view")
+
+
+class ViewFileBoxStatsWorkOrder(BaseWorkOrderToken):
+    """Work order token for viewing the file state counts of all FileUploadBoxes.
+
+    The work type is `"view_stats"` rather than `"view"` so that a
+    `ViewFileBoxWorkOrder` can't validate as a token for every box.
+    """
+
+    work_type: Literal["view_stats"] = "view_stats"
 
 
 class SubmitAccessionMapWorkOrder(BaseWorkOrderToken):
@@ -376,6 +390,10 @@ class BoxRetrievalResults(BaseModel):
     boxes: list[ResearchDataUploadBox] = Field(
         ..., description="The retrieved research data upload boxes"
     )
+
+
+# The number of file uploads per state in an upload box; absent states count zero
+FileStateCounts = dict[FileUploadState, NonNegativeInt]
 
 
 class HubStorageSummary(BaseModel):

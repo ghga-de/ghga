@@ -99,8 +99,8 @@
             <p>
               <strong class="inline-block w-40">Files / Size:</strong>
               <span
-                >{{ box.file_count }} files using {{ box.size | parseBytes }} of
-                {{ box.max_size | parseBytes }}</span
+                >{{ box.file_count | number }} files using
+                {{ box.size | parseBytes }} of {{ box.max_size | parseBytes }}</span
               >
             </p>
             <div class="mt-4 flex flex-wrap gap-2">
