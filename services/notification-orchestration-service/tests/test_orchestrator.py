@@ -51,7 +51,11 @@ def iva_state_payload(user_id: UUID4, state: event_schemas.IvaState) -> dict[str
             notifications.ACCESS_REQUEST_CREATED_TO_DS,
             {
                 "full_user_name": TEST_USER.name,
-                "email": TEST_USER.email,
+                "requester_emails": (
+                    f"Contact email for this request: {TEST_USER.email}\n"
+                    f"LS Login email (preferred address in LS Login): {TEST_USER.email}"
+                    f"\n\n{notifications.SAME_EMAILS_NOTE}"
+                ),
                 "dataset_id": DATASET_ID,
                 "dataset_title": "A Great Dataset",
                 "dac_alias": "Some DAC",
@@ -134,7 +138,9 @@ async def test_access_request(
     ]
 
     # Create the kafka event that would be published by the access request service
-    payload = make_access_request(test_user.user_id, status).model_dump()
+    payload = make_access_request(
+        test_user.user_id, status, contact_email=test_user.email
+    ).model_dump()
     await joint_fixture.kafka.publish_event(
         payload=payload,
         type_="upserted",
