@@ -71,7 +71,7 @@ describe('UserManagerFilter', () => {
 
   it('should set the filter after typing a name', async () => {
     const textbox = screen.getByRole('textbox', {
-      name: 'Name, email, or LS ID of user',
+      name: 'Name, LS Login email, or LS ID of user',
     });
 
     await userEvent.type(textbox, 'Doe');
@@ -142,12 +142,12 @@ describe('UserManagerFilter', () => {
 
   it('should clear the name filter with its remove button', async () => {
     const textbox = screen.getByRole('textbox', {
-      name: 'Name, email, or LS ID of user',
+      name: 'Name, LS Login email, or LS ID of user',
     });
     await userEvent.type(textbox, 'Doe');
     await userEvent.click(
       screen.getByRole('button', {
-        name: 'Remove filter for user name, email, and LS ID',
+        name: 'Remove filter for user name, LS Login email, and LS ID',
       }),
     );
     await fixture.whenStable();

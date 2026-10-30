@@ -31,12 +31,12 @@
         >
           <div class="flex min-w-96 grow items-baseline gap-2">
             <mat-form-field class="grow">
-              <mat-label>Name, email, or LS ID of user</mat-label>
+              <mat-label>Name, LS Login email, or LS ID of user</mat-label>
               <input matInput type="text" [formField]="filterForm.idStrings" />
             </mat-form-field>
             <button
               mat-icon-button
-              aria-label="Remove filter for user name, email, and LS ID"
+              aria-label="Remove filter for user name, LS Login email, and LS ID"
               [class.invisible]="!filterForm.idStrings().value()"
               (click)="filterForm.idStrings().value.set('')"
               data-umami-event="User Manager Filters User Details Clear Clicked"

@@ -38,7 +38,11 @@
           >
             <span class="truncate font-semibold">{{ user.displayName }}</span>
             <div class="text-secondary flex min-w-0 items-center gap-1 text-sm">
-              <mat-icon fontIcon="email" class="shrink-0 text-base"></mat-icon>
+              <mat-icon
+                fontIcon="email"
+                class="shrink-0 text-base"
+                title="LS Login email"
+              ></mat-icon>
               <span class="truncate">{{ user.email }}</span>
             </div>
             <div class="text-secondary flex min-w-0 items-center gap-1 text-xs">
@@ -57,7 +61,7 @@
         </div>
       } @else {
         <mat-form-field class="w-full">
-          <mat-label>Search by name, email or external ID</mat-label>
+          <mat-label>Search by name, LS Login email or external ID</mat-label>
           <input
             matInput
             type="text"
@@ -103,7 +107,11 @@
                 </td>
                 <td class="py-1 pr-4">
                   <div class="text-secondary flex items-center gap-1">
-                    <mat-icon fontIcon="email" class="shrink-0 text-base"></mat-icon>
+                    <mat-icon
+                      fontIcon="email"
+                      class="shrink-0 text-base"
+                      title="LS Login email"
+                    ></mat-icon>
                     <span>{{ user.email }}</span>
                   </div>
                 </td>

@@ -9,16 +9,17 @@
         >{{ grant.user_title ? grant.user_title + ' ' : ''
         }}{{ grant.user_name }}</strong
       >
-      with email <strong>{{ grant.user_email }}</strong> for the dataset with accession
-      <strong>{{ grant.dataset_id }}</strong> shall be <strong>revoked</strong> by
-      entering the email of the user and dataset accession in the box below.
+      with LS Login email <strong>{{ grant.user_email }}</strong> for the dataset with
+      accession <strong>{{ grant.dataset_id }}</strong> shall be
+      <strong>revoked</strong> by entering the LS Login email of the user and dataset
+      accession in the box below.
     </p>
     <mat-form-field class="w-full">
       <input
         [formField]="confirmForm.email"
         matInput
         class="w-full"
-        placeholder="Confirm email of user"
+        placeholder="Confirm LS Login email of user"
       />
     </mat-form-field>
     <mat-form-field class="w-full">

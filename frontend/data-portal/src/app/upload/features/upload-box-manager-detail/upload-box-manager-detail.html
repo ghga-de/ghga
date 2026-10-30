@@ -150,7 +150,7 @@
             <div class="overflow-auto">
               <table mat-table [dataSource]="grants()" class="w-full">
                 <ng-container matColumnDef="grantee">
-                  <th mat-header-cell *matHeaderCellDef>Grantee</th>
+                  <th mat-header-cell *matHeaderCellDef>Grantee (LS Login email)</th>
                   <td mat-cell *matCellDef="let grant"
                     >{{ grant.user_name }} ({{ grant.user_email }})</td
                   >

@@ -93,11 +93,12 @@ describe('AccessRequestManagerDetail', () => {
     expect(a).toBeVisible();
   });
 
-  it('should show the requester with email in two links', () => {
+  it('should show the requester and the contact email in two links', () => {
     const a = screen.getByRole('link', { name: 'Dr. John Doe' });
     expect(a).toBeVisible();
     const email = screen.getByRole('link', { name: 'doe@home.org' });
     expect(email).toBeVisible();
+    expect(email.closest('p')).toHaveTextContent(/^\s*Contact email:/);
   });
 
   it('should load the LD ID and show it in a code', () => {

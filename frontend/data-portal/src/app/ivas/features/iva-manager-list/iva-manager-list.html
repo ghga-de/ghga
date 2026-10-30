@@ -12,7 +12,9 @@
       class="larger-mat-table-text"
     >
       <ng-container matColumnDef="user">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>User</th>
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+          User (LS Login email)
+        </th>
         <td mat-cell *matCellDef="let iva" class="min-w-48">
           @if (iva.warn) {
             <mat-icon

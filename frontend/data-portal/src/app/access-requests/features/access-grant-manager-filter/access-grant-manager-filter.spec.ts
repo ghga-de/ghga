@@ -46,7 +46,10 @@ describe('AccessGrantManagerFilter', () => {
   });
 
   it('should set the filter after typing a name and a dataset ID', async () => {
-    await userEvent.type(screen.getByRole('textbox', { name: 'Name or Email' }), 'Doe');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Name or LS Login email' }),
+      'Doe',
+    );
     await userEvent.type(screen.getByRole('textbox', { name: 'Dataset ID' }), 'GHGAD1');
     await fixture.whenStable();
 
@@ -62,12 +65,12 @@ describe('AccessGrantManagerFilter', () => {
   });
 
   it('should clear the filter with the remove buttons', async () => {
-    const textbox = screen.getByRole('textbox', { name: 'Name or Email' });
+    const textbox = screen.getByRole('textbox', { name: 'Name or LS Login email' });
     await userEvent.type(textbox, 'Doe');
     await userEvent.click(screen.getByRole('combobox', { name: 'Grant status' }));
     await userEvent.click(screen.getByRole('option', { name: 'Active' }));
     await userEvent.click(
-      screen.getByRole('button', { name: 'Remove filter for name and email' }),
+      screen.getByRole('button', { name: 'Remove filter for name and LS Login email' }),
     );
     await userEvent.click(
       screen.getByRole('button', { name: 'Remove filter for grant status' }),
