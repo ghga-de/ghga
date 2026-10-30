@@ -73,6 +73,12 @@ export interface ResearchDataUploadBoxUpdate {
 export type FileStateCountsByBox = Record<string, FileUploadStateCounts>;
 
 /**
+ * The most upload boxes the RS counts the file states of in one request, since
+ * their IDs must fit into the URL. Above it, the counts of all boxes are loaded.
+ */
+export const MAX_FILE_STATE_COUNTS_BOXES = 100;
+
+/**
  * Check whether the file state counts of an upload box must be loaded from the
  * RS. An empty box has none, and archiving a box archives all of its files.
  * @param box - the upload box with its state and file count

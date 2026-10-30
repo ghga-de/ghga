@@ -17,6 +17,7 @@ import {
   BoxRetrievalResults,
   FileStateCountsByBox,
   matchesFileStatesFilter,
+  MAX_FILE_STATE_COUNTS_BOXES,
   needsFileStateCounts,
   ResearchDataUploadBox,
   ResearchDataUploadBoxBase,
@@ -123,7 +124,8 @@ export class UploadBoxService {
   /**
    * The upload boxes to load the file state counts of: the IDs of the boxes on
    * the current page of the list that need them, or 'all' while the list is
-   * filtered by the file states, since that needs the counts beyond the page.
+   * filtered by the file states, since that needs the counts beyond the page,
+   * or while the page holds more boxes than one request can count.
    * The equality check keeps an unchanged set of boxes from loading again.
    */
   #fileStateCountsBoxIds = computed<string[] | 'all' | undefined>(
@@ -132,6 +134,7 @@ export class UploadBoxService {
       const fileStates = this.#uploadBoxesFilter()?.fileStates;
       if (fileStates && fileStates !== 'no_files') return 'all';
       const boxIds = this.#visibleBoxIds();
+      if (boxIds.length > MAX_FILE_STATE_COUNTS_BOXES) return 'all';
       return boxIds.length ? boxIds : undefined;
     },
     {

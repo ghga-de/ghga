@@ -73,8 +73,8 @@ box_rpc_router = APIRouter()
 # provided by the file box service, but is attached to them by this service.
 _SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUploadWithAccession.model_fields)
 
-# The most upload boxes whose file states can be counted in one request. The data
-# portal asks for a page of its box list, and the IDs must fit into the URL.
+# The maximum number of upload boxes whose file states one request can count.
+# The data portal asks for a page of its box list, and the IDs must fit into the URL.
 _MAX_FILE_STATE_COUNTS_BOXES = 100
 
 

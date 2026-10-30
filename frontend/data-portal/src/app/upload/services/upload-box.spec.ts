@@ -20,6 +20,7 @@ import { provideHttpCache, withHttpCacheInterceptor } from '@ngneat/cashew';
 import {
   BoxRetrievalResults,
   FileStateCountsByBox,
+  MAX_FILE_STATE_COUNTS_BOXES,
   ResearchDataUploadBoxBase,
   ResearchDataUploadBoxUpdate,
   UploadBoxState,
@@ -329,6 +330,21 @@ describe('UploadBoxService', () => {
     service.showFileStateCountsOf([gamma]);
     testBed.tick();
     httpMock.expectNone((req) => req.url === FILE_STATE_COUNTS_URL);
+  });
+
+  it('should fetch the file state counts of all boxes when the page holds too many', async () => {
+    await loadBoxes();
+    const alpha = TEST_BOX_RETRIEVAL_RESULTS.boxes[0];
+    const boxes = Array.from({ length: MAX_FILE_STATE_COUNTS_BOXES + 1 }, (_, i) => ({
+      ...alpha,
+      id: `box-${i}`,
+    }));
+    service.showFileStateCountsOf(boxes);
+    testBed.tick();
+    httpMock.expectOne(FILE_STATE_COUNTS_URL).flush(TEST_FILE_STATE_COUNTS);
+    await Promise.resolve();
+
+    expect(service.fileStateCountsByBox()).toEqual(TEST_FILE_STATE_COUNTS);
   });
 
   it('should keep the upload boxes when the file state counts fail', async () => {
