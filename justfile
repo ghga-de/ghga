@@ -653,8 +653,7 @@ testbed-up profile="": (demo-load profile)
 testbed-install:
     #!/usr/bin/env bash
     set -euo pipefail
-    # The workspace Python: the export below comes frozen from uv.lock, which resolves
-    # for the lock's requires-python only.
+    # on the interpreter the workspace runs on: uv venv reads .python-version itself
     uv venv .venv-testbed --allow-existing
     # uv exports the workspace paths relative to the root; made absolute so the file
     # means the same whichever directory the installer resolves them against

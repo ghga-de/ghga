@@ -52,7 +52,7 @@ def workdir_factory(original_model_path: Path):
     """Prepare a work directory for the provided model."""
 
     @pytest.fixture
-    def workdir(tmp_path: Path) -> Generator[Path, None, None]:
+    def workdir(tmp_path: Path) -> Generator[Path]:
         """Prepare a work directory for"""
         tmp_path.joinpath("event_store").mkdir()
         tmp_path.joinpath("submission_store").mkdir()

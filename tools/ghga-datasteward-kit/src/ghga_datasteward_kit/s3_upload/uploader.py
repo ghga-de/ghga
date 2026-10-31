@@ -112,7 +112,7 @@ class ChunkedUploader:
         self,
         *,
         client: httpx2.AsyncClient,
-        file_processor: Generator[tuple[int, bytes], Any, None],
+        file_processor: Generator[tuple[int, bytes], Any],
         start: float,
     ):
         """Handle upload of one file part"""

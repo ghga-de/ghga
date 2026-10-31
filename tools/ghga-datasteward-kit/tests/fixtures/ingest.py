@@ -65,7 +65,7 @@ class IngestFixture:
 
 
 @pytest.fixture
-def legacy_ingest_fixture() -> Generator[IngestFixture, None, None]:
+def legacy_ingest_fixture() -> Generator[IngestFixture]:
     """Generate necessary data for file ingest."""
     with TemporaryDirectory() as input_dir:
         with TemporaryDirectory() as submission_store_dir:
@@ -116,7 +116,7 @@ def legacy_ingest_fixture() -> Generator[IngestFixture, None, None]:
 
 
 @pytest.fixture
-def ingest_fixture() -> Generator[IngestFixture, None, None]:
+def ingest_fixture() -> Generator[IngestFixture]:
     """Generate necessary data for file ingest."""
     with TemporaryDirectory() as input_dir:
         with TemporaryDirectory() as submission_store_dir:

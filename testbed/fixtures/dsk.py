@@ -82,7 +82,7 @@ class DskFixture:
 
 
 @fixture(name="dsk", scope="session")
-def dsk_fixture() -> Generator[DskFixture, None, None]:
+def dsk_fixture() -> Generator[DskFixture]:
     """Pytest fixture for tests using the Data Steward Kit."""
     config = DskConfig()
     yield DskFixture(config=config)

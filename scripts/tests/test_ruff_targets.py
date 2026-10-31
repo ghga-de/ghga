@@ -89,6 +89,19 @@ def test_non_member_target_is_the_workspace_interpreter(directory: str):
     assert _target_for(directory) == _as_target(version)
 
 
+def test_testbed_follows_the_workspace_interpreter():
+    """The test bed runs on the workspace interpreter, so its floor and target do too.
+
+    `testbed-install` builds its venv from `.python-version`, but its ruff target and
+    floor live in its own `.ruff.toml` and `pyproject.toml`, which the root config does
+    not reach.
+    """
+    version = (ROOT / ".python-version").read_text().strip()
+    ruff = tomllib.loads((ROOT / "testbed" / ".ruff.toml").read_text())
+    assert ruff["target-version"] == _as_target(version)
+    assert _floor("testbed") == version
+
+
 @pytest.mark.parametrize("directory", SCRIPT_DIRS)
 def test_script_target_is_the_lowest_floor_declared_there(directory: str):
     """A script run outside the workspace venv is checked against its own floor.

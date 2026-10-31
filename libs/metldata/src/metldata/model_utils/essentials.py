@@ -148,7 +148,7 @@ class MetadataModel(SchemaDefinition):
             yaml.safe_dump(self.as_dict(essential=True), file)
 
     @contextmanager
-    def temporary_yaml_path(self) -> Generator[Path, None, None]:
+    def temporary_yaml_path(self) -> Generator[Path]:
         """Returns a context manager that creates a temporary yaml file containing the
         model and returns its path on __enter__ and deletes it on __exit__.
 

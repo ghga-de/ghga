@@ -48,7 +48,7 @@ def storage_config(
 
 
 @pytest.fixture
-def legacy_config_fixture() -> Generator[LegacyConfig, None, None]:
+def legacy_config_fixture() -> Generator[LegacyConfig]:
     """Generate a test Config file."""
     with TemporaryDirectory() as output_dir:
         config = LegacyConfig(
@@ -63,7 +63,7 @@ def legacy_config_fixture() -> Generator[LegacyConfig, None, None]:
 
 
 @pytest.fixture
-def config_fixture() -> Generator[Config, None, None]:
+def config_fixture() -> Generator[Config]:
     """Generate a test Config file."""
     public_key = encode_key(generate_key_pair().public)
 
