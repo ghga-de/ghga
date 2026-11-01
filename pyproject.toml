@@ -23,7 +23,7 @@ dev = [
     "pre-commit>=4.6",
     "mypy>=2.1",
     "ruff>=0.15.13",
-    "rumdl>=0.3.0",
+    "rumdl>=0.3.2",
     "actionlint-py>=1.7.12",  # the workflow hook; it also runs shellcheck on run: blocks
     "httpx>=0.28.1",
     "tomli_w>=1.2",
@@ -212,5 +212,3 @@ disable = ["MD033"]
 line-length = 0
 reflow = true
 reflow-mode = "sentence-per-line"
-# not sentence ends; rumdl already knows e.g., i.e., etc. and the like
-abbreviations = ["incl", "approx", "pt"]

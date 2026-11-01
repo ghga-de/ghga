@@ -13,8 +13,7 @@ These domains are: accessibility, responsiveness, and semantics.
 
 The first task of this epic relates to the overhaul of the data portal to improve its accessibility and semantics, as well as attempt to standardise the implementation of its responsiveness.
 
-The second task is that of creating a development document in a suitable location within the data portal repository (e.g. `./docs/semantics.md`) containing guidelines (viz.
-SOPs) and best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
+The second task is that of creating a development document in a suitable location within the data portal repository (e.g. `./docs/semantics.md`) containing guidelines (viz. SOPs) and best practices in the implementation of accessibility, responsiveness, and semantics in the data portal.
 
 ### Included/Required
 
