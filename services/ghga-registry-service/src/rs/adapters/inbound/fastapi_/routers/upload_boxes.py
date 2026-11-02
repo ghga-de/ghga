@@ -47,6 +47,7 @@ from rs.core.models import (
     BoxRetrievalResults,
     BoxUploadsPage,
     CreateUploadBoxRequest,
+    FileStateCounts,
     FileUploadWithAccession,
     HubStorageSummary,
     ResearchDataUploadBox,
@@ -71,6 +72,10 @@ box_rpc_router = APIRouter()
 # order). This includes the accession, which is not a field of the file uploads as
 # provided by the file box service, but is attached to them by this service.
 _SORTABLE_FILE_UPLOAD_FIELDS = frozenset(FileUploadWithAccession.model_fields)
+
+# The maximum number of upload boxes whose file states one request can count.
+# The data portal asks for a page of its box list, and the IDs must fit into the URL.
+_MAX_FILE_STATE_COUNTS_BOXES = 100
 
 
 def _ensure_valid_sort_fields(sort: str) -> str:
@@ -393,6 +398,49 @@ async def get_storage_overview(
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(message="Failed to get storage overview") from err
+
+
+# Registered before "/{box_id}", which would otherwise match this path
+@box_router.get(
+    "/file-state-counts",
+    summary="Get the file state counts of the open and locked upload boxes",
+    description="Returns the number of file uploads per state for the open and locked"
+    + " upload boxes, keyed by the box ID, either for the given boxes or for all of"
+    + " them. Only the states that count toward a box's file_count are included."
+    + " Boxes without such file uploads and states without file uploads are absent."
+    + " Archived boxes are absent as well, since all their files are archived."
+    + " Requires the Data Steward role.",
+    response_model=dict[UUID4, FileStateCounts],
+    responses={
+        # No "model" here: with response_model set, FastAPI would list the enum
+        # of the state names twice in the OpenAPI spec
+        200: {"description": "File state counts successfully retrieved."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized."},
+        422: {"description": "Validation error in query parameters."},
+    },
+)
+@TRACER.start_as_current_span("routes.get_file_state_counts")
+async def get_file_state_counts(
+    registry: dummies.RegistryDummy,
+    auth_context: StewardAuthContext,
+    box_id: Annotated[
+        list[UUID4] | None,
+        Query(
+            max_length=_MAX_FILE_STATE_COUNTS_BOXES,
+            description="The IDs of the upload boxes to count; all if none are given",
+        ),
+    ] = None,
+) -> dict[UUID4, FileStateCounts]:
+    """Get the number of file uploads per state for the open and locked upload boxes.
+
+    Requires Data Steward role.
+    """
+    try:
+        return await registry.rdub_manager.get_file_state_counts(box_ids=box_id)
+    except Exception as err:
+        log.error(err, exc_info=True)
+        raise HttpInternalError(message="Failed to get file state counts") from err
 
 
 @box_router.get(

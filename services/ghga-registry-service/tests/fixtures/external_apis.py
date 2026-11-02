@@ -82,6 +82,7 @@ class FileBoxApiMock(MockApi):
         self.on_delete_file_upload_box: ResponseHandler = _unconfigured
         self.on_requeue_single_file_upload: ResponseHandler = _unconfigured
         self.on_requeue_all_box_uploads: ResponseHandler = _unconfigured
+        self.on_get_file_state_counts: ResponseHandler = _unconfigured
         self.route("POST", "/boxes", "on_create_file_upload_box")
         self.route("PATCH", "/boxes/{box_id}", "on_update_file_upload_box")
         self.route("GET", "/boxes/{box_id}/uploads", "on_get_file_upload_list")
@@ -95,6 +96,7 @@ class FileBoxApiMock(MockApi):
             "on_requeue_single_file_upload",
         )
         self.route("POST", "/rpc/boxes/{box_id}/requeue", "on_requeue_all_box_uploads")
+        self.route("POST", "/rpc/boxes/file-state-counts", "on_get_file_state_counts")
 
 
 @asynccontextmanager

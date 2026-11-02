@@ -26,6 +26,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
@@ -60,6 +61,7 @@ const MAX_USER_RESULTS = 10;
     MatIcon,
     MatProgressSpinner,
     MatRadioModule,
+    MatTooltip,
     RouterLink,
     IvaStatePipe,
     IvaTypePipe,

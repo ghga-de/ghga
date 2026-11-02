@@ -1,51 +1,145 @@
 #!/usr/bin/env python3
-"""Compare Trivy JSON reports and render the outcome as markdown.
+"""Compare Trivy or uv audit JSON reports and render the outcome as markdown.
 
-Used by .github/workflows/security-scan.yaml in two steps:
+Used by .github/workflows/security-scan.yaml in three modes:
 
-  diff    two Trivy JSON reports (before/after a lockfile update) into a
-          "fragment": the vulnerabilities the update fixed and the ones it
-          introduced, identified by (VulnerabilityID, PkgName) so version
-          bumps of a still-vulnerable package do not count as a fix.
-  render  one or more fragments into a markdown report (the PR body / job
-          summary) and print the number of fixed DEPENDENCY vulnerabilities to
-          stdout, which the workflow uses as its open-a-PR gate.
+  diff      two reports of one kind (before/after a lockfile update) into a
+            "fragment": the vulnerabilities the update fixed and the ones it
+            introduced. Records are paired by package, advisory and version, and
+            an advisory the other side still has at another version is neither,
+            so a bump of a still-vulnerable package does not count as a fix.
+  render    one or more fragments into a markdown report (the PR body / job
+            summary) and print the number of fixed DEPENDENCY vulnerabilities to
+            stdout, which the workflow uses as its open-a-PR gate.
+  exposure  one uv audit report into the job summary's current-exposure tables.
 
-Fixed vulnerabilities are split by Trivy's result class: OS packages live in the
-base image, out of reach of any lockfile, so their fixes are reported but never
-gate a PR. Only lang-pkgs fixes do.
+Fixed vulnerabilities are split by origin. OS packages live in the base image, out
+of reach of any lockfile, and dev-only packages never ship, so their fixes are
+reported but never gate a PR. Only fixes in runtime dependencies do.
 """
 
 import argparse
 import json
 import pathlib
+import re
 from typing import Any
+
+from affected_targets import _canonical
 
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
 
 # Trivy's Result.Class for OS packages. Anything else these scans produce is
 # lang-pkgs, i.e. a dependency the lockfiles control.
 OS_PKGS = "os-pkgs"
+LANG_PKGS = "lang-pkgs"
+
+# Class of a uv audit finding in a package the published images do not install,
+# one that only a dependency group or an extra brings in.
+DEV_ONLY = "dev-only"
+
+# The ecosystem of every uv audit record, and of a Trivy record whose Result.Type
+# is one of PYTHON_TYPES. Any other Trivy type is an ecosystem of its own.
+PYPI = "pypi"
+PYTHON_TYPES = {"python-pkg", "pip", "pipenv", "poetry", "uv"}
+
+# The uv audit JSON schema this script reads. A report of any other fails, so a format
+# change cannot read as "no findings" and close a PR.
+UV_AUDIT_SCHEMA = "preview"
+
+# The machines the images are built for (dev-images.yaml, release.yaml).
+IMAGE_MACHINES = ("x86_64", "aarch64")
 
 
-def _load_vulns(path):
-    """Flatten a Trivy JSON report into {(vuln_id, package): record}.
+def _read_json(path):
+    return json.loads(pathlib.Path(path).read_text())
+
+
+def _name(record):
+    """The package name records are matched on; PEP 503 applies to PyPI only."""
+    package = record["package"]
+    return _canonical(package) if record["ecosystem"] == PYPI else package
+
+
+def _ids(record):
+    return {record["id"], *record.get("aliases", [])}
+
+
+def _package(record):
+    """The key records must share to be paired: ecosystem, name and class."""
+    return record["ecosystem"], _name(record), record["class"]
+
+
+def _advisories(records, by_version):
+    """Label each record with its advisory, a number the records of one advisory share.
+
+    Records of one package whose IDs or aliases overlap, directly or through another
+    record, are one advisory: OSV returns one under its GHSA and its PYSEC ID, and
+    Trivy names it by its CVE. With `by_version`, each installed version of a
+    package is an advisory of its own.
+    """
+    parent = list(range(len(records)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    owner: dict[tuple[str, ...], int] = {}
+    for i, r in enumerate(records):
+        package = (r["ecosystem"], _name(r), r["installed"] if by_version else "")
+        for vuln_id in _ids(r):
+            parent[find(i)] = find(owner.setdefault((*package, vuln_id), i))
+    return [find(i) for i in range(len(records))]
+
+
+def _merge(records):
+    """Collapse each advisory into its first record, carrying the others' IDs as aliases."""
+    records = list(records)
+    groups: dict[int, list[dict[str, Any]]] = {}
+    for label, r in zip(_advisories(records, by_version=True), records, strict=True):
+        groups.setdefault(label, []).append(r)
+    merged = []
+    for first, *rest in groups.values():
+        ids = dict.fromkeys(i for r in (first, *rest) for i in sorted(_ids(r)))
+        fixed_in = dict.fromkeys(
+            v for r in (first, *rest) for v in r["fixed_in"].split(", ") if v
+        )
+        merged.append(
+            {
+                **first,
+                "aliases": [i for i in ids if i != first["id"]],
+                "fixed_in": ", ".join(fixed_in),
+            }
+        )
+    return merged
+
+
+def _load_trivy(path):
+    """Flatten a Trivy JSON report into one record per vulnerability and package.
 
     Results (per-target sections) are merged: the mono image reports the OS
     packages and the Python venv separately, but for fixed/introduced
-    accounting only the (vulnerability, package) pair matters. Each record
+    accounting only the vulnerability and the package matter. Each record
     keeps its section's Class, which separates base-image from dependency
-    findings.
+    findings. VendorIDs are not aliases: one distribution advisory (a DSA, say)
+    fixes several CVEs, and taking it as an alias would merge them.
     """
-    report = json.loads(pathlib.Path(path).read_text())
-    vulns: dict[tuple[str, str], dict[str, Any]] = {}
-    for result in report.get("Results") or []:
+    vulns: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for result in _read_json(path).get("Results") or []:
+        result_type = result.get("Type", "")
         for v in result.get("Vulnerabilities") or []:
-            key = (v["VulnerabilityID"], v.get("PkgName", ""))
+            key = (
+                v["VulnerabilityID"],
+                v.get("PkgName", ""),
+                v.get("InstalledVersion", ""),
+            )
             vulns.setdefault(
                 key,
                 {
                     "id": v["VulnerabilityID"],
+                    "aliases": [],
+                    "ecosystem": PYPI if result_type in PYTHON_TYPES else result_type,
                     "package": v.get("PkgName", ""),
                     "installed": v.get("InstalledVersion", ""),
                     "fixed_in": v.get("FixedVersion", ""),
@@ -54,25 +148,195 @@ def _load_vulns(path):
                     "class": result.get("Class", ""),
                 },
             )
-    return vulns
+    return list(vulns.values())
+
+
+def _load_runtime(paths, python=None):
+    """Read the (name, version) pairs from `uv export` requirements files.
+
+    A line is left out where its environment marker holds on no image: Linux on one
+    of IMAGE_MACHINES, with the images' `python` version, or this interpreter's where
+    it is not given. A line without an exact pin, a URL dependency, counts for every
+    version, as None.
+    """
+    # Imported here: only uv-audit modes need it, and the PR job runs bare python3.
+    from packaging.requirements import Requirement
+
+    # evaluate() lays these over this interpreter's environment.
+    image = {"sys_platform": "linux", "platform_system": "Linux"}
+    if python:
+        image["python_full_version"] = image["implementation_version"] = python
+        image["python_version"] = ".".join(python.split(".")[:2])
+    images = [{**image, "platform_machine": m} for m in IMAGE_MACHINES]
+    lines = [
+        line for path in paths for line in pathlib.Path(path).read_text().splitlines()
+    ]
+    pairs = set()
+    for line in lines:
+        if not re.match(r"[A-Za-z0-9]", line):
+            continue
+        requirement = Requirement(line)
+        marker = requirement.marker
+        if marker is not None and not any(marker.evaluate(env) for env in images):
+            continue
+        pins = [s.version for s in requirement.specifier if s.operator == "=="]
+        pairs.add((_canonical(requirement.name), pins[0] if len(pins) == 1 else None))
+    return pairs
+
+
+def _read_uv_audit(path):
+    """Parse a uv audit report, failing unless it has the schema this script reads."""
+    report = _read_json(path)
+    version = (report.get("schema") or {}).get("version")
+    if version != UV_AUDIT_SCHEMA or not isinstance(
+        report.get("vulnerabilities"), list
+    ):
+        raise SystemExit(
+            f"{path}: not a uv audit report of schema {UV_AUDIT_SCHEMA!r} "
+            f"(schema {version!r}); check the format, then update UV_AUDIT_SCHEMA"
+        )
+    return report
+
+
+def _load_uv_audit(report, runtime):
+    """Flatten a parsed uv audit report into one record per advisory and package version.
+
+    uv audit reports no severity. A package version missing from `runtime`, the
+    (name, version) pairs the published images install, is classed DEV_ONLY.
+    """
+    vulns: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for v in report["vulnerabilities"]:
+        package = v["dependency"]["name"]
+        version = v["dependency"].get("version", "")
+        name = _canonical(package)
+        installed = (name, version) in runtime or (name, None) in runtime
+        vulns.setdefault(
+            (v["id"], package, version),
+            {
+                "id": v["id"],
+                "aliases": v.get("aliases") or [],
+                "ecosystem": PYPI,
+                "package": package,
+                "installed": version,
+                "fixed_in": ", ".join(v.get("fix_versions") or []),
+                "severity": "",
+                "url": v.get("link") or "",
+                "class": LANG_PKGS if installed else DEV_ONLY,
+            },
+        )
+    return _merge(vulns.values())
+
+
+def _adverse_entries(report):
+    """Describe each adverse status of a parsed uv audit report as (key, line).
+
+    The entries' shape is not documented yet, so a package is named where the
+    entry has one and the entry is shown as it is. The key leaves out the version,
+    so a status that persists through a version bump keeps its key.
+    """
+    entries = []
+    for status in report.get("adverse_statuses") or []:
+        dependency = status.get("dependency") if isinstance(status, dict) else None
+        if isinstance(dependency, dict) and dependency.get("name"):
+            rest = {k: v for k, v in status.items() if k != "dependency"}
+            key = (_canonical(dependency["name"]), json.dumps(rest, sort_keys=True))
+            line = (
+                f"`{dependency['name']}` {dependency.get('version', '')}: "
+                f"{json.dumps(rest)}"
+            )
+        else:
+            line = json.dumps(status, sort_keys=True)
+            key = ("", line)
+        entries.append((key, line))
+    return entries
+
+
+def _adverse(report):
+    return [line for _, line in _adverse_entries(report)]
+
+
+def _pair(before, after):
+    """Pair each record with one of the same package, class and advisory.
+
+    Returns the unpaired records of each side: those of `before` were fixed, those
+    of `after` were introduced. Records pair at the same version only, so one of two
+    installed versions that the update did fix cannot hide behind the other. An
+    unpaired record whose advisory the other side still has, at any version, is
+    neither, so a bump that is still vulnerable is no fix. The class must match too,
+    or a dev-only version could take the pair of a runtime one.
+    """
+    after = list(after)
+    candidates: dict[tuple[str, str, str], list[int]] = {}
+    for j, o in enumerate(after):
+        candidates.setdefault(_package(o), []).append(j)
+    taken = [False] * len(after)
+    left = []
+    for r in before:
+        match = next(
+            (
+                j
+                for j in candidates.get(_package(r), [])
+                if not taken[j]
+                and _ids(r) & _ids(after[j])
+                and after[j]["installed"] == r["installed"]
+            ),
+            None,
+        )
+        if match is None:
+            left.append(r)
+        else:
+            taken[match] = True
+    right = [o for j, o in enumerate(after) if not taken[j]]
+
+    # Across versions, an advisory the other side still has is neither fixed nor introduced.
+    def remains(r, others):
+        return any(_package(o) == _package(r) and _ids(r) & _ids(o) for o in others)
+
+    return [r for r in left if not remains(r, right)], [
+        o for o in right if not remains(o, left)
+    ]
 
 
 def _by_severity(records):
     return sorted(
         records,
-        key=lambda r: (SEVERITY_ORDER.get(r["severity"], 5), r["id"], r["package"]),
+        key=lambda r: (
+            SEVERITY_ORDER.get(r["severity"], 5),
+            r["id"],
+            r["package"],
+            r["installed"],
+        ),
     )
 
 
 def _diff(args):
-    before = _load_vulns(args.before)
-    after = _load_vulns(args.after)
+    adverse: list[str] = []
+    if args.format == "uv-audit":
+        # Each side is classed by its own runtime list, so a vulnerable package the
+        # update moves from dev-only into the images shows as introduced.
+        before_report = _read_uv_audit(args.before)
+        after_report = _read_uv_audit(args.after)
+        before = _load_uv_audit(
+            before_report, _load_runtime(args.before_runtime, args.python)
+        )
+        after = _load_uv_audit(
+            after_report, _load_runtime(args.after_runtime, args.python)
+        )
+        known = {key for key, _ in _adverse_entries(before_report)}
+        adverse = [
+            line for key, line in _adverse_entries(after_report) if key not in known
+        ]
+    else:
+        before = _load_trivy(args.before)
+        after = _load_trivy(args.after)
+    fixed, introduced = _pair(before, after)
     fragment = {
         "label": args.label,
         "before_count": len(before),
         "after_count": len(after),
-        "fixed": _by_severity([before[k] for k in before.keys() - after.keys()]),
-        "introduced": _by_severity([after[k] for k in after.keys() - before.keys()]),
+        "fixed": _by_severity(fixed),
+        "introduced": _by_severity(introduced),
+        "adverse": adverse,
     }
     pathlib.Path(args.out).write_text(json.dumps(fragment, indent=2) + "\n")
 
@@ -85,28 +349,77 @@ def _table(records):
     for r in records:
         ref = f"[{r['id']}]({r['url']})" if r["url"] else r["id"]
         lines.append(
-            f"| {ref} | {r['severity']} | `{r['package']}` "
+            f"| {ref} | {r['severity'] or '-'} | `{r['package']}` "
             f"| {r['installed']} | {r['fixed_in'] or '-'} |"
         )
     return lines
 
 
 def _split_by_origin(records):
-    """Partition records into the dependency ones and the base-image ones."""
-    return (
-        [r for r in records if r.get("class") != OS_PKGS],
-        [r for r in records if r.get("class") == OS_PKGS],
-    )
+    """Partition records into the runtime dependency, dev-only and base-image ones."""
+    deps: list[dict[str, Any]] = []
+    dev: list[dict[str, Any]] = []
+    base: list[dict[str, Any]] = []
+    for r in records:
+        {OS_PKGS: base, DEV_ONLY: dev}.get(r.get("class"), deps).append(r)
+    return deps, dev, base
 
 
-def _section(heading, records):
+def _list_once(record_lists):
+    """Drop from each list the PyPI advisories an earlier list holds; count what is left.
+
+    Trivy and uv audit both see the Python runtime dependencies, so a fix both
+    report is listed and counted once, in the first fragment that has it. Within
+    that fragment, each installed version of a package counts once per advisory,
+    even where Trivy lists it under a CVE and a GHSA ID that only another
+    fragment's aliases join. Records of any other ecosystem stay: two images that
+    share a base package each carry its fix or regression.
+    """
+    record_lists = [list(records) for records in record_lists]
+    flat = [(n, r) for n, records in enumerate(record_lists) for r in records]
+    # Every record is an advisory of its own, except where PyPI records share one.
+    advisory: list[tuple[str, int]] = [("own", i) for i in range(len(flat))]
+    pypi = [i for i, (_, r) in enumerate(flat) if r["ecosystem"] == PYPI]
+    labels = _advisories([flat[i][1] for i in pypi], by_version=False)
+    for i, label in zip(pypi, labels, strict=True):
+        advisory[i] = (PYPI, label)
+    listed_in: dict[tuple[str, int], int] = {}
+    kept: list[list[dict[str, Any]]] = [[] for _ in record_lists]
+    counted = set()
+    for (n, r), a in zip(flat, advisory, strict=True):
+        if listed_in.setdefault(a, n) == n:
+            kept[n].append(r)
+            counted.add((*a, r["installed"]) if a[0] == PYPI else a)
+    return kept, len(counted)
+
+
+def _section(heading, records, listed_above=0):
     lines = [f"**{heading} ({len(records)}):**", ""]
     lines.extend(_table(records) if records else ["none"])
+    if listed_above:
+        lines.extend(["", f"{listed_above} more already listed above."])
     lines.append("")
     return lines
 
 
-def _render_fragment(fragment):
+def _collapsed_section(heading, records):
+    """Render a section folded away, for a long list that never gates a PR."""
+    summary = f"<summary>{heading} ({len(records)})</summary>"
+    return ["<details>", summary, "", *_table(records), "", "</details>", ""]
+
+
+def _split_shipped(records):
+    """Partition records into those the images ship and the dev-only ones."""
+    deps, dev, base = _split_by_origin(records)
+    return deps + base, dev
+
+
+def _adverse_section(heading, lines):
+    return [f"**{heading} ({len(lines)}):**", "", *(f"- {line}" for line in lines), ""]
+
+
+def _render_fragment(fragment, fixed_deps, introduced):
+    """Render a fragment, with its fixed dependency and shipped introduced records deduplicated."""
     lines = [
         f"### {fragment['label']}",
         "",
@@ -114,42 +427,120 @@ def _render_fragment(fragment):
         f"{fragment['after_count']} after.",
         "",
     ]
-    fixed_deps, fixed_base = _split_by_origin(fragment["fixed"])
-    lines.extend(_section("Fixed by the dependency update", fixed_deps))
+    all_fixed_deps, fixed_dev, fixed_base = _split_by_origin(fragment["fixed"])
+    lines.extend(
+        _section(
+            "Fixed by the dependency update",
+            fixed_deps,
+            len(all_fixed_deps) - len(fixed_deps),
+        )
+    )
+    if fixed_dev:
+        lines.extend(
+            _collapsed_section(
+                "Fixed in dev-only packages, not counted toward a PR", fixed_dev
+            )
+        )
     if fixed_base:
         lines.extend(
             _section(
                 "Fixed by the refreshed base image, not by this update", fixed_base
             )
         )
-    if fragment["introduced"]:
-        lines.extend(_section("Introduced", fragment["introduced"]))
+    all_introduced, introduced_dev = _split_shipped(fragment["introduced"])
+    if all_introduced:
+        lines.extend(
+            _section("Introduced", introduced, len(all_introduced) - len(introduced))
+        )
+    if introduced_dev:
+        lines.extend(
+            _collapsed_section("Introduced in dev-only packages", introduced_dev)
+        )
+    if fragment.get("adverse"):
+        lines.extend(
+            _adverse_section(
+                "Adverse statuses the update introduced", fragment["adverse"]
+            )
+        )
     return lines
 
 
 def _render(args):
-    fragments = [json.loads(pathlib.Path(p).read_text()) for p in args.fragments]
+    fragments = [_read_json(p) for p in args.fragments]
+    fixed_deps, fixed_count = _list_once(
+        _split_by_origin(f["fixed"])[0] for f in fragments
+    )
+    introduced, _ = _list_once(_split_shipped(f["introduced"])[0] for f in fragments)
     lines = []
-    for fragment in fragments:
-        lines.extend(_render_fragment(fragment))
+    for parts in zip(fragments, fixed_deps, introduced, strict=True):
+        lines.extend(_render_fragment(*parts))
     pathlib.Path(args.out).write_text("\n".join(lines).rstrip() + "\n")
-    print(sum(len(_split_by_origin(f["fixed"])[0]) for f in fragments))
+    print(fixed_count)
+
+
+def _exposure(args):
+    report = _read_uv_audit(args.report)
+    deps, dev, _ = _split_by_origin(
+        _by_severity(_load_uv_audit(report, _load_runtime(args.runtime, args.python)))
+    )
+    packages = (report.get("summary") or {}).get("audited_packages", "?")
+    lines = [
+        f"{len(deps) + len(dev)} known vulnerabilities in {packages} packages.",
+        "",
+        *_section("In packages the images install", deps),
+    ]
+    if dev:
+        lines.extend(_collapsed_section("In dev-only packages", dev))
+    if adverse := _adverse(report):
+        lines.extend(_adverse_section("Adverse statuses", adverse))
+    pathlib.Path(args.out).write_text("\n".join(lines).rstrip() + "\n")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="mode", required=True)
-    diff = sub.add_parser("diff", help="diff two Trivy JSON reports into a fragment")
+    diff = sub.add_parser("diff", help="diff two JSON reports into a fragment")
     diff.add_argument("--label", required=True, help="artifact name shown in reports")
-    diff.add_argument("--before", required=True, help="Trivy JSON report (before)")
-    diff.add_argument("--after", required=True, help="Trivy JSON report (after)")
+    diff.add_argument(
+        "--format", choices=["trivy", "uv-audit"], default="trivy", help="report kind"
+    )
+    diff.add_argument("--before", required=True, help="JSON report (before)")
+    diff.add_argument("--after", required=True, help="JSON report (after)")
+    diff.add_argument(
+        "--before-runtime",
+        nargs="+",
+        help="uv exports of what the images install before (required for uv-audit)",
+    )
+    diff.add_argument(
+        "--after-runtime",
+        nargs="+",
+        help="uv exports of what the images install after (required for uv-audit)",
+    )
+    diff.add_argument("--python", help="the images' Python version, for markers")
     diff.add_argument("--out", required=True, help="fragment JSON output path")
     diff.set_defaults(func=_diff)
     render = sub.add_parser("render", help="render fragments to markdown")
     render.add_argument("fragments", nargs="+", help="fragment JSON files")
     render.add_argument("--out", required=True, help="markdown output path")
     render.set_defaults(func=_render)
+    exposure = sub.add_parser("exposure", help="render one uv audit report to markdown")
+    exposure.add_argument("--report", required=True, help="uv audit JSON report")
+    exposure.add_argument(
+        "--runtime",
+        nargs="+",
+        required=True,
+        help="uv exports of the packages the images install",
+    )
+    exposure.add_argument("--python", help="the images' Python version, for markers")
+    exposure.add_argument("--out", required=True, help="markdown output path")
+    exposure.set_defaults(func=_exposure)
     args = parser.parse_args()
+    if (
+        args.mode == "diff"
+        and args.format == "uv-audit"
+        and not (args.before_runtime and args.after_runtime)
+    ):
+        parser.error("--format uv-audit requires --before-runtime and --after-runtime")
     args.func(args)
 
 

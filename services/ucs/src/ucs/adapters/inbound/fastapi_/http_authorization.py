@@ -35,12 +35,14 @@ __all__ = [
     "require_requeue_all_failed_work_order",
     "require_requeue_file_work_order",
     "require_upload_file_work_order",
+    "require_view_file_box_stats_work_order",
     "require_view_file_box_work_order",
 ]
 
 CreateFileBoxProvider = JWTAuthContextProvider[models.CreateFileBoxWorkOrder]
 ChangeFileBoxProvider = JWTAuthContextProvider[models.ChangeFileBoxWorkOrder]
 ViewFileBoxProvider = JWTAuthContextProvider[models.ViewFileBoxWorkOrder]
+ViewFileBoxStatsProvider = JWTAuthContextProvider[models.ViewFileBoxStatsWorkOrder]
 CreateFileProvider = JWTAuthContextProvider[models.CreateFileWorkOrder]
 UploadFileProvider = JWTAuthContextProvider[models.UploadFileWorkOrder]
 DeleteFileBoxProvider = JWTAuthContextProvider[models.DeleteFileBoxWorkOrder]
@@ -71,6 +73,10 @@ class JWTAuthContextProviderBundle:
         self.view_file_box_provider = JWTAuthContextProvider(
             config=self.rs_auth_config,
             context_class=models.ViewFileBoxWorkOrder,
+        )
+        self.view_file_box_stats_provider = JWTAuthContextProvider(
+            config=self.rs_auth_config,
+            context_class=models.ViewFileBoxStatsWorkOrder,
         )
         self.create_file_provider = JWTAuthContextProvider(
             config=self.wps_auth_config,
@@ -145,6 +151,19 @@ async def _require_view_file_box_work_order(
 ) -> models.ViewFileBoxWorkOrder:
     """Require a "view file box" work order context using FastAPI."""
     provider = auth_provider_bundle.view_file_box_provider
+    return await require_auth_context_using_credentials(
+        credentials=credentials, auth_provider=provider
+    )
+
+
+async def _require_view_file_box_stats_work_order(
+    auth_provider_bundle: Annotated[
+        JWTAuthContextProviderBundle, Depends(dummies.auth_provider_bundle)
+    ],
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False)),
+) -> models.ViewFileBoxStatsWorkOrder:
+    """Require a "view file box stats" work order context using FastAPI."""
+    provider = auth_provider_bundle.view_file_box_stats_provider
     return await require_auth_context_using_credentials(
         credentials=credentials, auth_provider=provider
     )
@@ -257,6 +276,9 @@ async def _require_requeue_all_failed_work_order(
 require_create_file_box_work_order = Security(_require_create_file_box_work_order)
 require_change_file_box_work_order = Security(_require_change_file_box_work_order)
 require_view_file_box_work_order = Security(_require_view_file_box_work_order)
+require_view_file_box_stats_work_order = Security(
+    _require_view_file_box_stats_work_order
+)
 require_create_file_work_order = Security(_require_create_file_work_order)
 require_upload_file_work_order = Security(_require_upload_file_work_order)
 require_close_file_work_order = Security(_require_close_file_work_order)
