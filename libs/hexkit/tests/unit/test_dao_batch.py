@@ -43,10 +43,40 @@ def test_batch_operation_error():
     assert BatchOperationError(errors=errors).not_attempted == ()
 
 
+def test_batch_operation_error_names_five():
+    """Test that the message names five failed IDs and a note lists all of them."""
+    ids = list("abcdefg")
+    errors: dict[ID, DaoError] = {id_: ResourceNotFoundError(id_=id_) for id_ in ids}
+
+    error = BatchOperationError(errors=errors)
+
+    assert str(error) == (
+        "7 resource(s) of the batch failed: ['a', 'b', 'c', 'd', 'e'] and 2 more"
+    )
+    assert error.__notes__ == [f"All 7 IDs: {ids}"]
+    assert len(error.errors) == 7
+
+    five = BatchOperationError(errors=dict(list(errors.items())[:5]))
+    assert str(five).endswith("['a', 'b', 'c', 'd', 'e']")
+    assert not hasattr(five, "__notes__")
+
+
 def test_ensure_distinct_ids():
     """Test that ensure_distinct_ids names each repeated ID once."""
     ensure_distinct_ids(["a", "b", 1])
     ensure_distinct_ids([])
 
-    with pytest.raises(ValueError, match=r"more than once: \['a', 1\]$"):
+    with pytest.raises(ValueError, match=r"more than once: \['a', 1\]$") as info:
         ensure_distinct_ids(["a", 1, "b", "a", 1, "a"])
+    assert not hasattr(info.value, "__notes__")
+
+
+def test_ensure_distinct_ids_names_five():
+    """Test that the message names five repeated IDs and a note lists all of them."""
+    repeated = list("abcdefg")
+
+    with pytest.raises(ValueError) as info:
+        ensure_distinct_ids(repeated * 2)
+
+    assert str(info.value).endswith("['a', 'b', 'c', 'd', 'e'] and 2 more")
+    assert info.value.__notes__ == [f"All 7 IDs: {repeated}"]
