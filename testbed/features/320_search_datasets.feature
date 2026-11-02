@@ -13,6 +13,7 @@ Feature: 22 Search Datasets
     When I search datasets without any keyword
     Then the response status code is "200"
     And I get all the existing datasets
+    And only the legacy dataset is found with flat accession
 
   Scenario: Search datasets with a word not found in
     When I search datasets with the "hotel" query
@@ -22,17 +23,22 @@ Feature: 22 Search Datasets
   Scenario: Search datasets with a common keyword
     When I search datasets with the "dataset" query
     Then the response status code is "200"
-    And I get "2" search results
+    And I get "3" search results
 
   Scenario: Search datasets with study alias
     When I search datasets with the "STUDY_A" query
     Then the response status code is "200"
     And I get only dataset "EGADATASET000A" as search result
 
+  Scenario: Search datasets with the legacy study alias
+    When I search datasets with the "STUDY_X" query
+    Then the response status code is "200"
+    And I get only dataset "EGADATASET000X" as search result
+
   Scenario: Search datasets by keyword matching
     When I search datasets with the "An interesting dataset C" query
     Then the response status code is "200"
-    And I get "2" search results
+    And I get "3" search results
 
   Scenario: Search datasets with exact description
     When I search datasets with the ""An interesting dataset B"" query

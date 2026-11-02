@@ -54,7 +54,7 @@ def delete_artifacts_for_complete_datasets(fixtures: JointFixture):
         for event_file in (event_path / "source_events").glob("*.json")
         if is_complete_dataset_submission(event_file)
     ]
-    assert len(source_events) == 2
+    assert len(source_events) == 3
     num_artifact_types = num_deleted_artifacts = 0
     for artifact_dir in event_path.glob("artifact*"):
         if not artifact_dir.is_dir():
