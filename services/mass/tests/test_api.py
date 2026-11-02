@@ -149,13 +149,21 @@ async def test_search_with_limit(joint_fixture: JointFixture):
 
 @pytest.mark.parametrize(
     "params",
-    [{"skip": -1}, {"skip": 2**63}, {"limit": 0}, {"limit": -1}, {"limit": 1001}],
+    [
+        {"skip": -1},
+        {"skip": 2**63},
+        {"limit": 0},
+        {"limit": -1},
+        {"limit": 1001},
+        {"limit": 2**63},
+    ],
     ids=[
         "negative skip",
         "skip above int64",
         "zero limit",
         "negative limit",
         "limit above maximum",
+        "limit above int64",
     ],
 )
 async def test_search_with_invalid_pagination(
