@@ -27,7 +27,9 @@ from typing import Any
 import pytest
 from pydantic import UUID4, BaseModel
 from pymongo import MongoClient
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.collection import Collection
+from pymongo.errors import BulkWriteError
 
 from hexkit.correlation import (
     correlation_id_var,
@@ -38,6 +40,7 @@ from hexkit.correlation import (
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.dao import (
     BatchOperationError,
+    DbTimeoutError,
     InvalidFilterError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
@@ -2102,6 +2105,47 @@ async def test_update_many_with_failed_lookup_publishes_nothing(
         assert publisher.published[1:] == [
             (CHANGE_EVENT_TYPE, changed.model_dump(mode="json"))
         ]
+
+
+async def test_insert_many_with_write_concern_error_publishes_nothing(
+    mongo_kafka: MongoKafkaFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a batch whose write concern failed publishes nothing and raises its
+    BatchOperationError, as a single write raises before it publishes, and that
+    publish_pending then sends the documents it wrote.
+    """
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        dtos = [ExampleDto(), ExampleDto()]
+        insert_many = AsyncCollection.insert_many
+
+        async def insert_then_time_out(
+            self: AsyncCollection, *args: Any, **kwargs: Any
+        ) -> Any:
+            await insert_many(self, *args, **kwargs)
+            concern = {
+                "code": 64,
+                "errmsg": "waiting for replication timed out",
+                "errInfo": {"wtimeout": True},
+            }
+            raise BulkWriteError({"writeErrors": [], "writeConcernErrors": [concern]})
+
+        monkeypatch.setattr(AsyncCollection, "insert_many", insert_then_time_out)
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.insert_many(dtos)
+
+        assert list(caught.value.errors) == [dto.id for dto in dtos]
+        for error in caught.value.errors.values():
+            assert isinstance(error, DbTimeoutError)
+        assert publisher.published == []
+        for dto in dtos:
+            assert await dao.get_by_id(dto.id) == dto
+            assert not is_published(mongo_kafka, dto.id)
+
+        monkeypatch.undo()
+        await dao.publish_pending()
+        expected = [(CHANGE_EVENT_TYPE, dto.model_dump(mode="json")) for dto in dtos]
+        assert sorted(publisher.published, key=str) == sorted(expected, key=str)
 
 
 async def test_delete_many_tombstones_live_ids(mongo_kafka: MongoKafkaFixture):
