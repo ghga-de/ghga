@@ -663,7 +663,9 @@ class MongoDbDao(Generic[Dto]):
             try:
                 result = await self._collection.bulk_write(operations, ordered=ordered)
             except BulkWriteError as error:
-                failures = _errors_from_bulk_write(error, ids, ordered=ordered)
+                failures = _errors_from_bulk_write(
+                    error, ids, ordered=ordered, duplicate_key=_replace_duplicate_error
+                )
                 # The caller raises it later, outside this except block
                 failures.__cause__ = error
                 return error.details["nMatched"], failures
