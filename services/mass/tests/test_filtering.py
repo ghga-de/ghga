@@ -373,3 +373,26 @@ async def test_filter_for_fur_color(
     assert facet.name == "Fur color"
     if names:
         assert any(option.value == color for option in facet.options)
+
+
+@pytest.mark.parametrize(
+    "ids,names",
+    [(["0"], []), (["1"], ["Jack"]), (["2", "3"], ["Bruiser", "Lady"])],
+    ids=range(1, 4),
+)
+async def test_filter_by_id(
+    ids: list[str], names: list[str], joint_fixture: JointFixture
+):
+    """Test that we can filter by the ID of the resources"""
+    params: QueryParams = {
+        "class_name": CLASS_NAME,
+        "filter_by": ["id_"] * len(ids),
+        "value": ids,
+    }
+
+    results = await joint_fixture.call_search_endpoint(params)
+
+    # Check that the expected names are returned
+    returned_names = [resource.content["name"] for resource in results.hits]
+    assert returned_names == names
+    assert results.count == len(names)
