@@ -173,8 +173,9 @@ def _errors_from_bulk_write(
     """Turn the failures of a bulk write into an error that names each failed resource.
 
     `ids` holds the ID of each operation, in the order the operations were passed to
-    the bulk write. MongoDB names a failure by its index in that list, whether the
-    batch is ordered or not. `duplicate_key` returns the error that the operation's
+    the bulk write, and must be distinct, which the batch methods ensure before they
+    write. MongoDB names a failure by its index in that list, whether the batch is
+    ordered or not. `duplicate_key` returns the error that the operation's
     single-resource method raises for a duplicate key.
 
     A write concern error does not undo the writes: each attempted resource without a
