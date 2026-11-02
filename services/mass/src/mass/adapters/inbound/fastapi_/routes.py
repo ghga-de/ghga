@@ -78,11 +78,17 @@ async def search(  # noqa: PLR0913
         Query(description="Values(s) that shall be used for filtering results"),
     ] = None,
     skip: Annotated[
-        int, Query(ge=0, description="The number of results to skip for pagination")
+        int,
+        Query(
+            ge=0,
+            le=2**63 - 1,  # MongoDB cannot encode larger ints
+            description="The number of results to skip for pagination",
+        ),
     ] = 0,
     limit: Annotated[
-        int | None, Query(ge=1, description="Limit the results to this number")
-    ] = None,
+        int,
+        Query(ge=1, le=1000, description="Limit the results to this number"),
+    ] = 100,
     order_by: Annotated[
         list[str] | None,
         Query(description="Field(s) that shall be used for sorting results"),

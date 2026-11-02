@@ -261,6 +261,7 @@ paths:
         schema:
           default: 0
           description: The number of results to skip for pagination
+          maximum: 9223372036854775807
           minimum: 0
           title: Skip
           type: integer
@@ -269,12 +270,12 @@ paths:
         name: limit
         required: false
         schema:
-          anyOf:
-          - minimum: 1
-            type: integer
-          - type: 'null'
+          default: 100
           description: Limit the results to this number
+          maximum: 1000
+          minimum: 1
           title: Limit
+          type: integer
       - description: Field(s) that shall be used for sorting results
         in: query
         name: order_by
