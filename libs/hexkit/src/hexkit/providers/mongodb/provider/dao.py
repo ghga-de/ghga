@@ -128,6 +128,22 @@ DUPLICATE_KEY_ERROR = 11000
 MAX_TIME_MS_EXPIRED = 50
 
 
+def _write_concern_error(error: BulkWriteError) -> DaoError | None:
+    """Return the error a single write raises for the batch's write concern error.
+
+    Only the last one counts, as for pymongo. Unlike `BulkWriteError.timeout`, this
+    ignores the write errors, so a write that ran out of its maxTimeMS does not make
+    the write concern error a timeout.
+    """
+    concern_errors = error.details.get("writeConcernErrors")
+    if not concern_errors:
+        return None
+    last, info = concern_errors[-1], concern_errors[-1].get("errInfo", {})
+    if last.get("code") == MAX_TIME_MS_EXPIRED or info.get("wtimeout"):
+        return DbTimeoutError(last["errmsg"])
+    return DaoError(last["errmsg"])
+
+
 def _errors_from_bulk_write(
     error: BulkWriteError, ids: Sequence[ID], *, ordered: bool
 ) -> BatchOperationError:
@@ -137,18 +153,14 @@ def _errors_from_bulk_write(
     the bulk write. MongoDB names a failure by its index in that list, whether the
     batch is ordered or not.
 
-    Raises:
-        DbTimeoutError: when the batch's write concern timed out.
-        DaoError: when the batch hit another write concern error, which no single
-            resource caused.
+    A write concern error does not undo the writes: each attempted resource without a
+    write error of its own is named with the write concern's error, as its single
+    write raises it.
     """
-    if error.details.get("writeConcernErrors"):
-        if error.timeout:
-            raise DbTimeoutError(str(error)) from error
-        raise DaoError(str(error)) from error
     errors: dict[ID, DaoError] = {}
+    write_errors = error.details["writeErrors"]
     # Each failure gets the error that the single-resource method raises for it
-    for failure in error.details["writeErrors"]:
+    for failure in write_errors:
         id_, key_value = ids[failure["index"]], failure.get("keyValue")
         if failure["code"] == MAX_TIME_MS_EXPIRED:
             errors[id_] = DbTimeoutError(failure["errmsg"])
@@ -166,8 +178,14 @@ def _errors_from_bulk_write(
             errors[id_] = UniqueConstraintViolationError(unique_fields=key_value)
     # An ordered batch stops at its first failure and skips the rest
     not_attempted: Sequence[ID] = ()
-    if ordered:
-        not_attempted = ids[error.details["writeErrors"][0]["index"] + 1 :]
+    if ordered and write_errors:
+        not_attempted = ids[write_errors[0]["index"] + 1 :]
+    concern_error = _write_concern_error(error)
+    if concern_error:
+        # An attempted write without an error of its own is applied but not
+        # confirmed, which its single method reports with this error
+        attempted = ids[: len(ids) - len(not_attempted)]
+        errors |= {id_: concern_error for id_ in attempted if id_ not in errors}
     return BatchOperationError(errors=errors, not_attempted=not_attempted)
 
 

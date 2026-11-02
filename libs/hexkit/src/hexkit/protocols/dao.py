@@ -148,6 +148,9 @@ class BatchOperationError(DaoError):
     """Raised when a batch partly failed: what it names failed, the rest succeeded.
 
     `errors` maps each failed ID to the error a single-resource method would raise.
+    It also names each resource whose write was applied but not confirmed, such as
+    after a MongoDB write concern error, with the error a single write raises for that;
+    such a write stays stored unless a failover rolls it back.
     `not_attempted` lists, in input order, the IDs an ordered batch skipped after its
     first failure. An unordered batch attempts every resource, so for it the list is
     empty.
