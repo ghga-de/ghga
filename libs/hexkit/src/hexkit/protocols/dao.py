@@ -21,6 +21,7 @@ with the database.
 import typing
 from abc import ABC, abstractmethod
 from asyncio import sleep
+from collections import Counter
 from collections.abc import (
     AsyncIterator,
     Awaitable,
@@ -142,16 +143,9 @@ class BatchOperationError(DaoError):
 
 def ensure_distinct_ids(ids: Iterable[ID]) -> None:
     """Raise a ValueError naming the IDs that occur more than once in a batch."""
-    seen: set[ID] = set()
-    duplicates: set[ID] = set()
-    for id_ in ids:
-        if id_ in seen:
-            duplicates.add(id_)
-        seen.add(id_)
+    duplicates = [id_ for id_, count in Counter(ids).items() if count > 1]
     if duplicates:
-        # Sorted by their text, so the message does not depend on the set's order
-        listed = sorted(duplicates, key=str)
-        raise ValueError(f"The batch holds these IDs more than once: {listed}")
+        raise ValueError(f"The batch holds these IDs more than once: {duplicates}")
 
 
 class FindError(DaoError):
