@@ -507,9 +507,9 @@ class Dao(typing.Protocol[Dto]):
                 `UniqueConstraintViolationError` if it clashes with a unique index over
                 another field, to `DbTimeoutError` if its write timed out, or to a plain
                 `DaoError` for any other failure, such as a failed document validation.
-            DbTimeoutError: when the write concern timed out.
-            DaoError: when the write concern failed otherwise, which no single resource
-                caused.
+                A failed write concern also names each resource it left unconfirmed,
+                a missing one included, with `DbTimeoutError` if it timed out or a
+                plain `DaoError` otherwise; those resources stay stored.
         """
         ...
 
