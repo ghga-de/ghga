@@ -69,6 +69,20 @@ components:
       - total_count
       title: BoxUploadsPage
       type: object
+    FileStateCountsRequest:
+      description: Request body for counting the FileUploads per state in FileUploadBoxes.
+      properties:
+        box_ids:
+          description: The IDs of the FileUploadBoxes whose FileUploads are counted
+          items:
+            format: uuid4
+            type: string
+          title: Box Ids
+          type: array
+      required:
+      - box_ids
+      title: File State Counts Request
+      type: object
     FileUpload:
       description: 'A FileUpload.
 
@@ -1546,6 +1560,57 @@ paths:
               schema: {}
           description: Successful Response
       summary: health
+      tags:
+      - UploadControllerService
+  /rpc/boxes/file-state-counts:
+    post:
+      description: 'Count the FileUploads per state in each of the given FileUploadBoxes.
+
+
+        Unknown box IDs are ignored. Requires a ViewFileBoxStatsWorkOrder token from
+        the RS.'
+      operationId: getFileStateCounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileStateCountsRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  additionalProperties:
+                    type: integer
+                  propertyNames:
+                    enum:
+                    - init
+                    - inbox
+                    - failed
+                    - cancelled
+                    - interrogated
+                    - failed_interrogation
+                    - awaiting_archival
+                    - archived
+                  type: object
+                propertyNames:
+                  format: uuid4
+                title: Response Getfilestatecounts
+                type: object
+          description: The number of file uploads per state for each box. Only the
+            states that count toward a box's file_count are included. Boxes without
+            such uploads and states without uploads are absent.
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Count the file uploads per state in the given boxes
       tags:
       - UploadControllerService
   /rpc/boxes/{box_id}/requeue:

@@ -16,11 +16,13 @@
 """Defines the main upload controller class"""
 
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 
 from pydantic import UUID4
 
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
+    FileUploadState,
     InterrogationFailure,
     InterrogationSuccess,
     UploadBoxState,
@@ -546,6 +548,19 @@ class UploadControllerPort(ABC):
         Raises:
         - `PaginationError` if skip and/or limit are invalid.
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
+        """
+        ...
+
+    @abstractmethod
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        """Return the number of FileUploads per state for each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such FileUploads are
+        absent from the result, as are states without FileUploads.
         """
         ...
 

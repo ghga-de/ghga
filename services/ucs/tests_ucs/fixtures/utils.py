@@ -79,6 +79,12 @@ def view_file_box_token_header(*, box_id: UUID = uuid4(), jwk: JWK) -> dict[str,
     return _make_auth_header(work_order, jwk)
 
 
+def view_file_box_stats_token_header(*, jwk: JWK) -> dict[str, str]:
+    """Generate ViewFileBoxStatsWorkOrder token for testing."""
+    work_order = models.ViewFileBoxStatsWorkOrder(work_type="view_stats")
+    return _make_auth_header(work_order, jwk)
+
+
 def create_file_token_header(
     *,
     box_id: UUID = uuid4(),

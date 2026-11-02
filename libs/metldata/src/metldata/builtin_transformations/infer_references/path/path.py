@@ -74,7 +74,7 @@ class ReferencePath:
         self.target = self.elements[-1].target
 
     @classmethod
-    def validate(cls, value, info: ValidationInfo) -> "ReferencePath":
+    def validate(cls, value, info: ValidationInfo) -> ReferencePath:
         """A validator for pydantic."""
         if isinstance(value, cls):
             return value

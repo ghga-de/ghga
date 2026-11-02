@@ -17,7 +17,9 @@
 """Shared test used for steps with prefix test_3*"""
 
 import subprocess
+import time
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fixtures import Config, JointFixture, Response, StateStorage  # noqa: RUF100
@@ -29,6 +31,43 @@ from pytest_bdd import (  # noqa: RUF100
 )
 
 from steps.utils import has_reached, parse
+
+
+def _session_headers(fixtures: JointFixture, full_name: str) -> dict[str, str]:
+    """Return the request headers of the given logged-in user."""
+    session = fixtures.auth.get_saved_session(
+        name=full_name, state_store=fixtures.state
+    )
+    assert session, f"No session found for {full_name}"
+    return fixtures.auth.headers(session=session)
+
+
+def _read_stable_box(
+    fixtures: JointFixture, storage_name: str, full_name: str = "Data Steward"
+) -> dict[str, Any]:
+    """Read the upload box back from RS once its version has stopped advancing.
+
+    RS learns about uploads, deletions and state changes in UCS from events, so a
+    version read right after a change is often already out of date, which gets the
+    next update of the box rejected. The box read is stored as the box's state.
+    """
+    rdub = fixtures.state.get_state(f"rdub_{storage_name}")
+    assert rdub, f"No upload box in state for {storage_name} storage"
+    url = f"{fixtures.config.rs_url}/upload-boxes/{rdub['id']}"
+    headers = _session_headers(fixtures, full_name)
+
+    box: dict[str, Any] = {}
+    version = None
+    for _ in range(30):
+        box = fixtures.http.get(url, headers=headers).json()
+        if box.get("version") == version:
+            break
+        version = box.get("version")
+        time.sleep(1)
+    assert version is not None, f"Could not read the {storage_name} upload box"
+
+    fixtures.state.set_state(f"rdub_{storage_name}", box)
+    return box
 
 
 @when(

@@ -35,7 +35,7 @@ import {
 import { AccessGrantStatusClassPipe } from '@app/access-requests/pipes/access-grant-status-class-pipe';
 import { AccessRequestStatusClassPipe } from '@app/access-requests/pipes/access-request-status-class-pipe';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { UserSession } from '@app/auth/models/user';
+import { UserRegisteredData } from '@app/auth/models/user';
 import { Iva, IvaState } from '@app/ivas/models/iva';
 import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
@@ -201,26 +201,24 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   #userId = computed(() => this.request()?.user_id);
 
   /**
-   * Resource for loading the external ID of the user who made the access request.
+   * Resource for loading the user who made the access request,
+   * whose LS ID and LS Login email are not part of the request.
    * Only loads when userId is set.
    */
-  userExtId = httpResource<string | undefined>(
+  requester = httpResource<UserRegisteredData | undefined>(
     () => {
       const userId = this.#userId();
       if (!userId) return undefined;
       return `${this.#usersUrl}/${userId}`;
     },
-    {
-      parse: (raw) => (raw as UserSession).ext_id,
-      defaultValue: undefined,
-    },
+    { defaultValue: undefined },
   );
 
   /**
    * The external ID with a zero-width space before the `@`, so that it can wrap there.
    */
   protected userExtIdText = computed(() =>
-    this.userExtId.value()?.split('@', 2).join('\u200B@'),
+    this.requester.value()?.ext_id.split('@', 2).join('\u200B@'),
   );
 
   /**
