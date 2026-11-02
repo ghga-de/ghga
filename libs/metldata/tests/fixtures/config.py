@@ -33,7 +33,7 @@ PREFIX_MAPPING = {
 
 
 @pytest.fixture
-def config_sub_fixture() -> Generator[SubmissionConfig, None, None]:
+def config_sub_fixture() -> Generator[SubmissionConfig]:
     """Generate a test config."""
     with TemporaryDirectory() as submission_store_dir:
         with NamedTemporaryFile() as accession_store_path:

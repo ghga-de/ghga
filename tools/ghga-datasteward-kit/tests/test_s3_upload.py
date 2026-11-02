@@ -424,7 +424,7 @@ async def test_error_handling_part_upload(
                         self,
                         *,
                         client: httpx2.AsyncClient,
-                        file_processor: Generator[tuple[int, bytes], Any, None],
+                        file_processor: Generator[tuple[int, bytes], Any],
                         start: float,
                     ):
                         """Mock to be used as patch for raising a custom exception"""
