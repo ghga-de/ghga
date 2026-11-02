@@ -692,6 +692,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             BatchOperationError:
                 when some resources could not be deleted. Each failed ID maps to
                 `DbTimeoutError` if its write timed out, or to another `DaoError`.
+                A failed write concern names each tombstone it left unconfirmed the
+                same way; its delete is published by `publish_pending`.
         """
         if isinstance(ids, str):
             raise TypeError("delete_many takes a collection of IDs, not a single ID")

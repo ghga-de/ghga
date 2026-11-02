@@ -117,6 +117,7 @@ A resource that another writer creates or deletes around these lookups can get t
 A batch raises at its first failed publish, as a single write does, although its write is stored.
 The resources not published keep `__metadata__.published == False`, so `publish_pending()` sends them later.
 When the write failed for some IDs, the batch logs the failed publish as a warning and raises its `BatchOperationError` instead, since that error names the writes that were lost.
+A batch with a write concern error publishes nothing, as a single write: its error names every resource the write concern left unconfirmed, and `publish_pending()` sends them later.
 A send already retries by itself when a connection drops or a partition moves to another broker, until the producer's request timeout of 40 s runs out.
 
 Each resource costs one send and one mark write.
