@@ -122,6 +122,28 @@ class PreconditionFailedError(DaoError):
         super().__init__(message)
 
 
+# How many IDs an error message names before it only counts the rest
+_NAMED_IDS = 5
+
+
+def _named_ids(ids: list[ID]) -> str:
+    """Name the first IDs and count the rest, so that a log line stays short."""
+    named = str(ids[:_NAMED_IDS])
+    if len(ids) > _NAMED_IDS:
+        named += f" and {len(ids) - _NAMED_IDS} more"
+    return named
+
+
+def _note_all_ids(error: Exception, ids: list[ID]) -> None:
+    """Attach every ID when the message leaves some out.
+
+    A traceback prints the note, while `str(error)`, and so a log line of the
+    message, leaves it out.
+    """
+    if len(ids) > _NAMED_IDS:
+        error.add_note(f"All {len(ids)} IDs: {ids}")
+
+
 class BatchOperationError(DaoError):
     """Raised when a batch partly failed: what it names failed, the rest succeeded.
 
@@ -129,6 +151,9 @@ class BatchOperationError(DaoError):
     `not_attempted` lists, in input order, the IDs an ordered batch skipped after its
     first failure. An unordered batch attempts every resource, so for it the list is
     empty.
+
+    The message names the first five failed IDs; when there are more, a note on the
+    error, which a traceback prints, lists all of them.
     """
 
     def __init__(
@@ -136,10 +161,11 @@ class BatchOperationError(DaoError):
     ):
         self.errors = dict(errors)
         self.not_attempted = tuple(not_attempted)
-        message = (
-            f"{len(self.errors)} resource(s) of the batch failed: {list(self.errors)}"
+        failed = list(self.errors)
+        super().__init__(
+            f"{len(failed)} resource(s) of the batch failed: {_named_ids(failed)}"
         )
-        super().__init__(message)
+        _note_all_ids(self, failed)
 
 
 # TODO: Remove `mapping` when moving hexkit to v11.0.0
@@ -179,7 +205,11 @@ def ensure_distinct_ids(ids: Iterable[ID]) -> None:
     """Raise a ValueError naming the IDs that occur more than once in a batch."""
     duplicates = [id_ for id_, count in Counter(ids).items() if count > 1]
     if duplicates:
-        raise ValueError(f"The batch holds these IDs more than once: {duplicates}")
+        error = ValueError(
+            f"The batch holds these IDs more than once: {_named_ids(duplicates)}"
+        )
+        _note_all_ids(error, duplicates)
+        raise error
 
 
 class FindError(DaoError):
