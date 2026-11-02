@@ -26,11 +26,13 @@ from typing import Any, cast
 import pytest
 from pydantic import UUID4, BaseModel, ConfigDict, Field, field_serializer
 from pymongo import AsyncMongoClient, monitoring
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.errors import BulkWriteError
 
 from hexkit.protocols.dao import (
     BatchOperationError,
     Dao,
+    DbTimeoutError,
     InvalidFilterError,
     MultipleHitsFoundError,
     NoHitsFoundError,
@@ -1225,6 +1227,48 @@ async def test_dao_update_many(mongodb: MongoDbFixture):
             assert await dao.get_by_id(dto.id) == dto
         with pytest.raises(ResourceNotFoundError):
             await dao.get_by_id(missing.id)
+
+
+async def test_dao_update_many_write_concern_error(
+    mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a write concern error names every resource of update_many with its
+    error, a missing one included, as `update` raises it before it checks the match.
+    """
+    async with counted_dao(mongodb) as (dao, _):
+        stored = ExampleDto(field_a="stored")
+        await dao.insert(stored)
+        changed = stored.model_copy(update={"field_b": 7})
+        missing = ExampleDto(field_a="missing")
+        bulk_write = AsyncCollection.bulk_write
+
+        async def write_then_time_out(
+            self: AsyncCollection, *args: Any, **kwargs: Any
+        ) -> Any:
+            result = await bulk_write(self, *args, **kwargs)
+            concern = {
+                "code": 64,
+                "errmsg": "waiting for replication timed out",
+                "errInfo": {"wtimeout": True},
+            }
+            raise BulkWriteError(
+                {
+                    "writeErrors": [],
+                    "writeConcernErrors": [concern],
+                    "nMatched": result.matched_count,
+                }
+            )
+
+        monkeypatch.setattr(AsyncCollection, "bulk_write", write_then_time_out)
+        with pytest.raises(BatchOperationError) as caught:
+            await dao.update_many([changed, missing])
+
+        assert isinstance(caught.value.__cause__, BulkWriteError)
+        assert list(caught.value.errors) == [changed.id, missing.id]
+        for error in caught.value.errors.values():
+            assert isinstance(error, DbTimeoutError)
+        # The write concern error does not undo the write, as after a single update
+        assert await dao.get_by_id(changed.id) == changed
 
 
 async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
