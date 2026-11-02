@@ -26,6 +26,7 @@ DHFS processes them in that order, and asks again right after a batch, instead o
 - RS must expose the list to data stewards through a read and a replace endpoint (see [API definitions](#api-definitions)).
   The replace endpoint must reject a request whose `version` does not match the stored one, so that two stewards editing at the same time cannot overwrite each other unnoticed.
   Each saved edit increments the `version` counter.
+  A save with the current `version` and the stored order changes nothing: RS returns the stored document without incrementing `version`, publishing an event or writing an audit record.
 - RS must reject a list with duplicate boxes, unknown boxes, or boxes that are already `"archived"`.
 - RS must remove a box from the list when the box is deleted or archived.
   Each removal increments `version` (reiterating that from a few lines above, just to be clear).
@@ -128,6 +129,7 @@ Both require the Data Steward role through `StewardAuthContext`, like the existi
   RS resolves each file upload box ID itself.
   - `200`: the stored document with its new `version`, `changed_by` and `last_changed`.
     It returns the document instead of `204`, which the other RS write endpoints use, so the Data Portal can take the new values without a second request.
+    If `box_ids` matches the stored order, the body is the stored document, unchanged.
   - `404`: a box ID that does not exist.
   - `409`: either `version` does not match the stored one, or a box is archived.
     Each case gets its own `HttpCustomExceptionBase` subclass and `exception_id`, so the Data Portal can tell them apart and offer a reload only for the version conflict.
@@ -278,7 +280,7 @@ The priority list:
 | State | Meaning | Changes on |
 |---|---|---|
 | Not stored yet | RS returns version `0`, no entries, and `null` for `changed_by` and `last_changed`; FIS ranks no file | the first save |
-| Version `n` | The stored order, with who changed it last and when | a save, or RS removing an archived or deleted box (`n + 1` each, with `changed_by` and `last_changed` set) |
+| Version `n` | The stored order, with who changed it last and when | a save that changes the order, or RS removing an archived or deleted box (`n + 1` each, with `changed_by` and `last_changed` set) |
 
 A box and the list:
 
@@ -313,6 +315,7 @@ The prototype shows each of these except loading and load failed.
 | Optimistic concurrency with `version` | Two stewards cannot overwrite each other unnoticed; FIS drops stale events | [API definitions](#api-definitions) |
 | Outbox, not `PersistentKafkaPublisher` | The list is current state, not an event that starts a flow | [Included/Required](#includedrequired) |
 | Locked boxes can be ranked | Their files can still be waiting | [States](#states) |
+| Saving an unchanged order is a no-op | FIS receives no event that changes nothing; `changed_by` keeps naming the steward who last changed the order | [API definitions](#api-definitions) |
 | Every change to the list writes an audit record | The order decides which data is processed first, so who changed it must be traceable | [Included/Required](#includedrequired) |
 | The document carries `changed_by` and `last_changed` | The page shows who changed the order last; the audit log is not readable from the page | [Data Portal page](#data-portal-page) |
 | One global list, not one per storage alias | FIS filters by storage alias first, so each Data Hub sees the global order | [Not included](#not-included) |
@@ -322,9 +325,7 @@ The prototype shows each of these except loading and load failed.
 
 ### Open questions
 
-1. **Saving an unchanged order:** should RS increment `version` and publish an event, or return the stored document unchanged?
-   Recommended: return it unchanged, so FIS receives no event that changes nothing.
-2. **Waiting-file counts on the page:** stewards would see which boxes still have files to re-encrypt, but RS has no such count; it needs data from FIS.
+1. **Waiting-file counts on the page:** stewards would see which boxes still have files to re-encrypt, but RS has no such count; it needs data from FIS.
    Recommended: leave it out of this epic.
 
 ### Rollout
@@ -354,6 +355,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 - RS: version conflict, validation errors, and removal of a box from the list when it is archived or deleted.
 - RS: a save sets `changed_by` to the saving steward, and an automatic removal to the steward who archived or deleted the box; both set `last_changed`.
 - RS: a save and an automatic removal each write one audit record with the old and new order, but if a save is rejected then no audit log is created.
+- RS: a save of the stored order returns the stored document and leaves `version`, `changed_by` and `last_changed` unchanged, with no event and no audit record.
 - DHFS: the wait is skipped after a round that concluded at least one file, and kept after an empty response or a round in which every file was inconclusive.
 - FIS: a `deleted` priority event leaves every file unranked.
 - Data Portal: reordering by drag and by buttons, adding and removing boxes, discard, the leave guard, the "Last changed by" line before and after the first save, dropping stale IDs on load, and each save error from [Data Portal page](#data-portal-page), against a mocked RS.
@@ -367,6 +369,7 @@ A new feature numbered after 203 therefore finds no box it can rank, so it creat
 API, in a new feature, e.g. `204_upload_box_priority.feature`, with its own boxes:
 
 - The data steward reads the list, replaces it, and gets the new `version`, their own ID as `changed_by`, and a `last_changed`.
+- Replacing it with the same order returns the same `version`.
 - Replacing it fails with `409` for a stale `version`, `404` for an unknown box and `422` for a duplicate box.
 - After a replace, FIS's priority document reaches the new `version` within a timeout.
 - FIS stores `box_id` on files uploaded during the run.
