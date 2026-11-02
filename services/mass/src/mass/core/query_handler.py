@@ -80,6 +80,11 @@ class QueryHandler(QueryHandlerPort):
     ) -> models.QueryResults:
         # a blank query is no query, so it must not imply sorting by relevance
         query = query.strip()
+        if not query and any(
+            param.order == models.SortOrder.RELEVANCE
+            for param in sorting_parameters or []
+        ):
+            raise self.RelevanceSortingWithoutQueryError()
 
         # set empty list if not provided
         if filters is None:

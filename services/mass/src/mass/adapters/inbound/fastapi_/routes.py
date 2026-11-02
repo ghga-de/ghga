@@ -120,11 +120,6 @@ async def search(  # noqa: PLR0913
     except ValueError as err:
         detail = "Number of fields to order by must match number of sort options"
         raise HTTPException(status_code=422, detail=detail) from err
-    if not query.strip() and any(
-        param.order == models.SortOrder.RELEVANCE for param in sorting_parameters
-    ):
-        detail = "Sorting by relevance requires a query"
-        raise HTTPException(status_code=422, detail=detail)
     try:
         results = await query_handler.handle_query(
             class_name=class_name,
@@ -140,6 +135,8 @@ async def search(  # noqa: PLR0913
             detail="The specified class name is invalid."
             + " See /search-options for a list of valid class names.",
         ) from err
+    except query_handler.RelevanceSortingWithoutQueryError as err:
+        raise HTTPException(status_code=422, detail=str(err)) from err
     except (query_handler.SearchError, query_handler.ValidationError) as err:
         log.error(err, exc_info=True)
         raise HTTPException(
