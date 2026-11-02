@@ -16,11 +16,13 @@
 
 """Test how the MongoDB provider maps bulk write errors to the errors of a batch."""
 
+from collections.abc import Callable
 from typing import Any
 
 import pytest
 from pymongo.errors import BulkWriteError
 
+from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
     DaoError,
     DbTimeoutError,
@@ -28,9 +30,11 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
 )
 from hexkit.providers.mongodb.provider.dao import (
-    DUPLICATE_KEY_ERROR,
+    DUPLICATE_KEY_ERRORS,
     MAX_TIME_MS_EXPIRED,
     _errors_from_bulk_write,
+    _insert_duplicate_error,
+    _replace_duplicate_error,
 )
 
 IDS = ["a", "b", "c", "d"]
@@ -49,27 +53,47 @@ def bulk_write_error(
     return BulkWriteError(details)
 
 
-def duplicate_key(index: int, key_value: dict[str, Any] | None) -> dict[str, Any]:
+def duplicate_key(
+    index: int, key_value: dict[str, Any] | None, *, code: int = 11000
+) -> dict[str, Any]:
     """A write error for a duplicate key at the given position of the batch."""
-    failure = {"index": index, "code": DUPLICATE_KEY_ERROR, "errmsg": "E11000"}
+    failure = {"index": index, "code": code, "errmsg": f"E{code}"}
     if key_value is not None:
         failure["keyValue"] = key_value
     return failure
 
 
+@pytest.mark.parametrize("code", sorted(DUPLICATE_KEY_ERRORS))
 @pytest.mark.parametrize(
-    "key_value, expected",
+    "rule, key_value, expected",
     [
-        ({"_id": "b"}, ResourceAlreadyExistsError),
-        (None, ResourceAlreadyExistsError),
-        ({"field_a": "x"}, UniqueConstraintViolationError),
-        ({"_id": "b", "field_a": "x"}, UniqueConstraintViolationError),
+        (_insert_duplicate_error, {"_id": "b"}, ResourceAlreadyExistsError),
+        (_insert_duplicate_error, None, ResourceAlreadyExistsError),
+        (_insert_duplicate_error, {"field_a": "x"}, UniqueConstraintViolationError),
+        (
+            _insert_duplicate_error,
+            {"_id": "b", "field_a": "x"},
+            UniqueConstraintViolationError,
+        ),
+        (_replace_duplicate_error, {"_id": "b"}, UniqueConstraintViolationError),
+        (_replace_duplicate_error, None, UniqueConstraintViolationError),
+        (_replace_duplicate_error, {"field_a": "x"}, UniqueConstraintViolationError),
     ],
 )
-def test_duplicate_keys(key_value: dict[str, Any] | None, expected: type[DaoError]):
-    """Test that a duplicate key maps to the error of the index that clashed."""
+def test_duplicate_keys(
+    code: int,
+    rule: Callable[[ID, dict[str, Any] | None], DaoError],
+    key_value: dict[str, Any] | None,
+    expected: type[DaoError],
+):
+    """Test that each duplicate-key code maps to the error that the operation's
+    single method raises for the index that clashed.
+    """
     error = _errors_from_bulk_write(
-        bulk_write_error(duplicate_key(1, key_value)), IDS, ordered=False
+        bulk_write_error(duplicate_key(1, key_value, code=code)),
+        IDS,
+        ordered=False,
+        duplicate_key=rule,
     )
 
     assert list(error.errors) == ["b"]
@@ -81,7 +105,12 @@ def test_other_write_error():
     """Test that any other write error keeps the server's message."""
     failure = {"index": 2, "code": 121, "errmsg": "Document failed validation"}
 
-    error = _errors_from_bulk_write(bulk_write_error(failure), IDS, ordered=False)
+    error = _errors_from_bulk_write(
+        bulk_write_error(failure),
+        IDS,
+        ordered=False,
+        duplicate_key=_insert_duplicate_error,
+    )
 
     assert type(error.errors["c"]) is DaoError
     assert str(error.errors["c"]) == "Document failed validation"
@@ -91,7 +120,12 @@ def test_write_past_its_time_limit():
     """Test that a write that ran out of its maxTimeMS maps to a timeout."""
     failure = {"index": 2, "code": MAX_TIME_MS_EXPIRED, "errmsg": "time limit"}
 
-    error = _errors_from_bulk_write(bulk_write_error(failure), IDS, ordered=False)
+    error = _errors_from_bulk_write(
+        bulk_write_error(failure),
+        IDS,
+        ordered=False,
+        duplicate_key=_insert_duplicate_error,
+    )
 
     assert type(error.errors["c"]) is DbTimeoutError
 
@@ -102,6 +136,7 @@ def test_unordered_collects_every_failure():
         bulk_write_error(duplicate_key(0, {"_id": "a"}), duplicate_key(3, None)),
         IDS,
         ordered=False,
+        duplicate_key=_insert_duplicate_error,
     )
 
     assert list(error.errors) == ["a", "d"]
@@ -111,7 +146,10 @@ def test_unordered_collects_every_failure():
 def test_ordered_lists_skipped_ids():
     """Test that an ordered batch lists the IDs after its failure as not attempted."""
     error = _errors_from_bulk_write(
-        bulk_write_error(duplicate_key(1, {"_id": "b"})), IDS, ordered=True
+        bulk_write_error(duplicate_key(1, {"_id": "b"})),
+        IDS,
+        ordered=True,
+        duplicate_key=_insert_duplicate_error,
     )
 
     assert list(error.errors) == ["b"]
@@ -142,6 +180,7 @@ def test_write_concern_error_names_unconfirmed_resources(
         bulk_write_error(duplicate_key(1, {"_id": "b"}), concern=concern),
         IDS,
         ordered=False,
+        duplicate_key=_insert_duplicate_error,
     )
 
     assert type(error.errors["b"]) is ResourceAlreadyExistsError
@@ -159,6 +198,7 @@ def test_write_concern_error_in_ordered_batch():
         bulk_write_error(duplicate_key(1, {"_id": "b"}), concern=WRITE_CONCERN_TIMEOUT),
         IDS,
         ordered=True,
+        duplicate_key=_insert_duplicate_error,
     )
 
     assert list(error.errors) == ["b", "a"]
@@ -170,7 +210,10 @@ def test_write_concern_error_in_ordered_batch():
 def test_write_concern_error_alone_names_every_resource(ordered: bool):
     """Test that a write concern error without any write error names every resource."""
     error = _errors_from_bulk_write(
-        bulk_write_error(concern=WRITE_CONCERN_TIMEOUT), IDS, ordered=ordered
+        bulk_write_error(concern=WRITE_CONCERN_TIMEOUT),
+        IDS,
+        ordered=ordered,
+        duplicate_key=_insert_duplicate_error,
     )
 
     assert list(error.errors) == IDS
@@ -185,7 +228,10 @@ def test_write_time_limit_does_not_make_write_concern_a_timeout():
     failure = {"index": 2, "code": MAX_TIME_MS_EXPIRED, "errmsg": "time limit"}
 
     error = _errors_from_bulk_write(
-        bulk_write_error(failure, concern=WRITE_CONCERN_ERROR), IDS, ordered=False
+        bulk_write_error(failure, concern=WRITE_CONCERN_ERROR),
+        IDS,
+        ordered=False,
+        duplicate_key=_insert_duplicate_error,
     )
 
     assert type(error.errors["c"]) is DbTimeoutError
@@ -209,6 +255,8 @@ def test_last_write_concern_error_decides(
     bulk_error = bulk_write_error()
     bulk_error.details["writeConcernErrors"] = concerns
 
-    error = _errors_from_bulk_write(bulk_error, IDS, ordered=False)
+    error = _errors_from_bulk_write(
+        bulk_error, IDS, ordered=False, duplicate_key=_insert_duplicate_error
+    )
 
     assert all(type(failure) is expected for failure in error.errors.values())
