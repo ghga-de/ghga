@@ -633,7 +633,9 @@ class MongoDbDao(Generic[Dto]):
                 await self._collection.insert_many(documents, ordered=ordered)
             except BulkWriteError as error:
                 ids = [document["_id"] for document in documents]
-                raise _errors_from_bulk_write(error, ids, ordered=ordered) from error
+                raise _errors_from_bulk_write(
+                    error, ids, ordered=ordered, duplicate_key=_insert_duplicate_error
+                ) from error
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
