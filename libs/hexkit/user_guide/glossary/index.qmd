@@ -1,3 +1,7 @@
+---
+title: "Glossary"
+---
+
 <!--
  Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
  for the German Human Genome-Phenome Archive (GHGA)
@@ -15,6 +19,227 @@
  limitations under the License.
 -->
 
-# Glossary
+Key terms used throughout the hexkit documentation, in alphabetical order.
+Each entry links to the chapter that covers the term in depth.
 
-TBD
+## Adapter
+
+The code that connects a port of the application core to a piece of infrastructure.
+In the Triple Hexagonal Architecture, an adapter is split into a translator and a provider.
+See [Hexagonal Architecture](../arch_concepts/hexagonal_arch.qmd#adapters).
+
+## At-least-once delivery
+
+The guarantee of the Kafka subscriber: an event is never skipped, but it may be delivered more than once if the service stops before committing its offset.
+Translators must therefore be idempotent.
+See [Kafka Event Subscriber](../providers/kafka/subscriber.qmd#offset-management).
+
+## Composition root
+
+The one module of a service, conventionally `inject.py`, that knows which adapter implements which port and wires them together.
+See [Dependency Injection](../arch_concepts/dependency_injection.qmd#the-composition-root).
+
+## Config prefix
+
+The `prefix` passed to `config_from_yaml`.
+It names the config YAML file (`.{prefix}.yaml`) and prefixes the environment variables that hold the settings.
+See [Configuration](../configuration.qmd#the-prefix).
+
+## Consumer
+
+A service that reads events from a topic, without knowing which service produced them.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd).
+
+## Consumer group
+
+The set of service instances that share the work of consuming a topic, so each event is processed by one instance only.
+The Kafka subscriber uses the configured `service_name` as the consumer group ID.
+See [Kafka Event Subscriber](../providers/kafka/subscriber.qmd).
+
+## Core
+
+The domain logic of a service, written in the language of the domain and free of infrastructure details.
+It talks to the outside only through ports.
+See [Hexagonal Architecture](../arch_concepts/hexagonal_arch.qmd#application-core-the-inside).
+
+## Correlation ID
+
+A UUID4 attached to a request chain at its origin and passed along in event headers and log records, so that all work belonging to one request can be found across services.
+Also called a request ID.
+See [Correlation IDs](../observability_tools/correlation_ids.qmd).
+
+## DAO (data access object)
+
+An object that offers CRUD and find operations for one resource type, independent of the database behind it.
+hexkit defines it with the `Dao` protocol and creates instances through a DAO factory.
+See [The DAO Pattern](../arch_concepts/dao_pattern.qmd) and [Data Access Objects](../protocols/dao.qmd).
+
+## DAO factory
+
+The object that creates DAOs, one per resource type, from a name, a DTO model and an ID field.
+`MongoDbDaoFactory` is the MongoDB implementation.
+See [Data Access Objects](../protocols/dao.qmd).
+
+## DAO publisher
+
+A DAO that also publishes an outbox event for every insert, update, upsert or delete.
+It implements the producing side of the outbox pattern.
+See [DAO Publisher](../protocols/daopublisher.qmd).
+
+## DAO subscriber
+
+A translator that consumes outbox events and receives each change through one of two methods: `changed()` or `deleted()`.
+It implements the consuming side of the outbox pattern.
+See [DAO Subscriber](../protocols/daosubscriber.qmd).
+
+## Database version
+
+The version number that the MongoDB migration tooling stores in a dedicated collection of the service's database.
+Version 1 marks the start of versioning, so the first migration a service writes is version 2.
+See [MongoDB Migrations](../providers/mongodb_migrations.qmd#how-versioning-works).
+
+## Dead letter queue (DLQ)
+
+The topic to which the Kafka subscriber publishes an event that still fails after all retries, instead of crashing the service.
+The event keeps its payload, type and key and receives headers describing the failure.
+See [Dead Letter Queue](../arch_concepts/dlq.qmd).
+
+## DTO (data transfer object)
+
+A Pydantic model that describes the shape of the data a DAO stores or an event carries.
+See [The DAO Pattern](../arch_concepts/dao_pattern.qmd).
+
+## Event
+
+A message that a producer publishes to a topic on a broker.
+In hexkit, an event has a topic, a type, a key, a payload and headers, such as the correlation ID and the event ID.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd).
+
+## Event ID
+
+A UUID4 in an event's headers that identifies one event instance.
+An event republished from the DLQ receives a new event ID.
+See [Dead Letter Queue](../arch_concepts/dlq.qmd).
+
+## Event type
+
+A header field that hexkit adds to every event to tell different kinds of events on the same topic apart.
+Outbox events use the types `upserted` and `deleted`.
+
+## Fixture
+
+A pytest fixture that hexkit provides to run tests against real or in-memory infrastructure, such as `KafkaFixture`, `MongoDbFixture` and `S3Fixture`.
+See [Kafka Test Utils](../providers/kafka/test_utils.qmd), [MongoDB Test Utils](../providers/mongodb.qmd#mongodb-test-utils) and [S3 Object Storage Test Utils](../providers/s3.qmd#s3-object-storage-test-utils).
+
+## Idempotence
+
+The property of a consumer that processing the same event twice leaves the service in the same state as processing it once.
+hexkit consumers must be idempotent, because events can be redelivered and republished.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd#implications).
+
+## Inbound and outbound
+
+The direction of a port or adapter, seen from the core.
+An inbound port is called by the outside world, such as a REST endpoint or an event subscriber; an outbound port is called by the core, such as a DAO or an event publisher.
+See [Hexagonal Architecture](../arch_concepts/hexagonal_arch.qmd#ports).
+
+## Key
+
+The value by which Kafka orders events within a topic.
+Events with the same key keep their order; outbox events use the resource ID as the key.
+
+## Key-value store
+
+Storage that saves and retrieves values by a string key, defined by the `KeyValueStoreProtocol`.
+Providers exist for Redis, MongoDB, S3, Vault and in-memory testing, each in a `Bytes`, `Str`, `Json` and `Dto` variant.
+See [Protocols](../protocols/index.qmd#keyvaluestoreprotocol).
+
+## Migration
+
+Code that converts the documents of a MongoDB database from one database version to the next, written as a `MigrationDefinition` subclass.
+The `MigrationManager` runs pending migrations once, even when several service instances start at the same time.
+See [MongoDB Migrations](../providers/mongodb_migrations.qmd).
+
+## Object storage
+
+Storage for files organized in buckets, defined by the `ObjectStorageProtocol`.
+File content moves through presigned URLs, not through the service.
+See [Object Storage](../protocols/objstorage.qmd).
+
+## Offset
+
+The position of a consumer group within a topic.
+The Kafka subscriber commits the offset only after an event has been fully handled.
+See [Kafka Event Subscriber](../providers/kafka/subscriber.qmd#offset-management).
+
+## Outbox pattern
+
+A way to share data between services: the owning service stores a resource and publishes its full latest state as an event, and other services keep their own copy by consuming those events.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd#outbox-pattern).
+
+## Persistent publisher
+
+An event publisher, `PersistentKafkaPublisher`, that stores every event in MongoDB as it publishes it, so the same event can be published again later.
+Unlike the DAO publisher, it publishes arbitrary events, not resource states.
+See [Outbox vs. Persistent Publisher](../developer_help/outbox_v_persistent_pub.qmd).
+
+## Port
+
+An interface of the core, written in the language of the domain, through which the core is called or calls out.
+See [Hexagonal Architecture](../arch_concepts/hexagonal_arch.qmd#ports).
+
+## Presigned URL
+
+A time-limited URL that lets a client upload or download an object directly from object storage, without credentials of its own.
+See [Object Storage](../protocols/objstorage.qmd).
+
+## Producer
+
+A service that publishes events to a topic, without knowing which services consume them.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd).
+
+## Protocol
+
+An abstract interface for one type of infrastructure, such as a DAO or an event publisher, that does not depend on a specific technology.
+It separates the translator from the provider.
+See [Protocols](../protocols/index.qmd) and [Triple Hexagonal Architecture](../arch_concepts/triple_hexagonal_arch.qmd#the-core-concept).
+
+## Provider
+
+The technology-specific implementation of a protocol, such as `MongoDbDaoFactory` for the DAO protocol or `KafkaEventPublisher` for the event publisher protocol.
+Providers are general-purpose and shared across services.
+See [Providers](../providers/index.qmd).
+
+## Retry topic
+
+The topic `retry-<service_name>` to which an event from the DLQ is republished for another attempt.
+The Kafka subscriber restores the original topic name before passing the event to the translator.
+See [Dead Letter Queue](../arch_concepts/dlq.qmd#republishing-and-re-consuming-dlq-events).
+
+## Tombstone
+
+The `deleted` outbox event: an event with an empty payload whose key names the deleted resource.
+See [DAO Publisher](../protocols/daopublisher.qmd).
+
+## Topic
+
+A named stream of events on the broker.
+A topic can have any number of producers and consumers, and events stay on it after they are consumed.
+
+## Topic compaction
+
+A Kafka setting that keeps only the latest event per key in a topic.
+Combined with the outbox pattern, a consumer that reads a compacted topic receives the current state of every resource.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd#outbox-pattern).
+
+## Translator
+
+The service-specific inner part of an adapter, which converts between a port of the core and a protocol.
+A Kafka event subscriber, for example, passes each event to a translator that implements `EventSubscriberProtocol`.
+See [Triple Hexagonal Architecture](../arch_concepts/triple_hexagonal_arch.qmd#the-core-concept).
+
+## Triple Hexagonal Architecture
+
+An extension of the Hexagonal Architecture that adds the protocol as a third interface, splitting each adapter into a translator and a provider.
+Providers can then be shared across services.
+See [Triple Hexagonal Architecture](../arch_concepts/triple_hexagonal_arch.qmd).
