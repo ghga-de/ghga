@@ -176,6 +176,8 @@ except BatchOperationError as error:
         log.warning("Book %s was not stored: %s", book_id, reason)
 ```
 
+`errors` also names each resource whose write was applied but not confirmed, such as after a MongoDB write concern error; such a write stays stored.
+
 By default, every resource in a batch is attempted.
 Pass `ordered=True` to stop at the first failure instead; `error.not_attempted` then lists the IDs after it, in input order.
 
