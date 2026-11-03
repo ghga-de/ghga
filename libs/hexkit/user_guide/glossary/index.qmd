@@ -128,7 +128,7 @@ Outbox events use the types `upserted` and `deleted`.
 
 ## Fixture
 
-A pytest fixture that hexkit provides to run tests against real or in-memory infrastructure, such as `KafkaFixture`, `MongoDbFixture` and `S3Fixture`.
+Test setup that hexkit provides as pytest fixtures to run tests against real or in-memory infrastructure, such as `KafkaFixture`, `MongoDbFixture` and `S3Fixture`.
 See [Kafka Test Utils](../providers/kafka/test_utils.qmd), [MongoDB Test Utils](../providers/mongodb.qmd#mongodb-test-utils) and [S3 Object Storage Test Utils](../providers/s3.qmd#s3-object-storage-test-utils).
 
 ## Idempotence
