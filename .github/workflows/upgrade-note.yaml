@@ -1,0 +1,26 @@
+# Require an `Upgrade:` line in every PR description, for the release notes. A workflow
+# of its own so that `edited` re-runs only this check when the description is fixed.
+name: upgrade-note
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/check_upgrade_note.py
+          sparse-checkout-cone-mode: false
+      # Through the environment: interpolated into `run`, the body could inject commands.
+      - env:
+          BODY: ${{ github.event.pull_request.body }}
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+        run: python3 scripts/check_upgrade_note.py --head "$HEAD" --base "$BASE" -- "$BODY"

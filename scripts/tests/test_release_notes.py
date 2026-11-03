@@ -51,6 +51,14 @@ def _pyproject(name: str, version: str, markers: str = "") -> str:
     return manifest + (f"[tool.ghga]\n{markers}\n" if markers else "")
 
 
+@pytest.fixture(autouse=True)
+def descriptions(monkeypatch):
+    """No test reaches GitHub: a PR's description is looked up here, empty if absent."""
+    found: dict[int, str] = {}
+    monkeypatch.setattr(release_notes, "pr_description", lambda pr: found.get(pr, ""))
+    return found
+
+
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     """A repo with a platform and a library release, and a mixed history between."""
@@ -116,8 +124,8 @@ def repo(tmp_path, monkeypatch):
     return tmp_path
 
 
-def _entry(kind="chore", text="x", pr=None, breaking=False, scope=None):
-    return Entry(kind, scope, text, pr, breaking, ())
+def _entry(kind="chore", text="x", pr=None, breaking=False, scope=None, upgrade=()):
+    return Entry(kind, scope, text, pr, breaking, (), tuple(upgrade))
 
 
 def test_final_release_compares_with_the_previous_final_release(repo):
@@ -268,6 +276,96 @@ def test_render_lists_breaking_changes_first_and_drops_the_own_scope():
     notes = release_notes.render("demo/1.1.0", "demo/1.0.0", entries)
     assert "- **Breaking:** **other:** Drop b (#2)\n- Add a (#1)" in notes
     assert "## Changes" in notes  # a breaking change is a change users notice
+
+
+def test_upgrade_trailers_are_read_from_the_body():
+    """Several trailers each give a line; a folded one is joined back into one."""
+    body = (
+        "- Rename the flag\n\n"
+        "Upgrade: rename `--db` to `--db-name`\n"
+        "Upgrade: set `config.db_name` from\n"
+        "  `mongodb.dbName` instead\n"
+        "BREAKING CHANGE: `--db` is gone"
+    )
+    entry = release_notes._entry("feat(ucs)!: rename (#9)", body, [])
+    assert entry.upgrade == (
+        "rename `--db` to `--db-name`",
+        "set `config.db_name` from `mongodb.dbName` instead",
+    )
+
+
+def test_upgrade_in_running_text_is_no_trailer():
+    entry = release_notes._entry("fix: x", "- An Upgrade: in a bullet", [])
+    assert entry.upgrade == ()
+
+
+def test_render_lists_upgrade_notes_above_the_pull_requests():
+    entries = [
+        _entry("chore", "a", 1, scope="ucs", upgrade=["drop `x`"]),
+        _entry("fix", "b", 2),
+    ]
+    notes = release_notes.render("ghga/1.1.0", "ghga/1.0.0", entries)
+    section = notes.split("## Upgrade notes\n\n")[1].split("## Pull requests")[0]
+    assert "- **ucs:** drop `x` (#1)" in section
+    assert "(#2)" not in section
+
+
+def test_render_without_upgrade_notes_has_no_section():
+    notes = release_notes.render("ghga/1.1.0", "ghga/1.0.0", [_entry("fix", pr=1)])
+    assert "## Upgrade notes" not in notes
+
+
+@pytest.fixture
+def renamed_flag(repo, monkeypatch):
+    """A release `ghga/1.2.0` with one PR, #20, whose commit message has no note."""
+    monkeypatch.setattr(release_notes, "shipped_prefixes", lambda path: SHIPPED)
+    _commit(repo, "services/s/app.py", "chore(s): rename a flag (#20)\n\n- Rename it")
+    _git(repo, "tag", "ghga/1.2.0")
+    return repo
+
+
+def test_upgrade_note_reaches_the_release_it_landed_in(renamed_flag, descriptions):
+    """The version is not known when the note is written; the tag range decides it."""
+    descriptions[20] = "Renames it.\r\n\r\nUpgrade: rename `--a` to `--b`\r\n"
+    text, _ = release_notes.notes("ghga/1.2.0", descriptions=True)
+    assert "- **s:** rename `--a` to `--b` (#20)" in text
+    earlier, _ = release_notes.notes("ghga/1.1.0", descriptions=True)
+    assert "## Upgrade notes" not in earlier
+
+
+def test_description_wins_over_the_commit_message(descriptions):
+    """Whoever merged may have copied the lines, dropped them or left them stale."""
+    descriptions.update({1: "Upgrade: from the PR", 2: "Upgrade: none"})
+    changes = [
+        _entry(pr=1, upgrade=["from the commit"]),
+        _entry(pr=2, upgrade=["copied, then the PR said none"]),
+        _entry(pr=None, upgrade=["pushed without a PR"]),
+    ]
+    taken = release_notes.with_descriptions(changes, strict=True)
+    assert [e.upgrade for e in taken] == [
+        ("from the PR",),
+        (),
+        ("pushed without a PR",),
+    ]
+
+
+def test_unreachable_github_fails_a_draft(renamed_flag, monkeypatch):
+    def offline(pr):
+        raise OSError("no network")
+
+    monkeypatch.setattr(release_notes, "pr_description", offline)
+    with pytest.raises(SystemExit, match="description of #20"):
+        release_notes.notes("ghga/1.2.0", descriptions=True)
+
+
+def test_unreachable_github_falls_back_to_the_commit_messages(capsys, monkeypatch):
+    def offline(pr):
+        raise OSError("no network")
+
+    monkeypatch.setattr(release_notes, "pr_description", offline)
+    changes = [_entry(pr=1, upgrade=["copied at merge"]), _entry(pr=2)]
+    assert release_notes.with_descriptions(changes, strict=False) == changes
+    assert capsys.readouterr().err.count("warning:") == 1
 
 
 def test_render_without_previous_release_offers_every_summary():
