@@ -34,6 +34,12 @@ The guarantee of the Kafka subscriber: an event is never skipped, but it may be 
 Translators must therefore be idempotent.
 See [Kafka Event Subscriber](../providers/kafka/subscriber.qmd#offset-management).
 
+## Broker
+
+The server that stores events and passes them from producers to consumers.
+hexkit uses Apache Kafka as its broker.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd).
+
 ## Composition root
 
 The one module of a service, conventionally `inject.py`, that knows which adapter implements which port and wires them together.
@@ -104,6 +110,12 @@ The topic to which the Kafka subscriber publishes an event that still fails afte
 The event keeps its payload, type and key and receives headers describing the failure.
 See [Dead Letter Queue](../arch_concepts/dlq.qmd).
 
+## Dependency injection
+
+A way of building a service in which an object receives the objects it works with from outside, instead of creating them itself.
+In a hexkit service, the composition root creates the adapters and passes them to the core.
+See [Dependency Injection](../arch_concepts/dependency_injection.qmd).
+
 ## DTO (data transfer object)
 
 A Pydantic model that describes the shape of the data a DAO stores or an event carries.
@@ -126,10 +138,28 @@ See [Dead Letter Queue](../arch_concepts/dlq.qmd).
 A header field that hexkit adds to every event to tell different kinds of events on the same topic apart.
 Outbox events use the types `upserted` and `deleted`.
 
+## Event-driven architecture
+
+A way for services to communicate in which a producer publishes events to a broker and consumers read them, instead of calling each other directly.
+The producer does not know who consumes its events, and consumers do not know who produced them.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd).
+
 ## Fixture
 
 Test setup that hexkit provides as pytest fixtures to run tests against real or in-memory infrastructure, such as `KafkaFixture`, `MongoDbFixture` and `S3Fixture`.
 See [Kafka Test Utils](../providers/kafka/test_utils.qmd), [MongoDB Test Utils](../providers/mongodb.qmd#mongodb-test-utils) and [S3 Object Storage Test Utils](../providers/s3.qmd#s3-object-storage-test-utils).
+
+## Headers
+
+Metadata that travels with an event, separate from its payload.
+The Kafka publisher always sets the headers `type`, `event_id` and `correlation_id`; a service may add more.
+See [Kafka Event Publisher](../providers/kafka/publisher.qmd#headers-and-correlation-ids).
+
+## Hexagonal Architecture
+
+An architecture in which the core of a service depends only on ports, and adapters connect those ports to the outside world.
+Also called Ports and Adapters; the Triple Hexagonal Architecture extends it.
+See [Hexagonal Architecture](../arch_concepts/hexagonal_arch.qmd).
 
 ## Idempotence
 
@@ -160,6 +190,12 @@ Code that converts the documents of a MongoDB database from one database version
 The `MigrationManager` runs pending migrations once, even when several service instances start at the same time.
 See [MongoDB Migrations](../providers/mongodb_migrations.qmd).
 
+## Multipart upload
+
+An upload that splits a large file into parts, each uploaded through its own presigned URL, and then completes them into one object.
+For a smaller file, a single presigned POST request is enough.
+See [Object Storage](../protocols/objstorage.qmd#multipart-uploads).
+
 ## Object storage
 
 Storage for files organized in buckets, defined by the `ObjectStorageProtocol`.
@@ -176,6 +212,18 @@ See [Kafka Event Subscriber](../providers/kafka/subscriber.qmd#offset-management
 
 A way to share data between services: the owning service stores a resource and publishes its full latest state as an event, and other services keep their own copy by consuming those events.
 See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd#outbox-pattern).
+
+## Partition
+
+A subdivision of a Kafka topic.
+Kafka keeps events in order within a partition, and events with the same key always go to the same partition.
+See [Kafka Event Publisher](../providers/kafka/publisher.qmd).
+
+## Payload
+
+The data an event carries, as a JSON object.
+Consumers usually validate it against a Pydantic model.
+See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd).
 
 ## Persistent publisher
 
@@ -210,11 +258,24 @@ The technology-specific implementation of a protocol, such as `MongoDbDaoFactory
 Providers are general-purpose and shared across services.
 See [Providers](../providers/index.qmd).
 
+## Republish
+
+Publishing stored events again: the DAO publisher and the persistent publisher both offer `republish()` for this.
+The DAO publisher sends the current state of all its resources, for example to fill a newly deployed consumer service.
+Republished events receive new event IDs but keep their stored correlation IDs.
+See [Outbox vs. Persistent Publisher](../developer_help/outbox_v_persistent_pub.qmd#republishing).
+
 ## Retry topic
 
 The topic `retry-<service_name>` to which an event from the DLQ is republished for another attempt.
 The Kafka subscriber restores the original topic name before passing the event to the translator.
 See [Dead Letter Queue](../arch_concepts/dlq.qmd#republishing-and-re-consuming-dlq-events).
+
+## Span
+
+One recorded operation in OpenTelemetry tracing, with its timing, attributes and outcome.
+Spans form a trace through their parent spans.
+See [OpenTelemetry](../observability_tools/opentelemetry.qmd).
 
 ## Tombstone
 
@@ -232,6 +293,13 @@ A Kafka setting that keeps only the latest event per key in a topic.
 Combined with the outbox pattern, a consumer that reads a compacted topic receives the current state of every resource.
 See [Event-driven Architecture](../arch_concepts/event_driven_arch.qmd#outbox-pattern).
 
+## Trace
+
+The tree of spans that follows one request across services in OpenTelemetry tracing.
+hexkit passes the trace context in event headers, so a trace continues across the broker.
+Unlike a correlation ID, a trace also records timing and which operation caused which.
+See [OpenTelemetry](../observability_tools/opentelemetry.qmd#traces-across-kafka-events).
+
 ## Translator
 
 The service-specific inner part of an adapter, which converts between a port of the core and a protocol.
@@ -243,3 +311,9 @@ See [Triple Hexagonal Architecture](../arch_concepts/triple_hexagonal_arch.qmd#t
 An extension of the Hexagonal Architecture that adds the protocol as a third interface, splitting each adapter into a translator and a provider.
 Providers can then be shared across services.
 See [Triple Hexagonal Architecture](../arch_concepts/triple_hexagonal_arch.qmd).
+
+## Upsert
+
+A write that updates a resource if it exists and inserts it otherwise.
+The `Dao` offers it as `upsert()`, next to `insert()`, which fails if the resource exists, and `update()`, which fails if it does not.
+See [Data Access Objects](../protocols/dao.qmd#crud-operations).
