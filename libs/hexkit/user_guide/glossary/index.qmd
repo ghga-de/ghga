@@ -137,6 +137,7 @@ See [Dead Letter Queue](../arch_concepts/dlq.qmd).
 
 A header field that hexkit adds to every event to tell different kinds of events on the same topic apart.
 Outbox events use the types `upserted` and `deleted`.
+See [DAO Publisher](../protocols/daopublisher.qmd#event-semantics).
 
 ## Event-driven architecture
 
@@ -175,8 +176,8 @@ See [Hexagonal Architecture](../arch_concepts/hexagonal_arch.qmd#ports).
 
 ## Key
 
-The value by which Kafka orders events within a topic.
-Events with the same key keep their order; outbox events use the resource ID as the key.
+The value that decides which partition of a topic an event goes to.
+Kafka keeps events in order only within a partition, so events with the same key keep their order; outbox events use the resource ID as the key.
 
 ## Key-value store
 
