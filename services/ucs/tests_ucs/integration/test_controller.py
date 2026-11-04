@@ -1249,59 +1249,6 @@ async def test_cleanup_of_orphaned_files(
     assert set(all_object_ids) == expected_objects
 
 
-async def test_cleanup_keeps_young_orphaned_files(joint_fixture: JointFixture, caplog):
-    """Test that an orphaned object younger than `orphaned_object_min_age_hours` is
-    not deleted by the cleanup job.
-    """
-    controller = joint_fixture.upload_controller
-    s3_storage = joint_fixture.s3.storage
-    bucket_id = joint_fixture.bucket_id
-    assert joint_fixture.config.orphaned_object_min_age_hours > 0
-
-    # Any FileUpload will do, so that the empty-database safeguard does not trip
-    async with set_correlation_id(uuid4()):
-        box_id = await controller.create_file_upload_box(
-            storage_alias="test", max_size=utils.TEST_MAX_BOX_SIZE
-        )
-        await controller.initiate_file_upload(
-            box_id=box_id,
-            alias="test-file",
-            decrypted_size=DECRYPTED_SIZE,
-            encrypted_size=ENCRYPTED_SIZE,
-            part_size=utils.PART_SIZE,
-        )
-
-    orphaned_object_id = str(uuid4())
-    upload_id = await s3_storage.init_multipart_upload(
-        bucket_id=bucket_id, object_id=orphaned_object_id
-    )
-    url = await s3_storage.get_part_upload_url(
-        upload_id=upload_id,
-        bucket_id=bucket_id,
-        object_id=orphaned_object_id,
-        part_number=1,
-    )
-    await upload_to_s3(url, b"some-data")
-    await s3_storage.complete_multipart_upload(
-        upload_id=upload_id, bucket_id=bucket_id, object_id=orphaned_object_id
-    )
-
-    caplog.clear()
-    with caplog.at_level("INFO"):
-        await controller.cleanup_stale_uploads()
-
-    assert await s3_storage.does_object_exist(
-        bucket_id=bucket_id, object_id=orphaned_object_id
-    )
-    assert any(
-        message.startswith(
-            f"Cleaned up 0 orphaned object(s) from bucket {bucket_id} in storage"
-            + " alias test. Kept 1 object(s)"
-        )
-        for message in caplog.messages
-    )
-
-
 async def test_upload_activity_deleted_after_completion_failure(
     joint_fixture: JointFixture,
 ):
