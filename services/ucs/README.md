@@ -15,7 +15,7 @@ The executable `ucs` takes one of these commands:
 
 The `cleanup` command also aborts orphaned multipart uploads and deletes orphaned objects in the inbox bucket, meaning those without a matching FileUpload.
 It deletes an orphaned object only once it is older than [`orphaned_object_min_age_hours`](#properties/orphaned_object_min_age_hours).
-For a storage alias, it leaves all orphans alone and logs an error if the FileUpload collection is empty, or if the orphans outnumber [`max_orphaned_objects`](#properties/max_orphaned_objects) or [`max_orphaned_multipart_uploads`](#properties/max_orphaned_multipart_uploads).
+For a storage alias, it leaves all orphans alone and logs an error if the FileUpload collection is empty, or if the orphaned objects outnumber [`max_orphaned_objects`](#properties/max_orphaned_objects).
 These safeguards stop a deployment that shares the inbox bucket but not the database from deleting everything in the bucket.
 After checking that the orphans are real, run `ucs cleanup --no-run-forever --ignore-safeguards` to remove them once.
 
@@ -550,9 +550,6 @@ The service requires the following configuration parameters:
   Minimum: `0`.
   Default: `6`.
 - <a id="properties/max_orphaned_objects"></a>**`max_orphaned_objects`** *(integer)*: If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.
-  Minimum: `0`.
-  Default: `100`.
-- <a id="properties/max_orphaned_multipart_uploads"></a>**`max_orphaned_multipart_uploads`** *(integer)*: If the cleanup job finds more orphaned multipart uploads than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.
   Minimum: `0`.
   Default: `100`.
 

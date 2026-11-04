@@ -1716,19 +1716,26 @@ class UploadController(UploadControllerPort):
 
         Orphaned objects younger than `config.orphaned_object_min_age_hours` are kept.
         Orphans are left alone for a storage alias if the FileUpload collection is
-        empty or the orphan counts exceed `config.max_orphaned_objects` or
-        `config.max_orphaned_multipart_uploads`, unless `ignore_safeguards` is True.
+        empty or the orphaned object count exceeds `config.max_orphaned_objects`,
+        unless `ignore_safeguards` is True.
         """
         now = now_utc_ms_prec()
         cutoff = now - timedelta(hours=self._config.multipart_upload_ttl_hours)
         orphaned_object_cutoff = now - timedelta(
             hours=self._config.orphaned_object_min_age_hours
         )
+        # Checked once for all aliases. A stale result only blocks more, since an
+        #  upload that starts during the job can only make the collection non-empty.
+        db_is_empty = not [
+            upload
+            async for upload in self._file_upload_dao.find_all(filter_={}, limit=1)
+        ]
         for storage_alias in self._config.object_storages:
             await self._cleanup_stale_uploads_for_alias(
                 storage_alias=storage_alias,
                 cutoff=cutoff,
                 orphaned_object_cutoff=orphaned_object_cutoff,
+                db_is_empty=db_is_empty,
                 ignore_safeguards=ignore_safeguards,
             )
 
@@ -1819,34 +1826,50 @@ class UploadController(UploadControllerPort):
                     exc_info=True,
                 )
 
-    async def _find_safeguard_violations(
-        self, *, orphaned_s3_upload_count: int, orphaned_object_count: int
-    ) -> list[str]:
-        """Return a description of each cleanup safeguard that would be violated by
-        removing the given number of orphaned multipart uploads and objects.
+    def _safeguards_allow_orphan_removal(
+        self,
+        *,
+        storage_alias: str,
+        orphaned_s3_upload_count: int,
+        orphaned_object_count: int,
+        db_is_empty: bool,
+        ignore_safeguards: bool,
+    ) -> bool:
+        """Return whether orphans may be removed for the alias, and log why not.
+
+        An empty FileUpload collection, or more orphaned objects than
+        `config.max_orphaned_objects`, suggests the database does not belong to the
+        bucket. Either one blocks removal unless `ignore_safeguards` is True.
         """
-        violations: list[str] = []
-        any_file_upload = [
-            upload
-            async for upload in self._file_upload_dao.find_all(filter_={}, limit=1)
-        ]
-        if not any_file_upload:
-            violations.append("the FileUpload collection is empty")
-
-        max_uploads = self._config.max_orphaned_multipart_uploads
-        if orphaned_s3_upload_count > max_uploads:
-            violations.append(
-                f"{orphaned_s3_upload_count} orphaned multipart uploads exceed the"
-                + f" limit of {max_uploads}"
-            )
-
         max_objects = self._config.max_orphaned_objects
-        if orphaned_object_count > max_objects:
-            violations.append(
+        if db_is_empty and (orphaned_s3_upload_count or orphaned_object_count):
+            violation = "the FileUpload collection is empty"
+        elif orphaned_object_count > max_objects:
+            violation = (
                 f"{orphaned_object_count} orphaned objects exceed the limit of"
                 + f" {max_objects}"
             )
-        return violations
+        else:
+            return True
+
+        if ignore_safeguards:
+            log.warning(
+                "Ignoring cleanup safeguards for alias '%s': %s.",
+                storage_alias,
+                violation,
+            )
+            return True
+
+        log.error(
+            "Left %i orphaned multipart upload(s) and %i orphaned object(s) for alias"
+            + " '%s' untouched because %s. Verify that they are really orphaned, then"
+            + " run `ucs cleanup --no-run-forever --ignore-safeguards` to remove them.",
+            orphaned_s3_upload_count,
+            orphaned_object_count,
+            storage_alias,
+            violation,
+        )
+        return False
 
     async def _cleanup_stale_uploads_for_alias(
         self,
@@ -1854,13 +1877,15 @@ class UploadController(UploadControllerPort):
         storage_alias: str,
         cutoff: UTCDatetime,
         orphaned_object_cutoff: UTCDatetime,
+        db_is_empty: bool,
         ignore_safeguards: bool,
     ) -> None:
         """Run stale upload cleanup for a single storage alias.
 
         This aborts ongoing uploads that are too old or not tied to any FileUpload.
         Orphaned objects last modified before `orphaned_object_cutoff` are also
-        deleted. Orphans are left alone if a safeguard is violated, unless
+        deleted. Orphans are left alone if `db_is_empty` is True or there are more
+        orphaned objects than `config.max_orphaned_objects`, unless
         `ignore_safeguards` is True.
         """
         # S3 is listed before the database is read. An object only exists once its
@@ -1942,29 +1967,14 @@ class UploadController(UploadControllerPort):
             else set()
         )
 
-        if orphaned_s3_uploads or orphaned_object_ids:
-            violations = await self._find_safeguard_violations(
-                orphaned_s3_upload_count=len(orphaned_s3_uploads),
-                orphaned_object_count=len(orphaned_object_ids),
-            )
-            if violations and not ignore_safeguards:
-                log.error(
-                    "Left %i orphaned multipart upload(s) and %i orphaned object(s)"
-                    + " for alias '%s' untouched because %s. Verify that they are"
-                    + " really orphaned, then run `ucs cleanup --no-run-forever"
-                    + " --ignore-safeguards` to remove them.",
-                    len(orphaned_s3_uploads),
-                    len(orphaned_object_ids),
-                    storage_alias,
-                    "; ".join(violations),
-                )
-                return
-            if violations:
-                log.warning(
-                    "Ignoring cleanup safeguards for alias '%s': %s.",
-                    storage_alias,
-                    "; ".join(violations),
-                )
+        if not self._safeguards_allow_orphan_removal(
+            storage_alias=storage_alias,
+            orphaned_s3_upload_count=len(orphaned_s3_uploads),
+            orphaned_object_count=len(orphaned_object_ids),
+            db_is_empty=db_is_empty,
+            ignore_safeguards=ignore_safeguards,
+        ):
+            return
 
         await self._abort_orphaned_s3_uploads(
             storage_alias=storage_alias, orphaned_s3_uploads=orphaned_s3_uploads

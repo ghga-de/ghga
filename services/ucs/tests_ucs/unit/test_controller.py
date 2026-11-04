@@ -2712,8 +2712,9 @@ async def test_cleanup_safeguard_limits_orphaned_objects(
     caplog: pytest.LogCaptureFixture,
     ignore_safeguards: bool,
 ):
-    """Test that more orphaned objects than `max_orphaned_objects` blocks their
-    deletion, unless the safeguards are ignored.
+    """Test that more orphaned objects than `max_orphaned_objects` blocks both their
+    deletion and the abortion of orphaned multipart uploads, unless the safeguards
+    are ignored.
     """
     box_id = await rig.create_default_box()
     file_id, _ = await rig.controller.initiate_file_upload(
@@ -2724,6 +2725,7 @@ async def test_cleanup_safeguard_limits_orphaned_objects(
         part_size=PART_SIZE,
     )
     known_object_id = str((await rig.file_upload_dao.get_by_id(file_id)).object_id)
+    orphaned_s3_upload_id = await init_orphaned_s3_upload(rig)
     orphaned_object_ids = {str(uuid4()) for _ in range(3)}
     monkeypatch.setattr(
         rig.controller,
@@ -2746,48 +2748,10 @@ async def test_cleanup_safeguard_limits_orphaned_objects(
     assert "3 orphaned objects exceed the limit of 2" in records[0].getMessage()
     if ignore_safeguards:
         assert orphan_spy.deleted_object_ids == [orphaned_object_ids]
+        assert orphan_spy.aborted_s3_upload_ids == [orphaned_s3_upload_id]
     else:
         assert orphan_spy.deleted_object_ids == []
-
-
-async def test_cleanup_safeguard_limits_orphaned_multipart_uploads(
-    rig: JointRig,
-    orphan_spy: OrphanCleanupSpy,
-    monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
-):
-    """Test that more orphaned multipart uploads than `max_orphaned_multipart_uploads`
-    blocks both their abortion and the deletion of orphaned objects.
-    """
-    await rig.controller.initiate_file_upload(
-        box_id=await rig.create_default_box(),
-        alias="test-file",
-        decrypted_size=DECRYPTED_SIZE,
-        encrypted_size=ENCRYPTED_SIZE,
-        part_size=PART_SIZE,
-    )
-    for _ in range(2):
-        await init_orphaned_s3_upload(rig)
-    monkeypatch.setattr(
-        rig.controller,
-        "_config",
-        rig.config.model_copy(update={"max_orphaned_multipart_uploads": 1}),
-    )
-    monkeypatch.setattr(
-        rig.s3_client, "list_object_ids", list_objects_returning({str(uuid4())})
-    )
-
-    caplog.clear()
-    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
-        await rig.controller.cleanup_stale_uploads()
-
-    assert orphan_spy.aborted_s3_upload_ids == []
-    assert orphan_spy.deleted_object_ids == []
-    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
-    assert len(errors) == 1
-    assert "2 orphaned multipart uploads exceed the limit of 1" in (
-        errors[0].getMessage()
-    )
+        assert orphan_spy.aborted_s3_upload_ids == []
 
 
 async def test_cleanup_lists_s3_before_reading_db(

@@ -89,11 +89,3 @@ class Config(
             + " multipart uploads for that alias, unless run with --ignore-safeguards."
         ),
     )
-    max_orphaned_multipart_uploads: NonNegativeInt = Field(
-        default=100,
-        description=(
-            "If the cleanup job finds more orphaned multipart uploads than this for one"
-            + " storage alias, it deletes no orphaned objects and aborts no orphaned"
-            + " multipart uploads for that alias, unless run with --ignore-safeguards."
-        ),
-    )

@@ -56,8 +56,8 @@ def sync_run_cleanup(
         typer.Option(
             "--ignore-safeguards",
             help="Delete orphaned objects and abort orphaned multipart uploads even"
-            + " if the database is empty or the orphan counts exceed the configured"
-            + " limits. Requires --no-run-forever.",
+            + " if the database is empty or the orphaned object count exceeds the"
+            + " configured limit. Requires --no-run-forever.",
         ),
     ] = False,
 ):
