@@ -33,6 +33,7 @@ from ghga_event_schemas.pydantic_ import (
     InterrogationFailure,
     InterrogationSuccess,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
@@ -2417,6 +2418,14 @@ async def test_orphaned_abort_failure_does_not_stop_cleanup(
     """Test that a failure aborting one orphaned S3 upload does not prevent the cleanup
     job from attempting to abort the remaining orphaned uploads.
     """
+    # Any FileUpload will do, so that the empty-database safeguard does not trip
+    await rig.controller.initiate_file_upload(
+        box_id=await rig.create_default_box(),
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
     bucket_id, object_storage = rig.object_storages.for_alias("test")
 
     # Create two orphaned S3 multipart uploads (no corresponding FileUpload records)
@@ -2485,8 +2494,9 @@ async def test_cleanup_skips_alias_when_s3_connection_fails(
         orphan_cleanup_calls += 1
 
     monkeypatch.setattr(rig.s3_client, "list_all_multipart_uploads", failing_list)
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", counting_orphan_cleanup)
     monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", counting_orphan_cleanup
+        rig.s3_client, "delete_orphaned_objects", counting_orphan_cleanup
     )
 
     caplog.clear()
@@ -2520,15 +2530,15 @@ async def test_cleanup_continues_with_remaining_aliases(
 
     cleaned_aliases: list[str] = []
 
-    async def record_orphan_cleanup(*, storage_alias: str, known_object_ids: set[str]):
+    async def record_orphan_cleanup(
+        *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ):
         cleaned_aliases.append(storage_alias)
 
     monkeypatch.setattr(
         rig.s3_client, "list_all_multipart_uploads", failing_for_first_alias
     )
-    monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", record_orphan_cleanup
-    )
+    monkeypatch.setattr(rig.s3_client, "delete_orphaned_objects", record_orphan_cleanup)
 
     await rig.controller.cleanup_stale_uploads()
 
@@ -2552,15 +2562,15 @@ async def test_cleanup_skips_unknown_storage_alias(
 
     cleaned_aliases: list[str] = []
 
-    async def record_orphan_cleanup(*, storage_alias: str, known_object_ids: set[str]):
+    async def record_orphan_cleanup(
+        *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ):
         cleaned_aliases.append(storage_alias)
 
     monkeypatch.setattr(
         rig.s3_client, "list_all_multipart_uploads", failing_for_first_alias
     )
-    monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", record_orphan_cleanup
-    )
+    monkeypatch.setattr(rig.s3_client, "delete_orphaned_objects", record_orphan_cleanup)
 
     caplog.clear()
     with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
@@ -2588,7 +2598,7 @@ async def test_cleanup_tolerates_orphaned_object_cleanup_failure(
         )
 
     monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", failing_orphan_cleanup
+        rig.s3_client, "delete_orphaned_objects", failing_orphan_cleanup
     )
 
     caplog.clear()
@@ -2601,6 +2611,212 @@ async def test_cleanup_tolerates_orphaned_object_cleanup_failure(
         "Could not clean up orphaned objects for alias 'test'"
         in warnings[0].getMessage()
     )
+
+
+class OrphanCleanupSpy:
+    """Records the calls the cleanup job makes to remove orphans."""
+
+    def __init__(self) -> None:
+        self.deleted_object_ids: list[set[str]] = []
+        self.aborted_s3_upload_ids: list[str] = []
+
+    async def delete_orphaned_objects(
+        self, *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ) -> None:
+        """Record the object IDs passed for deletion."""
+        self.deleted_object_ids.append(object_ids)
+
+    async def abort_multipart_upload(
+        self, *, storage_alias: str, object_id: str, s3_upload_id: str, **kwargs
+    ) -> None:
+        """Record the S3 upload ID passed for abortion."""
+        self.aborted_s3_upload_ids.append(s3_upload_id)
+
+
+@pytest.fixture()
+def orphan_spy(rig: JointRig, monkeypatch: pytest.MonkeyPatch) -> OrphanCleanupSpy:
+    """Replace the S3 client's orphan removal methods with a spy."""
+    spy = OrphanCleanupSpy()
+    monkeypatch.setattr(
+        rig.s3_client, "delete_orphaned_objects", spy.delete_orphaned_objects
+    )
+    monkeypatch.setattr(
+        rig.s3_client, "abort_multipart_upload", spy.abort_multipart_upload
+    )
+    return spy
+
+
+def list_objects_returning(object_ids: set[str]):
+    """Return a stand-in for `S3Client.list_object_ids` that lists `object_ids`."""
+
+    async def list_object_ids(*, storage_alias: str) -> set[str]:
+        return object_ids
+
+    return list_object_ids
+
+
+async def init_orphaned_s3_upload(rig: JointRig) -> str:
+    """Start a multipart upload in the inbox bucket that has no FileUpload."""
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    return await object_storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=str(uuid4())
+    )
+
+
+async def test_cleanup_safeguard_blocks_orphans_when_db_empty(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that an empty FileUpload collection blocks all orphan removal.
+
+    This is the case of a second deployment that shares the inbox bucket but not the
+    database, where every object in the bucket looks orphaned.
+    """
+    await init_orphaned_s3_upload(rig)
+    monkeypatch.setattr(
+        rig.s3_client, "list_object_ids", list_objects_returning({str(uuid4())})
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.deleted_object_ids == []
+    assert orphan_spy.aborted_s3_upload_ids == []
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "the FileUpload collection is empty" in errors[0].getMessage()
+
+
+async def test_cleanup_without_orphans_logs_no_error_when_db_empty(
+    rig: JointRig, orphan_spy: OrphanCleanupSpy, caplog: pytest.LogCaptureFixture
+):
+    """Test that a fresh deployment with an empty DB and an empty bucket does not
+    trip the empty-database safeguard.
+    """
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    assert [r for r in caplog.records if r.levelno == logging.ERROR] == []
+    assert orphan_spy.deleted_object_ids == [set()]
+
+
+@pytest.mark.parametrize("ignore_safeguards", [False, True])
+async def test_cleanup_safeguard_limits_orphaned_objects(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    ignore_safeguards: bool,
+):
+    """Test that more orphaned objects than `max_orphaned_objects` blocks their
+    deletion, unless the safeguards are ignored.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    known_object_id = str((await rig.file_upload_dao.get_by_id(file_id)).object_id)
+    orphaned_object_ids = {str(uuid4()) for _ in range(3)}
+    monkeypatch.setattr(
+        rig.controller,
+        "_config",
+        rig.config.model_copy(update={"max_orphaned_objects": 2}),
+    )
+    monkeypatch.setattr(
+        rig.s3_client,
+        "list_object_ids",
+        list_objects_returning({known_object_id, *orphaned_object_ids}),
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads(ignore_safeguards=ignore_safeguards)
+
+    expected_level = logging.WARNING if ignore_safeguards else logging.ERROR
+    records = [r for r in caplog.records if r.levelno == expected_level]
+    assert len(records) == 1
+    assert "3 orphaned objects exceed the limit of 2" in records[0].getMessage()
+    if ignore_safeguards:
+        assert orphan_spy.deleted_object_ids == [orphaned_object_ids]
+    else:
+        assert orphan_spy.deleted_object_ids == []
+
+
+async def test_cleanup_safeguard_limits_orphaned_multipart_uploads(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that more orphaned multipart uploads than `max_orphaned_multipart_uploads`
+    blocks both their abortion and the deletion of orphaned objects.
+    """
+    await rig.controller.initiate_file_upload(
+        box_id=await rig.create_default_box(),
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    for _ in range(2):
+        await init_orphaned_s3_upload(rig)
+    monkeypatch.setattr(
+        rig.controller,
+        "_config",
+        rig.config.model_copy(update={"max_orphaned_multipart_uploads": 1}),
+    )
+    monkeypatch.setattr(
+        rig.s3_client, "list_object_ids", list_objects_returning({str(uuid4())})
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.aborted_s3_upload_ids == []
+    assert orphan_spy.deleted_object_ids == []
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "2 orphaned multipart uploads exceed the limit of 1" in (
+        errors[0].getMessage()
+    )
+
+
+async def test_cleanup_lists_s3_before_reading_db(
+    rig: JointRig, orphan_spy: OrphanCleanupSpy, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that an upload whose FileUpload is created while the bucket is being
+    listed is not treated as orphaned.
+
+    Before the fix, the database was read first, so an upload that started and
+    completed during the run was deleted while its FileUpload stayed in 'inbox'.
+    """
+    box_id = await rig.create_default_box()
+
+    async def list_while_upload_starts(*, storage_alias: str) -> set[str]:
+        file_id, _ = await rig.controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+        file_upload = await rig.file_upload_dao.get_by_id(file_id)
+        return {str(file_upload.object_id)}
+
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", list_while_upload_starts)
+
+    await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.deleted_object_ids == [set()]
 
 
 async def test_refresh_activity_warns_and_recreates_when_missing(rig: JointRig):

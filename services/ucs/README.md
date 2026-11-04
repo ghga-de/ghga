@@ -539,6 +539,16 @@ The service requires the following configuration parameters:
   Default: `72`.
 - <a id="properties/cleanup_interval_minutes"></a>**`cleanup_interval_minutes`** *(integer)*: How often (in minutes) the cleanup job runs.
   Default: `60`.
+- <a id="properties/orphaned_object_min_age_hours"></a>**`orphaned_object_min_age_hours`** *(integer)*: Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload.
+  Applies even when safeguards are ignored.
+  Minimum: `0`.
+  Default: `6`.
+- <a id="properties/max_orphaned_objects"></a>**`max_orphaned_objects`** *(integer)*: If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.
+  Minimum: `0`.
+  Default: `100`.
+- <a id="properties/max_orphaned_multipart_uploads"></a>**`max_orphaned_multipart_uploads`** *(integer)*: If the cleanup job finds more orphaned multipart uploads than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.
+  Minimum: `0`.
+  Default: `100`.
 
 #### Definitions
 

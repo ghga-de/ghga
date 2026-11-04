@@ -17,11 +17,13 @@
 
 import logging
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Any
 
 from pydantic import UUID4
 
 from ghga_service_commons.utils.multinode_storage import ObjectStorages
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from ucs.config import Config
 from ucs.core.models import FileUpload, FileUploadBasics, ObjectMetadata
@@ -445,12 +447,8 @@ class S3Client(S3ClientPort):
         ):
             return await object_storage.get_all_multipart_uploads(bucket_id=bucket_id)
 
-    async def cleanup_orphaned_objects(
-        self, *, storage_alias: str, known_object_ids: set[str]
-    ):
-        """Clean out all orphaned object IDs in the inbox bucket.
-
-        When finished, log basic stats for deleted objects.
+    async def list_object_ids(self, *, storage_alias: str) -> set[str]:
+        """Return the IDs of all objects in the inbox bucket for the alias.
 
         Raises:
             `UnknownStorageAliasError` if the storage alias is not known.
@@ -458,26 +456,83 @@ class S3Client(S3ClientPort):
             `S3OperationError` if S3 returns any other unexpected error.
         """
         bucket_id, object_storage = self._get_bucket_and_storage(storage_alias)
-        extra: dict[str, Any] = {"storage_alias": storage_alias, "bucket_id": bucket_id}
+        extra = {"storage_alias": storage_alias, "bucket_id": bucket_id}
         with handle_bucket_and_general_s3_errors(
             op_name="list_all_object_ids", bucket_id=bucket_id, extra=extra
         ):
-            object_ids = await object_storage.list_all_object_ids(bucket_id=bucket_id)
+            return set(await object_storage.list_all_object_ids(bucket_id=bucket_id))
 
-        orphaned_object_ids = set(object_ids) - known_object_ids
+    async def _is_older_than(
+        self,
+        *,
+        object_storage: ObjectStorageProtocol,
+        bucket_id: str,
+        object_id: str,
+        cutoff: UTCDatetime,
+    ) -> bool:
+        """Return whether the object was last modified before `cutoff`.
 
-        # Return early if no orphaned objects
-        if not orphaned_object_ids:
+        An object without a last-modified time is treated as too young.
+
+        Raises:
+            `ObjectNotFoundError` if the object no longer exists.
+            `ObjectStorageProtocolError` if S3 returns any other error.
+        """
+        metadata = await object_storage.get_object_metadata(
+            bucket_id=bucket_id, object_id=object_id
+        )
+        last_modified = metadata.get("LastModified")
+        if not isinstance(last_modified, datetime):
+            log.warning(
+                "Object %s in bucket %s has no last-modified time, so it is kept.",
+                object_id,
+                bucket_id,
+            )
+            return False
+        return last_modified < cutoff
+
+    async def delete_orphaned_objects(
+        self, *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ) -> None:
+        """Delete the given objects from the inbox bucket if they were last modified
+        before `cutoff`. Younger objects, and objects without a last-modified time,
+        are kept.
+
+        Each deletion is logged, and a summary with counts is logged when finished.
+
+        Raises:
+            `UnknownStorageAliasError` if the storage alias is not known.
+        """
+        bucket_id, object_storage = self._get_bucket_and_storage(storage_alias)
+        extra: dict[str, Any] = {"storage_alias": storage_alias, "bucket_id": bucket_id}
+
+        if not object_ids:
             log.info("Did not detect any orphaned objects in the bucket %s.", bucket_id)
             return
 
-        # Deleting an already-gone object succeeds silently, so it counts as deleted.
-        deleted_ids = []
-        problem_ids = []
-        for object_id in orphaned_object_ids:
+        # Each deletion is logged on its own line so that a run killed partway through
+        #  still leaves a record, and no single log line grows with the number of IDs
+        deleted_count = 0
+        too_young_count = 0
+        failed_count = 0
+        for object_id in object_ids:
             try:
+                if not await self._is_older_than(
+                    object_storage=object_storage,
+                    bucket_id=bucket_id,
+                    object_id=object_id,
+                    cutoff=cutoff,
+                ):
+                    too_young_count += 1
+                    continue
                 await object_storage.delete_object(
                     bucket_id=bucket_id, object_id=object_id
+                )
+            except ObjectStorageProtocol.ObjectNotFoundError:
+                log.info(
+                    "Orphaned object %s is already gone from bucket %s.",
+                    object_id,
+                    bucket_id,
                 )
             except ObjectStorageProtocol.ObjectStorageProtocolError as err:
                 log.error(
@@ -489,25 +544,28 @@ class S3Client(S3ClientPort):
                     str(err),
                     extra={**extra, "object_id": object_id},
                 )
-                problem_ids.append(object_id)
+                failed_count += 1
             else:
-                deleted_ids.append(object_id)
+                log.info(
+                    "Deleted orphaned object %s from bucket %s.",
+                    object_id,
+                    bucket_id,
+                    extra={**extra, "object_id": object_id},
+                )
+                deleted_count += 1
 
-        problem_msg = ""
-        if problem_ids:
-            problem_msg = (
-                f" An additional {len(problem_ids)} object(s) could not be deleted."
-            )
-            extra["could_not_delete_count"] = len(problem_ids)
-            extra["could_not_delete_object_ids"] = problem_ids
-
-        extra["deleted_count"] = len(deleted_ids)
-        extra["deleted_object_ids"] = deleted_ids
+        extra["deleted_count"] = deleted_count
+        extra["too_young_count"] = too_young_count
+        extra["could_not_delete_count"] = failed_count
         log.info(
-            "Cleaned up %i orphaned object(s) from bucket %s in storage alias %s.%s",
-            len(deleted_ids),
+            "Cleaned up %i orphaned object(s) from bucket %s in storage alias %s."
+            + " Kept %i object(s) last modified after %s. %i object(s) could not be"
+            + " deleted.",
+            deleted_count,
             bucket_id,
             storage_alias,
-            problem_msg,
+            too_young_count,
+            cutoff.isoformat(),
+            failed_count,
             extra=extra,
         )

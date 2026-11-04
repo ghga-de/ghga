@@ -689,6 +689,27 @@
       "description": "How often (in minutes) the cleanup job runs.",
       "title": "Cleanup Interval Minutes",
       "type": "integer"
+    },
+    "orphaned_object_min_age_hours": {
+      "default": 6,
+      "description": "Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored.",
+      "minimum": 0,
+      "title": "Orphaned Object Min Age Hours",
+      "type": "integer"
+    },
+    "max_orphaned_objects": {
+      "default": 100,
+      "description": "If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.",
+      "minimum": 0,
+      "title": "Max Orphaned Objects",
+      "type": "integer"
+    },
+    "max_orphaned_multipart_uploads": {
+      "default": 100,
+      "description": "If the cleanup job finds more orphaned multipart uploads than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.",
+      "minimum": 0,
+      "title": "Max Orphaned Multipart Uploads",
+      "type": "integer"
     }
   },
   "required": [
