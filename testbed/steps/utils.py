@@ -56,6 +56,15 @@ EXPECTED_NOTIFICATIONS = {
     "iva_code_transmitted": "Contact Address Verification Code Transmitted",
 }
 
+# The phone numbers of the SMS addresses the suite creates, by the word the features
+# use for them: feature 110 verifies the main one and keeps it, and feature 501 asks
+# for consent before an SMS to the other one, from the US block reserved for fiction,
+# and deletes it again
+USER_PHONE_NUMBERS = {
+    "main": "+491710000001",
+    "other": "+12025550123",
+}
+
 IVA_TYPE_NAMES = {
     "Phone": "SMS",
     "InPerson": "In Person",
