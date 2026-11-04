@@ -1160,7 +1160,7 @@ async def test_cleanup_of_orphaned_files(
 
     # Set the inbox and cancelled docs to the desired states but leave init as is to
     #  simulate race condition
-    file_inbox_doc["inbox"] = "inbox"
+    file_inbox_doc["state"] = "inbox"
     file_cancelled_doc["state"] = "cancelled"
     collection.replace_one(filter={"_id": file_inbox_id}, replacement=file_inbox_doc)
     collection.replace_one(
