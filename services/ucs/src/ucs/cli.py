@@ -49,6 +49,21 @@ def sync_consume_events(run_forever: bool = True):
 
 
 @cli.command(name="cleanup")
-def sync_run_cleanup(run_forever: bool = True):
+def sync_run_cleanup(
+    run_forever: bool = True,
+    ignore_safeguards: Annotated[
+        bool,
+        typer.Option(
+            "--ignore-safeguards",
+            help="Delete orphaned objects and abort orphaned multipart uploads even"
+            + " if the database is empty or the orphan counts exceed the configured"
+            + " limits. Requires --no-run-forever.",
+        ),
+    ] = False,
+):
     """Run the periodic stale upload cleanup job."""
-    asyncio.run(perform_cleanup(run_forever=run_forever))
+    if ignore_safeguards and run_forever:
+        raise typer.BadParameter("--ignore-safeguards requires --no-run-forever")
+    asyncio.run(
+        perform_cleanup(run_forever=run_forever, ignore_safeguards=ignore_safeguards)
+    )
