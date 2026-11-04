@@ -565,7 +565,7 @@ class Interrogator(InterrogatorPort):
         upload_id: str,
         old_secret: SecretBytes,
         new_secret: SecretBytes,
-    ) -> Checksums:
+    ) -> tuple[Checksums, dict[str, float], float]:
         """Perform the decrypt/re-encrypt/decrypt/upload cycle on each file part.
 
         `max_concurrent_parts` workers draw part ranges from a shared iterator; the
@@ -573,8 +573,10 @@ class Interrogator(InterrogatorPort):
         that pool is this file's whole budget - memory, live tasks and S3 transfers.
 
         Returns the `Checksums` object containing the checksums calculated during
-        the file processing. All error translation is done here, but all S3 cleanup is
-        handled from the calling function, `interrogate_file()`.
+        the file processing, the seconds spent in each stage summed over all parts,
+        and the wall time of the whole parts phase. All error translation is done
+        here, but all S3 cleanup is handled from the calling function,
+        `interrogate_file()`.
 
         Raises:
         - DecryptionError if a file part cannot be decrypted.
@@ -664,7 +666,8 @@ class Interrogator(InterrogatorPort):
             timings=timings,
             wall_time=wall_time,
         )
-        return checksums
+        stage_seconds = {stage: round(t, 3) for stage, t in timings.items()}
+        return checksums, stage_seconds, round(wall_time, 3)
 
     def _log_part_metrics(
         self,
@@ -756,7 +759,7 @@ class Interrogator(InterrogatorPort):
                 file_upload.id,
             )
             # Error translation handled inside ._process_file_parts()
-            checksums = await self._process_file_parts(
+            checksums, stage_seconds, wall_time = await self._process_file_parts(
                 file_upload=file_upload,
                 new_object_id=new_object_id,
                 upload_id=upload_id,
@@ -859,6 +862,8 @@ class Interrogator(InterrogatorPort):
             encrypted_parts_md5=checksums.encrypted_md5,
             encrypted_parts_sha256=checksums.encrypted_sha256,
             encrypted_size=file_upload.encrypted_size - file_upload.offset,
+            wall_time_seconds=wall_time,
+            stage_seconds=stage_seconds,
         )
 
     async def _clean_up_upload(self, *, upload_id: str, object_id: str, file_id: UUID4):
@@ -890,6 +895,8 @@ class Interrogator(InterrogatorPort):
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],
         encrypted_size: int,
+        wall_time_seconds: float | None = None,
+        stage_seconds: dict[str, float] | None = None,
     ) -> None:
         """Submit an InterrogationReport for a successful interrogation.
 
@@ -908,6 +915,8 @@ class Interrogator(InterrogatorPort):
             encrypted_parts_md5=[h.hex() for h in encrypted_parts_md5],
             encrypted_parts_sha256=[h.hex() for h in encrypted_parts_sha256],
             encrypted_size=encrypted_size,
+            wall_time_seconds=wall_time_seconds,
+            stage_seconds=stage_seconds,
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
