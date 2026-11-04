@@ -215,3 +215,26 @@ async def test_with_filters_and_sorts(joint_fixture: JointFixture):
     )
 
     assert [hit.id_ for hit in results.hits] == reference_ids
+
+
+@pytest.mark.parametrize("query", ["", "   "], ids=["empty", "blank"])
+async def test_relevance_without_query(query: str, joint_fixture: JointFixture):
+    """Make sure sorting by relevance without a query is rejected"""
+    params: QueryParams = {
+        "class_name": CLASS_NAME,
+        "query": query,
+        "order_by": ["field"],
+        "sort": ["relevance"],
+    }
+
+    response = await joint_fixture.rest_client.get(url="/search", params=params)
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Sorting by relevance requires a query"
+
+
+async def test_blank_query(joint_fixture: JointFixture):
+    """Make sure a blank query is treated like no query"""
+    params: QueryParams = {"class_name": CLASS_NAME, "query": "   "}
+
+    results = await joint_fixture.call_search_endpoint(params)
+    assert results.count == 5
