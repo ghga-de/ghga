@@ -72,6 +72,9 @@ for the full set of configurable values.
 | `config.max_concurrent_uploads_per_box` | Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests. | `5` |
 | `config.multipart_upload_ttl_hours` | Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job. | `72` |
 | `config.cleanup_interval_minutes` | How often (in minutes) the cleanup job runs. | `60` |
+| `config.orphaned_object_min_age_hours` | Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored. | `6` |
+| `config.max_orphaned_objects` | If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards. | `100` |
+| `config.max_orphaned_multipart_uploads` | If the cleanup job finds more orphaned multipart uploads than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards. | `100` |
 
 ## Parameters
 
