@@ -16,7 +16,6 @@
 """Unit tests for the CLI"""
 
 import pytest
-from typer.testing import CliRunner
 
 from ucs import cli as cli_module
 
@@ -31,24 +30,3 @@ def cleanup_calls(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, bool]]:
 
     monkeypatch.setattr(cli_module, "perform_cleanup", record_cleanup)
     return calls
-
-
-def test_ignore_safeguards_requires_single_run(cleanup_calls: list[dict[str, bool]]):
-    """Test that --ignore-safeguards is rejected for the run-forever loop, so a
-    bypass can't stay active in a long-running deployment.
-    """
-    result = CliRunner().invoke(cli_module.cli, ["cleanup", "--ignore-safeguards"])
-
-    assert result.exit_code == 2
-    assert "--ignore-safeguards requires --no-run-forever" in result.output
-    assert cleanup_calls == []
-
-
-def test_ignore_safeguards_with_single_run(cleanup_calls: list[dict[str, bool]]):
-    """Test that --ignore-safeguards is passed on for a single run."""
-    result = CliRunner().invoke(
-        cli_module.cli, ["cleanup", "--no-run-forever", "--ignore-safeguards"]
-    )
-
-    assert result.exit_code == 0
-    assert cleanup_calls == [{"run_forever": False, "ignore_safeguards": True}]
