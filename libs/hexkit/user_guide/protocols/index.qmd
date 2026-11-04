@@ -164,4 +164,34 @@ This interface is documented in depth in the dedicated [Object Storage](objstora
 
 ## Adding Protocols
 
-TBD
+Add a protocol only when no existing one fits and the abstraction serves more than one service.
+The aim is not to model a technology exactly, but to separate the logic every service needs from the logic each service writes for itself; see [The Protocol Definition Matters](../arch_concepts/triple_hexagonal_arch.qmd#the-protocol-definition-matters).
+
+### Defining the Protocol
+
+Put the protocol in its own module under `src/hexkit/protocols/`, and name its operations without referring to any technology.
+hexkit protocols take one of two forms:
+
+- **An abstract base class** with a public method that validates its input and then calls an abstract `_..._validated()` method, as `EventPublisherProtocol.publish()` does with `_publish_validated()`.
+  Use this form when every provider must apply the same validation, so a provider cannot skip it.
+- **A `typing.Protocol`**, as `Dao` and `KeyValueStoreProtocol` are.
+  Providers then satisfy it by their methods alone, without inheriting from it.
+  Use this form when there is no shared logic to enforce.
+
+Define the errors that callers must handle in the protocol module too, as `hexkit.protocols.dao` does with `ResourceNotFoundError`.
+Providers then translate their driver's errors into these types, so translators keep working when the provider changes.
+
+### Adding Providers
+
+A protocol needs at least two providers:
+
+1. **An in-memory provider** in `src/hexkit/providers/testing/`, so services can unit-test their translators without infrastructure.
+2. **A provider for a real backend** in its own subpackage under `src/hexkit/providers/`, with the backend's client library as an optional extra in `pyproject.toml`, like `mongodb` or `s3`.
+
+Test the in-memory provider in `tests/unit/` and the real provider in `tests/integration/providers/`, against a testcontainer.
+
+### Documenting the Protocol
+
+1. Write a chapter in `user_guide/protocols/` that documents the protocol independently of any provider, like [Object Storage](objstorage.qmd).
+2. Add the protocol to this page: to its category, and to the table in [Choosing a Protocol](#choosing-a-protocol).
+3. Add the chapter to the `user_guide` section, and the protocol class to the matching `Protocols —` section of `reference`, both in `great-docs.yml`.
