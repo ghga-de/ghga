@@ -124,6 +124,17 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
         assert len(report["encrypted_parts_md5"]) > 0
         assert isinstance(report["encrypted_parts_sha256"], list)
         assert len(report["encrypted_parts_sha256"]) > 0
+        assert report["wall_time_seconds"] >= 0
+        assert set(report["stage_seconds"]) == {
+            "download",
+            "decrypt",
+            "reencrypt",
+            "verify",
+            "digest",
+            "fold",
+            "upload",
+        }
+        assert all(seconds >= 0 for seconds in report["stage_seconds"].values())
 
     # Verify the per-file phase-timing log was emitted for each file
     phase_timing_logs = [
@@ -356,6 +367,8 @@ async def test_file_decryption_error(joint_fixture: JointFixture):
 
     # The important thing is that passed=False and a report was submitted
     assert report["reason"] is not None, "Reason field should exist"
+    assert report["wall_time_seconds"] is None
+    assert report["stage_seconds"] is None
 
     # Verify that the interrogation bucket is empty (upload was aborted/cleaned up)
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore

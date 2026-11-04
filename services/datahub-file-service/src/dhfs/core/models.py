@@ -197,3 +197,18 @@ class InterrogationReport(BaseModel):
     reason: str | None = Field(
         default=None, description="The reason the file interrogation failed."
     )
+    wall_time_seconds: float | None = Field(
+        default=None,
+        description=(
+            "The elapsed time of processing all file parts, from the first download"
+            + " to the last upload, in seconds, if interrogation was successful."
+        ),
+    )
+    stage_seconds: dict[str, float] | None = Field(
+        default=None,
+        description=(
+            "The seconds spent in each processing stage, summed over all file parts,"
+            + " if interrogation was successful. Parts run concurrently, so the sum can"
+            + " exceed the wall time, and a crypto stage includes waiting for a thread."
+        ),
+    )

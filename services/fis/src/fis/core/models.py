@@ -132,6 +132,19 @@ class InterrogationReport(BaseModel):
         default=None,
         description="Conditional upon failure, contains reason for failure",
     )
+    wall_time_seconds: float | None = Field(
+        default=None,
+        description=(
+            "Elapsed time of processing all file parts in seconds, if DHFS sent it"
+        ),
+    )
+    stage_seconds: dict[str, float] | None = Field(
+        default=None,
+        description=(
+            "Seconds spent in each processing stage, summed over all file parts, if"
+            + " DHFS sent it. Parts run concurrently, so the sum can exceed the wall time."
+        ),
+    )
 
 
 class InterrogationReportWithSecret(InterrogationReport):

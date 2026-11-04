@@ -113,6 +113,8 @@ class InterrogatorPort(ABC):
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],
         encrypted_size: int,
+        wall_time_seconds: float | None = None,
+        stage_seconds: dict[str, float] | None = None,
     ) -> None:
         """Submit an InterrogationReport for a successful interrogation.
 
