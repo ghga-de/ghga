@@ -41,6 +41,9 @@ from hexkit.utils import now_utc_ms_prec
 STATES = event_schemas.FileUploadState
 log = logging.getLogger(__name__)
 
+# DHFS sets these afresh on every submission, so they don't tell reports apart.
+_TIMING_FIELDS = {"interrogated_at", "wall_time_seconds", "stage_seconds"}
+
 
 class InterrogationHandler(InterrogationHandlerPort):
     """This is the core class that manages `FileUnderInterrogation` and
@@ -142,9 +145,9 @@ class InterrogationHandler(InterrogationHandlerPort):
             )
             return False
         else:
-            # See if the reports differ - the timestamps are immaterial here
-            report_subset = report.model_dump(exclude={"interrogated_at", "secret"})
-            stored_subset = stored_report.model_dump(exclude={"interrogated_at"})
+            # See if the reports differ - the timing differs on every resend
+            report_subset = report.model_dump(exclude=_TIMING_FIELDS | {"secret"})
+            stored_subset = stored_report.model_dump(exclude=_TIMING_FIELDS)
             # List different fields
             different_fields = {
                 k for k, v in report_subset.items() if stored_subset[k] != v
