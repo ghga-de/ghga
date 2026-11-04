@@ -137,6 +137,7 @@ components:
         stage_seconds:
           anyOf:
           - additionalProperties:
+              minimum: 0.0
               type: number
             type: object
           - type: 'null'
@@ -150,7 +151,8 @@ components:
           type: string
         wall_time_seconds:
           anyOf:
-          - type: number
+          - minimum: 0.0
+            type: number
           - type: 'null'
           description: Elapsed time of processing all file parts in seconds, if DHFS
             sent it

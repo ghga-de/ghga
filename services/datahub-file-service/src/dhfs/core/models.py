@@ -22,7 +22,14 @@ from functools import cached_property
 from math import ceil
 
 import crypt4gh.lib
-from pydantic import UUID4, BaseModel, Field, SecretBytes, computed_field
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    NonNegativeFloat,
+    SecretBytes,
+    computed_field,
+)
 
 from dhfs.constants import SEGMENT_OVERHEAD
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -197,14 +204,14 @@ class InterrogationReport(BaseModel):
     reason: str | None = Field(
         default=None, description="The reason the file interrogation failed."
     )
-    wall_time_seconds: float | None = Field(
+    wall_time_seconds: NonNegativeFloat | None = Field(
         default=None,
         description=(
             "The elapsed time of processing all file parts, from the first download"
             + " to the last upload, in seconds, if interrogation was successful."
         ),
     )
-    stage_seconds: dict[str, float] | None = Field(
+    stage_seconds: dict[str, NonNegativeFloat] | None = Field(
         default=None,
         description=(
             "The seconds spent in each processing stage, summed over all file parts,"
