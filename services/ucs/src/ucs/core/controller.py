@@ -1824,10 +1824,6 @@ class UploadController(UploadControllerPort):
     ) -> list[str]:
         """Return a description of each cleanup safeguard that would be violated by
         removing the given number of orphaned multipart uploads and objects.
-
-        An empty FileUpload collection means this instance likely shares the inbox
-        bucket with another deployment whose database it can't see, so everything in
-        the bucket would look orphaned.
         """
         violations: list[str] = []
         any_file_upload = [
