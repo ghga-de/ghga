@@ -513,7 +513,7 @@ class S3Client(S3ClientPort):
         # Each deletion is logged on its own line so that a run killed partway through
         #  still leaves a record, and no single log line grows with the number of IDs
         deleted_count = 0
-        too_young_count = 0
+        kept_count = 0
         failed_count = 0
         for object_id in object_ids:
             try:
@@ -523,7 +523,7 @@ class S3Client(S3ClientPort):
                     object_id=object_id,
                     cutoff=cutoff,
                 ):
-                    too_young_count += 1
+                    kept_count += 1
                     continue
                 await object_storage.delete_object(
                     bucket_id=bucket_id, object_id=object_id
@@ -555,16 +555,16 @@ class S3Client(S3ClientPort):
                 deleted_count += 1
 
         extra["deleted_count"] = deleted_count
-        extra["too_young_count"] = too_young_count
+        extra["kept_count"] = kept_count
         extra["could_not_delete_count"] = failed_count
         log.info(
             "Cleaned up %i orphaned object(s) from bucket %s in storage alias %s."
-            + " Kept %i object(s) last modified after %s. %i object(s) could not be"
-            + " deleted.",
+            + " Kept %i object(s) last modified after %s or without a last-modified"
+            + " time. %i object(s) could not be deleted.",
             deleted_count,
             bucket_id,
             storage_alias,
-            too_young_count,
+            kept_count,
             cutoff.isoformat(),
             failed_count,
             extra=extra,
