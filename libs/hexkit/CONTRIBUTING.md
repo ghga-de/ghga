@@ -43,24 +43,30 @@ just typecheck         # mypy, per workspace member
 ## Documentation
 
 The narrative docs live under [`./user_guide`](./user_guide) and the site is configured by [`./great-docs.yml`](./great-docs.yml); it is built with [Great Docs](https://posit-dev.github.io/great-docs/), which uses Quarto.
-Neither is part of the monorepo's shared toolchain — Great Docs requires Python >= 3.11 and is only needed for the docs — so install both yourself, then build and serve the site from this directory:
+Great Docs is pinned in the `docs` dependency group of the monorepo's `uv.lock`, but installed into its own virtual environment, `.venv-docs`, so that its large dependency tree stays out of the workspace environment.
+Quarto is a separate binary: the devcontainer provides it, and on any other machine you install it from <https://quarto.org/docs/get-started/>.
+
+Run these commands from the repository root:
 
 ``` bash
-# Install the docs toolchain (once)
-uv tool install great-docs==0.14.1
-# Quarto: see https://quarto.org/docs/get-started/
+# Install the docs toolchain into .venv-docs (once per clone)
+just docs-install
 
+# Build the site into libs/hexkit/great-docs/_site/
+just docs libs/hexkit
+```
+
+To view the built site, serve it from `libs/hexkit` with the Great Docs binary from `.venv-docs`:
+
+``` bash
 # Execute in libs/hexkit:
 
-# Build the site into great-docs/_site/
-great-docs build
-
 # Serve the built site at http://localhost:3000
-great-docs preview
+../../.venv-docs/bin/great-docs preview
 ```
 
 `preview` only serves the existing build (it builds first only when no build exists yet) and does not watch for changes.
-Because `great-docs build` clears and regenerates the build directory, don't rebuild while a preview is running — instead, after editing a page or `great-docs.yml`, stop the preview (`Ctrl+C`), re-run `great-docs build`, and start `great-docs preview` again to view your changes.
+Because a build clears and regenerates the build directory, don't rebuild while a preview is running — instead, after editing a page or `great-docs.yml`, stop the preview (`Ctrl+C`), re-run `just docs libs/hexkit`, and start the preview again to view your changes.
 
 > **Note:** great-docs' `build --watch` doesn't track edits to your `user_guide/` source (it only watches the generated build directory), so rebuild manually as above.
 > A full rebuild takes a while, so don't expect your changes to show up immediately.
