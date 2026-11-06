@@ -2783,6 +2783,34 @@ async def test_cleanup_lists_s3_before_reading_db(
     assert orphan_spy.deleted_object_ids == [set()]
 
 
+async def test_cleanup_keeps_s3_upload_that_completes_during_listing(
+    rig: JointRig, orphan_spy: OrphanCleanupSpy, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a multipart upload whose FileUpload moves to 'inbox' after the
+    multipart uploads were listed is not aborted as orphaned.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    async def list_while_upload_completes(*, storage_alias: str) -> set[str]:
+        file_upload = await rig.file_upload_dao.get_by_id(file_id)
+        file_upload.state = "inbox"
+        await rig.file_upload_dao.update(file_upload)
+        return {str(file_upload.object_id)}
+
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", list_while_upload_completes)
+
+    await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.aborted_s3_upload_ids == []
+
+
 async def test_refresh_activity_warns_and_recreates_when_missing(rig: JointRig):
     """Test that _refresh_upload_activity logs a warning and recreates the entry
     when the activity record is unexpectedly absent during a part URL request.

@@ -1939,7 +1939,6 @@ class UploadController(UploadControllerPort):
 
         # Get just the 'init', i.e. ongoing, uploads from that list
         ongoing_uploads = [x for x in uploads_in_inbox_bucket if x.state == "init"]
-        known_init_object_ids = {str(upload.object_id) for upload in ongoing_uploads}
 
         # Determine which of the ongoing uploads have been dormant since the cutoff time
         stale_uploads = await self._find_stale_uploads(
@@ -1952,15 +1951,18 @@ class UploadController(UploadControllerPort):
                 upload=upload, storage_alias=storage_alias
             )
 
-        # Find truly orphaned S3 uploads (object_id not matching any known init FileUpload)
+        # Cast to str because S3 returns the object IDs as strings
+        known_object_ids = {str(x.object_id) for x in uploads_in_inbox_bucket}
+
+        # Orphaned S3 uploads have no FileUpload with data in the inbox bucket. Not
+        #  just 'init' FileUploads count, because an upload that completes after S3 was
+        #  listed is already 'inbox' here.
         orphaned_s3_uploads = {
             s3_upload_id: object_id
             for s3_upload_id, object_id in active_s3_uploads.items()
-            if object_id not in known_init_object_ids
+            if object_id not in known_object_ids
         }
 
-        # Cast to str because S3 returns the object IDs as strings
-        known_object_ids = {str(x.object_id) for x in uploads_in_inbox_bucket}
         orphaned_object_ids = (
             object_ids_in_bucket - known_object_ids
             if object_ids_in_bucket is not None
