@@ -611,6 +611,12 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if self._autopublish:
             await self.publish_document(document)
 
+    async def insert_many(
+        self, dtos: Collection[Dto], *, ordered: bool = False
+    ) -> None:
+        """Not implemented: the DAO publisher does not support batch writes yet."""
+        raise NotImplementedError
+
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
         try:

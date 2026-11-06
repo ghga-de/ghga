@@ -225,6 +225,15 @@ The `properties` dictionary is forwarded to pymongo's [`create_index()`](https:/
 
 A unique index is also the mechanism behind `UniqueConstraintViolationError`: writes that would break a unique index over non-ID fields raise it, letting you enforce uniqueness of, say, an email address at the database level.
 
+### Batch Operations
+
+The [batch operations](../protocols/dao.qmd#batch-operations) of the DAO protocol each send one bulk command per batch.
+The pymongo driver splits a batch above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
+
+A batch is not atomic, and there are no transactions yet to make it so.
+A `BatchOperationError` names every failed and every skipped ID, so the caller knows exactly what was written.
+After a timeout or a lost connection the outcome is unknown; `find_all` shows what arrived.
+
 ### Error Handling
 
 The provider translates pymongo's errors into the exception types of the [DAO protocol](../protocols/dao.qmd#error-handling), so calling code never needs to import from pymongo:
@@ -237,6 +246,7 @@ The provider translates pymongo's errors into the exception types of the [DAO pr
 | Find mapping with unknown field names | `InvalidMappingError` |
 | `find_one` matching zero / more than one document | `NoHitsFoundError` / `MultipleHitsFoundError` |
 | Operation exceeding the configured `mongo_timeout` | `DbTimeoutError` |
+| Some resources of a batch failing | `BatchOperationError`, holding one of the errors above per ID |
 | Any other driver-level failure | `DaoError` |
 
 All of these derive from `DaoError`, so `except DaoError` is a safe catch-all for database problems.
