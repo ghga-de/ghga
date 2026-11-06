@@ -170,11 +170,20 @@ The aim is not to model a technology exactly, but to separate the logic every se
 ### Defining the Protocol
 
 Put the protocol in its own module under `src/hexkit/protocols/`, and name its operations without referring to any technology.
-The structure of the link between protocol and provider varies, and there is no strict requirement for how to structure that link in new protocol/provider pairs.
-For inspiration, though, here are two forms of linkage between existing protocol/provider pairs: In one form, the protocol class exposes an abstract public method and the provider is expected to implement that method (as with `DaoSubscriberProtocol`).
-In another form, the protocol class implements a public method that calls an abstract private method, which the provider is expected to implement (as with `ObjectStorageProtocol`).
-While the protocol/provider linkage is determined on a case-by-case basis, any errors that callers must handle must be defined in the protocol module, as `hexkit.protocols.dao` does with `ResourceNotFoundError`.
-Providers then translate their driver's errors into these types, so translators keep working when the provider changes.
+Who implements a protocol depends on its direction.
+A provider implements an outbound protocol, such as `ObjectStorageProtocol`, and the service calls it.
+The service's translators implement an inbound protocol, such as `EventSubscriberProtocol`, and the provider calls them.
+
+hexkit's protocols take one of three forms, and a new protocol can use whichever fits:
+
+- **An abstract base class with abstract public methods**, as `DaoSubscriberProtocol` is.
+- **An abstract base class** whose public methods validate their input and then call an abstract method of the same name with a leading underscore, as `ObjectStorageProtocol.does_bucket_exist()` does with `_does_bucket_exist()`.
+  Use this form when every implementation must apply the same validation.
+- **A `typing.Protocol`**, as `Dao` and `KeyValueStoreProtocol` are, which implementations can satisfy by their methods alone, without inheriting from it.
+
+Define the errors that callers must handle as nested classes of the protocol, as `ObjectStorageProtocol.BucketNotFoundError` is, so that one import brings the protocol and its errors, and names cannot clash between protocols.
+A `typing.Protocol` must define them at module level instead, as `hexkit.protocols.dao` does with `ResourceNotFoundError`, because a nested class would become a member that every implementation has to provide.
+Providers then translate their driver's errors into these types, so the service's code keeps working when the provider changes.
 
 ### Adding Providers
 
