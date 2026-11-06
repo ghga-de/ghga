@@ -13,31 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Mocks of the APIs the datasteward kit calls, built on the service commons `MockApi`.
+"""Serving the APIs the datasteward kit calls from service commons `MockApi` mocks.
 
 The kit's synchronous calls build their own `httpx2` client or call `httpx2.get`, so
 `serve_httpx2_from` redirects what `httpx2` hands out.
 """
 
-__all__ = ["WkvsMock", "serve_httpx2_from"]
+__all__ = ["serve_httpx2_from"]
 
 from typing import Any
 
 import httpx2
 import pytest
-
-from ghga_service_commons.http.mock_api import MockApi, ResponseHandler, respond
-
-
-class WkvsMock(MockApi):
-    """A mock of the well-known value service, serving the storage aliases."""
-
-    def __init__(self, base_url: str, storage_aliases: dict[str, str]) -> None:
-        super().__init__(base_url)
-        self.on_get_storage_aliases: ResponseHandler = respond(
-            200, json={"storage_aliases": storage_aliases}
-        )
-        self.route("GET", "/values/storage_aliases", "on_get_storage_aliases")
 
 
 def serve_httpx2_from(

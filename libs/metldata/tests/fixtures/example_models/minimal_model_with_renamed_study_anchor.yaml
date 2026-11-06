@@ -1,0 +1,72 @@
+id: https://w3id.org/Minimal-Model-With-Renamed-Study-Anchor
+name: Minimal-Model-With-Renamed-Study-Anchor
+version: 0.9.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+imports:
+  - linkml:types
+
+default_range: string
+
+classes:
+  AliasMixin:
+    mixin: true
+    slots:
+      - alias
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+
+  Study:
+    description: >-
+      A Study is the scope of a submission.
+    mixins: AliasMixin
+
+  File:
+    description: >-
+      A file is an object that contains information generated from a process.
+    mixins: AliasMixin
+    slots:
+      - filename
+    slot_usage:
+      filename:
+        required: true
+
+  Submission:
+    tree_root: true
+    description: >-
+      A grouping entity that holds exactly one study, but anchors it on a slot other
+      than the one the loader reads the study from.
+    slots:
+      - study
+      - files
+
+    slot_usage:
+      study:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+        minimum_cardinality: 1
+        maximum_cardinality: 1
+      files:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+
+slots:
+  alias:
+    description: The alias for an entity.
+
+  study:
+    description: The study associated with an entity.
+    range: Study
+
+  files:
+    description: The file associated with an entity.
+    range: File
+
+  filename:
+    description: The given filename.
