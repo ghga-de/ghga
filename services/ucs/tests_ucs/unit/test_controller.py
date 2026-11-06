@@ -2760,8 +2760,8 @@ async def test_cleanup_lists_s3_before_reading_db(
     """Test that an upload whose FileUpload is created while the bucket is being
     listed is not treated as orphaned.
 
-    Before the fix, the database was read first, so an upload that started and
-    completed during the run was deleted while its FileUpload stayed in 'inbox'.
+    The bucket must be listed before the database is read, so that every listed
+    object already has its FileUpload when the known IDs are collected.
     """
     box_id = await rig.create_default_box()
 
