@@ -1859,7 +1859,7 @@
         },
         "orphaned_object_min_age_hours": {
           "default": 6,
-          "description": "Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored.",
+          "description": "Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored. Age is measured from the object's LastModified time, which some S3 backends, including AWS, set to when a multipart upload was initiated rather than completed.",
           "minimum": 0,
           "title": "Orphaned Object Min Age Hours",
           "type": [
