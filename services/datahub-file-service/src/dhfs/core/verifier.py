@@ -17,9 +17,8 @@
 
 import logging
 import os
+from collections.abc import Generator
 from contextlib import suppress
-from dataclasses import dataclass
-from math import ceil
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 from uuid import UUID
@@ -40,7 +39,6 @@ from dhfs.core import models
 from dhfs.core.checksums import Checksums
 from dhfs.inject import prepare_interrogator
 from ghga_service_commons.utils.crypt import generate_key_pair
-from ghga_service_commons.utils.temp_files import big_temp_file
 from hexkit.providers.s3 import S3Config
 from hexkit.providers.s3.provider import S3ObjectStorage
 
@@ -59,20 +57,6 @@ OBJECT_ID_STR = str(OBJECT_ID_UUID)
 INTERROGATION_OBJECT_ID = UUID("00000000-0000-4000-b000-000000000002")
 SUBMITTER_SECRET = os.urandom(ENCRYPTION_SECRET_LENGTH)
 PART_SIZE = 100 * 1024**2  # 100 MiB
-
-
-@dataclass
-class EncryptedObject:
-    """An object encapsulating random data encrypted using an abbreviated version of the
-    real encryption process.
-    """
-
-    checksums: Checksums
-    unencrypted_size: int
-    encrypted_size: int
-    part_size: int
-    offset: int
-    data: bytes
 
 
 async def run_dhfs_verification(config: Config, *, file_size: int):
@@ -247,114 +231,94 @@ async def _upload_inbox_dummy_file(
     file_size: int,
 ) -> models.FileUpload:
     """Generate a fresh encrypted dummy file and upload it to the inbox."""
-    encrypted_object = _generate_encrypted_object(
-        part_size=PART_SIZE,
-        file_size=file_size,
-        public_key_path=public_key_path,
-    )
-
-    file_upload = models.FileUpload(
-        id=FILE_ID,
-        object_id=OBJECT_ID_UUID,
-        storage_alias=config.storage_alias,
-        bucket_id=config.inbox_bucket_id,
-        decrypted_sha256=encrypted_object.checksums.unencrypted_sha256.hexdigest(),
-        decrypted_size=encrypted_object.unencrypted_size,
-        encrypted_size=encrypted_object.encrypted_size,
-        part_size=encrypted_object.part_size,
-    )
-
-    log.info("Uploading encrypted object data...")
-
+    log.info("Uploading %i MiB of encrypted dummy data...", file_size // 1024**2)
     try:
-        await _upload_encrypted_object(
+        decrypted_sha256, encrypted_size = await _upload_dummy_data(
             config=config,
             storage=inbox_write_storage,
-            encrypted_object=encrypted_object,
+            public_key_path=public_key_path,
+            file_size=file_size,
         )
     except Exception as err:
         raise RuntimeError(
             f"Failed to upload the dummy file to the {config.inbox_bucket_id} bucket: {err!s}"
         ) from err
 
-    return file_upload
-
-
-def _generate_encrypted_object(
-    part_size: int, public_key_path: Path, file_size: int
-) -> EncryptedObject:
-    """Generate an ID, encryption secret, etc. to provide encrypted data."""
-    checksums = Checksums()
-    envelope = _make_envelope(
-        file_secret=SUBMITTER_SECRET, public_key_path=public_key_path
-    )
-    encrypted_data = envelope
-
-    # Encrypt data in Crypt4GH SEGMENT_SIZE chunks, not part_size chunks
-    log.info(f"Generating {file_size // (1024**2)} MiB of dummy data")
-    with big_temp_file(file_size) as file:
-        unencrypted_size = file.tell()
-        file.seek(0)
-        log.info("Dummy file generated - encrypting.")
-        while unencrypted_chunk := file.read(crypt4gh.lib.SEGMENT_SIZE):
-            checksums.update_unencrypted(unencrypted_chunk)
-            nonce = os.urandom(NONCE_LENGTH)
-            encrypted_chunk = encrypt_algo(
-                unencrypted_chunk, None, nonce, SUBMITTER_SECRET
-            )
-            encrypted_data += nonce + encrypted_chunk
-
-    # Iterate through encrypted data and calculate checksums on encrypted content
-    for i in range(ceil(len(encrypted_data) / part_size)):
-        part = encrypted_data[i * part_size : (i + 1) * part_size]
-        if part:
-            checksums.update_encrypted(part)
-
-    return EncryptedObject(
-        checksums=checksums,
-        unencrypted_size=unencrypted_size,
-        encrypted_size=len(encrypted_data),
-        part_size=part_size,
-        offset=len(envelope),
-        data=encrypted_data,
+    return models.FileUpload(
+        id=FILE_ID,
+        object_id=OBJECT_ID_UUID,
+        storage_alias=config.storage_alias,
+        bucket_id=config.inbox_bucket_id,
+        decrypted_sha256=decrypted_sha256,
+        decrypted_size=file_size,
+        encrypted_size=encrypted_size,
+        part_size=PART_SIZE,
     )
 
 
-def _make_envelope(file_secret: bytes, public_key_path: Path) -> bytes:
-    submitter_private_key = generate_key_pair().private
-    keys = [(0, submitter_private_key, get_public_key(public_key_path))]
-    header_content = crypt4gh.header.make_packet_data_enc(0, file_secret)
-    header_packets = crypt4gh.header.encrypt(header_content, keys)
-    return crypt4gh.header.serialize(header_packets)
+def _encrypted_dummy_parts(
+    *, file_size: int, part_size: int, envelope: bytes, checksums: Checksums
+) -> Generator[bytes]:
+    """Generate random data, encrypt it and yield the object it makes, part by part.
+
+    Only one part is held at a time, so memory does not grow with the file size.
+    The plaintext goes into `checksums`.
+    """
+    pending = bytearray(envelope)
+    remaining = file_size
+    while remaining:
+        segment = os.urandom(min(crypt4gh.lib.SEGMENT_SIZE, remaining))
+        remaining -= len(segment)
+        checksums.update_unencrypted(segment)
+        nonce = os.urandom(NONCE_LENGTH)
+        pending += nonce + encrypt_algo(segment, None, nonce, SUBMITTER_SECRET)
+        while len(pending) >= part_size:
+            yield bytes(pending[:part_size])
+            del pending[:part_size]
+    if pending:
+        yield bytes(pending)
 
 
-async def _upload_encrypted_object(
+async def _upload_dummy_data(
     *,
     config: Config,
     storage: S3ObjectStorage,
-    encrypted_object: EncryptedObject,
-):
-    """Upload dummy data to the inbox bucket."""
+    public_key_path: Path,
+    file_size: int,
+    part_size: int = PART_SIZE,
+) -> tuple[str, int]:
+    """Upload a fresh encrypted dummy file to the inbox bucket, a part as it is made.
+
+    Returns the SHA-256 of the plaintext and the size of the encrypted object.
+    """
     inbox_bucket_id = config.inbox_bucket_id
 
     if not inbox_bucket_id:
         raise RuntimeError("Config parameter inbox_bucket_id must be set.")
 
+    checksums = Checksums()
+    envelope = _make_envelope(
+        file_secret=SUBMITTER_SECRET, public_key_path=public_key_path
+    )
     upload_id = await storage.init_multipart_upload(
         bucket_id=inbox_bucket_id, object_id=OBJECT_ID_STR
     )
 
+    encrypted_size = 0
     async with get_configured_httpx_client(config=config) as client:
-        for i in range(len(encrypted_object.checksums.encrypted_md5)):
-            log.info("Uploading part number %i.", i + 1)
-            start = i * encrypted_object.part_size
-            stop = (i + 1) * encrypted_object.part_size
-            content = encrypted_object.data[start:stop]
+        parts = _encrypted_dummy_parts(
+            file_size=file_size,
+            part_size=part_size,
+            envelope=envelope,
+            checksums=checksums,
+        )
+        for part_number, content in enumerate(parts, start=1):
+            log.info("Uploading part number %i.", part_number)
             url = await storage.get_part_upload_url(
                 upload_id=upload_id,
                 bucket_id=inbox_bucket_id,
                 object_id=OBJECT_ID_STR,
-                part_number=i + 1,
+                part_number=part_number,
                 expires_after=300,
             )
 
@@ -364,9 +328,19 @@ async def _upload_encrypted_object(
                     f"Inbox part upload returned HTTP {response.status_code}."
                     f" Response: {response.text}"
                 )
+            encrypted_size += len(content)
     await storage.complete_multipart_upload(
         upload_id=upload_id, bucket_id=inbox_bucket_id, object_id=OBJECT_ID_STR
     )
+    return checksums.unencrypted_sha256.hexdigest(), encrypted_size
+
+
+def _make_envelope(file_secret: bytes, public_key_path: Path) -> bytes:
+    submitter_private_key = generate_key_pair().private
+    keys = [(0, submitter_private_key, get_public_key(public_key_path))]
+    header_content = crypt4gh.header.make_packet_data_enc(0, file_secret)
+    header_packets = crypt4gh.header.encrypt(header_content, keys)
+    return crypt4gh.header.serialize(header_packets)
 
 
 def _get_crypt4gh_private_key(

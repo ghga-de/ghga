@@ -186,19 +186,9 @@ async def test_upload_inbox_dummy_file_error(caplog):
     config.storage_alias = "test-hub"
     config.inbox_bucket_id = "test-inbox"
 
-    encrypted_object = MagicMock()
-    encrypted_object.checksums.unencrypted_sha256.hexdigest.return_value = "a" * 64
-    encrypted_object.unencrypted_size = 10
-    encrypted_object.encrypted_size = 20
-    encrypted_object.part_size = 5
-
     with (
         patch(
-            "dhfs.core.verifier._generate_encrypted_object",
-            return_value=encrypted_object,
-        ),
-        patch(
-            "dhfs.core.verifier._upload_encrypted_object",
+            "dhfs.core.verifier._upload_dummy_data",
             new=AsyncMock(side_effect=RuntimeError("denied")),
         ),
         caplog.at_level(logging.ERROR, logger="dhfs.core.verifier"),
