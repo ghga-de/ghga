@@ -9,6 +9,12 @@
 executableArgs:
   - interrogate
 
+# The image ships jemalloc; musl's own allocator made the re-encryption over
+# TLS 40% slower.
+envVars:
+  - name: LD_PRELOAD
+    value: /usr/lib/libjemalloc.so.2
+
 service:
   enabled: false
 containerPorts:
