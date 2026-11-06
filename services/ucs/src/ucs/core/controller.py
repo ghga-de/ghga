@@ -1705,21 +1705,38 @@ class UploadController(UploadControllerPort):
             box_id=file_upload.box_id, file_id=file_id, require_unlocked=False
         )
 
-    async def cleanup_stale_uploads(self) -> None:
+    async def cleanup_stale_uploads(self, *, ignore_safeguards: bool = False) -> None:
         """Abort stale in-progress multipart uploads and mark their FileUpload records
-        as 'cancelled'. Also aborts any orphaned S3 multipart uploads that have no
-        corresponding FileUpload record.
+        as 'cancelled'. Also aborts any orphaned S3 multipart uploads and deletes any
+        orphaned inbox objects that have no corresponding FileUpload record.
 
         An upload is considered stale if its last-activity timestamp is older than
         `config.multipart_upload_ttl_hours` hours. If no activity entry exists,
         falls back to comparing the FileUpload's `initiated` timestamp.
+
+        Orphaned objects younger than `config.orphaned_object_min_age_hours` are kept.
+        Orphans are left alone for a storage alias if the FileUpload collection is
+        empty or the orphaned object count exceeds `config.max_orphaned_objects`,
+        unless `ignore_safeguards` is True.
         """
-        cutoff = now_utc_ms_prec() - timedelta(
-            hours=self._config.multipart_upload_ttl_hours
+        now = now_utc_ms_prec()
+        cutoff = now - timedelta(hours=self._config.multipart_upload_ttl_hours)
+        orphaned_object_cutoff = now - timedelta(
+            hours=self._config.orphaned_object_min_age_hours
         )
+        # Checked once for all aliases. A stale result only blocks more, since an
+        #  upload that starts during the job can only make the collection non-empty.
+        db_is_empty = not [
+            upload
+            async for upload in self._file_upload_dao.find_all(filter_={}, limit=1)
+        ]
         for storage_alias in self._config.object_storages:
             await self._cleanup_stale_uploads_for_alias(
-                storage_alias=storage_alias, cutoff=cutoff
+                storage_alias=storage_alias,
+                cutoff=cutoff,
+                orphaned_object_cutoff=orphaned_object_cutoff,
+                db_is_empty=db_is_empty,
+                ignore_safeguards=ignore_safeguards,
             )
 
     async def _find_stale_uploads(
@@ -1809,42 +1826,75 @@ class UploadController(UploadControllerPort):
                     exc_info=True,
                 )
 
+    def _safeguards_allow_orphan_removal(  # noqa: PLR0913
+        self,
+        *,
+        storage_alias: str,
+        orphaned_s3_upload_count: int,
+        orphaned_object_count: int,
+        objects_listed: bool,
+        db_is_empty: bool,
+        ignore_safeguards: bool,
+    ) -> bool:
+        """Return whether orphans may be removed for the alias, and log why not.
+
+        An empty FileUpload collection, or more orphaned objects than
+        `config.max_orphaned_objects`, suggests the database does not belong to the
+        bucket. If the objects could not be listed, their count is unknown. Each of
+        these blocks removal unless `ignore_safeguards` is True.
+        """
+        max_objects = self._config.max_orphaned_objects
+        if db_is_empty and (orphaned_s3_upload_count or orphaned_object_count):
+            violation = "the FileUpload collection is empty"
+        elif not objects_listed and orphaned_s3_upload_count:
+            violation = "the objects in the bucket could not be listed"
+        elif orphaned_object_count > max_objects:
+            violation = (
+                f"{orphaned_object_count} orphaned objects exceed the limit of"
+                + f" {max_objects}"
+            )
+        else:
+            return True
+
+        if ignore_safeguards:
+            log.warning(
+                "Ignoring cleanup safeguards for alias '%s': %s.",
+                storage_alias,
+                violation,
+            )
+            return True
+
+        log.error(
+            "Left %i orphaned multipart upload(s) and %i orphaned object(s) for alias"
+            + " '%s' untouched because %s. Verify that they are really orphaned, then"
+            + " run `ucs cleanup --no-run-forever --ignore-safeguards` to remove them.",
+            orphaned_s3_upload_count,
+            orphaned_object_count,
+            storage_alias,
+            violation,
+        )
+        return False
+
     async def _cleanup_stale_uploads_for_alias(
         self,
         *,
         storage_alias: str,
         cutoff: UTCDatetime,
+        orphaned_object_cutoff: UTCDatetime,
+        db_is_empty: bool,
+        ignore_safeguards: bool,
     ) -> None:
         """Run stale upload cleanup for a single storage alias.
 
         This aborts ongoing uploads that are too old or not tied to any FileUpload.
-        Orphaned objects are also deleted.
+        Orphaned objects last modified before `orphaned_object_cutoff` are also
+        deleted. Orphans are left alone if `db_is_empty` is True, the objects in the
+        bucket can't be listed, or there are more orphaned objects than
+        `config.max_orphaned_objects`, unless `ignore_safeguards` is True.
         """
-        # Fetch all FileUploads for this storage alias that still have data in the inbox
-        #  bucket ('init', 'inbox', or 'failed_interrogation') to avoid doing a second
-        #  query later when performing object cleanup
-        uploads_in_inbox_bucket = [
-            upload
-            async for upload in self._file_upload_dao.find_all(
-                filter_={
-                    "storage_alias": storage_alias,
-                    "state": {"$in": ["init", "inbox", "failed_interrogation"]},
-                }
-            )
-        ]
-
-        # Get just the 'init', i.e. ongoing, uploads from that list
-        ongoing_uploads = [x for x in uploads_in_inbox_bucket if x.state == "init"]
-        known_init_object_ids = {str(upload.object_id) for upload in ongoing_uploads}
-
-        # Determine which of the ongoing uploads have been dormant since the cutoff time
-        stale_uploads = await self._find_stale_uploads(
-            ongoing_uploads=ongoing_uploads, cutoff=cutoff
-        )
-
-        # Get all active S3 multipart uploads in this storage's inbox bucket so we can
-        #  look for stale uploads that might have been abandoned due to errors or other
-        #  processes that orphaned them from any database records.
+        # S3 is listed before the database is read. An object only exists once its
+        #  upload is complete, and its FileUpload was inserted before that, so objects
+        #  from uploads that start while the job runs are not mistaken for orphans.
         try:
             active_s3_uploads = await self._s3_client.list_all_multipart_uploads(
                 storage_alias=storage_alias
@@ -1865,12 +1915,39 @@ class UploadController(UploadControllerPort):
             )
             return
 
-        # Find truly orphaned S3 uploads (object_id not matching any known init FileUpload)
-        orphaned_s3_uploads = {
-            s3_upload_id: object_id
-            for s3_upload_id, object_id in active_s3_uploads.items()
-            if object_id not in known_init_object_ids
-        }
+        # If listing objects fails, the object step is skipped but the rest still runs
+        object_ids_in_bucket: set[str] | None = None
+        try:
+            object_ids_in_bucket = await self._s3_client.list_object_ids(
+                storage_alias=storage_alias
+            )
+        except Exception:
+            # Treat all unhandled exceptions as potentially transient here and just log
+            log.warning(
+                "Could not clean up orphaned objects for alias '%s'.",
+                storage_alias,
+                exc_info=True,
+            )
+
+        # Fetch all FileUploads for this storage alias that still have data in the inbox
+        #  bucket ('init', 'inbox', or 'failed_interrogation')
+        uploads_in_inbox_bucket = [
+            upload
+            async for upload in self._file_upload_dao.find_all(
+                filter_={
+                    "storage_alias": storage_alias,
+                    "state": {"$in": ["init", "inbox", "failed_interrogation"]},
+                }
+            )
+        ]
+
+        # Get just the 'init', i.e. ongoing, uploads from that list
+        ongoing_uploads = [x for x in uploads_in_inbox_bucket if x.state == "init"]
+
+        # Determine which of the ongoing uploads have been dormant since the cutoff time
+        stale_uploads = await self._find_stale_uploads(
+            ongoing_uploads=ongoing_uploads, cutoff=cutoff
+        )
 
         # Cancel each of the stale uploads that have FileUpload entries in the DB
         for upload in stale_uploads:
@@ -1878,16 +1955,45 @@ class UploadController(UploadControllerPort):
                 upload=upload, storage_alias=storage_alias
             )
 
+        # Cast to str because S3 returns the object IDs as strings
+        known_object_ids = {str(x.object_id) for x in uploads_in_inbox_bucket}
+
+        # Orphaned S3 uploads have no FileUpload with data in the inbox bucket. Not
+        #  just 'init' FileUploads count, because an upload that completes after S3 was
+        #  listed is already 'inbox' here.
+        orphaned_s3_uploads = {
+            s3_upload_id: object_id
+            for s3_upload_id, object_id in active_s3_uploads.items()
+            if object_id not in known_object_ids
+        }
+
+        orphaned_object_ids = (
+            object_ids_in_bucket - known_object_ids
+            if object_ids_in_bucket is not None
+            else set()
+        )
+
+        if not self._safeguards_allow_orphan_removal(
+            storage_alias=storage_alias,
+            orphaned_s3_upload_count=len(orphaned_s3_uploads),
+            orphaned_object_count=len(orphaned_object_ids),
+            objects_listed=object_ids_in_bucket is not None,
+            db_is_empty=db_is_empty,
+            ignore_safeguards=ignore_safeguards,
+        ):
+            return
+
         await self._abort_orphaned_s3_uploads(
             storage_alias=storage_alias, orphaned_s3_uploads=orphaned_s3_uploads
         )
 
-        # Get a set of all object_ids from uploads_in_inbox_bucket. Cast to str because
-        #  S3Client does a set diff on the string object IDs returned by S3
-        known_object_ids = {str(x.object_id) for x in uploads_in_inbox_bucket}
+        if object_ids_in_bucket is None:
+            return
         try:
-            await self._s3_client.cleanup_orphaned_objects(
-                storage_alias=storage_alias, known_object_ids=known_object_ids
+            await self._s3_client.delete_orphaned_objects(
+                storage_alias=storage_alias,
+                object_ids=orphaned_object_ids,
+                cutoff=orphaned_object_cutoff,
             )
         except Exception:
             # Treat all unhandled exceptions as potentially transient here and just log

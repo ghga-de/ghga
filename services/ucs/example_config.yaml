@@ -38,6 +38,7 @@ log_format: null
 log_level: INFO
 log_traceback: true
 max_concurrent_uploads_per_box: 5
+max_orphaned_objects: 100
 migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'
@@ -53,6 +54,7 @@ object_storages:
       s3_secret_access_key: '**********'
       s3_session_token: null
 openapi_url: /openapi.json
+orphaned_object_min_age_hours: 6
 otel_trace_sampling_rate: 1.0
 port: 8080
 rs_auth_config:

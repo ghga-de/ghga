@@ -228,6 +228,7 @@ async def test_stale_upload_cleanup_records_spans(
             # Autoinstrumented MongoDB access (pymongo)
             "test.find",
             "test.find",
+            "test.find",
             # Autoinstrumented object storage (botocore)
             "S3.ListMultipartUploads",
             "S3.ListObjects",
