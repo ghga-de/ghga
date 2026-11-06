@@ -514,6 +514,7 @@ class S3Client(S3ClientPort):
         #  still leaves a record, and no single log line grows with the number of IDs
         deleted_count = 0
         kept_count = 0
+        already_gone_count = 0
         failed_count = 0
         for object_id in object_ids:
             try:
@@ -534,6 +535,7 @@ class S3Client(S3ClientPort):
                     object_id,
                     bucket_id,
                 )
+                already_gone_count += 1
             except ObjectStorageProtocol.ObjectStorageProtocolError as err:
                 log.error(
                     "Unable to clean up object %s from bucket %s in storage alias %s"
@@ -556,16 +558,19 @@ class S3Client(S3ClientPort):
 
         extra["deleted_count"] = deleted_count
         extra["kept_count"] = kept_count
+        extra["already_gone_count"] = already_gone_count
         extra["could_not_delete_count"] = failed_count
         log.info(
             "Cleaned up %i orphaned object(s) from bucket %s in storage alias %s."
             + " Kept %i object(s) last modified after %s or without a last-modified"
-            + " time. %i object(s) could not be deleted.",
+            + " time. %i object(s) were already gone. %i object(s) could not be"
+            + " deleted.",
             deleted_count,
             bucket_id,
             storage_alias,
             kept_count,
             cutoff.isoformat(),
+            already_gone_count,
             failed_count,
             extra=extra,
         )

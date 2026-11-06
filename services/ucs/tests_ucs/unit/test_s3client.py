@@ -516,10 +516,10 @@ async def test_delete_orphaned_objects_skips_missing_objects(
     s3_client: S3ClientPort, caplog: pytest.LogCaptureFixture
 ):
     """Test that an orphaned object that disappeared after listing is skipped
-    without an error.
+    without an error and counted as already gone.
     """
     caplog.clear()
-    with caplog.at_level(logging.ERROR, logger="ucs.adapters.outbound.s3"):
+    with caplog.at_level(logging.INFO, logger="ucs.adapters.outbound.s3"):
         await s3_client.delete_orphaned_objects(
             storage_alias=TEST_STORAGE_ALIAS,
             object_ids={"vanished-object"},
@@ -527,3 +527,6 @@ async def test_delete_orphaned_objects_skips_missing_objects(
         )
 
     assert [r for r in caplog.records if r.levelno == logging.ERROR] == []
+    summary = caplog.records[-1]
+    assert summary.getMessage().startswith("Cleaned up 0 orphaned object(s)")
+    assert summary.already_gone_count == 1  # type: ignore[attr-defined]
