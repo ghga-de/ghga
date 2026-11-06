@@ -19,19 +19,22 @@
 Utilities for testing are located in `../testutils.py`.
 """
 
-from collections.abc import AsyncIterator, Callable, Collection, Mapping
+from collections.abc import AsyncIterator, Callable, Collection, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any, Generic, Literal, TypeAlias
 
 from pymongo import AsyncMongoClient
 from pymongo.asynchronous.collection import AsyncCollection
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import BulkWriteError, DuplicateKeyError
 
 from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
+    BatchOperationError,
     Dao,
+    DaoError,
     DaoFactoryProtocol,
+    DbTimeoutError,
     Dto,
     FindResult,
     IndexBase,
@@ -117,6 +120,92 @@ async def get_single_hit(
         return dto
 
     raise MultipleHitsFoundError(filter_=mapping)
+
+
+# MongoDB's error codes for a write that clashes with a unique index. MongoDB 2.4
+# raised 11001 for an update and 12582 for an insert into a capped collection.
+# Single writes, through pymongo, map only 11000 and report the other two as a plain
+# DaoError, but a batch follows what the codes mean, as pymongo's GridFS upload does.
+DUPLICATE_KEY_ERRORS = frozenset({11000, 11001, 12582})
+# MongoDB's error code for a write that ran out of its maxTimeMS
+MAX_TIME_MS_EXPIRED = 50
+
+
+def _insert_duplicate_error(id_: ID, key_value: dict[str, Any] | None) -> DaoError:
+    """Return the error that `insert` raises for a duplicate key.
+
+    A duplicate key on `_id` means the resource exists already. Without `keyValue`
+    the clashing index is unknown, and it is taken to be the ID's as well.
+    """
+    if key_value is not None and list(key_value) != ["_id"]:
+        return UniqueConstraintViolationError(unique_fields=key_value)
+    return ResourceAlreadyExistsError(id_=id_)
+
+
+def _replace_duplicate_error(id_: ID, key_value: dict[str, Any] | None) -> DaoError:
+    """Return the error that `update` and `upsert` raise for a duplicate key."""
+    return UniqueConstraintViolationError(unique_fields=key_value or {})
+
+
+def _write_concern_error(error: BulkWriteError) -> DaoError | None:
+    """Return the error a single write raises for the batch's write concern error.
+
+    Only the last one counts, as for pymongo. Unlike `BulkWriteError.timeout`, this
+    ignores the write errors, so a write that ran out of its maxTimeMS does not make
+    the write concern error a timeout.
+    """
+    concern_errors = error.details.get("writeConcernErrors")
+    if not concern_errors:
+        return None
+    last, info = concern_errors[-1], concern_errors[-1].get("errInfo", {})
+    if last.get("code") == MAX_TIME_MS_EXPIRED or info.get("wtimeout"):
+        return DbTimeoutError(last["errmsg"])
+    return DaoError(last["errmsg"])
+
+
+def _errors_from_bulk_write(
+    error: BulkWriteError,
+    ids: Sequence[ID],
+    *,
+    ordered: bool,
+    duplicate_key: Callable[[ID, dict[str, Any] | None], DaoError],
+) -> BatchOperationError:
+    """Turn the failures of a bulk write into an error that names each failed resource.
+
+    `ids` holds the ID of each operation, in the order the operations were passed to
+    the bulk write, and must be distinct, which the batch methods ensure before they
+    write. MongoDB names a failure by its index in that list, whether the batch is
+    ordered or not. `duplicate_key` returns the error that the operation's
+    single-resource method raises for a duplicate key.
+
+    A write concern error does not undo the writes: each attempted resource without a
+    write error of its own is named with the write concern's error, as its single
+    write raises it.
+    """
+    errors: dict[ID, DaoError] = {}
+    write_errors = error.details["writeErrors"]
+    # Each failure gets the error that the single-resource method raises for it
+    for failure in write_errors:
+        id_ = ids[failure["index"]]
+        if failure["code"] == MAX_TIME_MS_EXPIRED:
+            errors[id_] = DbTimeoutError(failure["errmsg"])
+        elif failure["code"] in DUPLICATE_KEY_ERRORS:
+            errors[id_] = duplicate_key(id_, failure.get("keyValue"))
+        else:
+            # Any other failure, such as a failed document validation or a document
+            # over the size limit, has no error of its own
+            errors[id_] = DaoError(failure["errmsg"])
+    # An ordered batch stops at its first failure and skips the rest
+    not_attempted: Sequence[ID] = ()
+    if ordered and write_errors:
+        not_attempted = ids[write_errors[0]["index"] + 1 :]
+    concern_error = _write_concern_error(error)
+    if concern_error:
+        # An attempted write without an error of its own is applied but not
+        # confirmed, which its single method reports with this error
+        attempted = ids[: len(ids) - len(not_attempted)]
+        errors |= {id_: concern_error for id_ in attempted if id_ not in errors}
+    return BatchOperationError(errors=errors, not_attempted=not_attempted)
 
 
 FieldName: TypeAlias = str
@@ -278,8 +367,8 @@ class MongoDbDao(Generic[Dto]):
             try:
                 result = await self._collection.replace_one(doc_filter, document)
             except DuplicateKeyError as error:
-                key_value = error.details.get("keyValue", {})  # type: ignore
-                raise UniqueConstraintViolationError(unique_fields=key_value) from error
+                key_value = error.details.get("keyValue")  # type: ignore
+                raise _replace_duplicate_error(document["_id"], key_value) from error
 
         if result.matched_count == 0:
             if precondition:
@@ -481,11 +570,7 @@ class MongoDbDao(Generic[Dto]):
                 await self._collection.insert_one(document)
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue")  # type: ignore
-                if key_value is not None and list(key_value) != ["_id"]:
-                    raise UniqueConstraintViolationError(
-                        unique_fields=key_value
-                    ) from error
-                raise ResourceAlreadyExistsError(id_=document["_id"]) from error
+                raise _insert_duplicate_error(document["_id"], key_value) from error
 
     async def upsert(self, dto: Dto) -> None:
         """Update the provided resource if it already exists, create it otherwise.
@@ -510,8 +595,8 @@ class MongoDbDao(Generic[Dto]):
                     {"_id": document["_id"]}, document, upsert=True
                 )
             except DuplicateKeyError as error:
-                key_value = error.details.get("keyValue", {})  # type: ignore
-                raise UniqueConstraintViolationError(unique_fields=key_value) from error
+                key_value = error.details.get("keyValue")  # type: ignore
+                raise _replace_duplicate_error(document["_id"], key_value) from error
 
 
 class MongoDbDaoFactory(DaoFactoryProtocol[MongoDbIndex]):
