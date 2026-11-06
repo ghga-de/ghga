@@ -187,11 +187,10 @@ Providers then translate their driver's errors into these types, so the service'
 
 ### Adding Providers
 
-A protocol needs **at least one provider** in its own subpackage under `src/hexkit/providers/`, with the backend's client library as an optional extra in `pyproject.toml`, like `mongodb` or `s3`.
-Optionally, add another provider for in-memory testing if practical to do so.
-Place in-memory test providers in `src/hexkit/providers/testing/`, so services can unit-test their translators without infrastructure.
-
-Test the in-memory provider in `tests/unit/` and the real provider in `tests/integration/providers/`, against a testcontainer.
+A protocol needs **at least one provider** for a real backend.
+Put it in that backend's subpackage under `src/hexkit/providers/`, or in a new subpackage with the backend's client library as an optional extra in `pyproject.toml`, like `mongodb` or `s3`.
+Where practical, also add an in-memory provider in `src/hexkit/providers/testing/`, so services can unit-test their code without infrastructure.
+Test the real provider in `tests/integration/providers/` against a testcontainer, and an in-memory provider in `tests/unit/`.
 
 ### Documenting the Protocol
 
