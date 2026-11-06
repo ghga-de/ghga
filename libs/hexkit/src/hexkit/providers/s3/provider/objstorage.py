@@ -535,6 +535,7 @@ class S3ObjectStorage(ObjectStorageProtocol):
         part_number: int,
         expires_after: int = 3600,
         part_md5: str | None = None,
+        verify_upload: bool = True,
     ) -> str:
         """Given a id of an instantiated multipart upload along with the corresponding
         bucket and object ID, it returns a presigned URL for uploading a file part with the
@@ -542,6 +543,8 @@ class S3ObjectStorage(ObjectStorageProtocol):
         You may also specify a custom expiry duration in seconds (`expires_after`).
         Please note: the part number must be a non-zero, positive integer and parts
         should be uploaded in sequence.
+        With `verify_upload=False`, the ListMultipartUploads call that checks the
+        upload is skipped.
         """
         if not 0 < part_number <= self.MAX_FILE_PART_NUMBER:
             raise ValueError(
@@ -551,9 +554,10 @@ class S3ObjectStorage(ObjectStorageProtocol):
 
         # Upload check needed: presigning is local-only, so a missing upload or
         # multiple active uploads can only be detected here.
-        await self._assert_multipart_upload_exists(
-            upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
-        )
+        if verify_upload:
+            await self._assert_multipart_upload_exists(
+                upload_id=upload_id, bucket_id=bucket_id, object_id=object_id
+            )
 
         params = {
             "Bucket": bucket_id,

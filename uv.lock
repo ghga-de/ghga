@@ -1373,7 +1373,7 @@ provides-extras = ["pydantic"]
 
 [[package]]
 name = "ghga-connector"
-version = "4.0.2"
+version = "4.0.3"
 source = { editable = "tools/ghga-connector" }
 dependencies = [
     { name = "async-lru" },
@@ -1720,7 +1720,7 @@ wheels = [
 
 [[package]]
 name = "hexkit"
-version = "10.0.0"
+version = "11.0.0"
 source = { editable = "libs/hexkit" }
 dependencies = [
     { name = "opentelemetry-api" },
