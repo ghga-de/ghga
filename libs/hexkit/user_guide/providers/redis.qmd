@@ -19,8 +19,179 @@ title: "Redis"
  limitations under the License.
 -->
 
-Redis providers implement `KeyValueStoreProtocol` for low-latency key-value access.
+The Redis providers implement the [`KeyValueStoreProtocol`](../protocols/index.qmd#keyvaluestoreprotocol) on a [Redis](https://redis.io) server.
+Redis serves values from memory, so these stores suit small values that are read often, such as cached results, tokens or session state.
+Whether values survive a server restart depends on the server's persistence settings, not on hexkit.
+For values that must be durable, use the [MongoDB](mongodb.qmd#mongodb-kv-store-providers) or [S3](s3.qmd#s3-kv-store-providers) stores; for secrets, use [Vault](vault.qmd).
 
-Available variants are `RedisBytesKeyValueStore`, `RedisStrKeyValueStore`, `RedisJsonKeyValueStore`, and `RedisDtoKeyValueStore`.
+To use them, install hexkit with the `redis` extra:
 
-API reference: [hexkit.providers.redis](../../reference/index.qmd#provider-redis)
+```sh
+pip install hexkit[redis]
+```
+
+## Redis KV Store Providers
+
+There is one store per [value-type variant](../protocols/index.qmd#keyvaluestoreprotocol): [`RedisBytesKeyValueStore`](../../reference/providers.redis.RedisBytesKeyValueStore.qmd), [`RedisStrKeyValueStore`](../../reference/providers.redis.RedisStrKeyValueStore.qmd), [`RedisJsonKeyValueStore`](../../reference/providers.redis.RedisJsonKeyValueStore.qmd) and [`RedisDtoKeyValueStore`](../../reference/providers.redis.RedisDtoKeyValueStore.qmd).
+All four share the configuration, construction and key handling described below.
+
+### Configuration
+
+Connection parameters are collected in [`RedisConfig`](../../reference/providers.redis.RedisConfig.qmd).
+Inherit your service's config class from it (see [Configuration](../configuration.qmd)), or instantiate it directly:
+
+```python
+from hexkit.providers.redis import RedisConfig
+
+config = RedisConfig(redis_url="redis://localhost:6379/0")
+```
+
+| Parameter | Description |
+| --------- | ----------- |
+| `redis_url` | The connection URL, in the form `redis://[[username]:password@]host[:port][/database]`, or with `rediss://` for TLS. The port defaults to `6379` and the database to `0`. Stored as a Pydantic `Secret`, because it may contain credentials. |
+| `redis_timeout` | Optional socket timeout in whole seconds, applied to every Redis operation, including connection. When exceeded, the operation raises a `redis.exceptions.TimeoutError`. Defaults to `None` (no timeout). |
+
+### Creating Stores
+
+The recommended way to create a store is the `construct()` async context manager, which opens a Redis client on entry and closes it on exit:
+
+```python
+from pydantic import BaseModel
+
+from hexkit.providers.redis import RedisDtoKeyValueStore
+
+
+class Book(BaseModel):
+    id: str
+    title: str
+    year: int
+
+
+async with RedisDtoKeyValueStore.construct(
+    config=config, dto_model=Book, key_prefix="books:"
+) as book_store:
+    await book_store.set("b1", Book(id="b1", title="Dune", year=1965))
+    book = await book_store.get("b1")
+```
+
+Only the `Dto` store takes the extra `dto_model` argument.
+`key_prefix` is optional in `construct()` for all four stores, but the `Dto` store's own constructor requires it.
+
+Each `construct()` call opens its own client with its own connection pool.
+To let several stores share one client, open it with `ConfiguredRedisClient` and pass it to the stores' constructors:
+
+```python
+from hexkit.providers.redis import (
+    ConfiguredRedisClient,
+    RedisJsonKeyValueStore,
+    RedisStrKeyValueStore,
+)
+
+async with ConfiguredRedisClient(config) as client:
+    token_store = RedisStrKeyValueStore(
+        client=client, config=config, key_prefix="tokens:"
+    )
+    settings_store = RedisJsonKeyValueStore(
+        client=client, config=config, key_prefix="settings:"
+    )
+    ...
+```
+
+### Value Types
+
+| Store | Accepts | Stored in Redis as |
+| ----- | ------- | ------------------ |
+| `RedisBytesKeyValueStore` | `bytes` | The bytes unchanged |
+| `RedisStrKeyValueStore` | `str` | UTF-8 text |
+| `RedisJsonKeyValueStore` | `dict` (a JSON object) | JSON text |
+| `RedisDtoKeyValueStore` | Instances of `dto_model` | The model's fields as JSON text, validated against `dto_model` on read |
+
+`set()` raises a `TypeError` if a value does not match the store's type.
+The `Json` store accepts only JSON objects, not lists or single values, and no store accepts `None`.
+The `Dto` store converts a model with `model_dump()` and then `json.dumps()`, so `set()` also raises a `TypeError` for a model with a field that `json.dumps()` cannot encode, such as a `UUID` or `datetime`.
+
+### Keys and Prefixes
+
+A store writes each key as `key_prefix` followed by the key, so the `book_store` above stores `"b1"` under the Redis key `books:b1`.
+The prefix defaults to an empty string.
+
+All stores on the same Redis database share one keyspace, and a store reads whatever value is stored under its key.
+Give each store its own prefix, or its own database through the `/database` part of `redis_url`.
+Otherwise, stores that use the same key overwrite each other's values, and reading another store's value can return the wrong type without an error.
+For example, a `Json` store reads the `Str` value `"123"` as the integer `123`, and raises a `JSONDecodeError` only on text that is not JSON.
+
+The stores set no expiry, so a value stays until it is deleted or the server evicts it.
+
+### Error Handling
+
+The stores do not translate Redis errors into hexkit errors, so callers see the exceptions of the [redis-py](https://redis.readthedocs.io) client:
+
+- `redis.exceptions.ConnectionError` if the server cannot be reached.
+  The client connects lazily, so `construct()` succeeds and the first operation raises.
+- `redis.exceptions.TimeoutError` if an operation exceeds `redis_timeout`.
+
+To trace Redis operations, install the `opentelemetry-redis` extra; see [OpenTelemetry](../observability_tools/opentelemetry.qmd).
+
+## Redis Test Utils
+
+For integration tests, the `test-redis` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that start a disposable Redis container from the image named in `REDIS_IMAGE`.
+The `test` and `all` extras do not include it, so install it explicitly:
+
+```sh
+pip install hexkit[test-redis]
+```
+
+All utilities live in `hexkit.providers.redis.testutils`.
+
+### Fixtures
+
+The `redis_fixture` yields a `RedisFixture` object under the fixture name `redis`.
+Both the container fixture and the Redis fixture must be imported into the test module or its `conftest.py` for pytest to resolve them, hence the `# noqa: F401` comments:
+
+```python
+import pytest
+
+from hexkit.providers.redis import RedisDtoKeyValueStore
+from hexkit.providers.redis.testutils import (
+    RedisFixture,
+    redis_container_fixture,  # noqa: F401
+    redis_fixture,  # noqa: F401
+)
+
+
+@pytest.mark.asyncio()
+async def test_book_store(redis: RedisFixture):
+    async with RedisDtoKeyValueStore.construct(
+        config=redis.config, dto_model=Book, key_prefix="books:"
+    ) as book_store:
+        await book_store.set("b1", Book(id="b1", title="Dune", year=1965))
+
+    assert redis.client.keys("books:*") == [b"books:b1"]
+```
+
+The fixtures split the work between two scopes:
+
+- `redis_container_fixture` (fixture name `redis_container`) is session-scoped: one Redis container is started per test session and reused by all tests.
+- `redis_fixture` (fixture name `redis`) is function-scoped: it flushes the database before each test, so every test starts with no keys.
+  `clean_redis_fixture` is an alias for it.
+- `persistent_redis_fixture` is the variant without the flush, for tests that intentionally share state.
+  It also uses the fixture name `redis`, so do not import it into the same module as `redis_fixture`.
+
+If the default scopes or names do not fit your test setup, the factory functions `get_redis_container_fixture`, `get_clean_redis_fixture` and `get_persistent_redis_fixture` create the same fixtures with custom `scope` and `name` arguments.
+For example, `get_persistent_redis_fixture(name="redis_persistent")` lets both variants be used in one module.
+
+### The RedisFixture
+
+A `RedisFixture` carries two attributes and one method:
+
+- `config`: a `RedisConfig` pointing at the test container, to pass to the stores.
+- `client`: a synchronous `redis.Redis` client for arranging and inspecting state directly, as in the `keys()` call above.
+  The stores need an asynchronous client, so do not pass this one to their constructors.
+- `flush_db()`: deletes all keys from the database.
+
+For unit tests without a container, use the [in-memory key-value stores](testing.qmd#in-memory-key-value-stores) instead.
+The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/kvstore/test_redis_kv.py) show further usage.
+
+## API Reference
+
+See [hexkit.providers.redis](../../reference/index.qmd#provider-redis).
