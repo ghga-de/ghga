@@ -182,7 +182,7 @@ For example, `get_persistent_redis_fixture(name="redis_persistent")` lets both v
 
 ### The RedisFixture
 
-A `RedisFixture` carries two attributes and one method:
+A `RedisFixture` has two attributes and one method:
 
 - `config`: a `RedisConfig` pointing at the test container, to pass to the stores.
 - `client`: a synchronous `redis.Redis` client for arranging and inspecting state directly, as in the `keys()` call above.
