@@ -17,6 +17,7 @@
 
 import base64
 import logging
+from collections.abc import AsyncIterator
 
 import httpx2
 from async_lru import alru_cache
@@ -27,6 +28,7 @@ from dhfs.config import Config
 from dhfs.constants import (
     DOWNLOAD_URL_CACHE_TIME,
     DOWNLOAD_URL_LIFESPAN,
+    UPLOAD_CHUNK_SIZE,
     URL_CACHE_SIZE,
 )
 from dhfs.core.models import FileUpload
@@ -36,6 +38,27 @@ from hexkit.protocols.objstorage import ObjectStorageProtocol
 log = logging.getLogger(__name__)
 
 __all__ = ["S3Client"]
+
+
+class PartBody:
+    """A file part as a request body that is sent in chunks.
+
+    httpx2 sends `bytes` content in one write, which has to finish within a single
+    request timeout, and it would read a `bytearray` as an iterable of integers.
+    Each iteration starts from the beginning, so the retry transport can send the
+    body again; an async generator could only be sent once.
+    """
+
+    def __init__(self, data: bytes | bytearray, *, chunk_size: int = UPLOAD_CHUNK_SIZE):
+        self._view = memoryview(data)
+        self._chunk_size = chunk_size
+
+    def __aiter__(self) -> AsyncIterator[bytes]:
+        return self._chunks()
+
+    async def _chunks(self) -> AsyncIterator[bytes]:
+        for start in range(0, len(self._view), self._chunk_size):
+            yield self._view[start : start + self._chunk_size].tobytes()
 
 
 class S3Client(S3ClientPort):
@@ -250,23 +273,20 @@ class S3Client(S3ClientPort):
         part_no: int,
         md5_base64: str,
     ) -> str:
-        """Retrieve a presigned part upload URL for a given file part"""
-        # Convert MD5 to base64 for S3
-        try:
-            return await self._storage.get_part_upload_url(
-                upload_id=upload_id,
-                bucket_id=self._interrogation_bucket_id,
-                object_id=object_id,
-                part_number=part_no,
-                part_md5=md5_base64,
-            )
-        except ObjectStorageProtocol.BucketNotFoundError as err:
-            bucket_error = self.BucketNotFoundError(
-                bucket_id=self._interrogation_bucket_id
-            )
-            raise bucket_error from err
-        except ObjectStorageProtocol.MultiPartUploadNotFoundError as err:
-            raise self.UploadURLMissingUploadError(upload_id=upload_id) from err
+        """Retrieve a presigned part upload URL for a given file part.
+
+        The upload is not checked first, which would cost a ListMultipartUploads call
+        per part: DHFS created it moments ago under a fresh object ID, and a part sent
+        to an upload that has gone fails with an UploadPartError.
+        """
+        return await self._storage.get_part_upload_url(
+            upload_id=upload_id,
+            bucket_id=self._interrogation_bucket_id,
+            object_id=object_id,
+            part_number=part_no,
+            part_md5=md5_base64,
+            verify_upload=False,
+        )
 
     async def upload_file_part(
         self,
@@ -275,14 +295,14 @@ class S3Client(S3ClientPort):
         object_id: str,
         part_no: int,
         part_md5: bytes,
-        part: bytes,
+        part: bytes | bytearray,
     ) -> None:
         """Upload a single re-encrypted file part.
 
         Raises:
         - BadPartMD5Error if the specified MD5 doesn't match the MD5 calculated by S3.
-        - BucketNotFoundError if the interrogation bucket is missing.
-        - UploadPartError if any other error causes the part upload to fail.
+        - UploadPartError if any other error causes the part upload to fail, including
+            a missing upload or interrogation bucket.
         """
         md5_base64 = base64.b64encode(part_md5).decode()
         upload_url = await self._get_part_upload_url(
@@ -294,8 +314,12 @@ class S3Client(S3ClientPort):
 
         try:
             log.debug("Object %s: Uploading part number %i.", object_id, part_no)
+            # The explicit Content-Length keeps httpx2 from switching to chunked
+            #  transfer encoding, which presigned S3 part uploads do not accept.
             response = await self._httpx_client.put(
-                upload_url, content=part, headers={"Content-MD5": md5_base64}
+                upload_url,
+                content=PartBody(part),
+                headers={"Content-MD5": md5_base64, "Content-Length": str(len(part))},
             )
         except RetryError as retry_error:
             check_for_request_errors(retry_error, upload_url)

@@ -66,16 +66,6 @@ class S3ClientPort(ABC):
             )
             super().__init__(msg)
 
-    class UploadURLMissingUploadError(S3OperationError):
-        """Raised when trying to generate a presigned upload URL for an upload that doesn't exist"""
-
-        def __init__(self, *, upload_id: str):
-            msg = (
-                f"Failed to get part upload URL for upload {upload_id} because the"
-                + " upload does not exist."
-            )
-            super().__init__(msg)
-
     class UploadPartError(S3OperationError):
         """Raised when there's a problem uploading a file part."""
 
@@ -189,14 +179,14 @@ class S3ClientPort(ABC):
         object_id: str,
         part_no: int,
         part_md5: bytes,
-        part: bytes,
+        part: bytes | bytearray,
     ) -> None:
         """Upload a single re-encrypted file part.
 
         Raises:
         - BadPartMD5Error if the specified MD5 doesn't match the MD5 calculated by S3.
-        - BucketNotFoundError if the interrogation bucket is missing.
-        - UploadPartError if any other error causes the part upload to fail.
+        - UploadPartError if any other error causes the part upload to fail, including
+            a missing upload or interrogation bucket.
         """
         ...
 
