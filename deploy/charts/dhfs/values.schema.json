@@ -527,7 +527,12 @@
     "envVars": {
       "type": "array",
       "description": "Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled)",
-      "default": []
+      "default": [
+        {
+          "name": "LD_PRELOAD",
+          "value": "/usr/lib/libjemalloc.so.2"
+        }
+      ]
     },
     "envVarsConfigMap": {
       "type": "string",
