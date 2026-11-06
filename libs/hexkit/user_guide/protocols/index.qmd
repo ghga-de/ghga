@@ -80,7 +80,7 @@ The [Kafka Event Subscriber](../providers/kafka/subscriber.qmd#the-translator) c
 ### DLQSubscriberProtocol
 
 The [`DLQSubscriberProtocol`](../../reference/protocols.eventsub.DLQSubscriberProtocol.qmd) is the variant of the `EventSubscriberProtocol` for services that process the dead letter queue.
-Its `consume()` method also receives the event ID, the timestamp and all headers, which describe where and why the event failed.
+Its `consume()` method also receives the timestamp and all headers, which describe where and why the event failed.
 
 A `KafkaEventSubscriber` that runs a DLQ translator consumes only the configured DLQ topic, and it disables its own DLQ so that failed DLQ events are not sent back to the DLQ.
 See [Consuming From the DLQ](../arch_concepts/dlq.qmd#consuming-from-the-dlq).
