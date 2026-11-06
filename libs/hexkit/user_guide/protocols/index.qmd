@@ -19,7 +19,7 @@ title: "Protocols"
  limitations under the License.
 -->
 
-A protocol is an abstract interface for one type of infrastructure, such as a database, an event broker or an object storage.
+A protocol is an abstract interface for one type of infrastructure, such as a database, an event broker or object storage.
 It describes the operations a service needs, such as "insert a resource" or "publish an event", without naming a specific technology.
 Services write their adapters against protocols, so they can switch the backend without changing their own code.
 
