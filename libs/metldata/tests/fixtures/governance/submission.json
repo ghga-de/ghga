@@ -1,0 +1,315 @@
+{
+  "accession_map": {
+    "analysis_process_output_files": {
+      "OUTPUT_1": "GHGAF60227492784158",
+      "OUTPUT_2": "GHGAF98095735942999",
+      "OUTPUT_3": "GHGAF03542347431941",
+      "OUTPUT_4": "GHGAF00240854404941",
+      "OUTPUT_5": "GHGAF70399258952657",
+      "OUTPUT_6": "GHGAF48722477903529",
+      "OUTPUT_7": "GHGAF52403457644815",
+      "OUTPUT_8": "GHGAF64039739056861",
+      "OUTPUT_9": "GHGAF00202976705407"
+    },
+    "data_access_committees": {
+      "DAC_1": "GHGAC27979815690400"
+    },
+    "data_access_policies": {
+      "DAP_1": "GHGAP80911357088984",
+      "DAP_2": "GHGAP60953192127193"
+    },
+    "datasets": {
+      "DS_1": "GHGAD09598790897621",
+      "DS_2": "GHGAD13934222639683"
+    },
+    "sequencing_process_files": {
+      "SEQ_FILE_1": "GHGAF98787275505937",
+      "SEQ_FILE_2": "GHGAF88846609319878",
+      "SEQ_FILE_3": "GHGAF35359790750617",
+      "SEQ_FILE_4": "GHGAF02723287849704",
+      "SEQ_FILE_5": "GHGAF19339989618442",
+      "SEQ_FILE_6": "GHGAF82574397155238",
+      "SEQ_FILE_7": "GHGAF07328380425408",
+      "SEQ_FILE_8": "GHGAF62118300340019",
+      "SEQ_FILE_9": "GHGAF86681016295324"
+    },
+    "study_files": {
+      "STUDY_FILE_1": "GHGAF29699992445931"
+    }
+  },
+  "content": {
+    "analysis_process_output_files": [
+      {
+        "alias": "OUTPUT_1",
+        "analysis_process": "ANALYSIS_PROCESS_1",
+        "checksum": "653c42e051644f1d03fd8a73c55649b9bea6d36b354348e9dc33ce355af41289",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "VCF",
+        "name": "SAMPLE_1_SPECIMEN_1_FILE_1.vcf.gz",
+        "size": 92161
+      },
+      {
+        "alias": "OUTPUT_2",
+        "analysis_process": "ANALYSIS_PROCESS_2",
+        "checksum": "5864b0ef8f3c25cd7da50fcb3b88f8884831ebbc87435dc3f84371437162d170",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "VCF",
+        "name": "SAMPLE_1_SPECIMEN_1_FILE_2.vcf.gz",
+        "size": 71681
+      },
+      {
+        "alias": "OUTPUT_3",
+        "analysis_process": "ANALYSIS_PROCESS_3",
+        "checksum": "68568c92cc9f836f9a2a1b701327ac089b7ff3c52228c4038b9de54edca876e0",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "VCF",
+        "name": "SAMPLE_1_SPECIMEN_1_FILE_3.vcf.gz",
+        "size": 122881
+      },
+      {
+        "alias": "OUTPUT_4",
+        "analysis_process": "ANALYSIS_PROCESS_4",
+        "checksum": "ef2b7a9496ac3e8d90a6b2317a0ddc05fdc8e2cb616a14431544b0920cca2d41",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "VCF",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_4.vcf.gz",
+        "size": 45057
+      },
+      {
+        "alias": "OUTPUT_5",
+        "analysis_process": "ANALYSIS_PROCESS_5",
+        "checksum": "b446a4e9cd57e2446e113b603be5e761672e88c0b3d87de5f12ca6bfa73cf110",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "VCF",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_5.vcf.gz",
+        "size": 65537
+      },
+      {
+        "alias": "OUTPUT_6",
+        "analysis_process": "ANALYSIS_PROCESS_6",
+        "checksum": "c3f451348e9c5cb0acbacd2df071392d151f007554bc2c08de667a1349eb0a86",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "VCF",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_6.vcf.gz",
+        "size": 45057
+      },
+      {
+        "alias": "OUTPUT_7",
+        "analysis_process": "ANALYSIS_PROCESS_7",
+        "checksum": "b17e8d803fb62757d41ccbe26ed719e6aa95119ffd55fac64dc100ea985d42f0",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "VCF",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_7.vcf.gz",
+        "size": 61441
+      },
+      {
+        "alias": "OUTPUT_8",
+        "analysis_process": "ANALYSIS_PROCESS_8",
+        "checksum": "2912879766f9c619fdebb8f10ba4dad02a367ee30f52c1a55bb8cad4999efa53",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "VCF",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_8.vcf.gz",
+        "size": 92161
+      },
+      {
+        "alias": "OUTPUT_9",
+        "analysis_process": "ANALYSIS_PROCESS_9",
+        "checksum": "2935b5685772b2c2778dfc6facde4186d59e516cc6ad55e92f96b3e63d44b68a",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "VCF",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_9.vcf.gz",
+        "size": 43009
+      }
+    ],
+    "data_access_committees": [
+      {
+        "alias": "DAC_1",
+        "email": "dac_institute_a@dac.dac",
+        "institute": "institute_a"
+      }
+    ],
+    "data_access_policies": [
+      {
+        "alias": "DAP_1",
+        "data_access_committee": "DAC_1",
+        "data_use_modifiers": [
+          "clinical care use"
+        ],
+        "data_use_permission": "disease specific research",
+        "description": "A Data Access Policy 1",
+        "name": "DAP 1",
+        "policy_text": "This is a very permissible DAP",
+        "policy_url": "http://some/policy"
+      },
+      {
+        "alias": "DAP_2",
+        "data_access_committee": "DAC_1",
+        "data_use_modifiers": [
+          "user specific restriction"
+        ],
+        "data_use_permission": "no restriction",
+        "description": "A Data Access Policy 2",
+        "name": "DAP 2",
+        "policy_text": "This is a very strict DAP",
+        "policy_url": "http://some/other/policy"
+      }
+    ],
+    "datasets": [
+      {
+        "alias": "DS_1",
+        "data_access_policy": "DAP_1",
+        "description": "An interesting dataset A",
+        "title": "The A dataset",
+        "types": [
+          "A Type",
+          "Another Type"
+        ]
+      },
+      {
+        "alias": "DS_2",
+        "data_access_policy": "DAP_2",
+        "description": "An interesting dataset B",
+        "title": "The B dataset",
+        "types": [
+          "And another Type"
+        ]
+      }
+    ],
+    "sequencing_process_files": [
+      {
+        "alias": "SEQ_FILE_1",
+        "checksum": "995254cf212686d88ea73cbaf49489c8dc2784dc31cb586452e0aa835498ab98",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_1_SPECIMEN_1_FILE_1.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_1",
+        "size": 90113
+      },
+      {
+        "alias": "SEQ_FILE_2",
+        "checksum": "b8de1729ef9b8a424749ce85815c9eeb166cb7f5f5eca4b02f04e2f9277501c6",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_1_SPECIMEN_1_FILE_2.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_2",
+        "size": 104449
+      },
+      {
+        "alias": "SEQ_FILE_3",
+        "checksum": "6b7f4b8fc774de4359c985835733c169f1731a109db7893dd35acd4afea3c5b4",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_1_SPECIMEN_1_FILE_3.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_3",
+        "size": 51201
+      },
+      {
+        "alias": "SEQ_FILE_4",
+        "checksum": "9aea8c99cc065836f1f2765a8590971c5b5d2a29c4c6569c475089c5b57d1180",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_4.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_4",
+        "size": 96257
+      },
+      {
+        "alias": "SEQ_FILE_5",
+        "checksum": "a13dfc276fe322cb1b7490441097662e60443fb8787b011eaec4621916842847",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_5.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_5",
+        "size": 63489
+      },
+      {
+        "alias": "SEQ_FILE_6",
+        "checksum": "e5c186653c619507cec6aa6b7affedeb5ec29a5e23d2814d2710076fa1f5000b",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_6.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_6",
+        "size": 104449
+      },
+      {
+        "alias": "SEQ_FILE_7",
+        "checksum": "f37c331e32ba71cfabbd88b9115eeb6a000c1085cc596dcee9db3c7552229049",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_7.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_7",
+        "size": 53249
+      },
+      {
+        "alias": "SEQ_FILE_8",
+        "checksum": "6c11379d7ce5625bdef86d2b72c0399280388f2532c26c3934f4ee88e7c25e4d",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_8.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_8",
+        "size": 96257
+      },
+      {
+        "alias": "SEQ_FILE_9",
+        "checksum": "23ba42aeef99bffae8f1f4409c64d1a2e19c49dc74c2c6ad6c7b98c5bf04dd1f",
+        "checksum_type": "SHA256",
+        "dataset": "DS_2",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "SAMPLE_2_SPECIMEN_1_FILE_9.fastq.gz",
+        "sequencing_process": "SEQ_PROCESS_9",
+        "size": 49153
+      }
+    ],
+    "study_files": [
+      {
+        "alias": "STUDY_FILE_1",
+        "checksum": "7a586609dd8c7d6f53cbc2e82e1165de2c7aab6769c6dde9882b45048b0fdaa9",
+        "checksum_type": "SHA256",
+        "dataset": "DS_1",
+        "format": "FASTQ",
+        "forward_or_reverse": "REVERSE",
+        "name": "STUDY_1_SPECIMEN_1_FILE_1.fastq.gz",
+        "size": 106497,
+        "study": "STUDY_A"
+      }
+    ]
+  },
+  "description": "Test",
+  "id": "5e5f1f85-890f-4fa2-9db1-9939ac283ef0",
+  "status_history": [
+    {
+      "new_status": "pending",
+      "timestamp": "2023-08-11T08:07:03.050484+00:00"
+    },
+    {
+      "new_status": "completed",
+      "timestamp": "2023-08-11T08:07:15.559302+00:00"
+    }
+  ],
+  "title": "Test"
+}
