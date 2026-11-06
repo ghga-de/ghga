@@ -29,13 +29,16 @@ class SubmissionAnnotation(BaseModel):
         ...,
         description=(
             "A map of user-specified id to system-generated accession for metadata"
-            + " resources. Keys on the top level correspond to names of metadata classes."
+            + " resources. Keys on the top level correspond to the anchor slots of the"
+            + " metadata classes, e.g. 'studies' for the class 'Study'."
             + " Keys on the second level correspond to user-specified aliases."
             + " Values on the second level correspond to system-generated accessions."
             + " Please note that the user-defined alias might only be unique within"
             + " the scope of the corresponding class and this submission. By contrast,"
             + " the system-generated accession is unique across all classes and"
-            + " submissions."
+            + " submissions. A submission with a study PID holds the study and dataset"
+            + " classes only, since every other accession is composed from the study"
+            + " PID and the alias. A flat-accessioned submission holds every class."
         ),
     )
 

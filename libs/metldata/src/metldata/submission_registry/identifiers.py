@@ -158,6 +158,22 @@ def get_study_pid(
     raise MissingStudyError("The submission content holds no study.")
 
 
+def get_pid_anchors(
+    *,
+    accession_registry: AccessionRegistry,
+    anchor_points_by_target: dict[str, AnchorPoint],
+) -> set[str]:
+    """Get the anchors of the study and the dataset class, the only classes whose
+    accessions are stored in the accession map.
+    """
+    return {
+        anchor_point.root_slot
+        for class_name, anchor_point in anchor_points_by_target.items()
+        if accession_registry.is_study_class(class_name)
+        or accession_registry.is_dataset_class(class_name)
+    }
+
+
 def generate_accession_map(
     *,
     content: SubmissionContent,
@@ -165,7 +181,9 @@ def generate_accession_map(
     accession_registry: AccessionRegistry,
     anchor_points_by_target: dict[str, AnchorPoint],
 ) -> AccessionMap:
-    """Generate an accession map for the provided content.
+    """Generate an accession map for the provided content, holding the study PID
+    and the dataset PIDs only. Every other accession is composed from the study PID
+    and its alias by the `add_accessions` transformation.
 
     If an existing accession map is provided, an updated version is returned. Thereby,
     new accessions are added for new content resources. Existing accessions are kept if
@@ -196,6 +214,11 @@ def generate_accession_map(
         for accession in accessions_by_alias.values()
     }
 
+    pid_anchors = get_pid_anchors(
+        accession_registry=accession_registry,
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
     accession_map = {
         anchor: {
             alias: get_accession(
@@ -213,5 +236,6 @@ def generate_accession_map(
             )
         }
         for anchor, resources in content.items()
+        if anchor in pid_anchors
     }
     return accession_map
