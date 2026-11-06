@@ -43,9 +43,19 @@ def sync_verify(
         "--file-size",
         help="Size of the dummy file in MiB. Default is 125.",
     ),
+    part_size: int = typer.Option(
+        64,
+        "--part-size",
+        min=5,
+        help=(
+            "Part size of the dummy file's upload in MiB, before it is aligned to"
+            + " Crypt4GH segments as the connector aligns it. Default is 64, the"
+            + " connector's default."
+        ),
+    ),
 ):
     """Run the re-encryption process on a dummy file to verify that DHFS works with the
     current S3 backend. Outbound API calls to GHGA Central are mocked except for a
     single call at the start which validates the current DHFS version.
     """
-    asyncio.run(verify(file_size=file_size * 1024**2))
+    asyncio.run(verify(file_size=file_size * 1024**2, part_size=part_size * 1024**2))

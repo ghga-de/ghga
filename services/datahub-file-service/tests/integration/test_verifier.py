@@ -15,7 +15,7 @@
 
 """Integration tests for run_dhfs_verification setup and teardown.
 
-The core interrogation logic (prepare_interrogator / interrogate_file) is mocked
+The core interrogation logic (prepare_interrogator / interrogate_new_files) is mocked
 so these tests focus exclusively on inbox upload and cleanup behavior.
 """
 
@@ -25,7 +25,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from math import ceil
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import crypt4gh.lib
 import httpx2
@@ -37,7 +37,7 @@ from dhfs.config import Config
 from dhfs.core.verifier import (
     OBJECT_ID_STR,
     OBJECT_ID_UUID,
-    _upload_dummy_data,
+    _upload_inbox_dummy_file,
     run_dhfs_verification,
 )
 from hexkit.providers.s3.testutils import S3Fixture
@@ -89,15 +89,25 @@ async def verifier_fixture(
 
 @asynccontextmanager
 async def _succeeding_interrogator(*, config):
-    """Drop-in for prepare_interrogator that simulates a successful interrogation."""
-    yield AsyncMock()
+    """Drop-in for prepare_interrogator that simulates a successful interrogation,
+    reported to Central the way the real one reports it.
+    """
+
+    async def interrogate_new_files():
+        await CentralClient.submit_interrogation_report(
+            MagicMock(), report=MagicMock(passed=True)
+        )
+
+    mock = AsyncMock()
+    mock.interrogate_new_files.side_effect = interrogate_new_files
+    yield mock
 
 
 @asynccontextmanager
 async def _failing_interrogator(*, config):
     """Drop-in for prepare_interrogator that simulates a failed interrogation."""
     mock = AsyncMock()
-    mock.interrogate_file.side_effect = RuntimeError("Simulated failure")
+    mock.interrogate_new_files.side_effect = RuntimeError("Simulated failure")
     yield mock
 
 
@@ -132,35 +142,42 @@ async def test_failure_cleans_up(verifier_fixture: VerifierFixture):
     )
 
 
-async def test_dummy_data_is_a_valid_crypt4gh_object(verifier_fixture: VerifierFixture):
-    """The dummy file, uploaded a part as it is made, must arrive in the expected number
-    of parts and decrypt to plaintext of the stated size and checksum.
+async def test_dummy_file_is_uploaded_like_the_connector_does(
+    verifier_fixture: VerifierFixture,
+):
+    """The dummy file must arrive in parts of the segment-aligned part size, like a
+    connector upload, and decrypt to plaintext of the stated size and checksum.
     """
     part_size = 5 * 1024**2  # the smallest part S3 accepts before the last one
     file_size = 2 * part_size + 12345
 
-    decrypted_sha256, encrypted_size = await _upload_dummy_data(
+    file_upload = await _upload_inbox_dummy_file(
         config=verifier_fixture.config,
-        storage=verifier_fixture.s3.storage,
+        inbox_write_storage=verifier_fixture.s3.storage,
         public_key_path=DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
         file_size=file_size,
         part_size=part_size,
     )
 
+    assert file_upload.part_size % crypt4gh.lib.CIPHER_SEGMENT_SIZE == 0
+    assert file_upload.part_size == file_upload.adjusted_part_size >= part_size
     storage = verifier_fixture.s3.storage
     # A multipart ETag ends in the part count
     etag = await storage.get_object_etag(
         bucket_id=INBOX_BUCKET_ID, object_id=OBJECT_ID_STR
     )
-    assert etag.strip('"').endswith(f"-{ceil(encrypted_size / part_size)}")
+    part_count = ceil(file_upload.encrypted_size / file_upload.part_size)
+    assert etag.strip('"').endswith(f"-{part_count}")
     url = await storage.get_object_download_url(
         bucket_id=INBOX_BUCKET_ID, object_id=OBJECT_ID_STR
     )
     encrypted = httpx2.get(url).content
-    assert len(encrypted) == encrypted_size
+    assert len(encrypted) == file_upload.encrypted_size
 
     plaintext = io.BytesIO()
     keys = [(0, get_crypt4gh_private_key().get_secret_value(), None)]
     crypt4gh.lib.decrypt(keys, io.BytesIO(encrypted), plaintext)
-    assert len(plaintext.getvalue()) == file_size
-    assert hashlib.sha256(plaintext.getvalue()).hexdigest() == decrypted_sha256
+    assert len(plaintext.getvalue()) == file_upload.decrypted_size == file_size
+    assert (
+        hashlib.sha256(plaintext.getvalue()).hexdigest() == file_upload.decrypted_sha256
+    )

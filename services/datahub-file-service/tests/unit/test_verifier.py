@@ -27,12 +27,14 @@ from dhfs.config import Config
 from dhfs.core.verifier import (
     INTERROGATION_OBJECT_ID,
     OBJECT_ID_STR,
+    _check_report,
     _clean_buckets,
     _upload_inbox_dummy_file,
     _validate_config_for_verifier,
     run_dhfs_verification,
 )
 from tests.fixtures.central_api import CentralApiMock, get_mocked_httpx_client
+from tests.fixtures.utils import DHFS_CRYPT4GH_PUBLIC_KEY_PATH
 
 
 @pytest.mark.parametrize(
@@ -197,6 +199,25 @@ async def test_upload_inbox_dummy_file_error(caplog):
             await _upload_inbox_dummy_file(
                 config=config,
                 inbox_write_storage=AsyncMock(),
-                public_key_path=Path("/fake/key.pub"),
+                public_key_path=DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
                 file_size=1024,
             )
+
+
+def test_check_report_accepts_a_passed_report():
+    """A passed report from DHFS means the file was processed."""
+    _check_report([MagicMock(passed=True)])
+
+
+@pytest.mark.parametrize(
+    "reports, message",
+    [
+        ([], "could not process the file conclusively"),
+        ([MagicMock(passed=False, reason="Checksum mismatch")], "Checksum mismatch"),
+    ],
+    ids=["inconclusive", "failed"],
+)
+def test_check_report_raises_unless_passed(reports: list, message: str):
+    """No report, or a failed one, must fail the verification with the reason."""
+    with pytest.raises(RuntimeError, match=message):
+        _check_report(reports)
