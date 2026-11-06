@@ -175,7 +175,7 @@ hexkit protocols take one of two forms:
 - **An abstract base class** with a public method that validates its input and then calls an abstract `_..._validated()` method, as `EventPublisherProtocol.publish()` does with `_publish_validated()`.
   Use this form when every provider must apply the same validation, so a provider cannot skip it.
 - **A `typing.Protocol`**, as `Dao` and `KeyValueStoreProtocol` are.
-  Providers then satisfy it by their methods alone, without inheriting from it.
+  Providers can then satisfy it by their methods alone, without inheriting from it.
   Use this form when there is no shared logic to enforce.
 
 Define the errors that callers must handle in the protocol module too, as `hexkit.protocols.dao` does with `ResourceNotFoundError`.
