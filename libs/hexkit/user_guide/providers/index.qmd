@@ -19,18 +19,119 @@ title: "Providers"
  limitations under the License.
 -->
 
-Providers are hexkit's concrete implementations of its [protocols](../protocols/index.qmd), each binding a protocol to a specific technology.
-Application code is written against the protocols; which provider is wired in decides the actual infrastructure.
-Each provider family lives behind an optional extra (e.g. `pip install hexkit[akafka,mongodb]`), so services only pull in the dependencies they need.
+A provider implements a [protocol](../protocols/index.qmd) for one technology: `MongoDbDaoFactory`, for example, implements the `DaoFactoryProtocol` for MongoDB, and `KafkaEventPublisher` implements the `EventPublisherProtocol` for Apache Kafka.
+A service writes its [translators](../glossary/index.qmd#translator) against the protocols and chooses the providers in its [dependency injection](../arch_concepts/dependency_injection.qmd).
+Switching to another backend, or to an in-memory provider in a test, then needs no change to the translators.
 
-## Currently Implemented Providers
+Providers work in one of two directions:
 
-- [Apache Kafka](kafka/index.qmd): event publishing and consumption — [`KafkaEventPublisher`](kafka/publisher.qmd), [`KafkaEventSubscriber`](kafka/subscriber.qmd), and the `KafkaOutboxSubscriber` — plus [test utilities](kafka/test_utils.qmd).
-- [MongoDB](mongodb.qmd): document-database implementations of the DAO and key-value-store protocols, plus [migration tooling](mongodb_migrations.qmd) for evolving stored data alongside the data model.
-- [MongoDB + Kafka](mongokafka.qmd): the outbox publisher (`MongoKafkaDaoPublisher`) and the `PersistentKafkaPublisher`, combining both backends.
-- [S3](s3.qmd): object storage and key-value stores on any S3-compatible backend.
-- [Redis](redis.qmd): key-value stores for fast access to hot values.
-- [Vault](vault.qmd): key-value stores for secrets.
-- [Testing](testing.qmd): in-memory implementations for unit tests, such as the mock DAO and in-memory key-value stores.
+- **Outbound** providers, such as DAO factories, event publishers and key-value stores, implement a protocol, and the service calls them.
+- **Inbound** providers, the event subscribers, call the service's translators, which implement the protocol.
+
+Each technology's client library is an optional extra of hexkit, so a service installs only the ones it uses, for example `pip install hexkit[akafka,mongodb]`.
+The `test-*` extras add pytest fixtures that run the backend in a testcontainer.
+The `test` extra installs all of them except `test-redis`, and the `all` extra installs `test` and the `opentelemetry` extra.
+
+Each provider for a real backend has a config class, such as `MongoDbConfig`, from which the service's config class inherits; see [Configuration](../configuration.qmd).
+
+## Providers by Technology
+
+### Apache Kafka
+
+Extra: `akafka`; test fixtures: `test-akafka`.
+See [Apache Kafka](kafka/index.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`KafkaEventPublisher`](kafka/publisher.qmd) | [`EventPublisherProtocol`](../../reference/protocols.eventpub.EventPublisherProtocol.qmd) | Publishes events to Kafka topics. |
+| [`KafkaEventSubscriber`](kafka/subscriber.qmd) | Runs a translator implementing the [`EventSubscriberProtocol`](../../reference/protocols.eventsub.EventSubscriberProtocol.qmd) or the [`DLQSubscriberProtocol`](../../reference/protocols.eventsub.DLQSubscriberProtocol.qmd) | Consumes events and passes them to the translator; can retry failed events and send them to a dead letter queue. |
+| [`KafkaOutboxSubscriber`](../protocols/daosubscriber.qmd#running-a-subscriber-the-kafka-provider) | Runs translators implementing the [`DaoSubscriberProtocol`](../../reference/protocols.daosub.DaoSubscriberProtocol.qmd) | Consumes another service's outbox events to keep a copy of its resources. |
+
+### MongoDB
+
+Extra: `mongodb`; test fixtures: `test-mongodb`.
+See [MongoDB](mongodb.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`MongoDbDaoFactory`](mongodb.qmd#mongodb-dao) | [`DaoFactoryProtocol`](../../reference/protocols.dao.DaoFactoryProtocol.qmd); its DAOs implement [`Dao`](../../reference/protocols.dao.Dao.qmd) | Stores resources as documents, one collection per resource type, with queries and indexes. |
+| [`MongoDb*KeyValueStore`](mongodb.qmd#mongodb-kv-store-providers) | [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) | Stores each value as a document in a collection, for durable structured values. |
+
+The same extra provides the [migration tools](mongodb_migrations.qmd), which migrate stored documents when a service's data model changes and implement no protocol.
+
+### MongoDB + Kafka
+
+Extras: `akafka` and `mongodb`; test fixtures: `test-akafka` and `test-mongodb`.
+See [MongoDB + Kafka](mongokafka.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`MongoKafkaDaoPublisherFactory`](mongokafka.qmd#outbox-publisher) | [`DaoPublisherFactoryProtocol`](../../reference/protocols.daopub.DaoPublisherFactoryProtocol.qmd); its DAOs implement [`DaoPublisher`](../../reference/protocols.daopub.DaoPublisher.qmd) | Stores resources in MongoDB and publishes their changes as events, implementing the outbox pattern. |
+| [`PersistentKafkaPublisher`](mongokafka.qmd#persistent-publisher) | [`EventPublisherProtocol`](../../reference/protocols.eventpub.EventPublisherProtocol.qmd) | Publishes events to Kafka and stores them in MongoDB, so they can be published again. |
+
+For the difference between the two, see [Outbox vs. Persistent Publisher](../developer_help/outbox_v_persistent_pub.qmd).
+
+### S3
+
+Extra: `s3`; test fixtures: `test-s3`.
+See [S3](s3.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`S3ObjectStorage`](s3.qmd#s3-object-storage-provider) | [`ObjectStorageProtocol`](../../reference/protocols.objstorage.ObjectStorageProtocol.qmd) | Manages buckets and objects on S3-compatible storage, and creates presigned URLs for uploads and downloads. |
+| [`S3*KeyValueStore`](s3.qmd#s3-kv-store-providers) | [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) | Stores each value as an object in a bucket, for large or opaque values. |
+
+### Redis
+
+Extra: `redis`; test fixtures: `test-redis`.
+See [Redis](redis.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`Redis*KeyValueStore`](redis.qmd#redis-kv-store-providers) | [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) | Keeps values in Redis, for small values that are read often, such as cached results or tokens. |
+
+### HashiCorp Vault
+
+Extra: `vault`; test fixtures: `test-vault`.
+See [Vault](vault.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`Vault*KeyValueStore`](vault.qmd#vault-kv-store-providers) | [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) | Stores each value as a secret in Vault, for credentials and other sensitive values. |
+
+### In-Memory (Testing)
+
+Extra: `mongodb`, because `hexkit.providers.testing` imports the mock DAO, which reuses the MongoDB provider's document conversion.
+See [In-Memory (Testing)](testing.qmd).
+
+| Provider | Protocol | Purpose |
+| --- | --- | --- |
+| [`new_mock_dao_class()`](testing.qmd#mock-dao) | [`Dao`](../../reference/protocols.dao.Dao.qmd) | Creates a DAO class that keeps resources in a dictionary. |
+| [`InMemEventPublisher`](testing.qmd#in-memory-event-publisher) | [`EventPublisherProtocol`](../../reference/protocols.eventpub.EventPublisherProtocol.qmd) | Collects published events in an `InMemEventStore` that tests read from. |
+| [`InMem*KeyValueStore`](testing.qmd#in-memory-key-value-stores) | [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) | Keeps values in a dictionary. |
+| [`InMemObjectStorage`](testing.qmd#in-memory-object-storage) | [`ObjectStorageProtocol`](../../reference/protocols.objstorage.ObjectStorageProtocol.qmd) | Tracks buckets and object IDs, without file content. |
+
+These providers are for unit tests only.
 
 ## Adding Providers
+
+A new provider implements an existing protocol for a backend.
+If no protocol fits, define one first; see [Adding Protocols](../protocols/index.qmd#adding-protocols).
+
+1. **Package:** put the provider in the backend's subpackage, `src/hexkit/providers/<backend>/`, with the implementation in `provider/`.
+   Export its public names from the subpackage's `__init__.py`.
+2. **Dependencies:** for a new backend, add its client library as an optional extra in `pyproject.toml`, named after the backend.
+   Add a `test-<backend>` extra that adds testcontainers.
+3. **Configuration:** for a new backend, add a `<Backend>Config` class in `config.py`, and store credentials as `SecretStr` or `Secret[...]`.
+   A service's config class inherits from the config classes of all its providers.
+   Prefix the field names with the backend, as in `redis_url` or `s3_endpoint_url`, so they do not clash.
+4. **Errors:** where the protocol defines errors, such as the DAO errors or `ObjectStorageProtocol.BucketNotFoundError`, raise those instead of the client library's errors.
+   The service's error handling then keeps working with another provider.
+5. **Connection:** if the provider holds a client connection, add a `construct()` async context manager that opens the connection on entry and closes it on exit.
+   The Kafka, MongoDB, Redis and Vault providers do this.
+6. **Test utils:** for a new backend, add a `testutils.py` with a session-scoped container fixture, and a function-scoped clean fixture with a persistent variant.
+   Add `get_*` factory functions for all three, as the existing providers do.
+7. **Tests:** test the provider in `tests/integration/providers/` against a testcontainer.
+   For a key-value store, subclass the shared test suites in `tests/integration/providers/kvstore/kvstore_test_suites.py`.
+8. **Documentation:** write a page in `user_guide/providers/`, and add the provider to this page.
+   In `great-docs.yml`, add the page to the `Providers` section of `user_guide`, and the classes to a `Provider —` section of `reference`.
