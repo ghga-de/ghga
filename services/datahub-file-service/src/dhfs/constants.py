@@ -27,6 +27,8 @@ __all__ = [
     "NONCE_LENGTH",
     "SEGMENT_OVERHEAD",
     "SQUASHED_LOGGERS",
+    "TAG_LENGTH",
+    "UPLOAD_CHUNK_SIZE",
 ]
 
 AUTH_TOKEN_VALID_SECONDS = 60
@@ -36,10 +38,15 @@ NONCE_LENGTH = 12
 
 # Bytes encryption adds to every Crypt4GH segment (nonce + Poly1305 auth tag).
 SEGMENT_OVERHEAD = crypt4gh.lib.CIPHER_DIFF
+TAG_LENGTH = SEGMENT_OVERHEAD - NONCE_LENGTH
 ENCRYPTION_SECRET_LENGTH = 32
 DOWNLOAD_URL_LIFESPAN = 300  # five minutes
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
+
+# Part uploads are sent in chunks of this size, so no single write has to carry a whole
+#  part within one request timeout. 1 MiB benchmarked best.
+UPLOAD_CHUNK_SIZE = 1024**2
 SQUASHED_LOGGERS = [
     "httpx2",
     "crypt4gh",

@@ -345,12 +345,14 @@ async def _upload_dummy_data(
         )
         for part_number, content in enumerate(parts, start=1):
             log.info("Uploading part number %i.", part_number)
+            # The upload was created just above, so checking it per part is wasted
             url = await storage.get_part_upload_url(
                 upload_id=upload_id,
                 bucket_id=inbox_bucket_id,
                 object_id=OBJECT_ID_STR,
                 part_number=part_number,
                 expires_after=300,
+                verify_upload=False,
             )
 
             response = await client.put(url, content=content, timeout=300)

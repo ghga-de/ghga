@@ -188,7 +188,8 @@ async def test_upload_file_part(joint_fixture: JointFixture, s3_client: S3Client
     md5 = hashlib.md5(part).digest()
     bogus_md5 = hashlib.md5(b"junk").digest()
 
-    # Try to upload file part when neither upload nor bucket yet exist
+    # Part URLs are presigned without checking the upload, so S3 itself refuses
+    #  a part when neither upload nor bucket exist yet, naming the missing bucket
     with pytest.raises(S3Client.BucketNotFoundError):
         await s3_client.upload_file_part(
             upload_id="bogus",
@@ -203,7 +204,7 @@ async def test_upload_file_part(joint_fixture: JointFixture, s3_client: S3Client
     await joint_fixture.s3.storage.create_bucket(interrogation)
 
     # Try to upload file part when bucket exists but upload does not
-    with pytest.raises(S3Client.UploadURLMissingUploadError):
+    with pytest.raises(S3Client.UploadNotFoundError):
         await s3_client.upload_file_part(
             upload_id="bogus",
             object_id=object_id,

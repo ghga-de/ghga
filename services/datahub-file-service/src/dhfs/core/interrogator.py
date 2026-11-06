@@ -32,17 +32,17 @@ from uuid import UUID, uuid4
 import crypt4gh.header
 import crypt4gh.lib
 from crypt4gh.keys import get_private_key
-from nacl.bindings import (
-    crypto_aead_chacha20poly1305_ietf_decrypt as decrypt_algo,
-)
-from nacl.bindings import (
-    crypto_aead_chacha20poly1305_ietf_encrypt as encrypt_algo,
-)
+from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from pydantic import UUID4, SecretBytes
 
 from dhfs.adapters.outbound.http import ConnectionFailedError
 from dhfs.config import Config
-from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH, SEGMENT_OVERHEAD
+from dhfs.constants import (
+    ENCRYPTION_SECRET_LENGTH,
+    NONCE_LENGTH,
+    SEGMENT_OVERHEAD,
+    TAG_LENGTH,
+)
 from dhfs.core.checksums import Checksums
 from dhfs.core.models import FileUpload, InterrogationReport, PartRange
 from dhfs.core.timings import PartTimings
@@ -58,8 +58,7 @@ log = logging.getLogger(__name__)
 type ByteBuffer = bytes | bytearray | memoryview
 
 # Crypto and hashing run off the loop: a part's decrypt/re-encrypt/verify chain has no
-#  `await` in it and would block S3 ops. Two workers benchmarked best; more regressed,
-#  because pynacl holds the GIL for most of each segment.
+#  `await` in it and would block S3 ops. Two workers benchmarked best.
 CRYPTO_THREAD_COUNT = 2
 
 
@@ -326,8 +325,6 @@ class Interrogator(InterrogatorPort):
         """
         part_size = len(encrypted_part)
         segments = ceil(part_size / crypt4gh.lib.CIPHER_SEGMENT_SIZE)
-        key = secret.get_secret_value()
-        read_position = write_position = 0
 
         try:
             # Sizing happens inside the try so that a malformed part fails as a
@@ -342,65 +339,62 @@ class Interrogator(InterrogatorPort):
             buffer = bytearray(plaintext_size)
             source = memoryview(encrypted_part)
             target = memoryview(buffer)
-            while read_position < part_size:
-                chunk = source[
-                    read_position : read_position + crypt4gh.lib.CIPHER_SEGMENT_SIZE
-                ]
-                # nacl needs real bytes; slicing the view is free.
-                decrypted = decrypt_algo(
-                    bytes(chunk[NONCE_LENGTH:]),  # data to decrypt (after nonce)
-                    None,
-                    bytes(chunk[:NONCE_LENGTH]),  # nonce (first 12 bytes)
-                    key,
+            cipher = ChaCha20Poly1305(secret.get_secret_value())
+            for segment in range(segments):
+                read_position = segment * crypt4gh.lib.CIPHER_SEGMENT_SIZE
+                nonce_end = read_position + NONCE_LENGTH
+                segment_end = min(
+                    read_position + crypt4gh.lib.CIPHER_SEGMENT_SIZE, part_size
                 )
-                target[write_position : write_position + len(decrypted)] = decrypted
-                write_position += len(decrypted)
-                read_position += crypt4gh.lib.CIPHER_SEGMENT_SIZE
-
-            # Slicing into a bytearray would copy, undoing preallocation gains.
-            # That is only sound while the segment framing fills it exactly; a short write
-            # would otherwise hand back silent trailing zeros as if they were plaintext.
-            if write_position != len(buffer):
-                raise ValueError(
-                    f"Decryption produced {write_position} bytes for a"
-                    + f" {len(buffer)}-byte buffer"
+                write_position = segment * crypt4gh.lib.SEGMENT_SIZE
+                plaintext_end = write_position + segment_end - nonce_end - TAG_LENGTH
+                # Views in and out, so no segment is copied. decrypt_into rejects an
+                #  output view of the wrong length, which is what guarantees the
+                #  segments fill the buffer exactly instead of leaving trailing zeros.
+                cipher.decrypt_into(
+                    source[read_position:nonce_end],
+                    source[nonce_end:segment_end],
+                    None,
+                    target[write_position:plaintext_end],
                 )
             return buffer
         except Exception as err:
-            # We do a catch-all here on purpose - decrypt_algo can raise several error types
+            # We do a catch-all here on purpose - decryption can raise several error types
             raise self.DecryptionError() from err
 
     def _reencrypt_part(
         self, *, decrypted_part: ByteBuffer, new_secret: SecretBytes
-    ) -> bytes:
+    ) -> bytearray:
         """Re-encrypt a decrypted file part using a new secret.
 
-        Returns `bytes` because the result is handed to httpx, which treats other
-        buffer types as iterables of integers.
+        Each segment is encrypted from a view of the input straight into the output
+        buffer, which is returned as it is: the part upload sends it in chunks.
 
-        May raise exceptions from the underlying encrypt_algo if re-encryption fails.
+        May raise exceptions from cryptography if re-encryption fails.
         """
         part_size = len(decrypted_part)
         segments = ceil(part_size / crypt4gh.lib.SEGMENT_SIZE)
         buffer = bytearray(part_size + SEGMENT_OVERHEAD * segments)
-        key = new_secret.get_secret_value()
-        read_position = write_position = 0
+        cipher = ChaCha20Poly1305(new_secret.get_secret_value())
+        nonces = os.urandom(NONCE_LENGTH * segments)
 
         source = memoryview(decrypted_part)
         target = memoryview(buffer)
-        while read_position < part_size:
-            chunk = bytes(
-                source[read_position : read_position + crypt4gh.lib.SEGMENT_SIZE]
+        for segment in range(segments):
+            read_position = segment * crypt4gh.lib.SEGMENT_SIZE
+            chunk = source[read_position : read_position + crypt4gh.lib.SEGMENT_SIZE]
+            write_position = segment * crypt4gh.lib.CIPHER_SEGMENT_SIZE
+            nonce_end = write_position + NONCE_LENGTH
+            nonce = target[write_position:nonce_end]
+            nonce[:] = nonces[segment * NONCE_LENGTH : (segment + 1) * NONCE_LENGTH]
+            cipher.encrypt_into(
+                nonce,
+                chunk,
+                None,
+                target[nonce_end : nonce_end + len(chunk) + TAG_LENGTH],
             )
-            nonce = os.urandom(NONCE_LENGTH)
-            encrypted = encrypt_algo(chunk, None, nonce, key)
-            target[write_position : write_position + NONCE_LENGTH] = nonce
-            write_position += NONCE_LENGTH
-            target[write_position : write_position + len(encrypted)] = encrypted
-            write_position += len(encrypted)
-            read_position += crypt4gh.lib.SEGMENT_SIZE
 
-        return bytes(buffer)
+        return buffer
 
     async def _download_part(self, ctx: _PartContext) -> bytes:
         """Download a single encrypted part, translating S3 errors."""
@@ -423,7 +417,7 @@ class Interrogator(InterrogatorPort):
             raise _translate_s3_error(err) from err
 
     async def _upload_part(
-        self, ctx: _PartContext, *, upload_id: str, part_md5: bytes, part: bytes
+        self, ctx: _PartContext, *, upload_id: str, part_md5: bytes, part: bytearray
     ) -> None:
         """Upload a single re-encrypted part, translating S3 errors."""
         try:
@@ -487,7 +481,7 @@ class Interrogator(InterrogatorPort):
 
     async def _reencrypt_stage(
         self, ctx: _PartContext, *, decrypted_part: ByteBuffer, secret: SecretBytes
-    ) -> bytes:
+    ) -> bytearray:
         """Re-encrypt a part under the new secret, on the crypto pool."""
         return await self._crypto_stage(
             ctx,
@@ -518,7 +512,7 @@ class Interrogator(InterrogatorPort):
 
     async def _prepare_part(
         self, ctx: _PartContext, *, old_secret: SecretBytes, new_secret: SecretBytes
-    ) -> tuple[bytes, tuple[bytes, bytes]]:
+    ) -> tuple[bytearray, tuple[bytes, bytes]]:
         """Produce the bytes to upload for one part, plus their (md5, sha256) digests.
 
         Each `del` drops a buffer the moment the next stage stops needing it, holding

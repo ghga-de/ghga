@@ -131,7 +131,7 @@ def get_encrypted_object(
     for i in range((len(encrypted_data) // part_size) + 1):
         part = encrypted_data[i * part_size : (i + 1) * part_size]
         if part:
-            checksums.update_encrypted(part)
+            checksums.update_encrypted(bytearray(part))
 
     return EncryptedObject(
         checksums=checksums,
