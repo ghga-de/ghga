@@ -14,7 +14,10 @@
 # limitations under the License.
 #
 
-"""Shared steps for the user features with prefix test_1*"""
+"""Shared steps for the user features with prefix test_1*
+
+Also covers the portal feature 501
+"""
 
 import json
 import re
@@ -200,14 +203,18 @@ def _sms_requests(fixtures: JointFixture) -> list[dict]:
 
 
 def check_sms_received_at(full_name: str, phone: str, fixtures: JointFixture) -> str:
-    """Check that the user received exactly one SMS with a verification code.
+    """Check that the number received exactly one SMS with a verification code.
 
     Returns the verification code from the SMS.
     """
     slept: float = 0
     requests: list[dict] = []
     while slept < SMS_TIMEOUT:
-        requests = _sms_requests(fixtures)
+        requests = [
+            r
+            for r in _sms_requests(fixtures)
+            if json.loads(r["request"]["body"]).get("phone") == phone
+        ]
         if requests:
             break
         time.sleep(SMS_INTERVAL)
@@ -216,9 +223,6 @@ def check_sms_received_at(full_name: str, phone: str, fixtures: JointFixture) ->
         f"Expected one verification code SMS for {full_name}, got {len(requests)}"
     )
     sms_body = json.loads(requests[0]["request"]["body"])
-    assert sms_body.get("phone") == phone, (
-        f"SMS phone number does not match expected: {sms_body}"
-    )
     assert sms_body.get("sender_id") == EXPECTED_SMS_SENDER, (
         f"SMS sender does not match expected: {sms_body}"
     )

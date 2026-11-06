@@ -77,7 +77,7 @@ Feature: 501 Data Portal User Profile
       And I add a new "SMS" contact address with the "other" number
       Then the "other" SMS contact address has state "Unverified"
 
-      When I request verification for the "SMS" IVA
+      When I click to request verification for the "SMS" IVA
       Then I am asked for consent to send an SMS to the "other" number
 
       When I consent to sending the SMS

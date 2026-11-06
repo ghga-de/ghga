@@ -221,14 +221,8 @@ def add_new_iva(playwright: PlaywrightFixture, iva_type: str, iva_value: str):
     page.wait_for_load_state()
 
 
-@when(parse('I request verification for the "{iva_type}" IVA'))
-def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
-    """Request verification of the one unverified IVA of the given type.
-
-    Sending an SMS needs the user's consent, so for an SMS address this leaves
-    the consent dialog open for the steps that check and answer it.
-    """
-    page = playwright.page
+def _click_request_verification(page, iva_type: str) -> None:
+    """Click "Request verification" on the one unverified IVA of the given type."""
     page.wait_for_selector(
         "app-user-iva-list > .grid", timeout=UI_TIMEOUT
     )  # Wait for items to be loaded
@@ -239,10 +233,24 @@ def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
     request_button = unverified_items.get_by_role("button", name="Request verification")
     expect(request_button).to_be_visible()
     request_button.click()
-
     page.wait_for_selector("app-confirm-dialog", timeout=UI_TIMEOUT)
-    if iva_type == "SMS":
-        return
+
+
+@when(parse('I click to request verification for the "{iva_type}" IVA'))
+def click_request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
+    """Open the dialog with which requesting verification of an IVA starts.
+
+    Sending an SMS needs the user's consent, so for an SMS address the steps
+    that check and answer the consent dialog follow this one.
+    """
+    _click_request_verification(playwright.page, iva_type)
+
+
+@when(parse('I request verification for the "{iva_type}" IVA'))
+def request_iva_verification(playwright: PlaywrightFixture, iva_type: str):
+    """Request verification of the one unverified IVA of the given type."""
+    page = playwright.page
+    _click_request_verification(page, iva_type)
     confirm_dialog = page.locator("app-confirm-dialog").first
     expect(confirm_dialog).to_contain_text("Request verification of your address")
     continue_button = page.get_by_role(
