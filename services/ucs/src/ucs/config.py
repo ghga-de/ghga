@@ -79,6 +79,9 @@ class Config(
         description=(
             "Minimum age in hours before the cleanup job deletes an inbox object that"
             + " has no matching FileUpload. Applies even when safeguards are ignored."
+            + " Age is measured from the object's LastModified time, which some S3"
+            + " backends, including AWS, set to when a multipart upload was initiated"
+            + " rather than completed."
         ),
     )
     max_orphaned_objects: NonNegativeInt = Field(
