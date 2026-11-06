@@ -326,6 +326,33 @@ async def test_get_part_upload_url():
         url = await fn(part_number=1)
 
 
+async def test_get_part_upload_url_without_upload_check():
+    """Test that `verify_upload=False` returns a URL without checking the upload."""
+    storage = InMemObjectStorage()
+    upload_id = str(uuid4())
+
+    url = await storage.get_part_upload_url(
+        upload_id=upload_id,
+        bucket_id=BUCKET1,
+        object_id=OBJECT1,
+        part_number=1,
+        verify_upload=False,
+    )
+    assert url == (
+        f"https://storage.test/{BUCKET1}/{OBJECT1}/{upload_id}"
+        + "/part_no_1?expires_after=3600"
+    )
+
+    with pytest.raises(ValueError):  # The part number is still checked
+        await storage.get_part_upload_url(
+            upload_id=upload_id,
+            bucket_id=BUCKET1,
+            object_id=OBJECT1,
+            part_number=0,
+            verify_upload=False,
+        )
+
+
 async def test_abort_multipart_upload():
     """Test aborting a multipart upload and verifying it's removed from active uploads"""
     storage = InMemObjectStorage()
