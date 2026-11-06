@@ -56,7 +56,7 @@ OBJECT_ID_STR = str(OBJECT_ID_UUID)
 # re-encrypted file by a known ID rather than a runtime-generated UUID.
 INTERROGATION_OBJECT_ID = UUID("00000000-0000-4000-b000-000000000002")
 SUBMITTER_SECRET = os.urandom(ENCRYPTION_SECRET_LENGTH)
-PART_SIZE = 100 * 1024**2  # 100 MiB
+PART_SIZE = 64 * 1024**2  # 64 MiB
 
 
 async def run_dhfs_verification(config: Config, *, file_size: int):
@@ -108,17 +108,25 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
         return
 
     # Patch uuid4 so the re-encrypted object ID is set to INTERROGATION_OBJECT_ID. That
-    #  lets us find it more easily.
+    #  lets us find it more easily. Central hands out the dummy file as a batch of one,
+    #  and the report DHFS would send it is kept by the mock instead.
     with (
         patch.object(
-            CentralClient, "submit_interrogation_report", new_callable=AsyncMock
+            CentralClient,
+            "fetch_new_uploads",
+            new_callable=AsyncMock,
+            return_value=[file_upload],
         ),
+        patch.object(
+            CentralClient, "submit_interrogation_report", new_callable=AsyncMock
+        ) as submit_report,
         patch("dhfs.core.interrogator.uuid4", return_value=INTERROGATION_OBJECT_ID),
     ):
         log.info("Performing DHFS file processing.")
         async with prepare_interrogator(config=config) as interrogator:
             try:
-                await interrogator.interrogate_file(file_upload)
+                await interrogator.interrogate_new_files()
+                _check_report(submit_report)
                 log.info("File processing succeeded.")
             except Exception as err:
                 raise RuntimeError(f"File processing failed: {err!s}") from err
@@ -129,6 +137,18 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
                     inbox_write_storage=inbox_write_storage,
                     dhfs_storage=normal_dhfs_storage,
                 )
+
+
+def _check_report(submit_report: AsyncMock) -> None:
+    """Raise unless DHFS reported the dummy file as successfully processed.
+
+    No report means the attempt was inconclusive; DHFS logged why as a warning.
+    """
+    if not submit_report.await_args:
+        raise RuntimeError("DHFS could not process the file conclusively.")
+    report: models.InterrogationReport = submit_report.await_args.kwargs["report"]
+    if not report.passed:
+        raise RuntimeError(report.reason or "DHFS reported the file as failed.")
 
 
 def _validate_config_for_verifier(config: Config):
@@ -229,21 +249,31 @@ async def _upload_inbox_dummy_file(
     inbox_write_storage: S3ObjectStorage,
     public_key_path: Path,
     file_size: int,
+    part_size: int = PART_SIZE,
 ) -> models.FileUpload:
     """Generate a fresh encrypted dummy file and upload it to the inbox."""
-    log.info("Uploading %i MiB of encrypted dummy data...", file_size // 1024**2)
+    envelope = _make_envelope(
+        file_secret=SUBMITTER_SECRET, public_key_path=public_key_path
+    )
+    log.info(
+        "Uploading %i MiB of encrypted dummy data in parts of %i bytes...",
+        file_size // 1024**2,
+        part_size,
+    )
     try:
         decrypted_sha256, encrypted_size = await _upload_dummy_data(
             config=config,
             storage=inbox_write_storage,
-            public_key_path=public_key_path,
+            envelope=envelope,
             file_size=file_size,
+            part_size=part_size,
         )
     except Exception as err:
         raise RuntimeError(
             f"Failed to upload the dummy file to the {config.inbox_bucket_id} bucket: {err!s}"
         ) from err
 
+    # DHFS aligns the part size to whole Crypt4GH segments itself
     return models.FileUpload(
         id=FILE_ID,
         object_id=OBJECT_ID_UUID,
@@ -252,7 +282,7 @@ async def _upload_inbox_dummy_file(
         decrypted_sha256=decrypted_sha256,
         decrypted_size=file_size,
         encrypted_size=encrypted_size,
-        part_size=PART_SIZE,
+        part_size=part_size,
     )
 
 
@@ -287,9 +317,9 @@ async def _upload_dummy_data(
     *,
     config: Config,
     storage: S3ObjectStorage,
-    public_key_path: Path,
+    envelope: bytes,
     file_size: int,
-    part_size: int = PART_SIZE,
+    part_size: int,
 ) -> tuple[str, int]:
     """Upload a fresh encrypted dummy file to the inbox bucket, a part as it is made.
 
@@ -301,9 +331,6 @@ async def _upload_dummy_data(
         raise RuntimeError("Config parameter inbox_bucket_id must be set.")
 
     plaintext_sha256 = hashlib.sha256()
-    envelope = _make_envelope(
-        file_secret=SUBMITTER_SECRET, public_key_path=public_key_path
-    )
     upload_id = await storage.init_multipart_upload(
         bucket_id=inbox_bucket_id, object_id=OBJECT_ID_STR
     )
