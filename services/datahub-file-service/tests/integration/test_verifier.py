@@ -19,19 +19,32 @@ The core interrogation logic (prepare_interrogator / interrogate_file) is mocked
 so these tests focus exclusively on inbox upload and cleanup behavior.
 """
 
+import hashlib
+import io
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from math import ceil
 from unittest.mock import AsyncMock, patch
 
+import crypt4gh.lib
+import httpx2
 import pytest
 import pytest_asyncio
 
 from dhfs.adapters.outbound.central import CentralClient
 from dhfs.config import Config
-from dhfs.core.verifier import OBJECT_ID_UUID, run_dhfs_verification
+from dhfs.core.verifier import (
+    OBJECT_ID_STR,
+    OBJECT_ID_UUID,
+    _upload_dummy_data,
+    run_dhfs_verification,
+)
 from hexkit.providers.s3.testutils import S3Fixture
-from tests.fixtures.utils import DHFS_CRYPT4GH_PUBLIC_KEY_PATH
+from tests.fixtures.utils import (
+    DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
+    get_crypt4gh_private_key,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -117,3 +130,37 @@ async def test_failure_cleans_up(verifier_fixture: VerifierFixture):
     assert not await _inbox_has_object(verifier_fixture), (
         "Inbox object should be removed even when interrogation fails"
     )
+
+
+async def test_dummy_data_is_a_valid_crypt4gh_object(verifier_fixture: VerifierFixture):
+    """The dummy file, uploaded a part as it is made, must arrive in the expected number
+    of parts and decrypt to plaintext of the stated size and checksum.
+    """
+    part_size = 5 * 1024**2  # the smallest part S3 accepts before the last one
+    file_size = 2 * part_size + 12345
+
+    decrypted_sha256, encrypted_size = await _upload_dummy_data(
+        config=verifier_fixture.config,
+        storage=verifier_fixture.s3.storage,
+        public_key_path=DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
+        file_size=file_size,
+        part_size=part_size,
+    )
+
+    storage = verifier_fixture.s3.storage
+    # A multipart ETag ends in the part count
+    etag = await storage.get_object_etag(
+        bucket_id=INBOX_BUCKET_ID, object_id=OBJECT_ID_STR
+    )
+    assert etag.strip('"').endswith(f"-{ceil(encrypted_size / part_size)}")
+    url = await storage.get_object_download_url(
+        bucket_id=INBOX_BUCKET_ID, object_id=OBJECT_ID_STR
+    )
+    encrypted = httpx2.get(url).content
+    assert len(encrypted) == encrypted_size
+
+    plaintext = io.BytesIO()
+    keys = [(0, get_crypt4gh_private_key().get_secret_value(), None)]
+    crypt4gh.lib.decrypt(keys, io.BytesIO(encrypted), plaintext)
+    assert len(plaintext.getvalue()) == file_size
+    assert hashlib.sha256(plaintext.getvalue()).hexdigest() == decrypted_sha256
