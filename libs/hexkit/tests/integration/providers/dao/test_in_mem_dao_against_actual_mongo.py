@@ -387,6 +387,7 @@ async def batch_outcome(dao, method: str, args: list, kwargs: dict[str, Any]):
         ("update_many", [[FEWER_APPLES, NEW_ITEM]], {}),
         ("update_many", [[NEW_ITEM, FEWER_APPLES]], {"ordered": True}),
         ("upsert_many", [[FEWER_APPLES, NEW_ITEM]], {}),
+        ("delete_many", [["apples", "missing", "apples"]], {}),
         ("insert_many", [[]], {}),
     ],
 )

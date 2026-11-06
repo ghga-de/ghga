@@ -629,6 +629,10 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         """Not implemented: the DAO publisher does not support batch writes yet."""
         raise NotImplementedError
 
+    async def delete_many(self, ids: Collection[ID]) -> None:
+        """Not implemented: the DAO publisher does not support batch writes yet."""
+        raise NotImplementedError
+
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
         try:
