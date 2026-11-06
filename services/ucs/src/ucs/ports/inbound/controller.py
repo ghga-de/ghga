@@ -629,7 +629,7 @@ class UploadControllerPort(ABC):
 
         Orphaned objects younger than `config.orphaned_object_min_age_hours` are kept.
         Orphans are left alone for a storage alias if the FileUpload collection is
-        empty or the orphaned object count exceeds `config.max_orphaned_objects`,
-        unless `ignore_safeguards` is True.
+        empty, the objects in the bucket can't be listed, or the orphaned object count
+        exceeds `config.max_orphaned_objects`, unless `ignore_safeguards` is True.
         """
         ...

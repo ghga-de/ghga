@@ -1826,12 +1826,13 @@ class UploadController(UploadControllerPort):
                     exc_info=True,
                 )
 
-    def _safeguards_allow_orphan_removal(
+    def _safeguards_allow_orphan_removal(  # noqa: PLR0913
         self,
         *,
         storage_alias: str,
         orphaned_s3_upload_count: int,
         orphaned_object_count: int,
+        objects_listed: bool,
         db_is_empty: bool,
         ignore_safeguards: bool,
     ) -> bool:
@@ -1839,11 +1840,14 @@ class UploadController(UploadControllerPort):
 
         An empty FileUpload collection, or more orphaned objects than
         `config.max_orphaned_objects`, suggests the database does not belong to the
-        bucket. Either one blocks removal unless `ignore_safeguards` is True.
+        bucket. If the objects could not be listed, their count is unknown. Each of
+        these blocks removal unless `ignore_safeguards` is True.
         """
         max_objects = self._config.max_orphaned_objects
         if db_is_empty and (orphaned_s3_upload_count or orphaned_object_count):
             violation = "the FileUpload collection is empty"
+        elif not objects_listed and orphaned_s3_upload_count:
+            violation = "the objects in the bucket could not be listed"
         elif orphaned_object_count > max_objects:
             violation = (
                 f"{orphaned_object_count} orphaned objects exceed the limit of"
@@ -1884,9 +1888,9 @@ class UploadController(UploadControllerPort):
 
         This aborts ongoing uploads that are too old or not tied to any FileUpload.
         Orphaned objects last modified before `orphaned_object_cutoff` are also
-        deleted. Orphans are left alone if `db_is_empty` is True or there are more
-        orphaned objects than `config.max_orphaned_objects`, unless
-        `ignore_safeguards` is True.
+        deleted. Orphans are left alone if `db_is_empty` is True, the objects in the
+        bucket can't be listed, or there are more orphaned objects than
+        `config.max_orphaned_objects`, unless `ignore_safeguards` is True.
         """
         # S3 is listed before the database is read. An object only exists once its
         #  upload is complete, and its FileUpload was inserted before that, so objects
@@ -1973,6 +1977,7 @@ class UploadController(UploadControllerPort):
             storage_alias=storage_alias,
             orphaned_s3_upload_count=len(orphaned_s3_uploads),
             orphaned_object_count=len(orphaned_object_ids),
+            objects_listed=object_ids_in_bucket is not None,
             db_is_empty=db_is_empty,
             ignore_safeguards=ignore_safeguards,
         ):

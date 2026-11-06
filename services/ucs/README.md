@@ -15,7 +15,7 @@ The executable `ucs` takes one of these commands:
 
 The `cleanup` command also aborts orphaned multipart uploads and deletes orphaned objects in the inbox bucket, meaning those without a matching FileUpload.
 It deletes an orphaned object only once it is older than [`orphaned_object_min_age_hours`](#properties/orphaned_object_min_age_hours).
-For a storage alias, it leaves all orphans alone and logs an error if the FileUpload collection is empty, or if the orphaned objects outnumber [`max_orphaned_objects`](#properties/max_orphaned_objects).
+For a storage alias, it leaves all orphans alone and logs an error if the FileUpload collection is empty, if the objects in the bucket can't be listed, or if the orphaned objects outnumber [`max_orphaned_objects`](#properties/max_orphaned_objects).
 These safeguards stop a deployment that shares the inbox bucket but not the database from deleting everything in the bucket.
 After checking that the orphans are real, run `ucs cleanup --no-run-forever --ignore-safeguards` to remove them once.
 

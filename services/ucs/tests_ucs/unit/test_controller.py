@@ -2754,6 +2754,49 @@ async def test_cleanup_safeguard_limits_orphaned_objects(
         assert orphan_spy.aborted_s3_upload_ids == []
 
 
+@pytest.mark.parametrize("ignore_safeguards", [False, True])
+async def test_cleanup_safeguard_blocks_s3_upload_abort_when_listing_fails(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    ignore_safeguards: bool,
+):
+    """Test that orphaned multipart uploads are not aborted if the objects in the
+    bucket can't be listed, unless the safeguards are ignored.
+
+    Without the object list, the orphaned object count can't be checked against
+    `max_orphaned_objects`.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    orphaned_s3_upload_id = await init_orphaned_s3_upload(rig)
+
+    async def failing_listing(*, storage_alias: str) -> set[str]:
+        raise SimulatedConnectionError("Connection reset while listing objects")
+
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", failing_listing)
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads(ignore_safeguards=ignore_safeguards)
+
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    if ignore_safeguards:
+        assert orphan_spy.aborted_s3_upload_ids == [orphaned_s3_upload_id]
+        assert errors == []
+    else:
+        assert orphan_spy.aborted_s3_upload_ids == []
+        assert len(errors) == 1
+        assert "the objects in the bucket could not be listed" in errors[0].getMessage()
+
+
 async def test_cleanup_lists_s3_before_reading_db(
     rig: JointRig, orphan_spy: OrphanCleanupSpy, monkeypatch: pytest.MonkeyPatch
 ):
