@@ -29,7 +29,8 @@ class SubmissionAnnotation(BaseModel):
         ...,
         description=(
             "A map of user-specified id to system-generated accession for metadata"
-            + " resources. Keys on the top level correspond to names of metadata classes."
+            + " resources. Keys on the top level correspond to the anchor slots of the"
+            + " metadata classes, e.g. 'studies' for the class 'Study'."
             + " Keys on the second level correspond to user-specified aliases."
             + " Values on the second level correspond to system-generated accessions."
             + " Please note that the user-defined alias might only be unique within"

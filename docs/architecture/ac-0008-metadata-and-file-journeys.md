@@ -99,7 +99,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content` (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a source event) → `complete_submission`.
   **Only `PENDING`→`COMPLETED` is ever used.**
   `upsert_submission_content` refuses anything but `PENDING`, and nothing in metldata amends a completed submission.
-  dskit does that itself (`ghga_datasteward_kit/amendment/`), driving `SubmissionStore`, `generate_accession_map` and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
+  dskit does that itself (`ghga_datasteward_kit/amendment/`), driving `SubmissionStore`, its own `generate_legacy_accession_map` and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
 - `SubmissionStatus` (`models.py:31`) *defines* `DEPRECATED_*`, `PUBLISHED`, `HIDDEN_*`, `EMPTIED_*`, `CANCELED`, `IN_REVIEW` — **none are ever set**.
   There is no replaces/replaced-by field and no versioning anywhere today. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
@@ -108,28 +108,32 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Engine: `AccessionRegistry` in `accession_registry/accession_registry.py`.
   A study gets the PID `GHGA.YY.XXX.1`: `YY` is the two-digit UTC year, `XXX` three random RFC 4648 base32 characters, unique within the year.
   Only fresh lineages are minted; the version counter stays at `1` until predecessors can be declared → [changed by the feature](../epics/epic-0093-giraffe.md).
-- A dataset gets `{study_pid}.DS.xxx`, unique within its study; every other entity gets `{study_pid}.{alias}`, with the alias normalized by `normalize_alias` in `metadata_utils.py`.
-  It is stripped and lowercased, and every character other than `a–z`, `0–9`, `_` and `-` becomes `-`, so the accession is safe in URLs and file names and holds no further dot.
-  The metadata and the accession map keep the alias as submitted.
+- A dataset gets `{study_pid}.DS.xxx`, unique within its study.
+  The submission's accession map stores the study and dataset PIDs only.
   Which classes are the study and the dataset is set by `study_class_name` and `dataset_class_name` in the config.
+- Every other entity gets `{study_pid}.{alias}`, which is never stored: the `add_accessions` transformation composes it on every run, from the study PID in the map (`complete_accession_map` in `builtin_transformations/add_accessions/metadata_transform.py`).
+  It takes the study class from its own `study_class_name`, and composes nothing for a flat study accession, whose map must hold every class.
+  The alias is normalized by `normalize_alias` in `metadata_utils.py`: stripped and lowercased, and every character other than `a–z`, `0–9`, `_` and `-` becomes `-`, so the accession is safe in URLs and file names and holds no further dot.
+  The metadata and the accession map keep the alias as submitted.
 - A random block is drawn up to 100 times; if every draw collides, one is picked from the blocks still unused, and `AccessionGenerationError` is raised when none is left.
 - Aliases must hold ASCII characters only and be unique across all entities of a submission once normalized, checked by `MetadataValidator.check_aliases_are_ascii` and `check_alias_uniqueness` before anything is minted.
 - Persisted in **one JSON file** (`accession_store.py`): `years` holds the minted `XXX` blocks per `YY`, and `legacy` holds the flat accessions (`GHGAS…`, `GHGAF…`), those minted before study PIDs and those dskit's `amend` mints.
   Dataset and alias accessions are not stored there: a dataset's `xxx` is drawn against the accessions its submission already holds, and an alias accession is unique once the study PID is.
-  The file is an index; the submission store holds which accession belongs to which entity.
-- Alias↔accession stability (`generate_accession_map` in `submission_registry/identifiers.py`): within one submission object, re-upserting the same alias **reuses** its accession; new aliases get new ones; dropped aliases fall out.
+  The file is an index; the submission store holds which study and dataset PID belongs to which entity, and every accession of a flat-accessioned submission.
+- Alias↔accession stability (`generate_accession_map` in `submission_registry/identifiers.py`): within one submission object, re-upserting the same dataset alias **reuses** its PID; new aliases get new ones; dropped aliases fall out.
+  Every other accession follows from the study PID and the alias, so it stays the same as long as both do.
   `submit` always calls `init_submission` (fresh UUID, empty map), so a new `submit` run of the same aliases mints *fresh* accessions.
   **`dskit metadata amend --submission-id <id>` extends a submission accessioned in the flat scheme**, whose study accession is `GHGA`, one letter and 14 digits.
   A submission with a study PID is refused with `AccessionNotLegacyError`, so study PIDs are only ever minted by `submit`.
   It loads the completed submission, validates the new metadata against the model, and checks that no alias is repeated within its class; a flat accession holds no alias, so uniqueness across classes is not needed.
-  It hands the stored map to `generate_accession_map` with dskit's `LegacyAccessionRegistry` (`amendment/legacy_accessioning.py`), which mints `prefix + 14 digits` for each new alias and registers it under `legacy`, so a flat accession is never given out twice.
+  It hands the stored map to `generate_legacy_accession_map` with dskit's `LegacyAccessionRegistry` (both in `amendment/legacy_accessioning.py`), which keeps every class in the map and mints `prefix + 14 digits` for each new alias and registers it under `legacy`, so a flat accession is never given out twice.
   It writes the result back under the same ID and republishes the source event, so existing accessions survive and only new aliases are minted.
   Before writing, it reports the dropped, new and kept files of the five file classes, each with its count and up to 20 aliases.
   It asks for confirmation when files would be dropped or none kept, and refuses such an amendment when stdin is not a terminal, so a pipe cannot answer for a steward.
   The other classes follow the same alias matching without being reported; the study keeps its accession even under a new alias.
   A field changed on an already-accessioned resource is not an accession change at all — no report entry, no prompt, and the next `load` upserts that resource.
   Confining amendments to added files is an operational rule, not one the tool enforces.
-  All of it lives in dskit (`ghga_datasteward_kit/amendment/`); metldata provides `generate_accession_map` and the `AccessionRegistry` that dskit subclasses.
+  All of it lives in dskit (`ghga_datasteward_kit/amendment/`); metldata provides the helpers in `submission_registry/identifiers.py` and the `AccessionRegistry` that dskit subclasses.
   There is still no accession stability *across* submissions. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
 ### The LinkML model (current testbed model)

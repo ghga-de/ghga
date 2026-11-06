@@ -54,6 +54,10 @@
   - **`accession_slot_description`** *(string)*: The description of the slot to contain the accessions to.
     Default: `"The accession for an entity."`.
 
+  - **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the study PID.
+    The accessions of every class missing from the accession map are composed from that PID and the alias.
+    Default: `"Study"`.
+
 - <a id="definitions/EmbeddingProfile"></a>**`EmbeddingProfile`** *(object)*: A model for describing a profile for embedding referenced classes into a class of interest of a metadata model.
   Please note, only the embedding for anchored classes that are referenced by this source class can be changed.
   All anchored classes are assumed to be non-embedded by default.

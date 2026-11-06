@@ -1,0 +1,5 @@
+accession_map:
+  studies:
+    STUDY_A: GHGA.26.K7Q.1
+  datasets:
+    DS_A: GHGA.26.K7Q.1.DS.M3P
