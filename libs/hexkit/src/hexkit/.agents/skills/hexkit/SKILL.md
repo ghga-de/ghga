@@ -52,7 +52,7 @@ Look at the stored data, not the event, when choosing between the outbox and the
 
 - Bind each DAO to a frozen Pydantic DTO that carries its own ID (`UUID4Field()` generates one); change a resource with `model_copy(update=...)` and write it back.
 - `insert` fails on an existing ID, `update` and `delete` on a missing one; use `upsert` only where create-or-replace is meant.
-- `insert_many` writes a batch in one call; it is not atomic, and its `BatchOperationError` maps each failed ID to the error `insert` raises.
+- `insert_many` and `upsert_many` write a batch in one call; they are not atomic, and their `BatchOperationError` maps each failed ID to the error that `insert` or `upsert` raises.
 - Filter with `filter_=`; the old `mapping=` still works with a `DeprecationWarning` and goes in hexkit 11.
 - `find_all` is not awaited: it returns a lazy `FindResult` with `to_list()` and `total_count()`.
   Always pass `sort` with `skip` and `limit`.
