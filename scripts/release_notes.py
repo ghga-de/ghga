@@ -518,19 +518,16 @@ def _has_tag(tag: str) -> bool:
     return True
 
 
-def _line(entry: Entry, name: str) -> str:
+def _line(entry: Entry, name: str, note: str | None = None) -> str:
+    """Return the list line of `entry`, or of its upgrade note `note`, as written."""
     # A library's own name as scope says nothing in that library's notes.
     scope = f"**{entry.scope}:** " if entry.scope and entry.scope != name else ""
+    pr = f" (#{entry.pr})" if entry.pr else ""
+    if note is not None:
+        return f"- {scope}{note}{pr}"
     breaking = "**Breaking:** " if entry.breaking else ""
     text = entry.text[:1].upper() + entry.text[1:]
-    pr = f" (#{entry.pr})" if entry.pr else ""
     return f"- {breaking}{scope}{text}{pr}"
-
-
-def _upgrade_line(entry: Entry, text: str, name: str) -> str:
-    scope = f"**{entry.scope}:** " if entry.scope and entry.scope != name else ""
-    pr = f" (#{entry.pr})" if entry.pr else ""
-    return f"- {scope}{text}{pr}"
 
 
 def render(
@@ -546,7 +543,7 @@ def render(
     for summary in SUMMARIES:
         if previous is None or summary.applies(changes):
             lines += [f"## {summary.heading}", "", summary.hint, ""]
-    upgrade = [_upgrade_line(e, text, name) for e in changes for text in e.upgrade]
+    upgrade = [_line(e, name, note) for e in changes for note in e.upgrade]
     if upgrade:
         lines += ["## Upgrade notes", "", UPGRADE_HINT, "", *upgrade, ""]
     if components:

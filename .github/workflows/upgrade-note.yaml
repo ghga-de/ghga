@@ -1,5 +1,5 @@
-# Require an `Upgrade:` line in every PR description, for the release notes. A workflow
-# of its own so that `edited` re-runs only this check when the description is fixed.
+# Require an `Upgrade:` line in a PR description that changes config, API or chart values.
+# A workflow of its own so that `edited` re-runs only this check.
 name: upgrade-note
 
 on:
@@ -10,12 +10,14 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  upgrade-note:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # The checkout is the PR's merge commit; depth 2 brings its first parent, the base.
       - uses: actions/checkout@v5
         with:
+          fetch-depth: 2
           sparse-checkout: scripts/check_upgrade_note.py
           sparse-checkout-cone-mode: false
       # Through the environment: interpolated into `run`, the body could inject commands.
@@ -23,4 +25,7 @@ jobs:
           BODY: ${{ github.event.pull_request.body }}
           HEAD: ${{ github.head_ref }}
           BASE: ${{ github.base_ref }}
-        run: python3 scripts/check_upgrade_note.py --head "$HEAD" --base "$BASE" -- "$BODY"
+        run: |
+          git diff --name-only HEAD^1 HEAD \
+            | python3 scripts/check_upgrade_note.py \
+              --head "$HEAD" --base "$BASE" --changed - -- "$BODY"
