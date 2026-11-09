@@ -138,10 +138,19 @@ export class AccessRequestDurationEdit implements OnInit {
     () => this.durationForm.untilDate().errors()[0]?.message ?? null,
   );
 
+  /**
+   * Whether the stored end date lies before the end of today, so that the editor
+   * offers the end of today instead, a date the request does not have yet.
+   */
+  #endMovedUp = computed<boolean>(
+    () => new Date(this.request()['access_ends']) < this.todayEnd,
+  );
+
   isModified = computed<boolean>(
     () =>
       this.isOpen() &&
-      (!isSameTime(this.formModel().fromDate, this.#defaultFromDate()) ||
+      (this.#endMovedUp() ||
+        !isSameTime(this.formModel().fromDate, this.#defaultFromDate()) ||
         !isSameTime(this.formModel().untilDate, this.#defaultUntilDate())),
   );
 

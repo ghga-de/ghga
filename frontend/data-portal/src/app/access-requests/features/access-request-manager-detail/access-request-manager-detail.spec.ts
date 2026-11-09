@@ -259,10 +259,6 @@ describe('AccessRequestManagerDetail', () => {
   });
 
   it('should keep a saved IVA when the IVAs reload', async () => {
-    Object.assign(TestBed.inject(AccessRequestService), {
-      updateRequest: () => of(null),
-    });
-
     const postal = await selectPostalIvaAndReload();
 
     expect(postal).toBeChecked();
@@ -333,8 +329,14 @@ describe('AccessRequestManagerDetail access period warning', () => {
     await render({ access_ends: daysFromNow(3) });
 
     expect(
-      screen.getByText(/The access period ends on .*, less than 7 days from now\./),
+      screen.getByText(/The access period ends on .*, which leaves less than 7 days/),
     ).toBeVisible();
+  });
+
+  it('should warn when a later access period is shorter than the minimum', async () => {
+    await render({ access_starts: daysFromNow(20), access_ends: daysFromNow(22) });
+
+    expect(screen.getByText(/which leaves less than 7 days of access/)).toBeVisible();
   });
 
   it('should not warn about a request that is no longer pending', async () => {
@@ -354,13 +356,26 @@ describe('AccessRequestManagerDetail access period warning', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit access duration' }));
 
     expect(screen.getByLabelText('End date')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Edit access duration' })).toBeNull();
+  });
+
+  it('should warn once the access period ends while the page is open', async () => {
+    vitest.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      await render({ access_ends: new Date(Date.now() + 30_000).toISOString() });
+      expect(screen.getByText(/which leaves less than 7 days/)).toBeVisible();
+
+      vitest.advanceTimersByTime(60_000);
+      await fixture.whenStable();
+
+      expect(screen.getByText(/The requested access period ended on/)).toBeVisible();
+    } finally {
+      vitest.useRealTimers();
+    }
   });
 
   it('should drop the warning once a new end date is saved', async () => {
     await render({ access_ends: daysFromNow(-1) });
-    Object.assign(TestBed.inject(AccessRequestService), {
-      updateRequest: () => of(null),
-    });
 
     fixture.componentInstance.saved(new Map([['access_ends', daysFromNow(30)]]));
     await fixture.whenStable();

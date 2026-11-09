@@ -107,6 +107,31 @@ describe('AccessRequestDurationEdit', () => {
     );
   });
 
+  it('should save the offered end of today for a period that has ended', async () => {
+    const request = {
+      ...accessRequests[0],
+      status: AccessRequestStatus.pending,
+      access_starts: '2025-01-01T00:00:00.000Z',
+      access_ends: '2025-01-08T23:59:59.999Z',
+    };
+    await result.rerender({ inputs: { request }, partialUpdate: true });
+    // populate the form for the new request, as on creation
+    component.ngOnInit();
+
+    let emitted: Map<string, string> | undefined;
+    component.saved.subscribe((value) => {
+      emitted = value as Map<string, string>;
+    });
+
+    component.open();
+    expect(component.isModified()).toBe(true);
+    component.save();
+
+    expect(emitted?.get('access_ends')).toBe(
+      localDateToContractIsoUtc(component.todayEnd, true),
+    );
+  });
+
   it('should not consider re-selecting the same dates a modification', () => {
     component.open();
     const { fromDate, untilDate } = getFormModel(component);

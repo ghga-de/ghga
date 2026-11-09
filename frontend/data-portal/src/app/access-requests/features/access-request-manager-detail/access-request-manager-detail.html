@@ -78,14 +78,16 @@
                     new end date before allowing the request, or deny it.
                   } @else {
                     The access period ends on
-                    {{ ar.access_ends | date: periodFormat : periodTimeZone }}, less
-                    than {{ minDays }} days from now. Consider a later end date before
-                    allowing the request.
+                    {{ ar.access_ends | date: periodFormat : periodTimeZone }}, which
+                    leaves less than {{ minDays }} days of access. Consider a later end
+                    date before allowing the request.
                   }
                 </p>
-                <button mat-stroked-button type="button" (click)="editDuration()">
-                  Edit access duration
-                </button>
+                @if (!durationEditOpen()) {
+                  <button mat-stroked-button type="button" (click)="editDuration()">
+                    Edit access duration
+                  </button>
+                }
               </div>
             }
             <div class="mb-2 flex">

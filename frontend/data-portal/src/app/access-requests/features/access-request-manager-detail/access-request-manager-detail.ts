@@ -18,6 +18,7 @@ import {
   Signal,
   viewChild,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -56,6 +57,7 @@ import {
 } from '@app/shared/utils/date-formats';
 import { html } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
+import { interval, map } from 'rxjs';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -108,6 +110,14 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
 
   protected readonly minDays = this.#config.accessGrantMinDays;
   private durationEdit = viewChild(AccessRequestDurationEdit);
+  protected durationEditOpen = computed(() => this.durationEdit()?.isOpen() ?? false);
+
+  /**
+   * The current time, ticking every minute, so the period warning keeps up with it.
+   */
+  #now = toSignal(interval(60_000).pipe(map(() => Date.now())), {
+    initialValue: Date.now(),
+  });
 
   id = input.required<string>();
   #request = this.#accessRequestService.accessRequest;
@@ -245,14 +255,17 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
 
   /**
    * Whether the access period of a pending request has ended or is shorter than the
-   * minimum, counted from now, since allowing the request moves its start up to now.
+   * minimum. A start in the past counts as now, since allowing the request moves it
+   * up to now.
    */
   protected periodWarning = computed<'ended' | 'short' | undefined>(() => {
     const ar = this.request();
     if (ar?.status !== AccessRequestStatus.pending) return undefined;
-    const remaining = new Date(ar.access_ends).getTime() - Date.now();
-    if (remaining <= 0) return 'ended';
-    if (remaining < this.minDays * DAY_MS) return 'short';
+    const now = this.#now();
+    const ends = new Date(ar.access_ends).getTime();
+    if (ends <= now) return 'ended';
+    const starts = Math.max(now, new Date(ar.access_starts).getTime());
+    if (ends - starts < this.minDays * DAY_MS) return 'short';
     return undefined;
   });
 
@@ -296,22 +309,27 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     setTimeout(() => this.showTransition.set(false), 300);
     const id = this.id();
     if (id) {
-      // Has it been fetched individually already?
-      let ar = this.#request.error() ? undefined : this.#request.value();
-      if (ar && ar.id === id) {
+      const ar = this.#loadedRequest(id);
+      if (ar) {
         this.#cachedRequest.set(ar);
       } else {
-        // Has it been fetched as part of a list?
-        const requests = this.#requests.error() ? [] : this.#requests.value();
-        ar = requests.find((ar: AccessRequest) => ar.id === id);
-        if (ar) {
-          this.#cachedRequest.set(ar);
-        } else {
-          // If not, we need to fetch it now
-          this.#accessRequestService.loadAccessRequest(id);
-        }
+        // If not, we need to fetch it now
+        this.#accessRequestService.loadAccessRequest(id);
       }
     }
+  }
+
+  /**
+   * Find the request with the given ID among those the service has already fetched,
+   * individually or as part of a list.
+   * @param id - the ID of the access request
+   * @returns the access request, or undefined if it has not been fetched
+   */
+  #loadedRequest(id: string): AccessRequest | undefined {
+    const ar = this.#request.error() ? undefined : this.#request.value();
+    if (ar?.id === id) return ar;
+    const requests = this.#requests.error() ? [] : this.#requests.value();
+    return requests.find((ar: AccessRequest) => ar.id === id);
   }
 
   /**
@@ -333,10 +351,8 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     if (!id) return;
     this.#accessRequestService.updateRequest(id, changes).subscribe({
       next: () => {
-        // the service updates its own copies of the request, but not this one
-        this.#cachedRequest.update((ar) =>
-          ar?.id === id ? { ...ar, ...changes } : ar,
-        );
+        // take over the copy the service has updated, as this one is a snapshot
+        this.#cachedRequest.update((ar) => ar && (this.#loadedRequest(id) ?? ar));
         this.#notificationService.showSuccess(
           `Access request was successfully modified.`,
         );
