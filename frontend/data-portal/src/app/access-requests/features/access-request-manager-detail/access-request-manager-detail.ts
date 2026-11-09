@@ -16,6 +16,7 @@ import {
   OnInit,
   signal,
   Signal,
+  viewChild,
 } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
@@ -56,6 +57,8 @@ import {
 import { html } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The view component used for managing access requests in the access request manager.
@@ -102,6 +105,9 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   #usersUrl = `${this.#authUrl}/users`;
 
   #location = inject(NavigationTracker);
+
+  protected readonly minDays = this.#config.accessGrantMinDays;
+  private durationEdit = viewChild(AccessRequestDurationEdit);
 
   id = input.required<string>();
   #request = this.#accessRequestService.accessRequest;
@@ -237,6 +243,26 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     () => this.request()?.status === AccessRequestStatus.pending,
   );
 
+  /**
+   * Whether the access period of a pending request has ended or is shorter than the
+   * minimum, counted from now, since allowing the request moves its start up to now.
+   */
+  protected periodWarning = computed<'ended' | 'short' | undefined>(() => {
+    const ar = this.request();
+    if (ar?.status !== AccessRequestStatus.pending) return undefined;
+    const remaining = new Date(ar.access_ends).getTime() - Date.now();
+    if (remaining <= 0) return 'ended';
+    if (remaining < this.minDays * DAY_MS) return 'short';
+    return undefined;
+  });
+
+  /**
+   * Open the editor of the access duration.
+   */
+  protected editDuration(): void {
+    this.durationEdit()?.open();
+  }
+
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
       this.#notificationService.showError('Error fetching verification addresses.');
@@ -307,6 +333,10 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     if (!id) return;
     this.#accessRequestService.updateRequest(id, changes).subscribe({
       next: () => {
+        // the service updates its own copies of the request, but not this one
+        this.#cachedRequest.update((ar) =>
+          ar?.id === id ? { ...ar, ...changes } : ar,
+        );
         this.#notificationService.showSuccess(
           `Access request was successfully modified.`,
         );

@@ -7,7 +7,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { allIvasOfDoe } from '@app/../mocks/data';
+import { accessRequests, allIvasOfDoe } from '@app/../mocks/data';
 import { IvaService } from '@app/ivas/services/iva';
 import { AccessRequestManagerDetail } from './access-request-manager-detail';
 
@@ -16,8 +16,13 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
+import {
+  AccessRequest,
+  AccessRequestStatus,
+} from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
@@ -47,38 +52,53 @@ class MockIvaService {
 class MockConfigService {
   authUrl = 'http://mock.dev/auth';
   helpdeskTicketUrl = 'http:/helpdesk.test/ticket/';
+  accessGrantMinDays = 7;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+let fixture: ComponentFixture<AccessRequestManagerDetail>;
+let httpMock: HttpTestingController;
+
+/**
+ * Render the component for the mock request, changed as given.
+ * @param changes - the fields of the mock request to change
+ */
+async function render(changes: Partial<AccessRequest> = {}): Promise<void> {
+  TestBed.configureTestingModule({
+    imports: [AccessRequestManagerDetail],
+    providers: [
+      { provide: IvaService, useClass: MockIvaService },
+      { provide: AccessRequestService, useClass: MockAccessRequestService },
+      { provide: ConfigService, useClass: MockConfigService },
+      { provide: ActivatedRoute, useValue: fakeActivatedRoute },
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideNativeDateAdapter(),
+    ],
+  });
+
+  await TestBed.compileComponents();
+  // the mock data types the status as a plain string
+  TestBed.inject(AccessRequestService).accessRequest.value.set({
+    ...accessRequests[4],
+    ...changes,
+  } as AccessRequest);
+  fixture = TestBed.createComponent(AccessRequestManagerDetail);
+  httpMock = TestBed.inject(HttpTestingController);
+
+  fixture.componentRef.setInput('id', '9409db13-e23e-433e-9afa-544d8f25b720');
+
+  TestBed.tick();
+  const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev');
+  expect(req.request.method).toBe('GET');
+  req.flush({ ext_id: 'ls-id-of-joe@ls-aai.dev', email: 'joe@login.org' });
+
+  await fixture.whenStable();
 }
 
 describe('AccessRequestManagerDetail', () => {
-  let fixture: ComponentFixture<AccessRequestManagerDetail>;
-  let httpMock: HttpTestingController;
-
-  beforeEach(async () => {
-    TestBed.configureTestingModule({
-      imports: [AccessRequestManagerDetail],
-      providers: [
-        { provide: IvaService, useClass: MockIvaService },
-        { provide: AccessRequestService, useClass: MockAccessRequestService },
-        { provide: ConfigService, useClass: MockConfigService },
-        { provide: ActivatedRoute, useValue: fakeActivatedRoute },
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
-    });
-
-    await TestBed.compileComponents();
-    fixture = TestBed.createComponent(AccessRequestManagerDetail);
-    httpMock = TestBed.inject(HttpTestingController);
-
-    fixture.componentRef.setInput('id', '9409db13-e23e-433e-9afa-544d8f25b720');
-
-    TestBed.tick();
-    const req = httpMock.expectOne('http://mock.dev/auth/users/doe@test.dev');
-    expect(req.request.method).toBe('GET');
-    req.flush({ ext_id: 'ls-id-of-joe@ls-aai.dev', email: 'joe@login.org' });
-
-    await fixture.whenStable();
-  });
+  beforeEach(() => render());
 
   afterEach(() => {
     httpMock.verify();
@@ -206,12 +226,13 @@ describe('AccessRequestManagerDetail', () => {
     );
   });
 
-  it('should preselect the best IVA again when the IVAs reload', async () => {
+  /**
+   * Select the postal address IVA, which is not the best one, and reload the IVAs.
+   * @returns the radio button of the postal address
+   */
+  async function selectPostalIvaAndReload(): Promise<HTMLElement> {
     const postal = screen.getByRole('radio', {
       name: 'Postal Address: c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
-    });
-    Object.assign(TestBed.inject(AccessRequestService), {
-      updateRequest: () => of(undefined),
     });
     await userEvent.click(postal);
     await fixture.whenStable();
@@ -222,8 +243,29 @@ describe('AccessRequestManagerDetail', () => {
     await fixture.whenStable();
     ivas.isLoading.set(false);
     await fixture.whenStable();
+    return postal;
+  }
+
+  it('should preselect the best IVA again when the IVAs reload', async () => {
+    const error = new HttpErrorResponse({ status: 500 });
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => throwError(() => error),
+    });
+    vitest.spyOn(console, 'debug').mockImplementation(() => undefined);
+
+    await selectPostalIvaAndReload();
 
     expect(screen.getByRole('radio', { name: 'SMS: +441234567890004' })).toBeChecked();
+  });
+
+  it('should keep a saved IVA when the IVAs reload', async () => {
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => of(null),
+    });
+
+    const postal = await selectPostalIvaAndReload();
+
+    expect(postal).toBeChecked();
   });
 
   it('should show the reason when the backend refuses a change', () => {
@@ -255,5 +297,74 @@ describe('AccessRequestManagerDetail', () => {
     expect(showError).toHaveBeenCalledExactlyOnceWith(
       'Access request could not be modified. Please try again later',
     );
+  });
+});
+
+describe('AccessRequestManagerDetail access period warning', () => {
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  /**
+   * Get an ISO date the given number of days from now.
+   * @param days - the number of days, negative for the past
+   * @returns the date in ISO format
+   */
+  const daysFromNow = (days: number) =>
+    new Date(Date.now() + days * DAY_MS).toISOString();
+
+  it('should not warn when enough of the access period remains', async () => {
+    await render();
+
+    expect(screen.queryByText(/access period/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit access duration' })).toBeNull();
+  });
+
+  it('should warn when the access period has ended', async () => {
+    await render({ access_starts: daysFromNow(-30), access_ends: daysFromNow(-23) });
+
+    expect(
+      screen.getByText(/The requested access period ended on \d{4}-\d{2}-\d{2}\./),
+    ).toBeVisible();
+    expect(screen.getByText(/Set a new end date before allowing/)).toBeVisible();
+  });
+
+  it('should warn when less than the minimum access period remains', async () => {
+    await render({ access_ends: daysFromNow(3) });
+
+    expect(
+      screen.getByText(/The access period ends on .*, less than 7 days from now\./),
+    ).toBeVisible();
+  });
+
+  it('should not warn about a request that is no longer pending', async () => {
+    await render({
+      status: AccessRequestStatus.denied,
+      access_starts: daysFromNow(-30),
+      access_ends: daysFromNow(-23),
+    });
+
+    expect(screen.queryByText(/access period/)).toBeNull();
+  });
+
+  it('should open the duration editor from the warning', async () => {
+    await render({ access_ends: daysFromNow(-1) });
+    expect(screen.queryByLabelText('End date')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit access duration' }));
+
+    expect(screen.getByLabelText('End date')).toBeVisible();
+  });
+
+  it('should drop the warning once a new end date is saved', async () => {
+    await render({ access_ends: daysFromNow(-1) });
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => of(null),
+    });
+
+    fixture.componentInstance.saved(new Map([['access_ends', daysFromNow(30)]]));
+    await fixture.whenStable();
+
+    expect(screen.queryByText(/access period/)).toBeNull();
   });
 });
