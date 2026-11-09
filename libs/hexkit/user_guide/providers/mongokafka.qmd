@@ -82,6 +82,7 @@ Republishing events:
 Correlation & Event IDs:
 
 - The current correlation ID is captured and stored on each write.
+  A write raises a `CorrelationIdContextError` if no correlation ID is set in the context.
 - During (re)publish, the stored correlation ID is re-applied to the context so downstream consumers see a consistent trace.
 - Event IDs are generated every time the data is (re)published, and the ID is stored after the event is published.
   This is different from the Persistent Publisher in that the latter will reuse the same event ID.
@@ -107,10 +108,13 @@ Migrations that change documents before the service starts are the exception; th
 The following shows a contrived example of how to use the Outbox Publisher:
 
 ```python
-from pydantic import BaseModel
 from uuid import UUID
 
-from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory, MongoKafkaConfig
+from pydantic import BaseModel
+
+from hexkit.correlation import set_new_correlation_id
+from hexkit.providers.mongokafka import MongoKafkaConfig, MongoKafkaDaoPublisherFactory
+
 
 # Define a model
 class User(BaseModel):
@@ -140,17 +144,20 @@ async with MongoKafkaDaoPublisherFactory.construct(config=config) as factory:
         autopublish=True,
     )
 
-    # Create or update data -> publishes a CHANGE event
-    await user_dao.upsert(
-        User(
-            user_id=UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"),
-            name="Jane",
-            email="jane@example.com",
+    # Writes need a correlation ID in the context. A service usually sets it
+    # per request or gets it from the consumed event; here, set a new one.
+    async with set_new_correlation_id():
+        # Create or update data -> publishes a CHANGE event
+        await user_dao.upsert(
+            User(
+                user_id=UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"),
+                name="Jane",
+                email="jane@example.com",
+            )
         )
-    )
 
-    # Delete data -> publishes a DELETE tombstone
-    await user_dao.delete(UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"))
+        # Delete data -> publishes a DELETE tombstone
+        await user_dao.delete(UUID("2e3975db-2c80-49f1-9f6b-cbb0174ca8f3"))
 
     # Operational controls
     await user_dao.publish_pending()  # Drain any unpublished changes
@@ -258,28 +265,127 @@ There are three parameters unique to the Persistent Publisher: `compacted_topics
 ### Usage example in service 'abc'
 
 ```python
-from hexkit.providers.mongokafka import PersistentKafkaPublisher
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from hexkit.providers.mongodb import MongoDbDaoFactory
-from hexkit.providers.mongokafka import MongoKafkaConfig
+from hexkit.providers.mongokafka import MongoKafkaConfig, PersistentKafkaPublisher
 
 # Normally, topics would be defined in configuration. This is only for conciseness:
 COMPACTED_TOPICS = {"users"}
 TOPICS_NOT_STORED = {"notifications"}
 
+
 @asynccontextmanager
 async def get_persistent_publisher(
-    config: MongoKafkaConfig, dao_factory: MongoDbDaoFactory | None = None
-) -> AsyncGenerator[PersistentKafkaPublisher]:
+    config: MongoKafkaConfig,
+) -> AsyncGenerator[PersistentKafkaPublisher, None]:
     """Construct and return a PersistentKafkaPublisher."""
     async with (
-        MongoDbDaoFactory.construct(config=config) as _dao_factory,
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
         PersistentKafkaPublisher.construct(
             config=config,
-            dao_factory=_dao_factory,
+            dao_factory=dao_factory,
             compacted_topics=COMPACTED_TOPICS,
-            topics_not_stored=TOPICS_NOT_STORED
+            topics_not_stored=TOPICS_NOT_STORED,
             collection_name="abcPersistedEvents",
         ) as persistent_publisher,
     ):
         yield persistent_publisher
 ```
+
+## MongoDB + Kafka Test Utils
+
+Integration tests of the Outbox Publisher and the Persistent Publisher need a MongoDB and a Kafka container at the same time.
+`hexkit.providers.mongokafka.testutils` combines the [MongoDB fixtures](mongodb.qmd#mongodb-test-utils) and the [Kafka fixtures](kafka/test_utils.qmd) so that a test gets one `MongoKafkaConfig` for both containers.
+There is no separate extra for it; install the extras of both fixtures, which the `test` extra also includes:
+
+```sh
+pip install hexkit[test-mongodb,test-akafka]
+```
+
+### Fixtures
+
+The module provides two fixtures:
+
+- `mongo_kafka_fixture` (fixture name `mongo_kafka`) is function-scoped and yields a [`MongoKafkaFixture`](#the-mongokafkafixture).
+- `mongo_kafka_config_fixture` (fixture name `mongo_kafka_config`) is session-scoped and yields only the combined `MongoKafkaConfig`, for use in session-scoped fixtures of your own.
+
+Neither starts a container.
+`mongo_kafka` builds on the fixtures named `mongodb` and `kafka`, and `mongo_kafka_config` on those named `mongodb_container` and `kafka_container`.
+Import all of them into the test module or its `conftest.py`, hence the `# noqa: F401` comments.
+
+This test checks that the `users` DAO from the [usage example](#usage-example) publishes a change event on insert.
+The DAO's writes raise a `CorrelationIdContextError` without a [correlation ID](../observability_tools/correlation_ids.qmd) in the context, so the test sets one with `set_new_correlation_id()`:
+
+```python
+from uuid import uuid4
+
+import pytest
+
+from hexkit.correlation import set_new_correlation_id
+from hexkit.providers.akafka.testutils import (
+    ExpectedEvent,
+    kafka_container_fixture,  # noqa: F401
+    kafka_fixture,  # noqa: F401
+)
+from hexkit.providers.mongodb.testutils import (
+    mongodb_container_fixture,  # noqa: F401
+    mongodb_fixture,  # noqa: F401
+)
+from hexkit.providers.mongokafka import (
+    CHANGE_EVENT_TYPE,
+    MongoKafkaDaoPublisherFactory,
+)
+from hexkit.providers.mongokafka.testutils import (
+    MongoKafkaFixture,
+    mongo_kafka_fixture,  # noqa: F401
+)
+
+
+@pytest.mark.asyncio()
+async def test_user_outbox(mongo_kafka: MongoKafkaFixture):
+    user = User(user_id=uuid4(), name="Jane", email="jane@example.com")
+
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        user_dao = await factory.get_dao(
+            name="users",
+            dto_model=User,
+            id_field="user_id",
+            dto_to_event=user_to_event,
+            event_topic="users.outbox",
+        )
+        async with (
+            set_new_correlation_id(),
+            mongo_kafka.kafka.expect_events(
+                events=[
+                    ExpectedEvent(
+                        payload=user_to_event(user),
+                        type_=CHANGE_EVENT_TYPE,
+                        key=str(user.user_id),
+                    )
+                ],
+                in_topic="users.outbox",
+            ),
+        ):
+            await user_dao.insert(user)
+```
+
+`mongo_kafka` does no cleanup of its own: the `mongodb` and `kafka` fixtures do it.
+With `mongodb_fixture` and `kafka_fixture`, as above, each test starts with no collections and empty topics.
+To keep state between tests, import `persistent_mongodb_fixture` and `persistent_kafka_fixture` instead.
+
+Unlike the MongoDB and Kafka fixtures, these two have no factory functions, so their scopes and names are fixed.
+If you rename the MongoDB or Kafka fixtures with their factory functions, `mongo_kafka` and `mongo_kafka_config` no longer find them.
+
+### The MongoKafkaFixture
+
+A `MongoKafkaFixture` is a named tuple with three fields:
+
+- `mongodb`: the `MongoDbFixture`, whose `client` lets a test inspect stored documents, including their `__metadata__`.
+- `kafka`: the [`KafkaFixture`](kafka/test_utils.qmd#the-kafkafixture), for publishing test events and asserting on published ones.
+- `config`: the `MongoKafkaConfig` that combines the configs of both fixtures, to pass to `MongoKafkaDaoPublisherFactory.construct()` or `PersistentKafkaPublisher.construct()`.
+
+The Persistent Publisher also needs a DAO factory; pass it `mongo_kafka.mongodb.dao_factory`.

@@ -19,8 +19,175 @@ title: "In-Memory (Testing)"
  limitations under the License.
 -->
 
-In-memory providers implement `KeyValueStoreProtocol` for lightweight test setups without external infrastructure dependencies.
+The in-memory providers in `hexkit.providers.testing` implement hexkit's protocols with plain Python data structures, so unit tests can run the code under test without a database, broker or object storage.
+They keep everything in the test process and expose their internal state, so a test can set up data and inspect the result directly.
 
-Available variants are `InMemBytesKeyValueStore`, `InMemStrKeyValueStore`, `InMemJsonKeyValueStore`, and `InMemDtoKeyValueStore`.
+::: {.callout-warning}
+These providers are for tests only.
+They do not persist data, are not safe for concurrent use across threads or processes, and fake parts of the behavior described below.
+:::
 
-API reference: [hexkit.providers.testing](../../reference/index.qmd#provider-in-memory-testing)
+| Protocol | In-memory provider | Import from |
+| --- | --- | --- |
+| [`Dao`](../protocols/dao.qmd) | Class created by `new_mock_dao_class()` | `hexkit.providers.testing` |
+| [`EventPublisherProtocol`](kafka/publisher.qmd) | `InMemEventPublisher`, with `InMemEventStore` | `hexkit.providers.testing` |
+| [`KeyValueStoreProtocol`](../protocols/index.qmd#keyvaluestoreprotocol) | `InMemBytesKeyValueStore`, `InMemStrKeyValueStore`, `InMemJsonKeyValueStore`, `InMemDtoKeyValueStore` | `hexkit.providers.testing` |
+| [`ObjectStorageProtocol`](../protocols/objstorage.qmd) | `InMemObjectStorage` | `hexkit.providers.testing.objstorage` |
+
+There is no in-memory event subscriber: to test a translator, call its `consume()` method directly, as shown in [Kafka Test Utils](kafka/test_utils.qmd).
+
+The providers need no infrastructure, but they do need the `mongodb` extra, because the mock DAO reuses the MongoDB provider's document conversion and `hexkit.providers.testing` imports it on load:
+
+```sh
+pip install hexkit[mongodb]
+```
+
+For tests against real infrastructure, use the testcontainer fixtures instead: [Kafka](kafka/test_utils.qmd), [MongoDB](mongodb.qmd#mongodb-test-utils) and [S3](s3.qmd#s3-object-storage-test-utils).
+The in-memory providers suit unit tests of the core and of translators; the fixtures suit integration tests that need the backend's real behavior.
+
+## Mock DAO
+
+`new_mock_dao_class()` returns a DAO class for one DTO model.
+Each instance stores its resources in a dictionary, so create a new instance per test to start empty:
+
+```python
+from pydantic import BaseModel
+
+from hexkit.providers.testing import new_mock_dao_class
+
+
+class Book(BaseModel):
+    id: str
+    title: str
+    year: int
+
+
+BookDao = new_mock_dao_class(dto_model=Book, id_field="id")
+
+
+async def test_add_book():
+    book_dao = BookDao()
+    catalog = Catalog(book_dao=book_dao)  # the code under test
+
+    await catalog.add_book(id="b1", title="Dune", year=1965)
+
+    assert book_dao.latest == Book(id="b1", title="Dune", year=1965)
+    assert await book_dao.get_by_id("b1") == book_dao.latest
+```
+
+The mock DAO implements the [CRUD and find operations](../protocols/dao.qmd#crud-operations) of the `Dao` protocol, including pagination and sorting in `find_all()`, and raises the same errors as the MongoDB provider.
+It converts DTOs to documents with the MongoDB provider's own functions, so the stored form matches what the MongoDB DAO would write.
+
+Two attributes help with test setup and assertions:
+
+- `resources`: the dictionary of stored documents, keyed by resource ID.
+- `latest`: the most recently inserted resource, as a DTO.
+  It raises a `MockDAOEmptyError` if the DAO is empty.
+
+### Query Operators
+
+By default (`handle_mql=True`), filters may use these MongoDB query operators: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$and`, `$or`, `$nor`, `$not` and `$exists`.
+The full set is in `hexkit.providers.testing.dao.SUPPORTED_MQL_OPERATORS`.
+With `handle_mql=False`, a filter only matches fields by equality, including nested fields in dot notation.
+
+The operators follow Python semantics, except for comparisons with `None` or missing fields, which match MongoDB.
+Other edge cases, such as ordering values of different types, may behave differently from MongoDB; cover those with integration tests against the [MongoDB fixture](mongodb.qmd#mongodb-test-utils).
+
+### Limitations
+
+- **No factory:** the mock DAO does not implement `DaoFactoryProtocol`.
+  Inject DAO instances directly, or wrap the class in a small factory of your own.
+- **No indexes:** `insert()` only checks for a duplicate ID, so it never raises a `UniqueConstraintViolationError`.
+- **No transactions:** `with_transaction()` raises `NotImplementedError`.
+- **No publishing:** `publish_pending()` and `republish()` are `AsyncMock` objects, so the mock DAO can replace a [`DaoPublisher`](../protocols/daopublisher.qmd), but it publishes no events.
+  A test can still assert that these methods were called.
+  Both mocks are shared by every mock DAO class and instance, so call `reset_mock()` on them before a test that asserts on calls.
+
+## In-Memory Event Publisher
+
+`InMemEventPublisher` implements the `EventPublisherProtocol` and puts every published event into an `InMemEventStore`, which keeps one queue per topic.
+`event_store.get(topic)` removes and returns the oldest event of a topic, and raises a `TopicExhaustedError` when the topic has none left.
+[Kafka Test Utils](kafka/test_utils.qmd) shows a complete example.
+
+Each stored event is an `Event` with only three fields: `type_`, `key` and `payload`.
+The store drops the event ID and headers, including the correlation ID, so assert on those with the [Kafka fixture](kafka/test_utils.qmd) instead.
+
+To let several publishers write to the same store, create the store first and pass it in:
+
+```python
+from hexkit.providers.testing import InMemEventPublisher, InMemEventStore
+
+event_store = InMemEventStore()
+user_publisher = InMemEventPublisher(event_store=event_store)
+audit_publisher = InMemEventPublisher(event_store=event_store)
+```
+
+## In-Memory Key-Value Stores
+
+The four key-value stores implement the `KeyValueStoreProtocol` with the same [value-type variants](../protocols/index.qmd#keyvaluestoreprotocol) as the production providers: `Bytes`, `Str`, `Json` and `Dto`.
+They encode each value to bytes before storing it, as the production providers do, so a value that the production provider could not serialize fails here too.
+
+Create a store with `construct()`, like the production providers, or with a plain constructor call:
+
+```python
+from hexkit.providers.testing import InMemDtoKeyValueStore, InMemStrKeyValueStore
+
+async with InMemDtoKeyValueStore.construct(dto_model=Book) as book_store:
+    await book_store.set("b1", Book(id="b1", title="Dune", year=1965))
+
+token_store = InMemStrKeyValueStore(key_prefix="token:")
+```
+
+Both forms accept two optional arguments:
+
+- `key_prefix`: a string prepended to every key, as with the production providers.
+- `backing_store`: a dictionary of encoded values to use instead of a new, empty one.
+  Pass the same dictionary to several stores to share data between them, or keep a reference to it to inspect the stored bytes.
+
+Every store raises a `TypeError` if a value does not match its variant, such as a `str` passed to a `Bytes` store.
+The `Dto` store also requires the `dto_model` argument.
+
+## In-Memory Object Storage
+
+`InMemObjectStorage` implements the `ObjectStorageProtocol`.
+It is not exported by `hexkit.providers.testing`, so import it from the `objstorage` submodule:
+
+```python
+from hexkit.providers.testing.objstorage import InMemObjectStorage
+```
+
+The storage tracks which buckets and object IDs exist, but no file content.
+It validates bucket and object IDs with the same rules as every `ObjectStorageProtocol` provider.
+Since no file is ever transferred, objects only appear in three ways:
+
+- `complete_multipart_upload()` adds the object to its bucket.
+- `copy_object()` adds the destination object.
+- A test adds the object ID to `storage.buckets[bucket_id]` directly.
+
+A presigned POST from `get_object_upload_url()` does *not* create the object, because no client uploads anything to it.
+To simulate such an upload, add the object ID directly:
+
+```python
+storage = InMemObjectStorage()
+await storage.create_bucket("inbox")
+
+storage.buckets["inbox"].add("file-1")  # simulate a finished upload
+
+assert await storage.does_object_exist(bucket_id="inbox", object_id="file-1")
+```
+
+Several operations return fixed or fake values:
+
+| Operation | Returns |
+| --- | --- |
+| `get_object_upload_url()`, `get_part_upload_url()`, `get_object_download_url()` | URLs under `https://storage.test` that point to no server |
+| `get_object_size()` | Always `1024` |
+| `get_object_etag()` | `"etag_for_<object_id>"` |
+| `get_object_metadata()` | `{"ContentLength": 1024, "ETag": "etag_for_<object_id>"}` |
+| `list_parts()` | Dummy parts of 100 bytes each, three by default |
+
+Checking an object's content with the `object_md5sum` argument of `does_object_exist()` raises a `NotImplementedError`.
+
+## API Reference
+
+See [hexkit.providers.testing](../../reference/index.qmd#provider-in-memory-testing).

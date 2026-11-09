@@ -384,6 +384,7 @@ reference:
       - providers.testing.InMemStrKeyValueStore
       - providers.testing.InMemJsonKeyValueStore
       - providers.testing.InMemDtoKeyValueStore
+      - providers.testing.objstorage.InMemObjectStorage
       - providers.testing.new_mock_dao_class
       - providers.testing.MockDAOEmptyError
       - providers.testing.TopicExhaustedError

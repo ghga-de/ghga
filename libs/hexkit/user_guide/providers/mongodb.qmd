@@ -56,7 +56,7 @@ config = MongoDbConfig(
 The recommended way to set up the factory is the `construct()` async context manager, which opens the MongoDB client on entry and closes it on exit:
 
 ```python
-from pydantic import BaseModel, ConfigDict, UUID4
+from pydantic import UUID4, BaseModel, ConfigDict
 
 from hexkit.protocols.dao import UUID4Field
 from hexkit.providers.mongodb import MongoDbDaoFactory
@@ -248,28 +248,8 @@ Every single DAO operation is atomic on its own (MongoDB guarantees single-docum
 
 ### Testing
 
-For integration tests, the `test-mongodb` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that spin up a disposable MongoDB instance.
-The `mongodb_fixture` yields a `MongoDbFixture` whose `dao_factory` attribute is a ready-to-use `MongoDbDaoFactory`:
-
-```python
-from hexkit.providers.mongodb.testutils import (
-    MongoDbFixture,
-    mongodb_container_fixture,  # noqa: F401
-    mongodb_fixture,  # noqa: F401
-)
-
-
-async def test_book_dao(mongodb: MongoDbFixture):
-    book_dao = await mongodb.dao_factory.get_dao(
-        name="books", dto_model=Book, id_field="id"
-    )
-    ...
-```
-
-For unit tests that should not touch a database at all, the [in-memory mock DAO](testing.qmd) mimics the MongoDB provider's behavior, including a subset of the query operators.
-See also the [MongoDB Test Utils](#mongodb-test-utils) section below.
-
-The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py) double as an extensive collection of runnable usage examples.
+For integration tests against a real database, use the fixtures in [MongoDB Test Utils](#mongodb-test-utils).
+For unit tests without a database, the [in-memory mock DAO](testing.qmd#mock-dao) mimics the MongoDB DAO, including a subset of the query operators.
 
 ## MongoDB Migration Tools
 
@@ -286,3 +266,73 @@ Available variants are `MongoDbBytesKeyValueStore`, `MongoDbStrKeyValueStore`, `
 API reference: [hexkit.providers.mongodb](../../reference/index.qmd#provider-mongodb)
 
 ## MongoDB Test Utils
+
+For integration tests, the `test-mongodb` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that start a disposable MongoDB container from the image named in `MONGODB_IMAGE`.
+The `test` extra includes it:
+
+```sh
+pip install hexkit[test-mongodb]
+```
+
+All utilities live in `hexkit.providers.mongodb.testutils`.
+They serve tests of the DAO and of the KV stores, and the [MongoDB + Kafka test utils](mongokafka.qmd#mongodb-kafka-test-utils) build on them.
+
+### Fixtures
+
+The `mongodb_fixture` yields a `MongoDbFixture` object under the fixture name `mongodb`.
+Both the container fixture and the MongoDB fixture must be imported into the test module or its `conftest.py` for pytest to resolve them, hence the `# noqa: F401` comments.
+This test inserts a `Book` from [Creating DAOs](#creating-daos) through a DAO and reads the stored document with the fixture's client:
+
+```python
+from uuid import uuid4
+
+import pytest
+
+from hexkit.providers.mongodb.testutils import (
+    MongoDbFixture,
+    mongodb_container_fixture,  # noqa: F401
+    mongodb_fixture,  # noqa: F401
+)
+
+
+@pytest.mark.asyncio()
+async def test_book_document(mongodb: MongoDbFixture):
+    book_dao = await mongodb.dao_factory.get_dao(
+        name="books", dto_model=Book, id_field="id"
+    )
+    book = Book(id=uuid4(), title="Refactoring", author="Martin Fowler", pages=448)
+    await book_dao.insert(book)
+
+    books = mongodb.client[mongodb.config.db_name]["books"]
+    assert books.find_one({"_id": book.id})["title"] == "Refactoring"
+```
+
+The fixtures split the work between two scopes:
+
+- `mongodb_container_fixture` (fixture name `mongodb_container`) is session-scoped: one MongoDB container is started per test session and reused by all tests.
+  It yields a `MongoDbContainerFixture`, the testcontainers container with a `mongodb_config` attribute for the database `test`.
+- `mongodb_fixture` (fixture name `mongodb`) is function-scoped: it drops all collections of the database before each test.
+  `clean_mongodb_fixture` is an alias for it.
+- `persistent_mongodb_fixture` is the variant without the cleanup, for tests that intentionally share state.
+  It also uses the fixture name `mongodb`, so to use both variants in one module, create one of them under another name with its factory function.
+
+If the default scopes or names do not fit your test setup, the factory functions `get_mongodb_container_fixture`, `get_clean_mongodb_fixture` and `get_persistent_mongodb_fixture` create the same fixtures with custom `scope` and `name` arguments.
+For example, `get_persistent_mongodb_fixture(name="mongodb_persistent")` creates the persistent variant under the name `mongodb_persistent`.
+
+Dropping a collection also drops its [indexes](#defining-indexes), which `get_dao()` creates.
+Create DAOs inside the test or in function-scoped fixtures that depend on `mongodb`, so that they are created after the cleanup.
+A DAO created before the cleanup, such as in a session-scoped fixture, has no indexes left and raises no `UniqueConstraintViolationError`.
+
+### The MongoDbFixture
+
+A `MongoDbFixture` has three attributes and one method:
+
+- `client`: a synchronous pymongo `MongoClient`, for arranging and inspecting documents directly, as in the example above.
+- `config`: a `MongoDbConfig` for the database `test`, to pass to your own DAO factories or [KV stores](#mongodb-kv-store-providers).
+- `dao_factory`: a `MongoDbDaoFactory` for the database, open for the lifetime of the fixture.
+- `empty_collections()`: drops collections of the database, all of them by default.
+  Pass `collections` to drop only some, and `exclude_collections` to keep some.
+  It raises a `RuntimeError` if MongoDB refuses the drop.
+
+For unit tests without a container, use the [in-memory providers](testing.qmd) instead.
+The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py) show further usage of the DAO.
