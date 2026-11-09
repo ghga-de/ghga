@@ -11,7 +11,7 @@ import { allIvasOfDoe } from '@app/../mocks/data';
 import { IvaService } from '@app/ivas/services/iva';
 import { AccessRequestManagerDetail } from './access-request-manager-detail';
 
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -22,10 +22,11 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { MockAccessRequestService } from '@app/access-requests/services/access-request.mock-service';
 import { ConfigService } from '@app/shared/services/config';
 import { ConfirmationService } from '@app/shared/services/confirmation';
+import { Notifier } from '@app/shared/services/notification';
 import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 /**
  * Mock the IVA service as needed by the access request manager dialog component
@@ -223,5 +224,36 @@ describe('AccessRequestManagerDetail', () => {
     await fixture.whenStable();
 
     expect(screen.getByRole('radio', { name: 'SMS: +441234567890004' })).toBeChecked();
+  });
+
+  it('should show the reason when the backend refuses a change', () => {
+    const showError = vitest.spyOn(TestBed.inject(Notifier), 'showError');
+    const detail = 'Access end date must be later than access start date';
+    const error = new HttpErrorResponse({ status: 422, error: { detail } });
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => throwError(() => error),
+    });
+    vitest.spyOn(console, 'debug').mockImplementation(() => undefined);
+
+    fixture.componentInstance.saveIva();
+
+    expect(showError).toHaveBeenCalledExactlyOnceWith(
+      `Access request could not be modified: ${detail}`,
+    );
+  });
+
+  it('should show a generic message when the backend fails', () => {
+    const showError = vitest.spyOn(TestBed.inject(Notifier), 'showError');
+    const error = new HttpErrorResponse({ status: 500, error: { detail: 'Boom' } });
+    Object.assign(TestBed.inject(AccessRequestService), {
+      updateRequest: () => throwError(() => error),
+    });
+    vitest.spyOn(console, 'debug').mockImplementation(() => undefined);
+
+    fixture.componentInstance.saveIva();
+
+    expect(showError).toHaveBeenCalledExactlyOnceWith(
+      'Access request could not be modified. Please try again later',
+    );
   });
 });

@@ -313,8 +313,15 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
       },
       error: (err) => {
         console.debug(err);
+        // a 422 carries the reason the backend refused the change
+        const detail =
+          err instanceof HttpErrorResponse && err.status === 422
+            ? err.error?.detail
+            : undefined;
         this.#notificationService.showError(
-          'Access request could not be modified. Please try again later',
+          typeof detail === 'string'
+            ? `Access request could not be modified: ${detail}`
+            : 'Access request could not be modified. Please try again later',
         );
       },
     });

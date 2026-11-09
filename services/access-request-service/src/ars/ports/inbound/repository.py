@@ -158,6 +158,7 @@ class AccessRequestRepositoryPort(ABC):
         """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
+        The access period is only checked when it is changed or the request is allowed.
 
         Only data stewards may use this method.
 
