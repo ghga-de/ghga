@@ -194,7 +194,6 @@ GET_VAULT_FIXTURE_DEPRECATION_MESSAGE = (
 )
 
 
-# TODO: Remove `get_vault_fixture` when moving hexkit to v11.0.0
 def get_vault_fixture(scope: PytestScope = "function", name: str = "vault"):
     """Get a persistent Vault fixture with desired scope and name.
 
