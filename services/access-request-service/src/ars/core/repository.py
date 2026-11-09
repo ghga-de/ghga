@@ -331,7 +331,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
 
         if status != AccessRequestStatus.PENDING:
             update["status"] = status
-            update["status_changed"] = now_utc_ms_prec()
+            update["status_changed"] = now
             update["changed_by"] = user_id
 
         if patch_data.ticket_id is not None:

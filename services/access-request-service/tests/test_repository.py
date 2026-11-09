@@ -1177,14 +1177,12 @@ async def test_allow_request_whose_access_period_has_passed(
     assert access_grants.last_grant == "nothing granted so far"
 
 
-async def test_allow_request_with_past_end_date():
+async def test_allow_request_with_past_end_date(caplog: pytest.LogCaptureFixture):
     """Test that allowing with a new end date in the past blames that date."""
     await expire_access_period(REQUEST_IDS[3])
+    message = "Access end date must be later than access start date"
 
-    with pytest.raises(
-        repository.AccessRequestInvalidDuration,
-        match="Access end date must be later than access start date",
-    ):
+    with pytest.raises(repository.AccessRequestInvalidDuration, match=message):
         await repository.update(
             REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
@@ -1195,6 +1193,7 @@ async def test_allow_request_with_past_end_date():
             auth_context=auth_context_steward,
         )
 
+    assert message in caplog.messages
     assert access_grants.last_grant == "nothing granted so far"
 
 
