@@ -25,6 +25,8 @@ jobs:
           BODY: ${{ github.event.pull_request.body }}
           HEAD: ${{ github.head_ref }}
           BASE: ${{ github.base_ref }}
+        # Only an explicit bash sets pipefail, so a failed diff fails the step.
+        shell: bash
         run: |
           git diff --name-only HEAD^1 HEAD \
             | python3 scripts/check_upgrade_note.py \
