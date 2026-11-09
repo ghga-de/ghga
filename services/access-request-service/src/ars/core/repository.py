@@ -252,6 +252,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
+        The access period is only checked when it is changed or the request is allowed.
 
         Only data stewards may use this method.
 
@@ -292,24 +293,30 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         # force start to be not earlier than the current date
         access_starts = max(now_utc_ms_prec(), access_starts)
         access_ends = patch_data.access_ends or request.access_ends
-        if access_starts >= access_ends:
-            invalid_duration_error = self.AccessRequestInvalidDuration(
-                "Access end date must be later than access start date"
-            )
-            raise invalid_duration_error
-        # even the data steward may not extend the access grant ad infinitum
-        if access_ends > access_starts + self._max_extend_duration:
-            invalid_duration_error = self.AccessRequestInvalidDuration(
-                "Access duration is too long"
-            )
-            log.error(invalid_duration_error)
-            raise invalid_duration_error
 
-        update: dict[str, Any] = {
-            "iva_id": iva_id,
-            "access_starts": access_starts,
-            "access_ends": access_ends,
-        }
+        update: dict[str, Any] = {"iva_id": iva_id}
+
+        # check the period only when it changes or access is granted,
+        # so that a request whose period has passed can still be denied
+        period_changed = (
+            patch_data.access_starts is not None or patch_data.access_ends is not None
+        )
+        if period_changed or status == AccessRequestStatus.ALLOWED:
+            if access_starts >= access_ends:
+                invalid_duration_error = self.AccessRequestInvalidDuration(
+                    "Access end date must be later than access start date"
+                )
+                log.error(invalid_duration_error)
+                raise invalid_duration_error
+            # even the data steward may not extend the access grant ad infinitum
+            if access_ends > access_starts + self._max_extend_duration:
+                invalid_duration_error = self.AccessRequestInvalidDuration(
+                    "Access duration is too long"
+                )
+                log.error(invalid_duration_error)
+                raise invalid_duration_error
+            update["access_starts"] = access_starts
+            update["access_ends"] = access_ends
 
         if status != AccessRequestStatus.PENDING:
             update["status"] = status

@@ -1117,6 +1117,68 @@ async def test_set_invalid_access_end_date():
     assert access_grants.last_grant == "nothing granted so far"
 
 
+async def expire_access_period(request_id: UUID4) -> AccessRequest:
+    """Move the access period of the given request into the past."""
+    request = await access_request_dao.get_by_id(request_id)
+    past = now_utc_ms_prec() - timedelta(days=30)
+    expired_request = request.model_copy(
+        update={"access_starts": past, "access_ends": past + timedelta(days=7)}
+    )
+    await access_request_dao.update(expired_request)
+    return expired_request
+
+
+@pytest.mark.parametrize(
+    "patch_data",
+    [
+        AccessRequestPatchData(status=AccessRequestStatus.DENIED),
+        AccessRequestPatchData(iva_id=uuid4()),
+        AccessRequestPatchData(ticket_id="GSI-1234"),
+        AccessRequestPatchData(internal_note="Some internal note"),
+        AccessRequestPatchData(note_to_requester="Some note to the requester"),
+    ],
+    ids=["deny", "iva", "ticket", "internal_note", "note_to_requester"],
+)
+async def test_change_request_whose_access_period_has_passed(
+    patch_data: AccessRequestPatchData,
+):
+    """Test that a request whose access period has passed can still be changed."""
+    expired_request = await expire_access_period(REQUEST_IDS[3])
+
+    await repository.update(
+        REQUEST_IDS[3], patch_data=patch_data, auth_context=auth_context_steward
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    patched = patch_data.model_dump(exclude_none=True)
+    assert changed_request.model_dump(include=set(patched)) == patched
+    assert changed_request.access_starts == expired_request.access_starts
+    assert changed_request.access_ends == expired_request.access_ends
+
+
+async def test_allow_request_whose_access_period_has_passed(
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that a request cannot be allowed when its access period has passed."""
+    await expire_access_period(REQUEST_IDS[3])
+
+    with pytest.raises(
+        repository.AccessRequestInvalidDuration,
+        match="Access end date must be later than access start date",
+    ):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=uuid4(), status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert "Access end date must be later than access start date" in caplog.messages
+    assert access_grants.last_grant == "nothing granted so far"
+
+
 async def test_set_past_access_start_date():
     """Test setting an invalid access start date."""
     request = await access_request_dao.get_by_id(REQUEST_IDS[3])
