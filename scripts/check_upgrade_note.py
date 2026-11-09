@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Check that a pull request description says what an upgrade requires.
 
-Every pull request description needs a line starting with `Upgrade:`: one per action a
-deployment or a tool's user must take, or `Upgrade: none`. The release notes collect
-these lines from the descriptions (scripts/release_notes.py), so they are written once,
-while the release they land in is still unknown. Used by
-.github/workflows/upgrade-note.yaml, a required check, so a missing line blocks the
-merge.
+A pull request that changes a config schema, an example config, an `openapi.yaml` or
+chart values needs a line starting with `Upgrade:`: one per action a deployment or a
+tool's user must take, or `Upgrade: none`. Elsewhere the line is optional, for actions
+no such file shows, like a renamed CLI flag. The release notes collect these lines from
+the descriptions (scripts/release_notes.py), so they are written once, while the release
+they land in is still unknown. Used by .github/workflows/upgrade-note.yaml, a required
+check, so a missing line blocks the merge.
 
 Release merges and back-merges between `dev` and `main`, and the branches Renovate and
-the security scan own, are exempt.
+the security scan own, are exempt. Without `--changed`, every pull request needs the
+line, so a broken diff cannot let one through.
 
 Usage:
-    python3 scripts/check_upgrade_note.py --head <branch> --base <branch> -- "<body>"
+    git diff --name-only <base> <head> | python3 scripts/check_upgrade_note.py \
+        --head <branch> --base <branch> --changed - -- "<body>"
 """
 
 from __future__ import annotations
@@ -21,11 +24,25 @@ import argparse
 import os
 import re
 import sys
+from fnmatch import fnmatch
+from pathlib import Path, PurePosixPath
 
 RULES = "docs/conventions.md#names-branches-prs-commits"
 
 EXEMPT_HEADS = ("renovate/", "automated/")
 INTEGRATION_BRANCHES = {"dev", "main"}
+
+# What a deployment reads; `config_schema.json` and `openapi.yaml` are generated from the
+# code, so they change whenever a setting or a route does.
+UPGRADE_FILES = {
+    "config_schema.json",
+    "example_config.yaml",
+    "openapi.yaml",
+    "chart-values.yaml",
+}
+# The generated charts; their `values-local.yaml` and the like serve only the demo and
+# the test bed.
+CHART_VALUES = "deploy/charts/*/values.yaml"
 
 # A long line may continue on lines that start with whitespace, as git folds trailers.
 UPGRADE_LINE = re.compile(
@@ -42,6 +59,22 @@ def is_exempt(head: str, base: str) -> bool:
     return head.startswith(EXEMPT_HEADS) or release_merge
 
 
+def needs_note(paths: list[str]) -> list[str]:
+    """Return the changed files that make an `Upgrade:` line required."""
+    return [
+        path
+        for path in paths
+        if PurePosixPath(path).name in UPGRADE_FILES or fnmatch(path, CHART_VALUES)
+    ]
+
+
+def read_paths(source: str) -> list[str]:
+    """Return the paths in the file `source`, one per line, `-` meaning stdin."""
+    if source == "-":
+        return sys.stdin.read().splitlines()
+    return Path(source).read_text(encoding="utf-8").splitlines()
+
+
 def upgrade_lines(text: str) -> list[str]:
     """Return the text of each `Upgrade:` line, `none` included, folds joined."""
     text = COMMENT.sub("", text.replace("\r\n", "\n"))
@@ -54,10 +87,13 @@ def upgrade_notes(text: str) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Fail unless the description has an `Upgrade:` line or the PR is exempt."""
+    """Fail if the PR needs an `Upgrade:` line and its description has none."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--head", default="", help="the PR's head branch")
     parser.add_argument("--base", default="", help="the PR's base branch")
+    parser.add_argument(
+        "--changed", help="a file of the PR's changed paths, one per line; - for stdin"
+    )
     parser.add_argument("body")
     args = parser.parse_args(argv)
 
@@ -67,6 +103,10 @@ def main(argv: list[str] | None = None) -> int:
     lines = upgrade_lines(args.body)
     if lines:
         print(*(f"Upgrade: {line}" for line in lines), sep="\n")
+        return 0
+    triggers = needs_note(read_paths(args.changed)) if args.changed else None
+    if triggers == []:
+        print("No upgrade note needed: no config, API or chart values changed.")
         return 0
 
     problem = (

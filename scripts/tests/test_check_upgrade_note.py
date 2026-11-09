@@ -1,5 +1,6 @@
 """Tests for check_upgrade_note.py: which descriptions pass, and what the notes read."""
 
+import io
 import sys
 from pathlib import Path
 
@@ -7,7 +8,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from check_upgrade_note import is_exempt, main, upgrade_lines, upgrade_notes
+from check_upgrade_note import (
+    is_exempt,
+    main,
+    needs_note,
+    upgrade_lines,
+    upgrade_notes,
+)
 
 TEMPLATE_HINT = (
     "<!--\nEnd with one line per action an upgrade requires:\nUpgrade: none\n-->"
@@ -86,3 +93,40 @@ def test_check_annotates_and_summarises_in_actions(tmp_path, capsys, monkeypatch
 
 def test_exempt_pull_request_passes_without_a_line():
     assert main(["--head", "dev", "--base", "main", "--", ""]) == 0
+
+
+@pytest.mark.parametrize(
+    ("path", "needed"),
+    [
+        ("services/ucs/config_schema.json", True),
+        ("services/ucs/example_config.yaml", True),
+        ("services/ucs/openapi.yaml", True),
+        ("services/ucs/chart-values.yaml", True),
+        ("deploy/charts/ucs/values.yaml", True),
+        ("deploy/charts/ghga/values-testbed.yaml", False),
+        ("deploy/tests/dummy/values.yaml", False),
+        ("services/ucs/src/ucs/config.py", False),
+        ("docs/conventions.md", False),
+    ],
+)
+def test_files_that_need_a_note(path, needed):
+    """A CLI flag shows in no file, so its note stays optional."""
+    assert needs_note([path]) == ([path] if needed else [])
+
+
+def run(changed: str, body: str, monkeypatch) -> int:
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr("sys.stdin", io.StringIO(changed))
+    return main(["--head", "feat/x", "--base", "dev", "--changed", "-", "--", body])
+
+
+def test_note_is_optional_without_upgrade_files(monkeypatch):
+    assert run("scripts/x.py\ndocs/x.md\n", "", monkeypatch) == 0
+    assert run("", "", monkeypatch) == 0
+
+
+def test_note_is_required_with_upgrade_files(monkeypatch):
+    changed = "scripts/x.py\nservices/ucs/openapi.yaml\n"
+    assert run(changed, "", monkeypatch) == 1
+    assert run(changed, "Upgrade: none", monkeypatch) == 0

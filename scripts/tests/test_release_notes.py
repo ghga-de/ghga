@@ -278,8 +278,8 @@ def test_render_lists_breaking_changes_first_and_drops_the_own_scope():
     assert "## Changes" in notes  # a breaking change is a change users notice
 
 
-def test_upgrade_trailers_are_read_from_the_body():
-    """Several trailers each give a line; a folded one is joined back into one."""
+def test_upgrade_lines_are_read_from_the_body():
+    """Several `Upgrade:` lines each give a note; a folded one is joined back into one."""
     body = (
         "- Rename the flag\n\n"
         "Upgrade: rename `--db` to `--db-name`\n"
@@ -294,7 +294,7 @@ def test_upgrade_trailers_are_read_from_the_body():
     )
 
 
-def test_upgrade_in_running_text_is_no_trailer():
+def test_upgrade_in_running_text_is_no_note():
     entry = release_notes._entry("fix: x", "- An Upgrade: in a bullet", [])
     assert entry.upgrade == ()
 
