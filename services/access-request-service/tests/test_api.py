@@ -864,6 +864,35 @@ async def test_patch_state_change_of_denied_request(
     assert response.json()["detail"] == "Access request has already been processed"
 
 
+async def test_patch_status_when_granting_access_fails(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+    access_grants: AccessGrantsMock,
+):
+    """Test that a failed access grant is a server error without internal details."""
+    client = rest.rest_client
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+
+    access_grants.on_grant_access = respond(500)
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "allowed"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Access request could not be modified."
+
+    # the request stays pending, so the steward can try again
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+    assert response.status_code == 200
+    assert response.json()[0]["status"] == "pending"
+
+
 async def test_patch_everything_when_allowing_request(
     rest: RestFixture,
     auth_headers_doe: dict[str, str],
