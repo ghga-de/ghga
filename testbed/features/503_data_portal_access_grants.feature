@@ -50,14 +50,14 @@ Feature: 503 Data Portal Requests
 
     Scenario: Data Steward extends an access period that has ended
 
-      Given the access period of the pending request for dataset "DS_A" has ended
+      Given the access period for "DS_A" has ended
       When I load the admin page "Access Request Manager"
       And I filter "access requests" for dataset "DS_A"
       And I select the filtered item
       Then I am warned that the access period has ended
 
-      When I allow the access request although its period has ended
-      Then I am told "The access period has ended; set a new end date before allowing"
+      When I try to allow the access request
+      Then I am told to set a new end date
 
       When I filter "access requests" for dataset "DS_A"
       And I select the filtered item

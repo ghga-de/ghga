@@ -285,9 +285,7 @@ def _ars_request_to_extended_json(document: dict[str, Any]) -> dict[str, Any]:
     return document
 
 
-@given(
-    parse('the access period of the pending request for dataset "{alias}" has ended')
-)
+@given(parse('the access period for "{alias}" has ended'))
 def expire_access_period(fixtures: JointFixture, alias: str):
     """Move the access period of the pending request into the past.
 
@@ -338,7 +336,7 @@ def check_no_period_warning(fixtures: JointFixture):
     expect(page.locator("main")).not_to_contain_text(PERIOD_ENDED_TEXT)
 
 
-@when("I allow the access request although its period has ended")
+@when("I try to allow the access request")
 def allow_expired_access_request(fixtures: JointFixture):
     """Confirm the allowance and expect the backend to refuse it."""
     page = fixtures.playwright.page
@@ -351,12 +349,12 @@ def allow_expired_access_request(fixtures: JointFixture):
     assert status == 422, f"Expected the allowance to be refused, got {status}"
 
 
-@then(parse('I am told "{message}"'))
-def check_error_toast(fixtures: JointFixture, message: str):
-    """Check the error notification the portal shows."""
+@then("I am told to set a new end date")
+def check_new_end_date_toast(fixtures: JointFixture):
+    """Check that the error notification asks for a new end date."""
     page = fixtures.playwright.page
     expect(page.locator("mat-snack-bar-container")).to_contain_text(
-        message, timeout=UI_TIMEOUT
+        "set a new end date", timeout=UI_TIMEOUT
     )
 
 
