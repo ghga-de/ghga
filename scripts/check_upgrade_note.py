@@ -24,7 +24,6 @@ import argparse
 import os
 import re
 import sys
-from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
 
 RULES = "docs/conventions.md#names-branches-prs-commits"
@@ -40,9 +39,9 @@ UPGRADE_FILES = {
     "openapi.yaml",
     "chart-values.yaml",
 }
-# The generated charts; their `values-local.yaml` and the like serve only the demo and
-# the test bed.
-CHART_VALUES = "deploy/charts/*/values.yaml"
+# The charts the deployments install. `ghga-demo` and `aai`, and the `values-local.yaml`
+# and the like, serve only the demo and the test bed.
+CHART_VALUES = re.compile(r"deploy/charts/(?!ghga-demo/|aai/)[^/]+/values\.yaml")
 
 # A long line may continue on lines that start with whitespace, as git folds trailers.
 UPGRADE_LINE = re.compile(
@@ -64,7 +63,7 @@ def needs_note(paths: list[str]) -> list[str]:
     return [
         path
         for path in paths
-        if PurePosixPath(path).name in UPGRADE_FILES or fnmatch(path, CHART_VALUES)
+        if PurePosixPath(path).name in UPGRADE_FILES or CHART_VALUES.fullmatch(path)
     ]
 
 
