@@ -19,7 +19,7 @@ and neglected **static sharding by `hash(file_id) % n`, leases sized from an ass
 
 to achieve **any number of instances sharing one queue without configuration**
 
-accepting that **a new hexkit DAO method, one claim per file plus renewals, a unique ID per instance, and a claim that mutates on a GET**.
+accepting that **a new hexkit DAO method, one claim per file plus renewals, a restarted instance losing its lease, and a claim that mutates on a GET**.
 
 ## Details
 
@@ -32,7 +32,7 @@ That is wasteful and noisy, not unsafe.
 
 The DHFS chart runs a Deployment, so pod names are random and `replicaCount` can change at any time, and some hubs do not run Kubernetes at all.
 
-An *instance* is one running DHFS process, identified by its `service_instance_id`; "replica" refers only to `replicaCount`.
+An *instance* is one running DHFS process; "replica" refers only to `replicaCount`.
 
 ### Decision
 
@@ -44,8 +44,9 @@ An *instance* is one running DHFS process, identified by its `service_instance_i
   FIS refuses a renewal once a claim has been held longer than a hold cap, which guards against an instance that is alive but stuck.
 - **Release.**
   An instance that gives up on a file releases it, and FIS backs the file off exponentially.
-- **Holder check.**
-  Renewal and release apply only for the instance named in `leased_by`.
+- **Claimant ID.**
+  Each instance generates a random claimant ID at startup and sends it with every claim, renewal and release.
+  Renewal and release apply only for the claimant ID stored in `leased_by`.
 - **Find-and-modify in the hexkit DAO.**
   A new method, `update_first`, selects, sorts and changes a resource in one call, and changes only the given fields.
   Changes map model fields to plain values; MongoDB update operators are a documented extension, as in filters, and FIS uses `$inc` for its claim counter.
@@ -60,7 +61,7 @@ An *instance* is one running DHFS process, identified by its `service_instance_i
 - Instances can be added or removed at any time, and no instance needs to know how many others run.
 - A dead instance parks its file for at most one lease; a stuck but live one parks it until the hold cap.
 - FIS takes one claim per file instead of one per batch, plus a renewal every 4 minutes per working instance.
-- `service_instance_id` must be unique per instance, which the chart's `serviceInstanceId.fromPodName` provides; hubs without Kubernetes must provide it themselves.
+- The claimant ID is unique without any deployment setting, but a restarted instance gets a new one, so the file it held waits out one lease.
 - The retry transport can repeat the GET, stranding up to three leases until they expire.
 - Lease writes filter on `state` and `interrogated` and change only lease fields, so they cannot overwrite a state the outbox subscriber writes ([ADR-0005](adr-0005-db-event-consistency.md)).
 - Every hexkit DAO provider and `DaoPublisher` implement `update_first`, and providers validate each changed value, since a partial update skips whole-model validation.
@@ -78,5 +79,9 @@ An *instance* is one running DHFS process, identified by its `service_instance_i
   A random pick from the window, retries and re-reads only work around that, and replacing the whole document needs a precondition to avoid overwriting the subscriber's state changes.
 - **Leases in their own collection.**
   The claim could no longer filter on lease state in MongoDB and would fetch every waiting file.
+- **`service_instance_id` as the claimant ID.**
+  Deployments set it per Deployment: the charts give every replica one constant, such as `rs_1`, so two instances would pass every `leased_by` check without a warning.
+  It is unique only with the chart's `serviceInstanceId.fromPodName`, which is off by default and exists only on Kubernetes.
+  An ID that survived restarts, so that a restarted container kept its lease, would need persistent identity per instance, such as a StatefulSet, tying the code to one kind of deployment.
 - **A `POST …/claim` endpoint, with the GET left read-only.**
   Cleaner, but it binds no DHFS until every hub has upgraded, unless FIS raises `dhfs_version_constraint` with it and crash-loops every hub on the old image.

@@ -16,7 +16,7 @@ This is that follow-up.
 If a Data Hub were to attempt to run more than one instance today, each instance would receive the same unbounded list, and re-encrypt the same files.
 [ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md) decides that instances coordinate through renewable file leases in FIS, and weighs the alternatives; this epic implements it.
 Most of the new logic is in FIS.
-DHFS sends an instance ID when requesting a new file, renews the lease while it works, releases the file if interrogation is inconclusive, and stops sleeping between files.
+DHFS sends a claimant ID when requesting a new file, renews the lease while it works, releases the file if interrogation is inconclusive, and stops sleeping between files.
 
 ### Included/Required
 
@@ -39,18 +39,12 @@ FIS:
 
 DHFS:
 
-- Send the service's existing `service_instance_id` on every claim, renewal and release, so FIS can tell one instance of a hub from another.
+- Generate a claimant ID once at startup, and send it on every claim, renewal and release, so FIS can tell one instance of a hub from another; see [The claimant ID](#the-claimant-id).
 - Renew the lease from a background task while a file is in work, and stop that task before sending the report; see [The lease duration and renewal](#the-lease-duration-and-renewal).
 - Call the release endpoint from the `InconclusiveError` branch of `interrogate_new_files()`, which today only logs, from the `ConclusiveError` branch when `report_failure` did not reach FIS, and after FIS refuses a renewal.
 - Skip the poll interval after conclusively *or* inconclusively processing a file, and sleep only when the request for the next file comes back empty.
   Serving one file per claim makes this required; see [Serving one file per claim requires the poll pacing change](#serving-one-file-per-claim-requires-the-poll-pacing-change).
 - Add jitter of up to 10% to `min_run_interval_seconds`, as a constant rather than a setting, so instances rolled out together stop polling in lockstep.
-
-Deployment:
-
-- Set `serviceInstanceId.fromPodName: true` in `services/datahub-file-service/chart-values.yaml`.
-  The `leased_by` check is inert without it; see [Only the DHFS instance holding the file may renew or release it](#only-the-dhfs-instance-holding-the-file-may-renew-or-release-it).
-  If a Data Hub isn't using Kubernetes, they'll need to ensure this `serviceInstanceId` is unique for every instance.
 
 ### Optional
 
@@ -82,7 +76,7 @@ Deployment:
 It now serves **at most one file**, and leases the file it serves.
 The response shape still adheres to `BaseFileInformation`, which is unchanged.
 
-New endpoints, both authenticated by the same Data Hub JWT and User-Agent check as the existing three Data Hub endpoints, and both carrying the caller's instance ID:
+New endpoints, both authenticated by the same Data Hub JWT and User-Agent check as the existing three Data Hub endpoints, and both carrying the caller's claimant ID:
 
 - `POST /rpc/storages/{storage_alias}/uploads/{file_id}/renew`:
   - *Tell FIS that the caller is still working on a claimed file.*
@@ -218,26 +212,21 @@ A release that is not checked against the instance holding the lease can clear a
 Instance A claims a file, its lease expires while A is still working, B claims the file, and A then fails with an `InconclusiveError` and releases.
 FIS overwrites B's lease with `now + backoff`, the next claim hands B's file to C, and two instances interrogate the same file again.
 
-So the claim stores `leased_by`, and renewal and release put the caller's instance ID into their `update_first` filter.
+So the claim stores `leased_by`, and renewal and release put the caller's claimant ID into their `update_first` filter.
 A release from any other instance changes nothing and FIS logs a warning; a renewal from any other instance gets a 409.
 When the filter matches nothing, FIS reads the file once more to choose between 404 and the 409 or warning; that read only picks the response.
 Either means a lease expired while an instance was still working, because its renewals did not reach FIS for a whole lease.
 
-**Use the existing `service_instance_id` as the identifier, and stop setting it to a constant.**
-hexkit already requires that setting and writes it into every log record as `instance` (`libs/hexkit/src/hexkit/log.py`), so reusing it adds no second identifier and lets a reader match a lease to the log lines of the instance holding it.
-Today the value is a fixed string: `services/datahub-file-service/dev_config.yaml` sets `"1"`, and the two demo deployments use `"1"` and `"2"` for two different *hubs*, not two instances of one hub.
-Two instances of one hub would then send the same value and every `leased_by` check would pass, so the failure above returns through configuration instead of code, and no warning is logged.
+### The claimant ID
 
-The chart already has the switch for this.
-`serviceInstanceId.fromPodName` (`deploy/charts/dhfs/values.yaml`, default false) injects `DHFS_SERVICE_INSTANCE_ID` from the Downward API `metadata.name` (`deploy/charts/ghga-common/templates/_helpers.tpl:64-66`), and an environment variable takes precedence over the YAML file in hexkit's config order.
-No member sets it today, so this epic must turn it on: without it, the first hub to raise `replicaCount` runs a `leased_by` check that never rejects anything.
+DHFS generates the claimant ID with `uuid4()` once per process, at startup, and FIS stores it as `leased_by`.
+It is not a setting, so no deployment can make two instances share one; [ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md) explains why `service_instance_id` cannot serve instead.
 
-Use the pod name rather than a UUID generated per process.
-The pod name survives a container restart inside the same pod, so a container that is OOM-killed and restarted reclaims its own unexpired lease instead of waiting it out.
-It also needs no code: `commandStyle: exec` runs without a shell, so `$HOSTNAME` is not reliably set, and a UUID would have to come from `socket.gethostname()` or the same Downward API variable anyway.
+A restarted process, whether its container was OOM-killed or its pod rescheduled, gets a new claimant ID and cannot renew or release the lease it held.
+That file waits out its lease, at most 20 minutes; see [A stopped instance parks one file](#a-stopped-instance-parks-one-file).
 
-A pod that is deleted and rescheduled comes back under a new name and cannot reclaim anything.
-That file waits out its lease; see [A stopped instance parks one file](#a-stopped-instance-parks-one-file).
+DHFS logs its claimant ID at startup, in a record that also carries `service_instance_id` as `instance`, and in every claim, renewal and release log line.
+FIS names `leased_by` in its warnings, so an operator can match a lease to the logs of the instance holding it.
 
 ### The lease duration and renewal
 
@@ -358,8 +347,7 @@ Set `max_lease_hold_seconds` to the longest single interrogation the team expect
 The claim is a side effect of a GET that the client retries.
 A response lost after the write, or a 500 retried three times, leaves one to three files leased to no worker, idle until the lease expires.
 The pacing change makes DHFS poll far more often, so there are many more claims to lose.
-`leased_by` covers the retried case, because the instance reclaims on its next claim the lease it already holds.
-A claim whose response is lost waits for expiry, which is one lease, 20 minutes, because no renewal follows.
+Each such file waits for expiry, which is one lease, 20 minutes, because no renewal follows.
 
 #### A stopped instance parks one file
 
@@ -439,7 +427,6 @@ New unit tests, on the `rig` fixture, with the clock frozen rather than slept th
 - A renewal after a release returns 409, because the release cleared `leased_by`.
 - Release applies the backoff, the backoff cap holds, and a repeated release is idempotent.
 - Renewing or releasing a file that belongs to another storage alias is rejected.
-- Two claims carrying the same `service_instance_id` count as one instance, which guards against the chart switch being off.
 - A cancelled event for a leased file does not resurrect it, and the file is not served again.
 - A claim over a collection that holds a `leased_until=None` document, which catches the in-memory DAO's `$lt` behaviour.
 
@@ -464,6 +451,7 @@ New DHFS tests:
 - A round that processed a file polls again without sleeping, and a round that claimed nothing sleeps.
   Test the decision, not the wall clock.
 - A response holding more than one file is still processed in full, which guards the untouched loop.
+- The claimant ID stays the same for every claim, renewal and release of one process, and differs between two processes.
 - Release is called for an inconclusive file, and for a conclusive one only when `report_failure` did not land; a failing release neither masks the original error nor stops the service.
 - The renewal task renews while a file is in work and stops before the report.
   Drive it with a shortened interval or a fake clock, not the wall clock.
