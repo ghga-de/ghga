@@ -182,7 +182,7 @@ claimed_file = await self._file_dao.update_first(
     sort=["leased_until", "state_updated"],
     changes={
         "leased_until": now + timedelta(seconds=LEASE_SECONDS),
-        "leased_by": instance_id,
+        "leased_by": claimant_id,
         "claimed_at": now,
         "$inc": {"times_claimed": 1},
     },
@@ -215,6 +215,7 @@ FIS overwrites B's lease with `now + backoff`, the next claim hands B's file to 
 So the claim stores `leased_by`, and renewal and release put the caller's claimant ID into their `update_first` filter.
 A release from any other instance changes nothing and FIS logs a warning; a renewal from any other instance gets a 409.
 When the filter matches nothing, FIS reads the file once more to choose between 404 and the 409 or warning; that read only picks the response.
+A release that finds `leased_by` null logs no warning: the file was already released, most often by a retry of the same release.
 Either means a lease expired while an instance was still working, because its renewals did not reach FIS for a whole lease.
 
 ### The claimant ID
@@ -309,12 +310,12 @@ Any path that produces neither leaves the file leased until expiry:
 
 ### Backoff
 
-A release sets `leased_until = now + min(backoff_base * 2 ** max(times_claimed - 1, 0), backoff_cap)`.
+A release sets `leased_until = now + min(backoff_base * 2 ** (times_claimed - 1), backoff_cap)`.
 It reads the file for `times_claimed`, then writes the backoff with an `update_first` filtered on the file ID and `leased_by`, which also sets `leased_by` and `claimed_at` to null.
 Only a claim changes `times_claimed`, and a claim also changes `leased_by`, so the filter ensures the backoff comes from the current count.
 Clearing `leased_by` makes a repeated release match nothing, which matters because the retry transport repeats a POST on 5xx and on connection failures.
 Without a backoff, a file that fails in five seconds every time, one still being written to the inbox for example, is claimed, released and re-claimed in a tight loop by every instance.
-The `max` guards the exponent: a release that arrives after `_requeue_file` has reset the counter would otherwise raise 2 to the power of -1 and back the file off by half the base.
+A release always finds `times_claimed` at 1 or more, because only a claim sets `leased_by`, and every claim increments the counter.
 
 `times_claimed` counts how often FIS handed the file out, including a claim stranded by a lost response and a claim the instance never started, so it runs ahead of the number of re-encryption attempts.
 That is accurate enough for a backoff, and the name keeps anyone from reporting it to a Data Steward as a count of failed attempts.
@@ -426,7 +427,7 @@ New unit tests, on the `rig` fixture, with the clock frozen rather than slept th
 - A renewal by the holder extends the lease from now, keeps `times_claimed`, `claimed_at` and `state_updated`, and also succeeds after expiry when no other instance has claimed the file.
 - A renewal from another instance, for a file that is no longer waiting, or past `max_lease_hold_seconds` returns 409 and changes nothing.
 - A renewal after a release returns 409, because the release cleared `leased_by`.
-- Release applies the backoff, the backoff cap holds, and a repeated release is idempotent.
+- Release applies the backoff, the backoff cap holds, and a repeated release changes nothing and logs no warning.
 - Renewing or releasing a file that belongs to another storage alias is rejected.
 - A cancelled event for a leased file does not resurrect it, and the file is not served again.
 - A claim over a collection that holds a `leased_until=None` document, which catches the in-memory DAO's `$lt` behaviour.
