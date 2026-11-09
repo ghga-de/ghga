@@ -129,7 +129,7 @@ class LegacyAccessionRegistry(AccessionRegistry):
     ) -> str:
         """Get the flat accession of a resource of the given class.
 
-        The study keeps its accession, which `generate_accession_map` passes as
+        The study keeps its accession, which `generate_legacy_accession_map` passes as
         `study_pid`. Every other resource gets a new one, registered in the store.
 
         Raises:
