@@ -2,42 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Manage Box Priority (lo-fi prototype)</title>
+<title>Upload Box Manager with priority (lo-fi prototype)</title>
 </head>
 <body>
 <!--
   Lo-fi prototype for epic 95 (Shoebill). Open the file in a browser.
   No backend: RS is simulated in memory, and the "Prototype controls" at the bottom
-  trigger the error paths. Box titles and numbers are placeholders.
+  trigger the other responses. Box titles and numbers are placeholders.
 -->
 <header>
   <p><strong>GHGA Data Portal</strong></p>
-  <nav aria-label="Breadcrumb"><a href="#">Upload Box Manager</a> / Re-encryption Priority</nav>
 </header>
 
 <main>
-  <h1>Manage Box Priority</h1>
-  <p>Files in ranked boxes are re-encrypted first, highest rank first. Changes apply from the next batch each Data Hub starts.</p>
-  <p>Version <span id="version"></span>, <span id="last-change"></span></p>
-  <p>
-    <button type="button" id="discard">Discard changes</button>
-    <button type="button" id="save">Save order</button>
-  </p>
-  <p id="status" role="status"></p>
-  <p id="alert" role="alert" hidden><span id="alert-text"></span> <button type="button" id="reload">Reload latest order</button></p>
+  <h1>Upload Box Manager</h1>
+  <p id="notice" role="status"></p>
 
-  <section aria-labelledby="ranked-heading">
-    <h2 id="ranked-heading">Priority order</h2>
-    <p id="empty-ranked" hidden>No box is ranked. All files are re-encrypted in no particular order.</p>
-    <ol id="ranked"></ol>
-    <p>Drag a row, or use its buttons, to change its rank. Files already being re-encrypted are not interrupted.</p>
+  <section id="list-mode" aria-label="Upload boxes">
+    <p>[Filters, unchanged and not prototyped]</p>
+    <p><button type="button" id="change-priority">Change priority</button></p>
+    <table>
+      <thead>
+        <tr>
+          <th id="priority-header"><button type="button" id="sort-priority">Priority</button></th>
+          <th>Title</th>
+          <th>State</th>
+          <th>Files</th>
+          <th>Location</th>
+          <th>Last change</th>
+        </tr>
+      </thead>
+      <tbody id="box-rows"></tbody>
+    </table>
+    <p>[Paginator, unchanged and not prototyped]</p>
   </section>
 
-  <section aria-labelledby="unranked-heading">
-    <h2 id="unranked-heading">Unranked boxes</h2>
-    <p><label for="search">Find a box by title or storage</label> <input id="search" type="search"></p>
-    <ul id="unranked"></ul>
-    <p id="empty-unranked" hidden>No unranked box matches.</p>
+  <section id="reorder-mode" aria-labelledby="reorder-heading" hidden>
+    <nav aria-label="Breadcrumb">Upload Box Manager / Change priority</nav>
+    <h2 id="reorder-heading">Change priority</h2>
+    <p>Files of boxes higher up are re-encrypted first. Changes apply from the next batch each Data Hub starts.</p>
+    <p>Version <span id="version"></span>, <span id="last-change"></span></p>
+    <p>
+      <button type="button" id="cancel">Cancel</button>
+      <button type="button" id="save">Save priority</button>
+    </p>
+    <p id="status" role="status"></p>
+    <p id="empty-ranked" hidden>There are no boxes that are not archived.</p>
+    <ol id="ranked"></ol>
+    <p>Drag a row, or use its buttons, to change its position. Files already being re-encrypted are not interrupted.</p>
     <p>Archived boxes are not listed.</p>
   </section>
 </main>
@@ -45,72 +57,152 @@
 <hr>
 <fieldset>
   <legend>Prototype controls (not part of the page)</legend>
-  <p><label><input type="checkbox" id="sim-conflict"> Next save: another steward saved first (409, version conflict)</label></p>
-  <p><label><input type="checkbox" id="sim-gone"> Next save: an added box was archived meanwhile (409, box archived)</label></p>
+  <p><button type="button" id="create-box">Another steward creates a box now (it joins the end)</button></p>
+  <p><label><input type="checkbox" id="sim-other"> Next save: another steward saved in the meantime (moved Box E to the top)</label></p>
+  <p><label><input type="checkbox" id="sim-gone"> Next save: a box you moved was archived in the meantime</label></p>
   <p><label><input type="checkbox" id="sim-error"> Next save: server error (500)</label></p>
   <p><button type="button" id="reset">Reset prototype</button></p>
+  <details open>
+    <summary>Request body that the next save would send</summary>
+    <pre id="request"></pre>
+  </details>
 </fieldset>
 
 <script>
 const INITIAL_BOXES = [
-  { id: "a", title: "Box A", storage: "Heidelberg", state: "open", files: 120 },
-  { id: "b", title: "Box B", storage: "Tuebingen", state: "locked", files: 8 },
-  { id: "c", title: "Box C", storage: "Heidelberg", state: "open", files: 35 },
-  { id: "d", title: "Box D", storage: "Koeln", state: "open", files: 60 },
-  { id: "e", title: "Box E", storage: "Tuebingen", state: "open", files: 12 },
-  { id: "f", title: "Box F", storage: "Koeln", state: "locked", files: 25 },
-  { id: "g", title: "Box G", storage: "Heidelberg", state: "archived", files: 40 },
+  { id: "a", title: "Box A", storage: "Heidelberg", state: "open", files: 120, lastChange: "2026-10-14 11:20" },
+  { id: "b", title: "Box B", storage: "Tuebingen", state: "locked", files: 8, lastChange: "2026-10-12 09:40" },
+  { id: "c", title: "Box C", storage: "Heidelberg", state: "open", files: 35, lastChange: "2026-10-13 08:15" },
+  { id: "d", title: "Box D", storage: "Koeln", state: "open", files: 60, lastChange: "2026-10-10 16:05" },
+  { id: "e", title: "Box E", storage: "Tuebingen", state: "open", files: 12, lastChange: "2026-10-11 14:30" },
+  { id: "f", title: "Box F", storage: "Koeln", state: "locked", files: 25, lastChange: "2026-10-09 10:00" },
+  { id: "g", title: "Box G", storage: "Heidelberg", state: "archived", files: 40, lastChange: "2026-10-01 12:00" },
 ];
-// "z" stands for a box deleted after it was ranked: the page drops IDs it cannot match.
+// "z" is an entry left behind by a crash: its box was deleted. The page ignores it,
+// and the next repair drops it.
 const INITIAL_PRIORITY = {
   version: 7,
-  boxIds: ["b", "a", "z", "d"],
+  boxIds: ["b", "a", "z", "d", "c", "e", "f"],
   changedBy: "Steward A",
   lastChanged: "2026-10-14 15:02",
 };
 const CURRENT_STEWARD = "Steward B (you)";
+const STATE_ORDER = { locked: 0, open: 1, archived: 2 };
 const now = () => new Date().toISOString().slice(0, 16).replace("T", " ");
 
-let boxes, saved, order, dragId, highlightId, highlightTimer;
+// server: the document stored in the simulated RS
+// loaded: what the page loaded from it; order and moves: the steward's unsaved changes
+let boxes, server, loaded, order, moves, sortByPriority, createdCount, dragId, highlightId, highlightTimer;
 const marker = document.createElement("li");
 marker.setAttribute("aria-hidden", "true");
 marker.append(document.createElement("hr"));
 
 const $ = (id) => document.getElementById(id);
 const boxById = (id) => boxes.find((box) => box.id === id);
-const rankable = (id) => boxById(id) && boxById(id).state !== "archived";
-const isDirty = () => order.join() !== saved.boxIds.join();
+const notArchived = (id) => boxById(id) && boxById(id).state !== "archived";
+
+// The repair RS does on every write; the page shows the same result.
+// Appends missing boxes, oldest last change first
+function withMissing(boxIds) {
+  const missing = boxes
+    .filter((box) => box.state !== "archived" && !boxIds.includes(box.id))
+    .sort((x, y) => x.lastChange.localeCompare(y.lastChange))
+    .map((box) => box.id);
+  return [...boxIds, ...missing];
+}
+// Drops entries of unknown, archived or deleted boxes
+const pruned = (boxIds) => boxIds.filter(notArchived);
+const repaired = (boxIds) => pruned(withMissing(boxIds));
 
 function reset() {
   boxes = INITIAL_BOXES.map((box) => ({ ...box }));
-  loadFromServer({ ...INITIAL_PRIORITY, boxIds: [...INITIAL_PRIORITY.boxIds] });
-  $("status").textContent = "";
+  server = { ...INITIAL_PRIORITY, boxIds: [...INITIAL_PRIORITY.boxIds] };
+  sortByPriority = false;
+  createdCount = 0;
+  $("notice").textContent = "";
+  loadFromServer();
+  showMode("list");
 }
 
-function loadFromServer(priority) {
-  saved = { ...priority, boxIds: priority.boxIds.filter(rankable) };
-  order = [...saved.boxIds];
-  $("alert").hidden = true;
+function loadFromServer() {
+  loaded = { ...server, boxIds: repaired(server.boxIds) };
+  order = [...loaded.boxIds];
+  moves = [];
+  $("status").textContent = "";
   render();
 }
 
-function setOrder(newOrder, movedId) {
-  order = newOrder;
+function showMode(mode) {
+  $("list-mode").hidden = mode !== "list";
+  $("reorder-mode").hidden = mode !== "reorder";
+  render();
+}
+
+// Simulated RS writes
+function writeList(boxIds, changedBy) {
+  server = { version: server.version + 1, boxIds, changedBy, lastChanged: now() };
+}
+
+// Simulated PATCH /upload-box-priority. Gone boxes are dropped only after the last
+// move, because a later move can refer to them.
+function applyMoves(version, requestedMoves) {
+  const list = withMissing(server.boxIds);
+  const skipped = [];
+  for (const move of requestedMoves) {
+    if (move.before === move.box_id || (move.before !== null && !list.includes(move.before))) {
+      skipped.push(move);
+      continue;
+    }
+    if (list.includes(move.box_id)) list.splice(list.indexOf(move.box_id), 1);
+    list.splice(move.before === null ? list.length : list.indexOf(move.before), 0, move.box_id);
+  }
+  const result = pruned(list);
+  const includesOtherChanges = server.version !== version;
+  if (result.join() !== server.boxIds.join()) writeList(result, CURRENT_STEWARD);
+  return { priority: server, skipped, includesOtherChanges };
+}
+
+// Each change updates the local order and records one move
+function move(from, to) {
+  const [id] = order.splice(from, 1);
+  order.splice(to, 0, id);
+  moves.push({ box_id: id, before: order[to + 1] ?? null });
+  if (order.join() === loaded.boxIds.join()) moves = [];
   $("status").textContent = "";
-  highlightId = movedId;
+  highlightId = id;
   clearTimeout(highlightTimer);
   highlightTimer = setTimeout(() => { highlightId = null; render(); }, 1500);
   render();
 }
 
-function move(from, to) {
-  const next = [...order];
-  const [id] = next.splice(from, 1);
-  next.splice(to, 0, id);
-  setOrder(next, id);
+function render(focus) {
+  renderList();
+  renderReorder(focus);
+  $("request").textContent = moves.length
+    ? JSON.stringify({ version: loaded.version, moves }, null, 2)
+    : "(no changes)";
 }
 
-function render(focus) {
+function renderList() {
+  const position = (id) => loaded.boxIds.indexOf(id) + 1;
+  const byDefault = (x, y) =>
+    STATE_ORDER[x.state] - STATE_ORDER[y.state] || y.lastChange.localeCompare(x.lastChange);
+  const byPriority = (x, y) =>
+    (position(x.id) || Infinity) - (position(y.id) || Infinity) || byDefault(x, y);
+  const rows = [...boxes].sort(sortByPriority ? byPriority : byDefault);
+  $("box-rows").replaceChildren(...rows.map((box) => {
+    const row = document.createElement("tr");
+    for (const value of [position(box.id) || "", box.title, box.state, box.files, box.storage, box.lastChange]) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    return row;
+  }));
+  $("priority-header").setAttribute("aria-sort", sortByPriority ? "ascending" : "none");
+}
+
+function renderReorder(focus) {
   const ranked = $("ranked");
   ranked.replaceChildren();
   order.forEach((id, index) => {
@@ -123,35 +215,23 @@ function render(focus) {
       `<span aria-hidden="true">::</span> <strong>${title}</strong> - ${box.storage} - ${box.state} - ${box.files} files ` +
       `<button type="button" data-action="up" aria-label="Move ${box.title} up" ${index === 0 ? "disabled" : ""}>Up</button> ` +
       `<button type="button" data-action="down" aria-label="Move ${box.title} down" ${index === order.length - 1 ? "disabled" : ""}>Down</button> ` +
-      `<button type="button" data-action="top" aria-label="Move ${box.title} to top" ${index === 0 ? "disabled" : ""}>Top</button> ` +
-      `<button type="button" data-action="remove" aria-label="Remove ${box.title} from priority">Remove</button>`;
+      `<button type="button" data-action="top" aria-label="Move ${box.title} to top" ${index === 0 ? "disabled" : ""}>Top</button>`;
     ranked.append(row);
   });
   $("empty-ranked").hidden = order.length > 0;
 
-  const query = $("search").value.trim().toLowerCase();
-  const unranked = boxes
-    .filter((box) => box.state !== "archived" && !order.includes(box.id))
-    .filter((box) => `${box.title} ${box.storage}`.toLowerCase().includes(query));
-  $("unranked").replaceChildren(...unranked.map((box) => {
-    const item = document.createElement("li");
-    item.dataset.id = box.id;
-    item.innerHTML =
-      `${box.title} - ${box.storage} - ${box.state} - ${box.files} files ` +
-      `<button type="button" data-action="add" aria-label="Add ${box.title} to priority">Add</button>`;
-    return item;
-  }));
-  $("empty-unranked").hidden = unranked.length > 0;
-
-  $("version").textContent = saved.version;
+  $("version").textContent = loaded.version;
   // changed_by resolves to a display name linking to /user-manager/<id> in the real page
-  $("last-change").innerHTML = saved.changedBy
-    ? `last changed by <a href="#">${saved.changedBy}</a> on ${saved.lastChanged}`
-    : "no edit history yet";
-  $("save").disabled = !isDirty();
-  $("discard").disabled = !isDirty();
-  if (isDirty() && !$("status").textContent && $("alert").hidden) {
-    $("status").textContent = "You have unsaved changes.";
+  if (loaded.changedBy) {
+    $("last-change").innerHTML = `last changed by <a href="#">${loaded.changedBy}</a> on ${loaded.lastChanged}`;
+  } else if (loaded.lastChanged) {
+    $("last-change").textContent = `last changed automatically on ${loaded.lastChanged}`;
+  } else {
+    $("last-change").textContent = "no edit history yet";
+  }
+  $("save").disabled = moves.length === 0;
+  if (moves.length > 0 && !$("status").textContent) {
+    $("status").textContent = "You have unsaved changes to the priority order.";
   }
   if (focus) {
     const button = document.querySelector(`[data-id="${focus.id}"] [data-action="${focus.action}"]`);
@@ -159,7 +239,18 @@ function render(focus) {
   }
 }
 
-// Buttons in the ranked list
+// List mode
+$("sort-priority").addEventListener("click", () => {
+  sortByPriority = !sortByPriority;
+  render();
+});
+$("change-priority").addEventListener("click", () => {
+  $("notice").textContent = "";
+  loadFromServer();
+  showMode("reorder");
+});
+
+// Buttons in the list
 $("ranked").addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
@@ -169,12 +260,11 @@ $("ranked").addEventListener("click", (event) => {
   if (action === "up") move(index, index - 1);
   if (action === "down") move(index, index + 1);
   if (action === "top") move(index, 0);
-  if (action === "remove") setOrder(order.filter((other) => other !== id), null);
   render({ id, action });
 });
 
 // Drag and drop. The marker (an <hr> in its own <li>) sits in the gap where the row
-// will land; the gaps directly above and below the dragged row show no marker,
+// will be dropped; the gaps directly above and below the dragged row show no marker,
 // because a drop there changes nothing.
 function gapFor(event) {
   const row = event.target.closest("li[data-id]");
@@ -220,71 +310,65 @@ $("ranked").addEventListener("dragend", () => {
   dragId = null;
 });
 
-// Unranked list
-$("unranked").addEventListener("click", (event) => {
-  const button = event.target.closest("button");
-  if (!button) return;
-  const id = button.closest("li").dataset.id;
-  setOrder([...order, id], id);
+// Cancel and save
+$("cancel").addEventListener("click", () => {
+  loadFromServer();
+  showMode("list");
 });
-$("search").addEventListener("input", () => render());
-
-// Save and discard: a simulated PUT /upload-box-priority
-$("discard").addEventListener("click", () => loadFromServer(saved));
 
 $("save").addEventListener("click", () => {
-  $("status").textContent = "";
-  $("alert").hidden = true;
-
   if ($("sim-error").checked) {
     $("sim-error").checked = false;
     $("status").textContent = "Saving failed. Your changes are kept; try again.";
     return;
   }
-  if ($("sim-conflict").checked) {
-    $("sim-conflict").checked = false;
-    $("alert-text").textContent =
-      `Another data steward saved version ${saved.version + 1} while you were editing. ` +
-      "Reload it and apply your changes again.";
-    $("alert").hidden = false;
-    return;
+  if ($("sim-other").checked) {
+    $("sim-other").checked = false;
+    writeList(["e", ...repaired(server.boxIds).filter((id) => id !== "e")], "Steward C");
   }
-  const added = order.filter((id) => !saved.boxIds.includes(id));
-  if ($("sim-gone").checked && added.length > 0) {
+  if ($("sim-gone").checked) {
     $("sim-gone").checked = false;
-    const gone = boxById(added[0]);
+    const gone = boxById(moves[0].box_id);
     gone.state = "archived";
-    order = order.filter((id) => id !== gone.id);
-    $("status").textContent =
-      `${gone.title} was archived meanwhile and has been removed from your order. ` +
-      "Your other changes are kept; save again.";
-    render();
-    return;
+    writeList(repaired(server.boxIds), "Steward C");
   }
-  saved = {
-    version: saved.version + 1,
-    boxIds: [...order],
-    changedBy: CURRENT_STEWARD,
-    lastChanged: now(),
-  };
-  $("status").textContent = `Saved as version ${saved.version}. Data Hubs use it from their next batch.`;
-  render();
+
+  const versionBefore = server.version;
+  const response = applyMoves(loaded.version, moves);
+  const notes = [
+    response.priority.version === versionBefore
+      ? `Nothing changed; the priority order is still version ${versionBefore}.`
+      : `Saved as version ${response.priority.version}. Data Hubs use it from their next batch.`,
+  ];
+  if (response.includesOtherChanges) {
+    notes.push("The saved order includes changes made since you started editing.");
+  }
+  if (response.skipped.length > 0) {
+    notes.push(
+      `${response.skipped.length} of your changes no longer applied and were skipped,` +
+      " for example because a box was archived in the meantime.",
+    );
+  }
+  $("notice").textContent = notes.join(" ");
+  loadFromServer();
+  showMode("list");
 });
 
-$("reload").addEventListener("click", () => {
-  // The simulated newer version from another steward keeps the old order.
-  loadFromServer({
-    version: saved.version + 1,
-    boxIds: saved.boxIds,
-    changedBy: "Steward C",
-    lastChanged: now(),
-  });
+// Simulated box creation: RS adds the new box to the end of the list
+$("create-box").addEventListener("click", () => {
+  createdCount += 1;
+  const id = `new${createdCount}`;
+  boxes.push({ id, title: `New box ${createdCount}`, storage: "Heidelberg", state: "open", files: 0, lastChange: now() });
+  writeList([...repaired(server.boxIds).filter((other) => other !== id), id], "Steward C");
+  if (!$("list-mode").hidden) loadFromServer();
+  $("notice").textContent = `Another steward created New box ${createdCount}.`;
+  render();
 });
 
 $("reset").addEventListener("click", reset);
 
 window.addEventListener("beforeunload", (event) => {
-  if (isDirty()) event.preventDefault();
+  if (moves.length > 0) event.preventDefault();
 });
 
 reset();
