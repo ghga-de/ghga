@@ -232,7 +232,6 @@ A test that copies the config with another `vault_path` should choose a path bel
 
 If the default scopes or names do not fit your test setup, the factory functions `get_vault_container_fixture`, `get_clean_vault_fixture` and `get_persistent_vault_fixture` create the same fixtures with custom `scope` and `name` arguments.
 For example, `get_persistent_vault_fixture(name="vault_persistent")` creates the persistent variant under the name `vault_persistent`.
-Despite its name, `get_vault_fixture` also creates the persistent variant, not the clean `vault_fixture`.
 
 ### The VaultFixture
 
