@@ -14,12 +14,17 @@ That epic put multi-instance operation under "Not included" and called it a sepa
 This is that follow-up.
 
 If a Data Hub were to attempt to run more than one instance today, each instance would receive the same unbounded list, and re-encrypt the same files.
-This epic adds a lease to FIS: a file served to one instance is hidden from the next caller until the lease expires or the instance releases it.
-The lease is short, and the instance renews it while it works on the file.
+[ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md) decides that instances coordinate through renewable file leases in FIS, and weighs the alternatives; this epic implements it.
 Most of the new logic is in FIS.
 DHFS sends an instance ID when requesting a new file, renews the lease while it works, releases the file if interrogation is inconclusive, and stops sleeping between files.
 
 ### Included/Required
+
+hexkit:
+
+- Add `update_first` to the `Dao` protocol: it finds the first resource matching a filter in a given sort order and changes it, in one atomic call.
+  See [The hexkit DAO method](#the-hexkit-dao-method).
+- Implement it in the MongoDB provider, the in-memory DAO and the outbox `DaoPublisher`.
 
 FIS:
 
@@ -27,7 +32,7 @@ FIS:
 - Update the `GET /storages/{storage_alias}/uploads` handler to orchestrate file claims: serve one file, set `leased_until`, `leased_by`, `claimed_at` and `times_claimed`, and leave everything else unchanged.
 - Add `POST /rpc/storages/{storage_alias}/uploads/{file_id}/renew` so an instance can extend its lease while it works on the file.
 - Add `POST /rpc/storages/{storage_alias}/uploads/{file_id}/release` so an instance can hand a file back before its lease expires.
-- Wrap the read, `leased_by` check and write of both endpoints in `hexkit.protocols.dao.race_condition_retries`, so a renewal or release that races a claim re-reads the file and checks `leased_by` again.
+- Claim, renew and release each with one `update_first` call; see [The claim itself](#the-claim-itself).
 - Add the compound index `{storage_alias: 1, state: 1, interrogated: 1, leased_until: 1, state_updated: 1}`.
   The `files` collection currently indexes only `object_id`.
 - Add the configuration settings listed under [Configuration](#configuration).
@@ -146,31 +151,57 @@ If the `$or` index union turns out to perform badly, the sentinel is the fallbac
 
 Sort ascending by `leased_until`, then by `state_updated`.
 Null sorts before any date in both Mongo and the in-memory DAO, so never-claimed files come first and expired leases follow oldest-first.
-The second key gives the window a deterministic order, so a claim pages through the same candidates each time.
-Which of them an instance takes is then a random choice; see [The claim reads a window of candidates](#the-claim-reads-a-window-of-candidates).
+The second key makes the order deterministic among files with the same `leased_until`.
+
+### The hexkit DAO method
+
+```python
+async def update_first(
+    self,
+    *,
+    filter_: Mapping[str, Any],
+    changes: Mapping[str, Any],
+    sort: list[str] | None = None,
+) -> Dto:
+```
+
+- It selects the first resource that matches `filter_` in `sort` order, changes it and returns the changed resource, in one atomic call.
+  It is the atomic form of `find_all(limit=1)` followed by `update`, so concurrent calls get different resources and none of them retries.
+- `filter_` and `sort` work as in `find_all`.
+- `changes` maps model fields to plain values and changes only those fields.
+  Keys starting with `$` are MongoDB update operators, a documented extension in the same way as operators in filters.
+  The in-memory DAO supports `$inc`, the only one FIS uses.
+- It raises `NoHitsFoundError` when nothing matches, like `find_one`.
+- A partial update skips whole-model validation.
+  MongoDB applies the change on the server, so the provider cannot validate the merged document before the write.
+  It validates and serializes each plain value against its field's type before the call, and validates the returned document after it; operator values are the caller's responsibility.
+- `DaoPublisher` publishes the returned document, so it needs no extra read.
+
+The name follows hexkit's terms rather than pymongo's `find_one_and_update`.
+Other backends can do the same: PostgreSQL with `UPDATE … WHERE id = (SELECT … FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, and the in-memory DAO trivially.
 
 ### The claim itself
 
-For each candidate, write the lease with an atomic check-and-set and skip the candidate if it fails:
-
 ```python
-await self._file_dao.update(
-    leased_file,
-    precondition={
-        "leased_until": value_just_read,
-        "state": "inbox",
-        "interrogated": False,
+claimed_file = await self._file_dao.update_first(
+    filter_=filter_,  # the claim query above
+    sort=["leased_until", "state_updated"],
+    changes={
+        "leased_until": now + timedelta(seconds=LEASE_SECONDS),
+        "leased_by": instance_id,
+        "claimed_at": now,
+        "$inc": {"times_claimed": 1},
     },
 )
 ```
 
-`MongoDbDao.update` compiles the precondition into a single `replace_one`, so the check and the write are atomic.
-Catch both `PreconditionFailedError` and `ResourceNotFoundError`: the provider distinguishes them with a second, non-atomic query, so a file deleted mid-claim surfaces as the latter.
+`NoHitsFoundError` means no file is waiting, and the GET returns an empty list.
 
-The precondition must cover `state` and `interrogated`, not just `leased_until`.
-`update()` replaces the whole document, and FIS runs the REST API and the outbox subscriber as two separate deployments (`fis` and `fis-consumer`).
-Without those two keys, a claim that reads a file before a cancellation event and writes after it would resurrect `state="inbox", can_remove=False`.
-[ADR-0005](../adrs/adr-0005-db-event-consistency.md) describes this read-modify-write hazard; here the two writers are different processes.
+The filter carries `state` and `interrogated`, and the call changes only the lease fields.
+FIS runs the REST API and the outbox subscriber as two separate deployments (`fis` and `fis-consumer`), and the subscriber replaces whole documents.
+A claim that replaced the whole document could overwrite a cancellation written in between and resurrect `state="inbox", can_remove=False`, the read-modify-write hazard of [ADR-0005](../adrs/adr-0005-db-event-consistency.md).
+A partial update cannot.
+The reverse, the subscriber overwriting a lease, happens only when it cancels, fails, archives or requeues the file, and each of those ends the lease anyway.
 
 Two further rules for the claim path:
 
@@ -178,8 +209,8 @@ Two further rules for the claim path:
   `process_file_upload` drops events whose `state_updated` is not newer than the stored one.
   A claim that bumped it would make FIS discard the genuine cancelled or archived event that follows, so `can_remove` would never be set and the object would never be cleaned up.
 - **Increment `times_claimed` at claim time, not at release.**
-  An instance that is OOM-killed never releases, so a counter advanced only on release would leave a file that keeps failing retried at full speed forever.
-  Incrementing at claim also makes the release endpoint idempotent, which matters because the retry transport repeats a POST on 5xx and on connection failures.
+  An instance that is OOM-killed never releases, so a counter advanced only on release would never count a file that keeps crashing its instance.
+  The increment is the `$inc` in the same call.
 
 ### Only the DHFS instance holding the file may renew or release it
 
@@ -187,8 +218,9 @@ A release that is not checked against the instance holding the lease can clear a
 Instance A claims a file, its lease expires while A is still working, B claims the file, and A then fails with an `InconclusiveError` and releases.
 FIS overwrites B's lease with `now + backoff`, the next claim hands B's file to C, and two instances interrogate the same file again.
 
-So the claim stores `leased_by`, and a renewal or release applies only when the caller's instance ID matches it.
+So the claim stores `leased_by`, and renewal and release put the caller's instance ID into their `update_first` filter.
 A release from any other instance changes nothing and FIS logs a warning; a renewal from any other instance gets a 409.
+When the filter matches nothing, FIS reads the file once more to choose between 404 and the 409 or warning; that read only picks the response.
 Either means a lease expired while an instance was still working, because its renewals did not reach FIS for a whole lease.
 
 **Use the existing `service_instance_id` as the identifier, and stop setting it to a constant.**
@@ -214,8 +246,7 @@ While DHFS works on a file, a background task renews the lease every `LEASE_RENE
 A lease therefore survives four failed renewals in a row, each of which the retry transport has already retried.
 The two constants live in different services, so comment each with a reference to the other: the lease must stay several renewal intervals long.
 
-Both are constants rather than settings because nothing about them depends on the hub.
-Throughput differs between Data Hubs and changes whenever a hub changes its infrastructure, so a lease sized from the file would need tuning per hub; a renewed lease needs none.
+Both are constants rather than settings, since a renewed lease needs no tuning per hub ([ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md)).
 
 The renewal task runs from the start of a file's interrogation until just before the report:
 
@@ -228,15 +259,15 @@ The renewal task runs from the start of a file's interrogation until just before
   The release changes something only when the instance still holds the lease, which is the hold cap case, and there it sets the backoff.
 - **Any other failure keeps the interrogation running.**
   On a connection error or a 5xx after retries, DHFS logs a warning and tries again at the next interval.
-  If FIS stays unreachable for a whole lease, another instance can claim the file, which costs duplicate work, never data integrity; see [What running two instances costs today](#what-running-two-instances-costs-today).
+  If FIS stays unreachable for a whole lease, another instance can claim the file, which costs duplicate work, never data integrity ([ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md)).
 
-A renewal uses the same precondition as the claim, so it cannot resurrect a cancelled file, and like the claim it never writes `state_updated`.
-It leaves `times_claimed` and `claimed_at` unchanged.
+A renewal is an `update_first` whose filter holds the file ID, `leased_by`, `state`, `interrogated` and the hold cap, and whose change sets only `leased_until`.
+So it cannot resurrect a cancelled file, and like the claim it never writes `state_updated`.
 It also succeeds after the lease has expired, as long as no other instance has claimed the file in the meantime.
 
 **The hold cap guards against an instance that is alive but stuck.**
 Its renewal task keeps running while its interrogation hangs, so renewal alone would hold the file forever.
-FIS refuses a renewal once `now - claimed_at` exceeds `max_lease_hold_seconds`.
+FIS refuses a renewal once `now - claimed_at` exceeds `max_lease_hold_seconds`, through `{"claimed_at": {"$gt": now - cap}}` in the filter.
 The default of 72 hours covers the 5 TB example from [Army Ant](./epic-0091-army-ant.md), which takes roughly 58 hours at 25 MiB/s.
 A dead instance parks a file for one lease; only a stuck one can park it for the cap.
 
@@ -286,29 +317,12 @@ Any path that produces neither leaves the file leased until expiry:
 - A stopped or killed instance releases nothing and stops renewing, and the file waits out its lease.
   Lease expiry is the only mechanism here, by choice; see [A stopped instance parks one file](#a-stopped-instance-parks-one-file).
 
-### The claim reads a window of candidates
-
-Reading exactly one candidate and losing the check-and-set on it means the instance gets nothing and sleeps for a full `min_run_interval_seconds`, even on a hub with a thousand files waiting.
-One file per claim is the worst case for contention, because every instance targets the same first row.
-
-So the claim reads a window of candidates with `limit`, picks one at random, and takes the next random one when the check-and-set fails.
-If it loses the whole window, it reads once more, since the window has moved; after a bounded number of rounds it gives up and returns nothing.
-
-Picking at random is what keeps instances off each other.
-Walking the window top-down leaves every instance targeting the same first row, so each one has to lose a check-and-set before it finds work.
-With a window of 50, two instances that claim at the same moment pick the same file one time in 50.
-
-Shuffle the window and walk the shuffled list, rather than calling `random.choice` once.
-A single choice needs a second pick anyway when the check-and-set fails, and a shuffle gives those retries without re-reading.
-
-The window is internal to the claim, and the endpoint still serves at most one file.
-Make it a constant in FIS with a comment rather than a setting: its size follows from how many instances contend, which an operator cannot judge.
-Fifty candidates over at most two rounds is enough for any number of instances a hub is likely to run, and 50 `FileUnderInterrogation` documents cost nothing to hold.
-The sort still puts never-claimed files and the oldest expired leases in the window, so a file cannot be passed over indefinitely.
-
 ### Backoff
 
 A release sets `leased_until = now + min(backoff_base * 2 ** max(times_claimed - 1, 0), backoff_cap)`.
+It reads the file for `times_claimed`, then writes the backoff with an `update_first` filtered on the file ID and `leased_by`, which also sets `leased_by` and `claimed_at` to null.
+Only a claim changes `times_claimed`, and a claim also changes `leased_by`, so the filter ensures the backoff comes from the current count.
+Clearing `leased_by` makes a repeated release match nothing, which matters because the retry transport repeats a POST on 5xx and on connection failures.
 Without a backoff, a file that fails in five seconds every time, one still being written to the inbox for example, is claimed, released and re-claimed in a tight loop by every instance.
 The `max` guards the exponent: a release that arrives after `_requeue_file` has reset the counter would otherwise raise 2 to the power of -1 and back the file off by half the base.
 
@@ -337,20 +351,6 @@ All on FIS:
 The lease length is a constant, not a setting; see [The lease duration and renewal](#the-lease-duration-and-renewal).
 Set `max_lease_hold_seconds` to the longest single interrogation the team expects, since a stuck but live instance parks its file for that long.
 
-### What running two instances costs today
-
-Throughput is not the only reason for a lease.
-Two instances finishing the same file do not produce a duplicate report, they produce a conflicting one: each re-encryption generates a new random secret, so `object_id` and both part checksum lists differ.
-Which error the loser gets depends on the timing.
-Arriving after the winner's report is stored, it takes the mismatch branch of `_check_if_report_is_duplicate`, which logs at CRITICAL and answers 409.
-Arriving while the winner is still mid-report, it passes the duplicate check too, and both instances deposit a secret with EKSS.
-The loser's `insert` then raises `ResourceAlreadyExistsError`, which FIS answers with a 500 after deleting that secret again.
-Either way a crash in that window leaks the loser's secret.
-
-What the existing code does handle: no corrupted file record, no double-published event, and the loser's orphaned object is removed, because `check_if_removable` answers `True` for an object ID FIS does not know.
-Uncoordinated instances are wasteful and noisy, not unsafe.
-A lease that expires too early costs CPU time and one CRITICAL log line, never data integrity.
-
 ### Known limitations
 
 #### A lost response blocks a file for the lease duration
@@ -368,7 +368,7 @@ SIGTERM is the common case, during a rolling update, and SIGKILL or a node failu
 DHFS installs no signal handler today, and Python's default SIGTERM ends the process outright, so no `finally` runs, including the multipart abort at `core/interrogator.py:800-803`: a stopped instance already leaves an orphaned upload behind.
 
 The cost is one file per stopped instance, delayed by at most one lease, 20 minutes.
-Nothing else stalls, because the claim picks at random from a window of candidates and every other file stays claimable.
+Nothing else stalls, because every other file stays claimable.
 A mass event, such as every instance of a hub restarting, frees all their files within the same 20 minutes.
 
 #### A stuck but live instance parks one file until the hold cap
@@ -401,7 +401,8 @@ This is existing behaviour and leases do not change it, but more instances make 
 
 ### Rollout
 
-FIS ships first.
+hexkit ships `update_first` first, in a release that FIS then requires.
+FIS ships next.
 Leases apply to every caller, so a DHFS that predates this epic keeps working; it never releases a file and waits out the lease on inconclusive ones.
 It also never renews, so its lease expires after 20 minutes on any longer file.
 With one instance per hub, no other instance claims the file in the meantime, so nothing changes for that hub.
@@ -412,40 +413,10 @@ Raising it together with the feature is a flag day: a hub still on the old image
 `run_interrogator` then returns, and the container crash-loops with no interrogation until that hub upgrades.
 The same happens to the old pods during each hub's own rolling update.
 
-### What was checked and ruled out
+### Route naming and generated docs
 
-Considered holding the lease in its own `fileLeases` collection, keyed by file ID.
-That would keep lease state off the document the outbox subscriber replaces wholesale from a separate process, and a first claim would be a plain `insert()`.
-Rejected because the candidate query could no longer filter on lease state in Mongo.
-FIS would fetch every uninterrogated file for the hub and filter them in Python, the unbounded query this epic removes.
-Taking over an expired lease also needs a check-and-set on the lease document, so the atomic-insert advantage only covers first claims.
-Widening the precondition to include `state` and `interrogated` closes the cross-process hazard at a far lower cost.
-
-Considered sizing each lease once, at claim time, from the file's `encrypted_size` and an assumed throughput, either a setting or a value FIS derives per hub from claim time, report time and size.
-That needs no renewal endpoint and no background task in DHFS.
-Rejected because throughput differs between Data Hubs and changes with their infrastructure, so any one value is wrong for some hub.
-Set too low, a dead instance parks a file for hours; set too high, the duplicate work this epic removes comes back, and the only signal is a log warning.
-A derived value lags behind every change and has no history for a hub's first files.
-A lease that cannot be renewed also cannot cover a multi-terabyte file without parking it for days when its instance dies.
-
-Considered keeping a multi-file claim by sizing each file's lease from a prefix sum, so file *i* is leased for `base + (sizes through i) / throughput`.
-That would preserve batching, which means no pacing change and no rise in request volume.
-Rejected for three reasons.
-One slow file stretches every lease behind it.
-An instance that dies strands the whole batch for the full cumulative window instead of one file.
-The lease also no longer describes the file it is attached to, which makes it harder to reason about later.
-
-### Why the claim stays on GET
-
-The claim mutates on a GET, and the retry transport repeats it.
-`client_num_retries` is 3 over a set including 500, 502, 503 and 504, so one claim can strand up to three leases.
-`leased_by` makes the repeat safe, because the same instance reclaims its own lease.
-
-A `POST /storages/{storage_alias}/uploads/claim` with the GET left read-only would be cleaner, but it does not fit the rollout.
-Leases have to bind every caller from the moment FIS ships, including a DHFS that predates this epic and only knows the GET.
-A new endpoint would leave leases applying to nobody until every hub had upgraded, the flag day that deferring `dhfs_version_constraint` avoids.
-
-Follow-ups: give the route a summary and docstring that say it claims rather than lists, rename `get_files_not_yet_interrogated` to match, and regenerate `services/fis/openapi.yaml`, `config_schema.json`, `example_config.yaml` and the README config block with `just service-docs`.
+The claim stays on the GET ([ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md)).
+Give the route a summary and docstring that say it claims rather than lists, rename `get_files_not_yet_interrogated` to match, and regenerate `services/fis/openapi.yaml`, `config_schema.json`, `example_config.yaml` and the README config block with `just service-docs`.
 The three settings also go into `services/fis/dev_config.yaml` and `tests_fis/fixtures/test_config.yaml` by hand.
 
 ### Testing
@@ -463,7 +434,6 @@ New unit tests, on the `rig` fixture, with the clock frozen rather than slept th
 
 - A claim serves and leases one file, a second claim returns none, and a claim after the lease expires serves it again.
 - Never-claimed files are served before expired ones.
-- A claim picks at random within the window: seed the RNG, or set up fewer files than the window holds and assert the set rather than the order.
 - A renewal by the holder extends the lease from now, keeps `times_claimed`, `claimed_at` and `state_updated`, and also succeeds after expiry when no other instance has claimed the file.
 - A renewal from another instance, for a file that is no longer waiting, or past `max_lease_hold_seconds` returns 409 and changes nothing.
 - A renewal after a release returns 409, because the release cleared `leased_by`.
@@ -476,11 +446,18 @@ New unit tests, on the `rig` fixture, with the clock frozen rather than slept th
 New integration tests, on `JointFixture` with the Mongo testcontainer, since the in-memory DAO cannot prove these:
 
 - Two concurrent claims through `asyncio.gather` return disjoint sets whose union is everything available.
-  Only this test proves the check-and-set.
+  Only this test proves that the claim is atomic in MongoDB.
 - A renewal and a claim racing on an expired lease: exactly one of them wins.
 - The claim filter matches a document inserted without `leased_until` at all, which proves no migration is needed.
 - `explain()` on the claim query does not collection-scan.
   Assert the absence of a COLLSCAN rather than a single clean IXSCAN: `$or` plans as a SUBPLAN over one index scan per branch, with a blocking SORT on top.
+
+New hexkit tests, for the MongoDB provider and the in-memory DAO alike:
+
+- `update_first` respects the filter and the sort, changes only the given fields, applies `$inc`, and raises `NoHitsFoundError` when nothing matches.
+- A plain value of the wrong type is rejected before anything is written.
+- Concurrent calls against MongoDB return different resources.
+- `DaoPublisher.update_first` publishes the returned document.
 
 New DHFS tests:
 
