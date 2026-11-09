@@ -111,7 +111,7 @@ feat(upload): add UCS endpoints (#207)
 
 **Upgrade notes** go at the end of a PR description: one line starting with `Upgrade:` for each action an upgrade requires, or `Upgrade: none`.
 An action is anything a deployment or a tool's user must change — a renamed CLI flag, a new or changed config setting, a changed chart value or `openapi.yaml` — said in their terms, e.g. `Upgrade: set ucs.config.storage_aliases for each box storage`.
-The line is required when the PR changes a `config_schema.json`, `example_config.yaml`, `openapi.yaml`, `chart-values.yaml` or `deploy/charts/*/values.yaml`; elsewhere add it only for an action no such file shows, like a renamed CLI flag.
+The line is required when the PR changes a `config_schema.json`, `example_config.yaml`, `openapi.yaml`, `chart-values.yaml` or `deploy/charts/*/values.yaml` other than the demo's `ghga-demo` and `aai`; elsewhere add it only for an action no such file shows, like a renamed CLI flag.
 Such a PR also gets a comment that mentions `@ghga-de/devops-engineers` with its lines, so the deployments hear of them during review rather than at the release.
 The release is unknown while the PR is open; the release notes collect the lines from the descriptions of the PRs in each tag's range ([releases.md](releases.md#release-notes)), so they need not be copied into the commit message.
 The required `upgrade-note` check fails while a PR that needs the line lacks it; release merges and back-merges between `dev` and `main`, `renovate/*` and `automated/*` are exempt.
