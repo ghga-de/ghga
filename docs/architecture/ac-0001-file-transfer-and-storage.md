@@ -1,7 +1,7 @@
 ---
 status: current
 date: 2024-01-19
-amended: 2026-04-19
+amended: 2026-11-06
 tags: [backend, data, security]
 related: [AC-0003, AC-0004, AC-0007]
 ---
@@ -12,10 +12,8 @@ This document describes implementation details for the upload and download of Re
 
 ## File upload
 
-This section describes the two different upload paths currently envisioned in GHGA.
-The first path uses the connector CLI tool and upload controller service to allow normal GHGA users to upload their files.
-The second path is a preliminary solution and uses the datasteward kit and file ingest service and does not support normal user upload, i.e. the upload is done by a data steward.
-In the future, the connector based upload shall replace the preliminary datasteward kit upload functionality.
+Files are uploaded with the connector CLI tool through the upload controller service, which lets GHGA users upload their files themselves.
+The upload boxes that group these uploads, and the interrogation and archival that follow, are described in [AC-0008](ac-0008-metadata-and-file-journeys.md#3-journey-b--file-upload-interrogation-archival).
 This section solely describes the upload process.
 For details on authorization see [Client configuration and authorization](#client-configuration-and-authorization).
 
@@ -178,76 +176,6 @@ sequenceDiagram
     DCS ->> DQ: publish event
 ```
 
-### (Preliminary) Upload via Datasteward Kit
-
-The datasteward kit splits file upload functionality into two separate parts:
-
-1. Upload of the file object to target S3 storage
-2. Populating downstream service databases
-
-File paths and aliases chosen for those files need to be provided for the upload.
-A file alias in this context is a submitter-defined identifier.
-It will later be mapped to an unique accession generated for each file during the submission of file-related metadata (described elsewhere).
-File data is uploaded directly to an S3 bucket that is accessible to the internal file registry service.
-
-During the upload process each file is read in parts of a specificed size which corresponds to the part size used for the multipart upload to the configured S3 bucket.
-Each part is encrypted using a common symmetric secret generated for the file and subsequently uploaded.
-At the same time, checksums are computed for the encrypted parts and for the unencrypted file content.
-After the encrypted file parts have been uploaded successfully, integrity is verified by downloading the file again and comparing checksums.
-In case of success, the secret is exchanged for a secret ID by calling the corresponding endpoint of the file ingest service and providing the secret as base64 encoded, asymetrically encrypted payload.
-
-The secret ID and other file related data and metadata, like checksums and file ID are written to an output JSON file identified by the chosen file alias.
-In a separate, final step, these output files need to be sent to the correct file ingest service endpoint to populate downstream services with the correct data.
-The file ingest services performs some necessary transformations on the received data and fires an event that the internal file registry is subscribed to.
-From here on processing continues as described for the GHGA connector based upload.
-
-```mermaid
-sequenceDiagram
-    actor Req as Data Requester
-    participant DSK as DS Kit
-
-    participant FIS as File Ingest<br>Service
-    participant IFRS as Internal File<br>Registry Service
-
-    box Message Queues
-        participant IQ as interrogations<br>topic
-    end
-
-    box Storage
-        participant ST as Staging Bucket
-        participant Vault as HashiCorp<br>Vault
-    end
-
-    autonumber
-    Req ->> DSK: instruct to upload files
-    Note over DSK: Needs a TSV file with file paths and aliases.
-
-    DSK ->> ST: initiate multipart upload
-    ST ->> DSK: upload ID
-
-    loop per file
-    loop per file part
-    DSK ->> ST: request part-specific upload URL (providing the upload ID)
-    ST ->> DSK: pre-signed URL
-    DSK ->> DSK: encrypt file part
-    DSK ->> ST: upload encrypted file part using URL
-    end
-    DSK ->> FIS: send encrypted secret
-    FIS ->> FIS: generate secret ID
-    FIS ->> Vault: store secret
-    FIS ->> DSK: return secret ID
-    DSK ->> DSK: write file metadata JSON to disk
-    end
-
-    Req ->> DSK: instruct to ingest upload metadata
-    loop per file metadata JSON
-    DSK ->> FIS: send file metadata
-    FIS ->> IQ: publish event
-    IQ ->> IFRS: consume event
-    end
-
-```
-
 ## File download
 
 This section solely describes the download process.
@@ -340,11 +268,8 @@ CLI ->> CLI: decrypt content (optional)
 
 To allow the production deployment of GHGA to support multiple hubs at which data can be stored, all file related backend services allow to configure multiple S3 endpoints.
 Each endpoint is identified by a chosen, fixed alias.
-The only exception to this is the file ingest service used in the datasteward kit upload.
-While the file ingest service does not communicate with S3-compatible object storage, the storage alias of data uploaded in this way still needs to be propagated to downstream services to address the correct storage node.
-
-This imposes a limitation on the preliminary upload path as all incoming file metadata is modified to use the storage alias configured for the file ingest service and special care needs to be taken to ensure this assumption holds.
-If a different storage location is populated using this upload path, the file ingest service needs to be reconfigured and restarted or another instance needs to be deployed.
+The only exception is the file ingest service, which does not talk to object storage itself.
+Each data hub file service names its storage alias in every request to the file ingest service, which passes the alias on in its events so that downstream services address the correct storage node.
 
 As mentioned previously, storage aliases are chosen and fixed.
 Furthermore, configuration across services has to match exactly with regard to which storage alias points to which S3 endpoint.

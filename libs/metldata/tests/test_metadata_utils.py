@@ -23,11 +23,30 @@ from metldata.metadata_utils import (
     convert_resource_list_to_dict,
     get_resources_of_class,
     lookup_resource_by_identifier,
+    normalize_alias,
     upsert_resources_in_metadata,
 )
 from metldata.model_utils.anchors import AnchorPoint, get_anchors_points_by_target
 from tests.fixtures.metadata import VALID_MINIMAL_METADATA_EXAMPLE
 from tests.fixtures.metadata_models import VALID_MINIMAL_METADATA_MODEL
+
+
+@pytest.mark.parametrize(
+    "alias, expected",
+    [
+        ("sample_1", "sample_1"),
+        ("Sample_1", "sample_1"),
+        ("  sample 1 ", "sample-1"),
+        ("a.b/c?d#e%f", "a-b-c-d-e-f"),
+        ("sample-1_a", "sample-1_a"),
+    ],
+    ids=["unchanged", "lowercased", "stripped", "special_characters", "kept"],
+)
+def test_normalize_alias(alias: str, expected: str):
+    """Test that an alias is stripped and lowercased, and that every character other
+    than a-z, 0-9, '_' and '-' is replaced with '-'.
+    """
+    assert normalize_alias(alias) == expected
 
 
 def test_lookup_resource_by_identifier_happy():

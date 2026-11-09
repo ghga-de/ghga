@@ -20,15 +20,14 @@
   The file name corresponds to the event key.
   The event type is stored together with the payload in the event file.
 
-- **`accession_store_path`** *(string, format: path)*: A file for storing the already registered accessions.
+- **`accession_store_path`** *(string, format: path)*: A JSON file holding the random blocks of the study PIDs minted so far, by year, so that none is minted twice, and the accessions minted before study PIDs.
 
-- **`prefix_mapping`** *(object)*: Specifies the ID prefix (values) per resource type (keys).
-  Can contain additional properties.
+- **`study_class_name`** *(string)*: Name of the metadata model class whose entity takes the bare study PID.
+  The model does not need to contain it.
+  Default: `"Study"`.
 
-  - **Additional Properties** *(string)*
-
-- **`suffix_length`** *(integer)*: Length of the numeric ID suffix.
-  Default: `8`.
+- **`dataset_class_name`** *(string)*: Name of the metadata model class whose entities are accessioned as '{study_pid}.DS.xxx'.
+  Default: `"Dataset"`.
 
 - **`metadata_model_path`** *(string, format: path)*: The path to the metadata model defined in LinkML.
 

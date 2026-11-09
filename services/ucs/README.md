@@ -13,6 +13,12 @@ The executable `ucs` takes one of these commands:
 - `publish-events` publishes pending events
 - `cleanup` runs the periodic cleanup of stale uploads
 
+The `cleanup` command also aborts orphaned multipart uploads and deletes orphaned objects in the inbox bucket, meaning those without a matching FileUpload.
+It deletes an orphaned object only once it is older than [`orphaned_object_min_age_hours`](#properties/orphaned_object_min_age_hours).
+For a storage alias, it leaves all orphans alone and logs an error if the FileUpload collection is empty, if the objects in the bucket can't be listed, or if the orphaned objects outnumber [`max_orphaned_objects`](#properties/max_orphaned_objects).
+These safeguards stop a deployment that shares the inbox bucket but not the database from deleting everything in the bucket.
+After checking that the orphans are real, run `ucs cleanup --no-run-forever --ignore-safeguards` to remove them once.
+
 [Running a service](../README.md#running-a-service) shows how to start, build and deploy it.
 
 ## Configuration
@@ -539,6 +545,14 @@ The service requires the following configuration parameters:
   Default: `72`.
 - <a id="properties/cleanup_interval_minutes"></a>**`cleanup_interval_minutes`** *(integer)*: How often (in minutes) the cleanup job runs.
   Default: `60`.
+- <a id="properties/orphaned_object_min_age_hours"></a>**`orphaned_object_min_age_hours`** *(integer)*: Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload.
+  Applies even when safeguards are ignored.
+  Age is measured from the object's LastModified time, which some S3 backends, including AWS, set to when a multipart upload was initiated rather than completed.
+  Minimum: `0`.
+  Default: `6`.
+- <a id="properties/max_orphaned_objects"></a>**`max_orphaned_objects`** *(integer)*: If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.
+  Minimum: `0`.
+  Default: `100`.
 
 #### Definitions
 

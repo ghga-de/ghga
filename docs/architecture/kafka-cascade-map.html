@@ -346,11 +346,10 @@
         <h3>Excluded: actions with no event</h3>
         <p>Omitted on purpose: every <code>GET</code> and <code>/health</code>;
           <span class="m">datasteward-kit metadata submit|transform</span> (file-system event store only);
-          <span class="m">files upload</span> (S3 only); <span class="m">ghga-connector decrypt</span>;
+          <span class="m">ghga-connector decrypt</span>;
           DCS <span class="m">/objects/{id}/envelopes</span>; the auth-service claim and grant routes;
           IVA <span class="m">create-code</span> and <span class="m">delete-iva</span>; and every
           work-package route.</p>
-        <p>Also gone: <span class="m">files ingest-upload-metadata</span>, now a dead command.</p>
       </article>
       <article>
         <h3>Excluded: the state management service</h3>

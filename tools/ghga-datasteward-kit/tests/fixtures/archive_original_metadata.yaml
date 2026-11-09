@@ -196,7 +196,7 @@
         "disease_or_healthy": "HEALTHY",
         "case_control_status": "TRUE_CONTROL_STATUS",
         "mutant_or_wildtype": "WILDTYPE",
-        "study": "STUDY_B",
+        "study": "STUDY_A",
       },
     ],
   "data_access_committees":
@@ -312,7 +312,7 @@
         "year": 1967,
         "journal": "Journal of Studies",
         "doi": "10.9876/efgh.5432",
-        "study": "STUDY_B",
+        "study": "STUDY_A",
         "xref": ["efgh_pubmed_link.pubmed"],
       },
     ],
@@ -607,13 +607,6 @@
             { "key": "budget", "value": "3.5M" },
             { "key": "funding", "value": "EU" },
           ],
-      },
-      {
-        "alias": "STUDY_B",
-        "title": "The B Study",
-        "description": "A study that is the B study",
-        "type": "WHOLE_GENOME_SEQUENCING",
-        "affiliations": ["Some Institute"],
       },
     ],
   "study_files":

@@ -16,7 +16,7 @@
 """Claims model classes used as DTOs and core entities."""
 
 from enum import StrEnum
-from typing import Annotated, Any
+from typing import Any
 from uuid import uuid4
 
 from pydantic import (
@@ -24,18 +24,17 @@ from pydantic import (
     EmailStr,
     Field,
     HttpUrl,
-    StringConstraints,
     ValidationInfo,
     field_serializer,
     field_validator,
 )
 
+from ghga_service_commons.utils.accessions import DatasetAccession
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 from . import BaseDto
 
 __all__ = [
-    "Accession",
     "AuthorityLevel",
     "Claim",
     "ClaimCreation",
@@ -50,12 +49,6 @@ __all__ = [
     "MatchType",
     "UploadGrant",
     "VisaType",
-]
-
-
-# Accession format should be moved to the commons module
-Accession = Annotated[
-    str, StringConstraints(strip_whitespace=True, pattern="^[A-Z]{1,6}[0-9]{3,18}$")
 ]
 
 
@@ -250,7 +243,7 @@ class BaseGrant(GrantId):
 class DownloadGrant(BaseGrant):
     """A download access grant for a dataset based on a corresponding claim."""
 
-    dataset_id: Accession = Field(
+    dataset_id: DatasetAccession = Field(
         default=..., description="ID of the dataset this grant is for"
     )
 

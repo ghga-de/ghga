@@ -17,6 +17,8 @@
 
 import re
 
+from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
+
 from .conftest import (
     Config,
     HttpClient,
@@ -92,7 +94,7 @@ def request_one_associated_samples(
         ega_accession=ega_accession, config=config, http=http, state=state
     )
     result = response.json()
-    match = re.search("'sample': '(GHGAN[0-9]+)'", repr(result))
+    match = re.search(rf"'sample': '({STUDY_PID_PATTERN}\.[^']+)'", repr(result))
     assert match
     resource_id = match.group(1)
     url = (

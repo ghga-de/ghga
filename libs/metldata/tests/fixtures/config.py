@@ -22,14 +22,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 import pytest
 
 from metldata.config import SubmissionConfig
-from tests.fixtures.metadata_models import VALID_MINIMAL_MODEL_EXAMPLE_PATH
-
-PREFIX_MAPPING = {
-    "File": "GHGAF",
-    "Experiment": "GHGAE",
-    "Sample": "GHGAS",
-    "Dataset": "GHGAD",
-}
+from tests.fixtures.metadata_models import MINIMAL_MODEL_WITH_STUDY_PATH
 
 
 @pytest.fixture
@@ -38,8 +31,7 @@ def config_sub_fixture() -> Generator[SubmissionConfig]:
     with TemporaryDirectory() as submission_store_dir:
         with NamedTemporaryFile() as accession_store_path:
             yield SubmissionConfig(
-                metadata_model_path=VALID_MINIMAL_MODEL_EXAMPLE_PATH,
+                metadata_model_path=MINIMAL_MODEL_WITH_STUDY_PATH,
                 submission_store_dir=submission_store_dir,
                 accession_store_path=accession_store_path.name,
-                prefix_mapping=PREFIX_MAPPING,
             )

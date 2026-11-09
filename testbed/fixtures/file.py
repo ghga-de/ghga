@@ -108,14 +108,15 @@ def file_fixture(config: Config, dsk: DskFixture) -> Generator[dict[str, FileBat
     File sizes are distributed according to the number of files in the metadata.
     """
     temp_dir = Path(tempfile.gettempdir())
-    metadata = json.loads(dsk.config.complete_metadata_path.read_text())
-    datasets: dict[str, list[dict]] = {
-        dataset["alias"]: [] for dataset in metadata["datasets"]
-    }
+    datasets: dict[str, list[dict]] = {}
+    for metadata_path in dsk.config.submission_metadata_paths:
+        metadata = json.loads(metadata_path.read_text())
+        for dataset in metadata["datasets"]:
+            datasets[dataset["alias"]] = []
+        for file_field in dsk.config.metadata_file_fields:
+            for file in metadata[file_field]:
+                datasets[file["dataset"]].append(file)
     assert set(datasets) == {"DS_A", "DS_B"}
-    for file_field in dsk.config.metadata_file_fields:
-        for file in metadata[file_field]:
-            datasets[file["dataset"]].append(file)
 
     file_batches: dict[str, FileBatch] = {}
     for dataset, files in datasets.items():

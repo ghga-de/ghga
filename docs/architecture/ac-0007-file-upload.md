@@ -7,7 +7,7 @@ related: [AC-0001, AC-0008]
 
 # AC-0007 — File upload
 
-This architecture concept describes the file upload process after its integration into the Data Portal, i.e. the replacement for the currently practiced manual upload by data stewards via the datasteward kit.
+This architecture concept describes the file upload process after its integration into the Data Portal, i.e. the replacement for the former manual upload by data stewards via the datasteward kit.
 
 > [!WARNING]
 > The content of this document is outdated and needs to be rewritten.
