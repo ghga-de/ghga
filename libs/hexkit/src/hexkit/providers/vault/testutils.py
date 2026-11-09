@@ -20,6 +20,7 @@ Please note, only use for testing purposes.
 """
 
 import time
+import warnings
 from collections.abc import Generator
 from contextlib import suppress
 from dataclasses import dataclass
@@ -185,25 +186,26 @@ def get_vault_container_fixture(
 vault_container_fixture = get_vault_container_fixture()
 
 
-def _vault_fixture(
-    vault_container: VaultFixture,
-) -> Generator[VaultFixture, None, None]:
-    """Fixture function that gets a Vault fixture.
-
-    The state of Vault is not cleaned up by the function.
-    """
-    yield vault_container
+# TODO: Remove `get_vault_fixture` when moving hexkit to v11.0.0
+GET_VAULT_FIXTURE_DEPRECATION_MESSAGE = (
+    "get_vault_fixture creates the persistent Vault fixture, not the clean one, and"
+    " will be removed in hexkit v11.0.0. Use get_persistent_vault_fixture or"
+    " get_clean_vault_fixture instead."
+)
 
 
+# TODO: Remove `get_vault_fixture` when moving hexkit to v11.0.0
 def get_vault_fixture(scope: PytestScope = "function", name: str = "vault"):
-    """Get a Vault fixture with desired scope and name.
+    """Get a persistent Vault fixture with desired scope and name.
 
-    The state of the Vault test container is persisted across tests.
-
-    By default, the function scope is used for this fixture,
-    while the session scope is used for the underlying Vault test container.
+    Deprecated because its name suggests the clean `vault_fixture`, while it
+    creates the persistent one. Use `get_persistent_vault_fixture` or
+    `get_clean_vault_fixture` instead.
     """
-    return pytest.fixture(_vault_fixture, scope=scope, name=name)
+    warnings.warn(
+        GET_VAULT_FIXTURE_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2
+    )
+    return get_persistent_vault_fixture(scope=scope, name=name)
 
 
 def _persistent_vault_fixture(
