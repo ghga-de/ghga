@@ -40,7 +40,7 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
   FIS stores `leased_until` and `leased_by` on each file.
   The GET serves at most one waiting file whose lease is null or expired, and leases it to the caller in one atomic find-and-modify.
 - **Renewal.**
-  A lease is a short constant, 20 minutes, and the instance renews it every 4 minutes while it works on the file.
+  A lease is a short constant, 22 minutes, and the instance renews it every 4 minutes while it works on the file.
   FIS refuses a renewal once a claim has been held longer than a hold cap, which guards against an instance that is alive but stuck.
 - **Release.**
   An instance that gives up on a file releases it, and FIS backs the file off exponentially.
