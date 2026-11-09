@@ -268,5 +268,5 @@ For fields beyond the covered ones, wrap the helper in your own change function 
 ## Testing Migrations
 
 Migrations are regular code and deserve tests.
-The [MongoDB test fixtures](mongodb.qmd#testing) give each test a disposable database: populate collections with documents in the old format, run the migration via a `MigrationManager`, and assert on the resulting documents.
+The [MongoDB test fixtures](mongodb.qmd#mongodb-test-utils) give each test a disposable database: populate collections with documents in the old format, run the migration via a `MigrationManager`, and assert on the resulting documents.
 The framework's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/migrations/test_mongodb_migrations.py) demonstrate this pattern extensively and double as runnable usage examples.

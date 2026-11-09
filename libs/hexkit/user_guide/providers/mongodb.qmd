@@ -56,7 +56,7 @@ config = MongoDbConfig(
 The recommended way to set up the factory is the `construct()` async context manager, which opens the MongoDB client on entry and closes it on exit:
 
 ```python
-from pydantic import BaseModel, ConfigDict, UUID4
+from pydantic import UUID4, BaseModel, ConfigDict
 
 from hexkit.protocols.dao import UUID4Field
 from hexkit.providers.mongodb import MongoDbDaoFactory
@@ -248,28 +248,8 @@ Every single DAO operation is atomic on its own (MongoDB guarantees single-docum
 
 ### Testing
 
-For integration tests, the `test-mongodb` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that spin up a disposable MongoDB instance.
-The `mongodb_fixture` yields a `MongoDbFixture` whose `dao_factory` attribute is a ready-to-use `MongoDbDaoFactory`:
-
-```python
-from hexkit.providers.mongodb.testutils import (
-    MongoDbFixture,
-    mongodb_container_fixture,  # noqa: F401
-    mongodb_fixture,  # noqa: F401
-)
-
-
-async def test_book_dao(mongodb: MongoDbFixture):
-    book_dao = await mongodb.dao_factory.get_dao(
-        name="books", dto_model=Book, id_field="id"
-    )
-    ...
-```
-
-For unit tests that should not touch a database at all, the [in-memory mock DAO](testing.qmd) mimics the MongoDB provider's behavior, including a subset of the query operators.
-See also the [MongoDB Test Utils](#mongodb-test-utils) section below.
-
-The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py) double as an extensive collection of runnable usage examples.
+For integration tests against a real database, use the fixtures in [MongoDB Test Utils](#mongodb-test-utils).
+For unit tests without a database, the [in-memory mock DAO](testing.qmd#mock-dao) mimics the MongoDB DAO, including a subset of the query operators.
 
 ## MongoDB Migration Tools
 
@@ -355,3 +335,4 @@ A `MongoDbFixture` has three attributes and one method:
   It raises a `RuntimeError` if MongoDB refuses the drop.
 
 For unit tests without a container, use the [in-memory providers](testing.qmd) instead.
+The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/dao/test_mongodb_dao.py) show further usage of the DAO.
