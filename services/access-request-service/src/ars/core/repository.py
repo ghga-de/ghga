@@ -262,6 +262,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         - `AccessRequestClosed` if the access request was already processed
         - `AccessRequestMissingIva` if an IVA is needed but not provided
         - `AccessRequestInvalidDuration` if the end date isn't later than the start date
+          or the access period has ended
         - `AccessRequestServerError` if the access grant could not be registered
         """
         try:
@@ -289,9 +290,10 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(missing_iva_error)
             raise missing_iva_error
 
+        now = now_utc_ms_prec()
         access_starts = patch_data.access_starts or request.access_starts
         # force start to be not earlier than the current date
-        access_starts = max(now_utc_ms_prec(), access_starts)
+        access_starts = max(now, access_starts)
         access_ends = patch_data.access_ends or request.access_ends
 
         update: dict[str, Any] = {"iva_id": iva_id}
@@ -303,8 +305,17 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         )
         if period_changed or status == AccessRequestStatus.ALLOWED:
             if access_starts >= access_ends:
+                # an end date that passed while the request was pending is not
+                # the steward's mistake, so name the cause instead
+                period_ended = (
+                    status == AccessRequestStatus.ALLOWED
+                    and patch_data.access_ends is None
+                    and access_ends <= now
+                )
                 invalid_duration_error = self.AccessRequestInvalidDuration(
-                    "Access end date must be later than access start date"
+                    "The access period has ended; set a new end date before allowing"
+                    if period_ended
+                    else "Access end date must be later than access start date"
                 )
                 log.error(invalid_duration_error)
                 raise invalid_duration_error

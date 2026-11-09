@@ -1162,11 +1162,9 @@ async def test_allow_request_whose_access_period_has_passed(
 ):
     """Test that a request cannot be allowed when its access period has passed."""
     await expire_access_period(REQUEST_IDS[3])
+    message = "The access period has ended; set a new end date before allowing"
 
-    with pytest.raises(
-        repository.AccessRequestInvalidDuration,
-        match="Access end date must be later than access start date",
-    ):
+    with pytest.raises(repository.AccessRequestInvalidDuration, match=message):
         await repository.update(
             REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
@@ -1175,8 +1173,51 @@ async def test_allow_request_whose_access_period_has_passed(
             auth_context=auth_context_steward,
         )
 
-    assert "Access end date must be later than access start date" in caplog.messages
+    assert message in caplog.messages
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_allow_request_with_past_end_date():
+    """Test that allowing with a new end date in the past blames that date."""
+    await expire_access_period(REQUEST_IDS[3])
+
+    with pytest.raises(
+        repository.AccessRequestInvalidDuration,
+        match="Access end date must be later than access start date",
+    ):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=uuid4(),
+                status=AccessRequestStatus.ALLOWED,
+                access_ends=now_utc_ms_prec() - timedelta(days=1),
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_allow_request_whose_access_period_has_passed_with_new_end():
+    """Test that a request whose period has passed can be allowed with a new end."""
+    await expire_access_period(REQUEST_IDS[3])
+    access_ends = now_utc_ms_prec() + timedelta(days=30)
+
+    await repository.update(
+        REQUEST_IDS[3],
+        patch_data=AccessRequestPatchData(
+            iva_id=SOME_IVA_ID,
+            status=AccessRequestStatus.ALLOWED,
+            access_ends=access_ends,
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    assert changed_request.status == AccessRequestStatus.ALLOWED
+    assert changed_request.access_ends == access_ends
+    assert access_grants.last_grant.endswith(f" until {access_ends}")
 
 
 async def test_set_past_access_start_date():
