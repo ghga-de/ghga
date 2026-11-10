@@ -131,7 +131,7 @@ jobs:
       # arm64 is emulated so one buildx call pushes the multi-platform index; native arm64
       # runners (ubuntu-24.04-arm) would need a job per platform and a manifest merge.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64
       # The default (docker-driver) builder shares the daemon's storage but can't export
