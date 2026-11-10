@@ -21,20 +21,27 @@ Additional endpoints might be structured in dedicated modules
 """
 
 import logging
+from contextlib import suppress
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager
 from hexkit.providers.mongokafka import MongoKafkaDaoPublisherFactory
-from rs.adapters.outbound.dao import get_box_dao, get_file_accession_dao
+from rs.adapters.outbound.dao import (
+    get_box_dao,
+    get_file_accession_dao,
+    get_upload_box_priority_dao,
+)
 from rs.config import Config
 from rs.inject import (
     get_persistent_publisher,
+    prepare_core,
     prepare_event_subscriber,
     prepare_rest_app,
 )
 from rs.migrations import MIGRATION_MAP
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +65,15 @@ async def run_rest_app():
     configure_logging(config=config)
     configure_opentelemetry(service_name=config.service_name, config=config)
 
-    async with prepare_rest_app(config=config) as app:
+    async with (
+        prepare_core(config=config) as registry,
+        prepare_rest_app(config=config, registry_override=registry) as app,
+    ):
+        # Fills the list with boxes that existed before it, and heals what a crash
+        # between writing a box and writing the list left behind. The next write to
+        # the list repairs it too, so the API starts even if this repair gave up.
+        with suppress(UploadBoxPriorityManagerPort.PriorityUpdateError):
+            await registry.priority_manager.repair()
         await run_server(app=app, config=config)
 
 
@@ -98,15 +113,22 @@ async def publish_events(*, all: bool = False):
         box_dao = await get_box_dao(
             config=config, dao_publisher_factory=dao_publisher_factory
         )
+        priority_dao = await get_upload_box_priority_dao(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
         if all:
             log.info("Republishing FileAccessionMappings...")
             await file_accession_publisher.republish()
             log.info("Republishing ResearchDataUploadBoxes...")
             await box_dao.republish()
+            log.info("Republishing the UploadBoxPriority...")
+            await priority_dao.republish()
         else:
             log.info("Publishing pending FileAccessionMappings...")
             await file_accession_publisher.publish_pending()
             log.info("Publishing pending ResearchDataUploadBoxes...")
             await box_dao.publish_pending()
+            log.info("Publishing the pending UploadBoxPriority...")
+            await priority_dao.publish_pending()
 
     log.info("Manual event publish finished.")
