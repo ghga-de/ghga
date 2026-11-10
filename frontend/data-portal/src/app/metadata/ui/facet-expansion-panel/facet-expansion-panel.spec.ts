@@ -47,7 +47,7 @@ describe('FacetExpansionPanel', () => {
 
   it('should be expanded from the start', () => {
     const expansionPanelButton = screen.getByRole('button', {
-      name: 'Test Facet(4)',
+      name: 'Test Facet (4)',
     });
     expect(expansionPanelButton.parentElement?.className.includes('mat-expanded')).toBe(
       true,
@@ -102,7 +102,7 @@ describe('FacetExpansionPanel', () => {
     let emitted: boolean | undefined;
     component.panelExpansionChanged.subscribe((x) => (emitted = x));
     const button = screen.getByRole('button', {
-      name: 'Test Facet(4)',
+      name: 'Test Facet (4)',
     });
     expect(button).toBeTruthy();
     expect(button.parentElement?.className.includes('mat-expanded')).toBe(true);
