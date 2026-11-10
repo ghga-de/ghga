@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-09-23
-amended: 2026-09-30
+amended: 2026-10-23
 tags: [release, process]
 related: [ADR-0027, ADR-0038]
 ---
@@ -18,7 +18,7 @@ we decided for **a draft GitHub release for the platform and for each library an
 
 and neglected **GitHub's generated notes, path labels, changelog files and releases per service**
 
-to achieve **notes a user can read at a glance, with the full list for whoever needs it, and no bookkeeping in pull requests**
+to achieve **notes a user can read at a glance, with the full list for whoever needs it, and no bookkeeping in pull requests beyond an `Upgrade:` line in those that change config, API or chart values**
 
 accepting that **someone fills in the summaries of each generated draft and then publishes it, and that the list is only as good as the commit messages**.
 
@@ -82,6 +82,14 @@ The notes have two parts:
 2. **Pull requests:** grouped under Features, Fixes, Documentation, Refactoring, Tests and Chores by the commit type.
    Breaking changes are marked and come first in their group.
    A commit outside the grammar is listed under Chores, and empty groups are left out.
+
+**Amended 2026-10-23:** a third part, **Upgrade notes**, sits between the two.
+A deployment or a tool's user needs to know which flag, setting or chart value changed, but a pull request cannot know the release it will land in.
+So a pull request description ends in `Upgrade:` lines, or `Upgrade: none`, and a required check blocks the merge until it does when the pull request changes a config schema, an example config, an `openapi.yaml` or chart values.
+The script fetches the descriptions of the pull requests it lists and collects their lines, so the tag range decides the release.
+It reads the description rather than the commit message, which keeps the lines only if whoever merges copies them; a commit without a pull request falls back to its message.
+Unlike the changelog files rejected below, the line is required only where config, API or chart values change, and it says what the title does not: what an upgrade must do.
+It lives in the pull request, so parallel work cannot conflict over it.
 
 Only the platform's final releases are marked as the repository's latest release.
 

@@ -294,6 +294,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write # to push the tags and create the draft releases
+      pull-requests: read # the upgrade notes are in the descriptions
     steps:
       - uses: actions/checkout@v5
         with:
