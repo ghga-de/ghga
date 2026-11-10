@@ -32,6 +32,7 @@ from ars.core.models import (
     AccessRequestPatchData,
     AccessRequestStatus,
     VerificationSmsData,
+    VerificationSmsResult,
 )
 
 __all__ = ["router"]
@@ -264,15 +265,15 @@ async def patch_access_request(
     summary="Send an SMS with a verification code for an access request",
     description="Endpoint used by data stewards to send an SMS with a verification"
     " code to a person authorized to act for the DAC. The sending is recorded"
-    " in the internal note of the access request.",
+    " in the internal note of the access request, which is returned.",
     responses={
-        204: {"description": "The SMS has been submitted for sending"},
+        200: {"description": "The SMS has been submitted for sending"},
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized to send a verification SMS."},
         404: {"description": "Access request does not exist."},
         422: {"description": "Validation error in submitted data."},
     },
-    status_code=204,
+    status_code=200,
 )
 async def send_verification_sms(
     *,
@@ -283,10 +284,10 @@ async def send_verification_sms(
     sms_data: VerificationSmsData,
     repository: dummies.AccessRequestRepoDummy,
     auth_context: StewardAuthContext,
-) -> Response:
+) -> VerificationSmsResult:
     """Send an SMS with a verification code for an access request"""
     try:
-        await repository.send_verification_sms(
+        note = await repository.send_verification_sms(
             access_request_id, sms_data=sms_data, auth_context=auth_context
         )
     except repository.AccessRequestAuthorizationError as exc:
@@ -300,7 +301,7 @@ async def send_verification_sms(
         raise HTTPException(
             status_code=500, detail="Verification SMS could not be sent."
         ) from exc
-    return Response(status_code=204)
+    return VerificationSmsResult(internal_note=note)
 
 
 @router.get(

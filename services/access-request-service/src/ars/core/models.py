@@ -41,6 +41,7 @@ __all__ = [
     "AccessRequestStatus",
     "Dataset",
     "VerificationSmsData",
+    "VerificationSmsResult",
 ]
 
 
@@ -268,3 +269,21 @@ class VerificationSmsData(BaseDto):
     def normalize_phone(cls, value: str) -> str:
         """Validate the phone number and normalize it to E.164 format."""
         return validate_phone_number(value)
+
+    @model_validator(mode="after")
+    def text_contains_code(self):
+        """Validate that the code recorded in the internal note is the one sent."""
+        if self.code and self.code not in self.text:
+            raise ValueError("The text must contain the verification code")
+
+        return self
+
+
+class VerificationSmsResult(BaseDto):
+    """The outcome of sending a verification SMS for an access request."""
+
+    internal_note: str = Field(
+        default=...,
+        description="The internal note of the access request,"
+        " including the record of the sent SMS",
+    )

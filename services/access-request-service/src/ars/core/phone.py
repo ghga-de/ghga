@@ -40,10 +40,15 @@ def validate_phone_number(value: str) -> str:
 
 
 def mask_phone_number(phone: str) -> str:
-    """Mask all but the country prefix and the last four digits of a phone number.
+    """Mask all but the country prefix and the last digits of a phone number.
+
+    Shows four digits, but at most half of the national number, so that a short
+    number stays masked as well.
 
     Expects the phone number in E.164 format.
     """
     number = phonenumbers.parse(phone, None)
     prefix = f"+{number.country_code}"
-    return prefix + "…" + phone[-4:]
+    national = phone[len(prefix) :]
+    shown = min(4, len(national) // 2)
+    return prefix + "…" + national[len(national) - shown :]

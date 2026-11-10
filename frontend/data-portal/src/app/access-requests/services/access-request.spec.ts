@@ -138,7 +138,7 @@ describe('AccessRequestService', () => {
     it('posts the SMS and returns the new internal note', () => {
       const httpMock = TestBed.inject(HttpTestingController);
       const sms = { phone: '+49 6221 424242', text: 'Code AB23CD', code: 'AB23CD' };
-      let note: string | null | undefined;
+      let note: string | undefined;
       service.sendVerificationSms('ar-1', sms).subscribe((n) => (note = n));
 
       const post = httpMock.expectOne(
@@ -146,11 +146,7 @@ describe('AccessRequestService', () => {
       );
       expect(post.request.method).toBe('POST');
       expect(post.request.body).toEqual(sms);
-      post.flush(null, { status: 204, statusText: 'No Content' });
-
-      const get = httpMock.expectOne('http://mock.dev/ars/access-requests/ar-1');
-      expect(get.request.method).toBe('GET');
-      get.flush({ id: 'ar-1', internal_note: 'Code AB23CD sent' });
+      post.flush({ internal_note: 'Code AB23CD sent' });
 
       expect(note).toBe('Code AB23CD sent');
     });

@@ -1362,12 +1362,13 @@ async def test_send_verification_sms(
             json=SMS_DATA,
             headers=auth_headers_steward,
         )
-        assert response.status_code == 204
+        assert response.status_code == 200
+        returned_note = response.json()["internal_note"]
 
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
     assert event.type_ == config.sms_notification_type
-    assert event.key == "+496221424242"
+    assert event.key == access_request_id
     assert event.payload == {"phone": "+496221424242", "text": SMS_DATA["text"]}
 
     response = await client.get(
@@ -1376,6 +1377,7 @@ async def test_send_verification_sms(
     assert response.status_code == 200
     note = response.json()["internal_note"]
     assert note.endswith(": Verification code AB23CD sent to +49…4242 by Rod Steward.")
+    assert returned_note == note
 
 
 async def test_send_verification_sms_as_user(

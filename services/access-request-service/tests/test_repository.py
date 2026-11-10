@@ -36,6 +36,7 @@ from ars.core.models import (
     Dataset,
     VerificationSmsData,
 )
+from ars.core.phone import mask_phone_number
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.daos import (
@@ -389,15 +390,15 @@ class AccessGrantsDummy(AccessGrantsPort):
 class SmsNotifierDummy(SmsNotifierPort):
     """Dummy SMS notifier that records the sent messages."""
 
-    sent: list[tuple[str, str]]
+    sent: list[tuple[str, str, str]]
 
     def reset(self):
         """Forget the sent messages."""
         self.sent = []
 
-    async def send_sms(self, *, phone: str, text: str) -> None:
+    async def send_sms(self, *, phone: str, text: str, key: str) -> None:
         """Record the message instead of sending it."""
-        self.sent.append((phone, text))
+        self.sent.append((phone, text, key))
 
 
 access_request_dao = AccessRequestDaoDummy()  # type: ignore
@@ -1623,18 +1624,36 @@ async def test_send_verification_sms():
     ar = ACCESS_REQUESTS[3]
     assert ar.status == AccessRequestStatus.PENDING
     assert not ar.internal_note
-    await repository.send_verification_sms(
+    note = await repository.send_verification_sms(
         ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
     )
-    assert sms_notifier.sent == [("+496221424242", SMS_DATA.text)]
+    assert sms_notifier.sent == [("+496221424242", SMS_DATA.text, str(ar.id))]
     updated = access_request_dao.last_upsert
     assert updated is not None
     assert updated.id == ar.id
     today = now_utc_ms_prec().date().isoformat()
-    assert updated.internal_note == (
-        f"{today}: Verification code AB23CD sent to +49…4242 by Rod Steward."
-    )
+    assert note == updated.internal_note
+    assert note == f"{today}: Verification code AB23CD sent to +49…4242 by Rod Steward."
     assert updated.status == AccessRequestStatus.PENDING
+
+
+async def test_send_verification_sms_is_recorded_before_sending(monkeypatch):
+    """Test that the SMS is recorded in the note even when sending it fails."""
+
+    async def fail(**kwargs):
+        raise RuntimeError("Cannot publish")
+
+    monkeypatch.setattr(sms_notifier, "send_sms", fail)
+    ar = ACCESS_REQUESTS[3]
+    with pytest.raises(RuntimeError, match="Cannot publish"):
+        await repository.send_verification_sms(
+            ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+    updated = access_request_dao.last_upsert
+    assert updated is not None
+    assert updated.id == ar.id
+    assert updated.internal_note
+    assert updated.internal_note.endswith("AB23CD sent to +49…4242 by Rod Steward.")
 
 
 async def test_send_verification_sms_appends_to_note():
@@ -1690,3 +1709,22 @@ async def test_verification_sms_with_invalid_phone(phone: str):
     """Test that invalid phone numbers or numbers without prefix are rejected."""
     with pytest.raises(ValueError, match="Invalid phone number"):
         VerificationSmsData(phone=phone, text="Some text")
+
+
+async def test_verification_sms_with_code_missing_in_text():
+    """Test that a code that is not contained in the text is rejected."""
+    with pytest.raises(ValueError, match="must contain the verification code"):
+        VerificationSmsData(phone="+49 6221 42 4242", text="Some text", code="AB23CD")
+
+
+@pytest.mark.parametrize(
+    "phone, masked",
+    [
+        ("+496221424242", "+49…4242"),
+        ("+29022158", "+290…58"),
+        ("+2902158", "+290…58"),
+    ],
+)
+def test_mask_phone_number(phone: str, masked: str):
+    """Test that at most half of the national number is shown."""
+    assert mask_phone_number(phone) == masked

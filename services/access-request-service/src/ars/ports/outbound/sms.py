@@ -25,6 +25,10 @@ class SmsNotifierPort(ABC):
     """A port for sending a text message to a phone number."""
 
     @abstractmethod
-    async def send_sms(self, *, phone: str, text: str) -> None:
-        """Send the given text to the given phone number in E.164 format."""
+    async def send_sms(self, *, phone: str, text: str, key: str) -> None:
+        """Send the given text to the given phone number in E.164 format.
+
+        The key identifies what the SMS is about. It must not contain the phone
+        number, since keys are more widely visible than the message itself.
+        """
         ...

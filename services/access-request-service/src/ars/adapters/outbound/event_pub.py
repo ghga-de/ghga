@@ -52,9 +52,12 @@ class SmsNotifier(SmsNotifierPort):
         self._type = config.sms_notification_type
         self._event_publisher = event_publisher
 
-    async def send_sms(self, *, phone: str, text: str) -> None:
-        """Send the given text to the given phone number in E.164 format."""
+    async def send_sms(self, *, phone: str, text: str, key: str) -> None:
+        """Send the given text to the given phone number in E.164 format.
+
+        The event is published with the given key.
+        """
         payload = SmsNotification(phone=phone, text=text).model_dump()
         await self._event_publisher.publish(
-            payload=payload, type_=self._type, key=phone, topic=self._topic
+            payload=payload, type_=self._type, key=key, topic=self._topic
         )

@@ -197,10 +197,16 @@ export class VerificationSmsDialog {
         },
         error: (err: unknown) => {
           console.debug(err);
-          const message =
-            err instanceof HttpErrorResponse && err.status === 422
-              ? 'The SMS could not be sent. Please check the phone number.'
-              : 'The SMS could not be sent. Please try again later.';
+          // a 422 carries the reason as text when the backend refused the request,
+          // and as a list when the data did not validate, mostly the phone number
+          const refused = err instanceof HttpErrorResponse && err.status === 422;
+          const detail = refused ? err.error?.detail : undefined;
+          let message = 'The SMS could not be sent. Please try again later.';
+          if (typeof detail === 'string') {
+            message = `The SMS could not be sent: ${detail}`;
+          } else if (refused) {
+            message = 'The SMS could not be sent. Please check the phone number.';
+          }
           this.sendError.set(message);
           this.isSubmitting.set(false);
           this.#notify.showError(message);

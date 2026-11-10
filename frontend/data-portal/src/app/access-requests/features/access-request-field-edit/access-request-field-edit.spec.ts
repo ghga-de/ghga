@@ -42,6 +42,43 @@ describe('AccessRequestFieldComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('for the internal note', () => {
+    beforeEach(async () => {
+      fixture.componentRef.setInput('request', accessRequests[4]);
+      await fixture.whenStable();
+    });
+
+    it('should take over a note that changes while it is being edited', async () => {
+      await userEvent.click(fixture.nativeElement.querySelector('.edit-button'));
+      await fixture.whenStable();
+      const input = screen.getByRole('textbox');
+      await userEvent.type(input, 'My edit');
+      await fixture.whenStable();
+      expect(component.isModified()).toBe(true);
+
+      const internal_note = 'Verification code AB23CD sent.';
+      fixture.componentRef.setInput('request', { ...accessRequests[4], internal_note });
+      await fixture.whenStable();
+
+      expect(input).toHaveValue(internal_note);
+      expect(component.isModified()).toBe(false);
+    });
+
+    it('should not save the old text over a note that changed', async () => {
+      const saved = vitest.fn();
+      component.saved.subscribe(saved);
+      await userEvent.click(fixture.nativeElement.querySelector('.edit-button'));
+      await fixture.whenStable();
+
+      const internal_note = 'Verification code AB23CD sent.';
+      fixture.componentRef.setInput('request', { ...accessRequests[4], internal_note });
+      await fixture.whenStable();
+      component.save();
+
+      expect(saved).not.toHaveBeenCalled();
+    });
+  });
+
   describe('for the ticket ID', () => {
     beforeEach(async () => {
       fixture.componentRef.setInput('request', accessRequests[4]);

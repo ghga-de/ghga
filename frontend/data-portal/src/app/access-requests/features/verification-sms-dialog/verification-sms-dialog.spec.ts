@@ -120,4 +120,31 @@ describe('VerificationSmsDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/check the phone number/);
     expect(dialogRef.close).not.toHaveBeenCalled();
   });
+
+  it('should show the reason if the backend refuses to send the SMS', async () => {
+    const detail = 'Access request has already been processed';
+    accessRequestService.sendVerificationSms.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 422, error: { detail } })),
+    );
+    await userEvent.type(fields().phone, '6221424242');
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
+    await fixture.whenStable();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(`could not be sent: ${detail}`);
+    expect(dialogRef.close).not.toHaveBeenCalled();
+  });
+
+  it('should ask to try again later after a server error', async () => {
+    accessRequestService.sendVerificationSms.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    await userEvent.type(fields().phone, '6221424242');
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
+    await fixture.whenStable();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/try again later/);
+    expect(dialogRef.close).not.toHaveBeenCalled();
+  });
 });

@@ -14,6 +14,7 @@ import {
   OnInit,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { form, FormField, validate } from '@angular/forms/signals';
 import { MatChipsModule } from '@angular/material/chips';
@@ -111,6 +112,16 @@ export class AccessRequestFieldEdit implements OnInit {
    * Notify the parent whenever the pending-edit state of this field changes.
    */
   #editedEffect = effect(() => this.edited.emit([this.name(), this.isModified()]));
+
+  /**
+   * Take over a value that changes outside this editor, as when the backend
+   * appends to the internal note. Saving a text based on the old value would
+   * otherwise overwrite the change.
+   */
+  #resetEffect = effect(() => {
+    const field = this.#defaultValue();
+    untracked(() => this.formModel.set({ field }));
+  });
 
   /**
    * Populate the editable field with the values from the access request on component init.

@@ -11,7 +11,7 @@ import { ConfigService } from '@app/shared/services/config';
 import { Notifier } from '@app/shared/services/notification';
 import { volatileCacheContext } from '@app/shared/utils/http-cache';
 import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
-import { map, Observable, switchMap, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import {
   AccessGrant,
   AccessGrantFilter,
@@ -396,18 +396,21 @@ export class AccessRequestService {
   /**
    * Send an SMS with a verification code for an access request to the DAC.
    * This can only be done by a data steward.
-   * The backend records the sending in the internal note, which is fetched
-   * afterwards and updated in the local state.
+   * The backend records the sending in the internal note and returns the note,
+   * which is then updated in the local state.
    * @param id - the access request ID
    * @param sms - the phone number, the text and the code contained in the text
    * @returns An observable that emits the new internal note
    */
-  sendVerificationSms(id: string, sms: VerificationSms): Observable<string | null> {
-    const url = `${this.#arsRequestsUrl}/${id}`;
-    return this.#http.post<null>(`${url}/verification-sms`, sms).pipe(
-      switchMap(() => this.#http.get<AccessRequest>(url)),
-      map((ar) => ar.internal_note),
-      tap((internal_note) => this.#updateAccessRequestLocally(id, { internal_note })),
+  sendVerificationSms(id: string, sms: VerificationSms): Observable<string> {
+    const url = `${this.#arsRequestsUrl}/${id}/verification-sms`;
+    return this.#http.post<{ internal_note: string }>(url, sms).pipe(
+      map(({ internal_note }) => internal_note),
+      tap((internal_note) => {
+        // the cached copy of the request lacks the new line in the note
+        this.#httpCache.delete(this.#requestBucket);
+        this.#updateAccessRequestLocally(id, { internal_note });
+      }),
     );
   }
 

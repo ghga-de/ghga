@@ -390,7 +390,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         *,
         sms_data: VerificationSmsData,
         auth_context: AuthContext,
-    ) -> None:
+    ) -> str:
         """Send an SMS with a verification code for the given access request.
 
         The recipient is a person authorized to act for the DAC, who confirms the
@@ -398,6 +398,8 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         in the internal note of the access request.
 
         Only data stewards may use this method, and only for pending requests.
+
+        Returns the new internal note.
 
         Raises:
         - `AccessRequestNotFoundError` if the specified request was not found
@@ -421,8 +423,6 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(invalid_state_error)
             raise invalid_state_error
 
-        await self._sms_notifier.send_sms(phone=sms_data.phone, text=sms_data.text)
-
         # the note is the only record of the code outside the helpdesk ticket
         what = (
             f"Verification code {sms_data.code}"
@@ -434,9 +434,16 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             f" to {mask_phone_number(sms_data.phone)} by {auth_context.name}."
         )
         note = f"{request.internal_note}\n{line}" if request.internal_note else line
+
+        # Record before sending: a line for an SMS that never went out does no harm,
+        # while a code that was sent but recorded nowhere cannot be verified.
         await self._request_dao.update(
             request.model_copy(update={"internal_note": note})
         )
+        await self._sms_notifier.send_sms(
+            phone=sms_data.phone, text=sms_data.text, key=str(access_request_id)
+        )
+        return note
 
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:

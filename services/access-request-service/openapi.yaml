@@ -351,6 +351,19 @@ components:
       - text
       title: VerificationSmsData
       type: object
+    VerificationSmsResult:
+      additionalProperties: false
+      description: The outcome of sending a verification SMS for an access request.
+      properties:
+        internal_note:
+          description: The internal note of the access request, including the record
+            of the sent SMS
+          title: Internal Note
+          type: string
+      required:
+      - internal_note
+      title: VerificationSmsResult
+      type: object
   securitySchemes:
     HTTPBearer:
       scheme: bearer
@@ -620,7 +633,7 @@ paths:
     post:
       description: Endpoint used by data stewards to send an SMS with a verification
         code to a person authorized to act for the DAC. The sending is recorded in
-        the internal note of the access request.
+        the internal note of the access request, which is returned.
       operationId: send_verification_sms
       parameters:
       - description: ID of the access request
@@ -639,7 +652,11 @@ paths:
               $ref: '#/components/schemas/VerificationSmsData'
         required: true
       responses:
-        '204':
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationSmsResult'
           description: The SMS has been submitted for sending
         '401':
           description: Not authenticated.
