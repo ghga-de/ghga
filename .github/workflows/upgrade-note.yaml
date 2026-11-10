@@ -25,9 +25,9 @@ jobs:
           BODY: ${{ github.event.pull_request.body }}
           HEAD: ${{ github.head_ref }}
           BASE: ${{ github.base_ref }}
-        # Only an explicit bash sets pipefail, so a failed diff fails the step.
-        shell: bash
+        # A file, not a pipe: the script may exit unread, and SIGPIPE would fail the step.
+        # --no-renames spares the blob:none clone fetching added and deleted files.
         run: |
-          git diff --name-only HEAD^1 HEAD \
-            | python3 scripts/check_upgrade_note.py \
-              --head "$HEAD" --base "$BASE" --changed - -- "$BODY"
+          git diff --name-only --no-renames HEAD^1 HEAD > "$RUNNER_TEMP/changed"
+          python3 scripts/check_upgrade_note.py \
+            --head "$HEAD" --base "$BASE" --changed "$RUNNER_TEMP/changed" -- "$BODY"

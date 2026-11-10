@@ -128,6 +128,17 @@ def test_note_is_optional_without_upgrade_files(monkeypatch):
     assert run("", "", monkeypatch) == 0
 
 
+def test_changed_files_are_read_from_a_file(tmp_path, monkeypatch):
+    """The workflow writes the list to a file, as a pipe could fail on SIGPIPE."""
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    changed = tmp_path / "changed"
+    changed.write_text("services/ucs/openapi.yaml\n")
+    args = ["--head", "feat/x", "--base", "dev", "--changed", str(changed), "--"]
+    assert main([*args, ""]) == 1
+    assert main([*args, "Upgrade: none"]) == 0
+
+
 def test_note_is_required_with_upgrade_files(monkeypatch):
     changed = "scripts/x.py\nservices/ucs/openapi.yaml\n"
     assert run(changed, "", monkeypatch) == 1

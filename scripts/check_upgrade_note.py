@@ -14,8 +14,9 @@ the security scan own, are exempt. Without `--changed`, every pull request needs
 line, so a broken diff cannot let one through.
 
 Usage:
-    git diff --name-only <base> <head> | python3 scripts/check_upgrade_note.py \
-        --head <branch> --base <branch> --changed - -- "<body>"
+    git diff --name-only --no-renames <base> <head> > changed
+    python3 scripts/check_upgrade_note.py \
+        --head <branch> --base <branch> --changed changed -- "<body>"
 """
 
 from __future__ import annotations
