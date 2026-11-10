@@ -68,6 +68,23 @@
               (edited)="edited($event)"
               class="contents"
             ></app-access-request-duration-edit>
+            @if (periodWarning(); as warning) {
+              <p class="text-warning flex items-start gap-x-1 text-[0.9375rem]">
+                <mat-icon fontIcon="warning" class="shrink-0 scale-[0.85]"></mat-icon>
+                <span>
+                  @if (warning === 'ended') {
+                    The requested access period ended on
+                    {{ ar.access_ends | date: periodFormat : periodTimeZone }}. Set a
+                    new end date before allowing the request, or deny it.
+                  } @else {
+                    The access period ends on
+                    {{ ar.access_ends | date: periodFormat : periodTimeZone }}, which
+                    leaves less than {{ minDays }} days of access. Consider a later end
+                    date before allowing the request.
+                  }
+                </span>
+              </p>
+            }
             <div class="mb-2 flex">
               <strong class="inline-block min-w-50">Request details:</strong>
               <div class="max-h-38 overflow-y-auto">

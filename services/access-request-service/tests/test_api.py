@@ -864,6 +864,81 @@ async def test_patch_state_change_of_denied_request(
     assert response.json()["detail"] == "Access request has already been processed"
 
 
+async def test_patch_request_whose_access_period_has_passed(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+    access_grants: AccessGrantsMock,
+):
+    """Test that a request whose period has passed can be denied but not allowed."""
+    client = rest.rest_client
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+
+    # a request cannot be created with a past period, so move it there in the DB
+    past = DATE_NOW - timedelta(days=30)
+    rest.mongodb.client[rest.config.db_name]["accessRequests"].update_many(
+        {}, {"$set": {"access_starts": past, "access_ends": past + timedelta(days=7)}}
+    )
+
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "allowed"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "The access period has ended; set a new end date before allowing"
+    )
+    assert access_grants.last_request is None
+
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "denied", "note_to_requester": "Please ask again"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 204
+
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+    assert response.status_code == 200
+    request = response.json()[0]
+    assert request["status"] == "denied"
+    assert request["note_to_requester"] == "Please ask again"
+    assert request["access_ends"] == isoformat(past + timedelta(days=7))
+
+
+async def test_patch_status_when_granting_access_fails(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+    access_grants: AccessGrantsMock,
+):
+    """Test that a failed access grant is a server error without internal details."""
+    client = rest.rest_client
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+
+    access_grants.on_grant_access = respond(500)
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "allowed"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Access request could not be modified."
+
+    # the request stays pending, so the steward can try again
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+    assert response.status_code == 200
+    assert response.json()[0]["status"] == "pending"
+
+
 async def test_patch_everything_when_allowing_request(
     rest: RestFixture,
     auth_headers_doe: dict[str, str],

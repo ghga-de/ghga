@@ -229,6 +229,7 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         """Reset the last recorded upsert."""
         self._requests = {request.id: request for request in ACCESS_REQUESTS}
         self.last_upsert = None
+        self.simulate_error = False
 
     def find_all(  # type: ignore[override]
         self, *, filter_: Mapping[str, Any]
@@ -262,6 +263,8 @@ class AccessRequestDaoDummy(AccessRequestDaoPort):  # pyright: ignore
         self, dto: AccessRequest, *, precondition: Mapping[str, Any] | None = None
     ) -> None:
         """Update an existing resource."""
+        if self.simulate_error:
+            raise RuntimeError("Database not available")
         try:
             stored = self._requests[dto.id]
         except KeyError as error:
@@ -307,11 +310,14 @@ class AccessGrantsDummy(AccessGrantsPort):
     """Dummy adapter for granting download access."""
 
     last_grant: str
+    last_grant_id: UUID4 | None
+    last_revoked_id: UUID4 | None
     simulate_error: bool
 
     def reset(self) -> None:
         """Reset the recorded grant."""
         self.last_grant = "nothing granted so far"
+        self.last_grant_id = self.last_revoked_id = None
         self.simulate_error = False
 
     async def grant_download_access(
@@ -330,7 +336,8 @@ class AccessGrantsDummy(AccessGrantsPort):
             f"to {user_id} with {iva_id}"
             f" for {dataset_id} from {valid_from} until {valid_until}"
         )
-        return uuid4()
+        self.last_grant_id = uuid4()
+        return self.last_grant_id
 
     async def get_download_access_grants(
         self,
@@ -366,6 +373,9 @@ class AccessGrantsDummy(AccessGrantsPort):
 
         May raise an `AccessGrantNotFoundError` or a general `AccessGrantsError`.
         """
+        if grant_id == self.last_grant_id:
+            self.last_revoked_id = grant_id
+            return
         for ar in ACCESS_REQUESTS:
             with suppress(ValueError):
                 idx = REQUEST_IDS.index(ar.id)
@@ -961,10 +971,28 @@ async def test_set_status_to_allowed_with_error_when_granting_access():
 
     assert access_grants.last_grant == f"to {ID_OF_JOHN_DOE} for DS007 failed"
 
-    # make sure the status is not changed in this case, and no mails are sent out
-    changed_request = access_request_dao.last_upsert
-    assert changed_request is not None
-    assert changed_request == original_request
+    # nothing is stored, so no status change is published and no mails are sent out
+    assert access_request_dao.last_upsert is None
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == original_request
+
+
+async def test_set_status_to_allowed_with_error_when_storing_request():
+    """Test that the access grant is revoked when the allowed request is not stored."""
+    original_request = await access_request_dao.get_by_id(REQUEST_IDS[3])
+    access_request_dao.simulate_error = True
+
+    with pytest.raises(RuntimeError, match="Database not available"):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=SOME_IVA_ID, status=AccessRequestStatus.ALLOWED
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert access_grants.last_grant_id is not None
+    assert access_grants.last_revoked_id == access_grants.last_grant_id
+    assert await access_request_dao.get_by_id(REQUEST_IDS[3]) == original_request
 
 
 async def test_set_status_to_allowed_when_it_is_already_allowed():
@@ -1162,11 +1190,9 @@ async def test_allow_request_whose_access_period_has_passed(
 ):
     """Test that a request cannot be allowed when its access period has passed."""
     await expire_access_period(REQUEST_IDS[3])
+    message = "The access period has ended; set a new end date before allowing"
 
-    with pytest.raises(
-        repository.AccessRequestInvalidDuration,
-        match="Access end date must be later than access start date",
-    ):
+    with pytest.raises(repository.AccessRequestInvalidDuration, match=message):
         await repository.update(
             REQUEST_IDS[3],
             patch_data=AccessRequestPatchData(
@@ -1175,8 +1201,50 @@ async def test_allow_request_whose_access_period_has_passed(
             auth_context=auth_context_steward,
         )
 
-    assert "Access end date must be later than access start date" in caplog.messages
+    assert message in caplog.messages
     assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_allow_request_with_past_end_date(caplog: pytest.LogCaptureFixture):
+    """Test that allowing with a new end date in the past blames that date."""
+    await expire_access_period(REQUEST_IDS[3])
+    message = "Access end date must be later than access start date"
+
+    with pytest.raises(repository.AccessRequestInvalidDuration, match=message):
+        await repository.update(
+            REQUEST_IDS[3],
+            patch_data=AccessRequestPatchData(
+                iva_id=uuid4(),
+                status=AccessRequestStatus.ALLOWED,
+                access_ends=now_utc_ms_prec() - timedelta(days=1),
+            ),
+            auth_context=auth_context_steward,
+        )
+
+    assert message in caplog.messages
+    assert access_grants.last_grant == "nothing granted so far"
+
+
+async def test_allow_request_whose_access_period_has_passed_with_new_end():
+    """Test that a request whose period has passed can be allowed with a new end."""
+    await expire_access_period(REQUEST_IDS[3])
+    access_ends = now_utc_ms_prec() + timedelta(days=30)
+
+    await repository.update(
+        REQUEST_IDS[3],
+        patch_data=AccessRequestPatchData(
+            iva_id=SOME_IVA_ID,
+            status=AccessRequestStatus.ALLOWED,
+            access_ends=access_ends,
+        ),
+        auth_context=auth_context_steward,
+    )
+
+    changed_request = access_request_dao.last_upsert
+    assert changed_request is not None
+    assert changed_request.status == AccessRequestStatus.ALLOWED
+    assert changed_request.access_ends == access_ends
+    assert access_grants.last_grant.endswith(f" until {access_ends}")
 
 
 async def test_set_past_access_start_date():

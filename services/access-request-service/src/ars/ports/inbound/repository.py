@@ -168,6 +168,7 @@ class AccessRequestRepositoryPort(ABC):
         - `AccessRequestClosed` if the access request was already processed
         - `AccessRequestMissingIva` if an IVA is needed but not provided
         - `AccessRequestInvalidDuration` if the end date isn't later than the start date
+          or the access period has ended
         - `AccessRequestServerError` if the access grant could not be registered
         """
         ...

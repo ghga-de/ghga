@@ -241,9 +241,13 @@ async def patch_access_request(
         repository.AccessRequestClosed,
         repository.AccessRequestMissingIva,
         repository.AccessRequestInvalidDuration,
-        repository.AccessRequestServerError,
     ) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except repository.AccessRequestServerError as exc:
+        # the repository has logged the cause, which is not for the client
+        raise HTTPException(
+            status_code=500, detail="Access request could not be modified."
+        ) from exc
     except Exception as exc:
         log.error("Could not modify access request: %s", exc, exc_info=True)
         raise HTTPException(
