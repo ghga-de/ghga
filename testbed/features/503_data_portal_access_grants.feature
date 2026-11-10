@@ -57,10 +57,9 @@ Feature: 503 Data Portal Requests
       Then I am warned that the access period has ended
 
       When I try to allow the access request
-      Then I am told to set a new end date
+      Then a dialog tells me that the access period has ended
 
-      When I filter "access requests" for dataset "DS_A"
-      And I select the filtered item
+      When I choose to edit the access duration in the dialog
       And I set the access end date to 30 days from today
       Then I am no longer warned about the access period
 

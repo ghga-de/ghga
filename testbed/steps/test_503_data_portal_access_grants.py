@@ -332,39 +332,43 @@ def check_period_ended_warning(fixtures: JointFixture):
 def check_no_period_warning(fixtures: JointFixture):
     """Check that the detail page shows no warning about the access period."""
     page = fixtures.playwright.page
-    expect(page.get_by_role("button", name="Edit access duration")).to_have_count(0)
     expect(page.locator("main")).not_to_contain_text(PERIOD_ENDED_TEXT)
 
 
 @when("I try to allow the access request")
-def allow_expired_access_request(fixtures: JointFixture):
-    """Confirm the allowance and expect the backend to refuse it."""
+def try_to_allow_access_request(fixtures: JointFixture):
+    """Click the Allow button on the detail page."""
     page = fixtures.playwright.page
     page.get_by_role("button", name="Allow", exact=True).click()
-    with page.expect_response(
-        lambda r: "/access-requests/" in r.url and r.request.method == "PATCH"
-    ) as response_info:
-        page.get_by_role("button", name="Confirm allowance").click()
-    status = response_info.value.status
-    assert status == 422, f"Expected the allowance to be refused, got {status}"
 
 
-@then("I am told to set a new end date")
-def check_new_end_date_toast(fixtures: JointFixture):
-    """Check that the error notification asks for a new end date."""
+@then("a dialog tells me that the access period has ended")
+def check_period_ended_dialog(fixtures: JointFixture):
+    """Check the dialog that explains why the request cannot be allowed."""
+    dialog = fixtures.playwright.page.get_by_role("dialog")
+    expect(dialog).to_contain_text("The access period has ended", timeout=UI_TIMEOUT)
+    expect(dialog).to_contain_text("Set a new end date")
+
+
+@when("I choose to edit the access duration in the dialog")
+def edit_duration_from_dialog(fixtures: JointFixture):
+    """Open the duration editor with the button of the dialog."""
     page = fixtures.playwright.page
-    expect(page.locator("mat-snack-bar-container")).to_contain_text(
-        "set a new end date", timeout=UI_TIMEOUT
-    )
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_role("button", name="Edit access duration").click()
+    expect(dialog).to_have_count(0, timeout=UI_TIMEOUT)
+    editor = page.locator("app-access-request-duration-edit")
+    expect(editor.get_by_label("End date")).to_be_visible(timeout=UI_TIMEOUT)
 
 
 @when(parse("I set the access end date to {days:d} days from today"))
 def set_access_end_date(fixtures: JointFixture, days: int):
-    """Open the duration editor from the warning and save a new end date."""
+    """Open the duration editor if needed and save a new end date."""
     page = fixtures.playwright.page
-    page.get_by_role("button", name="Edit access duration").click()
     editor = page.locator("app-access-request-duration-edit")
     end_input = editor.get_by_label("End date")
+    if not end_input.count():  # the dialog may have opened the editor already
+        editor.locator("mat-chip.edit-button").click()
     expect(end_input).to_be_visible(timeout=UI_TIMEOUT)
     end_date = datetime.now(UTC).date() + timedelta(days=days)
     end_input.fill(end_date.isoformat())
