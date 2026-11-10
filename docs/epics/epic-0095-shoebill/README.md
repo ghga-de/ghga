@@ -36,7 +36,10 @@ DHFS processes them in that order, and asks again right after a batch, instead o
   Each save that changes the list increments the `version` counter.
   If a save leaves the list unchanged, it doesn't cause any changes in the database: RS returns the stored document without incrementing `version`, publishing an event or writing an audit record.
 - RS must add a box to the end of the list when the box is created, and remove it when the box is deleted or archived.
-  Each addition and removal increments `version` (reiterating that from a few lines above, just to be clear).
+  Each addition and removal increments `version`.
+  RS writes the box first, then the list.
+  If the list write fails, for example after three collisions, the create, archive or delete request still succeeds, and RS logs the error.
+  The repair fixes the list on the next write or the next start of RS.
 - RS must 'repair' the list upon every update, and once when the REST app starts.
   The repair drops entries for boxes that are archived or no longer exist, and adds missing non-archived boxes to the end, oldest `last_changed` first.
   On a save, RS adds the missing boxes before it applies the moves, and drops the entries after the last move.
@@ -333,7 +336,9 @@ It adds a note in two cases:
 
 If the save fails, the page stays in reorder mode, keeps the changes, and asks the steward to try again.
 **Cancel** throws away the changes and switches to list mode.
-A `canDeactivate` guard asks before the steward leaves the page with unsaved changes.
+The existing `pendingEditsGuard` (`shared/features/pending-edits.ts`) asks before the steward leaves the page with unsaved changes.
+The access request detail page already uses it.
+The page implements `HasPendingEdits`, which reports whether reorder mode has unsaved moves.
 The [basic prototype](./prototype.html) shows both modes and each response, without styling.
 
 List mode, with the new column and button (the other columns stay the same):
@@ -341,11 +346,7 @@ List mode, with the new column and button (the other columns stay the same):
 ```text
 Upload Box Manager                                                [Change priority]
 [Filters                                                                          ]
-```
 
-Reorder mode:
-
-```text
 | Priority ^ | Title | State    | Files | Location   | Last change      | Details |
 |------------|-------|----------|-------|------------|------------------|---------|
 | 1          | Box B | locked   | 8     | Tuebingen  | 2026-10-12 09:40 | [>]     |
@@ -355,7 +356,11 @@ Reorder mode:
 | 5          | Box E | open     | 12    | Tuebingen  | 2026-10-11 14:30 | [>]     |
 |            | Box G | archived | 40    | Heidelberg | 2026-10-01 12:00 | [>]     |
                                              Upload boxes per page: 25   1 - 6 of 6
+```
 
+Reorder mode:
+
+```text
 Upload Box Manager / Change priority                 [Cancel] [Save priority]
 Files of boxes higher up are re-encrypted first.
 Version 7, last changed by _Steward A_ on 2026-10-14 15:02
@@ -405,6 +410,8 @@ A box and the list:
 
 RS writes the box and the list separately.
 If RS crashes between the two writes, the list can miss a new box, or keep an entry for an archived or deleted box.
+The same happens if the list write fails, for example after three collisions.
+The box request still succeeds in that case, and RS logs the error.
 FIS sorts the files of a missing box after the files of all listed boxes, which is also where the repair puts the box.
 FIS has no waiting files for an archived or deleted box.
 The next write to the list, or the next start of RS, repairs the list.
@@ -437,6 +444,7 @@ The prototype shows each of these except loading and the two load failures.
 | `version` on the document | FIS drops stale events. RS notices when two of its own writes collide. The page can tell whether the order changed after it loaded | [API definitions](#api-definitions) |
 | A save that leaves the list unchanged is a no-op | FIS gets no event that changes nothing, and `changed_by` still names the steward who last changed the order | [API definitions](#api-definitions) |
 | RS repairs the list on every write and when it starts | RS can't write a box and the list in one transaction. The repair at startup also fills the list with the boxes that existed before this epic | [Included/Required](#includedrequired) |
+| A box request succeeds even if the list write after it fails | The box change is already stored, and the next repair fixes the list | [Included/Required](#includedrequired) |
 | Outbox, not `PersistentKafkaPublisher` | The list is current state, not an event that starts a flow | [Included/Required](#includedrequired) |
 | Locked boxes stay in the order | Their files can still be waiting | [States](#states) |
 | Every change to the list writes an audit record | The order decides which data is processed first, so who changed it must be traceable | [Included/Required](#includedrequired) |
@@ -489,6 +497,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 - RS: a save based on an older `version` is applied to the stored list and sets `includes_other_changes`.
   A write that collides with another write is retried with a fresh read.
 - RS: RS adds a box to the end of the list when the box is created, and removes it when the box is archived or deleted.
+  If the list write fails, the create, archive or delete request still succeeds, and RS logs the error.
 - RS: the repair drops entries for archived or deleted boxes, and adds missing boxes to the end, oldest `last_changed` first.
   On a save, it adds the missing boxes before the moves and drops the entries after them.
   It runs on every write and at startup, and at startup it sets `changed_by` to `null` and writes nothing if the list is already complete.
@@ -537,7 +546,7 @@ Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps
 - The data steward opens the Upload Box Manager, clicks **Change priority**, moves the primary box once by dragging and once with a button, and saves.
 - The Priority column shows the box at the position it was moved to.
 - The reorder view shows the new version and "Last changed by" with the steward's name.
-- After the archival scenario, the box's Priority cell is empty, and the box is in neither panel of the reorder view.
+- After the archival scenario, the box's Priority cell is empty, and the reorder view does not show the box.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.
 
