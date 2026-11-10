@@ -31,6 +31,7 @@ import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { Notifier } from '@app/shared/services/notification';
 import { generateVerificationCode } from '@app/shared/utils/verification-code';
+import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
 
 /** Maximum length of the SMS text, as accepted by the backend */
 export const MAX_SMS_LENGTH = 480;
@@ -71,6 +72,7 @@ export function verificationSmsText(ar: AccessRequest, code: string): string {
     MatIconModule,
     MatInputModule,
     MatTooltipModule,
+    NgxMatInputTelComponent,
   ],
   templateUrl: './verification-sms-dialog.html',
 })
@@ -95,8 +97,8 @@ export class VerificationSmsDialog {
   });
 
   protected smsForm = form(this.smsModel, (p) => {
+    // the phone input emits E.164; the backend validates the number fully
     required(p.phone);
-    pattern(p.phone, /^\+[\d\s()/-]{6,}$/);
     required(p.code);
     pattern(p.code, /^[A-Za-z0-9]{4,16}$/);
     required(p.text);
@@ -185,7 +187,7 @@ export class VerificationSmsDialog {
     this.sendError.set('');
     const { phone, code, text } = this.smsModel();
     this.#accessRequestService
-      .sendVerificationSms(this.request.id, { phone: phone.trim(), code, text })
+      .sendVerificationSms(this.request.id, { phone, code, text })
       .subscribe({
         next: (note) => {
           this.#notify.showSuccess('The verification SMS has been sent.');

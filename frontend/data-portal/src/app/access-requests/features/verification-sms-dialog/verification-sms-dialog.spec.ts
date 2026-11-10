@@ -32,7 +32,8 @@ let fixture: ComponentFixture<VerificationSmsDialog>;
  */
 function fields() {
   return {
-    phone: screen.getByLabelText('Phone number') as HTMLInputElement,
+    // the tel input of ngx-mat-input-tel has no accessible name of its own
+    phone: fixture.nativeElement.querySelector('input[type="tel"]') as HTMLInputElement,
     code: screen.getByLabelText('Verification code') as HTMLInputElement,
     text: screen.getByLabelText('Message') as HTMLTextAreaElement,
   };
@@ -87,23 +88,23 @@ describe('VerificationSmsDialog', () => {
 
   it('should not send a message that misses the code', async () => {
     const { phone, text } = fields();
-    await userEvent.type(phone, '+49 6221 424242');
+    await userEvent.type(phone, '6221424242');
     await userEvent.clear(text);
     await userEvent.type(text, 'No code here');
     await fixture.whenStable();
     expect(screen.getByRole('button', { name: 'Send SMS' })).toBeDisabled();
   });
 
-  it('should send the SMS and close with the new note', async () => {
+  it('should send the SMS with a German number and close with the new note', async () => {
     accessRequestService.sendVerificationSms.mockReturnValue(of('the note'));
     const { phone, code, text } = fields();
-    await userEvent.type(phone, '+49 6221 424242');
+    await userEvent.type(phone, '6221424242');
     await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
 
     expect(accessRequestService.sendVerificationSms).toHaveBeenCalledWith(
       TEST_REQUEST.id,
-      { phone: '+49 6221 424242', code: code.value, text: text.value },
+      { phone: '+496221424242', code: code.value, text: text.value },
     );
     expect(dialogRef.close).toHaveBeenCalledWith('the note');
   });
@@ -112,7 +113,7 @@ describe('VerificationSmsDialog', () => {
     accessRequestService.sendVerificationSms.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 422 })),
     );
-    await userEvent.type(fields().phone, '+49 6221 424242');
+    await userEvent.type(fields().phone, '6221424242');
     await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
     await fixture.whenStable();

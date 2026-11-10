@@ -10,14 +10,17 @@
   <form class="grid gap-3 pt-2">
     <mat-form-field>
       <mat-label>Phone number</mat-label>
-      <input
-        matInput
-        type="tel"
-        autocomplete="off"
-        placeholder="+49 6221 123456"
+      <ngx-mat-input-tel
+        class="w-full"
+        defaultCountry="DE"
+        [preferredCountries]="['de']"
+        [enablePlaceholder]="true"
+        [enableSearch]="true"
         [formField]="smsForm.phone"
-      />
-      <mat-hint>With international prefix</mat-hint>
+        autocomplete="off"
+        maxLength="15"
+      ></ngx-mat-input-tel>
+      <mat-hint>Phone number of the person authorized to act for the DAC</mat-hint>
     </mat-form-field>
 
     <div class="flex items-start gap-2">
