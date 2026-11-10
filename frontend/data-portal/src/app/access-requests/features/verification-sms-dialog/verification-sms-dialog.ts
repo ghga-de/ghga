@@ -32,6 +32,7 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { Notifier } from '@app/shared/services/notification';
 import { generateVerificationCode } from '@app/shared/utils/verification-code';
 import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
+import { TelInputLabel } from '@app/shared/ui/tel-input-label/tel-input-label';
 
 /** Maximum length of the SMS text, as accepted by the backend */
 export const MAX_SMS_LENGTH = 480;
@@ -73,6 +74,7 @@ export function verificationSmsText(ar: AccessRequest, code: string): string {
     MatInputModule,
     MatTooltipModule,
     NgxMatInputTelComponent,
+    TelInputLabel,
   ],
   templateUrl: './verification-sms-dialog.html',
 })

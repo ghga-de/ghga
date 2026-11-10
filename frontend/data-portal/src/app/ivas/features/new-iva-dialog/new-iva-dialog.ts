@@ -28,6 +28,7 @@ import { MatInputModule } from '@angular/material/input';
 import { IvaType } from '@app/ivas/models/iva';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
+import { TelInputLabel } from '@app/shared/ui/tel-input-label/tel-input-label';
 
 /**
  * IVA creation dialog component
@@ -50,6 +51,7 @@ import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
     MatDialogActions,
     MatButtonToggleModule,
     NgxMatInputTelComponent,
+    TelInputLabel,
     A11yModule,
   ],
   providers: [IvaTypePipe],

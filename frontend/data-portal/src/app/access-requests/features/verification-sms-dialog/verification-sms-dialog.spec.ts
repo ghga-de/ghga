@@ -32,8 +32,7 @@ let fixture: ComponentFixture<VerificationSmsDialog>;
  */
 function fields() {
   return {
-    // the tel input of ngx-mat-input-tel has no accessible name of its own
-    phone: fixture.nativeElement.querySelector('input[type="tel"]') as HTMLInputElement,
+    phone: screen.getByRole('textbox', { name: 'Phone number' }) as HTMLInputElement,
     code: screen.getByLabelText('Verification code') as HTMLInputElement,
     text: screen.getByLabelText('Message') as HTMLTextAreaElement,
   };
