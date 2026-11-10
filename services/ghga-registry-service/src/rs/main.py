@@ -69,8 +69,8 @@ async def run_rest_app():
         prepare_core(config=config) as registry,
         prepare_rest_app(config=config, registry_override=registry) as app,
     ):
-        # Fills the list with boxes that existed before it, and heals what a crash
-        # between writing a box and writing the list left behind. The next write to
+        # Fills the list with boxes that existed before it, and repairs the list
+        # after a crash between writing a box and writing the list. The next write to
         # the list repairs it too, so the API starts even if this repair gave up.
         with suppress(UploadBoxPriorityManagerPort.PriorityUpdateError):
             await registry.priority_manager.repair()

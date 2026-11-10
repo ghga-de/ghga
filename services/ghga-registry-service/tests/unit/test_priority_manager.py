@@ -225,7 +225,7 @@ async def test_retry_after_lost_race(rig: PriorityRig, monkeypatch: pytest.Monke
     original_update = rig.priority_dao.update
 
     async def update_after_other_write(dto, *, precondition=None):
-        # Another write moves the second box to the top before this write lands
+        # Another write moves the second box to the top before this write is stored
         monkeypatch.setattr(rig.priority_dao, "update", original_update)
         await original_update(
             stored.model_copy(update={"version": 2, "entries": _entries(second, first)})
