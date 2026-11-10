@@ -134,6 +134,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[RegistryPort]:
             audit_repository=audit_repository,
             access_client=access_client,
             file_upload_box_client=file_upload_box_client,
+            priority_manager=priority_manager,
         )
 
         yield Registry(

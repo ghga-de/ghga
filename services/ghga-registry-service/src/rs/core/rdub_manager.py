@@ -18,7 +18,7 @@
 import logging
 from collections import Counter
 from collections.abc import Collection
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import UUID4, PositiveInt
@@ -48,6 +48,7 @@ from rs.core.models import (
     UploadBoxState,
 )
 from rs.ports.inbound.files import FileControllerPort
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.audit import AuditRepositoryPort
 from rs.ports.outbound.dao import BoxDao
@@ -96,7 +97,7 @@ def _sort_file_uploads(
 class RDUBManager(RDUBManagerPort):
     """A class for executing operations surrounding ResearchDataUploadBoxes"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         box_dao: BoxDao,
@@ -104,8 +105,10 @@ class RDUBManager(RDUBManagerPort):
         audit_repository: AuditRepositoryPort,
         file_upload_box_client: FileBoxClientPort,
         access_client: AccessClientPort,
+        priority_manager: UploadBoxPriorityManagerPort,
     ):
         self._box_dao = box_dao
+        self._priority_manager = priority_manager
         self._file_controller = file_controller
         self._audit_repository = audit_repository
         self._file_upload_box_client = file_upload_box_client
@@ -185,7 +188,32 @@ class RDUBManager(RDUBManagerPort):
             raise self.BoxTitleExistsError() from err
 
         await self._audit_repository.log_box_created(box=box, user_id=data_steward_id)
+        await self._update_priority_list(
+            action="add", box_id=box.id, user_id=data_steward_id
+        )
         return box.id
+
+    async def _update_priority_list(
+        self, *, action: Literal["add", "remove"], box_id: UUID4, user_id: UUID4
+    ) -> None:
+        """Add a box to the priority list or remove it, after the box was written.
+
+        The box request has succeeded at this point, so a failed list write is only
+        logged: the next write to the list, or the next start of RS, repairs it.
+        """
+        try:
+            if action == "add":
+                await self._priority_manager.add_box(box_id=box_id, user_id=user_id)
+            else:
+                await self._priority_manager.remove_box(box_id=box_id, user_id=user_id)
+        except Exception:
+            log.exception(
+                "Could not update the upload box priority list to %s box %s. The"
+                + " next write to the list or the next start of RS repairs it.",
+                action,
+                box_id,
+                extra={"box_id": box_id},
+            )
 
     async def update_research_data_upload_box(  # noqa: PLR0913
         self,
@@ -669,6 +697,10 @@ class RDUBManager(RDUBManagerPort):
             box=box, updated_box=updated_box, remote_committed=True
         )
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
+        if updated_box.state == "archived":
+            await self._update_priority_list(
+                action="remove", box_id=box.id, user_id=user_id
+            )
 
     async def grant_upload_access(  # noqa: PLR0913
         self,
@@ -1372,6 +1404,9 @@ class RDUBManager(RDUBManagerPort):
             raise error from err
         else:
             await self._audit_repository.log_box_deleted(box=box, user_id=user_id)
+            await self._update_priority_list(
+                action="remove", box_id=box_id, user_id=user_id
+            )
             log.info("Deleted RDUB %s and its FileUploadBox %s.", box_id, fub_id)
 
     async def store_accession_map(

@@ -15,7 +15,6 @@
 
 """Test that the upload box priority list is published through the outbox."""
 
-from asyncio import sleep
 from uuid import uuid4
 
 import pytest
@@ -29,8 +28,8 @@ from tests.fixtures.utils import TEST_MAX_SIZE
 pytestmark = pytest.mark.asyncio
 
 
-async def test_repair_publishes_priority(joint_fixture: JointFixture):
-    """Test that a repair that changes the list publishes it, and that a repair that
+async def test_box_changes_publish_priority(joint_fixture: JointFixture):
+    """Test that creating boxes publishes the list each time, and that a repair that
     changes nothing publishes nothing.
     """
     rdub_manager = joint_fixture.registry.rdub_manager
@@ -39,30 +38,28 @@ async def test_repair_publishes_priority(joint_fixture: JointFixture):
     joint_fixture.file_box_api.on_create_file_upload_box = respond(
         201, json=str(uuid4())
     )
+    data_steward_id = uuid4()
 
     box_ids = []
-    for i in range(2):
-        await sleep(0.002)  # distinct last_changed values, which MongoDB keeps in ms
-        box_ids.append(
-            await rdub_manager.create_research_data_upload_box(
-                title=f"Box {i}",
-                description="A box for the priority test",
-                storage_alias="test-storage",
-                data_steward_id=uuid4(),
-                max_size=TEST_MAX_SIZE,
-            )
-        )
-
     async with joint_fixture.kafka.record_events(in_topic=topic) as recorder:
-        await priority_manager.repair()
+        for i in range(2):
+            box_ids.append(
+                await rdub_manager.create_research_data_upload_box(
+                    title=f"Box {i}",
+                    description="A box for the priority test",
+                    storage_alias="test-storage",
+                    data_steward_id=data_steward_id,
+                    max_size=TEST_MAX_SIZE,
+                )
+            )
 
-    assert len(recorder.recorded_events) == 1
-    event = recorder.recorded_events[0]
+    assert len(recorder.recorded_events) == 2
+    event = recorder.recorded_events[-1]
     assert event.type_ == "upserted"
     assert event.key == BOX_PRIORITY_EVENT_KEY
     priority = UploadBoxPriority.model_validate(event.payload)
-    assert priority.version == 1
-    assert priority.changed_by is None
+    assert priority.version == 2
+    assert priority.changed_by == data_steward_id
     assert [entry.research_data_upload_box_id for entry in priority.entries] == box_ids
 
     async with joint_fixture.kafka.record_events(in_topic=topic) as recorder:

@@ -88,6 +88,30 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         """
         await self._update_priority(user_id=None)
 
+    async def add_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
+        """Add a newly created box to the end of the priority list.
+
+        Raises:
+            PriorityUpdateError: If other writes kept changing the list first.
+        """
+        await self._update_priority(
+            user_id=user_id,
+            change=lambda box_ids: box_ids if box_id in box_ids else [*box_ids, box_id],
+        )
+
+    async def remove_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
+        """Remove an archived or deleted box from the priority list.
+
+        Raises:
+            PriorityUpdateError: If other writes kept changing the list first.
+        """
+        await self._update_priority(
+            user_id=user_id,
+            change=lambda box_ids: [
+                listed_id for listed_id in box_ids if listed_id != box_id
+            ],
+        )
+
     async def _get_stored_priority(self) -> UploadBoxPriority | None:
         """Get the stored priority list, or None if none was stored yet."""
         try:

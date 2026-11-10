@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 
 class UploadBoxPriorityManagerPort(ABC):
     """Port for a class that manages the priority order of the upload boxes.
@@ -43,6 +45,24 @@ class UploadBoxPriorityManagerPort(ABC):
         The repair drops entries for boxes that are archived or no longer exist, and
         adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
         the list is already complete.
+
+        Raises:
+            PriorityUpdateError: If other writes kept changing the list first.
+        """
+        ...
+
+    @abstractmethod
+    async def add_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
+        """Add a newly created box to the end of the priority list.
+
+        Raises:
+            PriorityUpdateError: If other writes kept changing the list first.
+        """
+        ...
+
+    @abstractmethod
+    async def remove_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
+        """Remove an archived or deleted box from the priority list.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.

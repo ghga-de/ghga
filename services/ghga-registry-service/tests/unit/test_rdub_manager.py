@@ -29,10 +29,13 @@ from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolatio
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
 from rs.config import Config
+from rs.constants import BOX_PRIORITY_EVENT_KEY
 from rs.core import models
 from rs.core.files import FileController
+from rs.core.priority import UploadBoxPriorityManager
 from rs.core.rdub_manager import RDUBManager
 from rs.ports.inbound.files import FileControllerPort
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.outbound.http import AccessClientPort, FileBoxClientPort
 from tests.fixtures.utils import TEST_MAX_SIZE
 
@@ -53,6 +56,7 @@ USER1_AUTH_CONTEXT.id = str(TEST_USER_ID1)
 USER1_AUTH_CONTEXT.roles = []
 
 InMemBoxDao = new_mock_dao_class(dto_model=models.ResearchDataUploadBox, id_field="id")
+InMemPriorityDao = new_mock_dao_class(dto_model=models.UploadBoxPriority, id_field="id")
 InMemFileAccessionDao = new_mock_dao_class(
     dto_model=models.FileAccession, id_field="pid"
 )
@@ -89,6 +93,8 @@ class JointRig:
     access_client: AccessClientPort
     file_controller: FileControllerPort
     file_accession_dao: BaseInMemDao[models.FileAccession]
+    priority_dao: BaseInMemDao[models.UploadBoxPriority]
+    priority_manager: UploadBoxPriorityManager
     rdub_manager: RDUBManager
 
 
@@ -105,13 +111,19 @@ def rig(config: Config) -> JointRig:
     access_client_mock = AsyncMock()
     file_accession_dao = InMemFileAccessionDao()
     file_controller = FileController(file_accession_dao=file_accession_dao)
+    box_dao = InMemBoxDao()
+    priority_dao = InMemPriorityDao()
+    priority_manager = UploadBoxPriorityManager(
+        priority_dao=priority_dao, box_dao=box_dao, audit_repository=AsyncMock()
+    )
 
     rdub_manager = RDUBManager(
-        box_dao=(box_dao := InMemBoxDao()),
+        box_dao=box_dao,
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
         file_controller=file_controller,
         audit_repository=AsyncMock(),
+        priority_manager=priority_manager,
     )
 
     return JointRig(
@@ -121,8 +133,16 @@ def rig(config: Config) -> JointRig:
         file_accession_dao=file_accession_dao,
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
+        priority_dao=priority_dao,
+        priority_manager=priority_manager,
         rdub_manager=rdub_manager,
     )
+
+
+async def _priority_box_ids(rig: JointRig) -> list[UUID]:
+    """Return the IDs of the boxes in the stored priority list, in order."""
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    return [entry.research_data_upload_box_id for entry in priority.entries]
 
 
 @pytest_asyncio.fixture(name="populated_boxes")
@@ -166,6 +186,40 @@ async def test_create_research_data_upload_box(rig: JointRig):
     assert box.state == "open"
     assert box.file_upload_box_state == "open"
     assert box.max_size == TEST_MAX_SIZE
+
+    # The box joins the end of the priority list on behalf of the steward
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    assert await _priority_box_ids(rig) == [box_id]
+    assert priority.changed_by == TEST_DS_ID
+    assert priority.last_changed - now_utc_ms_prec() < timedelta(seconds=5)
+
+
+async def test_create_box_when_priority_list_write_fails(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Test that creating a box succeeds even if adding it to the priority list
+    fails, and that the failure is logged.
+    """
+    monkeypatch.setattr(
+        rig.priority_manager,
+        "add_box",
+        AsyncMock(side_effect=UploadBoxPriorityManagerPort.PriorityUpdateError()),
+    )
+
+    box_id = await rig.rdub_manager.create_research_data_upload_box(
+        title="Test",
+        description="Just a test",
+        storage_alias="HD01",
+        data_steward_id=TEST_DS_ID,
+        max_size=TEST_MAX_SIZE,
+    )
+
+    assert (await rig.box_dao.get_by_id(box_id)).state == "open"
+    assert [record.levelname for record in caplog.records] == ["ERROR"]
+    message = caplog.records[0].getMessage()
+    assert message.startswith(
+        f"Could not update the upload box priority list to add box {box_id}."
+    )
 
 
 async def test_create_research_data_upload_box_title_race_condition(rig: JointRig):
@@ -1689,6 +1743,9 @@ async def test_archive_research_data_upload_box_happy(
     # Verify file box client was called to archive
     rig.file_upload_box_client.archive_file_upload_box.assert_called_once()
 
+    # The archived box left the priority list
+    assert await _priority_box_ids(rig) == populated_boxes[1:]
+
 
 async def test_archive_via_update_box_not_found(rig: JointRig):
     """Test that archiving a non-existent box raises BoxNotFoundError."""
@@ -2575,6 +2632,9 @@ async def test_delete_research_data_upload_box_happy(
     )
     assert audit_kwargs["box"].id == box_id
     assert audit_kwargs["user_id"] == TEST_DS_ID
+
+    # The deleted box left the priority list
+    assert await _priority_box_ids(rig) == populated_boxes[1:]
 
 
 async def test_delete_box_locked_is_allowed(rig: JointRig, populated_boxes: list[UUID]):

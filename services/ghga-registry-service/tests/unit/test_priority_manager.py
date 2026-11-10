@@ -188,6 +188,30 @@ async def test_repair_of_complete_list(rig: PriorityRig):
     rig.audit_repository.log_box_priority_updated.assert_not_awaited()
 
 
+async def test_add_and_remove_box(rig: PriorityRig):
+    """Test that a new box joins the end of the list and that a removed box leaves
+    it, each on behalf of the given user.
+    """
+    listed = _make_box(days_ago=2)
+    new = _make_box(days_ago=0)
+    await _store_boxes(rig, listed, new)
+    await rig.priority_dao.insert(_make_priority(version=1, entries=_entries(listed)))
+
+    await rig.priority_manager.add_box(box_id=new.id, user_id=TEST_DS_ID)
+
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    assert priority.version == 2
+    assert priority.changed_by == TEST_DS_ID
+    assert priority.entries == _entries(listed, new)
+
+    await rig.box_dao.delete(listed.id)
+    await rig.priority_manager.remove_box(box_id=listed.id, user_id=TEST_DS_ID)
+
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    assert priority.version == 3
+    assert priority.entries == _entries(new)
+
+
 async def test_change_by_user(rig: PriorityRig):
     """Test that a change sees the missing boxes, that the entries for unknown boxes
     are dropped after it, and that the user who made it is recorded.
