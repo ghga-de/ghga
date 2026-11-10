@@ -8,7 +8,11 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 // eslint-disable-next-line boundaries/dependencies
 import { accessGrants, accessRequests } from '@app/../mocks/data';
-import { AccessGrantStatus, AccessRequestStatus } from '../models/access-requests';
+import {
+  AccessGrantStatus,
+  AccessRequest,
+  AccessRequestStatus,
+} from '../models/access-requests';
 
 /**
  * Mock for the Access Request Service
@@ -17,7 +21,7 @@ export class MockAccessRequestService {
   accessRequest = {
     isLoading: signal(false),
     error: signal(undefined),
-    value: signal(accessRequests[4]),
+    value: signal(accessRequests[4] as AccessRequest),
   };
   allAccessRequests = {
     isLoading: signal(false),
@@ -84,4 +88,10 @@ export class MockAccessRequestService {
   allAccessGrantsFiltered = () => accessGrants;
   revokeAccessGrant = () => of(null);
   loadAccessRequest = () => undefined;
+  updateRequest = (id: string, changes: Partial<AccessRequest>) => {
+    // like the real service, update the local copy after a successful change
+    const ar = this.accessRequest.value();
+    if (ar.id === id) this.accessRequest.value.set({ ...ar, ...changes });
+    return of(null);
+  };
 }

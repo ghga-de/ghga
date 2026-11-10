@@ -16,7 +16,9 @@ import {
   OnInit,
   signal,
   Signal,
+  viewChild,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -55,7 +57,10 @@ import {
 } from '@app/shared/utils/date-formats';
 import { html } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
+import { interval, map } from 'rxjs';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The view component used for managing access requests in the access request manager.
@@ -102,6 +107,16 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   #usersUrl = `${this.#authUrl}/users`;
 
   #location = inject(NavigationTracker);
+
+  protected readonly minDays = this.#config.accessGrantMinDays;
+  private durationEdit = viewChild(AccessRequestDurationEdit);
+
+  /**
+   * The current time, ticking every minute, so the period warning keeps up with it.
+   */
+  #now = toSignal(interval(60_000).pipe(map(() => Date.now())), {
+    initialValue: Date.now(),
+  });
 
   id = input.required<string>();
   #request = this.#accessRequestService.accessRequest;
@@ -237,6 +252,29 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     () => this.request()?.status === AccessRequestStatus.pending,
   );
 
+  /**
+   * Whether the access period of a pending request has ended or is shorter than the
+   * minimum. A start in the past counts as now, since allowing the request moves it
+   * up to now.
+   */
+  protected periodWarning = computed<'ended' | 'short' | undefined>(() => {
+    const ar = this.request();
+    if (ar?.status !== AccessRequestStatus.pending) return undefined;
+    const now = this.#now();
+    const ends = new Date(ar.access_ends).getTime();
+    if (ends <= now) return 'ended';
+    const starts = Math.max(now, new Date(ar.access_starts).getTime());
+    if (ends - starts < this.minDays * DAY_MS) return 'short';
+    return undefined;
+  });
+
+  /**
+   * Open the editor of the access duration.
+   */
+  protected editDuration(): void {
+    this.durationEdit()?.open();
+  }
+
   #ivasErrorEffect = effect(() => {
     if (this.ivasError()) {
       this.#notificationService.showError('Error fetching verification addresses.');
@@ -270,22 +308,27 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     setTimeout(() => this.showTransition.set(false), 300);
     const id = this.id();
     if (id) {
-      // Has it been fetched individually already?
-      let ar = this.#request.error() ? undefined : this.#request.value();
-      if (ar && ar.id === id) {
+      const ar = this.#loadedRequest(id);
+      if (ar) {
         this.#cachedRequest.set(ar);
       } else {
-        // Has it been fetched as part of a list?
-        const requests = this.#requests.error() ? [] : this.#requests.value();
-        ar = requests.find((ar: AccessRequest) => ar.id === id);
-        if (ar) {
-          this.#cachedRequest.set(ar);
-        } else {
-          // If not, we need to fetch it now
-          this.#accessRequestService.loadAccessRequest(id);
-        }
+        // If not, we need to fetch it now
+        this.#accessRequestService.loadAccessRequest(id);
       }
     }
+  }
+
+  /**
+   * Find the request with the given ID among those the service has already fetched,
+   * individually or as part of a list.
+   * @param id - the ID of the access request
+   * @returns the access request, or undefined if it has not been fetched
+   */
+  #loadedRequest(id: string): AccessRequest | undefined {
+    const ar = this.#request.error() ? undefined : this.#request.value();
+    if (ar?.id === id) return ar;
+    const requests = this.#requests.error() ? [] : this.#requests.value();
+    return requests.find((ar: AccessRequest) => ar.id === id);
   }
 
   /**
@@ -307,6 +350,8 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
     if (!id) return;
     this.#accessRequestService.updateRequest(id, changes).subscribe({
       next: () => {
+        // take over the copy the service has updated, as this one is a snapshot
+        this.#cachedRequest.update((ar) => ar && (this.#loadedRequest(id) ?? ar));
         this.#notificationService.showSuccess(
           `Access request was successfully modified.`,
         );
@@ -359,6 +404,10 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   safeAllow(): void {
     const request = this.request();
     if (!request || !this.selectedIvaIdRadioButton()) return;
+    if (this.periodWarning() === 'ended') {
+      this.#explainEndedPeriod(request);
+      return;
+    }
     const iva = this.ivas().find((iva) => iva.id === this.selectedIvaIdRadioButton());
     if (!iva) return;
     const ivaType = this.#ivaTypeName(iva);
@@ -395,6 +444,31 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   }
 
   /**
+   * Explain why a request whose access period has ended cannot be allowed,
+   * and offer to open the editor of the access duration.
+   * @param request - the access request
+   */
+  #explainEndedPeriod(request: AccessRequest): void {
+    const endDate = this.#datePipe.transform(
+      request.access_ends,
+      this.friendlyDateFormat,
+    );
+    this.#confirmationService.confirm({
+      title: 'The access period has ended',
+      message: html`<p>
+          The requested access period ended on <strong>${endDate}</strong>, so the
+          access request cannot be allowed as it is.
+        </p>
+        <p>Set a new end date before allowing the request, or deny it.</p>`,
+      cancelText: 'Cancel',
+      confirmText: 'Edit access duration',
+      callback: (edit) => {
+        if (edit) this.editDuration();
+      },
+    });
+  }
+
+  /**
    * Deny the access request after confirmation.
    */
   safeDeny(): void {
@@ -423,7 +497,10 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
    * @param action String literal specifying the desired status change.
    */
   saveBeforeStatusChange(action: 'deny' | 'allow'): void {
-    if (this.hasPendingEdits()) {
+    // explain an ended period first, as discarding the edits would not help
+    if (action === 'allow' && this.periodWarning() === 'ended') {
+      this.safeAllow();
+    } else if (this.hasPendingEdits()) {
       this.#confirmationService.confirm({
         title: 'Unsaved changes',
         message: 'Do you want to continue without saving your changes?',
