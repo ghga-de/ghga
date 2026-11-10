@@ -33,7 +33,11 @@ from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.audit import AuditRepository
 from rs.adapters.outbound.event_pub import EventPubTranslator
 from rs.config import Config
-from rs.core.models import ResearchDataUploadBox
+from rs.core.models import (
+    ResearchDataUploadBox,
+    UploadBoxPriority,
+    UploadBoxPriorityEntry,
+)
 from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
@@ -275,3 +279,39 @@ async def test_log_whole_box_requeue(audit_fixture: AuditFixture):
         "entity": "ResearchDataUploadBox",
         "entity_id": str(box_id),
     }
+
+
+async def test_log_box_priority_updated():
+    """Test the log_box_priority_updated function by inspecting how it calls
+    create_audit_record.
+    """
+    auditor = AuditRepository(service="rs", event_publisher=AsyncMock())
+    old_box_ids = [uuid4(), uuid4()]
+    priority = UploadBoxPriority(
+        id="global",
+        version=8,
+        changed_by=None,
+        last_changed=now_utc_ms_prec(),
+        entries=[
+            UploadBoxPriorityEntry(
+                research_data_upload_box_id=old_box_ids[1], file_upload_box_id=uuid4()
+            )
+        ],
+    )
+
+    auditor.create_audit_record = AsyncMock()
+    await auditor.log_box_priority_updated(
+        priority=priority, old_box_ids=old_box_ids, user_id=None
+    )
+    auditor.create_audit_record.assert_called_once_with(
+        label="UploadBoxPriority updated",
+        description=(
+            "The upload box priority list was changed to version 8."
+            f" Old order: [{old_box_ids[0]}, {old_box_ids[1]}]."
+            f" New order: [{old_box_ids[1]}]."
+        ),
+        user_id=None,
+        action="U",
+        entity="UploadBoxPriority",
+        entity_id="global",
+    )

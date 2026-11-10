@@ -21,7 +21,7 @@ from pydantic import UUID4
 from ghga_event_schemas.pydantic_ import AuditRecord, FileUpload
 from hexkit.correlation import get_correlation_id
 from hexkit.utils import now_utc_ms_prec
-from rs.core.models import ResearchDataUploadBox
+from rs.core.models import ResearchDataUploadBox, UploadBoxPriority
 from rs.ports.outbound.audit import AuditRepositoryPort
 from rs.ports.outbound.event_pub import EventPublisherPort
 
@@ -106,6 +106,36 @@ class AuditRepository(AuditRepositoryPort):
             action="D",
             entity=ResearchDataUploadBox.__name__,
             entity_id=str(box.id),
+        )
+
+    async def log_box_priority_updated(
+        self,
+        *,
+        priority: UploadBoxPriority,
+        old_box_ids: list[UUID4],
+        user_id: UUID4 | None,
+    ) -> None:
+        """Log a change to the upload box priority list.
+
+        The description holds the old and new order of research data upload box IDs,
+        so the audit log alone can reconstruct the history of the list.
+        `user_id` is None if the system made the change.
+        """
+        old_order = ", ".join(str(box_id) for box_id in old_box_ids)
+        new_order = ", ".join(
+            str(entry.research_data_upload_box_id) for entry in priority.entries
+        )
+        await self.create_audit_record(
+            label="UploadBoxPriority updated",
+            description=(
+                f"The upload box priority list was changed to version"
+                f" {priority.version}. Old order: [{old_order}]."
+                f" New order: [{new_order}]."
+            ),
+            user_id=user_id,
+            action="U",
+            entity=UploadBoxPriority.__name__,
+            entity_id=priority.id,
         )
 
     async def log_access_granted(
