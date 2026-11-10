@@ -54,6 +54,14 @@ _topics:
     kafkaUser:
       operations:
       - Write
+  uploadBoxPriorityTopic:
+    # as producer
+    topic:
+      name: upload_box_priority_topic
+      value: upload-box-priority
+    kafkaUser:
+      operations:
+      - Write
   deadLetterQueue:
   # as producer
     topic:
