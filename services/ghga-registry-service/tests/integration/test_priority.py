@@ -21,7 +21,7 @@ from uuid import uuid4
 import pytest
 
 from ghga_service_commons.http.mock_api import respond
-from rs.constants import UPLOAD_BOX_PRIORITY_ID
+from rs.constants import BOX_PRIORITY_EVENT_KEY
 from rs.core.models import UploadBoxPriority
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
@@ -59,7 +59,7 @@ async def test_repair_publishes_priority(joint_fixture: JointFixture):
     assert len(recorder.recorded_events) == 1
     event = recorder.recorded_events[0]
     assert event.type_ == "upserted"
-    assert event.key == UPLOAD_BOX_PRIORITY_ID
+    assert event.key == BOX_PRIORITY_EVENT_KEY
     priority = UploadBoxPriority.model_validate(event.payload)
     assert priority.version == 1
     assert priority.changed_by is None

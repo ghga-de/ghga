@@ -25,8 +25,7 @@ WORK_ORDER_TOKEN_VALID_SECONDS = 30
 FILE_ACCESSION_COLLECTION = "fileAccessions"
 STUDY_COLLECTION = "studies"
 UPLOAD_BOX_PRIORITY_COLLECTION = "uploadBoxPriority"
-# The ID of the single document that holds the upload box priority list
-UPLOAD_BOX_PRIORITY_ID = "global"
+BOX_PRIORITY_EVENT_KEY = "global"
 UCS_UPLOADS_PAGE_SIZE = 100
 
 # The RDUB-specific fields are used to look for changes in that subset of an RDUB document

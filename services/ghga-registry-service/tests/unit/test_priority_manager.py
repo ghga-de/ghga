@@ -25,7 +25,7 @@ import pytest
 from hexkit.protocols.dao import PreconditionFailedError, ResourceNotFoundError
 from hexkit.providers.testing.dao import BaseInMemDao, new_mock_dao_class
 from hexkit.utils import now_utc_ms_prec
-from rs.constants import UPLOAD_BOX_PRIORITY_ID
+from rs.constants import BOX_PRIORITY_EVENT_KEY
 from rs.core import models
 from rs.core.priority import UploadBoxPriorityManager
 from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
@@ -109,7 +109,7 @@ def _make_priority(
 ) -> models.UploadBoxPriority:
     """Make a priority list that a data steward changed a day ago."""
     return models.UploadBoxPriority(
-        id=UPLOAD_BOX_PRIORITY_ID,
+        id=BOX_PRIORITY_EVENT_KEY,
         version=version,
         changed_by=TEST_DS_ID,
         last_changed=now_utc_ms_prec() - timedelta(days=1),
@@ -122,7 +122,7 @@ async def test_repair_without_boxes(rig: PriorityRig):
     await rig.priority_manager.repair()
 
     with pytest.raises(ResourceNotFoundError):
-        await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+        await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     rig.audit_repository.log_box_priority_updated.assert_not_awaited()
 
 
@@ -138,7 +138,7 @@ async def test_repair_fills_new_list(rig: PriorityRig):
 
     await rig.priority_manager.repair()
 
-    priority = await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 1
     assert priority.changed_by is None
     assert priority.last_changed >= started
@@ -164,7 +164,7 @@ async def test_repair_heals_list(rig: PriorityRig):
 
     await rig.priority_manager.repair()
 
-    priority = await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 4
     assert priority.changed_by is None
     assert priority.entries == _entries(second, first, missing)
@@ -184,7 +184,7 @@ async def test_repair_of_complete_list(rig: PriorityRig):
 
     await rig.priority_manager.repair()
 
-    assert await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID) == stored
+    assert await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY) == stored
     rig.audit_repository.log_box_priority_updated.assert_not_awaited()
 
 
@@ -206,7 +206,7 @@ async def test_change_by_user(rig: PriorityRig):
         user_id=TEST_DS_ID, change=change
     )
 
-    assert priority == await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+    assert priority == await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 2
     assert priority.changed_by == TEST_DS_ID
     assert priority.entries == _entries(missing, listed)
@@ -236,7 +236,7 @@ async def test_retry_after_lost_race(rig: PriorityRig, monkeypatch: pytest.Monke
 
     await rig.priority_manager.repair()
 
-    priority = await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 3
     assert priority.entries == _entries(second, first, missing)
     rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
@@ -263,7 +263,7 @@ async def test_retry_after_lost_race_for_first_list(
 
     await rig.priority_manager.repair()
 
-    priority = await rig.priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+    priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 2
     assert priority.entries == _entries(other_box, box)
 
@@ -277,7 +277,7 @@ async def test_give_up_after_three_lost_races(
     await rig.priority_dao.insert(_make_priority(version=1, entries=[]))
     lose_race = AsyncMock(
         side_effect=PreconditionFailedError(
-            id_=UPLOAD_BOX_PRIORITY_ID, precondition={"version": 1}
+            id_=BOX_PRIORITY_EVENT_KEY, precondition={"version": 1}
         )
     )
     monkeypatch.setattr(rig.priority_dao, "update", lose_race)
