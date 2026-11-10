@@ -1540,7 +1540,7 @@ provides-extras = ["api", "http", "auth", "crypt", "dev", "objectstorage", "tran
 
 [[package]]
 name = "ghga-transpiler"
-version = "2.5.2"
+version = "2.6.0"
 source = { editable = "tools/ghga-transpiler" }
 dependencies = [
     { name = "click" },
