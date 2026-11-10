@@ -125,7 +125,7 @@ async def publish_events(*, all: bool = False):
             await file_accession_publisher.publish_pending()
             log.info("Publishing pending ResearchDataUploadBoxes...")
             await box_dao.publish_pending()
-            log.info("Publishing the pending UploadBoxPriority...")
+            log.info("Publishing the UploadBoxPriority (if pending)...")
             await priority_dao.publish_pending()
 
     log.info("Manual event publish finished.")
