@@ -341,30 +341,43 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if patch_data.note_to_requester is not None:
             update["note_to_requester"] = patch_data.note_to_requester or None
         modified_request = request.model_copy(update=update)
-        await self._request_dao.update(modified_request)
 
-        if status == AccessRequestStatus.ALLOWED:
-            # Try to register as download access grant
+        if status != AccessRequestStatus.ALLOWED:
+            await self._request_dao.update(modified_request)
+            return
+
+        # Register the grant before storing the request, since storing it publishes
+        # the allowed status, which the requester is notified about by email.
+        try:
+            grant_id = await self._access_grants.grant_download_access(
+                user_id=request.user_id,
+                iva_id=cast(UUID4, iva_id),  # has already been checked above
+                dataset_id=request.dataset_id,
+                valid_from=access_starts,
+                valid_until=access_ends,
+            )
+            if not grant_id:
+                raise self._access_grants.AccessGrantsError(
+                    "Access grant could not be created"
+                )
+        except self._access_grants.AccessGrantsError as error:
+            server_error = self.AccessRequestServerError(
+                f"Could not register the download access grant: {error}"
+            )
+            log.error(server_error)
+            raise server_error from error
+
+        try:
+            await self._request_dao.update(modified_request)
+        except Exception:
+            # a grant without an allowed request would be duplicated on a retry
             try:
-                grant_id = await self._access_grants.grant_download_access(
-                    user_id=request.user_id,
-                    iva_id=cast(UUID4, iva_id),  # has already been checked above
-                    dataset_id=request.dataset_id,
-                    valid_from=access_starts,
-                    valid_until=access_ends,
+                await self._access_grants.revoke_download_access_grant(grant_id)
+            except self._access_grants.AccessGrantsError as revoke_error:
+                log.error(
+                    "Could not revoke the access grant %s: %s", grant_id, revoke_error
                 )
-                if not grant_id:
-                    raise self._access_grants.AccessGrantsError(
-                        "Access grant could not be created"
-                    )
-            except self._access_grants.AccessGrantsError as error:
-                # roll back the status update
-                await self._request_dao.update(request)
-                server_error = self.AccessRequestServerError(
-                    f"Could not register the download access grant: {error}"
-                )
-                log.error(server_error)
-                raise server_error from error
+            raise
 
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
