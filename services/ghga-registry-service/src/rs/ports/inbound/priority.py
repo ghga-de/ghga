@@ -39,30 +39,14 @@ class UploadBoxPriorityManagerPort(ABC):
             )
 
     @abstractmethod
-    async def repair(self) -> None:
-        """Repair the priority list on behalf of the system, as done at startup.
+    async def repair(self, *, user_id: UUID4 | None = None) -> None:
+        """Repair the priority list on behalf of a user, or of the system if None.
 
         The repair drops entries for boxes that are archived or no longer exist, and
         adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
-        the list is already complete.
-
-        Raises:
-            PriorityUpdateError: If other writes kept changing the list first.
-        """
-        ...
-
-    @abstractmethod
-    async def add_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
-        """Add a newly created box to the end of the priority list.
-
-        Raises:
-            PriorityUpdateError: If other writes kept changing the list first.
-        """
-        ...
-
-    @abstractmethod
-    async def remove_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
-        """Remove an archived or deleted box from the priority list.
+        the list is already complete. RS runs it once at startup on behalf of the
+        system, and after a data steward creates, archives or deletes a box on behalf
+        of that steward.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.

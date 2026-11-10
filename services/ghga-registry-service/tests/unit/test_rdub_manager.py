@@ -93,6 +93,7 @@ class JointRig:
     access_client: AccessClientPort
     file_controller: FileControllerPort
     file_accession_dao: BaseInMemDao[models.FileAccession]
+    audit_repository: AsyncMock
     priority_dao: BaseInMemDao[models.UploadBoxPriority]
     priority_manager: UploadBoxPriorityManager
     rdub_manager: RDUBManager
@@ -112,9 +113,10 @@ def rig(config: Config) -> JointRig:
     file_accession_dao = InMemFileAccessionDao()
     file_controller = FileController(file_accession_dao=file_accession_dao)
     box_dao = InMemBoxDao()
+    audit_repository = AsyncMock()
     priority_dao = InMemPriorityDao()
     priority_manager = UploadBoxPriorityManager(
-        priority_dao=priority_dao, box_dao=box_dao, audit_repository=AsyncMock()
+        priority_dao=priority_dao, box_dao=box_dao, audit_repository=audit_repository
     )
 
     rdub_manager = RDUBManager(
@@ -122,7 +124,7 @@ def rig(config: Config) -> JointRig:
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
         file_controller=file_controller,
-        audit_repository=AsyncMock(),
+        audit_repository=audit_repository,
         priority_manager=priority_manager,
     )
 
@@ -133,6 +135,7 @@ def rig(config: Config) -> JointRig:
         file_accession_dao=file_accession_dao,
         file_upload_box_client=file_box_client_mock,
         access_client=access_client_mock,
+        audit_repository=audit_repository,
         priority_dao=priority_dao,
         priority_manager=priority_manager,
         rdub_manager=rdub_manager,
@@ -191,34 +194,72 @@ async def test_create_research_data_upload_box(rig: JointRig):
     priority = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert await _priority_box_ids(rig) == [box_id]
     assert priority.changed_by == TEST_DS_ID
-    assert priority.last_changed - now_utc_ms_prec() < timedelta(seconds=5)
+    assert now_utc_ms_prec() - priority.last_changed < timedelta(seconds=5)
+    rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
+        priority=priority, old_box_ids=[], user_id=TEST_DS_ID
+    )
 
 
-async def test_create_box_when_priority_list_write_fails(
-    rig: JointRig, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+@pytest.mark.parametrize("operation", ["create", "archive", "delete"])
+async def test_box_change_when_priority_list_write_fails(
+    rig: JointRig,
+    populated_boxes: list[UUID],
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    operation: str,
 ):
-    """Test that creating a box succeeds even if adding it to the priority list
-    fails, and that the failure is logged.
+    """Test that creating, archiving or deleting a box succeeds even if the priority
+    list write after it fails, and that the failure is logged once, as a warning.
     """
     monkeypatch.setattr(
         rig.priority_manager,
-        "add_box",
+        "repair",
         AsyncMock(side_effect=UploadBoxPriorityManagerPort.PriorityUpdateError()),
     )
+    rig.file_upload_box_client.get_all_file_uploads.return_value = []  # type: ignore
+    rig.access_client.get_upload_access_grants.return_value = []  # type: ignore
+    caplog.clear()
 
-    box_id = await rig.rdub_manager.create_research_data_upload_box(
-        title="Test",
-        description="Just a test",
-        storage_alias="HD01",
-        data_steward_id=TEST_DS_ID,
-        max_size=TEST_MAX_SIZE,
-    )
+    if operation == "create":
+        box_id = await rig.rdub_manager.create_research_data_upload_box(
+            title="Test",
+            description="Just a test",
+            storage_alias="HD01",
+            data_steward_id=TEST_DS_ID,
+            max_size=TEST_MAX_SIZE,
+        )
+        assert (await rig.box_dao.get_by_id(box_id)).state == "open"
+    elif operation == "archive":
+        box_id = populated_boxes[0]
+        box = await rig.box_dao.get_by_id(box_id)
+        await rig.box_dao.update(box.model_copy(update={"state": "locked"}))
+        await rig.rdub_manager.update_research_data_upload_box(
+            box_id=box_id,
+            version=box.version,
+            title=None,
+            description=None,
+            state="archived",
+            auth_context=DATA_STEWARD_AUTH_CONTEXT,
+        )
+        assert (await rig.box_dao.get_by_id(box_id)).state == "archived"
+    else:
+        box_id = populated_boxes[0]
+        box = await rig.box_dao.get_by_id(box_id)
+        await rig.rdub_manager.delete_research_data_upload_box(
+            box_id=box_id, version=box.version, user_id=TEST_DS_ID
+        )
+        with pytest.raises(ResourceNotFoundError):
+            await rig.box_dao.get_by_id(box_id)
 
-    assert (await rig.box_dao.get_by_id(box_id)).state == "open"
-    assert [record.levelname for record in caplog.records] == ["ERROR"]
-    message = caplog.records[0].getMessage()
-    assert message.startswith(
-        f"Could not update the upload box priority list to add box {box_id}."
+    warnings = [record for record in caplog.records if record.levelname != "INFO"]
+    assert [record.levelname for record in warnings] == ["WARNING"]
+    assert (
+        warnings[0]
+        .getMessage()
+        .startswith(
+            "Could not update the upload box priority list after a change to box"
+            + f" {box_id}."
+        )
     )
 
 

@@ -76,41 +76,19 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         self._box_dao = box_dao
         self._audit_repository = audit_repository
 
-    async def repair(self) -> None:
-        """Repair the priority list on behalf of the system, as done at startup.
+    async def repair(self, *, user_id: UUID4 | None = None) -> None:
+        """Repair the priority list on behalf of a user, or of the system if None.
 
         The repair drops entries for boxes that are archived or no longer exist, and
         adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
-        the list is already complete.
+        the list is already complete. RS runs it once at startup on behalf of the
+        system, and after a data steward creates, archives or deletes a box on behalf
+        of that steward.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.
         """
-        await self._update_priority(user_id=None)
-
-    async def add_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
-        """Add a newly created box to the end of the priority list.
-
-        Raises:
-            PriorityUpdateError: If other writes kept changing the list first.
-        """
-        await self._update_priority(
-            user_id=user_id,
-            change=lambda box_ids: box_ids if box_id in box_ids else [*box_ids, box_id],
-        )
-
-    async def remove_box(self, *, box_id: UUID4, user_id: UUID4) -> None:
-        """Remove an archived or deleted box from the priority list.
-
-        Raises:
-            PriorityUpdateError: If other writes kept changing the list first.
-        """
-        await self._update_priority(
-            user_id=user_id,
-            change=lambda box_ids: [
-                listed_id for listed_id in box_ids if listed_id != box_id
-            ],
-        )
+        await self._update_priority(user_id=user_id)
 
     async def _get_stored_priority(self) -> UploadBoxPriority | None:
         """Get the stored priority list, or None if none was stored yet."""
@@ -139,6 +117,9 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
             description="update the upload box priority list",
             error_on_failure=self.PriorityUpdateError,
             logger=log,
+            # One list write takes milliseconds, and box requests wait for it
+            interval=0.1,
+            jitter=0.1,
         ):
             with attempt:
                 stored = await self._get_stored_priority()

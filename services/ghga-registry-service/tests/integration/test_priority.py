@@ -20,7 +20,7 @@ from uuid import uuid4
 import pytest
 
 from ghga_service_commons.http.mock_api import respond
-from rs.constants import BOX_PRIORITY_EVENT_KEY
+from rs.constants import BOX_PRIORITY_EVENT_KEY, UPLOAD_BOX_PRIORITY_COLLECTION
 from rs.core.models import UploadBoxPriority
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
@@ -66,3 +66,30 @@ async def test_box_changes_publish_priority(joint_fixture: JointFixture):
         await priority_manager.repair()
 
     assert recorder.recorded_events == []
+
+
+async def test_repair_publishes_priority(joint_fixture: JointFixture):
+    """Test that a repair that changes the list publishes it on behalf of the system,
+    as when RS starts with boxes that existed before the list.
+    """
+    joint_fixture.file_box_api.on_create_file_upload_box = respond(
+        201, json=str(uuid4())
+    )
+    box_id = await joint_fixture.registry.rdub_manager.create_research_data_upload_box(
+        title="Box",
+        description="A box for the repair test",
+        storage_alias="test-storage",
+        data_steward_id=uuid4(),
+        max_size=TEST_MAX_SIZE,
+    )
+    joint_fixture.mongodb.empty_collections(collections=UPLOAD_BOX_PRIORITY_COLLECTION)
+
+    topic = joint_fixture.config.upload_box_priority_topic
+    async with joint_fixture.kafka.record_events(in_topic=topic) as recorder:
+        await joint_fixture.registry.priority_manager.repair()
+
+    assert len(recorder.recorded_events) == 1
+    priority = UploadBoxPriority.model_validate(recorder.recorded_events[0].payload)
+    assert priority.version == 1
+    assert priority.changed_by is None
+    assert [entry.research_data_upload_box_id for entry in priority.entries] == [box_id]
