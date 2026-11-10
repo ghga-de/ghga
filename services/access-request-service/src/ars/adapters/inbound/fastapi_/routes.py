@@ -31,6 +31,7 @@ from ars.core.models import (
     AccessRequestCreationData,
     AccessRequestPatchData,
     AccessRequestStatus,
+    VerificationSmsData,
 )
 
 __all__ = ["router"]
@@ -252,6 +253,52 @@ async def patch_access_request(
         log.error("Could not modify access request: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=500, detail="Access request could not be modified."
+        ) from exc
+    return Response(status_code=204)
+
+
+@router.post(
+    "/access-requests/{access_request_id}/verification-sms",
+    operation_id="send_verification_sms",
+    tags=["AccessRequests"],
+    summary="Send an SMS with a verification code for an access request",
+    description="Endpoint used by data stewards to send an SMS with a verification"
+    " code to a person authorized to act for the DAC. The sending is recorded"
+    " in the internal note of the access request.",
+    responses={
+        204: {"description": "The SMS has been submitted for sending"},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not authorized to send a verification SMS."},
+        404: {"description": "Access request does not exist."},
+        422: {"description": "Validation error in submitted data."},
+    },
+    status_code=204,
+)
+async def send_verification_sms(
+    *,
+    access_request_id: Annotated[
+        UUID4,
+        Path(..., alias="access_request_id", description="ID of the access request"),
+    ],
+    sms_data: VerificationSmsData,
+    repository: dummies.AccessRequestRepoDummy,
+    auth_context: StewardAuthContext,
+) -> Response:
+    """Send an SMS with a verification code for an access request"""
+    try:
+        await repository.send_verification_sms(
+            access_request_id, sms_data=sms_data, auth_context=auth_context
+        )
+    except repository.AccessRequestAuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except repository.AccessRequestNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except repository.AccessRequestClosed as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        log.error("Could not send verification SMS: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Verification SMS could not be sent."
         ) from exc
     return Response(status_code=204)
 

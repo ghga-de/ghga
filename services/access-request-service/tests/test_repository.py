@@ -34,6 +34,7 @@ from ars.core.models import (
     AccessRequestStatus,
     BaseAccessGrant,
     Dataset,
+    VerificationSmsData,
 )
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
@@ -42,6 +43,7 @@ from ars.ports.outbound.daos import (
     DatasetDaoPort,
     ResourceNotFoundError,
 )
+from ars.ports.outbound.sms import SmsNotifierPort
 from ghga_service_commons.auth.ghga import AcademicTitle, AuthContext
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.custom_types import ID
@@ -384,9 +386,24 @@ class AccessGrantsDummy(AccessGrantsPort):
         raise self.AccessGrantNotFoundError(f"Grant with ID {grant_id} not found")
 
 
+class SmsNotifierDummy(SmsNotifierPort):
+    """Dummy SMS notifier that records the sent messages."""
+
+    sent: list[tuple[str, str]]
+
+    def reset(self):
+        """Forget the sent messages."""
+        self.sent = []
+
+    async def send_sms(self, *, phone: str, text: str) -> None:
+        """Record the message instead of sending it."""
+        self.sent.append((phone, text))
+
+
 access_request_dao = AccessRequestDaoDummy()  # type: ignore
 dataset_dao = DatasetDaoDummy()  # type: ignore
 access_grants = AccessGrantsDummy()
+sms_notifier = SmsNotifierDummy()
 
 
 @pytest.fixture(autouse=True)
@@ -395,6 +412,7 @@ def reset():
     access_request_dao.reset()
     dataset_dao.reset()
     access_grants.reset()
+    sms_notifier.reset()
 
 
 repository = AccessRequestRepository(
@@ -402,6 +420,7 @@ repository = AccessRequestRepository(
     access_request_dao=access_request_dao,
     dataset_dao=dataset_dao,
     access_grants=access_grants,
+    sms_notifier=sms_notifier,
 )
 
 
@@ -1590,3 +1609,84 @@ async def test_revoke_an_access_grant_without_authorization():
     """Test that revoking an access grant needs proper authorization."""
     with pytest.raises(repository.AccessRequestAuthorizationError):
         await repository.revoke_grant(GRANT_IDS[0], auth_context=auth_context_doe)
+
+
+SMS_DATA = VerificationSmsData(
+    phone="+49 6221 42 4242",
+    text="Please send the code AB23CD to the GHGA helpdesk.",
+    code="AB23CD",
+)
+
+
+async def test_send_verification_sms():
+    """Test that a data steward can send a verification SMS and it is recorded."""
+    ar = ACCESS_REQUESTS[3]
+    assert ar.status == AccessRequestStatus.PENDING
+    assert not ar.internal_note
+    await repository.send_verification_sms(
+        ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+    )
+    assert sms_notifier.sent == [("+496221424242", SMS_DATA.text)]
+    updated = access_request_dao.last_upsert
+    assert updated is not None
+    assert updated.id == ar.id
+    today = now_utc_ms_prec().date().isoformat()
+    assert updated.internal_note == (
+        f"{today}: Verification code AB23CD sent to +49…4242 by Rod Steward."
+    )
+    assert updated.status == AccessRequestStatus.PENDING
+
+
+async def test_send_verification_sms_appends_to_note():
+    """Test that the record of a sent SMS is appended to an existing note."""
+    ar = ACCESS_REQUESTS[3]
+    await access_request_dao.update(ar.model_copy(update={"internal_note": "Hello"}))
+    sms_data = SMS_DATA.model_copy(update={"code": None})
+    await repository.send_verification_sms(
+        ar.id, sms_data=sms_data, auth_context=auth_context_steward
+    )
+    updated = access_request_dao.last_upsert
+    assert updated is not None
+    note = updated.internal_note
+    assert note
+    assert note.startswith("Hello\n")
+    assert note.endswith(": Verification SMS sent to +49…4242 by Rod Steward.")
+
+
+async def test_send_verification_sms_without_authorization():
+    """Test that only data stewards can send a verification SMS."""
+    with pytest.raises(repository.AccessRequestAuthorizationError):
+        await repository.send_verification_sms(
+            ACCESS_REQUESTS[3].id, sms_data=SMS_DATA, auth_context=auth_context_doe
+        )
+    assert not sms_notifier.sent
+    assert access_request_dao.last_upsert is None
+
+
+async def test_send_verification_sms_for_processed_request():
+    """Test that no verification SMS can be sent for a processed request."""
+    ar = ACCESS_REQUESTS[0]
+    assert ar.status == AccessRequestStatus.ALLOWED
+    with pytest.raises(repository.AccessRequestClosed):
+        await repository.send_verification_sms(
+            ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+    assert not sms_notifier.sent
+
+
+async def test_send_verification_sms_for_non_existing_request():
+    """Test that sending a verification SMS for an unknown request fails."""
+    with pytest.raises(repository.AccessRequestNotFoundError):
+        await repository.send_verification_sms(
+            uuid4(), sms_data=SMS_DATA, auth_context=auth_context_steward
+        )
+    assert not sms_notifier.sent
+
+
+@pytest.mark.parametrize(
+    "phone", ["06221 424242", "+49 123", "not a number", "+1 555 0100 0100 0100"]
+)
+async def test_verification_sms_with_invalid_phone(phone: str):
+    """Test that invalid phone numbers or numbers without prefix are rejected."""
+    with pytest.raises(ValueError, match="Invalid phone number"):
+        VerificationSmsData(phone=phone, text="Some text")

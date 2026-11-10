@@ -1,0 +1,88 @@
+<h2 mat-dialog-title>Send verification code to the DAC</h2>
+
+<mat-dialog-content>
+  <p>
+    Send an SMS with a verification code to a person authorized to act for the DAC
+    <em>{{ request.dac_alias }}</em
+    >, taking the phone number from the contract. Note the code in the helpdesk ticket;
+    the approval is verified when the code comes back via the helpdesk.
+  </p>
+  <form class="grid gap-3 pt-2">
+    <mat-form-field>
+      <mat-label>Phone number</mat-label>
+      <input
+        matInput
+        type="tel"
+        autocomplete="off"
+        placeholder="+49 6221 123456"
+        [formField]="smsForm.phone"
+      />
+      <mat-hint>With international prefix</mat-hint>
+    </mat-form-field>
+
+    <div class="flex items-start gap-2">
+      <mat-form-field class="w-48">
+        <mat-label>Verification code</mat-label>
+        <input
+          matInput
+          type="text"
+          class="totp-input-style text-center"
+          autocomplete="off"
+          [formField]="smsForm.code"
+        />
+      </mat-form-field>
+      <button
+        type="button"
+        class="mt-2"
+        mat-icon-button
+        matTooltip="Copy code to clipboard"
+        aria-label="Copy code to clipboard"
+        (click)="copyCode()"
+        data-umami-event="Verification SMS Dialog Copy Clicked"
+      >
+        <mat-icon fontIcon="content_copy"></mat-icon>
+      </button>
+      <button
+        type="button"
+        class="mt-2"
+        mat-icon-button
+        matTooltip="Generate a new code"
+        aria-label="Generate a new code"
+        (click)="regenerateCode()"
+        data-umami-event="Verification SMS Dialog Regenerate Clicked"
+      >
+        <mat-icon fontIcon="refresh"></mat-icon>
+      </button>
+    </div>
+
+    <mat-form-field>
+      <mat-label>Message</mat-label>
+      <textarea matInput rows="5" [formField]="smsForm.text"></textarea>
+      <mat-hint align="end">{{ textLength() }} / {{ maxLength }}</mat-hint>
+      @if (textMissesCode()) {
+        <mat-error>The message must contain the verification code.</mat-error>
+      }
+    </mat-form-field>
+    <div>
+      <button type="button" mat-button (click)="resetText()">Reset message</button>
+    </div>
+
+    @if (sendError()) {
+      <p class="text-error" role="alert">{{ sendError() }}</p>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button mat-button type="button" (click)="onCancel()">Cancel</button>
+  <button
+    mat-raised-button
+    class="button-primary"
+    type="button"
+    [disabled]="isSubmitDisabled()"
+    (click)="onSubmit()"
+    data-umami-event="Verification SMS Dialog Send Clicked"
+  >
+    Send SMS
+  </button>
+</mat-dialog-actions>

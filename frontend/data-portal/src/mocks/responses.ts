@@ -241,6 +241,7 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Patch an access request
   'PATCH /api/ars/access-requests/*': 204,
+  'POST /api/ars/access-requests/*/verification-sms': 204,
 
   /**
    * RTS API

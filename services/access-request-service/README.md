@@ -53,6 +53,22 @@ The service requires the following configuration parameters:
   Set this to 1 to disable extension.
   Minimum: `1`.
   Default: `5`.
+- <a id="properties/notification_topic"></a>**`notification_topic`** *(string, required)*: Name of the topic used for notification events.
+
+  Examples:
+
+  ```json
+  "notifications"
+  ```
+
+- <a id="properties/sms_notification_type"></a>**`sms_notification_type`** *(string, required)*: The type used for SMS notification events.
+
+  Examples:
+
+  ```json
+  "sms_notification"
+  ```
+
 - <a id="properties/download_access_url"></a>**`download_access_url`** *(string, required)*: URL pointing to the internal download access API.
 
   Examples:

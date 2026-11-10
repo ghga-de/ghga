@@ -25,9 +25,11 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    field_validator,
     model_validator,
 )
 
+from ars.core.phone import validate_phone_number
 from ghga_event_schemas.pydantic_ import AccessRequestStatus
 from ghga_service_commons.utils.accessions import DatasetAccession
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -38,6 +40,7 @@ __all__ = [
     "AccessRequestPatchData",
     "AccessRequestStatus",
     "Dataset",
+    "VerificationSmsData",
 ]
 
 
@@ -231,3 +234,37 @@ class GrantValidity(BaseModel):
             raise ValueError("'valid_until' must be later than 'valid_from'")
 
         return self
+
+
+class VerificationSmsData(BaseDto):
+    """An SMS with a verification code for confirming an access request.
+
+    A data steward sends it to a person authorized to act for the DAC,
+    who sends the code back via the helpdesk.
+    """
+
+    phone: str = Field(
+        default=...,
+        description="Phone number of the recipient with international prefix",
+        examples=["+49 6221 123456"],
+    )
+    text: str = Field(
+        default=...,
+        min_length=1,
+        max_length=480,
+        description="The text of the SMS, including the verification code",
+    )
+    code: str | None = Field(
+        default=None,
+        min_length=4,
+        max_length=16,
+        pattern=r"^[A-Za-z0-9]+$",
+        description="The verification code contained in the text,"
+        " to be recorded in the internal note of the access request",
+    )
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        """Validate the phone number and normalize it to E.164 format."""
+        return validate_phone_number(value)

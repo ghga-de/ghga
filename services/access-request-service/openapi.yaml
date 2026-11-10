@@ -315,6 +315,42 @@ components:
       - pending
       title: AccessRequestStatus
       type: string
+    VerificationSmsData:
+      additionalProperties: false
+      description: 'An SMS with a verification code for confirming an access request.
+
+
+        A data steward sends it to a person authorized to act for the DAC,
+
+        who sends the code back via the helpdesk.'
+      properties:
+        code:
+          anyOf:
+          - maxLength: 16
+            minLength: 4
+            pattern: ^[A-Za-z0-9]+$
+            type: string
+          - type: 'null'
+          description: The verification code contained in the text, to be recorded
+            in the internal note of the access request
+          title: Code
+        phone:
+          description: Phone number of the recipient with international prefix
+          examples:
+          - +49 6221 123456
+          title: Phone
+          type: string
+        text:
+          description: The text of the SMS, including the verification code
+          maxLength: 480
+          minLength: 1
+          title: Text
+          type: string
+      required:
+      - phone
+      - text
+      title: VerificationSmsData
+      type: object
   securitySchemes:
     HTTPBearer:
       scheme: bearer
@@ -578,6 +614,44 @@ paths:
       security:
       - HTTPBearer: []
       summary: Set status or modify other fields of an access request
+      tags:
+      - AccessRequests
+  /access-requests/{access_request_id}/verification-sms:
+    post:
+      description: Endpoint used by data stewards to send an SMS with a verification
+        code to a person authorized to act for the DAC. The sending is recorded in
+        the internal note of the access request.
+      operationId: send_verification_sms
+      parameters:
+      - description: ID of the access request
+        in: path
+        name: access_request_id
+        required: true
+        schema:
+          description: ID of the access request
+          format: uuid4
+          title: Access Request Id
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationSmsData'
+        required: true
+      responses:
+        '204':
+          description: The SMS has been submitted for sending
+        '401':
+          description: Not authenticated.
+        '403':
+          description: Not authorized to send a verification SMS.
+        '404':
+          description: Access request does not exist.
+        '422':
+          description: Validation error in submitted data.
+      security:
+      - HTTPBearer: []
+      summary: Send an SMS with a verification code for an access request
       tags:
       - AccessRequests
   /health:

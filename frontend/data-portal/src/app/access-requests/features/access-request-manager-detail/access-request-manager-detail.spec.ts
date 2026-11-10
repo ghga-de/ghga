@@ -17,6 +17,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute } from '@angular/router';
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import {
@@ -391,5 +392,35 @@ describe('AccessRequestManagerDetail access period warning', () => {
     await fixture.whenStable();
 
     expect(screen.queryByText(/access period/)).toBeNull();
+  });
+
+  it('should offer to send a verification code for a pending request', async () => {
+    await render({ status: AccessRequestStatus.pending });
+    expect(
+      screen.getByRole('button', { name: /Send verification code to DAC/ }),
+    ).toBeVisible();
+  });
+
+  it('should not offer to send a verification code for a processed request', async () => {
+    await render({ status: AccessRequestStatus.denied });
+    expect(
+      screen.queryByRole('button', { name: /Send verification code to DAC/ }),
+    ).toBeNull();
+  });
+
+  it('should show the new internal note after sending a verification code', async () => {
+    await render({ status: AccessRequestStatus.pending, internal_note: null });
+    const note = '2026-11-10: Verification code AB23CD sent to +49…4242 by Rod.';
+    const open = vitest
+      .spyOn(TestBed.inject(MatDialog), 'open')
+      .mockReturnValue({ afterClosed: () => of(note) } as never);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Send verification code to DAC/ }),
+    );
+    await fixture.whenStable();
+
+    expect(open).toHaveBeenCalledOnce();
+    expect(fixture.componentInstance.request()?.internal_note).toBe(note);
   });
 });
