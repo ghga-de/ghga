@@ -27,7 +27,7 @@ from hexkit.protocols.dao import (
     race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
-from rs.constants import UPLOAD_BOX_PRIORITY_ID
+from rs.constants import BOX_PRIORITY_EVENT_KEY
 from rs.core.models import (
     ResearchDataUploadBox,
     UploadBoxPriority,
@@ -91,7 +91,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
     async def _get_stored_priority(self) -> UploadBoxPriority | None:
         """Get the stored priority list, or None if none was stored yet."""
         try:
-            return await self._priority_dao.get_by_id(UPLOAD_BOX_PRIORITY_ID)
+            return await self._priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
         except ResourceNotFoundError:
             return None
 
@@ -147,7 +147,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
                     return stored
 
                 new_priority = UploadBoxPriority(
-                    id=UPLOAD_BOX_PRIORITY_ID,
+                    id=BOX_PRIORITY_EVENT_KEY,
                     version=stored.version + 1 if stored else 1,
                     changed_by=user_id,
                     last_changed=now_utc_ms_prec(),
@@ -164,7 +164,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
                         # Another write stored the first list in the meantime, so
                         # start again, as after any other lost race
                         raise PreconditionFailedError(
-                            id_=UPLOAD_BOX_PRIORITY_ID, precondition={"version": 0}
+                            id_=BOX_PRIORITY_EVENT_KEY, precondition={"version": 0}
                         ) from err
 
                 await self._audit_repository.log_box_priority_updated(
