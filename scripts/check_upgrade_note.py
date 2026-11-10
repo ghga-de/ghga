@@ -43,6 +43,7 @@ UPGRADE_FILES = {
 # The charts the deployments install. `ghga-demo` and `aai`, and the `values-local.yaml`
 # and the like, serve only the demo and the test bed.
 CHART_VALUES = re.compile(r"deploy/charts/(?!ghga-demo/|aai/)[^/]+/values\.yaml")
+SHOWN_FILES = 5
 
 # A long line may continue on lines that start with whitespace, as git folds trailers.
 UPGRADE_LINE = re.compile(
@@ -113,6 +114,10 @@ def main(argv: list[str] | None = None) -> int:
         "The description needs a line starting with `Upgrade:` for each action an"
         " upgrade requires, or `Upgrade: none`."
     )
+    if triggers:
+        shown = ", ".join(f"`{path}`" for path in triggers[:SHOWN_FILES])
+        more = len(triggers) - SHOWN_FILES
+        problem += f" It changes {shown}" + (f" and {more} more." if more > 0 else ".")
     in_actions = os.environ.get("GITHUB_ACTIONS") == "true"
     print(f"::error title=Upgrade note::{problem}" if in_actions else problem)
     print(f"See {RULES}.")

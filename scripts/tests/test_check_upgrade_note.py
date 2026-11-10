@@ -139,7 +139,14 @@ def test_changed_files_are_read_from_a_file(tmp_path, monkeypatch):
     assert main([*args, "Upgrade: none"]) == 0
 
 
-def test_note_is_required_with_upgrade_files(monkeypatch):
+def test_note_is_required_with_upgrade_files(capsys, monkeypatch):
     changed = "scripts/x.py\nservices/ucs/openapi.yaml\n"
     assert run(changed, "", monkeypatch) == 1
+    assert "It changes `services/ucs/openapi.yaml`." in capsys.readouterr().out
     assert run(changed, "Upgrade: none", monkeypatch) == 0
+
+
+def test_long_file_lists_are_cut(capsys, monkeypatch):
+    changed = "".join(f"services/s{i}/openapi.yaml\n" for i in range(7))
+    assert run(changed, "", monkeypatch) == 1
+    assert "and 2 more." in capsys.readouterr().out
