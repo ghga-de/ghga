@@ -88,8 +88,11 @@ describe('AccessRequestDurationEdit', () => {
     };
     await result.rerender({ inputs: { request }, partialUpdate: true });
 
-    const fromDate = new Date(2025, 7, 1);
-    const untilDate = new Date(2025, 7, 8);
+    const fromDate = new Date(component.todayStart);
+    fromDate.setDate(fromDate.getDate() + 10);
+    const untilDate = new Date(fromDate);
+    untilDate.setDate(untilDate.getDate() + 7);
+    untilDate.setHours(23, 59, 59, 999);
 
     let emitted: Map<string, string> | undefined;
     component.saved.subscribe((value) => {
@@ -105,6 +108,20 @@ describe('AccessRequestDurationEdit', () => {
     expect(emitted?.get('access_ends')).toBe(
       localDateToContractIsoUtc(untilDate, true),
     );
+  });
+
+  it('should show the stored dates of a period that has ended', async () => {
+    const request = {
+      ...accessRequests[0],
+      status: AccessRequestStatus.pending,
+      access_starts: '2025-01-01T12:00:00.000Z',
+      access_ends: '2025-01-08T12:00:00.000Z',
+    };
+    await result.rerender({ inputs: { request }, partialUpdate: true });
+    component.ngOnInit();
+    await result.fixture.whenStable();
+
+    expect(screen.getByText('2025-01-01 until 2025-01-08')).toBeVisible();
   });
 
   it('should save the offered end of today for a period that has ended', async () => {
@@ -130,6 +147,27 @@ describe('AccessRequestDurationEdit', () => {
     expect(emitted?.get('access_ends')).toBe(
       localDateToContractIsoUtc(component.todayEnd, true),
     );
+  });
+
+  it('should not save an end date before the start date', async () => {
+    const saved = vitest.fn();
+    component.saved.subscribe(saved);
+    component.open();
+    const later = new Date(component.todayStart);
+    later.setDate(later.getDate() + 10);
+    const earlier = new Date(component.todayStart);
+    earlier.setDate(earlier.getDate() + 5);
+
+    component.onDateSelected(later, true);
+    component.onDateSelected(earlier, false);
+    await result.fixture.whenStable();
+    expect(component.saveDisabled()).toBe(true);
+    const chip = result.fixture.nativeElement.querySelector('.save-edit-button');
+    // a typed date is taken on blur, so a click can reach the chip before it is disabled
+    chip.click();
+
+    expect(saved).not.toHaveBeenCalled();
+    expect(component.isOpen()).toBe(true);
   });
 
   it('should not consider re-selecting the same dates a modification', () => {

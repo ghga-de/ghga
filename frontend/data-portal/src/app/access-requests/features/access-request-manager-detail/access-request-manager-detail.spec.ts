@@ -313,7 +313,6 @@ describe('AccessRequestManagerDetail access period warning', () => {
     await render();
 
     expect(screen.queryByText(/access period/)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Edit access duration' })).toBeNull();
   });
 
   it('should warn when the access period has ended', async () => {
@@ -323,6 +322,27 @@ describe('AccessRequestManagerDetail access period warning', () => {
       screen.getByText(/The requested access period ended on \d{4}-\d{2}-\d{2}\./),
     ).toBeVisible();
     expect(screen.getByText(/Set a new end date before allowing/)).toBeVisible();
+  });
+
+  it('should explain an ended access period when allowing', async () => {
+    await render({ access_starts: daysFromNow(-30), access_ends: daysFromNow(-23) });
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(({ callback }) => callback?.(true));
+    const updateRequest = vitest.spyOn(
+      TestBed.inject(AccessRequestService),
+      'updateRequest',
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Allow' }));
+    await fixture.whenStable();
+
+    expect(confirm).toHaveBeenCalledOnce();
+    const { title, confirmText } = confirm.mock.calls[0][0];
+    expect(title).toBe('The access period has ended');
+    expect(confirmText).toBe('Edit access duration');
+    expect(updateRequest).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('End date')).toBeVisible();
   });
 
   it('should warn when less than the minimum access period remains', async () => {
@@ -347,16 +367,6 @@ describe('AccessRequestManagerDetail access period warning', () => {
     });
 
     expect(screen.queryByText(/access period/)).toBeNull();
-  });
-
-  it('should open the duration editor from the warning', async () => {
-    await render({ access_ends: daysFromNow(-1) });
-    expect(screen.queryByLabelText('End date')).toBeNull();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Edit access duration' }));
-
-    expect(screen.getByLabelText('End date')).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Edit access duration' })).toBeNull();
   });
 
   it('should warn once the access period ends while the page is open', async () => {

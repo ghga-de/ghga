@@ -189,7 +189,11 @@ export class AccessRequestDurationEdit implements OnInit {
    * @param date - The from date to update the range for
    */
   updateAccessEndRanges(date: Date): void {
-    this.minUntilDate.set(new Date(this.todayStart));
+    const startOfDate = new Date(date);
+    startOfDate.setHours(0, 0, 0, 0);
+    this.minUntilDate.set(
+      new Date(Math.max(this.todayStart.getTime(), startOfDate.getTime())),
+    );
 
     const newUntilMaxDate = new Date(date);
     newUntilMaxDate.setHours(23, 59, 59, 999);
@@ -261,6 +265,8 @@ export class AccessRequestDurationEdit implements OnInit {
   };
 
   save = () => {
+    // a disabled chip still fires its click event, so check again here
+    if (this.saveDisabled()) return;
     const { fromDate, untilDate } = this.formModel();
     if (fromDate && untilDate && this.isModified()) {
       const saveMap = new Map<keyof AccessRequest, string>();

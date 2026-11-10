@@ -110,7 +110,6 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
 
   protected readonly minDays = this.#config.accessGrantMinDays;
   private durationEdit = viewChild(AccessRequestDurationEdit);
-  protected durationEditOpen = computed(() => this.durationEdit()?.isOpen() ?? false);
 
   /**
    * The current time, ticking every minute, so the period warning keeps up with it.
@@ -405,6 +404,10 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   safeAllow(): void {
     const request = this.request();
     if (!request || !this.selectedIvaIdRadioButton()) return;
+    if (this.periodWarning() === 'ended') {
+      this.#explainEndedPeriod(request);
+      return;
+    }
     const iva = this.ivas().find((iva) => iva.id === this.selectedIvaIdRadioButton());
     if (!iva) return;
     const ivaType = this.#ivaTypeName(iva);
@@ -441,6 +444,31 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   }
 
   /**
+   * Explain why a request whose access period has ended cannot be allowed,
+   * and offer to open the editor of the access duration.
+   * @param request - the access request
+   */
+  #explainEndedPeriod(request: AccessRequest): void {
+    const endDate = this.#datePipe.transform(
+      request.access_ends,
+      this.friendlyDateFormat,
+    );
+    this.#confirmationService.confirm({
+      title: 'The access period has ended',
+      message: html`<p>
+          The requested access period ended on <strong>${endDate}</strong>, so the
+          access request cannot be allowed as it is.
+        </p>
+        <p>Set a new end date before allowing the request, or deny it.</p>`,
+      cancelText: 'Cancel',
+      confirmText: 'Edit access duration',
+      callback: (edit) => {
+        if (edit) this.editDuration();
+      },
+    });
+  }
+
+  /**
    * Deny the access request after confirmation.
    */
   safeDeny(): void {
@@ -469,7 +497,10 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
    * @param action String literal specifying the desired status change.
    */
   saveBeforeStatusChange(action: 'deny' | 'allow'): void {
-    if (this.hasPendingEdits()) {
+    // explain an ended period first, as discarding the edits would not help
+    if (action === 'allow' && this.periodWarning() === 'ended') {
+      this.safeAllow();
+    } else if (this.hasPendingEdits()) {
       this.#confirmationService.confirm({
         title: 'Unsaved changes',
         message: 'Do you want to continue without saving your changes?',

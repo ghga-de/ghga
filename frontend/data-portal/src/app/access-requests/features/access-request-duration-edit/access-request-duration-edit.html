@@ -68,8 +68,8 @@
     <strong class="min-w-50 pe-1 text-start align-middle">Access duration:</strong>
     <span class="flex min-w-60 grow items-center pb-1">
       <span class="grow">
-        {{ formModel().fromDate | date: periodFormat : periodTimeZone }} until
-        {{ formModel().untilDate | date: periodFormat : periodTimeZone }}
+        {{ request().access_starts | date: periodFormat : periodTimeZone }} until
+        {{ request().access_ends | date: periodFormat : periodTimeZone }}
       </span>
       @if (!locked()) {
         <mat-chip
