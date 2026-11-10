@@ -101,10 +101,9 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         """Apply `change` to the priority list and repair it, retrying on a lost race.
 
         Each attempt reads the list and the boxes, adds the missing boxes, applies the
-        change, and drops the entries for unknown, archived and deleted boxes. The
-        result is written only if the stored `version` is still the one just read.
-        If the result is the same as the stored list, nothing is written, published
-        or audited.
+        change, and drops the entries for unknown/archived/deleted boxes. The
+        result is written only if the stored `version` is unchanged.
+        If the result is the same as the stored list, return early.
 
         Returns the stored priority list, or None if none is stored and none is
         needed because there is no box.
