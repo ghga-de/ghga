@@ -230,10 +230,10 @@ The two constants live in different services, so comment each with a reference t
 The renewal task runs from the start of a file's interrogation until just before the report:
 
 - **Stop renewing before sending the report.**
-  `interrogate_file` calls `report_success` itself (`core/interrogator.py:854`), so the task has to end inside it, or that call moves out to the caller.
+  `interrogate_file` calls `report_success` itself, so the task has to end inside it, or that call moves out to the caller.
   A renewal that arrives after the report gets a 409, which would otherwise cancel the report.
 - **A 409 cancels the interrogation of that file.**
-  Cancelling it runs the existing `finally` in `interrogate_file` (`core/interrogator.py:800-803`), which aborts the multipart upload.
+  Cancelling it runs the existing `finally` in `interrogate_file`, which aborts the multipart upload.
   DHFS then handles the file like an `InconclusiveError`: it releases the file and moves on.
   The release changes something only when the instance still holds the lease, which is the hold cap case, and there it sets the backoff.
 - **Any other failure keeps the interrogation running.**
@@ -253,16 +253,16 @@ Keep `fetch_new_uploads()`, which `dhfs verify` still calls.
 
 ### `dhfs verify`
 
-`run_dhfs_verification` checks that FIS accepts the DHFS version with `fetch_new_uploads()` (`core/verifier.py:103-108`).
+`run_dhfs_verification` checks that FIS accepts the DHFS version with `fetch_new_uploads()`.
 That call stays on the read-only GET, so a verify run claims no file.
 Verify then calls `interrogate_file` directly on a dummy file that FIS does not know.
-Patch the renew and release calls there with `AsyncMock`, as `submit_interrogation_report` already is (`core/verifier.py:129-133`), so verify sends no lease calls for the dummy file.
+Patch the renew and release calls there with `AsyncMock`, as `submit_interrogation_report` already is, so verify sends no lease calls for the dummy file.
 
 ### Poll pacing
 
 `run_interrogator` sleeps out the remainder of `min_run_interval_seconds` after every round, whether or not the round did work.
 Have `interrogate_new_files()` return whether it processed a file, and sleep only when it did not ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences)).
-The `except Exception` round in `run_interrogator` (`main.py:60`) counts as a round that processed nothing, so an unhandled error reaches the same sleep.
+The `except Exception` round in `run_interrogator` counts as a round that processed nothing, so an unhandled error reaches the same sleep.
 
 ### Every path that ends without a report must release the file
 
@@ -272,10 +272,10 @@ Any path that produces neither leaves the file leased until expiry:
 - `InconclusiveError` releases the file, which is the usual case.
 - A renewal refused with a 409 cancels the interrogation and releases the file, as above.
 - `ConclusiveError` where `report_failure` did not reach FIS must also release.
-  `report_failure` catches `ConnectionFailedError`, `CentralAPIError` and bare `Exception` without re-raising (`core/interrogator.py:942-982`), and logs "DHFS will try re-processing this file later".
+  `report_failure` catches `ConnectionFailedError`, `CentralAPIError` and bare `Exception` without re-raising, and logs "DHFS will try re-processing this file later".
   That message is wrong once leases exist: the file waits out its lease instead of the next 60 second poll.
   So `report_failure` must return whether the report reached FIS, and the caller must release when it did not.
-- `report_success` catching a `CentralAPIError` must **not** release; the comment at `interrogator.py:920-924` gives the reason.
+- `report_success` catching a `CentralAPIError` must **not** release; the comment in `report_success` gives the reason.
   The file waits out its lease instead.
 - A stopped or killed instance releases nothing and stops renewing, and the file waits out its lease ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 
@@ -327,7 +327,8 @@ Set `max_lease_hold_seconds` to the longest single interrogation the team expect
 
 ### Rollout
 
-1. hexkit ships `update_first`, in a release that FIS then requires.
+1. hexkit adds `update_first`, before FIS or in the same change.
+   FIS uses hexkit from the workspace, so it needs no hexkit release first; raise its floor from `hexkit >= 8.3.0` to the version that adds `update_first`.
 2. FIS ships the claim, renew and release endpoints.
    The GET is unchanged, so every DHFS keeps working.
 3. DHFS ships claiming, renewal and release.
@@ -343,12 +344,13 @@ The three settings also go into `services/fis/dev_config.yaml` and `tests_fis/fi
 
 Existing tests that change:
 
-- `tests_fis/unit/test_core.py:282` `test_process_file_upload_requeue` must gain assertions on the four reset fields.
+- `test_process_file_upload_requeue` must gain assertions on the four reset fields.
 - `CentralApiMock` raises `NotMockedError` for an unrouted path, so it needs claim, renew and release routes.
   The `test_interrogator.py` tests that set `on_fetch_new_uploads` move to the claim route, serving one file per call.
-  Those that take the inconclusive path also need the release route: `:254`, `:368`, `:701`, `:812`.
+  Those that take the inconclusive path also need the release route: `test_file_not_in_inbox`, `test_etag_doesnt_match_local_md5`, `test_inbox_check_retryable_s3_errors_do_not_stop_the_batch` and `test_uncategorized_error_is_retried_not_reported`.
 
-The tests of the GET, `test_list_uploads` (`tests_fis/unit/test_api.py:120`) and `test_get_files_not_yet_interrogated` (`tests_fis/unit/test_core.py:340`), stay as they are.
+The tests of the GET stay as they are, since the GET is unchanged: `test_list_uploads`, `test_get_files_not_yet_interrogated` and `test_list_uploads_records_spans`.
+The claim endpoint gets its own span test next to `test_list_uploads_records_spans`, expecting a `routes.claim_upload` span under the server span and a `test.findAndModify` MongoDB span.
 
 New unit tests, on the `rig` fixture, with the clock frozen rather than slept through:
 
