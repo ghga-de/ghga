@@ -75,7 +75,7 @@ async def _upload_part(
 
 async def test_part_body_is_chunked_and_can_be_sent_again():
     """Every iteration yields the whole part again, in chunks of at most 1 MiB."""
-    data = os.urandom(2 * UPLOAD_CHUNK_SIZE + 1)
+    data = bytearray(os.urandom(2 * UPLOAD_CHUNK_SIZE + 1))
     body = PartBody(data)
 
     first = [chunk async for chunk in body]

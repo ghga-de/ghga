@@ -184,7 +184,7 @@ async def test_init_interrogation_bucket_upload(
 async def test_upload_file_part(joint_fixture: JointFixture, s3_client: S3Client):
     """Test the functionality of `S3Client.upload_file_part()`"""
     object_id = str(uuid4())
-    part = b"some content but not too much"
+    part = bytearray(b"some content but not too much")
     md5 = hashlib.md5(part).digest()
     bogus_md5 = hashlib.md5(b"junk").digest()
 
@@ -269,7 +269,7 @@ async def test_complete_upload(joint_fixture: JointFixture, s3_client: S3Client)
 
     # Now create an upload
     upload_id = await s3_client.init_interrogation_bucket_upload(object_id=object_id)
-    part = b"some content but not too much"
+    part = bytearray(b"some content but not too much")
     md5 = hashlib.md5(part).digest()
     await s3_client.upload_file_part(
         upload_id=upload_id,
@@ -315,7 +315,7 @@ async def test_abort_upload(joint_fixture: JointFixture, s3_client: S3Client):
 
     # Carry out an upload but don't complete it yet
     upload_id = await s3_client.init_interrogation_bucket_upload(object_id=object_id)
-    part = b"some content but not too much"
+    part = bytearray(b"some content but not too much")
     md5 = hashlib.md5(part).digest()
     await s3_client.upload_file_part(
         upload_id=upload_id,

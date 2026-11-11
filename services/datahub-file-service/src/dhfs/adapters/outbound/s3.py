@@ -49,7 +49,7 @@ class PartBody:
     body again; an async generator could only be sent once.
     """
 
-    def __init__(self, data: bytes | bytearray, *, chunk_size: int = UPLOAD_CHUNK_SIZE):
+    def __init__(self, data: bytearray, *, chunk_size: int = UPLOAD_CHUNK_SIZE):
         self._view = memoryview(data)
         self._chunk_size = chunk_size
 
@@ -274,7 +274,7 @@ class S3Client(S3ClientPort):
 
         The upload is not checked first, which would cost an extra storage call per
         part: it was created moments ago under a fresh object ID, and a part sent to
-        an upload that has gone fails with an UploadNotFoundError.
+        an upload that has gone fails with an UploadNotFoundError later instead.
         """
         return await self._storage.get_part_upload_url(
             upload_id=upload_id,
@@ -292,7 +292,7 @@ class S3Client(S3ClientPort):
         object_id: str,
         part_no: int,
         part_md5: bytes,
-        part: bytes | bytearray,
+        part: bytearray,
     ) -> None:
         """Upload a single re-encrypted file part.
 

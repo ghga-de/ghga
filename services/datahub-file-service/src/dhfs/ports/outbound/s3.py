@@ -189,7 +189,7 @@ class S3ClientPort(ABC):
         object_id: str,
         part_no: int,
         part_md5: bytes,
-        part: bytes | bytearray,
+        part: bytearray,
     ) -> None:
         """Upload a single re-encrypted file part.
 
