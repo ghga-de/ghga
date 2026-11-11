@@ -130,11 +130,6 @@ class ObjectStorageProtocol(ABC):
         specified number.
         Please note: the part number must be a non-zero, positive integer and parts
         should be uploaded in sequence.
-
-        By default, the provider first checks that the upload exists and is the only
-        one active for the object. A caller that has just created the upload itself
-        can skip that check with `verify_upload=False`: the part upload then fails
-        at the storage backend if the upload has gone.
         """
         self._validate_bucket_id(bucket_id)
         self._validate_object_id(object_id)
@@ -435,7 +430,6 @@ class ObjectStorageProtocol(ABC):
         specified number.
         Please note: the part number must be a non-zero, positive integer and parts
         should be uploaded in sequence.
-        With `verify_upload=False`, the check that the upload exists is skipped.
 
         *To be implemented by the provider. Input validation is done outside of this
         method.*

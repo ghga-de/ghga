@@ -331,6 +331,7 @@ class InMemObjectStorage(ObjectStorageProtocol):
 
         You may also specify a custom expiry duration in seconds (`expires_after`).
         Please note: the part number must be a non-zero, positive integer.
+
         With `verify_upload=False`, neither the bucket nor the upload is checked, so
         only the `ValueError` below can be raised.
 

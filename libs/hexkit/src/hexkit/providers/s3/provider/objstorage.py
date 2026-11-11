@@ -543,8 +543,6 @@ class S3ObjectStorage(ObjectStorageProtocol):
         You may also specify a custom expiry duration in seconds (`expires_after`).
         Please note: the part number must be a non-zero, positive integer and parts
         should be uploaded in sequence.
-        With `verify_upload=False`, the ListMultipartUploads call that checks the
-        upload is skipped.
         """
         if not 0 < part_number <= self.MAX_FILE_PART_NUMBER:
             raise ValueError(
