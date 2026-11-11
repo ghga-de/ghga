@@ -219,3 +219,15 @@ Options considered and left out, with the signal to look again.
   The session without them found all 25 defects planted in the review cases, so the reviewers could not find more, and the session called them only when the prompt named them.
   The runners gave the same result at a higher cost: `member-tester` cost 15% more and was called in 4 of 9 runs, and `testbed-runner` was no faster once a headless session was told to wait for the suite in the foreground.
   Look again if a session starts missing planted defects, or a test-bed run's output no longer fits a session's context.
+- **An implement–review loop.**
+  A user-invoked `/review-loop` would have Sonnet implement a task and a read-only Opus reviewer subagent check the diff against the task's `define-tasks` section in a context of its own, for at most two rounds.
+  An eval on 2026-11-11 cut eight tasks from merged PRs, six routine and two high-risk.
+  Sonnet 5.5 alone finished all 16 runs from the plan's section, with lint, types and the hidden tests green, so the loop had nothing to fix; its one run took a round without a finding at 2.3 times the cost.
+  The reviewer itself, run once on each task's change with one tested check removed, found the gap in 8 of 8 with the plan's section and in 6 of 8 with the YouTrack card alone.
+  Look again for work without a `define-tasks` plan, or once sessions start leaving bugs a review catches.
+- **Fable as the reviewer of high-risk changes.**
+  On the two high-risk changes of the same eval, Fable 5.1 found what Opus 5.5 found, at 2.7 times the cost.
+  Look again if Opus starts missing defects in access control or deletion.
+- **A shared `grill-me`.**
+  Its interview settles the decisions of a plan, which our epics, ADRs and `define-tasks` plans already settle, so it stays a personal tool ([dev/using-agents.md](dev/using-agents.md#personal-setup)).
+  Look again if loose ideas start reaching implementation without an epic.
