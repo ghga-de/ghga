@@ -86,7 +86,7 @@ The table is generated from each ADR's frontmatter by `just docs-check`; do not 
 | [0047](adrs/adr-0047-normalized-aliases-in-accessions.md) | Normalized aliases in accessions | accepted | data, backend |
 | [0048](adrs/adr-0048-architecture-concepts.md) | Numbered architecture concepts with frontmatter | accepted | docs, process |
 | [0049](adrs/adr-0049-microservice-library-over-framework.md) | A library of building blocks instead of a microservice framework | accepted | backend |
-<!-- adr-index:end -->https://www.getelectricaljobs.com/electrician-salary-guide
+<!-- adr-index:end -->
 
 ## Phased roadmap (high level)
 
