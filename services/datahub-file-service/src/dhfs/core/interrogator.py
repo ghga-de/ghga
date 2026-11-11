@@ -368,7 +368,7 @@ class Interrogator(InterrogatorPort):
         """Re-encrypt a decrypted file part using a new secret.
 
         Each segment is encrypted from a view of the input straight into the output
-        buffer, which is returned as it is: the part upload sends it in chunks.
+        buffer, which is returned as it is.
 
         May raise exceptions from cryptography if re-encryption fails.
         """

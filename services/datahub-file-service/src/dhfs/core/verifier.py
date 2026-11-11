@@ -273,7 +273,6 @@ async def _upload_inbox_dummy_file(
             f"Failed to upload the dummy file to the {config.inbox_bucket_id} bucket: {err!s}"
         ) from err
 
-    # DHFS aligns the part size to whole Crypt4GH segments itself
     return models.FileUpload(
         id=FILE_ID,
         object_id=OBJECT_ID_UUID,
@@ -293,7 +292,7 @@ def _encrypted_dummy_parts(
     envelope: bytes,
     hash_plaintext: Callable[[bytes], None],
 ) -> Generator[bytes]:
-    """Generate random data, encrypt it and yield the object it makes, part by part.
+    """Generate random data, encrypt it and yield the object, part by part.
 
     Only one part is held at a time, so memory does not grow with the file size.
     Each plaintext segment is passed to `hash_plaintext`.
@@ -321,7 +320,7 @@ async def _upload_dummy_data(
     file_size: int,
     part_size: int,
 ) -> tuple[str, int]:
-    """Upload a fresh encrypted dummy file to the inbox bucket, a part as it is made.
+    """Upload a fresh encrypted dummy file to the inbox bucket.
 
     Returns the SHA-256 of the plaintext and the size of the encrypted object.
     """
@@ -345,7 +344,6 @@ async def _upload_dummy_data(
         )
         for part_number, content in enumerate(parts, start=1):
             log.info("Uploading part number %i.", part_number)
-            # The upload was created just above, so checking it per part is wasted
             url = await storage.get_part_upload_url(
                 upload_id=upload_id,
                 bucket_id=inbox_bucket_id,

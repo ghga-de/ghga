@@ -44,8 +44,8 @@ DOWNLOAD_URL_LIFESPAN = 300  # five minutes
 DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
 
-# Part uploads are sent in chunks of this size, so no single write has to carry a whole
-#  part within one request timeout.
+# Number of bytes to read at once from a file part when streaming the httpx2.put request
+# This does not change the overall amount of bytes sent
 UPLOAD_CHUNK_SIZE = 1024**2
 SQUASHED_LOGGERS = [
     "httpx2",

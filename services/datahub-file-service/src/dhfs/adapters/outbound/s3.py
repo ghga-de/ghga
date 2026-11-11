@@ -48,7 +48,7 @@ class PartBody:
     Each iteration starts from the beginning, so a retried request can send the
     body again.
 
-    This is mainly done so memory pressure when sending a part does not scale
+    This is mainly done so memory pressure, when sending a part, does not scale
     linearly with part size.
     """
 
