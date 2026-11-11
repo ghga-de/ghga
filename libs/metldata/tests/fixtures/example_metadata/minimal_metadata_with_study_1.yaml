@@ -1,7 +1,17 @@
 studies:
   - alias: test_study
+data_access_committees:
+  - alias: test_dac
+data_access_policies:
+  - alias: test_dap
+    data_access_committee: test_dac
+datasets:
+  - alias: test_dataset
+    data_access_policy: test_dap
 files:
   - alias: test_sample_01_R1
     filename: test_sample_01_R1.fastq
+    dataset: test_dataset
   - alias: test_sample_01_R2
     filename: test_sample_01_R2.fastq
+    dataset: test_dataset

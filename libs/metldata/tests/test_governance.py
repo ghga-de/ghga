@@ -21,6 +21,7 @@ from dataclasses import dataclass
 
 import pytest
 
+from metldata.artifacts_rest.models import ArtifactInfo
 from metldata.custom_types import Json
 from metldata.governance import (
     GovernanceMetadata,
@@ -28,16 +29,43 @@ from metldata.governance import (
     resolve_file_governance,
     resolve_files_governance,
 )
+from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.essentials import ALIAS_SLOT
 from metldata.submission_registry.models import AccessionMap, Submission
 from tests.fixtures.utils import BASE_DIR
 
 ADDED_ACCESSIONS_PATH = BASE_DIR / "load" / "example_metadata" / "added_accessions.json"
+ARTIFACT_INFOS_PATH = BASE_DIR / "load" / "example_models" / "artifact_infos.json"
 # The submission and the resolved_restricted artifact the GHGA archive workflow
 # produces from it with the test bed's model. The workflow also reproduces
 # added_accessions from this submission.
 SUBMISSION_PATH = BASE_DIR / "governance" / "submission.json"
 RESOLVED_RESTRICTED_PATH = BASE_DIR / "governance" / "resolved_restricted.json"
 UNKNOWN_FILE_ACCESSION = "GHGAF00000000000000"
+
+
+def _load_artifact_anchor_points() -> dict[str, AnchorPoint]:
+    """Load the anchor points of the resolved_restricted artifact, as the loader
+    gets them from its ArtifactInfo.
+    """
+    [artifact_info] = [
+        ArtifactInfo.model_validate(artifact_info)
+        for artifact_info in json.loads(ARTIFACT_INFOS_PATH.read_text())
+        if artifact_info["name"] == "resolved_restricted"
+    ]
+    return {
+        class_name: resource_class.anchor_point
+        for class_name, resource_class in artifact_info.resource_classes.items()
+    }
+
+
+ARTIFACT_ANCHOR_POINTS = _load_artifact_anchor_points()
+# The submission model anchors the same classes under the same root slots, but
+# identifies them by alias instead of by accession.
+SUBMISSION_ANCHOR_POINTS = {
+    class_name: anchor_point.model_copy(update={"identifier_slot": ALIAS_SLOT})
+    for class_name, anchor_point in ARTIFACT_ANCHOR_POINTS.items()
+}
 
 
 @dataclass
@@ -138,10 +166,12 @@ def both_representations(studies: list[Study]) -> list[GovernanceMetadata]:
     """Index the same studies once as artifacts and once as submissions."""
     return [
         GovernanceMetadata.from_artifacts(
-            contents=[study.content for study in studies]
+            contents=[study.content for study in studies],
+            anchor_points_by_target=ARTIFACT_ANCHOR_POINTS,
         ),
         GovernanceMetadata.from_submissions(
-            submissions=[study.submission for study in studies]
+            submissions=[study.submission for study in studies],
+            anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
         ),
     ]
 
@@ -154,19 +184,23 @@ def test_same_answer_for_submission_and_its_artifact():
     submission = Submission.model_validate_json(SUBMISSION_PATH.read_text())
     file_accessions = [
         file["accession"]
-        for root_slot, resources in content.items()
-        if root_slot.endswith("_files")
-        for file in resources
+        for class_name, anchor_point in ARTIFACT_ANCHOR_POINTS.items()
+        if class_name.endswith("File")
+        for file in content[anchor_point.root_slot]
     ]
     assert file_accessions
 
     from_artifact = resolve_files_governance(
         file_accessions=file_accessions,
-        metadata=GovernanceMetadata.from_artifacts(contents=[content]),
+        metadata=GovernanceMetadata.from_artifacts(
+            contents=[content], anchor_points_by_target=ARTIFACT_ANCHOR_POINTS
+        ),
     )
     from_submission = resolve_files_governance(
         file_accessions=file_accessions,
-        metadata=GovernanceMetadata.from_submissions(submissions=[submission]),
+        metadata=GovernanceMetadata.from_submissions(
+            submissions=[submission], anchor_points_by_target=SUBMISSION_ANCHOR_POINTS
+        ),
     )
 
     assert from_artifact == from_submission
@@ -215,7 +249,9 @@ def test_loader_pattern_ignores_other_studies():
 
     governance = resolve_file_governance(
         file_accession=study_b.first_file["accession"],
-        metadata=GovernanceMetadata.from_artifacts(contents=[study_b.content]),
+        metadata=GovernanceMetadata.from_artifacts(
+            contents=[study_b.content], anchor_points_by_target=ARTIFACT_ANCHOR_POINTS
+        ),
     )
 
     assert [entry.dataset_accession for entry in governance] == [
@@ -234,7 +270,8 @@ def test_submission_without_accessions():
     governance = resolve_file_governance(
         file_accession=study_a.first_file["accession"],
         metadata=GovernanceMetadata.from_submissions(
-            submissions=[study_a.submission, new_submission]
+            submissions=[study_a.submission, new_submission],
+            anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
         ),
     )
 
@@ -288,7 +325,9 @@ def test_resource_without_reference():
     with pytest.raises(GovernanceResolutionError, match="data_access_policy"):
         resolve_file_governance(
             file_accession=study.first_file["accession"],
-            metadata=GovernanceMetadata.from_artifacts(contents=[study.content]),
+            metadata=GovernanceMetadata.from_artifacts(
+                contents=[study.content], anchor_points_by_target=ARTIFACT_ANCHOR_POINTS
+            ),
         )
 
 
@@ -327,7 +366,8 @@ def test_compared_by_content_only():
     governance_a, governance_b = resolve_file_governance(
         file_accession=study_a.first_file["accession"],
         metadata=GovernanceMetadata.from_artifacts(
-            contents=[study_a.content, study_b.content]
+            contents=[study_a.content, study_b.content],
+            anchor_points_by_target=ARTIFACT_ANCHOR_POINTS,
         ),
     )
 
@@ -338,7 +378,8 @@ def test_compared_by_content_only():
     governance_a, governance_b = resolve_file_governance(
         file_accession=study_a.first_file["accession"],
         metadata=GovernanceMetadata.from_artifacts(
-            contents=[study_a.content, study_b.content]
+            contents=[study_a.content, study_b.content],
+            anchor_points_by_target=ARTIFACT_ANCHOR_POINTS,
         ),
     )
 
@@ -351,7 +392,9 @@ def test_resolved_restricted_artifact():
     receives, whose datasets also hold the references inferred from the files.
     """
     content = json.loads(RESOLVED_RESTRICTED_PATH.read_text())["payload"]["content"]
-    metadata = GovernanceMetadata.from_artifacts(contents=[content])
+    metadata = GovernanceMetadata.from_artifacts(
+        contents=[content], anchor_points_by_target=ARTIFACT_ANCHOR_POINTS
+    )
 
     [governance] = resolve_file_governance(
         file_accession="GHGAF58002773408921", metadata=metadata
@@ -383,3 +426,32 @@ def test_resolved_restricted_artifact():
         file_accessions=file_accessions, metadata=metadata
     ).values():
         assert len(governance_list) == 1
+
+
+def test_root_slots_from_anchor_points():
+    """Test that a model anchoring a class on the governance chain under another
+    root slot resolves the same governance.
+    """
+    study = load_study()
+    expected_governance = resolve_file_governance(
+        file_accession=study.first_file["accession"],
+        metadata=GovernanceMetadata.from_artifacts(
+            contents=[study.content], anchor_points_by_target=ARTIFACT_ANCHOR_POINTS
+        ),
+    )
+    study.content["access_policies"] = study.content.pop("data_access_policies")
+    anchor_points_by_target = {
+        **ARTIFACT_ANCHOR_POINTS,
+        "DataAccessPolicy": ARTIFACT_ANCHOR_POINTS["DataAccessPolicy"].model_copy(
+            update={"root_slot": "access_policies"}
+        ),
+    }
+
+    governance = resolve_file_governance(
+        file_accession=study.first_file["accession"],
+        metadata=GovernanceMetadata.from_artifacts(
+            contents=[study.content], anchor_points_by_target=anchor_points_by_target
+        ),
+    )
+
+    assert governance == expected_governance

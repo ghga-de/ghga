@@ -23,6 +23,14 @@ from metldata.model_utils.anchors import (
     get_anchors_points_by_target,
 )
 from metldata.model_utils.essentials import (
+    ALIAS_SLOT,
+    DATA_ACCESS_COMMITTEE_CLASS,
+    DATA_ACCESS_POLICY_CLASS,
+    DATA_ACCESS_POLICY_DATA_ACCESS_COMMITTEE_SLOT,
+    DATASET_CLASS,
+    DATASET_DATA_ACCESS_POLICY_SLOT,
+    FILE_CLASS_SUFFIX,
+    FILE_DATASET_SLOT,
     ROOT_CLASS,
     STUDY_ANCHOR,
     STUDY_CLASS,
@@ -163,6 +171,66 @@ def check_study_cardinality(model: MetadataModel) -> None:
             + " and have a minimum_cardinality and a maximum_cardinality of 1, so"
             + " that every submission holds exactly one study."
         )
+
+
+def check_governance_anchors(model: MetadataModel) -> None:
+    """Check that the classes on the governance chain are anchored and that each one
+    refers to the next through the slot the governance traversal follows: every
+    anchored file class to DATASET_CLASS, DATASET_CLASS to DATA_ACCESS_POLICY_CLASS
+    and DATA_ACCESS_POLICY_CLASS to DATA_ACCESS_COMMITTEE_CLASS. The policy and the
+    committee must be identified by ALIAS_SLOT, which artifacts keep as the alias.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+    governance_classes = [
+        DATASET_CLASS,
+        DATA_ACCESS_POLICY_CLASS,
+        DATA_ACCESS_COMMITTEE_CLASS,
+    ]
+    for class_name in governance_classes:
+        check_class_exists(model=model, class_name=class_name)
+    check_anchor_points(model=model, classes=governance_classes)
+
+    anchor_points_by_target = get_anchors_points_by_target(model=model)
+    file_classes = [
+        class_name
+        for class_name in anchor_points_by_target
+        if class_name.endswith(FILE_CLASS_SUFFIX)
+    ]
+    if not file_classes:
+        raise MetadataModelAssumptionError(
+            f"An anchored class whose name ends in '{FILE_CLASS_SUFFIX}' is required."
+        )
+
+    links = [
+        (file_class, FILE_DATASET_SLOT, DATASET_CLASS) for file_class in file_classes
+    ] + [
+        (DATASET_CLASS, DATASET_DATA_ACCESS_POLICY_SLOT, DATA_ACCESS_POLICY_CLASS),
+        (
+            DATA_ACCESS_POLICY_CLASS,
+            DATA_ACCESS_POLICY_DATA_ACCESS_COMMITTEE_SLOT,
+            DATA_ACCESS_COMMITTEE_CLASS,
+        ),
+    ]
+    for class_name, slot_name, target_class in links:
+        check_class_slot_exists(model=model, class_name=class_name, slot_name=slot_name)
+        slot = model.schema_view.induced_slot(
+            slot_name=slot_name, class_name=class_name
+        )
+        if slot.range != target_class or slot.multivalued:
+            raise MetadataModelAssumptionError(
+                f"The slot '{slot_name}' of the '{class_name}' class must refer to a"
+                + f" single '{target_class}'."
+            )
+
+    for class_name in (DATA_ACCESS_POLICY_CLASS, DATA_ACCESS_COMMITTEE_CLASS):
+        identifier_slot = anchor_points_by_target[class_name].identifier_slot
+        if identifier_slot != ALIAS_SLOT:
+            raise MetadataModelAssumptionError(
+                f"The '{class_name}' class must be identified by the slot"
+                + f" '{ALIAS_SLOT}', not '{identifier_slot}'."
+            )
 
 
 def check_basic_model_assumption(model: MetadataModel) -> None:

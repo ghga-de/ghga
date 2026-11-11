@@ -29,9 +29,37 @@ classes:
     mixins: AliasMixin
     slots:
       - filename
+      - dataset
     slot_usage:
       filename:
         required: true
+      dataset:
+        required: true
+
+  Dataset:
+    description: >-
+      A dataset is a collection of files governed by one data access policy.
+    mixins: AliasMixin
+    slots:
+      - data_access_policy
+    slot_usage:
+      data_access_policy:
+        required: true
+
+  DataAccessPolicy:
+    description: >-
+      A data access policy states the conditions under which a dataset is shared.
+    mixins: AliasMixin
+    slots:
+      - data_access_committee
+    slot_usage:
+      data_access_committee:
+        required: true
+
+  DataAccessCommittee:
+    description: >-
+      A data access committee decides on access to the datasets of its policies.
+    mixins: AliasMixin
 
   Submission:
     tree_root: true
@@ -40,6 +68,9 @@ classes:
     slots:
       - studies
       - files
+      - datasets
+      - data_access_policies
+      - data_access_committees
 
     slot_usage:
       studies:
@@ -50,6 +81,21 @@ classes:
         minimum_cardinality: 1
         maximum_cardinality: 1
       files:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      datasets:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      data_access_policies:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      data_access_committees:
         required: true
         multivalued: true
         inlined: true
@@ -67,5 +113,29 @@ slots:
     description: The file associated with an entity.
     range: File
 
+  datasets:
+    description: The datasets associated with an entity.
+    range: Dataset
+
+  data_access_policies:
+    description: The data access policies associated with an entity.
+    range: DataAccessPolicy
+
+  data_access_committees:
+    description: The data access committees associated with an entity.
+    range: DataAccessCommittee
+
   filename:
     description: The given filename.
+
+  dataset:
+    description: The dataset the file belongs to.
+    range: Dataset
+
+  data_access_policy:
+    description: The data access policy of the dataset.
+    range: DataAccessPolicy
+
+  data_access_committee:
+    description: The data access committee of the data access policy.
+    range: DataAccessCommittee

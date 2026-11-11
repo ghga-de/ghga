@@ -22,6 +22,7 @@ from pydantic_settings import BaseSettings
 
 from metldata.model_utils.assumptions import (
     check_basic_model_assumption,
+    check_governance_anchors,
     check_study_anchor,
     check_study_cardinality,
 )
@@ -38,7 +39,8 @@ class MetadataModelConfig(BaseSettings):
     @property
     def metadata_model(self) -> MetadataModel:
         """Load the submission model from the path and check that it meets the basic
-        assumptions and holds exactly one study per submission.
+        assumptions, holds exactly one study per submission and has the governance
+        chain.
         """
         model = MetadataModel.init_from_path(self.metadata_model_path)
         check_basic_model_assumption(model)
@@ -46,4 +48,5 @@ class MetadataModelConfig(BaseSettings):
         # it holds, so check_study_anchor must run first
         check_study_anchor(model)
         check_study_cardinality(model)
+        check_governance_anchors(model)
         return model
