@@ -251,7 +251,6 @@ jobs:
   # and a job that never starts can leave its check missing rather than skipped — which
   # would block every unrelated PR forever. This job always runs and translates
   # "no image affected" into an explicit pass.
-  # The rulesets are exported to ghga-de/deploy: tell DevOps when you change one.
   images-gate:
     needs: [discover, check-images]
     if: ${{ always() }}
