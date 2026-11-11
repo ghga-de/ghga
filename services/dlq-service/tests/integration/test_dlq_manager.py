@@ -29,6 +29,29 @@ from tests.fixtures.prepop import ReferenceEventsDict
 pytestmark = pytest.mark.asyncio
 
 
+async def test_count_dead_letters_empty(joint_fixture: JointFixture):
+    """Verify the count is 0 when the DLQ is empty."""
+    assert await joint_fixture.dlq_manager.count_dead_letters() == 0
+
+
+async def test_count_dead_letters(
+    joint_fixture: JointFixture, prepopped_events: ReferenceEventsDict
+):
+    """Verify the count matches the total number of stored events across all
+    services and topics, and reflects a subsequent discard.
+    """
+    expected = sum(
+        len(events)
+        for topics in prepopped_events.values()
+        for events in topics.values()
+    )
+    assert await joint_fixture.dlq_manager.count_dead_letters() == expected
+
+    to_discard = prepopped_events[utils.UFS][utils.USER_EVENTS][0]
+    await joint_fixture.dlq_manager.discard_event(dlq_id=to_discard.dlq_id)
+    assert await joint_fixture.dlq_manager.count_dead_letters() == expected - 1
+
+
 async def test_discard(
     joint_fixture: JointFixture, mongodb: MongoDbFixture, prepopped_events
 ):

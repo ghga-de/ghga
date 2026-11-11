@@ -176,6 +176,10 @@ class DLQManager(DLQManagerPort):
             service_topics[event.dlq_info.service][event.topic] += 1
         return service_topics
 
+    async def count_dead_letters(self) -> int:
+        """Return the total number of events currently stored in the DLQ."""
+        return await self._dao.find_all(mapping={}).total_count()
+
     async def preview_events(
         self,
         *,
