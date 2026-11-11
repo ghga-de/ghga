@@ -58,7 +58,7 @@ class Study:
             for alias, accession in aliases.items()
         }
         submission_content = {
-            class_slot: [
+            root_slot: [
                 {
                     slot: _map_strings(value, mapping=alias_by_accession)
                     for slot, value in resource.items()
@@ -66,7 +66,7 @@ class Study:
                 }
                 for resource in resources
             ]
-            for class_slot, resources in self.content.items()
+            for root_slot, resources in self.content.items()
         }
         return Submission(
             id=str(id(self)),
@@ -108,21 +108,21 @@ def derive_study(*, base: Study, prefix: str, reused_file: Json | None) -> Study
         for accession in aliases.values()
     }
     content = {
-        class_slot: [
+        root_slot: [
             {
                 slot: _map_strings(value, mapping=new_accession_by_accession)
                 for slot, value in resource.items()
             }
             for resource in resources
         ]
-        for class_slot, resources in base.content.items()
+        for root_slot, resources in base.content.items()
     }
     accession_map = {
-        class_slot: {
+        root_slot: {
             alias: new_accession_by_accession[accession]
             for alias, accession in aliases.items()
         }
-        for class_slot, aliases in base.accession_map.items()
+        for root_slot, aliases in base.accession_map.items()
     }
     data_access_policy_2 = accession_map["data_access_policies"]["DAP_2"]
     first_file = content["research_data_files"][0]
@@ -154,8 +154,8 @@ def test_same_answer_for_submission_and_its_artifact():
     submission = Submission.model_validate_json(SUBMISSION_PATH.read_text())
     file_accessions = [
         file["accession"]
-        for class_slot, resources in content.items()
-        if class_slot.endswith("_files")
+        for root_slot, resources in content.items()
+        if root_slot.endswith("_files")
         for file in resources
     ]
     assert file_accessions
@@ -257,17 +257,17 @@ def test_unknown_file_accession():
 
 
 @pytest.mark.parametrize(
-    "class_slot, slot_name",
+    "root_slot, slot_name",
     [
         ("research_data_files", "dataset"),
         ("datasets", "data_access_policy"),
         ("data_access_policies", "data_access_committee"),
     ],
 )
-def test_dangling_reference(class_slot: str, slot_name: str):
+def test_dangling_reference(root_slot: str, slot_name: str):
     """Test that a dangling reference anywhere on the chain raises an error."""
     study = load_study()
-    for resource in study.content[class_slot]:
+    for resource in study.content[root_slot]:
         resource[slot_name] = "DANGLING"
 
     for metadata in both_representations([study]):
@@ -277,8 +277,8 @@ def test_dangling_reference(class_slot: str, slot_name: str):
             )
 
 
-def test_missing_reference_slot():
-    """Test that a resource without a reference slot raises a
+def test_resource_without_reference():
+    """Test that a resource without the slot that holds its reference raises a
     GovernanceResolutionError.
     """
     study = load_study()
@@ -369,14 +369,14 @@ def test_resolved_restricted_artifact():
 
     file_accessions = [
         file["accession"]
-        for class_slot in (
+        for root_slot in (
             "research_data_files",
             "process_data_files",
             "analysis_method_supporting_files",
             "experiment_method_supporting_files",
             "individual_supporting_files",
         )
-        for file in content[class_slot]
+        for file in content[root_slot]
     ]
     assert file_accessions
     for governance_list in resolve_files_governance(

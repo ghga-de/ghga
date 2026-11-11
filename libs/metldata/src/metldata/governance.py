@@ -28,10 +28,10 @@ from pydantic import BaseModel, Field
 from metldata.custom_types import Json
 from metldata.submission_registry.models import Submission
 
-FILE_CLASS_SLOT_SUFFIX = "_files"
-DATASET_CLASS_SLOT = "datasets"
-DATA_ACCESS_POLICY_CLASS_SLOT = "data_access_policies"
-DATA_ACCESS_COMMITTEE_CLASS_SLOT = "data_access_committees"
+FILE_ROOT_SLOT_SUFFIX = "_files"
+DATASET_ROOT_SLOT = "datasets"
+DATA_ACCESS_POLICY_ROOT_SLOT = "data_access_policies"
+DATA_ACCESS_COMMITTEE_ROOT_SLOT = "data_access_committees"
 REUSED_ACCESSION_SLOT = "reused_accession"
 
 # Governance is compared by content only, so these slots are left out of it.
@@ -41,9 +41,9 @@ IDENTITY_SLOTS = frozenset({"accession", "alias", "ega_accession"})
 class GovernanceResolutionError(RuntimeError):
     """Raised when a reference on the governance chain cannot be resolved."""
 
-    def __init__(self, *, class_slot: str, reference: str):
+    def __init__(self, *, root_slot: str, reference: str):
         super().__init__(
-            f"Could not resolve reference '{reference}' in class slot '{class_slot}'."
+            f"Could not resolve reference '{reference}' in root slot '{root_slot}'."
         )
 
 
@@ -80,25 +80,25 @@ class FileGovernance(BaseModel):
 class GovernanceMetadata:
     """Metadata documents indexed for the governance traversal.
 
-    Each document maps class slots to lists of resources. Resources carry an
-    `accession` if one was minted. References hold the value of `reference_slot`
-    and resolve within their own document. Use `from_submissions` or
-    `from_artifacts` to create an instance.
+    Each document maps the root slots, such as `datasets`, to the resources of that
+    class. Resources carry an `accession` if one was minted. References hold the
+    value of `identifier_slot` and resolve within their own document. Use
+    `from_submissions` or `from_artifacts` to create an instance.
     """
 
-    def __init__(self, *, documents: Sequence[Json], reference_slot: str):
-        self._reference_slot = reference_slot
-        self._resources_by_reference: list[dict[str, dict[str, Json]]] = [
+    def __init__(self, *, documents: Sequence[Json], identifier_slot: str):
+        self._identifier_slot = identifier_slot
+        self._resources_by_identifier: list[dict[str, dict[str, Json]]] = [
             {
-                class_slot: {
-                    resource[reference_slot]: resource
-                    for resource in document.get(class_slot, [])
-                    if reference_slot in resource
+                root_slot: {
+                    resource[identifier_slot]: resource
+                    for resource in document.get(root_slot, [])
+                    if identifier_slot in resource
                 }
-                for class_slot in (
-                    DATASET_CLASS_SLOT,
-                    DATA_ACCESS_POLICY_CLASS_SLOT,
-                    DATA_ACCESS_COMMITTEE_CLASS_SLOT,
+                for root_slot in (
+                    DATASET_ROOT_SLOT,
+                    DATA_ACCESS_POLICY_ROOT_SLOT,
+                    DATA_ACCESS_COMMITTEE_ROOT_SLOT,
                 )
             }
             for document in documents
@@ -112,20 +112,20 @@ class GovernanceMetadata:
         """
         documents = [
             {
-                class_slot: [
+                root_slot: [
                     _with_accession(
                         resource=resource,
-                        accession=submission.accession_map.get(class_slot, {}).get(
+                        accession=submission.accession_map.get(root_slot, {}).get(
                             resource.get("alias", "")
                         ),
                     )
                     for resource in resources
                 ]
-                for class_slot, resources in (submission.content or {}).items()
+                for root_slot, resources in (submission.content or {}).items()
             }
             for submission in submissions
         ]
-        return cls(documents=documents, reference_slot="alias")
+        return cls(documents=documents, identifier_slot="alias")
 
     @classmethod
     def from_artifacts(cls, *, contents: Sequence[Json]):
@@ -133,7 +133,7 @@ class GovernanceMetadata:
         `resolved_restricted`. Embedded artifacts are not supported, because they
         nest the policy in the dataset instead of referencing it.
         """
-        return cls(documents=contents, reference_slot="accession")
+        return cls(documents=contents, identifier_slot="accession")
 
     def _index_files(self, *, documents: Sequence[Json]) -> None:
         """Index file resources by their own accession and by their reused
@@ -145,8 +145,8 @@ class GovernanceMetadata:
         linked_accessions: dict[str, set[str]] = defaultdict(set)
         position = 0
         for document_index, document in enumerate(documents):
-            for class_slot, resources in document.items():
-                if not class_slot.endswith(FILE_CLASS_SLOT_SUFFIX):
+            for root_slot, resources in document.items():
+                if not root_slot.endswith(FILE_ROOT_SLOT_SUFFIX):
                     continue
                 for file in resources:
                     own_and_reused_accessions = {
@@ -188,21 +188,21 @@ class GovernanceMetadata:
         return [files_by_position[position] for position in sorted(files_by_position)]
 
     def resolve(
-        self, *, document_index: int, resource: Json, slot_name: str, class_slot: str
+        self, *, document_index: int, resource: Json, slot_name: str, root_slot: str
     ) -> Json:
         """Follow the reference in a resource's slot to the referenced resource."""
         reference = resource.get(slot_name)
         if not isinstance(reference, str):
             raise GovernanceResolutionError(
-                class_slot=class_slot,
+                root_slot=root_slot,
                 reference=f"<slot '{slot_name}' of resource"
-                + f" '{resource.get(self._reference_slot)}'>",
+                + f" '{resource.get(self._identifier_slot)}'>",
             )
         try:
-            return self._resources_by_reference[document_index][class_slot][reference]
+            return self._resources_by_identifier[document_index][root_slot][reference]
         except KeyError as error:
             raise GovernanceResolutionError(
-                class_slot=class_slot, reference=reference
+                root_slot=root_slot, reference=reference
             ) from error
 
 
@@ -269,7 +269,7 @@ def resolve_file_governance(
             document_index=document_index,
             resource=file,
             slot_name="dataset",
-            class_slot=DATASET_CLASS_SLOT,
+            root_slot=DATASET_ROOT_SLOT,
         )
         # Two artifact types of one study hold the same dataset. Datasets without
         # an accession are distinct per document.
@@ -281,13 +281,13 @@ def resolve_file_governance(
             document_index=document_index,
             resource=dataset,
             slot_name="data_access_policy",
-            class_slot=DATA_ACCESS_POLICY_CLASS_SLOT,
+            root_slot=DATA_ACCESS_POLICY_ROOT_SLOT,
         )
         data_access_committee = metadata.resolve(
             document_index=document_index,
             resource=data_access_policy,
             slot_name="data_access_committee",
-            class_slot=DATA_ACCESS_COMMITTEE_CLASS_SLOT,
+            root_slot=DATA_ACCESS_COMMITTEE_ROOT_SLOT,
         )
 
         governance_by_dataset[dataset_key] = FileGovernance(
