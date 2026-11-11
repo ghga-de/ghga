@@ -43,6 +43,7 @@ from metldata.model_utils.essentials import (
     FILE_DATASET_SLOT,
     REUSED_ACCESSION_SLOT,
 )
+from metldata.submission_registry.identifiers import lookup_accession
 from metldata.submission_registry.models import AccessionMap, Submission
 
 GOVERNANCE_CLASSES = (
@@ -335,7 +336,9 @@ def _lookup_submission_accession(
     anchor_point: AnchorPoint, alias: str, *, accession_map: AccessionMap
 ) -> str | None:
     """Look up the accession of a submission's resource in its accession map."""
-    return accession_map.get(anchor_point.root_slot, {}).get(alias)
+    return lookup_accession(
+        anchor=anchor_point.root_slot, alias=alias, accession_map=accession_map
+    )
 
 
 def _group_reuse_chains(
