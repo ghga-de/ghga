@@ -32,10 +32,11 @@ from metldata.submission_registry.models import AccessionMap, Submission
 from tests.fixtures.utils import BASE_DIR
 
 ADDED_ACCESSIONS_PATH = BASE_DIR / "load" / "example_metadata" / "added_accessions.json"
-# Trimmed copy of the resolved_restricted artifact from the dskit demo store
-RESOLVED_RESTRICTED_PATH = BASE_DIR / "governance" / "resolved_restricted.json"
-# Trimmed copy of the submission that produced the resolved_restricted artifact
+# The submission and the resolved_restricted artifact the GHGA archive workflow
+# produces from it with the test bed's model. The workflow also reproduces
+# added_accessions from this submission.
 SUBMISSION_PATH = BASE_DIR / "governance" / "submission.json"
+RESOLVED_RESTRICTED_PATH = BASE_DIR / "governance" / "resolved_restricted.json"
 UNKNOWN_FILE_ACCESSION = "GHGAF00000000000000"
 
 
@@ -347,19 +348,19 @@ def test_compared_by_content_only():
 
 def test_resolved_restricted_artifact():
     """Test that the traversal works on the resolved_restricted artifact the loader
-    receives, whose file classes differ from those of added_accessions.
+    receives, whose datasets also hold the references inferred from the files.
     """
     content = json.loads(RESOLVED_RESTRICTED_PATH.read_text())["payload"]["content"]
     metadata = GovernanceMetadata.from_artifacts(contents=[content])
 
     [governance] = resolve_file_governance(
-        file_accession="GHGAF29699992445931", metadata=metadata
+        file_accession="GHGAF58002773408921", metadata=metadata
     )
 
-    assert governance.dataset_accession == "GHGAD09598790897621"
-    assert governance.data_access_policy_accession == "GHGAP80911357088984"
+    assert governance.dataset_accession == "GHGAD23572188878277"
+    assert governance.data_access_policy_accession == "GHGAP32793167771402"
     assert governance.data_access_policy["name"] == "DAP 1"
-    assert governance.data_access_committee_accession == "GHGAC27979815690400"
+    assert governance.data_access_committee_accession == "GHGAC05045906188918"
     assert governance.data_access_committee_alias == "DAC_1"
     assert governance.data_access_committee == {
         "email": "dac_institute_a@dac.dac",
@@ -369,9 +370,11 @@ def test_resolved_restricted_artifact():
     file_accessions = [
         file["accession"]
         for class_slot in (
-            "study_files",
-            "sequencing_process_files",
-            "analysis_process_output_files",
+            "research_data_files",
+            "process_data_files",
+            "analysis_method_supporting_files",
+            "experiment_method_supporting_files",
+            "individual_supporting_files",
         )
         for file in content[class_slot]
     ]
