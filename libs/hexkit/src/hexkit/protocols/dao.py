@@ -22,7 +22,15 @@ import typing
 import warnings
 from abc import ABC, abstractmethod
 from asyncio import sleep
-from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
+from collections import Counter
+from collections.abc import (
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Collection,
+    Iterable,
+    Mapping,
+)
 from contextlib import AbstractAsyncContextManager
 from functools import partial
 from logging import Logger
@@ -37,6 +45,7 @@ from hexkit.custom_types import ID
 from hexkit.utils import FieldNotInModelError, validate_fields_in_model
 
 __all__ = [
+    "BatchOperationError",
     "Dao",
     "DaoFactoryProtocol",
     "FindError",
@@ -113,6 +122,55 @@ class PreconditionFailedError(DaoError):
         super().__init__(message)
 
 
+# How many IDs an error message names before it only counts the rest
+_NAMED_IDS = 5
+
+
+def _named_ids(ids: list[ID]) -> str:
+    """Name the first IDs and count the rest, so that a log line stays short."""
+    named = str(ids[:_NAMED_IDS])
+    if len(ids) > _NAMED_IDS:
+        named += f" and {len(ids) - _NAMED_IDS} more"
+    return named
+
+
+def _note_all_ids(error: Exception, ids: list[ID]) -> None:
+    """Attach every ID when the message leaves some out.
+
+    A traceback prints the note, while `str(error)`, and so a log line of the
+    message, leaves it out.
+    """
+    if len(ids) > _NAMED_IDS:
+        error.add_note(f"All {len(ids)} IDs: {ids}")
+
+
+class BatchOperationError(DaoError):
+    """Raised when a batch partly failed: what it names failed, the rest succeeded.
+
+    `errors` maps each failed ID to the error a single-resource method would raise.
+    It also names each resource whose write was applied but not confirmed, such as
+    after a MongoDB write concern error, with the error a single write raises for that;
+    such a write stays stored unless a failover rolls it back.
+    `not_attempted` lists, in input order, the IDs an ordered batch skipped after its
+    first failure. An unordered batch attempts every resource, so for it the list is
+    empty.
+
+    The message names the first five failed IDs; when there are more, a note on the
+    error, which a traceback prints, lists all of them.
+    """
+
+    def __init__(
+        self, *, errors: Mapping[ID, DaoError], not_attempted: Collection[ID] = ()
+    ):
+        self.errors = dict(errors)
+        self.not_attempted = tuple(not_attempted)
+        failed = list(self.errors)
+        super().__init__(
+            f"{len(failed)} resource(s) of the batch failed: {_named_ids(failed)}"
+        )
+        _note_all_ids(self, failed)
+
+
 # TODO: Remove `mapping` when moving hexkit to v11.0.0
 MAPPING_DEPRECATION_MESSAGE = (
     "The mapping parameter is being renamed to filter_, and support for mapping will"
@@ -144,6 +202,17 @@ def resolve_filter(
         MAPPING_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=stacklevel
     )
     return mapping
+
+
+def ensure_distinct_ids(ids: Iterable[ID]) -> None:
+    """Raise a ValueError naming the IDs that occur more than once in a batch."""
+    duplicates = [id_ for id_, count in Counter(ids).items() if count > 1]
+    if duplicates:
+        error = ValueError(
+            f"The batch holds these IDs more than once: {_named_ids(duplicates)}"
+        )
+        _note_all_ids(error, duplicates)
+        raise error
 
 
 class FindError(DaoError):
