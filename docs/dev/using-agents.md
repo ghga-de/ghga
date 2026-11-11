@@ -73,6 +73,8 @@ done
 Tools worth installing for yourself, none of them shared:
 
 - **[`npx skills`](https://github.com/vercel-labs/skills)** installs skills from a repo or a docs site, such as hexkit's; set `DISABLE_TELEMETRY=1`, since it reports installs by default.
+- **[grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me)** interviews you about a plan or a design until every branch of it is settled, which helps with an idea that has no epic yet; for work from an epic, `/define-tasks` settles the same questions.
+  `npx skills add mattpocock/skills --skill grill-me -g -a claude-code` puts it in `~/.claude/skills/`, on the `ghga-claude` volume.
 - **[skill-creator](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator)** helps write a skill and test it.
 - **[Trail of Bits](https://github.com/trailofbits/skills)**: only the plugins `differential-review`, `insecure-defaults` and `sharp-edges`, installed one by one, which review a change for security.
   We have not checked the repo's other plugins, and some of them add hooks that run in every session.
