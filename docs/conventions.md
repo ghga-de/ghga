@@ -55,6 +55,8 @@ Two long-lived branches ([ADR-0038](adrs/adr-0038-branching-strategy.md)): **`de
 - **Long-lived feature branches** are allowed, and decided case by case.
 - Committing directly to either branch is blocked by `no-commit-to-branch` ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)).
 
+The GitHub rulesets, required checks included, are exported to ghga-de/deploy: tell DevOps when you change one.
+
 Which branch a tag is cut on is **enforced** by `release.yaml`, per lane — it tests membership of the branch's first-parent chain, so a back-merge does not launder a tag onto the wrong lane:
 
 | tag | cut on | lane |
