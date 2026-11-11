@@ -218,6 +218,27 @@ async def test_process_file_upload_outdated(
     assert db_file.state_updated == local_file.state_updated
 
 
+async def test_process_file_upload_fills_box_id(rig: JointRig):
+    """Test that an outdated event fills in a missing box ID and changes nothing
+    else, as when UCS republishes its events for files stored before FIS kept it.
+    """
+    local_file = create_file_under_interrogation(HUB1)
+    local_file.box_id = None
+    await rig.file_dao.insert(local_file)
+
+    republished_file = create_file_under_interrogation(HUB1).model_copy(
+        update={
+            "id": local_file.id,
+            "state": "archived",
+            "state_updated": local_file.state_updated - timedelta(hours=1),
+        }
+    )
+    await rig.interrogation_handler.process_file_upload(file=republished_file)
+
+    db_file = await rig.file_dao.get_by_id(local_file.id)
+    assert db_file == local_file.model_copy(update={"box_id": republished_file.box_id})
+
+
 async def test_process_file_upload_updates(
     rig: JointRig, caplog: pytest.LogCaptureFixture
 ):

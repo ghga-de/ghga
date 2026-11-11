@@ -28,6 +28,7 @@ def create_file_under_interrogation(storage_alias: str):
     """Generate some dummy data for the specified storage_alias"""
     return FileUnderInterrogation(
         id=uuid4(),
+        box_id=uuid4(),
         storage_alias=storage_alias,
         bucket_id="inbox1",
         object_id=uuid4(),

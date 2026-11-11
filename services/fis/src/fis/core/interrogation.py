@@ -311,6 +311,10 @@ class InterrogationHandler(InterrogationHandlerPort):
           unknown (should not happen in normal operation), log a warning and ignore.
         - 'failed_interrogation': ignored, since FIS already recorded the failure while
           handling the interrogation report.
+
+        For a known file without a `box_id`, any event other than 'init' fills it in
+        first, even an outdated one. Files stored before FIS kept the `box_id` lack it
+        until UCS republishes its events.
         """
         if file.state == "init":
             return
@@ -340,6 +344,16 @@ class InterrogationHandler(InterrogationHandlerPort):
                 extra={"file_id": file.id},
             )
             return
+
+        # Fill in a missing box ID even from an old event, which a republish sends
+        if local_file.box_id is None and file.box_id is not None:
+            local_file = local_file.model_copy(update={"box_id": file.box_id})
+            await self._file_dao.update(local_file)
+            log.info(
+                "Filled in the missing box ID of file %s.",
+                file.id,
+                extra={"file_id": file.id, "box_id": file.box_id},
+            )
 
         # Ignore if outdated
         if local_file.state_updated >= file.state_updated:
