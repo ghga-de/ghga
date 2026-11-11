@@ -45,7 +45,7 @@ DOWNLOAD_URL_CACHE_TIME = DOWNLOAD_URL_LIFESPAN - 5
 URL_CACHE_SIZE = 250
 
 # Part uploads are sent in chunks of this size, so no single write has to carry a whole
-#  part within one request timeout. 1 MiB benchmarked best.
+#  part within one request timeout.
 UPLOAD_CHUNK_SIZE = 1024**2
 SQUASHED_LOGGERS = [
     "httpx2",

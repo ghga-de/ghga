@@ -41,12 +41,15 @@ __all__ = ["S3Client"]
 
 
 class PartBody:
-    """A file part as a request body that is sent in chunks.
+    """Wrapper for a file part, so it can be chunked.
 
     httpx2 sends `bytes` content in one write, which has to finish within a single
     request timeout, and it would read a `bytearray` as an iterable of integers.
     Each iteration starts from the beginning, so a retried request can send the
-    body again; an async generator could only be sent once.
+    body again.
+
+    This is mainly done so memory pressure when sending a part does not scale
+    linearly with part size.
     """
 
     def __init__(self, data: bytearray, *, chunk_size: int = UPLOAD_CHUNK_SIZE):
