@@ -14,7 +14,7 @@ That epic put multi-instance operation under "Not included" and called it a sepa
 This is that follow-up.
 
 If a Data Hub were to attempt to run more than one instance today, each instance would receive the same unbounded list, and re-encrypt the same files.
-[ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md) decides that instances coordinate through renewable file leases in FIS, and weighs the alternatives; this epic implements it.
+[ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md) decides that instances coordinate through renewable file leases in FIS, and weighs the alternatives; this epic implements it.
 Most of the new logic is in FIS.
 DHFS sends a claimant ID when requesting a new file, renews the lease while it works, releases the file if interrogation is inconclusive, and stops sleeping between files.
 
@@ -42,25 +42,20 @@ DHFS:
 - Generate a claimant ID once at startup, and send it on every claim, renewal and release, so FIS can tell one instance of a hub from another; see [The claimant ID](#the-claimant-id).
 - Renew the lease from a background task while a file is in work, and stop that task before sending the report; see [The lease duration and renewal](#the-lease-duration-and-renewal).
 - Call the release endpoint from the `InconclusiveError` branch of `interrogate_new_files()`, which today only logs, from the `ConclusiveError` branch when `report_failure` did not reach FIS, and after FIS refuses a renewal.
-- Skip the poll interval after conclusively *or* inconclusively processing a file, and sleep only when the request for the next file comes back empty.
-  Serving one file per claim makes this required; see [Serving one file per claim requires the poll pacing change](#serving-one-file-per-claim-requires-the-poll-pacing-change).
+- Skip the poll interval after conclusively *or* inconclusively processing a file, and sleep only when the request for the next file comes back empty; see [Poll pacing](#poll-pacing).
 - Add jitter of up to 10% to `min_run_interval_seconds`, as a constant rather than a setting, so instances rolled out together stop polling in lockstep.
 
 ### Optional
 
-- Give `S3Cleaner` a minimum object age, which bounds the cleanup race described under [The cleanup race widens](#the-cleanup-race-widens).
+- Give `S3Cleaner` a minimum object age, which bounds the cleanup race listed under [Known limitations](#known-limitations).
 
 ### Not included
 
-- Progress reporting with renewals.
-  A renewal says only that the instance is alive, not that its interrogation advances.
-  The hold cap covers an instance that is alive but stuck; see [The lease duration and renewal](#the-lease-duration-and-renewal).
-- Serving more than one file per claim/claim request.
+- Progress reporting with renewals; the hold cap covers an instance that is alive but stuck ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
+- Serving more than one file per claim ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 - A give-up state after N failed attempts.
   [Shovelnose Guitarfish](./epic-0092-shovelnose-guitarfish.md) already gives Data Stewards a requeue path.
-- Releasing the file in flight when the process is stopped (e.g. SIGTERM).
-  A signal handler, cancellation of the running interrogation and a release inside the 30 second grace window is a lot of DHFS machinery for one file per stopped pod.
-  That file waits out its lease instead, at most 22 minutes, and other files keep flowing; see [A stopped instance parks one file](#a-stopped-instance-parks-one-file).
+- Releasing the file in flight when the process is stopped, for example by SIGTERM ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 - Per-instance identity in the JWT.
   `sub` is the storage alias, so two instances of one hub are indistinguishable to the authentication layer.
 - Raising `replicaCount` for any hub.
@@ -166,13 +161,10 @@ async def update_first(
   Keys starting with `$` are MongoDB update operators, a documented extension in the same way as operators in filters.
   The in-memory DAO supports `$inc`, the only one FIS uses.
 - It raises `NoHitsFoundError` when nothing matches, like `find_one`.
-- A partial update skips whole-model validation.
-  MongoDB applies the change on the server, so the provider cannot validate the merged document before the write.
-  It validates and serializes each plain value against its field's type before the call, and validates the returned document after it; operator values are the caller's responsibility.
+- The provider validates and serializes each plain value against its field's type before the call, and validates the returned document after it; operator values are the caller's responsibility.
 - `DaoPublisher` publishes the returned document, so it needs no extra read.
 
 The name follows hexkit's terms rather than pymongo's `find_one_and_update`.
-Other backends can do the same: PostgreSQL with `UPDATE … WHERE id = (SELECT … FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`, and the in-memory DAO trivially.
 
 ### The claim itself
 
@@ -191,11 +183,7 @@ claimed_file = await self._file_dao.update_first(
 
 `NoHitsFoundError` means no file is waiting, and the GET returns an empty list.
 
-The filter carries `state` and `interrogated`, and the call changes only the lease fields.
-FIS runs the REST API and the outbox subscriber as two separate deployments (`fis` and `fis-consumer`), and the subscriber replaces whole documents.
-A claim that replaced the whole document could overwrite a cancellation written in between and resurrect `state="inbox", can_remove=False`, the read-modify-write hazard of [ADR-0005](../adrs/adr-0005-db-event-consistency.md).
-A partial update cannot.
-The reverse, the subscriber overwriting a lease, happens only when it cancels, fails, archives or requeues the file, and each of those ends the lease anyway.
+The filter carries `state` and `interrogated`, and the call changes only the lease fields; [ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences) gives the reason.
 
 Two further rules for the claim path:
 
@@ -208,23 +196,16 @@ Two further rules for the claim path:
 
 ### Only the DHFS instance holding the file may renew or release it
 
-A release that is not checked against the instance holding the lease can clear another instance's live lease.
-Instance A claims a file, its lease expires while A is still working, B claims the file, and A then fails with an `InconclusiveError` and releases.
-FIS overwrites B's lease with `now + backoff`, the next claim hands B's file to C, and two instances interrogate the same file again.
-
-So the claim stores `leased_by`, and renewal and release put the caller's claimant ID into their `update_first` filter.
+The claim stores `leased_by`, and renewal and release put the caller's claimant ID into their `update_first` filter ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 A release from any other instance changes nothing and FIS logs a warning; a renewal from any other instance gets a 409.
 When the filter matches nothing, FIS reads the file once more to choose between 404 and the 409 or warning; that read only picks the response.
 A release that finds `leased_by` null logs no warning: the file was already released, most often by a retry of the same release.
-Either means a lease expired while an instance was still working, because its renewals did not reach FIS for a whole lease.
+The warning says what it means: a lease expired while an instance was still working, because its renewals did not reach FIS for a whole lease.
 
 ### The claimant ID
 
 DHFS generates the claimant ID with `uuid4()` once per process, at startup, and FIS stores it as `leased_by`.
-It is not a setting, so no deployment can make two instances share one; [ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md) explains why `service_instance_id` cannot serve instead.
-
-A restarted process, whether its container was OOM-killed or its pod rescheduled, gets a new claimant ID and cannot renew or release the lease it held.
-That file waits out its lease, at most 22 minutes; see [A stopped instance parks one file](#a-stopped-instance-parks-one-file).
+It is not a setting, and not `service_instance_id` ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#alternatives)).
 
 DHFS logs its claimant ID at startup, in a record that also carries `service_instance_id` as `instance`, and in every claim, renewal and release log line.
 FIS names `leased_by` in its warnings, so an operator can match a lease to the logs of the instance holding it.
@@ -233,11 +214,8 @@ FIS names `leased_by` in its warnings, so an operator can match a lease to the l
 
 A lease lasts `LEASE_SECONDS`, a constant of 22 minutes in FIS, counted from the claim or from the latest renewal.
 While DHFS works on a file, a background task renews the lease every `LEASE_RENEWAL_INTERVAL_SECONDS`, a constant of 4 minutes in DHFS.
-A lease therefore survives four failed renewals in a row, each of which the retry transport has already retried.
-It lasts 22 rather than 20 minutes so that the fifth renewal still lands 2 minutes before expiry, not at the moment of it.
+[ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision) gives the reasons for both values.
 The two constants live in different services, so comment each with a reference to the other: the lease must stay several renewal intervals long.
-
-Both are constants rather than settings, since a renewed lease needs no tuning per hub ([ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md)).
 
 The renewal task runs from the start of a file's interrogation until just before the report:
 
@@ -250,45 +228,23 @@ The renewal task runs from the start of a file's interrogation until just before
   The release changes something only when the instance still holds the lease, which is the hold cap case, and there it sets the backoff.
 - **Any other failure keeps the interrogation running.**
   On a connection error or a 5xx after retries, DHFS logs a warning and tries again at the next interval.
-  If FIS stays unreachable for a whole lease, another instance can claim the file, which costs duplicate work, never data integrity ([ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md)).
 
 A renewal is an `update_first` whose filter holds the file ID, `leased_by`, `state`, `interrogated` and the hold cap, and whose change sets only `leased_until`.
-So it cannot resurrect a cancelled file, and like the claim it never writes `state_updated`.
+Like the claim, it never writes `state_updated`.
 It also succeeds after the lease has expired, as long as no other instance has claimed the file in the meantime.
 
-**The hold cap guards against an instance that is alive but stuck.**
-Its renewal task keeps running while its interrogation hangs, so renewal alone would hold the file forever.
-FIS refuses a renewal once `now - claimed_at` exceeds `max_lease_hold_seconds`, through `{"claimed_at": {"$gt": now - cap}}` in the filter.
-The default of 72 hours covers the 5 TB example from [Army Ant](./epic-0091-army-ant.md), which takes roughly 58 hours at 25 MiB/s.
-A dead instance parks a file for one lease; only a stuck one can park it for the cap.
-
-Renewal covers only the file DHFS is working on.
-Serving several files at once would leave the later ones unrenewed while DHFS works through the batch serially, so their leases would expire before DHFS reached them.
-So a claim serves one file, and no setting makes it serve more.
+The hold cap is the term `{"claimed_at": {"$gt": now - timedelta(seconds=max_lease_hold_seconds)}}` in that filter, so FIS refuses a renewal once the claim is older than the cap.
 
 ### One file per claim, but FIS's response is still in list format
 
-The response stays `list[BaseFileInformation]`, now holding merely zero or one entry.
-Keeping the list shape means DHFS needs no parsing change, and it leaves room to serve several files later should we do so.
+The response stays `list[BaseFileInformation]`, now holding zero or one entry, so DHFS needs no parsing change.
+Leave DHFS's `for file in new_files` loop as it is; `test_files_are_processed_one_at_a_time` (`tests/integration/test_interrogator.py:595`) already covers it.
 
-DHFS's `for file in new_files` loop therefore needs no change: it iterates over zero or one item.
-Leave the loop as it is.
-`test_files_are_processed_one_at_a_time` (`tests/integration/test_interrogator.py:595`) already covers it, and keeping it lets FIS serve several files later without touching DHFS.
-
-### Serving one file per claim requires the poll pacing change
+### Poll pacing
 
 `run_interrogator` sleeps out the remainder of `min_run_interval_seconds` after every round, whether or not the round did work.
-One file per round therefore caps an instance at one file per interval: with the default of 60 seconds, a hub draining a thousand small files would take over sixteen hours per instance.
-
-So DHFS must skip the sleep when the round processed a file, and sleep only when the claim came back empty.
-Have `interrogate_new_files()` return whether it processed anything, and gate the existing sleep on that.
-
-The backoff stops this from becoming a hot loop.
-A file that fails inconclusively in a tenth of a second is released and backed off on the FIS side.
-It is then absent from the next claim, which comes back empty and sends the instance to sleep.
-
-The `except Exception` round in `run_interrogator` (`main.py:60`) reaches the same sleep.
-It counts as a round that processed nothing, so an unhandled error does not spin the loop.
+Have `interrogate_new_files()` return whether it processed a file, and sleep only when it did not ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences)).
+The `except Exception` round in `run_interrogator` (`main.py:60`) counts as a round that processed nothing, so an unhandled error reaches the same sleep.
 
 ### Every path that ends without a report must release the file
 
@@ -301,12 +257,9 @@ Any path that produces neither leaves the file leased until expiry:
   `report_failure` catches `ConnectionFailedError`, `CentralAPIError` and bare `Exception` without re-raising (`core/interrogator.py:942-982`), and logs "DHFS will try re-processing this file later".
   That message is wrong once leases exist: the file waits out its lease instead of the next 60 second poll.
   So `report_failure` must return whether the report reached FIS, and the caller must release when it did not.
-- `report_success` catching a `CentralAPIError` must **not** release.
-  The comment at `interrogator.py:920-924` gives the reason: the round trip completed, so FIS may already have stored the report, and a second interrogation would use a different secret.
-  Waiting is correct here, and the wait grows from 60 seconds to one lease, 22 minutes.
-  Listed under [A success report that returned an error now waits a lease](#a-success-report-that-returned-an-error-now-waits-a-lease).
-- A stopped or killed instance releases nothing and stops renewing, and the file waits out its lease.
-  Lease expiry is the only mechanism here, by choice; see [A stopped instance parks one file](#a-stopped-instance-parks-one-file).
+- `report_success` catching a `CentralAPIError` must **not** release; the comment at `interrogator.py:920-924` gives the reason.
+  The file waits out its lease instead.
+- A stopped or killed instance releases nothing and stops renewing, and the file waits out its lease ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 
 ### Backoff
 
@@ -314,7 +267,6 @@ A release sets `leased_until = now + min(backoff_base * 2 ** (times_claimed - 1)
 It reads the file for `times_claimed`, then writes the backoff with an `update_first` filtered on the file ID and `leased_by`, which also sets `leased_by` and `claimed_at` to null.
 Only a claim changes `times_claimed`, and a claim also changes `leased_by`, so the filter ensures the backoff comes from the current count.
 Clearing `leased_by` makes a repeated release match nothing, which matters because the retry transport repeats a POST on 5xx and on connection failures.
-Without a backoff, a file that fails in five seconds every time, one still being written to the inbox for example, is claimed, released and re-claimed in a tight loop by every instance.
 A release always finds `times_claimed` at 1 or more, because only a claim sets `leased_by`, and every claim increments the counter.
 
 `times_claimed` counts how often FIS handed the file out, including a claim stranded by a lost response and a claim the instance never started, so it runs ahead of the number of re-encryption attempts.
@@ -339,73 +291,32 @@ All on FIS:
 | `claim_backoff_base_seconds` | int | 60 | First backoff after a release. |
 | `claim_backoff_cap_seconds` | int | 3600 | Upper bound on the backoff. |
 
-The lease length is a constant, not a setting; see [The lease duration and renewal](#the-lease-duration-and-renewal).
+The lease length is a constant, not a setting ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 Set `max_lease_hold_seconds` to the longest single interrogation the team expects, since a stuck but live instance parks its file for that long.
 
 ### Known limitations
 
-#### A lost response blocks a file for the lease duration
-
-The claim is a side effect of a GET that the client retries.
-A response lost after the write, or a 500 retried three times, leaves one to three files leased to no worker, idle until the lease expires.
-The pacing change makes DHFS poll far more often, so there are many more claims to lose.
-Each such file waits for expiry, which is one lease, 22 minutes, because no renewal follows.
-
-#### A stopped instance parks one file
-
-An instance that stops mid-file releases nothing, so that file stays leased until it expires.
-SIGTERM is the common case, during a rolling update, and SIGKILL or a node failure behaves the same way.
-DHFS installs no signal handler today, and Python's default SIGTERM ends the process outright, so no `finally` runs, including the multipart abort at `core/interrogator.py:800-803`: a stopped instance already leaves an orphaned upload behind.
-
-The cost is one file per stopped instance, delayed by at most one lease, 22 minutes.
-Nothing else stalls, because every other file stays claimable.
-A mass event, such as every instance of a hub restarting, frees all their files within the same 22 minutes.
-
-#### A stuck but live instance parks one file until the hold cap
-
-An instance whose interrogation hangs while its renewal task keeps running holds its file until `max_lease_hold_seconds`, 72 hours by default.
-Renewals carry no progress, so FIS cannot tell this instance from one working on a very large file.
-
-#### More requests against FIS
-
-One file per claim plus immediate re-polling turns one GET per batch of work into one GET per file.
-Draining a thousand files across four instances means a thousand claims rather than a few hundred.
-FIS already takes one report POST per file, so this is a change in degree, not in kind, but it is the first time the claim endpoint sees that volume.
-Renewals add one POST every 4 minutes for each instance working on a file, which is small next to the claims.
-
-#### A success report that returned an error now waits a lease
-
-When `report_success` catches a `CentralAPIError`, DHFS deliberately leaves the file alone rather than re-interrogating it with a different secret.
-That wait used to be one poll interval; it is now one lease, 22 minutes, since DHFS stops renewing once it has sent the report.
-
-#### The cleanup race widens
-
-Between `complete_upload` and FIS accepting the report, the re-encrypted object is unknown to FIS, so `check_if_removable` answers `True` and a concurrent cleanup run deletes it.
-One instance exposes one object at a time; several instances expose several.
-The optional minimum object age in `S3Cleaner` bounds this.
-
-#### A late report for a cancelled file is still accepted
-
-`handle_interrogation_report` has no state guard, so a success report arriving after a cancellation still publishes `interrogation_success`.
-This is existing behaviour and leases do not change it, but more instances make the window easier to hit.
+| Cause | Cost | Bound |
+|---|---|---|
+| A claim response is lost after the write, or a 500 is retried | One to three files leased to no instance; the pacing change makes claims, and so lost ones, far more frequent | One lease, 22 minutes |
+| An instance stops or restarts mid-file: SIGTERM in a rolling update, SIGKILL, an OOM kill or a node failure | Its file waits; its multipart upload stays orphaned, as today: DHFS has no SIGTERM handler, so no `finally` runs | One lease per stopped instance, also when every instance of a hub restarts at once |
+| An interrogation hangs while its renewal task keeps running | Its file waits, since FIS cannot tell it from an instance working on a very large file | `max_lease_hold_seconds`, 72 hours by default |
+| One claim per file and immediate re-polling | One GET per file instead of per batch, plus one renewal POST every 4 minutes per working instance | One claim per file, as FIS already takes one report per file |
+| `report_success` catches a `CentralAPIError`, and DHFS stops renewing | The file waits for its lease to expire instead of the next poll | One lease, 22 minutes, up from one poll interval |
+| Between `complete_upload` and FIS accepting the report, `check_if_removable` answers `True` for the re-encrypted object | A concurrent cleanup run deletes the object; each working instance exposes one | Unbounded until the optional minimum object age in `S3Cleaner` |
+| `handle_interrogation_report` has no state guard, as today | A success report after a cancellation still publishes `interrogation_success` | Unchanged by leases; more instances make the window easier to hit |
 
 ### Rollout
 
-hexkit ships `update_first` first, in a release that FIS then requires.
-FIS ships next.
-Leases apply to every caller, so a DHFS that predates this epic keeps working; it never releases a file and waits out the lease on inconclusive ones.
-It also never renews, so its lease expires after 22 minutes on any longer file.
-With one instance per hub, no other instance claims the file in the meantime, so nothing changes for that hub.
-A hub must not raise `replicaCount` before it runs a DHFS that renews, or its instances duplicate every file that takes longer than one lease.
-
-Raise `dhfs_version_constraint` only after the hubs have upgraded, in a later release.
-Raising it together with the feature is a flag day: a hub still on the old image gets 426, which DHFS turns into a `CriticalError`.
-`run_interrogator` then returns, and the container crash-loops with no interrogation until that hub upgrades.
-The same happens to the old pods during each hub's own rolling update.
+1. hexkit ships `update_first`, in a release that FIS then requires.
+2. FIS ships leases.
+3. DHFS ships renewal and release.
+   A hub raises `replicaCount` only once it runs this DHFS ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences)).
+4. In a later release, after the hubs have upgraded, FIS raises `dhfs_version_constraint` ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 
 ### Route naming and generated docs
 
-The claim stays on the GET ([ADR-0048](../adrs/adr-0048-dhfs-instances-coordinate-through-file-leases.md)).
+The claim stays on the GET ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md)).
 Give the route a summary and docstring that say it claims rather than lists, rename `get_files_not_yet_interrogated` to match, and regenerate `services/fis/openapi.yaml`, `config_schema.json`, `example_config.yaml` and the README config block with `just service-docs`.
 The three settings also go into `services/fis/dev_config.yaml` and `tests_fis/fixtures/test_config.yaml` by hand.
 
