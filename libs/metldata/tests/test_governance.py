@@ -26,6 +26,7 @@ from metldata.custom_types import Json
 from metldata.governance import (
     GovernanceMetadata,
     GovernanceResolutionError,
+    MissingAccessionError,
     resolve_file_governance,
     resolve_files_governance,
 )
@@ -455,3 +456,25 @@ def test_root_slots_from_anchor_points():
     )
 
     assert governance == expected_governance
+
+
+def test_submission_file_without_accession():
+    """Test that a submission with accessions raises a MissingAccessionError for a
+    file without one, instead of leaving the file out.
+    """
+    submission = Submission.model_validate_json(SUBMISSION_PATH.read_text())
+    datasets_and_studies_only = {
+        root_slot: accessions
+        for root_slot, accessions in submission.accession_map.items()
+        if root_slot in ("studies", "datasets")
+    }
+
+    with pytest.raises(MissingAccessionError, match="has no accession"):
+        GovernanceMetadata.from_submissions(
+            submissions=[
+                submission.model_copy(
+                    update={"accession_map": datasets_and_studies_only}
+                )
+            ],
+            anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
+        )

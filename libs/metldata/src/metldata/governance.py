@@ -62,6 +62,18 @@ class GovernanceResolutionError(RuntimeError):
         )
 
 
+class MissingAccessionError(RuntimeError):
+    """Raised when a submission with accessions holds a resource on the governance
+    chain that has none.
+    """
+
+    def __init__(self, *, root_slot: str, alias: str):
+        super().__init__(
+            f"The resource '{alias}' in root slot '{root_slot}' has no accession,"
+            + " though its submission has accessions."
+        )
+
+
 class FileGovernance(BaseModel):
     """The governance of a file through one of its datasets.
 
@@ -151,6 +163,8 @@ class GovernanceMetadata:
         Raises:
             AnchorPointNotFoundError: if a class on the governance chain is not
                 anchored.
+            MissingAccessionError: if a submission with accessions holds a resource
+                on the governance chain that has none.
         """
         governance_anchor_points = _filter_governance_anchor_points(
             anchor_points_by_target=anchor_points_by_target
@@ -335,10 +349,17 @@ def _index_document(
 def _lookup_submission_accession(
     anchor_point: AnchorPoint, alias: str, *, accession_map: AccessionMap
 ) -> str | None:
-    """Look up the accession of a submission's resource in its accession map."""
-    return lookup_accession(
+    """Look up the accession of a submission's resource in its accession map.
+
+    Raises:
+        MissingAccessionError: if the map holds accessions but none for the alias.
+    """
+    accession = lookup_accession(
         anchor=anchor_point.root_slot, alias=alias, accession_map=accession_map
     )
+    if accession is None and accession_map:
+        raise MissingAccessionError(root_slot=anchor_point.root_slot, alias=alias)
+    return accession
 
 
 def _group_reuse_chains(
