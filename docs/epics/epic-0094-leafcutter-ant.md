@@ -30,7 +30,8 @@ FIS:
 
 - Add `leased_until`, `leased_by`, `claimed_at` and `times_claimed` to `FileUnderInterrogation`.
 - Add `POST /rpc/storages/{storage_alias}/uploads/claim` so an instance can lease the next waiting file: it serves one file, sets `leased_until`, `leased_by`, `claimed_at` and `times_claimed`, and leaves everything else unchanged.
-- Leave `GET /storages/{storage_alias}/uploads` as it is: a read-only list of every waiting file.
+- Leave `GET /storages/{storage_alias}/uploads` as it is, a read-only list for a DHFS that predates this epic, and mark it deprecated with `deprecated=True` on the route.
+- Add `GET /storages/{storage_alias}/validate-version` for `dhfs verify`.
 - Add `POST /rpc/storages/{storage_alias}/uploads/{file_id}/renew` so an instance can extend its lease while it works on the file.
 - Add `POST /rpc/storages/{storage_alias}/uploads/{file_id}/release` so an instance can hand a file back before its lease expires.
 - Claim, renew and release each with one `update_first` call; see [The claim itself](#the-claim-itself).
@@ -41,8 +42,8 @@ FIS:
 DHFS:
 
 - Generate a claimant ID once at startup, and send it in the body of every claim, renewal and release, so FIS can tell one instance of a hub from another; see [The claimant ID](#the-claimant-id).
-- Claim one file per round through the claim endpoint instead of listing through the GET; see [Claiming in DHFS](#claiming-in-dhfs).
-- Keep the GET for the version check in `dhfs verify`, and mock the lease calls there; see [`dhfs verify`](#dhfs-verify).
+- Claim one file per round through the claim endpoint, and stop calling the GET; see [Claiming in DHFS](#claiming-in-dhfs).
+- Check the version in `dhfs verify` through the validate-version endpoint, and mock the lease calls there; see [`dhfs verify`](#dhfs-verify).
 - Renew the lease from a background task while a file is in work, and stop that task before sending the report; see [The lease duration and renewal](#the-lease-duration-and-renewal).
 - Call the release endpoint from the `InconclusiveError` branch of `interrogate_new_files()`, which today only logs, from the `ConclusiveError` branch when `report_failure` did not reach FIS, and after FIS refuses a renewal.
 - Skip the poll interval after conclusively *or* inconclusively processing a file, and sleep only when the request for the next file comes back empty; see [Poll pacing](#poll-pacing).
@@ -59,6 +60,8 @@ DHFS:
 - A give-up state after N failed attempts.
   [Shovelnose Guitarfish](./epic-0092-shovelnose-guitarfish.md) already gives Data Stewards a requeue path.
 - Releasing the file in flight when the process is stopped, for example by SIGTERM ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
+- Removing the GET.
+  A later FIS release removes it; see [Rollout](#rollout).
 - Per-instance identity in the JWT.
   `sub` is the storage alias, so two instances of one hub are indistinguishable to the authentication layer.
 - Raising `replicaCount` for any hub.
@@ -70,13 +73,20 @@ DHFS:
 
 ### RESTful/Synchronous
 
-`GET /storages/{storage_alias}/uploads` is unchanged: it lists every waiting file and leases nothing.
-A DHFS that predates this epic keeps using it, and so does `dhfs verify`.
+`GET /storages/{storage_alias}/uploads` is unchanged apart from being marked deprecated: it lists every waiting file and leases nothing.
+Only a DHFS that predates this epic calls it.
 
-The three new endpoints use the same Data Hub JWT and User-Agent check as the existing three Data Hub endpoints.
-Each takes the caller's claimant ID as its JSON body, `{"claimant_id": "<UUID4>"}`.
+The four new endpoints use the same Data Hub JWT and User-Agent check as the existing three Data Hub endpoints.
+Each of the three POSTs takes the caller's claimant ID as its JSON body, `{"claimant_id": "<UUID4>"}`.
 The claim takes no file ID, because FIS picks the file; renew and release name it in the path.
 
+- `GET /storages/{storage_alias}/validate-version`:
+  - *Tell the caller whether FIS accepts its DHFS version and its token.*
+  - Reads and changes nothing.
+  - Returns:
+    - 204 if both checks pass
+    - 426 if FIS rejects the DHFS version
+    - 401 or 403 from the JWT check, as on the other Data Hub endpoints
 - `POST /rpc/storages/{storage_alias}/uploads/claim`:
   - *Lease the next waiting file to the caller.*
   - Serves at most one file; see [The claim itself](#the-claim-itself).
@@ -249,12 +259,12 @@ The hold cap is the term `{"claimed_at": {"$gt": now - timedelta(seconds=max_lea
 
 Add a `CentralClient` method that posts the claim and returns the file, or `None` on 204.
 In `interrogate_new_files()`, call it once per round in place of `_fetch_batch()` and the `for file in new_files` loop, and keep their error handling, including the `CriticalError` on 426.
-Keep `fetch_new_uploads()`, which `dhfs verify` still calls.
+Remove `fetch_new_uploads()`, since DHFS no longer calls the GET.
 
 ### `dhfs verify`
 
 `run_dhfs_verification` checks that FIS accepts the DHFS version with `fetch_new_uploads()`.
-That call stays on the read-only GET, so a verify run claims no file.
+Replace that call with a `CentralClient.validate_version()` method that calls the validate-version endpoint and raises `UpgradeRequiredError` on 426, so a verify run claims no file.
 Verify then calls `interrogate_file` directly on a dummy file that FIS does not know.
 Patch the renew and release calls there with `AsyncMock`, as `submit_interrogation_report` already is, so verify sends no lease calls for the dummy file.
 
@@ -329,11 +339,12 @@ Set `max_lease_hold_seconds` to the longest single interrogation the team expect
 
 1. hexkit adds `update_first`, before FIS or in the same change.
    FIS uses hexkit from the workspace, so it needs no hexkit release first; raise its floor from `hexkit >= 8.3.0` to the version that adds `update_first`.
-2. FIS ships the claim, renew and release endpoints.
-   The GET is unchanged, so every DHFS keeps working.
-3. DHFS ships claiming, renewal and release.
+2. FIS ships the claim, renew, release and validate-version endpoints, and marks the GET deprecated.
+   The GET is otherwise unchanged, so every DHFS keeps working.
+   The release notes announce that a later release removes the GET.
+3. DHFS ships claiming, renewal, release and the new version check in `dhfs verify`.
    A hub raises `replicaCount` only once it runs this DHFS ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#consequences)).
-4. In a later release, after the hubs have upgraded, FIS raises `dhfs_version_constraint` ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
+4. In a later release, after the hubs have upgraded, FIS raises `dhfs_version_constraint` to exclude every DHFS that lists, and removes the GET ([ADR-0050](../adrs/adr-0050-dhfs-instances-coordinate-through-file-leases.md#decision)).
 
 ### Generated docs
 
@@ -345,17 +356,20 @@ The three settings also go into `services/fis/dev_config.yaml` and `tests_fis/fi
 Existing tests that change:
 
 - `test_process_file_upload_requeue` must gain assertions on the four reset fields.
-- `CentralApiMock` raises `NotMockedError` for an unrouted path, so it needs claim, renew and release routes.
+- `CentralApiMock` raises `NotMockedError` for an unrouted path, so it needs claim, renew, release and validate-version routes, and loses the uploads route.
   The `test_interrogator.py` tests that set `on_fetch_new_uploads` move to the claim route, serving one file per call.
   Those that take the inconclusive path also need the release route: `test_file_not_in_inbox`, `test_etag_doesnt_match_local_md5`, `test_inbox_check_retryable_s3_errors_do_not_stop_the_batch` and `test_uncategorized_error_is_retried_not_reported`.
+- The `test_central.py` tests that call `fetch_new_uploads()` move to the claim method: `test_central_api_unavailable`, `test_jwt_formation`, `test_responses_with_bad_format` and `test_500_response_handling`.
+- The verifier tests move from `fetch_new_uploads()` to `validate_version()`: `test_run_dhfs_verification_pings_central_new_uploads_endpoint` in `unit/test_verifier.py`, and the fixture in `integration/test_verifier.py` that patches it.
 
-The tests of the GET stay as they are, since the GET is unchanged: `test_list_uploads`, `test_get_files_not_yet_interrogated` and `test_list_uploads_records_spans`.
+The FIS tests of the GET stay as they are until FIS removes it: `test_list_uploads`, `test_get_files_not_yet_interrogated` and `test_list_uploads_records_spans`.
 The claim endpoint gets its own span test next to `test_list_uploads_records_spans`, expecting a `routes.claim_upload` span under the server span and a `test.findAndModify` MongoDB span.
 
 New unit tests, on the `rig` fixture, with the clock frozen rather than slept through:
 
 - A claim serves and leases one file, a second claim returns 204, and a claim after the lease expires serves it again.
 - The GET still lists every waiting file, leased or not, and changes nothing.
+- Validate-version returns 204 for an accepted DHFS version with a valid JWT, 426 for a rejected version, and 401 or 403 for a missing or foreign JWT.
 - Never-claimed files are served before expired ones.
 - A renewal by the holder extends the lease from now, keeps `times_claimed`, `claimed_at` and `state_updated`, and also succeeds after expiry when no other instance has claimed the file.
 - A renewal from another instance, for a file that is no longer waiting, or past `max_lease_hold_seconds` returns 409 and changes nothing.
@@ -385,8 +399,9 @@ New DHFS tests:
 
 - A round that processed a file polls again without sleeping, and a round that claimed nothing sleeps.
   Test the decision, not the wall clock.
-- The claim method returns the file on 200 and `None` on 204, and raises on errors as `fetch_new_uploads()` does.
-- `dhfs verify` calls only the GET, and sends no claim, renewal or release.
+- The claim method returns the file on 200 and `None` on 204.
+  It and `validate_version()` raise `UpgradeRequiredError` on 426, `CentralAPIError` on other error statuses, and `ConnectionFailedError` when FIS is unreachable.
+- `dhfs verify` calls only the validate-version endpoint, and sends no claim, renewal or release.
 - The claimant ID stays the same for every claim, renewal and release of one process, and differs between two processes.
 - Release is called for an inconclusive file, and for a conclusive one only when `report_failure` did not land; a failing release neither masks the original error nor stops the service.
 - The renewal task renews while a file is in work and stops before the report.

@@ -19,7 +19,7 @@ and neglected **static sharding by `hash(file_id) % n`, leases sized from an ass
 
 to achieve **any number of instances sharing one queue without configuration**
 
-accepting that **a new hexkit DAO method, one claim per file plus renewals, a restarted instance losing its lease, and a DHFS that predates leases ignoring them**.
+accepting that **a new hexkit DAO method, one claim per file plus renewals, a restarted instance losing its lease, and a DHFS that predates leases ignoring them until FIS retires the GET it lists through**.
 
 ## Details
 
@@ -59,11 +59,14 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
   A new method, `update_first`, selects, sorts and changes a resource in one call, and changes only the given fields.
   Changes map model fields to plain values; MongoDB update operators are a documented extension, as in filters, and FIS uses `$inc` for its claim counter.
   Other backends can implement it too, such as PostgreSQL with `SELECT … FOR UPDATE SKIP LOCKED`.
-- **The GET stays a read-only list.**
-  `GET /storages/{storage_alias}/uploads` keeps listing every waiting file and leases nothing.
-  A DHFS that predates leases keeps using it unchanged, and `dhfs verify` uses it to check that FIS accepts the DHFS version without claiming a file.
-  FIS raises `dhfs_version_constraint` only after the hubs have upgraded.
+- **Only an old DHFS uses the GET.**
+  `GET /storages/{storage_alias}/uploads` keeps listing every waiting file but doesn't touch leases, so a DHFS that predates leases keeps working unchanged.
+  Newer DHFS instances (with leases) never call it.
+  FIS removes it once `dhfs_version_constraint` excludes every DHFS that lists.
+  FIS raises that constraint only after the hubs have upgraded.
   Raising it earlier would be a flag day: a DHFS on an old image gets 426, stops on a `CriticalError` and crash-loops until its hub upgrades.
+- **`dhfs verify` checks the version through its own endpoint.**
+  `GET /storages/{storage_alias}/validate-version` runs the Data Hub JWT and User-Agent checks and reads no file, so a verify run claims nothing.
 
 [Leafcutter Ant](../epics/epic-0094-leafcutter-ant.md) specifies the implementation.
 
@@ -80,7 +83,7 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
   FIS runs its API and the subscriber as separate deployments, `fis` and `fis-consumer`, and the subscriber replaces whole documents.
   A claim that replaced the whole document could overwrite a cancellation written in between and return the file to the inbox, the read-modify-write hazard of [ADR-0005](adr-0005-db-event-consistency.md).
   The subscriber overwrites a lease only when it cancels, fails, archives or requeues the file, which ends the lease anyway.
-- A DHFS that predates leases lists through the GET and ignores leases, so as a hub's only instance it behaves as it does today.
+- A DHFS that predates leases lists through the GET and ignores leases, so as a hub's only instance it behaves as it does today, until FIS removes the GET.
   A hub must run a DHFS that claims before it adds instances.
   During a rolling update, the old pod can still re-encrypt a file the new pod claimed, as two instances do today.
 - Every hexkit DAO provider and `DaoPublisher` implement `update_first`, and providers validate each changed value, since a partial update skips whole-model validation.
@@ -106,3 +109,5 @@ An *instance* is one running DHFS process; "replica" refers only to `replicaCoun
   It binds every DHFS from the moment FIS ships, but an old DHFS gains nothing from that: it never renews, so it must run alone anyway.
   It would cut an old DHFS to one file per poll interval until its hub upgrades, because that DHFS sleeps after every round.
   It would also make every `dhfs verify` run leave a real file leased for 22 minutes with no instance working on it, and give a GET side effects.
+- **`GET /health` for the version check in `dhfs verify`.**
+  It already returns 426 for a rejected DHFS version, but it takes no JWT, so verify would no longer prove that FIS accepts the hub's token.
