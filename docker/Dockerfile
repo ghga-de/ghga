@@ -94,9 +94,9 @@ RUN ln -s /app/.venv/bin/python /app/entrypoint && test -e /app/entrypoint
 FROM venv-${VARIANT} AS builder
 
 # ---- allocator: jemalloc, for members that preload it -----------------------------------
-# musl's malloc is slow at the many small allocations of an event loop that handles one
-# TLS record per call. A member that needs a faster allocator preloads jemalloc with
-# LD_PRELOAD. The runner has no package manager, so the library is copied in on its own
+# musl's default allocator, malloc can be slow at many small allocations.
+# A member that needs a faster allocator preloads jemalloc with LD_PRELOAD.
+# The runner has no package manager, so the library is copied in on its own
 # and does not appear in the image's package database.
 # hadolint ignore=DL3006
 FROM ${BASE}-sfw-dev AS allocator
