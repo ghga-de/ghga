@@ -224,7 +224,7 @@ Options considered and left out, with the signal to look again.
   An eval on 2026-11-11 cut eight tasks from merged PRs, six routine and two high-risk.
   Sonnet 5.5 alone finished all 16 runs from the plan's section, with lint, types and the hidden tests green, so the loop had nothing to fix; its one run took a round without a finding at 2.3 times the cost.
   The reviewer itself, run once on each task's change with one tested check removed, found the gap in 8 of 8 with the plan's section and in 6 of 8 with the YouTrack card alone.
-  Look again for work without a `define-tasks` plan, or once sessions start leaving bugs a review catches.
+  Look again for tasks that come without a `define-tasks` plan, which the eval did not cover, or if human reviewers start finding bugs in code that agents wrote.
 - **Fable as the reviewer of high-risk changes.**
   On the two high-risk changes of the same eval, Fable 5.1 found what Opus 5.5 found, at 2.7 times the cost.
   Look again if Opus starts missing defects in access control or deletion.
