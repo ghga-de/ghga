@@ -410,7 +410,7 @@ describe('AccessRequestManagerDetail access period warning', () => {
 
   it('should show the new internal note after sending a verification code', async () => {
     await render({ status: AccessRequestStatus.pending, internal_note: null });
-    const note = '2026-11-10: Verification code AB23CD sent to +49…4242 by Rod.';
+    const note = '2026-11-10: Verification code AB23CD sent to +49…6789 by Rod.';
     const open = vitest
       .spyOn(TestBed.inject(MatDialog), 'open')
       .mockReturnValue({ afterClosed: () => of(note) } as never);
@@ -421,6 +421,25 @@ describe('AccessRequestManagerDetail access period warning', () => {
     await fixture.whenStable();
 
     expect(open).toHaveBeenCalledOnce();
+    expect(open.mock.calls[0][1]).toMatchObject({ disableClose: true });
     expect(fixture.componentInstance.request()?.internal_note).toBe(note);
+  });
+
+  it('should reload the request if the dialog does not know the new note', async () => {
+    await render({ status: AccessRequestStatus.pending, internal_note: null });
+    vitest
+      .spyOn(TestBed.inject(MatDialog), 'open')
+      .mockReturnValue({ afterClosed: () => of(null) } as never);
+    const reload = vitest.spyOn(
+      TestBed.inject(AccessRequestService),
+      'reloadAccessRequest',
+    );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Send verification code to DAC/ }),
+    );
+    await fixture.whenStable();
+
+    expect(reload).toHaveBeenCalledWith(accessRequests[4].id);
   });
 });

@@ -11,7 +11,6 @@ import {
   inject,
   input,
   linkedSignal,
-  OnInit,
   output,
   signal,
   untracked,
@@ -46,7 +45,7 @@ const ERROR_TICKET_ID = 'ID must be a number with up to 9 digits';
   ],
   templateUrl: './access-request-field-edit.html',
 })
-export class AccessRequestFieldEdit implements OnInit {
+export class AccessRequestFieldEdit {
   #config = inject(ConfigService);
   #baseTicketUrl = this.#config.helpdeskTicketUrl;
 
@@ -122,13 +121,6 @@ export class AccessRequestFieldEdit implements OnInit {
     const field = this.#defaultValue();
     untracked(() => this.formModel.set({ field }));
   });
-
-  /**
-   * Populate the editable field with the values from the access request on component init.
-   */
-  ngOnInit(): void {
-    this.formModel.set({ field: this.#defaultValue() });
-  }
 
   edit = () => {
     this.isOpen.set(true);

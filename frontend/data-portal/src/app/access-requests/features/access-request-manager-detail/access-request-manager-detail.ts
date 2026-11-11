@@ -427,6 +427,8 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
 
   /**
    * Open the dialog for sending a verification code and take over the new note.
+   * The dialog does not close by itself, since a send may still be running.
+   * If it closes with null, the note is unknown and the request is reloaded.
    */
   #openVerificationSmsDialog(): void {
     const request = this.request();
@@ -438,12 +440,18 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
           data: request,
           width: '40rem',
           maxWidth: '95vw',
+          disableClose: true,
         },
       )
       .afterClosed()
       .subscribe((note) => {
         if (note === undefined) return;
         this.#pendingEdits.delete('internal_note');
+        if (note === null) {
+          this.#cachedRequest.set(undefined);
+          this.#accessRequestService.reloadAccessRequest(request.id);
+          return;
+        }
         // the service has updated its copies, but this one is a snapshot
         this.#cachedRequest.update((ar) => ar && { ...ar, internal_note: note });
       });

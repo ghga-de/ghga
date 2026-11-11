@@ -406,11 +406,7 @@ export class AccessRequestService {
     const url = `${this.#arsRequestsUrl}/${id}/verification-sms`;
     return this.#http.post<{ internal_note: string }>(url, sms).pipe(
       map(({ internal_note }) => internal_note),
-      tap((internal_note) => {
-        // the cached copy of the request lacks the new line in the note
-        this.#httpCache.delete(this.#requestBucket);
-        this.#updateAccessRequestLocally(id, { internal_note });
-      }),
+      tap((internal_note) => this.#updateAccessRequestLocally(id, { internal_note })),
     );
   }
 

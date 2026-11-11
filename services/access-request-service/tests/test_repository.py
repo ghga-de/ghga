@@ -36,7 +36,6 @@ from ars.core.models import (
     Dataset,
     VerificationSmsData,
 )
-from ars.core.phone import mask_phone_number
 from ars.core.repository import AccessRequestConfig, AccessRequestRepository
 from ars.ports.outbound.access_grants import AccessGrantsPort
 from ars.ports.outbound.daos import (
@@ -1613,7 +1612,7 @@ async def test_revoke_an_access_grant_without_authorization():
 
 
 SMS_DATA = VerificationSmsData(
-    phone="+49 6221 42 4242",
+    phone="+49 1512 3456789",
     text="Please send the code AB23CD to the GHGA helpdesk.",
     code="AB23CD",
 )
@@ -1627,13 +1626,13 @@ async def test_send_verification_sms():
     note = await repository.send_verification_sms(
         ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
     )
-    assert sms_notifier.sent == [("+496221424242", SMS_DATA.text, str(ar.id))]
+    assert sms_notifier.sent == [("+4915123456789", SMS_DATA.text, str(ar.id))]
     updated = access_request_dao.last_upsert
     assert updated is not None
     assert updated.id == ar.id
     today = now_utc_ms_prec().date().isoformat()
     assert note == updated.internal_note
-    assert note == f"{today}: Verification code AB23CD sent to +49…4242 by Rod Steward."
+    assert note == f"{today}: Verification code AB23CD sent to +49…6789 by Rod Steward."
     assert updated.status == AccessRequestStatus.PENDING
 
 
@@ -1653,23 +1652,22 @@ async def test_send_verification_sms_is_recorded_before_sending(monkeypatch):
     assert updated is not None
     assert updated.id == ar.id
     assert updated.internal_note
-    assert updated.internal_note.endswith("AB23CD sent to +49…4242 by Rod Steward.")
+    assert updated.internal_note.endswith("AB23CD sent to +49…6789 by Rod Steward.")
 
 
 async def test_send_verification_sms_appends_to_note():
     """Test that the record of a sent SMS is appended to an existing note."""
     ar = ACCESS_REQUESTS[3]
     await access_request_dao.update(ar.model_copy(update={"internal_note": "Hello"}))
-    sms_data = SMS_DATA.model_copy(update={"code": None})
     await repository.send_verification_sms(
-        ar.id, sms_data=sms_data, auth_context=auth_context_steward
+        ar.id, sms_data=SMS_DATA, auth_context=auth_context_steward
     )
     updated = access_request_dao.last_upsert
     assert updated is not None
     note = updated.internal_note
     assert note
     assert note.startswith("Hello\n")
-    assert note.endswith(": Verification SMS sent to +49…4242 by Rod Steward.")
+    assert note.endswith(": Verification code AB23CD sent to +49…6789 by Rod Steward.")
 
 
 async def test_send_verification_sms_without_authorization():
@@ -1702,29 +1700,20 @@ async def test_send_verification_sms_for_non_existing_request():
     assert not sms_notifier.sent
 
 
-@pytest.mark.parametrize(
-    "phone", ["06221 424242", "+49 123", "not a number", "+1 555 0100 0100 0100"]
-)
+@pytest.mark.parametrize("phone", ["01512 3456789", "+49 6221 42 4242"])
 async def test_verification_sms_with_invalid_phone(phone: str):
-    """Test that invalid phone numbers or numbers without prefix are rejected."""
+    """Test that the phone number is validated."""
     with pytest.raises(ValueError, match="Invalid phone number"):
-        VerificationSmsData(phone=phone, text="Some text")
+        VerificationSmsData(phone=phone, text="Code AB23CD", code="AB23CD")
 
 
 async def test_verification_sms_with_code_missing_in_text():
     """Test that a code that is not contained in the text is rejected."""
     with pytest.raises(ValueError, match="must contain the verification code"):
-        VerificationSmsData(phone="+49 6221 42 4242", text="Some text", code="AB23CD")
+        VerificationSmsData(phone="+49 1512 3456789", text="Some text", code="AB23CD")
 
 
-@pytest.mark.parametrize(
-    "phone, masked",
-    [
-        ("+496221424242", "+49…4242"),
-        ("+29022158", "+290…58"),
-        ("+2902158", "+290…58"),
-    ],
-)
-def test_mask_phone_number(phone: str, masked: str):
-    """Test that at most half of the national number is shown."""
-    assert mask_phone_number(phone) == masked
+async def test_verification_sms_without_code():
+    """Test that an SMS without a verification code is rejected."""
+    with pytest.raises(ValueError, match="code"):
+        VerificationSmsData(phone="+49 1512 3456789", text="Some text")  # type: ignore[call-arg]

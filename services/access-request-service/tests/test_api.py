@@ -1336,7 +1336,7 @@ async def test_revoke_access_grant_unauthorized(
 
 
 SMS_DATA = {
-    "phone": "+49 6221 42 4242",
+    "phone": "+49 1512 3456789",
     "text": "Please send the code AB23CD to the GHGA helpdesk.",
     "code": "AB23CD",
 }
@@ -1369,14 +1369,14 @@ async def test_send_verification_sms(
     event = recorder.recorded_events[0]
     assert event.type_ == config.sms_notification_type
     assert event.key == access_request_id
-    assert event.payload == {"phone": "+496221424242", "text": SMS_DATA["text"]}
+    assert event.payload == {"phone": "+4915123456789", "text": SMS_DATA["text"]}
 
     response = await client.get(
         f"/access-requests/{access_request_id}", headers=auth_headers_steward
     )
     assert response.status_code == 200
     note = response.json()["internal_note"]
-    assert note.endswith(": Verification code AB23CD sent to +49…4242 by Rod Steward.")
+    assert note.endswith(": Verification code AB23CD sent to +49…6789 by Rod Steward.")
     assert returned_note == note
 
 
@@ -1404,13 +1404,14 @@ async def test_send_verification_sms_for_non_existing_request(
     assert response.status_code == 404
 
 
+@pytest.mark.parametrize("phone", ["01512 3456789", "+49 6221 42 4242"])
 async def test_send_verification_sms_with_invalid_phone(
-    rest: RestFixture, auth_headers_steward: dict[str, str]
+    rest: RestFixture, auth_headers_steward: dict[str, str], phone: str
 ):
-    """Test that a phone number without international prefix is rejected."""
+    """Test that a phone number without prefix or a landline number is rejected."""
     response = await rest.rest_client.post(
         f"/access-requests/{uuid4()}/verification-sms",
-        json={**SMS_DATA, "phone": "06221 424242"},
+        json={**SMS_DATA, "phone": phone},
         headers=auth_headers_steward,
     )
     assert response.status_code == 422

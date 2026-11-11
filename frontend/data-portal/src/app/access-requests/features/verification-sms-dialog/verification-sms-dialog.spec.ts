@@ -11,7 +11,7 @@ import { AccessRequest } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 
 import { accessRequests } from '@app/../mocks/data';
 import { VerificationSmsDialog, verificationSmsText } from './verification-sms-dialog';
@@ -87,23 +87,23 @@ describe('VerificationSmsDialog', () => {
 
   it('should not send a message that misses the code', async () => {
     const { phone, text } = fields();
-    await userEvent.type(phone, '6221424242');
+    await userEvent.type(phone, '15123456789');
     await userEvent.clear(text);
     await userEvent.type(text, 'No code here');
     await fixture.whenStable();
     expect(screen.getByRole('button', { name: 'Send SMS' })).toBeDisabled();
   });
 
-  it('should send the SMS with a German number and close with the new note', async () => {
+  it('should send the SMS with a German mobile number and close with the new note', async () => {
     accessRequestService.sendVerificationSms.mockReturnValue(of('the note'));
     const { phone, code, text } = fields();
-    await userEvent.type(phone, '6221424242');
+    await userEvent.type(phone, '15123456789');
     await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
 
     expect(accessRequestService.sendVerificationSms).toHaveBeenCalledWith(
       TEST_REQUEST.id,
-      { phone: '+496221424242', code: code.value, text: text.value },
+      { phone: '+4915123456789', code: code.value, text: text.value },
     );
     expect(dialogRef.close).toHaveBeenCalledWith('the note');
   });
@@ -112,7 +112,7 @@ describe('VerificationSmsDialog', () => {
     accessRequestService.sendVerificationSms.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 422 })),
     );
-    await userEvent.type(fields().phone, '6221424242');
+    await userEvent.type(fields().phone, '15123456789');
     await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
     await fixture.whenStable();
@@ -126,7 +126,7 @@ describe('VerificationSmsDialog', () => {
     accessRequestService.sendVerificationSms.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 422, error: { detail } })),
     );
-    await userEvent.type(fields().phone, '6221424242');
+    await userEvent.type(fields().phone, '15123456789');
     await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
     await fixture.whenStable();
@@ -139,12 +139,50 @@ describe('VerificationSmsDialog', () => {
     accessRequestService.sendVerificationSms.mockReturnValue(
       throwError(() => new HttpErrorResponse({ status: 500 })),
     );
-    await userEvent.type(fields().phone, '6221424242');
+    await userEvent.type(fields().phone, '15123456789');
     await fixture.whenStable();
     await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
     await fixture.whenStable();
 
     expect(screen.getByRole('alert')).toHaveTextContent(/try again later/);
     expect(dialogRef.close).not.toHaveBeenCalled();
+  });
+
+  it('should not let the dialog be cancelled while the SMS is being sent', async () => {
+    accessRequestService.sendVerificationSms.mockReturnValue(NEVER);
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    expect(cancel).toBeEnabled();
+    await userEvent.type(fields().phone, '15123456789');
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
+    await fixture.whenStable();
+
+    expect(cancel).toBeDisabled();
+  });
+
+  it('should close without a note when cancelled after a refusal', async () => {
+    accessRequestService.sendVerificationSms.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 422 })),
+    );
+    await userEvent.type(fields().phone, '15123456789');
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(dialogRef.close).toHaveBeenCalledWith(undefined);
+  });
+
+  it('should close with null when cancelled after a server error', async () => {
+    accessRequestService.sendVerificationSms.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+    await userEvent.type(fields().phone, '15123456789');
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Send SMS' }));
+    await fixture.whenStable();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(dialogRef.close).toHaveBeenCalledWith(null);
   });
 });

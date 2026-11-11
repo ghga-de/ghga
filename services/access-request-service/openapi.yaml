@@ -325,19 +325,17 @@ components:
         who sends the code back via the helpdesk.'
       properties:
         code:
-          anyOf:
-          - maxLength: 16
-            minLength: 4
-            pattern: ^[A-Za-z0-9]+$
-            type: string
-          - type: 'null'
           description: The verification code contained in the text, to be recorded
             in the internal note of the access request
+          maxLength: 16
+          minLength: 4
+          pattern: ^[A-Za-z0-9]+$
           title: Code
+          type: string
         phone:
-          description: Phone number of the recipient with international prefix
+          description: Mobile phone number of the recipient with international prefix
           examples:
-          - +49 6221 123456
+          - +49 1512 3456789
           title: Phone
           type: string
         text:
@@ -349,6 +347,7 @@ components:
       required:
       - phone
       - text
+      - code
       title: VerificationSmsData
       type: object
     VerificationSmsResult:

@@ -58,7 +58,7 @@ export const AccessGrantStateLabel: Record<AccessGrantStatus, string> = {
 export interface VerificationSms {
   phone: string;
   text: string;
-  code?: string;
+  code: string;
 }
 
 export interface AccessRequest {

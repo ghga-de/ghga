@@ -22,11 +22,13 @@ __all__ = ["mask_phone_number", "validate_phone_number"]
 
 
 def validate_phone_number(value: str) -> str:
-    """Validate a phone number and return it in E.164 format.
+    """Validate a mobile phone number and return it in E.164 format.
 
     No default region is set, so the number needs an international prefix.
+    Landlines are refused, since German networks no longer deliver SMS to them.
+    Numbers that cannot be told apart from landlines, as in the US, pass.
 
-    Raises a `ValueError` if the phone number is invalid.
+    Raises a `ValueError` if the phone number is invalid or not a mobile number.
     """
     try:
         number = phonenumbers.parse(value, None)
@@ -36,6 +38,11 @@ def validate_phone_number(value: str) -> str:
         phonenumbers.is_possible_number(number) and phonenumbers.is_valid_number(number)
     ):
         raise ValueError(f"Invalid phone number: {value}")
+    if phonenumbers.number_type(number) not in (
+        phonenumbers.PhoneNumberType.MOBILE,
+        phonenumbers.PhoneNumberType.FIXED_LINE_OR_MOBILE,
+    ):
+        raise ValueError(f"Invalid phone number: {value} is not a mobile number")
     return phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
 
 

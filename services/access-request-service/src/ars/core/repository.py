@@ -424,13 +424,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             raise invalid_state_error
 
         # the note is the only record of the code outside the helpdesk ticket
-        what = (
-            f"Verification code {sms_data.code}"
-            if sms_data.code
-            else "Verification SMS"
-        )
         line = (
-            f"{now_utc_ms_prec().date().isoformat()}: {what} sent"
+            f"{now_utc_ms_prec().date().isoformat()}:"
+            f" Verification code {sms_data.code} sent"
             f" to {mask_phone_number(sms_data.phone)} by {auth_context.name}."
         )
         note = f"{request.internal_note}\n{line}" if request.internal_note else line
@@ -442,6 +438,13 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         )
         await self._sms_notifier.send_sms(
             phone=sms_data.phone, text=sms_data.text, key=str(access_request_id)
+        )
+        log.info(
+            "Verification SMS sent",
+            extra={
+                "access_request_id": access_request_id,
+                "steward_id": auth_context.id,
+            },
         )
         return note
 

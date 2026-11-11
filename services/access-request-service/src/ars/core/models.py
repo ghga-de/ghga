@@ -246,8 +246,8 @@ class VerificationSmsData(BaseDto):
 
     phone: str = Field(
         default=...,
-        description="Phone number of the recipient with international prefix",
-        examples=["+49 6221 123456"],
+        description="Mobile phone number of the recipient with international prefix",
+        examples=["+49 1512 3456789"],
     )
     text: str = Field(
         default=...,
@@ -255,8 +255,8 @@ class VerificationSmsData(BaseDto):
         max_length=480,
         description="The text of the SMS, including the verification code",
     )
-    code: str | None = Field(
-        default=None,
+    code: str = Field(
+        default=...,
         min_length=4,
         max_length=16,
         pattern=r"^[A-Za-z0-9]+$",
@@ -273,7 +273,7 @@ class VerificationSmsData(BaseDto):
     @model_validator(mode="after")
     def text_contains_code(self):
         """Validate that the code recorded in the internal note is the one sent."""
-        if self.code and self.code not in self.text:
+        if self.code not in self.text:
             raise ValueError("The text must contain the verification code")
 
         return self

@@ -137,7 +137,7 @@ describe('AccessRequestService', () => {
   describe('sending a verification SMS', () => {
     it('posts the SMS and returns the new internal note', () => {
       const httpMock = TestBed.inject(HttpTestingController);
-      const sms = { phone: '+49 6221 424242', text: 'Code AB23CD', code: 'AB23CD' };
+      const sms = { phone: '+49 1512 3456789', text: 'Code AB23CD', code: 'AB23CD' };
       let note: string | undefined;
       service.sendVerificationSms('ar-1', sms).subscribe((n) => (note = n));
 

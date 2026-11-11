@@ -59,7 +59,8 @@ export function verificationSmsText(ar: AccessRequest, code: string): string {
  *
  * The code is generated, but can be changed. The text follows the code until it
  * is edited by hand. The dialog closes with the new internal note of the request,
- * in which the backend records the sending.
+ * in which the backend records the sending, or with null when a failed send may
+ * have changed the note anyway.
  */
 @Component({
   selector: 'app-verification-sms-dialog',
@@ -89,6 +90,10 @@ export class VerificationSmsDialog {
 
   protected isSubmitting = signal(false);
   protected sendError = signal('');
+
+  // the backend records the sending before it publishes the SMS, so only a 422
+  // tells for sure that the note has not been changed
+  #noteUnknown = false;
 
   #initialCode = generateVerificationCode();
 
@@ -174,10 +179,10 @@ export class VerificationSmsDialog {
   }
 
   /**
-   * Close the dialog without sending an SMS.
+   * Close the dialog without sending an SMS, or with null if the note is unknown.
    */
   protected onCancel(): void {
-    this.#dialogRef.close(undefined);
+    this.#dialogRef.close(this.#noteUnknown ? null : undefined);
   }
 
   /**
@@ -200,12 +205,14 @@ export class VerificationSmsDialog {
           // a 422 carries the reason as text when the backend refused the request,
           // and as a list when the data did not validate, mostly the phone number
           const refused = err instanceof HttpErrorResponse && err.status === 422;
+          if (!refused) this.#noteUnknown = true;
           const detail = refused ? err.error?.detail : undefined;
           let message = 'The SMS could not be sent. Please try again later.';
           if (typeof detail === 'string') {
             message = `The SMS could not be sent: ${detail}`;
           } else if (refused) {
-            message = 'The SMS could not be sent. Please check the phone number.';
+            message =
+              'The SMS could not be sent. Please check the phone number, which must be a mobile number.';
           }
           this.sendError.set(message);
           this.isSubmitting.set(false);
