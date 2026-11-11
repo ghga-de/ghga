@@ -543,6 +543,43 @@ class ResearchDataUploadBox(BaseModel):
     model_config = ConfigDict(title="research_data_upload_box")
 
 
+class UploadBoxPriorityEntry(BaseModel):
+    """One research data upload box in the upload box priority order."""
+
+    research_data_upload_box_id: UUID4 = Field(
+        ..., description="The ID of the research data upload box"
+    )
+    file_upload_box_id: UUID4 = Field(
+        ..., description="The ID of the file upload box of the research data upload box"
+    )
+    model_config = ConfigDict(title="upload_box_priority_entry")
+
+
+class UploadBoxPriority(BaseModel):
+    """The order in which the files of research data upload boxes are re-encrypted.
+
+    The list holds every research data upload box that is not archived.
+    """
+
+    id: str = Field(
+        ...,
+        description="The fixed ID of the single priority document",
+        examples=["global"],
+    )
+    version: int = Field(..., description="A counter indicating resource version")
+    changed_by: UUID4 | None = Field(
+        ...,
+        description="ID of the user who performed the latest change, or None if the"
+        + " system made it",
+    )
+    last_changed: UTCDatetime = Field(..., description="Timestamp of the latest change")
+    entries: list[UploadBoxPriorityEntry] = Field(
+        ...,
+        description="The boxes in priority order. Index 0 is the highest priority.",
+    )
+    model_config = ConfigDict(title="upload_box_priority")
+
+
 FileUploadState = Literal[
     "init",
     "inbox",

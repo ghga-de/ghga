@@ -24,6 +24,7 @@ from .stateful import (
     FileUploadEventsConfig,
     ResearchDataUploadBoxEventsConfig,
     ResourceEventsConfig,
+    UploadBoxPriorityEventsConfig,
     UserEventsConfig,
 )
 from .stateless import (
@@ -68,5 +69,6 @@ __all__ = [
     "ResearchDataUploadBoxEventsConfig",
     "ResourceEventsConfig",
     "SecondFactorRecreatedEventsConfig",
+    "UploadBoxPriorityEventsConfig",
     "UserEventsConfig",
 ]
