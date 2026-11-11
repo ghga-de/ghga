@@ -1,9 +1,8 @@
-# Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs (Miniature Horse)
+# Data Portal Accessibility, Responsiveness, Semantics and SOPs (Miniature Horse)
 
 **Epic Type:** Implementation Epic
 
-Epic planning and implementation follow the
-[Epic Planning and Marathon SOP](https://docs.ghga-dev.de/main/sops/sop001_epic_planning.html).
+Epic planning and implementation follow the Epic Planning and Marathon SOP.
 
 ## Scope
 
@@ -44,7 +43,8 @@ This epic covers the following user journeys:
 
 ## Additional Implementation Details
 
-- The documentation and implementation should be based on the a11y and responsiveness features that are already provided by Angular, Angular Material, Tailwind CSS, and any other library already in use that provides relevant features. Additional helper code can be provided in the shared directory of the data portal if needed, and additional libraries can be also added for this purpose.
+- The documentation and implementation should be based on the a11y and responsiveness features that are already provided by Angular, Angular Material, Tailwind CSS, and any other library already in use that provides relevant features.
+  Additional helper code can be provided in the shared directory of the data portal if needed, and additional libraries can be also added for this purpose.
 
 ### List of online resources
 

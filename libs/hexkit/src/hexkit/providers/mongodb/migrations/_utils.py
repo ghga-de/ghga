@@ -75,7 +75,13 @@ class DbVersionMismatchError(RuntimeError):
             f"Database version is {db_version}, but the service expects version"
             + f" {target_version}."
         )
+        if db_version < target_version:
+            msg += " Run the migrations before starting the service."
+        else:
+            msg += " The database was migrated for a newer release of the service."
         super().__init__(msg)
+        self.db_version = db_version
+        self.target_version = target_version
 
 
 def _get_db_version_from_records(version_docs: list[DbVersionRecord]) -> int:

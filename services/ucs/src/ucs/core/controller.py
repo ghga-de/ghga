@@ -17,6 +17,7 @@
 
 import contextlib
 import logging
+from collections.abc import Collection
 from datetime import timedelta
 from math import ceil
 from typing import Any
@@ -26,6 +27,7 @@ from pydantic import UUID4
 
 from ghga_event_schemas.pydantic_ import (
     FileInternallyRegistered,
+    FileUploadState,
     InterrogationFailure,
     InterrogationSuccess,
 )
@@ -34,7 +36,9 @@ from hexkit.protocols.dao import (
     DaoError,
     MultipleHitsFoundError,
     NoHitsFoundError,
+    PreconditionFailedError,
     UniqueConstraintViolationError,
+    race_condition_retries,
 )
 from hexkit.utils import now_utc_ms_prec
 from ucs.config import Config
@@ -111,7 +115,7 @@ class UploadController(UploadControllerPort):
             }
             try:
                 existing_upload = await self._file_upload_dao.find_one(
-                    mapping={"box_id": box_id, "alias": alias}
+                    filter_={"box_id": box_id, "alias": alias}
                 )
             except (NoHitsFoundError, MultipleHitsFoundError) as find_err:
                 # If we don't get any hits, something weird is going on. This isn't a
@@ -387,7 +391,7 @@ class UploadController(UploadControllerPort):
         if overwrite:
             try:
                 existing_upload = await self._file_upload_dao.find_one(
-                    mapping={"box_id": box_id, "alias": alias}
+                    filter_={"box_id": box_id, "alias": alias}
                 )
             except NoHitsFoundError:
                 existing_upload = None
@@ -402,7 +406,7 @@ class UploadController(UploadControllerPort):
         # Get both box size + in-progress size and the number of in-progress files
         in_progress_count = 0
         async for upload in self._file_upload_dao.find_all(
-            mapping={"box_id": box.id, "state": "init"}
+            filter_={"box_id": box.id, "state": "init"}
         ):
             current_size += upload.decrypted_size
             in_progress_count += 1
@@ -704,17 +708,13 @@ class UploadController(UploadControllerPort):
         Raises:
         - `FileUploadNotFound` if the FileUpload isn't found.
         - `BoxNotFoundError` if the FileUploadBox isn't found.
-        - `BoxVersionError` if the box version changed before stats could be updated.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadCompletionError` if there's an error while telling S3 to complete the upload.
         - `UploadSizeMismatchError` if the object size doesn't match the declared encrypted_size.
         - `ChecksumMismatchError` if the checksums don't match.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
-        # Get the FileUploadBox instance (box can be locked because users can lock
-        #  it proactively before all uploads have finished)
-        box = await self._get_box(box_id=box_id, require_unlocked=False)
-        box_version = box.version
         extra: dict[str, Any] = {"box_id": box_id, "file_id": file_id}  # just 4 logging
 
         # Get the FileUpload from the DB
@@ -733,9 +733,12 @@ class UploadController(UploadControllerPort):
             log.info(error, extra=extra)
             raise error
 
-        # Exit early if the FileUpload is complete (already in the inbox or archived)
+        # Exit early if the FileUpload is complete (already in the inbox or archived).
+        #  The stats are still updated because a previous call may have completed the
+        #  upload but failed to update them.
         if file_upload.state != "init":
             log.info("FileUpload with ID %s already complete.", file_id)
+            await self._update_box_stats(box_id=box_id)
             return
 
         try:
@@ -788,7 +791,7 @@ class UploadController(UploadControllerPort):
             )
 
         # Update the FileUploadBox with new size and file count
-        await self._update_box_stats(box_id=box_id, version=box_version)
+        await self._update_box_stats(box_id=box_id)
         log.info("DB data updated for upload completion of file %s", file_id)
 
     async def requeue_single_file_upload(
@@ -826,7 +829,13 @@ class UploadController(UploadControllerPort):
             )
 
         # Requeue it
-        await self._requeue_file_upload(file_upload=file_upload)
+        try:
+            await self._requeue_file_upload(file_upload=file_upload)
+        except PreconditionFailedError as err:
+            raise self.FileUploadStateError(
+                file_id=file_upload.id,
+                details="Only 'failed_interrogation' FileUploads can be requeued.",
+            ) from err
 
     async def requeue_all_box_uploads(self, *, box_id: UUID4) -> BoxRequeueResult:
         """Requeue all 'failed_interrogation' FileUploads in the given FileUploadBox.
@@ -845,7 +854,7 @@ class UploadController(UploadControllerPort):
 
         # Get all FileUploads for this box that failed interrogation
         potential_uploads = self._file_upload_dao.find_all(
-            mapping={"box_id": box_id, "state": "failed_interrogation"},
+            filter_={"box_id": box_id, "state": "failed_interrogation"},
             sort=["alias"],
         )
 
@@ -855,7 +864,7 @@ class UploadController(UploadControllerPort):
         async for file_upload in potential_uploads:
             try:
                 await self._requeue_file_upload(file_upload=file_upload)
-            except self.S3ObjectMissingError:
+            except self.S3ObjectMissingError, PreconditionFailedError:
                 skipped.append(file_upload.id)
             else:
                 requeued.append(file_upload.id)
@@ -868,6 +877,10 @@ class UploadController(UploadControllerPort):
 
         Does not modify the original argument and assumes the state has been validated.
         Verifies that the object exists in the inbox.
+
+        Raises:
+        - `PreconditionFailedError` if the FileUpload left the 'failed_interrogation'
+          state after the caller validated it.
         """
         # Make sure the object still exists in the inbox and hasn't been deleted already
         #  Error handling is done inside _get_object_metadata
@@ -878,7 +891,12 @@ class UploadController(UploadControllerPort):
         upload_copy.failure_reason = ""
         upload_copy.state = "inbox"
         upload_copy.state_updated = now_utc_ms_prec()
-        await self._file_upload_dao.update(upload_copy)
+        # The state the caller validated is only guaranteed to still hold if the update
+        # asserts it: every update publishes an event, so a second requeue slipping in
+        # between would interrogate the same file twice.
+        await self._file_upload_dao.update(
+            upload_copy, precondition={"state": "failed_interrogation"}
+        )
 
     async def remove_file_upload(
         self, *, box_id: UUID4, file_id: UUID4, require_unlocked: bool
@@ -890,16 +908,16 @@ class UploadController(UploadControllerPort):
         Raises:
         - `BoxNotFoundError` if the box does not exist.
         - `BoxStateError` if `require_unlocked` is True and the box isn't open.
-        - `BoxVersionError` if the box version changed before stats could be updated.
         - `FileUploadNotFound` if the FileUpload does not exist.
         - `UnknownStorageAliasError` if the storage alias is not known.
         - `UploadAbortError` if there's an error instructing S3 to abort the upload.
         - `BucketMissingError` if the configured bucket does not exist in S3.
         - `S3OperationError` if S3 returns any other unexpected error.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         # Make sure box exists and is unlocked (unless overridden)
-        box = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
+        _ = await self._get_box(box_id=box_id, require_unlocked=require_unlocked)
 
         # Retrieve the FileUpload data
         try:
@@ -927,7 +945,7 @@ class UploadController(UploadControllerPort):
         with contextlib.suppress(ResourceNotFoundError):
             await self._upload_activity_dao.delete(file_id)
 
-        await self._update_box_stats(box_id=box_id, version=box.version)
+        await self._update_box_stats(box_id=box_id)
         log.info("File %s deleted from box %s", file_id, box_id)
 
     async def remove_file_upload_box(
@@ -969,10 +987,16 @@ class UploadController(UploadControllerPort):
 
         # Lock the box so no new uploads can be initiated while sweeping
         if box.state == "open":
-            box.version += 1
-            box.state = "locked"
-            await self._file_upload_box_dao.update(box)
-            log.info("Locked FileUploadBox %s before deleting files.", box_id)
+            updated_box = box.model_copy(
+                update={"version": box.version + 1, "state": "locked"}
+            )
+            try:
+                await self._file_upload_box_dao.update(
+                    updated_box, precondition={"version": box.version}
+                )
+                log.info("Locked FileUploadBox %s before deleting files.", box_id)
+            except PreconditionFailedError as err:
+                raise self.BoxVersionError(box_id=box_id) from err
 
         # Before deleting anything, make sure there aren't any FileUploads in an
         #  unexpected state. Raising an error here leaves the box in the locked state,
@@ -980,7 +1004,7 @@ class UploadController(UploadControllerPort):
         files_with_wrong_state = [
             x
             async for x in self._file_upload_dao.find_all(
-                mapping={
+                filter_={
                     "box_id": box_id,
                     "state": {"$in": ["awaiting_archival", "archived"]},
                 }
@@ -1028,7 +1052,7 @@ class UploadController(UploadControllerPort):
             file_uploads = [
                 upload
                 async for upload in self._file_upload_dao.find_all(
-                    mapping={"box_id": box_id}
+                    filter_={"box_id": box_id}
                 )
             ]
             if not file_uploads:
@@ -1046,7 +1070,7 @@ class UploadController(UploadControllerPort):
                     await self._upload_activity_dao.delete(file_upload.id)
                 await self._file_upload_dao.delete(file_upload.id)
 
-    async def _update_box_stats(self, *, box_id: UUID4, version: int) -> None:
+    async def _update_box_stats(self, *, box_id: UUID4) -> None:
         """Update FileUploadBox stats (file count & size) in an idempotent manner,
         counting only files that are finished uploading.
 
@@ -1055,23 +1079,45 @@ class UploadController(UploadControllerPort):
 
         This helps mitigate potential state inconsistency arising from a hard crash.
 
+        Potential race conditions are mitigated by a basic retry mechanism that waits
+        a brief interval before re-fetching the box and re-calculating the stats, then
+        attempting the update again.
+
         Raises:
         - `BoxNotFoundError` if the box no longer exists.
-        - `BoxVersionError` if the box version has changed since it was fetched.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
-        box = await self._get_box(
-            box_id=box_id, require_unlocked=False, version=version
-        )
+        async for attempt in race_condition_retries(
+            description=f"update stats for box {box_id}",
+            error_on_failure=lambda: self.BoxStatsCalcError(box_id=box_id),
+            logger=log,
+        ):
+            with attempt:
+                box = await self._get_box(box_id=box_id, require_unlocked=False)
+                file_count, total_size = await self._calc_box_stats(box_id=box_id)
 
-        file_count, total_size = await self._calc_box_stats(box_id=box_id)
+                # Since every update triggers an event, only update if data differs
+                if file_count == box.file_count and total_size == box.size:
+                    return
 
-        # Since every update triggers an event, only update if data differs
-        if file_count != box.file_count or total_size != box.size:
-            box.version += 1
-            box.file_count = file_count
-            box.size = total_size
-            await self._file_upload_box_dao.update(box)
+                updated_box = box.model_copy(
+                    update={
+                        "version": box.version + 1,
+                        "file_count": file_count,
+                        "size": total_size,
+                    }
+                )
+
+                # Try to update the box stats
+                await self._file_upload_box_dao.update(
+                    updated_box,
+                    precondition={
+                        "version": box.version,
+                        "file_count": box.file_count,
+                        "size": box.size,
+                    },
+                )
 
     async def _calc_box_stats(self, *, box_id: UUID4) -> tuple[int, int]:
         """Compute a box's (file_count, total_decrypted_size) via the aggregator,
@@ -1133,16 +1179,26 @@ class UploadController(UploadControllerPort):
         )
 
         if max_size < box.size:
-            error = self.BoxMaxSizeTooLowError(
+            size_too_low_error = self.BoxMaxSizeTooLowError(
                 box_id=box_id, max_size=max_size, current_size=box.size
             )
-            log.info(error, extra={"box_id": box_id, "max_size": max_size})
-            raise error
+            log.info(size_too_low_error, extra={"box_id": box_id, "max_size": max_size})
+            raise size_too_low_error
 
-        box.version += 1
-        box.max_size = max_size
-        await self._file_upload_box_dao.update(box)
-        log.info("Updated max_size for box %s to %s.", box_id, max_size)
+        updated_box = box.model_copy(
+            update={"version": box.version + 1, "max_size": max_size}
+        )
+
+        # Attempt the update
+        try:
+            await self._file_upload_box_dao.update(
+                updated_box, precondition={"version": box.version}
+            )
+            log.info("Updated max_size for box %s to %s.", box_id, max_size)
+        except PreconditionFailedError as err:
+            box_version_error = self.BoxVersionError(box_id=box_id)
+            log.info(box_version_error, extra={"box_id": box_id, "max_size": max_size})
+            raise box_version_error from err
 
     async def lock_file_upload_box(
         self, *, box_id: UUID4, version: int, force: bool = False
@@ -1157,59 +1213,73 @@ class UploadController(UploadControllerPort):
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `IncompleteOrFailedError` if force=False and there are files still uploading
           or that failed interrogation.
-        - `BoxStatsCalcError` if there's a problem calculating box size and file count.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
+        # Do initial version check to avoid expensive file inspection if request
+        #  is outdated from the get-go
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
         )
 
+        # Return early if nothing to do
         if box.state != "open":
             # This goes for archived boxes too
             log.info("Box with ID %s is already locked.", box_id)
+            # Recompute the stats anyway
+            await self._update_box_stats(box_id=box_id)
             return
 
         # Look for ongoing uploads and files that failed interrogation
-        blocking_files_cursor = self._file_upload_dao.find_all(
-            mapping={
-                "box_id": box_id,
-                "state": {"$in": ["init", "failed_interrogation"]},
-            },
-            sort=["alias"],
-        )
-        incomplete_uploads = []
-        need_attention = []
-        async for file in blocking_files_cursor:
-            if file.state == "init":
-                incomplete_uploads.append((file.id, file.alias))  # already sorted
-            else:
-                need_attention.append((file.id, file.alias))
-
-        # If there are incomplete/failed files and force is set to false, raise an error
-        if (incomplete_uploads or need_attention) and not force:
-            error = self.IncompleteOrFailedError(
-                box_id=box_id,
-                incomplete_uploads=incomplete_uploads,
-                need_attention=need_attention,
-            )
-            log.info(
-                error,
-                extra={
+        if not force:
+            blocking_files_cursor = self._file_upload_dao.find_all(
+                filter_={
                     "box_id": box_id,
-                    "incomplete_uploads": str(incomplete_uploads),
-                    "need_attention": str(need_attention),
+                    "state": {"$in": ["init", "failed_interrogation"]},
                 },
+                sort=["alias"],
             )
-            raise error
+            incomplete_uploads = []
+            need_attention = []
+            async for file in blocking_files_cursor:
+                if file.state == "init":
+                    incomplete_uploads.append((file.id, file.alias))  # already sorted
+                else:
+                    need_attention.append((file.id, file.alias))
 
-        # Recompute stats
-        file_count, total_size = await self._calc_box_stats(box_id=box_id)
+            # If there are incomplete/failed files and force is set to false, raise an error
+            if incomplete_uploads or need_attention:
+                incomplete_error = self.IncompleteOrFailedError(
+                    box_id=box_id,
+                    incomplete_uploads=incomplete_uploads,
+                    need_attention=need_attention,
+                )
+                log.info(
+                    incomplete_error,
+                    extra={
+                        "box_id": box_id,
+                        "incomplete_uploads": str(incomplete_uploads),
+                        "need_attention": str(need_attention),
+                    },
+                )
+                raise incomplete_error
 
-        box.version += 1
-        box.state = "locked"
-        box.file_count = file_count
-        box.size = total_size
-        await self._file_upload_box_dao.update(box)
-        log.info("Locked box with ID %s.", box_id)
+        # Lock the box first, update stats later.
+        updated_box = box.model_copy(
+            update={"version": box.version + 1, "state": "locked"}
+        )
+        try:
+            await self._file_upload_box_dao.update(
+                updated_box, precondition={"version": box.version}
+            )
+            log.info("Locked box with ID %s.", box_id)
+        except PreconditionFailedError as err:
+            box_version_error = self.BoxVersionError(box_id=box_id)
+            log.info(box_version_error)
+            raise box_version_error from err
+
+        # Recompute the stats
+        await self._update_box_stats(box_id=box_id)
 
     async def unlock_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Unlock an existing FileUploadBox.
@@ -1218,21 +1288,34 @@ class UploadController(UploadControllerPort):
         - `BoxNotFoundError` if the FileUploadBox isn't found in the DB.
         - `BoxVersionError` if the supplied version doesn't match the current version.
         - `BoxStateError` if the box is archived and cannot be unlocked.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
         )
 
         if box.state == "locked":
-            box.version += 1
-            box.state = "open"
-            await self._file_upload_box_dao.update(box)
-            log.info("Unlocked box with ID %s", box_id)
+            try:
+                updated_box = box.model_copy(
+                    update={"version": box.version + 1, "state": "open"}
+                )
+                await self._file_upload_box_dao.update(
+                    updated_box, precondition={"version": box.version}
+                )
+                log.info("Unlocked box with ID %s", box_id)
+            except PreconditionFailedError as err:
+                box_version_error = self.BoxVersionError(box_id=box_id)
+                log.info(box_version_error)
+                raise box_version_error from err
         elif box.state == "archived":
             log.info("Can't unlock box %s because it's already archived.", box_id)
             raise self.BoxStateError(box_id=box_id, box_state=box.state)
         else:
             log.info("Box with ID %s is already unlocked", box_id)
+
+        # In both success cases (unlock and already-unlocked), recompute box stats
+        await self._update_box_stats(box_id=box_id)
 
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive an existing FileUploadBox.
@@ -1244,6 +1327,8 @@ class UploadController(UploadControllerPort):
         - `IncompleteOrFailedError` if the FileUploadBox has incomplete or
           'failed_interrogation' FileUploads.
         - `FileArchivalError` if there's a problem archiving a given FileUpload.
+        - `BoxStatsCalcError` if there's a problem calculating box size and file count,
+          or if the database can't be updated due to a race condition.
         """
         box = await self._get_box(
             box_id=box_id, require_unlocked=False, version=version
@@ -1252,6 +1337,8 @@ class UploadController(UploadControllerPort):
         # Exit early if already archived, or raise error if unlocked
         if box.state == "archived":
             log.info("Box with ID %s is already archived", box_id)
+            # Check/update box stats anyway, just in case something got stuck
+            await self._update_box_stats(box_id=box_id)
             return
         if box.state == "open":
             log.info("Can't unlock box %s because it's still open.", box_id)
@@ -1259,7 +1346,7 @@ class UploadController(UploadControllerPort):
 
         # Scan for incomplete files (including 'inbox') and failed_interrogation files
         blocking_files_cursor = self._file_upload_dao.find_all(
-            mapping={
+            filter_={
                 "box_id": box_id,
                 "state": {"$in": ["init", "inbox", "failed_interrogation"]},
             },
@@ -1293,7 +1380,7 @@ class UploadController(UploadControllerPort):
         # Verify that all files are in state 'interrogated' or 'awaiting_archival'.
         # We include the latter in case an early crash occurred after partial update
         files_cursor = self._file_upload_dao.find_all(
-            mapping={
+            filter_={
                 "box_id": box_id,
                 "state": {"$in": ["interrogated", "awaiting_archival"]},
             }
@@ -1317,10 +1404,21 @@ class UploadController(UploadControllerPort):
             await self._file_upload_dao.update(file)
 
         # Update the box last
-        box.version += 1
-        box.state = "archived"
-        await self._file_upload_box_dao.update(box)
-        log.info("Archived box with ID %s", box_id)
+        updated_box = box.model_copy(
+            update={"version": box.version + 1, "state": "archived"}
+        )
+        try:
+            await self._file_upload_box_dao.update(
+                updated_box, precondition={"version": box.version}
+            )
+            log.info("Archived box with ID %s.", box_id)
+        except PreconditionFailedError as err:
+            box_version_error = self.BoxVersionError(box_id=box_id)
+            log.info(box_version_error)
+            raise box_version_error from err
+
+        # Update box stats since this is the last chance to do so
+        await self._update_box_stats(box_id=box_id)
 
     async def get_box_file_info(
         self,
@@ -1356,7 +1454,7 @@ class UploadController(UploadControllerPort):
 
         try:
             find_result = self._file_upload_dao.find_all(
-                mapping={"box_id": box_id},
+                filter_={"box_id": box_id},
                 skip=skip,
                 limit=limit,
                 sort=sort,
@@ -1375,6 +1473,20 @@ class UploadController(UploadControllerPort):
             ]
         total_count = await find_result.total_count()
         return file_uploads, total_count
+
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        """Return the number of FileUploads per state for each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such FileUploads are
+        absent from the result, as are states without FileUploads.
+        """
+        return await self._box_stats_aggregator.compute_file_state_counts(
+            box_ids=box_ids
+        )
 
     async def process_interrogation_success(
         self, *, report: InterrogationSuccess
@@ -1426,7 +1538,22 @@ class UploadController(UploadControllerPort):
                 log.debug(
                     "Marking FileUpload %s as '%s'", file_id, updated_file_upload.state
                 )
-                await self._file_upload_dao.update(updated_file_upload)
+
+                try:
+                    await self._file_upload_dao.update(
+                        updated_file_upload,
+                        precondition={
+                            "state": "inbox",
+                            "state_updated": old_file_upload.state_updated,
+                        },
+                    )
+                except PreconditionFailedError:
+                    log.error(
+                        "FileUpload %s changed while its interrogation report was"
+                        + " being processed. The report was dropped, but its inbox"
+                        + " object has already been removed.",
+                        file_id,
+                    )
             case _:
                 log.info(
                     "FileUpload %s was already marked as '%s', so it's likely"
@@ -1468,11 +1595,26 @@ class UploadController(UploadControllerPort):
                         file_id,
                     )
                     return
+                state_updated_when_read = file_upload.state_updated
                 file_upload.state = "failed_interrogation"
                 file_upload.state_updated = now_utc_ms_prec()
                 file_upload.failure_reason = report.reason
                 log.debug("Marking FileUpload %s as '%s'", file_id, file_upload.state)
-                await self._file_upload_dao.update(file_upload)
+
+                try:
+                    await self._file_upload_dao.update(
+                        file_upload,
+                        precondition={
+                            "state": "inbox",
+                            "state_updated": state_updated_when_read,
+                        },
+                    )
+                except PreconditionFailedError:
+                    log.info(
+                        "Ignoring interrogation failure report for FileUpload %s"
+                        + " because the file changed while it was being processed.",
+                        file_id,
+                    )
             case _:
                 log.info(
                     "FileUpload %s was already marked as '%s', so it's likely"
@@ -1563,21 +1705,38 @@ class UploadController(UploadControllerPort):
             box_id=file_upload.box_id, file_id=file_id, require_unlocked=False
         )
 
-    async def cleanup_stale_uploads(self) -> None:
+    async def cleanup_stale_uploads(self, *, ignore_safeguards: bool = False) -> None:
         """Abort stale in-progress multipart uploads and mark their FileUpload records
-        as 'cancelled'. Also aborts any orphaned S3 multipart uploads that have no
-        corresponding FileUpload record.
+        as 'cancelled'. Also aborts any orphaned S3 multipart uploads and deletes any
+        orphaned inbox objects that have no corresponding FileUpload record.
 
         An upload is considered stale if its last-activity timestamp is older than
         `config.multipart_upload_ttl_hours` hours. If no activity entry exists,
         falls back to comparing the FileUpload's `initiated` timestamp.
+
+        Orphaned objects younger than `config.orphaned_object_min_age_hours` are kept.
+        Orphans are left alone for a storage alias if the FileUpload collection is
+        empty or the orphaned object count exceeds `config.max_orphaned_objects`,
+        unless `ignore_safeguards` is True.
         """
-        cutoff = now_utc_ms_prec() - timedelta(
-            hours=self._config.multipart_upload_ttl_hours
+        now = now_utc_ms_prec()
+        cutoff = now - timedelta(hours=self._config.multipart_upload_ttl_hours)
+        orphaned_object_cutoff = now - timedelta(
+            hours=self._config.orphaned_object_min_age_hours
         )
+        # Checked once for all aliases. A stale result only blocks more, since an
+        #  upload that starts during the job can only make the collection non-empty.
+        db_is_empty = not [
+            upload
+            async for upload in self._file_upload_dao.find_all(filter_={}, limit=1)
+        ]
         for storage_alias in self._config.object_storages:
             await self._cleanup_stale_uploads_for_alias(
-                storage_alias=storage_alias, cutoff=cutoff
+                storage_alias=storage_alias,
+                cutoff=cutoff,
+                orphaned_object_cutoff=orphaned_object_cutoff,
+                db_is_empty=db_is_empty,
+                ignore_safeguards=ignore_safeguards,
             )
 
     async def _find_stale_uploads(
@@ -1591,10 +1750,10 @@ class UploadController(UploadControllerPort):
         Falls back to the upload's `initiated` timestamp when no activity entry exists.
         """
         stale_uploads: list[FileUpload] = []
-        mapping = {"file_id": {"$in": [file.id for file in ongoing_uploads]}}
+        filter_ = {"file_id": {"$in": [file.id for file in ongoing_uploads]}}
         activities = {
             activity.file_id: activity.last_activity
-            async for activity in self._upload_activity_dao.find_all(mapping=mapping)
+            async for activity in self._upload_activity_dao.find_all(filter_=filter_)
         }
 
         for upload in ongoing_uploads:
@@ -1667,42 +1826,75 @@ class UploadController(UploadControllerPort):
                     exc_info=True,
                 )
 
+    def _safeguards_allow_orphan_removal(  # noqa: PLR0913
+        self,
+        *,
+        storage_alias: str,
+        orphaned_s3_upload_count: int,
+        orphaned_object_count: int,
+        objects_listed: bool,
+        db_is_empty: bool,
+        ignore_safeguards: bool,
+    ) -> bool:
+        """Return whether orphans may be removed for the alias, and log why not.
+
+        An empty FileUpload collection, or more orphaned objects than
+        `config.max_orphaned_objects`, suggests the database does not belong to the
+        bucket. If the objects could not be listed, their count is unknown. Each of
+        these blocks removal unless `ignore_safeguards` is True.
+        """
+        max_objects = self._config.max_orphaned_objects
+        if db_is_empty and (orphaned_s3_upload_count or orphaned_object_count):
+            violation = "the FileUpload collection is empty"
+        elif not objects_listed and orphaned_s3_upload_count:
+            violation = "the objects in the bucket could not be listed"
+        elif orphaned_object_count > max_objects:
+            violation = (
+                f"{orphaned_object_count} orphaned objects exceed the limit of"
+                + f" {max_objects}"
+            )
+        else:
+            return True
+
+        if ignore_safeguards:
+            log.warning(
+                "Ignoring cleanup safeguards for alias '%s': %s.",
+                storage_alias,
+                violation,
+            )
+            return True
+
+        log.error(
+            "Left %i orphaned multipart upload(s) and %i orphaned object(s) for alias"
+            + " '%s' untouched because %s. Verify that they are really orphaned, then"
+            + " run `ucs cleanup --no-run-forever --ignore-safeguards` to remove them.",
+            orphaned_s3_upload_count,
+            orphaned_object_count,
+            storage_alias,
+            violation,
+        )
+        return False
+
     async def _cleanup_stale_uploads_for_alias(
         self,
         *,
         storage_alias: str,
         cutoff: UTCDatetime,
+        orphaned_object_cutoff: UTCDatetime,
+        db_is_empty: bool,
+        ignore_safeguards: bool,
     ) -> None:
         """Run stale upload cleanup for a single storage alias.
 
         This aborts ongoing uploads that are too old or not tied to any FileUpload.
-        Orphaned objects are also deleted.
+        Orphaned objects last modified before `orphaned_object_cutoff` are also
+        deleted. Orphans are left alone if `db_is_empty` is True, the objects in the
+        bucket can't be listed, or there are more orphaned objects than
+        `config.max_orphaned_objects`, unless `ignore_safeguards` is True.
         """
-        # Fetch all FileUploads for this storage alias that still have data in the inbox
-        #  bucket ('init', 'inbox', or 'failed_interrogation') to avoid doing a second
-        #  query later when performing object cleanup
-        uploads_in_inbox_bucket = [
-            upload
-            async for upload in self._file_upload_dao.find_all(
-                mapping={
-                    "storage_alias": storage_alias,
-                    "state": {"$in": ["init", "inbox", "failed_interrogation"]},
-                }
-            )
-        ]
-
-        # Get just the 'init', i.e. ongoing, uploads from that list
-        ongoing_uploads = [x for x in uploads_in_inbox_bucket if x.state == "init"]
-        known_init_object_ids = {str(upload.object_id) for upload in ongoing_uploads}
-
-        # Determine which of the ongoing uploads have been dormant since the cutoff time
-        stale_uploads = await self._find_stale_uploads(
-            ongoing_uploads=ongoing_uploads, cutoff=cutoff
-        )
-
-        # Get all active S3 multipart uploads in this storage's inbox bucket so we can
-        #  look for stale uploads that might have been abandoned due to errors or other
-        #  processes that orphaned them from any database records.
+        # S3 is listed before the database is read. An object only exists once its
+        #  upload is complete, and its FileUpload was inserted before that, so objects
+        #  from uploads that start while the job runs are not mistaken for orphans.
         try:
             active_s3_uploads = await self._s3_client.list_all_multipart_uploads(
                 storage_alias=storage_alias
@@ -1723,12 +1915,39 @@ class UploadController(UploadControllerPort):
             )
             return
 
-        # Find truly orphaned S3 uploads (object_id not matching any known init FileUpload)
-        orphaned_s3_uploads = {
-            s3_upload_id: object_id
-            for s3_upload_id, object_id in active_s3_uploads.items()
-            if object_id not in known_init_object_ids
-        }
+        # If listing objects fails, the object step is skipped but the rest still runs
+        object_ids_in_bucket: set[str] | None = None
+        try:
+            object_ids_in_bucket = await self._s3_client.list_object_ids(
+                storage_alias=storage_alias
+            )
+        except Exception:
+            # Treat all unhandled exceptions as potentially transient here and just log
+            log.warning(
+                "Could not clean up orphaned objects for alias '%s'.",
+                storage_alias,
+                exc_info=True,
+            )
+
+        # Fetch all FileUploads for this storage alias that still have data in the inbox
+        #  bucket ('init', 'inbox', or 'failed_interrogation')
+        uploads_in_inbox_bucket = [
+            upload
+            async for upload in self._file_upload_dao.find_all(
+                filter_={
+                    "storage_alias": storage_alias,
+                    "state": {"$in": ["init", "inbox", "failed_interrogation"]},
+                }
+            )
+        ]
+
+        # Get just the 'init', i.e. ongoing, uploads from that list
+        ongoing_uploads = [x for x in uploads_in_inbox_bucket if x.state == "init"]
+
+        # Determine which of the ongoing uploads have been dormant since the cutoff time
+        stale_uploads = await self._find_stale_uploads(
+            ongoing_uploads=ongoing_uploads, cutoff=cutoff
+        )
 
         # Cancel each of the stale uploads that have FileUpload entries in the DB
         for upload in stale_uploads:
@@ -1736,16 +1955,45 @@ class UploadController(UploadControllerPort):
                 upload=upload, storage_alias=storage_alias
             )
 
+        # Cast to str because S3 returns the object IDs as strings
+        known_object_ids = {str(x.object_id) for x in uploads_in_inbox_bucket}
+
+        # Orphaned S3 uploads have no FileUpload with data in the inbox bucket. Not
+        #  just 'init' FileUploads count, because an upload that completes after S3 was
+        #  listed is already 'inbox' here.
+        orphaned_s3_uploads = {
+            s3_upload_id: object_id
+            for s3_upload_id, object_id in active_s3_uploads.items()
+            if object_id not in known_object_ids
+        }
+
+        orphaned_object_ids = (
+            object_ids_in_bucket - known_object_ids
+            if object_ids_in_bucket is not None
+            else set()
+        )
+
+        if not self._safeguards_allow_orphan_removal(
+            storage_alias=storage_alias,
+            orphaned_s3_upload_count=len(orphaned_s3_uploads),
+            orphaned_object_count=len(orphaned_object_ids),
+            objects_listed=object_ids_in_bucket is not None,
+            db_is_empty=db_is_empty,
+            ignore_safeguards=ignore_safeguards,
+        ):
+            return
+
         await self._abort_orphaned_s3_uploads(
             storage_alias=storage_alias, orphaned_s3_uploads=orphaned_s3_uploads
         )
 
-        # Get a set of all object_ids from uploads_in_inbox_bucket. Cast to str because
-        #  S3Client does a set diff on the string object IDs returned by S3
-        known_object_ids = {str(x.object_id) for x in uploads_in_inbox_bucket}
+        if object_ids_in_bucket is None:
+            return
         try:
-            await self._s3_client.cleanup_orphaned_objects(
-                storage_alias=storage_alias, known_object_ids=known_object_ids
+            await self._s3_client.delete_orphaned_objects(
+                storage_alias=storage_alias,
+                object_ids=orphaned_object_ids,
+                cutoff=orphaned_object_cutoff,
             )
         except Exception:
             # Treat all unhandled exceptions as potentially transient here and just log

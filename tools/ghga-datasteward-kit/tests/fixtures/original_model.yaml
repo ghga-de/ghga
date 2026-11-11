@@ -9,6 +9,14 @@ imports:
 default_range: string
 
 classes:
+  Study:
+    slots:
+      - alias
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+
   SampleFile:
     slots:
       - alias
@@ -117,12 +125,20 @@ classes:
       A submission can be considered as a set of inter-related (and inter-connected)
       entities that represent a data submission to GHGA.
     slots:
+      - studies
       - sample_files
       - experiment_files
       - datasets
       - samples
       - experiments
     slot_usage:
+      studies:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+        minimum_cardinality: 1
+        maximum_cardinality: 1
       sample_files:
         required: true
         multivalued: true
@@ -155,6 +171,11 @@ slots:
 
   description:
     description: Description of an entity.
+
+  studies:
+    description: >-
+      The study associated with an entity.
+    range: Study
 
   sample_files:
     description: >-

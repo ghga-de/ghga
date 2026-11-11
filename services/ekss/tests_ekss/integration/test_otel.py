@@ -19,10 +19,12 @@ import base64
 import inspect
 import os
 from collections import Counter
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
-from ekss import main
+from ekss.__main__ import run
 from ekss.inject import prepare_rest_app
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.opentelemetry.testutils import (  # noqa: F401
@@ -168,23 +170,18 @@ async def test_delete_secret_records_spans(
     )
 
 
-async def test_long_running_entrypoints_configure_otel():
-    """An entrypoint that skips it emits no traces at all.
+def configures_otel(command: Callable[..., Any]) -> bool:
+    """Tell whether a command runs a coroutine that calls `configure_opentelemetry`.
 
-    `migrate_db` is excluded by convention: a one-off command, not a service.
+    It reads the names the code refers to, since running the command starts the service.
     """
-    excluded = {"migrate_db"}
-    entrypoints = {
-        name: obj
-        for name, obj in vars(main).items()
-        if inspect.iscoroutinefunction(obj) and obj.__module__ == main.__name__
-    }
-    assert entrypoints, "No entrypoints found - has main.py been restructured?"
-
-    missing = sorted(
-        name
-        for name, func in entrypoints.items()
-        if name not in excluded
-        and "configure_opentelemetry" not in inspect.getsource(func)
+    return any(
+        "configure_opentelemetry" in inspect.getclosurevars(func).globals
+        for func in inspect.getclosurevars(command).globals.values()
+        if inspect.iscoroutinefunction(func)
     )
-    assert not missing, f"Entrypoints not configuring OpenTelemetry: {missing}"
+
+
+async def test_entry_point_configures_otel():
+    """The service emits no traces at all if its entry point skips it."""
+    assert configures_otel(run), "The entry point does not configure OpenTelemetry"

@@ -16,7 +16,7 @@
 """Integration tests for the PersistentKafkaPublisher"""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
@@ -120,7 +120,7 @@ async def test_basic_publish(kafka: KafkaFixture, mongodb: MongoDbFixture):
 
     # Inspect the 'created' and 'id' fields
     timestamp = dto_dict.pop("created")
-    assert datetime.now(tz=timezone.utc) - timestamp <= timedelta(seconds=30)
+    assert datetime.now(tz=UTC) - timestamp <= timedelta(seconds=30)
 
     assert dto_dict == expected_db_event
 

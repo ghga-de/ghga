@@ -4,14 +4,13 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DeferBlockState } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { ActivatedRoute } from '@angular/router';
-import { fakeActivatedRoute } from '@app/../mocks/route';
-import { HomePageComponent } from './home-page';
+import { HomePage } from './home-page';
 
 import { metadataGlobalSummary } from '@app/../mocks/data';
-import { GlobalSummaryComponent } from '@app/metadata/features/global-summary/global-summary';
+import { GlobalStats } from '@app/metadata/features/global-summary/global-summary';
 import { MetadataStatsService } from '@app/metadata/services/metadata-stats';
 
 /**
@@ -25,38 +24,43 @@ class MockMetadataStatsService {
   };
 }
 
-describe('HomePageComponent', () => {
-  let component: HomePageComponent;
-  let fixture: ComponentFixture<HomePageComponent>;
+describe('HomePage', () => {
+  let result: RenderResult<HomePage>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [HomePageComponent],
-      providers: [{ provide: ActivatedRoute, useValue: fakeActivatedRoute }],
-    })
-      .overrideComponent(GlobalSummaryComponent, {
-        set: {
+    result = await render(HomePage, {
+      routes: [],
+      deferBlockStates: DeferBlockState.Complete,
+      childComponentOverrides: [
+        {
+          component: GlobalStats,
           providers: [
             { provide: MetadataStatsService, useClass: MockMetadataStatsService },
           ],
         },
-      })
-      .compileComponents();
-
-    fixture = TestBed.createComponent(HomePageComponent);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      ],
+    });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
   });
 
   it('should render top heading', () => {
-    const fixture = TestBed.createComponent(HomePageComponent);
-    const compiled = fixture.nativeElement as HTMLElement;
-    const text = compiled.querySelector('h1')?.textContent;
-    expect(text).toContain('The German Human Genome‑Phenome Archive');
-    expect(text).toContain('Data Portal');
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('The German Human Genome‑Phenome Archive');
+    expect(heading).toHaveTextContent('Data Portal');
+  });
+
+  it('should link to the metadata browser', () => {
+    expect(screen.getByRole('link', { name: 'Browse data' })).toHaveAttribute(
+      'href',
+      '/browse',
+    );
+  });
+
+  it('should show the global statistics', () => {
+    expect(screen.getByRole('heading', { name: 'Statistics' })).toBeInTheDocument();
+    expect(screen.getByText('252')).toBeInTheDocument();
   });
 });

@@ -17,7 +17,7 @@
 """Configurable logging tools with JSON output."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import Formatter, Logger, LogRecord, StreamHandler, addLevelName, getLogger
 from typing import Any, Literal
 
@@ -150,7 +150,7 @@ class RecordCompiler(StreamHandler):
         """Set custom record attributes"""
         log_record = record.__dict__
         timestamp = datetime.fromtimestamp(log_record["created"])
-        timestamp = timestamp.astimezone(timezone.utc)
+        timestamp = timestamp.astimezone(UTC)
         iso_timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         extras = {
             key: value

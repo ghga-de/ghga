@@ -20,7 +20,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `config.host` | IP of the host. | `"127.0.0.1"` |
 | `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
-| `config.db_permissions` | List of permissions that can be granted on a collection. Use * to signify 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g. 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for write. '*' can be used to mean both read and write (or 'rw'). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection. | `[]` |
+| `config.db_permissions` | List of permissions that can be granted on a collection. Use `*` to signify 'all'. The format is `<db_name>.<collection_name>:<permissions>`, e.g. `db1.collection1.crud`. The permissions are `r` for read and `w` for write. `*` can be used to mean both read and write (or `rw`). Deletion is a write operation. If db_permissions are not set, no operations are allowed on any database or collection. | `[]` |
 | `config.allow_empty_prefix` | Only set to True for local testing. If False, `db_prefix` cannot be empty. This is to prevent accidental deletion of others' data in shared environments, i.e. staging. | `false` |
 | `config.db_prefix` | Prefix to add to all database names used in the SMS. | `null` |
 | `config.token_hashes` | List of token hashes corresponding to the tokens that can be used to authenticate calls to this service. Hashes are made with SHA-256. | `null` |
@@ -50,6 +50,7 @@ for the full set of configurable values.
 | `config.vault_kube_role` | Vault role name used for Kubernetes authentication | `null` |
 | `config.vault_auth_mount_point` | Adapter specific mount path for the corresponding auth backend. If none is provided, the default is used. | `null` |
 | `config.service_account_token_path` | Path to service account token used by kube auth adapter. | `"/var/run/secrets/kubernetes.io/serviceaccount/token"` |
+| `config.db_version_collection_suffix` | Collections whose name ends with this suffix hold a service's migration records and are skipped when deleting with the `*` collection wildcard, since the next migration run without them would migrate the service's current data again. Deleting such a collection by its name still works. An empty string turns the protection off. | `"DbVersions"` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
 | `config.log_format` | If set, will replace JSON formatting with the specified string format. If not set, has no effect. In addition to the standard attributes, the following can also be specified: timestamp, service, instance, level, correlation_id, and details | `null` |
 | `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
@@ -72,6 +73,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"sms"` |
@@ -126,7 +128,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
@@ -181,6 +184,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"sms"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

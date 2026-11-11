@@ -9,8 +9,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MetadataSearchService } from '@app/metadata/services/metadata-search';
-import { SearchResultComponent } from '../search-result/search-result';
-import { SearchResultStencilComponent } from '../search-result/search-result.stencil';
+import { SearchResult } from '../search-result/search-result';
+import { SearchResultStencil } from '../search-result/search-result.stencil';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const NUM_STENCILS = 3;
@@ -24,12 +24,12 @@ const NUM_STENCILS = 3;
     MatPaginatorModule,
     MatExpansionModule,
     MatProgressBarModule,
-    SearchResultComponent,
-    SearchResultStencilComponent,
+    SearchResult,
+    SearchResultStencil,
   ],
   templateUrl: './search-result-list.html',
 })
-export class SearchResultListComponent {
+export class SearchResultList {
   #metadataSearch = inject(MetadataSearchService);
   #searchResults = this.#metadataSearch.searchResults;
   hits = computed(() => this.#searchResults()?.hits ?? []);

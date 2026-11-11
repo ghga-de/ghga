@@ -22,9 +22,10 @@ Additional endpoints might be structured in dedicated modules
 
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.providers.mongodb.migrations import MigrationManager
 from rts.config import Config
 from rts.inject import prepare_event_subscriber, prepare_rest_app
-from rts.migrations.entry import run_db_migrations
+from rts.migrations import MIGRATION_MAP
 
 DB_VERSION = 2
 
@@ -51,4 +52,7 @@ async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()
     configure_logging(config=config)
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

@@ -382,6 +382,47 @@ async def test_load_artifacts_endpoint_invalid_resources(
     assert response.status_code == 422
 
 
+def _add_second_study(artifact: dict) -> None:
+    """Make the artifact hold a second study."""
+    artifact["content"]["studies"].append({"accession": "GHGAS_OTHER"})
+
+
+def _send_other_study_accession(artifact: dict) -> None:
+    """Make the artifact be sent with the accession of a study it does not hold."""
+    artifact["study_accession"] = "GHGAS_OTHER"
+
+
+@pytest.mark.parametrize(
+    "break_artifact, expected_detail",
+    [
+        (_add_second_study, "Expected exactly one study, found 2"),
+        (_send_other_study_accession, "was sent with study accession 'GHGAS_OTHER'"),
+    ],
+    ids=["two_studies", "mismatched_study_accession"],
+)
+async def test_load_artifacts_endpoint_invalid_publishable_artifact(
+    joint_fixture: JointFixture,  # noqa: F811
+    break_artifact,
+    expected_detail: str,
+):
+    """Test that a publishable artifact that does not hold exactly one study, matching
+    the study accession it is sent with, is rejected and nothing is stored.
+    """
+    artifacts_to_load = deepcopy(joint_fixture.artifact_resources)
+    break_artifact(artifacts_to_load["added_accessions"][0])
+
+    response = await joint_fixture.client.post(
+        "/rpc/load-artifacts",
+        json=artifacts_to_load,
+        headers={"Authorization": f"Bearer {joint_fixture.token}"},
+    )
+
+    assert response.status_code == 422
+    assert expected_detail in response.json()["detail"]
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    assert not db["added_accessions"].find().to_list()
+
+
 async def test_load_artifacts_endpoint_invalid_token(
     joint_fixture: JointFixture,  # noqa: F811
 ):

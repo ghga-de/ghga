@@ -1,0 +1,483 @@
+<title>Review of #PR_NUMBER</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column; bands as sections, a finding per row with two disclosures. */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --ink: #161b22;
+  --ink-2: #4a5361;
+  --ink-3: #737d8c;
+  --line: #d9dde3;
+  --tint: #eef0f4;
+  --code-bg: #f6f7f9;
+  --s-open: #8a929e;
+  --s-needs: #c2410c;
+  --s-dev: #6d4fc2;
+  --s-fixed: #1d7a4c;
+  --s-wont: #b4bac3;
+  --link: #1f5fbf;
+  --hl-key: #8a3ab9;
+  --hl-str: #1d7a4c;
+  --hl-com: #737d8c;
+  --hl-num: #b45309;
+  --hl-fn: #1f5fbf;
+  --f-head: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1015; --surface: #151a21; --ink: #e5e9ef; --ink-2: #a9b2bf; --ink-3: #7e8897;
+    --line: #29303a; --tint: #1c222c; --code-bg: #10141a;
+    --s-open: #7e8897; --s-needs: #f0763c; --s-dev: #a58cf0; --s-fixed: #4fb585; --s-wont: #4a525e;
+    --link: #79a8f2; --hl-key: #c792ea; --hl-str: #7fd1a0; --hl-com: #7e8897; --hl-num: #f2b36b; --hl-fn: #82aaff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1015; --surface: #151a21; --ink: #e5e9ef; --ink-2: #a9b2bf; --ink-3: #7e8897;
+  --line: #29303a; --tint: #1c222c; --code-bg: #10141a;
+  --s-open: #7e8897; --s-needs: #f0763c; --s-dev: #a58cf0; --s-fixed: #4fb585; --s-wont: #4a525e;
+  --link: #79a8f2; --hl-key: #c792ea; --hl-str: #7fd1a0; --hl-com: #7e8897; --hl-num: #f2b36b; --hl-fn: #82aaff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+/* A class that sets display outranks the hidden attribute; claude.ai's page skeleton has this rule, a local preview does not */
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); -webkit-font-smoothing: antialiased; }
+.page {
+  max-width: 920px; margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px;
+}
+#bands { display: grid; grid-template-columns: minmax(0, 1fr); gap: 30px; }
+a { color: var(--link); }
+code, pre, .mono { font-family: var(--f-mono); }
+code { font-size: 0.9em; background: var(--tint); padding: 0.05em 0.3em; border-radius: 3px; overflow-wrap: anywhere; }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 3px; }
+
+header { display: grid; gap: 6px; }
+.eyebrow { font: 500 12px var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+h1 { font: 700 30px/1.15 var(--f-head); margin: 0; text-wrap: balance; }
+.sub { color: var(--ink-2); margin: 0; }
+.meta { font: 13px var(--f-mono); color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 12px; }
+.meter-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.meter-label { font-weight: 600; font-variant-numeric: tabular-nums; }
+.meter { height: 8px; border-radius: 4px; background: var(--tint); overflow: hidden; display: flex; }
+.meter i { display: block; height: 100%; }
+.counts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; flex: none; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button {
+  font: 500 13px var(--f-body); color: var(--ink-2); background: transparent; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px;
+}
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.note { font-size: 13px; color: var(--ink-3); margin: 0; }
+
+.band { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.band h2 { font: 700 19px/1.2 var(--f-head); margin: 0; }
+.band .gloss { margin: 0; color: var(--ink-2); font-size: 14px; }
+.band-head { display: grid; gap: 2px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+
+.finding { grid-template-columns: minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--s-open); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.finding[data-status="needs_fix"] { border-left-color: var(--s-needs); }
+.finding[data-status="up_to_dev"] { border-left-color: var(--s-dev); }
+.finding[data-status="fixed"] { border-left-color: var(--s-fixed); }
+.finding[data-status="wontfix"] { border-left-color: var(--s-wont); }
+.finding[data-status="fixed"] .title, .finding[data-status="wontfix"] .title { color: var(--ink-3); }
+.f-top { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.num { font: 600 14px var(--f-mono); color: var(--ink-3); padding-top: 2px; }
+.title { font-weight: 600; font-size: 16px; flex: 1 1 260px; min-width: 0; }
+.cost { font: 12px var(--f-mono); color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; white-space: nowrap; margin-top: 2px; }
+.status { display: flex; align-items: center; }
+.status select {
+  font: 500 13px var(--f-body); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; cursor: pointer;
+}
+.refs { font: 12.5px var(--f-mono); color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 2px 14px; }
+details { border-top: 1px dashed var(--line); padding-top: 6px; min-width: 0; }
+details > summary { cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--ink-2); }
+details[open] > summary { margin-bottom: 8px; }
+.what { margin: 0 0 10px; max-width: 70ch; }
+.what em { font-style: normal; font-weight: 600; }
+.lbl { font: 500 11.5px var(--f-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin: 10px 0 4px; }
+pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 10px 12px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+pre.out { color: var(--ink-2); }
+.verdict { margin: 10px 0 0; padding-left: 10px; border-left: 2px solid var(--line); color: var(--ink-2); max-width: 70ch; }
+.fix p { margin: 0 0 8px; max-width: 70ch; }
+.patch + .patch { margin-top: 8px; }
+
+.hljs-keyword, .hljs-built_in, .hljs-literal { color: var(--hl-key); }
+.hljs-string, .hljs-regexp { color: var(--hl-str); }
+.hljs-comment { color: var(--hl-com); font-style: italic; }
+.hljs-number { color: var(--hl-num); }
+.hljs-title, .hljs-title.function_ { color: var(--hl-fn); }
+.hljs-subst { color: var(--ink); }
+
+.post-panel { border-color: var(--ink-3); }
+.post-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.post-btn {
+  font: 600 14px var(--f-body); color: var(--surface); background: var(--ink); cursor: pointer;
+  border: 0; border-radius: 6px; padding: 7px 16px;
+}
+.post-btn:disabled { opacity: 0.45; cursor: default; }
+.post-why { font-size: 13px; color: var(--ink-2); }
+.perm-btn { justify-self: start; font: 500 13px var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 5px; padding: 3px 10px; cursor: pointer; }
+.post-done { font-weight: 600; color: var(--s-fixed); }
+.anchor-line { font: 12.5px var(--f-mono); color: var(--ink-2); margin: 0 0 6px; }
+pre.md { white-space: pre-wrap; overflow-wrap: anywhere; }
+footer { font-size: 13px; color: var(--ink-3); display: grid; gap: 4px; }
+@media (max-width: 560px) { h1 { font-size: 25px; } }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Review board · ghga-de/ghga</div>
+    <h1 id="board-title">Review</h1>
+    <p class="sub"><a id="pr-link" href="#"></a></p>
+    <div class="meta" id="pr-meta"></div>
+  </header>
+
+  <section class="panel" aria-label="Progress">
+    <div class="meter-row">
+      <span class="meter-label" id="meter-label"></span>
+      <div class="counts" id="counts"></div>
+    </div>
+    <div class="meter" id="meter" aria-hidden="true"></div>
+    <div class="filters" role="group" aria-label="Show findings">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="open" aria-pressed="false">Open</button>
+      <button type="button" data-filter="needs_fix" aria-pressed="false">Needs fix</button>
+      <button type="button" data-filter="up_to_dev" aria-pressed="false">Up to dev</button>
+      <button type="button" data-filter="done" aria-pressed="false">Done</button>
+    </div>
+    <p class="note" id="store-note">Statuses load from the shared store.</p>
+  </section>
+
+  <section class="panel post-panel" id="post-panel" aria-label="Post the review">
+    <div class="post-row">
+      <button type="button" class="post-btn" id="post-btn" disabled>Post review</button>
+      <span class="post-why" id="post-why">Decide every open finding first.</span>
+    </div>
+    <p class="note" id="post-checks" hidden></p>
+    <button type="button" class="perm-btn" id="perm-btn" hidden>Review this board's permissions</button>
+    <details id="post-summary"><summary>Show the review summary</summary>
+      <pre class="md"><code id="summary-text"></code></pre>
+    </details>
+    <p class="note" id="post-note"></p>
+  </section>
+
+  <main id="bands"></main>
+
+  <footer id="board-footer"></footer>
+</div>
+
+<!-- The skill fills this block and the PR number in <title>; nothing else in the template changes per board. -->
+<script id="board-data" type="application/json">BOARD_DATA</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  const STATUSES = [
+    { key: "open", label: "Open", color: "var(--s-open)" },
+    { key: "needs_fix", label: "Needs fix", color: "var(--s-needs)" },
+    { key: "up_to_dev", label: "Up to dev", color: "var(--s-dev)" },
+    { key: "fixed", label: "Fixed", color: "var(--s-fixed)" },
+    { key: "wontfix", label: "Won't fix", color: "var(--s-wont)" }
+  ];
+  const RESOLVED = new Set(["fixed", "wontfix"]);
+  const POSTED = new Set(["needs_fix", "up_to_dev"]);
+
+  let DATA = null;
+  try { DATA = JSON.parse(document.getElementById("board-data").textContent); } catch (e) {}
+  if (!DATA) { document.getElementById("bands").textContent = "This board has no findings: its data block is missing or not valid JSON."; return; }
+  const PR = DATA.pr, BANDS = DATA.bands, FINDINGS = DATA.findings, KEY = "rb" + PR.number;
+  const POST_LABEL = DATA.dryRun ? `Draft review for #${PR.number} (dry run)` : `Post review to #${PR.number}`;
+  const RESOLVE_LABEL = DATA.dryRun ? `Draft resolving threads on #${PR.number} (dry run)` : `Resolve threads on #${PR.number}`;
+  document.getElementById("board-title").textContent = `Review of #${PR.number}`;
+  const prLink = document.getElementById("pr-link");
+  prLink.href = PR.url; prLink.textContent = PR.title;
+  document.getElementById("pr-meta").innerHTML = [`head ${PR.head.slice(0, 9)}`, `base ${PR.base}`, DATA.date]
+    .map(s => `<span>${esc(s)}</span>`).join("");
+  document.getElementById("board-footer").innerHTML = (DATA.footer || []).map(s => `<span>${s}</span>`).join("");
+  const CARRIED = FINDINGS.some(f => (f.threads || []).length);
+  document.getElementById("post-note").textContent = DATA.dryRun
+    ? "Dry run: the button asks the review session to draft the review and show it there. Nothing is posted to the PR, and no thread is resolved."
+    : "The button asks the review session to post one review: an inline comment per finding marked Needs fix or Up to dev, with a suggestion where the fix fits one. It requests changes when a finding is marked Needs fix, and only comments otherwise."
+      + (CARRIED ? " A finding from an earlier round replies in its thread instead, and the session resolves the threads of those marked Fixed or Won't fix." : "")
+      + " Nothing else is posted.";
+
+  const statusOf = {};
+  FINDINGS.forEach(f => { statusOf[f.id] = "open"; });
+  let filter = "all";
+  try { filter = localStorage.getItem(KEY + "-filter") || "all"; } catch (e) {}
+  let save = null;
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  function codeBlock(code, lang) { return `<pre><code class="language-${lang}">${esc(code)}</code></pre>`; }
+
+  function commentText(post, status) {
+    let text = (status === "up_to_dev" ? "q: Your call. " : "") + post.body;
+    if (post.suggestion) text += "\n\n```suggestion\n" + post.suggestion + "\n```";
+    return text;
+  }
+  function anchorText(post) {
+    if (post.reply_to) return "reply in the earlier thread";
+    return `${post.path.split("/").pop()}:${post.start_line ? post.start_line + "–" : ""}${post.line}${post.suggestion ? " · with a suggestion" : ""}`;
+  }
+  function summaryText() {
+    // Counts comments, not findings, since a finding can post several
+    const posts = k => FINDINGS.filter(f => statusOf[f.id] === k).flatMap(f => f.post);
+    const count = (list, one, many) => {
+      const n = list.length, hints = list.filter(p => p.suggestion).length;
+      const which = !hints ? "" : hints === n ? (n === 1 ? ", with a suggestion" : ", each with a suggestion") : `, ${hints} with a suggestion`;
+      return `${n} ${n === 1 ? one : many}${which}.`;
+    };
+    // Claims reproduction only for the findings that reproduced
+    const posted = FINDINGS.filter(f => POSTED.has(statusOf[f.id]));
+    if (!posted.length) {
+      const n = threadCount();
+      return n ? `No review is posted: the press only resolves ${n} thread${n > 1 ? "s" : ""}.` : "No review is posted: no finding is marked Needs fix or Up to dev.";
+    }
+    const unverified = posted.filter(f => f.unverified).length, head = PR.head.slice(0, 9);
+    const repro = !unverified ? `Each finding was reproduced on ${head}.`
+      : unverified === posted.length ? `No finding could be reproduced on ${head}; each is reasoned from the code.`
+      : `${posted.length - unverified} of ${posted.length} findings were reproduced on ${head}; ${unverified === 1 ? "the other is" : "the others are"} reasoned from the code.`;
+    const lines = [`${DATA.summary || "Review"} ${repro}`];
+    const fix = posts("needs_fix"), dev = posts("up_to_dev");
+    if (fix.length) lines.push(count(fix, "comment asks for a fix", "comments ask for a fix"));
+    if (dev.length) lines.push(count(dev, "comment marked q: leaves the call to you", "comments marked q: leave the call to you"));
+    return lines.join("\n\n");
+  }
+
+  function renderAll() {
+    const host = document.getElementById("bands");
+    host.innerHTML = BANDS.map(b => {
+      const items = FINDINGS.filter(f => f.band === b.id);
+      return `<section class="band" data-band="${b.id}">
+        <div class="band-head"><h2>${b.title}</h2><p class="gloss">${b.gloss}</p></div>
+        ${items.map(f => `
+        <article class="finding" id="f${f.id}" data-id="${f.id}" data-status="open">
+          <div class="f-top">
+            <span class="num">#${f.id}</span>
+            <span class="title">${f.title}</span>
+            <span class="cost">${f.unverified ? "unverified · " : ""}${f.cost}</span>
+            <label class="status"><span class="dot" aria-hidden="true"></span>
+              <select id="status-${f.id}" aria-label="Status of finding ${f.id}">
+                ${STATUSES.map(s => `<option value="${s.key}">${s.label}</option>`).join("")}
+              </select></label>
+          </div>
+          <div class="refs">${f.refs.map(r => `<span>${r}</span>`).join("")}</div>
+          <details id="repro-${f.id}"><summary>Show the repro</summary>
+            <p class="what">${f.what}</p>
+            <div class="lbl">Code</div>${codeBlock(f.code, f.codeLang || "python")}
+            <div class="lbl">Observed</div><pre class="out"><code>${esc(f.output)}</code></pre>
+            ${f.verdict ? `<p class="verdict">${f.verdict}</p>` : ""}
+          </details>
+          <details id="comment-${f.id}" class="comment" hidden><summary>Show the comment${f.post.length > 1 ? "s" : ""} to post</summary>
+            ${f.post.map((p, i) => `<p class="anchor-line">${esc(anchorText(p))}</p><pre class="md"><code data-post="${i}"></code></pre>`).join("")}
+          </details>
+          <details id="fix-${f.id}" class="fix"><summary>Show the fix</summary>
+            <p>${f.fix.text}</p>
+            ${(f.fix.patches || []).map(p => `<div class="patch">${codeBlock(p.code, p.lang)}</div>`).join("")}
+          </details>
+        </article>`).join("")}
+      </section>`;
+    }).join("");
+    host.querySelectorAll("select").forEach(sel => {
+      sel.addEventListener("change", () => setStatus(Number(sel.closest(".finding").dataset.id), sel.value));
+    });
+    if (window.hljs) host.querySelectorAll("pre code[class^=language-]").forEach(el => window.hljs.highlightElement(el));
+  }
+
+  function paint() {
+    FINDINGS.forEach(f => {
+      const el = document.getElementById("f" + f.id);
+      const st = statusOf[f.id];
+      el.dataset.status = st;
+      const sel = el.querySelector("select");
+      if (sel.value !== st) sel.value = st;
+      el.querySelector(".dot").style.background = STATUSES.find(s => s.key === st).color;
+      const show = filter === "all" || (filter === "done" ? RESOLVED.has(st) : st === filter);
+      el.hidden = !show;
+      const c = document.getElementById("comment-" + f.id);
+      const posted = POSTED.has(st);
+      c.hidden = !posted;
+      if (posted) c.querySelectorAll("code[data-post]").forEach(el => { el.textContent = commentText(f.post[Number(el.dataset.post)], st); });
+    });
+    document.getElementById("summary-text").textContent = summaryText();
+    updatePost();
+    document.querySelectorAll(".band").forEach(b => { b.hidden = !b.querySelector(".finding:not([hidden])"); });
+    const counts = Object.fromEntries(STATUSES.map(s => [s.key, 0]));
+    FINDINGS.forEach(f => counts[statusOf[f.id]]++);
+    const resolved = counts.fixed + counts.wontfix;
+    document.getElementById("meter-label").textContent = `${resolved} of ${FINDINGS.length} resolved`;
+    document.getElementById("counts").innerHTML = STATUSES.map(s =>
+      `<span><span class="dot" style="background:${s.color}"></span>${s.label} ${counts[s.key]}</span>`).join("");
+    document.getElementById("meter").innerHTML = STATUSES.filter(s => RESOLVED.has(s.key)).map(s =>
+      `<i style="width:${counts[s.key] / FINDINGS.length * 100}%;background:${s.color}"></i>`).join("");
+    document.querySelectorAll(".filters button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));
+  }
+
+  function setStatus(id, status) {
+    if (statusOf[id] === status) return;
+    statusOf[id] = status;
+    paint();
+    if (save) save(id, status);
+  }
+
+  document.querySelectorAll(".filters button").forEach(b => b.addEventListener("click", () => {
+    filter = b.dataset.filter;
+    try { localStorage.setItem(KEY + "-filter", filter); } catch (e) {}
+    paint();
+  }));
+
+  let postState = null, dbRef = null; // the store's review/post document
+  let comments = null, canSend = "off", isOwner = false, ownerKnown = false;
+  const postBtn = document.getElementById("post-btn"), postWhy = document.getElementById("post-why");
+  function requestsChanges() { return FINDINGS.some(f => statusOf[f.id] === "needs_fix"); }
+  function commentsToPost() { return FINDINGS.filter(f => POSTED.has(statusOf[f.id])).reduce((n, f) => n + f.post.length, 0); }
+  // A finding carried over from an earlier round names its review threads; deciding it resolves them
+  function threadsToResolve() { return FINDINGS.filter(f => (f.threads || []).length && RESOLVED.has(statusOf[f.id])); }
+  function threadCount() { return threadsToResolve().reduce((n, f) => n + f.threads.length, 0); }
+  function updatePost() {
+    const open = FINDINGS.filter(f => statusOf[f.id] === "open").length;
+    const toPost = commentsToPost(), threads = threadCount();
+    const fresh = postState && postState.status === "requested" && Date.now() - Date.parse(postState.requestedAt) < 30 * 60 * 1000;
+    let why = "", ok = false;
+    if (postState && postState.status === "posted") {
+      // Any viewer can write the store, so its values are coerced and escaped
+      const n = Number(postState.resolved) || 0;
+      const url = typeof postState.url === "string" && postState.url.startsWith("https://github.com/") ? postState.url : "";
+      const left = (Array.isArray(postState.unresolved) ? postState.unresolved : []).map(Number).filter(Number.isInteger);
+      const done = [url ? "Posted." : "", n ? `Resolved ${n} thread${n > 1 ? "s" : ""}.` : "", !url && !n && !left.length ? "No thread was left to resolve." : ""].filter(Boolean).join(" ");
+      postWhy.innerHTML = `<span class="post-done">${esc(done)}</span>`
+        + (left.length ? ` Not resolved: the threads of ${left.map(id => "#" + id).join(", ")}; ask the session again.` : "")
+        + (url ? ` <a href="${esc(url)}">Open the review on GitHub</a>` : "");
+      postBtn.disabled = true; postBtn.textContent = url ? "Review posted" : n ? "Threads resolved" : "Nothing resolved"; return;
+    }
+    if (fresh) why = "Sent to the review session. It posts and then marks the review here.";
+    else if (postState && postState.status === "failed" && !open && (toPost || threads) && canSend === "available") { ok = true; why = "Posting failed: " + (postState.reason || "no reason given") + ". Try again."; }
+    else if (open) why = `Decide the ${open} open finding${open > 1 ? "s" : ""} first.`;
+    else if (!toPost && !threads) why = "Nothing to post: no finding is marked Needs fix or Up to dev, and no decided finding has a thread to resolve.";
+    else if (!comments) why = ownerKnown ? "Sending to Claude is not available here: the comments capability did not load." : "Checking whether this view can send to Claude…";
+    else if (!isOwner) why = "Only the board's owner can ask Claude to draft or post the review.";
+    else if (canSend === "writers_only") why = "Only editors of this board can ask Claude to post.";
+    else if (canSend === "no_session") why = "No Claude session is watching this board right now.";
+    else if (canSend !== "available") why = "Sending to Claude is not available in this view.";
+    else {
+      ok = true;
+      const resolves = `resolves ${threads} review thread${threads > 1 ? "s" : ""}`;
+      why = !toPost ? `Nothing to post; ${resolves}.`
+        : `Posts ${toPost} comment${toPost > 1 ? "s" : ""} and the summary as one review that ${requestsChanges() ? "requests changes" : "comments only"}${threads ? `, and ${resolves}` : ""}.`;
+    }
+    postBtn.disabled = !ok; postBtn.textContent = toPost || !threads ? POST_LABEL : RESOLVE_LABEL; postWhy.textContent = why;
+  }
+  async function refreshCanSend() {
+    if (!comments) return;
+    try { canSend = await comments.canSendToClaude(); } catch (e) { canSend = "off"; }
+    updatePost();
+  }
+  postBtn.addEventListener("click", async () => {
+    postBtn.disabled = true;
+    const counts = s => FINDINGS.filter(f => statusOf[f.id] === s).map(f => "#" + f.id).join(", ") || "none";
+    const threads = threadsToResolve(), n = threadCount();
+    const event = commentsToPost() ? `as ${requestsChanges() ? "REQUEST_CHANGES" : "COMMENT"}` : "with nothing to post";
+    const text = (DATA.dryRun ? `Dry run: draft the review of #${PR.number} from this board and show it in the session. Do not post anything to the PR, and do not resolve any thread.` : `Post the review of #${PR.number} from this board (review-board skill), ${event}.`) + ` Needs fix: ${counts("needs_fix")}. Up to dev: ${counts("up_to_dev")}. Won't fix: ${counts("wontfix")}. Fixed: ${counts("fixed")}.`
+      + ` Threads to resolve: ${n}${n ? " (of " + threads.map(f => "#" + f.id).join(", ") + ")" : ""}.`;
+    try {
+      const anchor = await comments.anchorFor(document.getElementById("post-panel"));
+      await comments.sendToClaude({ anchor, text });
+      postState = { status: "requested", requestedAt: new Date().toISOString() };
+      if (dbRef) await dbRef.doc("review/post").set(postState);
+    } catch (e) {
+      postWhy.textContent = "Not sent: " + ((e && e.code) || "unknown error") + ". Nothing was posted.";
+      await refreshCanSend();
+      return;
+    }
+    updatePost();
+  });
+
+  const note = document.getElementById("store-note");
+  function useLocal(reason) {
+    note.textContent = reason + " Statuses are kept in this browser only.";
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY + "-status") || "{}");
+      Object.assign(statusOf, saved);
+    } catch (e) {}
+    paint();
+    save = () => { try { localStorage.setItem(KEY + "-status", JSON.stringify(statusOf)); } catch (e) {} };
+  }
+
+  renderAll();
+  paint();
+
+  const checks = { store: "…", owner: "…", claude: "…" };
+  function showChecks() {
+    const el = document.getElementById("post-checks");
+    const pending = Object.values(checks).includes("…");
+    const fine = checks.store === "ready" && checks.owner === "yes" && checks.claude === "available";
+    el.hidden = pending || fine;
+    el.textContent = `Checks: shared store ${checks.store} · owner ${checks.owner} · send to Claude ${checks.claude}`;
+  }
+  showChecks();
+
+  (async () => {
+    if (!window.claude) {
+      checks.store = checks.owner = checks.claude = "not in claude.ai";
+      showChecks(); useLocal("This is not the claude.ai viewer."); ownerKnown = true; updatePost(); return;
+    }
+    const [db, user, comm, perms] = await Promise.all(
+      ["db", "user", "comments", "permissions"].map(n => window.claude.use(n).catch(() => null)));
+    const permState = perms ? await perms.state().catch(() => ({})) : {};
+    if (perms && Object.values(permState).some(s => s === "denied")) {
+      const btn = document.getElementById("perm-btn");
+      btn.hidden = false;
+      btn.addEventListener("click", () => perms.manage().catch(() => {}));
+    }
+    const label = (ns, name) => ns ? "ready" : "unavailable" + (permState[name] ? ` (${permState[name]})` : "");
+
+    checks.store = label(db, "db");
+    if (db) {
+      note.textContent = "Statuses are shared with everyone who opens this board.";
+      dbRef = db;
+      save = (id, status) => {
+        db.doc("findings/f" + id).set({ status, updatedAt: new Date().toISOString() }).catch(err => {
+          note.textContent = "Saving failed: " + ((err && (err.code || err.message)) || "unknown error") + ". Pick the status again to retry.";
+        });
+      };
+      db.collection("findings").onSnapshot(snap => {
+        snap.docs.forEach(d => {
+          const id = Number(d.id.slice(1));
+          const st = d.data() && d.data().status;
+          if (statusOf[id] !== undefined && STATUSES.some(s => s.key === st)) statusOf[id] = st;
+        });
+        paint();
+      }, err => { checks.store = "stopped (" + ((err && err.code) || "error") + ")"; showChecks(); useLocal("The shared store stopped answering."); });
+      db.doc("review/post").onSnapshot(snap => { postState = snap.exists ? snap.data() : null; updatePost(); }, () => {});
+    } else {
+      useLocal("The shared store is not available here.");
+    }
+
+    try { isOwner = user ? await user.isOwner() : false; } catch (e) { isOwner = false; }
+    checks.owner = user ? (isOwner ? "yes" : "no") : label(user, "user");
+    comments = comm;
+    ownerKnown = true;
+    if (comments) { await refreshCanSend(); checks.claude = canSend; } else { checks.claude = label(comm, "comments"); }
+    showChecks();
+    updatePost();
+    document.addEventListener("visibilitychange", async () => {
+      if (!document.hidden && comments) { await refreshCanSend(); checks.claude = canSend; showChecks(); }
+    });
+  })();
+})();
+</script>

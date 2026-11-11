@@ -222,3 +222,42 @@ async def test_deletion_on_nonexistent_resources(mongodb: MongoDbFixture):
             headers={"Authorization": VALID_BEARER_TOKEN},
         )
         assert response.status_code == 204
+
+
+async def test_wildcard_deletion_keeps_version_collections(mongodb: MongoDbFixture):
+    """Test that the collection wildcard leaves the migration records in place."""
+    base_config = get_config(sources=[mongodb.config])
+    new_config = base_config.model_copy(update={"db_permissions": ["*.*:*"]})
+    config = get_config(sources=[new_config])
+    headers = {"Authorization": VALID_BEARER_TOKEN}
+    version_doc = {"_id": 2, "completed": DATES[0].isoformat()}
+
+    async with (
+        prepare_rest_app(config=config, events_handler_override=AsyncMock()) as app,
+        AsyncTestClient(app=app) as client,
+    ):
+        for namespace, doc in [
+            (ALLOPS, SALLY),
+            ("testdb.authDbVersions", version_doc),
+        ]:
+            response = await client.put(
+                f"/documents/{namespace}", headers=headers, json={"documents": doc}
+            )
+            assert response.status_code == 204
+
+        for namespace in ["*.*", "testdb.*"]:
+            response = await client.delete(f"/documents/{namespace}", headers=headers)
+            assert response.status_code == 204
+            response = await client.get(f"/documents/{ALLOPS}", headers=headers)
+            assert response.json() == []
+            response = await client.get(
+                "/documents/testdb.authDbVersions", headers=headers
+            )
+            assert response.json() == [version_doc]
+
+        response = await client.delete(
+            "/documents/testdb.authDbVersions", headers=headers
+        )
+        assert response.status_code == 204
+        response = await client.get("/documents/testdb.authDbVersions", headers=headers)
+        assert response.json() == []

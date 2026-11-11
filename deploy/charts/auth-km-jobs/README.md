@@ -26,6 +26,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"auth-km-jobs"` |
@@ -80,7 +81,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
@@ -135,6 +137,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"auth_km_jobs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

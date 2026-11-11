@@ -9,26 +9,24 @@ readme = "README.md"
 authors = [
     { name = "German Human Genome Phenome Archive (GHGA)", email = "contact@ghga.de" },
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Software Development :: Libraries",
     "Intended Audience :: Developers",
 ]
 name = "ghga_datasteward_kit"
-version = "5.4.2"
+version = "0.0.0"  # placeholder: the build stamps the platform version (ADR-0046)
 description = "GHGA Data Steward Kit - A utils package for GHGA data stewards."
 license = "Apache-2.0"
 dependencies = [
-    "crypt4gh >=1.8.6, <2",
-    "hexkit[s3] >=9.0.0",
     "ghga-transpiler >=2.1.2, <3",
-    "metldata >=4.2.1, <5",
-    "ghga-service-commons[transports,crypt] >=8.0.0, <9",
+    "metldata",
+    "ghga-service-commons[http] >=9.0.0, <10",
 ]
 
 [project.urls]
@@ -43,11 +41,6 @@ ghga-datasteward-kit = "ghga_datasteward_kit.__main__:run"
 where = [
     "src",
 ]
-
-[tool.pytest.ini_options]
-minversion = "8.4"
-asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.paths]
 source = [

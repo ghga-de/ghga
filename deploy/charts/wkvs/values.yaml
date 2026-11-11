@@ -7,6 +7,7 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: wkvs
@@ -74,8 +75,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -160,6 +162,9 @@ config:
 configPrefix: wkvs
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 environment:
   name: default
 cluster:

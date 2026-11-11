@@ -16,6 +16,12 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
+        },
+        "localImageIds": {
+          "type": "object",
+          "description": "Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
@@ -64,7 +70,7 @@
     },
     "cronjobs": {
       "type": "object",
-      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
+      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `concurrencyPolicy`, `activeDeadlineSeconds`, `startingDeadlineSeconds`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
       "additionalProperties": true,
       "properties": {
         "default": {
@@ -179,7 +185,7 @@
         "enabled": {
           "type": "boolean",
           "description": "Run a dedicated init container for DB migrations before the main container starts",
-          "default": false
+          "default": true
         },
         "image": {
           "type": "string",
@@ -193,11 +199,13 @@
         "executable": {
           "type": "string",
           "description": "Executable name and arguments run inside the migration init container",
-          "default": ""
+          "default": "pcs"
         },
         "executableArgs": {
           "type": "array",
-          "default": []
+          "default": [
+            "migrate-db"
+          ]
         },
         "env": {
           "type": "array",
@@ -366,13 +374,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -824,17 +836,6 @@
             "null"
           ]
         },
-        "db_name": {
-          "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
-          "examples": [
-            "my-database"
-          ],
-          "title": "Db Name",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "service_instance_id": {
           "description": "A string that uniquely identifies this instance across all instances of this service. A globally unique Kafka client ID will be created by concatenating the service_name and the service_instance_id.",
           "examples": [
@@ -889,6 +890,25 @@
             "integer",
             "null"
           ]
+        },
+        "migration_max_wait_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+          "examples": [
+            null,
+            300,
+            600,
+            3600
+          ],
+          "title": "Migration Max Wait Sec"
         },
         "otel_trace_sampling_rate": {
           "default": 1.0,
@@ -1154,6 +1174,17 @@
             "null"
           ]
         },
+        "db_name": {
+          "description": "Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead.",
+          "examples": [
+            "my-database"
+          ],
+          "title": "Db Name",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "mongo_timeout": {
           "anyOf": [
             {
@@ -1172,25 +1203,6 @@
             null
           ],
           "title": "Mongo Timeout"
-        },
-        "migration_max_wait_sec": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
-          "examples": [
-            null,
-            300,
-            600,
-            3600
-          ],
-          "title": "Migration Max Wait Sec"
         },
         "port": {
           "default": 8080,
@@ -1376,6 +1388,19 @@
       "type": "number",
       "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own",
       "default": 5
+    },
+    "concurrencyPolicy": {
+      "type": "string",
+      "description": "Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run",
+      "default": "Forbid"
+    },
+    "activeDeadlineSeconds": {
+      "description": "Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value",
+      "default": null
+    },
+    "startingDeadlineSeconds": {
+      "description": "Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit",
+      "default": null
     },
     "environment": {
       "type": "object",

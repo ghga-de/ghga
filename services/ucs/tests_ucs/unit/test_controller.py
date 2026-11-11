@@ -17,7 +17,8 @@
 
 import logging
 from asyncio import sleep
-from contextlib import nullcontext
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from datetime import timedelta
 from unittest.mock import patch
 from uuid import uuid4
@@ -32,6 +33,7 @@ from ghga_event_schemas.pydantic_ import (
     InterrogationFailure,
     InterrogationSuccess,
 )
+from ghga_service_commons.utils.utc_dates import UTCDatetime
 from hexkit.protocols.dao import ResourceNotFoundError, UniqueConstraintViolationError
 from hexkit.protocols.objstorage import ObjectStorageProtocol
 from hexkit.utils import now_utc_ms_prec
@@ -72,6 +74,24 @@ async def _fail_interrogation(*, file_id: UUID4, rig: JointRig):
         )
     )
     return await rig.file_upload_dao.get_by_id(file_id)
+
+
+@contextmanager
+def track_box_stats_updates(rig: JointRig) -> Iterator[list[UUID4]]:
+    """Record the box ID of every `_update_box_stats` call made inside the block.
+
+    The recompute writes nothing when the stats already match, so the call itself has
+    to be observed rather than the box version it leaves behind.
+    """
+    updated_box_ids: list[UUID4] = []
+    update_box_stats = rig.controller._update_box_stats
+
+    async def record_call(*, box_id: UUID4) -> None:
+        updated_box_ids.append(box_id)
+        await update_box_stats(box_id=box_id)
+
+    with patch.object(rig.controller, "_update_box_stats", record_call):
+        yield updated_box_ids
 
 
 async def _complete_file_upload(*, file_upload: FileUpload, rig: JointRig):
@@ -308,7 +328,11 @@ async def test_update_box_max_size_below_committed(rig: JointRig):
 
 
 async def test_lock_file_upload_box(rig: JointRig):
-    """Test locking an unlocked FileUploadBox"""
+    """Test locking an unlocked FileUploadBox.
+
+    Both the lock itself and a repeat lock of an already locked box have to recompute
+    the box stats, the latter so a stat update lost by an earlier crash is repaired.
+    """
     # First create a FileUploadBox (starts open by default)
     file_upload_box_dao = rig.file_upload_box_dao
     box_id = await rig.create_default_box()
@@ -317,15 +341,27 @@ async def test_lock_file_upload_box(rig: JointRig):
     assert file_upload_box_dao.latest.state == "open"
 
     # Now lock the box
-    await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
 
-    # Verify the box is now locked
+    # Verify the box is now locked and that its stats were recomputed
     assert file_upload_box_dao.latest.state == "locked"
+    assert updated_box_ids == [box_id]
+
+    # Make sure locking again will still recompute the stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.lock_file_upload_box(box_id=box_id, version=1)
+
+    assert file_upload_box_dao.latest.state == "locked"
+    assert updated_box_ids == [box_id]
 
 
 async def test_completion_recomputes_box_stats_from_truth(rig: JointRig):
     """Test that completing an upload derives box stats from the current FileUpload
     states, correcting any prior drift rather than blindly incrementing.
+
+    A repeat completion returns early without touching the FileUpload, but recomputes
+    all the same, so stats a crashed earlier call never wrote are repaired.
     """
     file_upload_box_dao = rig.file_upload_box_dao
     box_id = await rig.create_default_box()
@@ -337,16 +373,36 @@ async def test_completion_recomputes_box_stats_from_truth(rig: JointRig):
     await file_upload_box_dao.update(drifted_box)
 
     # Complete one file upload so the box has real stats again
-    _, _ = await rig.controller.initiate_file_upload(
+    file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
         alias="test_file",
         decrypted_size=DECRYPTED_SIZE,
         encrypted_size=ENCRYPTED_SIZE,
         part_size=PART_SIZE,
     )
-    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    completed_upload = await _complete_file_upload(
+        file_upload=rig.file_upload_dao.latest, rig=rig
+    )
+    assert completed_upload.state == "inbox"
     assert file_upload_box_dao.latest.file_count == 1
     assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # Modify the box stats (doesn't have to make sense here, just testing)
+    drifted_box = await file_upload_box_dao.get_by_id(box_id)
+    drifted_box.file_count = 5
+    drifted_box.size = 12345
+    await file_upload_box_dao.update(drifted_box)
+
+    # Verify that re-completing the completion op recomputes the box stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await _complete_file_upload(file_upload=completed_upload, rig=rig)
+
+    assert updated_box_ids == [box_id]
+    assert file_upload_box_dao.latest.file_count == 1
+    assert file_upload_box_dao.latest.size == DECRYPTED_SIZE
+
+    # Finally, verify that the FileUpload is unchanged (mostly a sanity check)
+    assert await rig.file_upload_dao.get_by_id(file_id) == completed_upload
 
 
 async def test_lock_recomputes_box_stats(rig: JointRig):
@@ -379,7 +435,11 @@ async def test_lock_recomputes_box_stats(rig: JointRig):
 
 
 async def test_unlock_file_upload_box(rig: JointRig):
-    """Test unlocking a locked FileUploadBox"""
+    """Test unlocking a locked FileUploadBox.
+
+    Both the unlock itself and a repeat unlock of an already open box have to recompute
+    the box stats, the latter so a stat update lost by an earlier crash is repaired.
+    """
     file_upload_box_dao = rig.file_upload_box_dao
 
     # First create a FileUploadBox
@@ -390,10 +450,19 @@ async def test_unlock_file_upload_box(rig: JointRig):
     assert file_upload_box_dao.latest.state == "locked"
 
     # Now unlock the box (version 1 → 2)
-    await rig.controller.unlock_file_upload_box(box_id=box_id, version=1)
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.unlock_file_upload_box(box_id=box_id, version=1)
 
-    # Verify the box is now unlocked
+    # Verify the box is now unlocked and that its stats were recomputed
     assert file_upload_box_dao.latest.state == "open"
+    assert updated_box_ids == [box_id]
+
+    # Make sure unlocking again will still recompute the stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.unlock_file_upload_box(box_id=box_id, version=2)
+
+    assert file_upload_box_dao.latest.state == "open"
+    assert updated_box_ids == [box_id]
 
 
 async def test_lock_box_version_error(rig: JointRig):
@@ -962,6 +1031,10 @@ async def test_archive_box_ignores_terminal_uploads(
     """Archiving must succeed when the only non-interrogated uploads are in a
     terminal state (cancelled or failed). Those uploads are no longer active and
     don't need attention.
+
+    Both the archival itself and a repeat archival of an already archived box have to
+    recompute the box stats, the latter so a stat update lost by an earlier crash is
+    repaired.
     """
     box_id = await rig.create_default_box()
     await rig.controller.lock_file_upload_box(box_id=box_id, version=0)
@@ -970,8 +1043,18 @@ async def test_archive_box_ignores_terminal_uploads(
     file_upload.box_id = box_id
     await rig.file_upload_dao.insert(file_upload)
 
-    await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=1)
+
     assert rig.file_upload_box_dao.latest.state == "archived"
+    assert updated_box_ids == [box_id]
+
+    # Verify archiving again will still recompute the stats
+    with track_box_stats_updates(rig) as updated_box_ids:
+        await rig.controller.archive_file_upload_box(box_id=box_id, version=2)
+
+    assert rig.file_upload_box_dao.latest.state == "archived"
+    assert updated_box_ids == [box_id]
 
 
 async def test_complete_file_upload_when_box_missing(rig: JointRig):
@@ -2156,7 +2239,7 @@ async def test_upload_activity_lifecycle(rig: JointRig):
     """Test that an UploadActivity entry is created when a FileUpload is initiated
     and deleted when the upload is completed.
     """
-    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    assert not [x async for x in rig.upload_activity_dao.find_all(filter_={})]
     box_id = await rig.create_default_box()
     file_id, _ = await rig.controller.initiate_file_upload(
         box_id=box_id,
@@ -2246,7 +2329,7 @@ async def test_cleanup_falls_back_to_initiated_when_no_activity(rig: JointRig):
     await rig.file_upload_dao.insert(file_upload)
 
     # No activity entry is created for this file
-    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    assert not [x async for x in rig.upload_activity_dao.find_all(filter_={})]
 
     # Run the cleanup job and make sure the upload is still cancelled
     await rig.controller.cleanup_stale_uploads()
@@ -2335,6 +2418,14 @@ async def test_orphaned_abort_failure_does_not_stop_cleanup(
     """Test that a failure aborting one orphaned S3 upload does not prevent the cleanup
     job from attempting to abort the remaining orphaned uploads.
     """
+    # Any FileUpload will do, so that the empty-database safeguard does not trip
+    await rig.controller.initiate_file_upload(
+        box_id=await rig.create_default_box(),
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
     bucket_id, object_storage = rig.object_storages.for_alias("test")
 
     # Create two orphaned S3 multipart uploads (no corresponding FileUpload records)
@@ -2403,8 +2494,9 @@ async def test_cleanup_skips_alias_when_s3_connection_fails(
         orphan_cleanup_calls += 1
 
     monkeypatch.setattr(rig.s3_client, "list_all_multipart_uploads", failing_list)
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", counting_orphan_cleanup)
     monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", counting_orphan_cleanup
+        rig.s3_client, "delete_orphaned_objects", counting_orphan_cleanup
     )
 
     caplog.clear()
@@ -2438,15 +2530,15 @@ async def test_cleanup_continues_with_remaining_aliases(
 
     cleaned_aliases: list[str] = []
 
-    async def record_orphan_cleanup(*, storage_alias: str, known_object_ids: set[str]):
+    async def record_orphan_cleanup(
+        *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ):
         cleaned_aliases.append(storage_alias)
 
     monkeypatch.setattr(
         rig.s3_client, "list_all_multipart_uploads", failing_for_first_alias
     )
-    monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", record_orphan_cleanup
-    )
+    monkeypatch.setattr(rig.s3_client, "delete_orphaned_objects", record_orphan_cleanup)
 
     await rig.controller.cleanup_stale_uploads()
 
@@ -2470,15 +2562,15 @@ async def test_cleanup_skips_unknown_storage_alias(
 
     cleaned_aliases: list[str] = []
 
-    async def record_orphan_cleanup(*, storage_alias: str, known_object_ids: set[str]):
+    async def record_orphan_cleanup(
+        *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ):
         cleaned_aliases.append(storage_alias)
 
     monkeypatch.setattr(
         rig.s3_client, "list_all_multipart_uploads", failing_for_first_alias
     )
-    monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", record_orphan_cleanup
-    )
+    monkeypatch.setattr(rig.s3_client, "delete_orphaned_objects", record_orphan_cleanup)
 
     caplog.clear()
     with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
@@ -2506,7 +2598,7 @@ async def test_cleanup_tolerates_orphaned_object_cleanup_failure(
         )
 
     monkeypatch.setattr(
-        rig.s3_client, "cleanup_orphaned_objects", failing_orphan_cleanup
+        rig.s3_client, "delete_orphaned_objects", failing_orphan_cleanup
     )
 
     caplog.clear()
@@ -2519,6 +2611,247 @@ async def test_cleanup_tolerates_orphaned_object_cleanup_failure(
         "Could not clean up orphaned objects for alias 'test'"
         in warnings[0].getMessage()
     )
+
+
+class OrphanCleanupSpy:
+    """Records the calls the cleanup job makes to remove orphans."""
+
+    def __init__(self) -> None:
+        self.deleted_object_ids: list[set[str]] = []
+        self.aborted_s3_upload_ids: list[str] = []
+
+    async def delete_orphaned_objects(
+        self, *, storage_alias: str, object_ids: set[str], cutoff: UTCDatetime
+    ) -> None:
+        """Record the object IDs passed for deletion."""
+        self.deleted_object_ids.append(object_ids)
+
+    async def abort_multipart_upload(
+        self, *, storage_alias: str, object_id: str, s3_upload_id: str, **kwargs
+    ) -> None:
+        """Record the S3 upload ID passed for abortion."""
+        self.aborted_s3_upload_ids.append(s3_upload_id)
+
+
+@pytest.fixture()
+def orphan_spy(rig: JointRig, monkeypatch: pytest.MonkeyPatch) -> OrphanCleanupSpy:
+    """Replace the S3 client's orphan removal methods with a spy."""
+    spy = OrphanCleanupSpy()
+    monkeypatch.setattr(
+        rig.s3_client, "delete_orphaned_objects", spy.delete_orphaned_objects
+    )
+    monkeypatch.setattr(
+        rig.s3_client, "abort_multipart_upload", spy.abort_multipart_upload
+    )
+    return spy
+
+
+def list_objects_returning(object_ids: set[str]):
+    """Return a stand-in for `S3Client.list_object_ids` that lists `object_ids`."""
+
+    async def list_object_ids(*, storage_alias: str) -> set[str]:
+        return object_ids
+
+    return list_object_ids
+
+
+async def init_orphaned_s3_upload(rig: JointRig) -> str:
+    """Start a multipart upload in the inbox bucket that has no FileUpload."""
+    bucket_id, object_storage = rig.object_storages.for_alias("test")
+    return await object_storage.init_multipart_upload(
+        bucket_id=bucket_id, object_id=str(uuid4())
+    )
+
+
+async def test_cleanup_safeguard_blocks_orphans_when_db_empty(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that an empty FileUpload collection blocks all orphan removal.
+
+    This is the case of a second deployment that shares the inbox bucket but not the
+    database, where every object in the bucket looks orphaned.
+    """
+    await init_orphaned_s3_upload(rig)
+    monkeypatch.setattr(
+        rig.s3_client, "list_object_ids", list_objects_returning({str(uuid4())})
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.deleted_object_ids == []
+    assert orphan_spy.aborted_s3_upload_ids == []
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 1
+    assert "the FileUpload collection is empty" in errors[0].getMessage()
+
+
+async def test_cleanup_without_orphans_logs_no_error_when_db_empty(
+    rig: JointRig, orphan_spy: OrphanCleanupSpy, caplog: pytest.LogCaptureFixture
+):
+    """Test that a fresh deployment with an empty DB and an empty bucket does not
+    trip the empty-database safeguard.
+    """
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads()
+
+    assert [r for r in caplog.records if r.levelno == logging.ERROR] == []
+    assert orphan_spy.deleted_object_ids == [set()]
+
+
+@pytest.mark.parametrize("ignore_safeguards", [False, True])
+async def test_cleanup_safeguard_limits_orphaned_objects(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    ignore_safeguards: bool,
+):
+    """Test that more orphaned objects than `max_orphaned_objects` blocks both their
+    deletion and the abortion of orphaned multipart uploads, unless the safeguards
+    are ignored.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    known_object_id = str((await rig.file_upload_dao.get_by_id(file_id)).object_id)
+    orphaned_s3_upload_id = await init_orphaned_s3_upload(rig)
+    orphaned_object_ids = {str(uuid4()) for _ in range(3)}
+    monkeypatch.setattr(
+        rig.controller,
+        "_config",
+        rig.config.model_copy(update={"max_orphaned_objects": 2}),
+    )
+    monkeypatch.setattr(
+        rig.s3_client,
+        "list_object_ids",
+        list_objects_returning({known_object_id, *orphaned_object_ids}),
+    )
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads(ignore_safeguards=ignore_safeguards)
+
+    expected_level = logging.WARNING if ignore_safeguards else logging.ERROR
+    records = [r for r in caplog.records if r.levelno == expected_level]
+    assert len(records) == 1
+    assert "3 orphaned objects exceed the limit of 2" in records[0].getMessage()
+    if ignore_safeguards:
+        assert orphan_spy.deleted_object_ids == [orphaned_object_ids]
+        assert orphan_spy.aborted_s3_upload_ids == [orphaned_s3_upload_id]
+    else:
+        assert orphan_spy.deleted_object_ids == []
+        assert orphan_spy.aborted_s3_upload_ids == []
+
+
+@pytest.mark.parametrize("ignore_safeguards", [False, True])
+async def test_cleanup_safeguard_blocks_s3_upload_abort_when_listing_fails(
+    rig: JointRig,
+    orphan_spy: OrphanCleanupSpy,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    ignore_safeguards: bool,
+):
+    """Test that orphaned multipart uploads are not aborted if the objects in the
+    bucket can't be listed, unless the safeguards are ignored.
+
+    Without the object list, the orphaned object count can't be checked against
+    `max_orphaned_objects`.
+    """
+    box_id = await rig.create_default_box()
+    await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    orphaned_s3_upload_id = await init_orphaned_s3_upload(rig)
+
+    async def failing_listing(*, storage_alias: str) -> set[str]:
+        raise SimulatedConnectionError("Connection reset while listing objects")
+
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", failing_listing)
+
+    caplog.clear()
+    with caplog.at_level(logging.ERROR, logger="ucs.core.controller"):
+        await rig.controller.cleanup_stale_uploads(ignore_safeguards=ignore_safeguards)
+
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    if ignore_safeguards:
+        assert orphan_spy.aborted_s3_upload_ids == [orphaned_s3_upload_id]
+        assert errors == []
+    else:
+        assert orphan_spy.aborted_s3_upload_ids == []
+        assert len(errors) == 1
+        assert "the objects in the bucket could not be listed" in errors[0].getMessage()
+
+
+async def test_cleanup_lists_s3_before_reading_db(
+    rig: JointRig, orphan_spy: OrphanCleanupSpy, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that an upload whose FileUpload is created while the bucket is being
+    listed is not treated as orphaned.
+
+    The bucket must be listed before the database is read, so that every listed
+    object already has its FileUpload when the known IDs are collected.
+    """
+    box_id = await rig.create_default_box()
+
+    async def list_while_upload_starts(*, storage_alias: str) -> set[str]:
+        file_id, _ = await rig.controller.initiate_file_upload(
+            box_id=box_id,
+            alias="test-file",
+            decrypted_size=DECRYPTED_SIZE,
+            encrypted_size=ENCRYPTED_SIZE,
+            part_size=PART_SIZE,
+        )
+        file_upload = await rig.file_upload_dao.get_by_id(file_id)
+        return {str(file_upload.object_id)}
+
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", list_while_upload_starts)
+
+    await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.deleted_object_ids == [set()]
+
+
+async def test_cleanup_keeps_s3_upload_that_completes_during_listing(
+    rig: JointRig, orphan_spy: OrphanCleanupSpy, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a multipart upload whose FileUpload moves to 'inbox' after the
+    multipart uploads were listed is not aborted as orphaned.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test-file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+
+    async def list_while_upload_completes(*, storage_alias: str) -> set[str]:
+        file_upload = await rig.file_upload_dao.get_by_id(file_id)
+        file_upload.state = "inbox"
+        await rig.file_upload_dao.update(file_upload)
+        return {str(file_upload.object_id)}
+
+    monkeypatch.setattr(rig.s3_client, "list_object_ids", list_while_upload_completes)
+
+    await rig.controller.cleanup_stale_uploads()
+
+    assert orphan_spy.aborted_s3_upload_ids == []
 
 
 async def test_refresh_activity_warns_and_recreates_when_missing(rig: JointRig):
@@ -2608,7 +2941,7 @@ async def test_initiate_file_upload_marks_failed_on_insert_kafka_error(
     assert stuck_upload.failure_reason == "Internal error during upload initiation"
 
     # Just double check that no UploadActivity was inserted
-    assert not [x async for x in rig.upload_activity_dao.find_all(mapping={})]
+    assert not [x async for x in rig.upload_activity_dao.find_all(filter_={})]
 
 
 @pytest.mark.parametrize("box_state", ["open", "locked"])
@@ -3220,3 +3553,156 @@ async def test_requeue_box_when_archived(rig: JointRig):
 
     with pytest.raises(UploadControllerPort.BoxStateError):
         await rig.controller.requeue_all_box_uploads(box_id=box_id)
+
+
+def _requeue_between_check_and_write(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch, file_id: UUID4, s3_operation: str
+) -> None:
+    """Test that the `precondition` check protects against a race condition
+    from a competing requeue request.
+    """
+    original = getattr(rig.s3_client, s3_operation)
+
+    async def requeue_first(**kwargs):
+        stored = await rig.file_upload_dao.get_by_id(file_id)
+        stored.state = "inbox"
+        stored.state_updated = now_utc_ms_prec()
+        stored.failure_reason = ""
+        await rig.file_upload_dao.update(stored)
+        return await original(**kwargs)
+
+    monkeypatch.setattr(rig.s3_client, s3_operation, requeue_first)
+
+
+async def test_requeue_file_loses_race_to_another_requeue(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a requeue whose file left 'failed_interrogation' after the state check
+    raises a FileUploadStateError instead of overwriting the competing write.
+    """
+    box_id, file_id, _ = await _upload_and_fail(rig, "test_file", "Checksum mismatch")
+    await sleep(MIN_SLEEP)
+    _requeue_between_check_and_write(
+        rig, monkeypatch, file_id, s3_operation="get_object_metadata"
+    )
+
+    with pytest.raises(UploadControllerPort.FileUploadStateError):
+        await rig.controller.requeue_single_file_upload(box_id=box_id, file_id=file_id)
+
+    # The competing requeue's write is the one that stands
+    after = await rig.file_upload_dao.get_by_id(file_id)
+    assert after.state == "inbox"
+    assert (
+        after.state_updated == rig.file_upload_dao.resources[file_id]["state_updated"]
+    )
+
+
+async def test_requeue_box_skips_file_that_loses_the_race(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a box-wide requeue reports a file that left 'failed_interrogation'
+    mid-run as skipped rather than failing the whole run.
+    """
+    box_id, file_id, _ = await _upload_and_fail(rig, "test_file", "Checksum mismatch")
+    await sleep(MIN_SLEEP)
+    _requeue_between_check_and_write(
+        rig, monkeypatch, file_id, s3_operation="get_object_metadata"
+    )
+
+    result = await rig.controller.requeue_all_box_uploads(box_id=box_id)
+
+    assert result.requeued == []
+    assert result.skipped == [file_id]
+
+
+async def test_interrogation_success_loses_race_to_requeue(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that an interrogation report whose file was requeued after the staleness
+    check is dropped instead of overwriting the requeue.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    in_inbox = await rig.file_upload_dao.get_by_id(file_id)
+    await sleep(MIN_SLEEP)
+    _requeue_between_check_and_write(
+        rig, monkeypatch, file_id, s3_operation="delete_inbox_file"
+    )
+
+    await rig.controller.process_interrogation_success(
+        report=InterrogationSuccess(
+            file_id=file_id,
+            secret_id="test-secret-789",
+            storage_alias="test",
+            bucket_id="interrogation",
+            object_id=uuid4(),
+            interrogated_at=now_utc_ms_prec(),
+            encrypted_parts_md5=["aaa111"],
+            encrypted_parts_sha256=["bbb222"],
+            encrypted_size=in_inbox.encrypted_size,
+        )
+    )
+
+    # The file stays where the competing write left it, with none of the report applied
+    after = await rig.file_upload_dao.get_by_id(file_id)
+    assert after.state == "inbox"
+    assert after.secret_id != "test-secret-789"
+    assert after.state_updated > in_inbox.state_updated
+
+
+async def test_interrogation_failure_loses_race_to_requeue(
+    rig: JointRig, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a failure report whose file was requeued after the staleness check is
+    dropped instead of overwriting the requeue.
+    """
+    box_id = await rig.create_default_box()
+    file_id, _ = await rig.controller.initiate_file_upload(
+        box_id=box_id,
+        alias="test_file",
+        decrypted_size=DECRYPTED_SIZE,
+        encrypted_size=ENCRYPTED_SIZE,
+        part_size=PART_SIZE,
+    )
+    await _complete_file_upload(file_upload=rig.file_upload_dao.latest, rig=rig)
+    in_inbox = await rig.file_upload_dao.get_by_id(file_id)
+    await sleep(MIN_SLEEP)
+
+    # This path makes no S3 call between reading the file and writing it, so the
+    # competing write is wrapped around the guarded update itself.
+    original_update = rig.file_upload_dao.update
+    already_raced = False
+
+    async def requeue_first(dto, **kwargs):
+        nonlocal already_raced
+        if not already_raced:
+            already_raced = True
+            stored = await rig.file_upload_dao.get_by_id(file_id)
+            stored.state = "inbox"
+            stored.state_updated = now_utc_ms_prec()
+            await original_update(stored)
+        await original_update(dto, **kwargs)
+
+    monkeypatch.setattr(rig.file_upload_dao, "update", requeue_first)
+
+    await rig.controller.process_interrogation_failure(
+        report=InterrogationFailure(
+            file_id=file_id,
+            storage_alias="test",
+            interrogated_at=now_utc_ms_prec(),
+            reason="Checksum mismatch",
+        )
+    )
+
+    # The file stays where the competing write left it, with no failure recorded
+    after = await rig.file_upload_dao.get_by_id(file_id)
+    assert after.state == "inbox"
+    assert not after.failure_reason
+    assert after.state_updated > in_inbox.state_updated

@@ -1,0 +1,12 @@
+commandStyle: exec
+commandPrefix: ""
+executable: myexe
+executableArgs:
+  - run-rest
+envVarsConfigMap: my-env-configmap
+envVarsSecret: my-env-secret
+migrationInitContainer:
+  enabled: true
+  executable: myexe
+  executableArgs:
+    - migrate-db

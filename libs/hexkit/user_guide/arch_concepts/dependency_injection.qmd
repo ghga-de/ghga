@@ -1,0 +1,326 @@
+---
+title: "Dependency Injection"
+---
+
+<!--
+ Copyright 2021 - 2026 Universität Tübingen, DKFZ, EMBL, and Universität zu Köln
+ for the German Human Genome-Phenome Archive (GHGA)
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+In the [Hexagonal Architecture](hexagonal_arch.qmd), the application core depends only on ports, never on the adapters that implement them.
+Some code still has to create the adapters and hand them to the core.
+Dependency injection is the name for this: an object receives the objects it works with from outside instead of creating or looking them up itself.
+This chapter recommends a way to set up dependency injection in a service built on hexkit, and explains why we recommend plain Python over a dependency injection framework.
+
+## Why Plain Python
+
+hexkit works with any dependency injection framework, but does not need one, and we recommend wiring a service without one.
+The service then wires its dependencies by hand, in ordinary functions that call constructors and pass the results on.
+This has the following advantages:
+
+- **Transparent:** the wiring is code you can read top to bottom, with no registry, decorators or name matching.
+- **Debuggable:** a debugger steps through it, and a wrong argument fails at the line that passes it.
+- **Type-checked:** mypy checks every constructor call, so most wiring mistakes show before the service runs.
+- **No global state:** everything is created inside a function call, so tests can build as many independent instances as they like.
+- **Lazy:** each entrypoint builds only what it uses, so starting the REST API does not also start an event consumer.
+
+The price is some verbosity.
+In a microservice with a handful of components, that is a few dozen lines, written once and read often.
+
+hexkit's providers are built for this style.
+Providers that hold a resource, such as a database client or a Kafka producer, are created with a `construct` class method that returns an async context manager.
+Entering it opens the connection, and leaving it closes the connection again, so setup and teardown follow the structure of the code.
+Providers without such a resource, such as `S3ObjectStorage`, are created with a plain constructor call.
+
+## Constructor Injection in the Core
+
+The core receives every dependency through its constructor, typed as a port:
+
+```python
+class LoanManager(LoanManagerPort):
+    """Handles the lending and returning of books."""
+
+    def __init__(
+        self,
+        *,
+        config: LoanConfig,
+        book_dao: BookDaoPort,
+        event_publisher: EventPublisherPort,
+    ):
+        self._config = config
+        self._book_dao = book_dao
+        self._event_publisher = event_publisher
+```
+
+Follow these rules in the core:
+
+- Type each dependency as its port, a `Protocol` or abstract base class, so that any implementation can be passed in.
+- Make the parameters keyword-only, since the wiring code calls them by name and a reordering cannot then go unnoticed.
+- Pass the config in like any other dependency instead of instantiating it, so tests can vary it per instance.
+- Keep imports of hexkit providers, FastAPI and other infrastructure out of the core; only the wiring code needs them.
+
+The same applies to the translators of the adapters: an event subscriber translator receives the inbound port of the core, and an event publisher translator receives the hexkit provider it publishes through.
+
+## The Composition Root
+
+All wiring of a service lives in one module, conventionally named `inject.py`.
+This module, the composition root, is the only place that knows which adapter implements which port.
+It typically holds three kinds of functions, each an async context manager that takes the config and yields the finished object:
+
+1. `prepare_core` builds the outbound adapters and the core, and yields the inbound port of the core.
+2. One `prepare_<adapter>` per inbound adapter, such as `prepare_rest_app` or `prepare_event_subscriber`, builds the adapter on top of `prepare_core`.
+3. Optionally, helpers for a provider that more than one of the above needs with the same settings, such as a persistent publisher with its topic configuration.
+
+### Preparing the Core
+
+```python
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from hexkit.providers.akafka import KafkaEventPublisher
+from hexkit.providers.mongodb import MongoDbDaoFactory
+
+from my_service.adapters.outbound.dao import get_book_dao
+from my_service.adapters.outbound.event_pub import EventPubTranslator
+from my_service.config import Config
+from my_service.core.loans import LoanManager
+from my_service.ports.inbound.loans import LoanManagerPort
+
+
+@asynccontextmanager
+async def prepare_core(*, config: Config) -> AsyncGenerator[LoanManagerPort]:
+    """Construct the core with all its outbound dependencies."""
+    async with (
+        MongoDbDaoFactory.construct(config=config) as dao_factory,
+        KafkaEventPublisher.construct(config=config) as kafka_publisher,
+    ):
+        book_dao = await get_book_dao(dao_factory=dao_factory)
+        event_publisher = EventPubTranslator(config=config, provider=kafka_publisher)
+
+        yield LoanManager(
+            config=config, book_dao=book_dao, event_publisher=event_publisher
+        )
+```
+
+The return type is the port, not the implementation, so callers of `prepare_core` depend on the port as well.
+The resources stay open as long as the caller stays inside the `async with` block, and close in reverse order when it leaves, also when an exception ends the block.
+
+Put the details of building one adapter, such as the collection name and indexes of a DAO, into a small function next to the adapter, like `get_book_dao` above.
+This keeps `prepare_core` a readable list of what the core is made of.
+
+### Preparing the REST API
+
+FastAPI resolves the dependencies of a route with `Depends`.
+The routes are defined at import time, before any port implementation exists, so they depend on a placeholder that the composition root replaces once the core is built.
+Define the placeholders in their own module of the REST adapter:
+
+```python
+# my_service/adapters/inbound/fastapi_/dummies.py
+from typing import Annotated
+
+from fastapi import Depends
+
+from my_service.ports.inbound.loans import LoanManagerPort
+
+
+def loan_manager_port() -> LoanManagerPort:
+    """Placeholder that the composition root replaces with the real loan manager."""
+    raise RuntimeError("The loan manager dependency was not replaced.")
+
+
+LoanManagerDummy = Annotated[LoanManagerPort, Depends(loan_manager_port)]
+```
+
+```python
+# my_service/adapters/inbound/fastapi_/routes.py
+@router.post("/loans")
+async def lend_book(loan: LoanRequest, loan_manager: LoanManagerDummy):
+    await loan_manager.lend(book_id=loan.book_id, user_id=loan.user_id)
+```
+
+A placeholder that raises turns a forgotten replacement into a clear error on the first request instead of a confusing one.
+
+`prepare_rest_app` then maps each placeholder to the real object through FastAPI's `dependency_overrides`:
+
+```python
+@asynccontextmanager
+async def prepare_rest_app(*, config: Config) -> AsyncGenerator[FastAPI]:
+    """Construct the REST API app with all its dependencies."""
+    app = get_configured_app(config=config)
+
+    async with prepare_core(config=config) as loan_manager:
+        app.dependency_overrides[dummies.loan_manager_port] = lambda: loan_manager
+        yield app
+```
+
+Each lambda returns the same instance on every request, so the core and its connections are shared by all requests and live as long as the app.
+This is the intended lifetime for hexkit providers, which manage connection pools of their own.
+
+### Preparing the Event Subscriber
+
+An event consumer is wired the same way, with the translator in place of the routes:
+
+```python
+@asynccontextmanager
+async def prepare_event_subscriber(
+    *, config: Config
+) -> AsyncGenerator[KafkaEventSubscriber]:
+    """Construct the event subscriber with all its dependencies."""
+    async with prepare_core(config=config) as loan_manager:
+        translator = EventSubTranslator(config=config, loan_manager=loan_manager)
+
+        async with (
+            KafkaEventPublisher.construct(config=config) as dlq_publisher,
+            KafkaEventSubscriber.construct(
+                config=config, translator=translator, dlq_publisher=dlq_publisher
+            ) as event_subscriber,
+        ):
+            yield event_subscriber
+```
+
+If the service consumes several groups of topics, combine their translators with a `ComboTranslator` and pass that to a single subscriber.
+
+### Entrypoints
+
+The entrypoints of the service, usually in `main.py`, create the config, set up logging and use exactly one prepare function each:
+
+```python
+async def run_rest_app() -> None:
+    """Run the HTTP REST API."""
+    config = Config()
+    configure_logging(config=config)
+
+    async with prepare_rest_app(config=config) as app:
+        await run_server(app=app, config=config)
+
+
+async def consume_events(run_forever: bool = True) -> None:
+    """Run an event consumer listening to the configured topics."""
+    config = Config()
+    configure_logging(config=config)
+
+    async with prepare_event_subscriber(config=config) as event_subscriber:
+        await event_subscriber.run(forever=run_forever)
+```
+
+A periodic job or a command line task can use `prepare_core` directly and call the core in a loop.
+
+## Sharing and Lifetimes
+
+Most decisions in the composition root are about how many instances of a resource exist and how long they live.
+
+- **Share a provider within one prepare function.**
+  If two adapters need MongoDB, construct one `MongoDbDaoFactory` and get both DAOs from it, so the service holds one connection pool instead of two.
+- **Let a helper accept an existing provider.**
+  A helper that is used both on its own and inside `prepare_core` can take the provider as an optional argument and construct one only if none is given.
+  `contextlib.nullcontext` wraps the given instance, so both cases fit the same `async with`:
+
+  ```python
+  @asynccontextmanager
+  async def get_persistent_publisher(
+      *, config: Config, dao_factory: MongoDbDaoFactory | None = None
+  ) -> AsyncGenerator[PersistentKafkaPublisher]:
+      """Construct a persistent publisher, reusing the DAO factory if given."""
+      async with (
+          nullcontext(dao_factory)
+          if dao_factory is not None
+          else MongoDbDaoFactory.construct(config=config) as factory,
+          PersistentKafkaPublisher.construct(
+              config=config,
+              dao_factory=factory,
+              collection_name="myServicePersistedEvents",
+          ) as publisher,
+      ):
+          yield publisher
+  ```
+
+- **Do not share across entrypoints.**
+  The REST API and the event consumer usually run as separate processes, and each builds its own core.
+  Keep any state that both need in the database, not in the core.
+- **Build objects without teardown directly.**
+  An adapter that holds no connection, such as a translator or a client that opens one per call, needs no context manager and is created with a plain constructor call inside the prepare function.
+- **Keep the prepare functions async context managers anyway.**
+  Even if a service has nothing to tear down today, entrypoints and tests then use every prepare function the same way, and adding a resource later changes no caller.
+  If nothing in the core is asynchronous, `prepare_core` may be a synchronous context manager, used with `with` inside the async `prepare_rest_app`.
+
+## Overriding Dependencies in Tests
+
+Without a container, there is no central place to swap a dependency.
+Instead, each inbound prepare function takes an optional override for the port it builds on, so a test can run the real adapter against a mock core:
+
+```python
+def prepare_core_with_override(
+    *, config: Config, loan_manager_override: LoanManagerPort | None = None
+):
+    """Return the given loan manager, or a context manager that builds the real one."""
+    return (
+        nullcontext(loan_manager_override)
+        if loan_manager_override is not None
+        else prepare_core(config=config)
+    )
+
+
+@asynccontextmanager
+async def prepare_rest_app(
+    *, config: Config, loan_manager_override: LoanManagerPort | None = None
+) -> AsyncGenerator[FastAPI]:
+    """Construct the REST API app, with the real core unless an override is given."""
+    app = get_configured_app(config=config)
+
+    async with prepare_core_with_override(
+        config=config, loan_manager_override=loan_manager_override
+    ) as loan_manager:
+        app.dependency_overrides[dummies.loan_manager_port] = lambda: loan_manager
+        yield app
+```
+
+A REST test then needs neither a database nor Kafka:
+
+```python
+async def test_lend_unknown_book():
+    """Test that lending an unknown book returns 404."""
+    loan_manager = AsyncMock()
+    loan_manager.lend.side_effect = LoanManagerPort.BookNotFoundError(book_id="b1")
+
+    async with (
+        prepare_rest_app(config=config, loan_manager_override=loan_manager) as app,
+        httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=app), base_url="http://test"
+        ) as client,
+    ):
+        response = await client.post("/loans", json={"book_id": "b1", "user_id": "u1"})
+
+    assert response.status_code == 404
+```
+
+Follow these rules for overrides:
+
+- Override at the inbound port of the core, the boundary the adapter under test talks to.
+  Overriding single outbound adapters through every layer makes the signatures long and the tests brittle.
+- Test the core itself by calling its constructor directly with in-memory or mock adapters, such as hexkit's [testing providers](../providers/testing.qmd); it needs no composition root.
+- Test outbound adapters against real infrastructure in test containers, through hexkit's [fixtures](../developer_help/testing.qmd) and the regular prepare functions.
+- Compare an override with `is not None`, not by its truth value, since a valid implementation may define `__bool__` or `__len__` and be falsy.
+- If a service has several independent inbound ports, give each its own prepare function and override parameter.
+
+If a test needs the outbound dependencies of a real core, for example to inspect the database after a call, let a separate prepare function yield a dataclass that holds the core together with them.
+Keep `prepare_core` itself yielding only the port, so production code cannot reach past it.
+
+## Summary
+
+- Pass every dependency to the core through its constructor, typed as a port.
+- Wire the service in one `inject.py` with plain functions; it is the only module that imports concrete providers.
+- Write one async context manager for the core and one per inbound adapter, and let each entrypoint use exactly one.
+- Use `async with` for every provider that holds a resource, and share one instance within a process where adapters need the same backend.
+- Give inbound prepare functions an optional override of the core port for tests.

@@ -38,7 +38,6 @@ import pathlib
 import re
 import subprocess
 import sys
-
 import tomllib
 
 from pypi_members import IndexedMember, pypi_members, release_candidates

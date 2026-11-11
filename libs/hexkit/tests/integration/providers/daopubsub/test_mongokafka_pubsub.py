@@ -16,8 +16,10 @@
 
 """Test the DAO pub/sub functionality based on the mongokafka/kafka providers."""
 
+import asyncio
 import uuid
-from collections.abc import Generator
+from collections.abc import AsyncIterator, Callable, Generator, Mapping
+from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -33,13 +35,18 @@ from hexkit.correlation import (
     new_correlation_id,
     set_new_correlation_id,
 )
+from hexkit.custom_types import JsonObject
 from hexkit.protocols.dao import (
+    InvalidMappingError,
+    PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
     UUID4Field,
 )
+from hexkit.protocols.daopub import DaoPublisher
 from hexkit.protocols.daosub import DaoSubscriberProtocol, DtoValidationError
+from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.protocols.eventsub import EventSubscriberProtocol
 from hexkit.providers.akafka import (
     ComboTranslator,
@@ -53,7 +60,7 @@ from hexkit.providers.akafka.testutils import (
     kafka_container_fixture,  # noqa: F401
     kafka_fixture,  # noqa: F401
 )
-from hexkit.providers.mongodb.provider import dto_to_document
+from hexkit.providers.mongodb.provider import ConfiguredMongoClient, dto_to_document
 from hexkit.providers.mongodb.provider.dao import MongoDbIndex
 from hexkit.providers.mongodb.testutils import (
     mongodb_container_fixture,  # noqa: F401
@@ -64,6 +71,10 @@ from hexkit.providers.mongokafka.provider import (
     CHANGE_EVENT_TYPE,
     DELETE_EVENT_TYPE,
     document_to_dto,
+)
+from hexkit.providers.mongokafka.provider.daopub import (
+    MAX_REPUBLISH_ROUNDS,
+    mark_published,
 )
 from hexkit.providers.mongokafka.testutils import (
     MongoKafkaFixture,
@@ -266,21 +277,21 @@ async def test_dao_outbox_happy(dto_model: type, mongo_kafka: MongoKafkaFixture)
 
         # perform a search for multiple resources:
         obtained_hits = {
-            hit async for hit in dao.find_all(mapping={"field_b": 42, "field_c": True})
+            hit async for hit in dao.find_all(filter_={"field_b": 42, "field_c": True})
         }
         assert obtained_hits == {example, example3}
 
         # perform a search using values with non-standard data types
         # (note that in this case we need to serialize these values manually):
-        mapping = {id_field: example_id, "field_d": example.field_d}
-        obtained_hit = await dao.find_one(mapping=mapping)
+        filter_ = {id_field: example_id, "field_d": example.field_d}
+        obtained_hit = await dao.find_one(filter_=filter_)
         assert obtained_hit == example
-        obtained_hits = {hit async for hit in dao.find_all(mapping=mapping)}
+        obtained_hits = {hit async for hit in dao.find_all(filter_=filter_)}
         assert obtained_hits == {example}
 
         # make sure that 4 resources with different IDs were inserted:
         obtained_ids = {
-            getattr(hit, id_field) async for hit in dao.find_all(mapping={})
+            getattr(hit, id_field) async for hit in dao.find_all(filter_={})
         }
         assert len(obtained_ids) == 4
         assert example_id in obtained_ids
@@ -293,7 +304,7 @@ async def test_dao_outbox_happy(dto_model: type, mongo_kafka: MongoKafkaFixture)
                 assert isinstance(obtained_id, uuid.UUID)
 
         # find a single resource:
-        obtained_hit = await dao.find_one(mapping={"field_a": "test"})
+        obtained_hit = await dao.find_one(filter_={"field_a": "test"})
 
         assert obtained_hit == example
 
@@ -315,7 +326,7 @@ async def test_dao_outbox_happy(dto_model: type, mongo_kafka: MongoKafkaFixture)
             await dao.get_by_id(example_id)
 
         # make sure that only 3 resources are left:
-        obtained_hits = {hit async for hit in dao.find_all(mapping={})}
+        obtained_hits = {hit async for hit in dao.find_all(filter_={})}
         assert len(obtained_hits) == 3
 
 
@@ -396,16 +407,16 @@ async def test_complex_models(mongo_kafka: MongoKafkaFixture):
                 },
             ]
 
-            for mapping in mappings:
-                obtained_hit = await dao.find_one(mapping=mapping)
+            for filter_ in mappings:
+                obtained_hit = await dao.find_one(filter_=filter_)
                 assert obtained_hit == resource
-                obtained_hits = await dao.find_all(mapping=mapping).to_list()
+                obtained_hits = await dao.find_all(filter_=filter_).to_list()
                 assert obtained_hits == [resource]
 
         # stage 4: delete
         for i in range(3):
             await dao.delete(resources[i].id)
-            obtained_hits = await dao.find_all(mapping={}).to_list()
+            obtained_hits = await dao.find_all(filter_={}).to_list()
             assert len(obtained_hits) == 2 - i
 
     # check that the expected events have been created
@@ -507,7 +518,7 @@ async def test_suppress_publishing(mongo_kafka: MongoKafkaFixture):
                 await dao.insert(example)
 
         # check that all resources were saved:
-        records = await dao.find_all(mapping={}).to_list()
+        records = await dao.find_all(filter_={}).to_list()
         assert len(records) == 3
         assert any(record.field_c for record in records)
 
@@ -735,6 +746,7 @@ async def test_mongokafka_dao_correlation_id_upsert(mongo_kafka: MongoKafkaFixtu
         inserted = collection.find_one({"__metadata__.correlation_id": correlation_id})
         assert inserted
         inserted_event_id = inserted["__metadata__"].pop("last_event_id", None)
+        assert isinstance(inserted["__metadata__"].pop("write_id"), uuid.UUID)
         assert isinstance(inserted_event_id, uuid.UUID)
 
         # Check the other metadata (now that we've removed the unpredictable event ID)
@@ -763,6 +775,7 @@ async def test_mongokafka_dao_correlation_id_upsert(mongo_kafka: MongoKafkaFixtu
 
             # Make sure the event ID is new since mongokafka shouldn't reuse event IDs
             updated_event_id = updated["__metadata__"].pop("last_event_id", None)
+            assert isinstance(updated["__metadata__"].pop("write_id"), uuid.UUID)
             assert isinstance(updated_event_id, uuid.UUID)
             assert updated_event_id != inserted_event_id
 
@@ -816,6 +829,7 @@ async def test_mongokafka_dao_correlation_id_delete(mongo_kafka: MongoKafkaFixtu
             "field_e": str(example.field_e),
         }
         inserted_event_id = metadata.pop("last_event_id", None)
+        assert isinstance(metadata.pop("write_id"), uuid.UUID)
         assert metadata == {
             "correlation_id": correlation_id,
             "deleted": False,
@@ -834,6 +848,7 @@ async def test_mongokafka_dao_correlation_id_delete(mongo_kafka: MongoKafkaFixtu
             metadata = deleted.pop("__metadata__")
             assert deleted == {"_id": example.id}
             deleted_event_id = metadata.pop("last_event_id", None)
+            assert isinstance(metadata.pop("write_id"), uuid.UUID)
             assert isinstance(deleted_event_id, uuid.UUID)
             assert deleted_event_id != inserted_event_id
             assert metadata == {
@@ -890,6 +905,7 @@ async def test_documents_without_metadata(mongo_kafka: MongoKafkaFixture):
         document = mongo_client[db_name]["example"].find_one({"_id": doc1["_id"]})
         assert document is not None and "__metadata__" in document
         event_id = document["__metadata__"].pop("last_event_id", None)
+        assert isinstance(document["__metadata__"].pop("write_id"), uuid.UUID)
         assert isinstance(event_id, uuid.UUID)
 
         # Check the other metadata (now that we've removed the unpredictable event ID)
@@ -907,6 +923,7 @@ async def test_documents_without_metadata(mongo_kafka: MongoKafkaFixture):
         deleted_doc = mongo_client[db_name]["example"].find_one({"_id": doc2["_id"]})
         assert deleted_doc is not None and "__metadata__" in deleted_doc
         deletion_event_id = deleted_doc["__metadata__"].pop("last_event_id", None)
+        assert isinstance(deleted_doc["__metadata__"].pop("write_id"), uuid.UUID)
         assert isinstance(event_id, uuid.UUID)
         assert deletion_event_id != event_id
         assert deleted_doc["__metadata__"] == {
@@ -952,12 +969,12 @@ async def test_find_returns_documents_without_metadata(mongo_kafka: MongoKafkaFi
         )
 
         # find_all must return the metadata-less document but not the deleted one.
-        result = dao.find_all(mapping={})
+        result = dao.find_all(filter_={})
         assert [hit async for hit in result] == [live_example]
         assert await result.total_count() == 1
 
         # find_one (which delegates to find_all) must locate it as well.
-        assert await dao.find_one(mapping={"id": live_id}) == live_example
+        assert await dao.find_one(filter_={"id": live_id}) == live_example
 
 
 async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
@@ -1008,6 +1025,528 @@ async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
             await dao.upsert(dto5)
 
 
+async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
+    """Test that `update` with `precondition` only replaces and publishes a
+    resource that exists, is not deleted, and matches the criteria.
+    """
+    kafka = mongo_kafka.kafka
+    async with MongoKafkaDaoPublisherFactory.construct(
+        config=mongo_kafka.config
+    ) as factory:
+        dao = await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(),
+            event_topic=EXAMPLE_TOPIC,
+        )
+
+        example = ExampleDto(field_b=1)
+        example_update = example.model_copy(update={"field_b": 2})
+
+        # Non-existing resource should raise ResourceNotFoundError
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.update(example_update, precondition={"field_b": 1})
+
+        await dao.insert(example)
+
+        # Criteria mismatch should raise NotHitsFoundError
+        # Bogus fields for precondition should raise InvalidMappingError
+        # and in either of the above cases, no events should be published
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(PreconditionFailedError):
+                await dao.update(example_update, precondition={"field_b": 3})
+            with pytest.raises(InvalidMappingError):
+                await dao.update(example_update, precondition={"not_a_field": 1})
+        assert await dao.get_by_id(example.id) == example
+
+        # Criteria match, including the ID field and an MQL operator
+        async with kafka.expect_events(
+            events=[
+                ExpectedEvent(
+                    payload=example_update.model_dump(),
+                    type_=CHANGE_EVENT_TYPE,
+                    key=str(example.id),
+                )
+            ],
+            in_topic=EXAMPLE_TOPIC,
+        ):
+            await dao.update(
+                example_update,
+                precondition={"id": example.id, "field_b": {"$lt": 2}},
+            )
+
+        # Verify that the document was updated
+        assert await dao.get_by_id(example.id) == example_update
+
+        # Deleted resource should behave the same as the non-existing resource case above
+        await dao.delete(example.id)
+        async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
+            with pytest.raises(ResourceNotFoundError):
+                await dao.update(example, precondition={"field_b": 2})
+
+
+class HeldEventPublisher(EventPublisherProtocol):
+    """Records published events and holds back the first one matching `hold` until
+    `release` is set, so a test can let a second writer overtake the first.
+    """
+
+    def __init__(self, hold: Callable[[JsonObject, str], bool]):
+        self._hold = hold
+        self.held = asyncio.Event()
+        self.release = asyncio.Event()
+        self.published: list[tuple[str, JsonObject]] = []
+
+    async def _publish_validated(
+        self,
+        *,
+        payload: JsonObject,
+        type_: str,
+        key: str,
+        topic: str,
+        event_id: uuid.UUID,
+        headers: Mapping[str, str],
+    ) -> None:
+        if not self.held.is_set() and self._hold(payload, type_):
+            self.held.set()
+            await self.release.wait()
+        self.published.append((type_, payload))
+
+
+@asynccontextmanager
+async def dao_with_publisher(
+    mongo_kafka: MongoKafkaFixture,
+    event_publisher: EventPublisherProtocol,
+    *,
+    autopublish: bool = True,
+) -> AsyncIterator[DaoPublisher[ExampleDto]]:
+    """Provide an outbox DAO for `ExampleDto` that publishes via `event_publisher`."""
+    async with ConfiguredMongoClient(config=mongo_kafka.config) as client:
+        factory = MongoKafkaDaoPublisherFactory(
+            config=mongo_kafka.config, event_publisher=event_publisher, db_client=client
+        )
+        yield await factory.get_dao(
+            name="example",
+            dto_model=ExampleDto,
+            id_field="id",
+            dto_to_event=lambda dto: dto.model_dump(mode="json"),
+            event_topic=EXAMPLE_TOPIC,
+            autopublish=autopublish,
+        )
+
+
+async def test_update_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
+    """Test that a guarded update is kept when an earlier update finishes publishing
+    after it.
+
+    Marking the earlier update as published must not write its stale state back, and
+    the last event must show the newer state again.
+    """
+    # field_b serves as the version that the updates use as precondition
+    publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 2)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto(field_a="locked", field_b=1)
+        await dao.insert(example)
+
+        first = example.model_copy(update={"field_b": 2})
+        first_update = asyncio.create_task(
+            dao.update(first, precondition={"field_b": 1})
+        )
+        await publisher.held.wait()
+
+        second = first.model_copy(update={"field_a": "open", "field_b": 3})
+        await dao.update(second, precondition={"field_b": 2})
+
+        publisher.release.set()
+        await first_update
+
+        assert await dao.get_by_id(example.id) == second
+        assert [payload["field_b"] for _, payload in publisher.published] == [
+            1,
+            3,
+            2,
+            3,
+        ]
+        collection = get_mongo_collection(mongo_kafka, "example")
+        document = collection.find_one({"_id": example.id})
+        assert document and document["__metadata__"]["published"] is True
+
+
+async def test_publish_pending_overtaken_by_update(mongo_kafka: MongoKafkaFixture):
+    """Test that `publish_pending` does not revert an update made while it was
+    publishing the previous state, and publishes that update after it.
+    """
+    publisher = HeldEventPublisher(hold=lambda payload, _: payload["field_b"] == 1)
+    async with dao_with_publisher(mongo_kafka, publisher, autopublish=False) as dao:
+        example = ExampleDto(field_b=1)
+        await dao.insert(example)
+
+        publishing = asyncio.create_task(dao.publish_pending())
+        await publisher.held.wait()
+
+        updated = example.model_copy(update={"field_b": 2})
+        await dao.update(updated, precondition={"field_b": 1})
+
+        publisher.release.set()
+        await publishing
+
+        assert await dao.get_by_id(example.id) == updated
+        assert [payload["field_b"] for _, payload in publisher.published] == [1, 2]
+        collection = get_mongo_collection(mongo_kafka, "example")
+        document = collection.find_one({"_id": example.id})
+        assert document and document["__metadata__"]["published"] is True
+
+
+async def test_delete_overtaking_a_slow_publish(mongo_kafka: MongoKafkaFixture):
+    """Test that a resource stays deleted when its insertion finishes publishing
+    after the deletion.
+    """
+    publisher = HeldEventPublisher(hold=lambda _, type_: type_ == CHANGE_EVENT_TYPE)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        insertion = asyncio.create_task(dao.insert(example))
+        await publisher.held.wait()
+
+        await dao.delete(example.id)
+
+        publisher.release.set()
+        await insertion
+
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(example.id)
+        assert [type_ for type_, _ in publisher.published] == [
+            DELETE_EVENT_TYPE,
+            CHANGE_EVENT_TYPE,
+            DELETE_EVENT_TYPE,
+        ]
+
+
+async def test_upsert_overtaking_a_slow_deletion(mongo_kafka: MongoKafkaFixture):
+    """Test that a resource upserted again is kept when its deletion finishes
+    publishing after the upsert.
+    """
+    publisher = HeldEventPublisher(hold=lambda _, type_: type_ == DELETE_EVENT_TYPE)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        await dao.insert(example)
+
+        deletion = asyncio.create_task(dao.delete(example.id))
+        await publisher.held.wait()
+
+        recreated = example.model_copy(update={"field_b": 2})
+        await dao.upsert(recreated)
+
+        publisher.release.set()
+        await deletion
+
+        assert await dao.get_by_id(example.id) == recreated
+        assert publisher.published[-2:] == [
+            (DELETE_EVENT_TYPE, {}),
+            (CHANGE_EVENT_TYPE, recreated.model_dump(mode="json")),
+        ]
+
+
+async def test_republishing_stops_under_constant_writes(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that republishing a superseded write gives up after a few rounds when
+    every publish is overtaken by yet another write, and leaves the resource pending.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class OvertakenEventPublisher(EventPublisherProtocol):
+        """Simulates a newer write of the resource during every publish."""
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            collection.update_one(
+                {"_id": uuid.UUID(key)},
+                {"$set": {"__metadata__.write_id": uuid.uuid4()}},
+            )
+
+    publisher = OvertakenEventPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+
+    # the first publish plus one per republishing round
+    assert publisher.published == 1 + MAX_REPUBLISH_ROUNDS
+    assert "Stopped republishing resource" in caplog.text
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is False
+
+
+async def test_republishing_error_is_logged(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a failure while republishing a newer write's state does not fail
+    the write that was overtaken, since that write is already stored and published,
+    and leaves the resource pending.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class FailingRepublishPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is published and marked during the first
+        publish, then fails.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published > 1:
+                raise RuntimeError("broker unavailable")
+            collection.update_one(
+                {"_id": uuid.UUID(key)},
+                {
+                    "$set": {
+                        "__metadata__.write_id": uuid.uuid4(),
+                        "__metadata__.published": True,
+                    }
+                },
+            )
+
+    publisher = FailingRepublishPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+
+    assert publisher.published == 2
+    assert "Could not republish the current state" in caplog.text
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is False
+
+
+async def test_late_mark_after_failed_republish(
+    mongo_kafka: MongoKafkaFixture, caplog: pytest.LogCaptureFixture
+):
+    """Test that a newer write cannot clear the pending flag when its mark lands
+    after a failed republish of its state set the flag, so that it republishes the
+    current state itself.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+    newer_write_id = uuid.uuid4()
+
+    class FailingRepublishPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is not yet marked during the first publish,
+        then fails the republish of its state.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published == 2:
+                raise RuntimeError("broker unavailable")
+            if self.published == 1:
+                collection.update_one(
+                    {"_id": uuid.UUID(key)},
+                    {"$set": {"__metadata__.write_id": newer_write_id}},
+                )
+
+    publisher = FailingRepublishPublisher()
+    async with (
+        dao_with_publisher(mongo_kafka, publisher) as dao,
+        ConfiguredMongoClient(config=mongo_kafka.config) as client,
+    ):
+        example = ExampleDto()
+        with caplog.at_level("WARNING"):
+            await dao.insert(example)
+        assert publisher.published == 2
+        assert "Could not republish the current state" in caplog.text
+
+        # the mark of the newer write arrives only now and must miss
+        async_collection = client.get_database(mongo_kafka.config.db_name)["example"]
+        marked = await mark_published(
+            async_collection,
+            example.id,
+            write_id=newer_write_id,
+            deleted=False,
+            event_id=None,
+        )
+        assert marked is False
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is False
+        assert stored["__metadata__"]["write_id"] != newer_write_id
+
+        # so the newer write republishes the current state, as publish_pending does
+        await dao.publish_pending()
+        assert publisher.published == 3
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is True
+
+
+async def test_failed_publish_of_a_superseded_write_leaves_it_pending(
+    mongo_kafka: MongoKafkaFixture,
+):
+    """Test that a write whose publish fails after a newer write replaced and
+    published the resource leaves it pending, since the failed write's event may
+    already be on the topic behind the newer write's event.
+    """
+    collection = get_mongo_collection(mongo_kafka, "example")
+
+    class FailingPublisher(EventPublisherProtocol):
+        """Simulates a newer write that is published and marked during the first
+        publish, which then fails.
+        """
+
+        def __init__(self):
+            self.published = 0
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published += 1
+            if self.published == 1:
+                collection.update_one(
+                    {"_id": uuid.UUID(key)},
+                    {
+                        "$set": {
+                            "__metadata__.write_id": uuid.uuid4(),
+                            "__metadata__.published": True,
+                        }
+                    },
+                )
+                raise RuntimeError("broker unavailable")
+
+    publisher = FailingPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        example = ExampleDto()
+        with pytest.raises(RuntimeError):
+            await dao.insert(example)
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is False
+
+        await dao.publish_pending()
+        assert publisher.published == 2
+        stored = collection.find_one({"_id": example.id})
+        assert stored and stored["__metadata__"]["published"] is True
+
+
+async def test_legacy_publish_keeps_a_deletion(mongo_kafka: MongoKafkaFixture):
+    """Test that publishing a change written before the write ID existed does not
+    revive the resource when it was deleted meanwhile by a writer that sets no write
+    ID either, as an older service version would.
+    """
+    example = ExampleDto()
+    document = dto_to_document(example, id_field="id")
+    document["__metadata__"] = {
+        "deleted": False,
+        "published": False,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": None,
+    }
+    collection = get_mongo_collection(mongo_kafka, "example")
+    collection.insert_one(document)
+
+    class DeletingEventPublisher(EventPublisherProtocol):
+        """Replaces the resource with a deletion stub during the change event."""
+
+        def __init__(self):
+            self.published: list[str] = []
+
+        async def _publish_validated(
+            self,
+            *,
+            payload: JsonObject,
+            type_: str,
+            key: str,
+            topic: str,
+            event_id: uuid.UUID,
+            headers: Mapping[str, str],
+        ) -> None:
+            self.published.append(type_)
+            if type_ == CHANGE_EVENT_TYPE:
+                collection.replace_one(
+                    {"_id": uuid.UUID(key)},
+                    {
+                        "__metadata__": {
+                            "deleted": True,
+                            "published": False,
+                            "correlation_id": get_correlation_id(),
+                        }
+                    },
+                )
+
+    publisher = DeletingEventPublisher()
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.publish_pending()
+        with pytest.raises(ResourceNotFoundError):
+            await dao.get_by_id(example.id)
+
+    assert publisher.published == [CHANGE_EVENT_TYPE, DELETE_EVENT_TYPE]
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["deleted"] is True
+    assert stored["__metadata__"]["published"] is True
+
+
+async def test_publish_pending_without_write_id(mongo_kafka: MongoKafkaFixture):
+    """Test that `publish_pending` marks documents as published whose metadata was
+    written before the write ID existed.
+    """
+    example = ExampleDto()
+    document = dto_to_document(example, id_field="id")
+    document["__metadata__"] = {
+        "deleted": False,
+        "published": False,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": None,
+    }
+    collection = get_mongo_collection(mongo_kafka, "example")
+    collection.insert_one(document)
+
+    publisher = HeldEventPublisher(hold=lambda *_: False)
+    async with dao_with_publisher(mongo_kafka, publisher) as dao:
+        await dao.publish_pending()
+        assert len(publisher.published) == 1
+        assert await dao.get_by_id(example.id) == example
+
+    stored = collection.find_one({"_id": example.id})
+    assert stored and stored["__metadata__"]["published"] is True
+
+
 async def test_find_all_total_count_excludes_soft_deleted(
     mongo_kafka: MongoKafkaFixture,
 ):
@@ -1031,7 +1570,7 @@ async def test_find_all_total_count_excludes_soft_deleted(
         await dao.delete(dead2.id)
 
         # Run a query and make sure total_count() is 2
-        result = dao.find_all(mapping={})
+        result = dao.find_all(filter_={})
         page = await result.to_list()
         assert len(page) == 2
 
@@ -1064,11 +1603,11 @@ async def test_pagination_against_deleted_docs(mongo_kafka: MongoKafkaFixture):
 
         # Only live_doc remains; the soft-deleted docs are excluded.
         #  If filtering is not done properly, this would return an empty list
-        results_limit = [x async for x in dao.find_all(mapping={}, skip=None, limit=4)]
+        results_limit = [x async for x in dao.find_all(filter_={}, skip=None, limit=4)]
         assert results_limit == [live_doc]
 
         # Check that using skip=1 and no limit returns an empty list
-        results_skip = [x async for x in dao.find_all(mapping={}, skip=1)]
+        results_skip = [x async for x in dao.find_all(filter_={}, skip=1)]
         assert results_skip == []
 
 
@@ -1108,15 +1647,15 @@ async def test_pagination_against_metadataless_docs(mongo_kafka: MongoKafkaFixtu
         await dao.insert(live_doc)
 
         # The metadata-less docs are live, so they must be retrieved alongside live_doc.
-        result = dao.find_all(mapping={})
+        result = dao.find_all(filter_={})
         all_hits = {hit async for hit in result}
         assert all_hits == {*docs, live_doc}
         assert await result.total_count() == 5
 
         # Pagination still applies across all five live docs.
-        page = await dao.find_all(mapping={}, limit=4).to_list()
+        page = await dao.find_all(filter_={}, limit=4).to_list()
         assert len(page) == 4
-        remaining = await dao.find_all(mapping={}, skip=4).to_list()
+        remaining = await dao.find_all(filter_={}, skip=4).to_list()
         assert len(remaining) == 1
 
 
@@ -1143,7 +1682,7 @@ async def test_find_all_pagination_total_count(mongo_kafka: MongoKafkaFixture):
             await dao.insert(ExampleDto(field_b=field_b, field_c=False))
 
         result = dao.find_all(
-            mapping={"field_c": True}, skip=1, limit=3, sort=["field_b"]
+            filter_={"field_c": True}, skip=1, limit=3, sort=["field_b"]
         )
 
         # to_list() returns only the paginated slice: field_b in [1, 2, 3]
@@ -1168,7 +1707,7 @@ async def test_find_all_to_list(mongo_kafka: MongoKafkaFixture):
         )
 
         # Test on empty list
-        assert await dao.find_all(mapping={}).to_list() == []
+        assert await dao.find_all(filter_={}).to_list() == []
 
         # Insert 3 docs
         dtos = [ExampleDto(field_b=i) for i in range(3)]
@@ -1176,7 +1715,7 @@ async def test_find_all_to_list(mongo_kafka: MongoKafkaFixture):
             await dao.insert(dto)
 
         # Verify that to_list does what it should
-        result = dao.find_all(mapping={}, sort=["field_b"])
+        result = dao.find_all(filter_={}, sort=["field_b"])
         items = await result.to_list()
         assert isinstance(items, list)
         assert items == dtos

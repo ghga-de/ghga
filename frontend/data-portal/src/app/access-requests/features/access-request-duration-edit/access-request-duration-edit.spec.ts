@@ -4,15 +4,18 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideNativeDateAdapter } from '@angular/material/core';
 
-import { AccessRequestDurationEditComponent } from './access-request-duration-edit';
+import { AccessRequestDurationEdit } from './access-request-duration-edit';
 
 import { accessRequests } from '@app/../mocks/data';
-import { AccessRequestStatus } from '@app/access-requests/models/access-requests';
+import {
+  AccessRequest,
+  AccessRequestStatus,
+} from '@app/access-requests/models/access-requests';
 import { ConfigService } from '@app/shared/services/config';
 import { localDateToContractIsoUtc } from '@app/shared/utils/date-formats';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
 interface DurationEditInternals {
   formModel: {
@@ -26,7 +29,7 @@ interface DurationEditInternals {
  * @param component - the component under test
  * @returns the current form model
  */
-function getFormModel(component: AccessRequestDurationEditComponent) {
+function getFormModel(component: AccessRequestDurationEdit) {
   return (component as unknown as DurationEditInternals).formModel();
 }
 
@@ -37,7 +40,7 @@ function getFormModel(component: AccessRequestDurationEditComponent) {
  * @param untilDate - the end date to set
  */
 function setFormModel(
-  component: AccessRequestDurationEditComponent,
+  component: AccessRequestDurationEdit,
   fromDate: Date | null,
   untilDate: Date | null,
 ): void {
@@ -56,41 +59,40 @@ class MockConfigService {
   defaultAccessDurationDays = 365;
 }
 
-describe('AccessRequestDurationEditComponent', () => {
-  let component: AccessRequestDurationEditComponent;
-  let fixture: ComponentFixture<AccessRequestDurationEditComponent>;
+describe('AccessRequestDurationEdit', () => {
+  let result: RenderResult<AccessRequestDurationEdit>;
+  let component: AccessRequestDurationEdit;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    result = await render(AccessRequestDurationEdit, {
       providers: [
         provideNativeDateAdapter(),
         { provide: ConfigService, useClass: MockConfigService },
       ],
-      imports: [AccessRequestDurationEditComponent],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(AccessRequestDurationEditComponent);
-    fixture.componentRef.setInput('request', accessRequests[0]);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+      inputs: { request: accessRequests[0] as AccessRequest },
+    });
+    component = result.fixture.componentInstance;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+    expect(screen.getByText('Access duration:')).toBeVisible();
   });
 
-  it('should emit ISO UTC date strings with service-contract day boundaries on save', () => {
+  it('should emit ISO UTC date strings with service-contract day boundaries on save', async () => {
     const request = {
       ...accessRequests[0],
       status: AccessRequestStatus.pending,
       access_starts: '2025-01-01T00:00:00.000Z',
       access_ends: '2025-01-08T23:59:59.999Z',
     };
-    fixture.componentRef.setInput('request', request);
-    fixture.detectChanges();
+    await result.rerender({ inputs: { request }, partialUpdate: true });
 
-    const fromDate = new Date(2025, 7, 1);
-    const untilDate = new Date(2025, 7, 8);
+    const fromDate = new Date(component.todayStart);
+    fromDate.setDate(fromDate.getDate() + 10);
+    const untilDate = new Date(fromDate);
+    untilDate.setDate(untilDate.getDate() + 7);
+    untilDate.setHours(23, 59, 59, 999);
 
     let emitted: Map<string, string> | undefined;
     component.saved.subscribe((value) => {
@@ -106,6 +108,66 @@ describe('AccessRequestDurationEditComponent', () => {
     expect(emitted?.get('access_ends')).toBe(
       localDateToContractIsoUtc(untilDate, true),
     );
+  });
+
+  it('should show the stored dates of a period that has ended', async () => {
+    const request = {
+      ...accessRequests[0],
+      status: AccessRequestStatus.pending,
+      access_starts: '2025-01-01T12:00:00.000Z',
+      access_ends: '2025-01-08T12:00:00.000Z',
+    };
+    await result.rerender({ inputs: { request }, partialUpdate: true });
+    component.ngOnInit();
+    await result.fixture.whenStable();
+
+    expect(screen.getByText('2025-01-01 until 2025-01-08')).toBeVisible();
+  });
+
+  it('should save the offered end of today for a period that has ended', async () => {
+    const request = {
+      ...accessRequests[0],
+      status: AccessRequestStatus.pending,
+      access_starts: '2025-01-01T00:00:00.000Z',
+      access_ends: '2025-01-08T23:59:59.999Z',
+    };
+    await result.rerender({ inputs: { request }, partialUpdate: true });
+    // populate the form for the new request, as on creation
+    component.ngOnInit();
+
+    let emitted: Map<string, string> | undefined;
+    component.saved.subscribe((value) => {
+      emitted = value as Map<string, string>;
+    });
+
+    component.open();
+    expect(component.isModified()).toBe(true);
+    component.save();
+
+    expect(emitted?.get('access_ends')).toBe(
+      localDateToContractIsoUtc(component.todayEnd, true),
+    );
+  });
+
+  it('should not save an end date before the start date', async () => {
+    const saved = vitest.fn();
+    component.saved.subscribe(saved);
+    component.open();
+    const later = new Date(component.todayStart);
+    later.setDate(later.getDate() + 10);
+    const earlier = new Date(component.todayStart);
+    earlier.setDate(earlier.getDate() + 5);
+
+    component.onDateSelected(later, true);
+    component.onDateSelected(earlier, false);
+    await result.fixture.whenStable();
+    expect(component.saveDisabled()).toBe(true);
+    const chip = result.fixture.nativeElement.querySelector('.save-edit-button');
+    // a typed date is taken on blur, so a click can reach the chip before it is disabled
+    chip.click();
+
+    expect(saved).not.toHaveBeenCalled();
+    expect(component.isOpen()).toBe(true);
   });
 
   it('should not consider re-selecting the same dates a modification', () => {
@@ -128,16 +190,16 @@ describe('AccessRequestDurationEditComponent', () => {
 
     component.open();
     component.onDateSelected(laterDate, false);
-    await fixture.whenStable();
+    await result.fixture.whenStable();
     expect(component.isModified()).toBe(true);
 
     component.cancel();
-    await fixture.whenStable();
+    await result.fixture.whenStable();
     expect(component.isModified()).toBe(false);
 
     component.open();
     component.onDateSelected(laterDate, false);
-    await fixture.whenStable();
+    await result.fixture.whenStable();
 
     expect(component.isModified()).toBe(true);
     expect(edits).toEqual([true, false, true]);

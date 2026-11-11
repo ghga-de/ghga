@@ -17,7 +17,6 @@
 in the API.
 """
 
-from typing import Annotated
 from uuid import uuid4
 
 from pydantic import (
@@ -26,11 +25,11 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
-    StringConstraints,
     model_validator,
 )
 
 from ghga_event_schemas.pydantic_ import AccessRequestStatus
+from ghga_service_commons.utils.accessions import DatasetAccession
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 
 __all__ = [
@@ -64,12 +63,6 @@ class Dataset(BaseDto):
     )
 
 
-# Accession format should be moved to the commons module
-Accession = Annotated[
-    str, StringConstraints(strip_whitespace=True, pattern="^[A-Z]{1,6}[0-9]{3,18}$")
-]
-
-
 class AccessRequestCreationData(BaseDto):
     """All data necessary to create an access request."""
 
@@ -81,7 +74,7 @@ class AccessRequestCreationData(BaseDto):
         description="ID of the IVA to be used for this request,"
         " but this can also be specified later",
     )
-    dataset_id: Accession = Field(
+    dataset_id: DatasetAccession = Field(
         default=..., description="ID of the dataset for which access is requested"
     )
     email: EmailStr = Field(
@@ -187,7 +180,7 @@ class BaseAccessGrant(BaseDto):
     iva_id: UUID4 | None = Field(  # actually UUID
         default=None, description="ID of an IVA associated with this grant"
     )
-    dataset_id: Accession = Field(
+    dataset_id: DatasetAccession = Field(
         default=..., description="ID of the dataset this grant is for"
     )
 

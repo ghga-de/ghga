@@ -29,12 +29,12 @@ from typing import NamedTuple
 try:
     from typing import Self
 except ImportError:  # Python < 3.11
-    from typing_extensions import Self
+    from typing import Self
 
 import pytest
 import pytest_asyncio
 from pydantic import SecretStr
-from testcontainers.localstack import LocalStackContainer
+from testcontainers.community.localstack import LocalStackContainer
 
 from hexkit.custom_types import PytestScope
 from hexkit.providers.s3 import S3Config, S3ObjectStorage

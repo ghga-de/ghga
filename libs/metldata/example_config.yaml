@@ -202,7 +202,7 @@ cors_exposed_headers: null
 dataset_change_topic: metadata_datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
-db_name: dev_db
+db_name: metadata-artifacts
 docs_url: /docs
 generate_correlation_id: true
 host: 127.0.0.1

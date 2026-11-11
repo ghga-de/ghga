@@ -25,6 +25,7 @@ for the full set of configurable values.
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.file_deletion_request_topic` | The name of the topic to receive events informing about files to delete. | `null` |
 | `config.file_deletion_request_type` | The type used for events indicating that a request to delete a file has been received. | `null` |
 | `config.file_internally_registered_topic` | Name of the topic used for events indicating that a file has been registered for download. | `null` |
@@ -52,7 +53,6 @@ for the full set of configurable values.
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.file_upload_box_topic` | Topic containing published FileUploadBox outbox events | `null` |
 | `config.wps_auth_config` |  | `null` |
@@ -72,6 +72,8 @@ for the full set of configurable values.
 | `config.max_concurrent_uploads_per_box` | Maximum number of in-progress FileUploads allowed per box at any one time. When a new upload would exceed this count, the request is rejected with 429 Too Many Requests. | `5` |
 | `config.multipart_upload_ttl_hours` | Number of hours after which an in-progress FileUpload with no activity is considered stale and will be aborted by the cleanup job. | `72` |
 | `config.cleanup_interval_minutes` | How often (in minutes) the cleanup job runs. | `60` |
+| `config.orphaned_object_min_age_hours` | Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored. Age is measured from the object's LastModified time, which some S3 backends, including AWS, set to when a multipart upload was initiated rather than completed. | `6` |
+| `config.max_orphaned_objects` | If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards. | `100` |
 
 ## Parameters
 
@@ -79,6 +81,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"ucs"` |
@@ -133,7 +136,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
@@ -188,6 +192,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"ucs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

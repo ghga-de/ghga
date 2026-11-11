@@ -14,8 +14,14 @@
 # limitations under the License.
 #
 
-"""Shared test used for steps with prefix test_3*"""
+"""Shared steps for the user features with prefix test_1*
 
+Also covers the portal feature 501
+"""
+
+import json
+import re
+import time
 from datetime import datetime, timedelta
 
 from fixtures import (  # noqa: RUF100
@@ -31,7 +37,12 @@ from pytest_bdd import (  # noqa: RUF100
     when,
 )
 
-from steps.utils import parse
+from steps.utils import USER_PHONE_NUMBERS, parse
+
+SMS_TIMEOUT = 15  # seconds to wait for the lox24 mock to receive the SMS
+SMS_INTERVAL = 0.1
+EXPECTED_SMS_TEXT = r"Your verification code is: [A-Z0-9]{6}"
+EXPECTED_SMS_SENDER = "GHGA"
 
 
 @when(
@@ -177,3 +188,66 @@ def user_tries_to_login(name: str, fixtures: JointFixture) -> Response:
     auth_headers = {"Authorization": f"Bearer {external_token}"}
     url = fixtures.config.auth_adapter_url + "/rpc/login"
     return fixtures.http.post(url, headers=auth_headers)
+
+
+def _sms_requests(fixtures: JointFixture) -> list[dict]:
+    """Get the SMS requests the lox24 mock received during the last minute."""
+    since = (now_as_utc() - timedelta(minutes=1)).isoformat()
+    url = (
+        fixtures.config.lox24_mock_url.rstrip("/")
+        + f"/__admin/requests?url=/sms&method=POST&since={since}"
+    )
+    response = fixtures.http.get(url)
+    assert response.status_code == 200, response.text
+    return response.json().get("requests", [])
+
+
+def check_sms_received_at(full_name: str, phone: str, fixtures: JointFixture) -> str:
+    """Check that the number received exactly one SMS with a verification code.
+
+    Returns the verification code from the SMS.
+    """
+    slept: float = 0
+    requests: list[dict] = []
+    while slept < SMS_TIMEOUT:
+        requests = [
+            r
+            for r in _sms_requests(fixtures)
+            if json.loads(r["request"]["body"]).get("phone") == phone
+        ]
+        if requests:
+            break
+        time.sleep(SMS_INTERVAL)
+        slept += SMS_INTERVAL
+    assert len(requests) == 1, (
+        f"Expected one verification code SMS for {full_name}, got {len(requests)}"
+    )
+    sms_body = json.loads(requests[0]["request"]["body"])
+    assert sms_body.get("sender_id") == EXPECTED_SMS_SENDER, (
+        f"SMS sender does not match expected: {sms_body}"
+    )
+    assert re.search(EXPECTED_SMS_TEXT, sms_body.get("text", "")), (
+        f"SMS body does not match expected pattern: {sms_body}"
+    )
+    return sms_body["text"].split(": ")[1].strip()
+
+
+@then(
+    parse(
+        '"{full_name}" receives an SMS at the "{which}" number'
+        " for IVA verification code"
+    )
+)
+def check_sms_received_at_which(full_name: str, which: str, fixtures: JointFixture):
+    """Check the SMS to the main or the other number of the suite."""
+    check_sms_received_at(full_name, USER_PHONE_NUMBERS[which], fixtures)
+
+
+@then(parse('"{full_name}" receives an SMS for IVA verification code'))
+def check_sms_received(full_name: str, fixtures: JointFixture):
+    """Check the SMS to the phone address of feature 110 and keep its code."""
+    verification_code = check_sms_received_at(
+        full_name, USER_PHONE_NUMBERS["main"], fixtures
+    )
+    # the SMS is only sent for the Phone IVA, so the state key needs no IVA type
+    fixtures.state.set_state("Phone iva_verification_code", verification_code)

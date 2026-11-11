@@ -7,13 +7,13 @@
 import { inject, Service } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 // eslint-disable-next-line boundaries/dependencies
-import { CustomSnackBarComponent } from '../ui/custom-snack-bar/custom-snack-bar';
+import { CustomSnackBar } from '../ui/custom-snack-bar/custom-snack-bar';
 
 /**
  * A service that can show various kinds of notifications to the user
  */
 @Service()
-export class NotificationService {
+export class Notifier {
   #snackBar = inject(MatSnackBar);
 
   /**
@@ -77,7 +77,7 @@ export class NotificationService {
     type: 'success' | 'info' | 'warning' | 'danger' | 'error',
     duration: number | undefined,
   ): void {
-    this.#snackBar.openFromComponent(CustomSnackBarComponent, {
+    this.#snackBar.openFromComponent(CustomSnackBar, {
       duration,
       horizontalPosition: 'end',
       verticalPosition: 'bottom',

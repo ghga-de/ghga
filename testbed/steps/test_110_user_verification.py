@@ -15,17 +15,12 @@
 
 """Step definitions for testing independent verification addresses"""
 
-import json
 import random
-import re
-import time
-from datetime import timedelta
 from string import ascii_letters, digits
 
 from fixtures.iva import IVA
-from ghga_service_commons.utils.utc_dates import now_as_utc
 
-from steps.utils import IVA_TYPE_NAMES
+from steps.utils import IVA_TYPE_NAMES, USER_PHONE_NUMBERS
 
 from .conftest import (
     JointFixture,
@@ -42,15 +37,8 @@ scenarios("../features/110_user_verification.feature")
 
 # Types are case-sensitive as they are requested by the API
 USER_IVAS = {
-    "Phone": "+491710000001",
+    "Phone": USER_PHONE_NUMBERS["main"],
     "InPerson": "A person",
-}
-
-
-EXPECTED_SMS_BODY = {
-    "phone": USER_IVAS["Phone"],
-    "text": r"Your verification code is: [A-Z0-9]{6}",
-    "sender_id": "GHGA",
 }
 
 
@@ -182,46 +170,6 @@ def check_iva_state(results: list, state: str, fixtures: JointFixture):
     assert iva["state"].lower() == state.lower(), (
         f"Expected state: {state}, got: {iva['state']}"
     )
-
-
-@then(parse('"{full_name}" receives an SMS for IVA verification code'))
-def check_sms_received(
-    full_name: str,
-    fixtures: JointFixture,
-    timeout: float = 15,
-    interval: float = 0.1,
-):
-    """Check that the user received an SMS for the IVA verification code"""
-    slept: float = 0
-    found = False
-    while slept < timeout and not found:
-        since = (now_as_utc() - timedelta(minutes=1)).isoformat()
-        lox24_url = (
-            fixtures.config.lox24_mock_url.rstrip("/")
-            + f"/__admin/requests?url=/sms&method=POST&since={since}"
-        )
-        response = fixtures.http.get(lox24_url)
-        assert response.status_code == 200
-        requests = response.json().get("requests", [])
-        if len(requests) == 1:
-            sms_body = json.loads(requests[0]["request"]["body"])
-            found = True
-        time.sleep(interval)
-        slept += interval
-
-    assert found, f"The verification code SMS was not received by {full_name}."
-
-    assert re.search(EXPECTED_SMS_BODY["text"], sms_body["text"]), (
-        f"SMS body does not match expected pattern: {sms_body}"
-    )
-    for key in (k for k in sms_body.keys() if k != "text"):
-        assert sms_body.get(key) == EXPECTED_SMS_BODY[key], (
-            f"SMS phone number does not match expected: {sms_body}"
-        )
-    verification_code = sms_body["text"].split(": ")[1].strip()
-    fixtures.state.set_state(
-        "Phone iva_verification_code", verification_code
-    )  # no need to use dynamic iva_type here, SMS is only sent for Phone IVA
 
 
 @then(parse('the number of IVAs created today is "{expected_count}"'))

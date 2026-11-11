@@ -25,7 +25,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import {
   BYTES_PER_TIB,
   MAX_UPLOAD_BOX_SIZE_TIB,
@@ -51,10 +51,10 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   ],
   templateUrl: './upload-box-creation-dialog.html',
 })
-export class UploadBoxCreationDialogComponent {
-  #dialogRef = inject(MatDialogRef<UploadBoxCreationDialogComponent, string>);
+export class UploadBoxCreationDialog {
+  #dialogRef = inject(MatDialogRef<UploadBoxCreationDialog, string>);
   #uploadBoxService = inject(UploadBoxService);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   locationOptions = this.#uploadBoxService.uploadBoxLocationOptions;
 

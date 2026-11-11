@@ -4,41 +4,32 @@
  * @license Apache-2.0
  */
 
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { render, RenderResult, screen } from '@testing-library/angular';
 
-import { ParagraphsComponent } from './paragraphs';
+import { Paragraphs } from './paragraphs';
 
-describe('ParagraphsComponent', () => {
-  let component: ParagraphsComponent;
-  let fixture: ComponentFixture<ParagraphsComponent>;
+describe('Paragraphs', () => {
+  let result: RenderResult<Paragraphs>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ParagraphsComponent],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(ParagraphsComponent);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('text', 'Hello\nWorld');
-    fixture.detectChanges();
+    result = await render(Paragraphs, { inputs: { text: 'Hello\nWorld' } });
   });
 
   it('should create', () => {
-    expect(component).toBeTruthy();
+    expect(result.fixture.componentInstance).toBeTruthy();
   });
 
   it('should show the text in multiple p tags', () => {
-    const par = fixture.nativeElement.querySelectorAll('p');
+    const par = screen.getAllByRole('paragraph');
     expect(par.length).toBe(2);
-    expect(par[0].textContent).toContain('Hello');
-    expect(par[1].textContent).toContain('World');
+    expect(par[0]).toHaveTextContent('Hello');
+    expect(par[1]).toHaveTextContent('World');
   });
 
-  it('should show the label when defined', () => {
-    fixture.componentRef.setInput('label', 'Test');
-    fixture.detectChanges();
-    const strong = fixture.nativeElement.querySelector('strong');
-    expect(strong).not.toBeNull();
-    expect(strong.textContent).toContain('Test: ');
+  it('should show the label when defined', async () => {
+    expect(screen.queryByText('Test:')).toBeNull();
+    await result.rerender({ inputs: { label: 'Test' }, partialUpdate: true });
+    const strong = screen.getByText('Test:');
+    expect(strong.tagName).toBe('STRONG');
   });
 });

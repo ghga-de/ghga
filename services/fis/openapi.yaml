@@ -134,10 +134,29 @@ components:
           - type: 'null'
           description: Encrypted file encryption secret
           title: Secret
+        stage_seconds:
+          anyOf:
+          - additionalProperties:
+              minimum: 0.0
+              type: number
+            type: object
+          - type: 'null'
+          description: Seconds spent in each processing stage, summed over all file
+            parts, if DHFS sent it. Parts run concurrently, so the sum can exceed
+            the wall time.
+          title: Stage Seconds
         storage_alias:
           description: The storage alias of the Data Hub housing the file
           title: Storage Alias
           type: string
+        wall_time_seconds:
+          anyOf:
+          - minimum: 0.0
+            type: number
+          - type: 'null'
+          description: Elapsed time of processing all file parts in seconds, if DHFS
+            sent it
+          title: Wall Time Seconds
       required:
       - file_id
       - storage_alias
@@ -179,7 +198,7 @@ info:
   description: A service to liaise between Central File Services and Data Hubs for
     file inspection.
   title: File Ingest Service
-  version: 12.1.0
+  version: 0.0.0
 openapi: 3.1.0
 paths:
   /health:

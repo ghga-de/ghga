@@ -11,13 +11,13 @@ import { PageEvent } from '@angular/material/paginator';
 import { Sort } from '@angular/material/sort';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
-import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
+import { Stencil } from '@app/shared/ui/stencil/stencil/stencil';
 import { ResearchDataUploadBox, UploadBoxStateClass } from '@app/upload/models/box';
 import { FileUploadWithAccession } from '@app/upload/models/file-upload';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
-import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
+import { UploadBoxFilesTable } from '../upload-box-files-table/upload-box-files-table';
 
 /**
  * Read-only details view of one of the current user's upload boxes, shown in a
@@ -31,13 +31,13 @@ import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-b
     MatDialogModule,
     Capitalise,
     ParseBytes,
-    RefreshButtonComponent,
-    StencilComponent,
-    UploadBoxFilesTableComponent,
+    RefreshButton,
+    Stencil,
+    UploadBoxFilesTable,
   ],
   templateUrl: './user-upload-box-details-dialog.html',
 })
-export class UserUploadBoxDetailsDialogComponent {
+export class UserUploadBoxDetailsDialog {
   #uploadBoxService = inject(UploadBoxService);
 
   /** The grant identifying the box to display, injected as dialog data. */

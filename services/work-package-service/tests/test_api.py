@@ -23,6 +23,7 @@ import pytest
 from fastapi import status
 
 from ghga_service_commons.api.testing import AsyncTestClient
+from ghga_service_commons.http.mock_api import respond
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
@@ -43,7 +44,7 @@ from .fixtures import (  # noqa: F401
     fixture_repository,
     headers_for_token,
 )
-from .fixtures.access_api import AccessApiMock, respond
+from .fixtures.access_api import AccessApiMock
 from .fixtures.crypt import decrypt, user_public_crypt4gh_key
 from .fixtures.datasets import DATASET, FILE_ACCESSION_MAPS
 
@@ -471,7 +472,7 @@ async def test_get_upload_wot_expired_access(
     token = decrypt(response_data["token"])
 
     # Mock expired access check - return null to indicate no access
-    access_api.on_check_upload_access = respond(json=None)
+    access_api.on_check_upload_access = respond(content=b"null")
 
     # Try to create a work order token - should fail due to expired box access
     create_request = {"work_type": "create", "alias": "test-file"}

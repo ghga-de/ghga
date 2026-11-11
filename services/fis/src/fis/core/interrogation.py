@@ -41,6 +41,9 @@ from hexkit.utils import now_utc_ms_prec
 STATES = event_schemas.FileUploadState
 log = logging.getLogger(__name__)
 
+# DHFS sets these afresh on every submission, so they don't tell reports apart.
+_TIMING_FIELDS = {"interrogated_at", "wall_time_seconds", "stage_seconds"}
+
 
 class InterrogationHandler(InterrogationHandlerPort):
     """This is the core class that manages `FileUnderInterrogation` and
@@ -67,7 +70,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         `False` otherwise.
         """
         try:
-            file = await self._file_dao.find_one(mapping={"object_id": object_id})
+            file = await self._file_dao.find_one(filter_={"object_id": object_id})
         except NoHitsFoundError:
             # If not found, log a warning, but indicate the file is removable
             log.warning("Did not find a record of a file with ID %s.", object_id)
@@ -142,9 +145,9 @@ class InterrogationHandler(InterrogationHandlerPort):
             )
             return False
         else:
-            # See if the reports differ - the timestamps are immaterial here
-            report_subset = report.model_dump(exclude={"interrogated_at", "secret"})
-            stored_subset = stored_report.model_dump(exclude={"interrogated_at"})
+            # See if the reports differ - the timing differs on every resend
+            report_subset = report.model_dump(exclude=_TIMING_FIELDS | {"secret"})
+            stored_subset = stored_report.model_dump(exclude=_TIMING_FIELDS)
             # List different fields
             different_fields = {
                 k for k, v in report_subset.items() if stored_subset[k] != v
@@ -413,7 +416,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         files = [
             models.BaseFileInformation(**x.model_dump())
             async for x in self._file_dao.find_all(
-                mapping={
+                filter_={
                     "storage_alias": storage_alias,
                     "state": "inbox",
                     "interrogated": False,

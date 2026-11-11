@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, model } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, effect, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -27,7 +27,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
 @Component({
   selector: 'app-access-request-manager-filter',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatInputModule,
     MatButtonModule,
@@ -39,7 +39,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   ],
   templateUrl: './access-request-manager-filter.html',
 })
-export class AccessRequestManagerFilterComponent {
+export class AccessRequestManagerFilter {
   #ars = inject(AccessRequestService);
 
   #filter = this.#ars.allAccessRequestsFilter;
@@ -49,34 +49,39 @@ export class AccessRequestManagerFilterComponent {
   displayFilters = false;
 
   /**
-   * The model for the filter properties
+   * The filter form, starting from the current filter
    */
-  ticketId = model<string | undefined>(this.#filter().ticketId);
-  dataset = model<string | undefined>(this.#filter().dataset);
-  name = model<string | undefined>(this.#filter().requester);
-  dac = model<string | undefined>(this.#filter().dac);
-  fromDate = model<Date | undefined>(this.#filter().fromDate);
-  toDate = model<Date | undefined>(this.#filter().toDate);
-  status = model<AccessRequestStatus | undefined>(this.#filter().status);
-  requestText = model<string | undefined>(this.#filter().requestText);
-  noteToRequester = model<string | undefined>(this.#filter().noteToRequester);
-  internalNote = model<string | undefined>(this.#filter().internalNote);
+  protected filterForm = form(
+    signal({
+      ticketId: this.#filter().ticketId ?? '',
+      dataset: this.#filter().dataset ?? '',
+      name: this.#filter().requester ?? '',
+      dac: this.#filter().dac ?? '',
+      fromDate: this.#filter().fromDate ?? (null as Date | null),
+      toDate: this.#filter().toDate ?? (null as Date | null),
+      status: (this.#filter().status ?? '') as AccessRequestStatus | '',
+      requestText: this.#filter().requestText ?? '',
+      noteToRequester: this.#filter().noteToRequester ?? '',
+      internalNote: this.#filter().internalNote ?? '',
+    }),
+  );
 
   /**
    * Communicate filter changes to the access request service
    */
   #filterEffect = effect(() => {
+    const filter = this.filterForm().value();
     this.#ars.setAllAccessRequestsFilter({
-      ticketId: this.ticketId(),
-      dataset: this.dataset(),
-      requester: this.name(),
-      dac: this.dac(),
-      fromDate: this.fromDate(),
-      toDate: this.toDate(),
-      status: this.status(),
-      requestText: this.requestText(),
-      noteToRequester: this.noteToRequester(),
-      internalNote: this.internalNote(),
+      ticketId: filter.ticketId || undefined,
+      dataset: filter.dataset || undefined,
+      requester: filter.name || undefined,
+      dac: filter.dac || undefined,
+      fromDate: filter.fromDate ?? undefined,
+      toDate: filter.toDate ?? undefined,
+      status: filter.status || undefined,
+      requestText: filter.requestText || undefined,
+      noteToRequester: filter.noteToRequester || undefined,
+      internalNote: filter.internalNote || undefined,
     });
   });
 

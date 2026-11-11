@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest_asyncio
 from pydantic import PrivateAttr, SecretStr
-from testcontainers.localstack import LocalStackContainer
+from testcontainers.community.localstack import LocalStackContainer
 
 from ghga_service_commons.utils.temp_files import big_temp_file
 from hexkit.providers.s3 import S3Config, S3ObjectStorage
@@ -135,7 +135,7 @@ class S3Fixture:
         )
 
 
-@pytest_asyncio.fixture(scope="function", autouse=True)
+@pytest_asyncio.fixture(scope="function", loop_scope="session", autouse=True)
 async def reset_state(s3_fixture: S3Fixture):
     """Reset S3 state between tests"""
     yield
@@ -166,7 +166,7 @@ async def populate_storage(
         )
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def s3_fixture() -> AsyncGenerator[S3Fixture, None]:
     """Pytest fixture for tests depending on the ObjectStorageS3 DAO."""
     with LocalStackContainer(image="localstack/localstack:0.14.5").with_services(

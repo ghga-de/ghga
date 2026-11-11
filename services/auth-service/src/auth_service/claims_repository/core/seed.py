@@ -42,7 +42,7 @@ log = logging.getLogger(__name__)
 async def _remove_existing_data_steward_claims(*, claim_dao: ClaimDao) -> None:
     """Remove all existing data steward claims"""
     num_removed_claims = 0
-    async for claim in claim_dao.find_all(mapping={"visa_type": VisaType.GHGA_ROLE}):
+    async for claim in claim_dao.find_all(filter_={"visa_type": VisaType.GHGA_ROLE}):
         role = get_role_from_claim(claim)
         if role is Role.DATA_STEWARD:
             await claim_dao.delete(claim.id)
@@ -103,7 +103,7 @@ async def _add_configured_data_steward_claims(
         # add the data steward as a user
         ext_id = data_steward.ext_id
         try:
-            user = await user_dao.find_one(mapping={"ext_id": ext_id})
+            user = await user_dao.find_one(filter_={"ext_id": ext_id})
         except MultipleHitsFoundError:
             log.error("External ID %r is not unique in the user registry.", ext_id)
             raise
@@ -124,7 +124,7 @@ async def _add_configured_data_steward_claims(
         )
         try:
             iva = await iva_dao.find_one(
-                mapping={
+                filter_={
                     "user_id": user.id,
                     "type": iva_data.type,
                     "value": iva_data.value,

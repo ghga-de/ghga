@@ -1,12 +1,11 @@
 # Epic Documentation
 
 > [!NOTE]
-> Each specification records the plan as it stood when its epic started and is not
-> updated afterwards. For current behaviour and binding rules, see the
-> [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
+> Each specification records the plan as it stood when its epic started, and is not kept in step with the code.
+> As an exception, it may be adapted or refined later, to correct something the epic design misjudged or missed that only became apparent during implementation, once the team has agreed on the new direction.
+> For current behaviour and binding rules, see the [ADRs](../adrs/), the [conventions](../conventions.md) and the code.
 
-This directory contains technical specifications for GHGA development epics,
-documenting the scope and plans for each epic before the epic is started.
+This directory contains technical specifications for GHGA development epics, documenting the scope and plans for each epic before the epic is started.
 
 ## Structure and Conventions
 
@@ -14,17 +13,21 @@ Each epic should have a descriptive title, a number and code name which should b
 
 Each epic is named `epic-NNNN-<code-name>`, with the number padded to four digits and the code name in kebab-case (e.g., `epic-0000-blob-fish` or `epic-0077-alpine-longhorn-beetle`).
 
-An epic without supporting files is a single Markdown file under that name (e.g., `epic-0093-giraffe.md`). An epic with supporting files is a directory under that name, holding the specification as `README.md` next to them (e.g., `epic-0019-pied-raven/README.md` next to `images/`). Start a new epic as a single file, and turn it into a directory in the same commit that adds the first supporting file, so a directory always means there is something else in it.
+An epic without supporting files is a single Markdown file under that name (e.g., `epic-0093-giraffe.md`).
+An epic with supporting files is a directory under that name, holding the specification as `README.md` next to them (e.g., `epic-0019-pied-raven/README.md` next to `images/`).
+Start a new epic as a single file, and turn it into a directory in the same commit that adds the first supporting file, so a directory always means there is something else in it.
 
-There are three epic types: `Exploratory Epic`, `Implementation Epic`, and `Exploration and Implementation Epic` for an epic that is half of each. Every specification names its own on an `**Epic Type:**` line below the heading, and `just docs-check` rejects anything else.
+There are three epic types: `Exploratory Epic`, `Implementation Epic`, and `Exploration and Implementation Epic` for an epic that is half of each.
+Every specification names its own on an `**Epic Type:**` line below the heading, and `just docs-check` rejects anything else.
 
 Please have a look at the templates ([exploratory](./epic-template-exploratory), [implementation](./epic-template-implementation)) and especially the contained technical specifications ([exploratory](./epic-template-exploratory/README.md), [implementation](./epic-template-implementation/README.md)).
 
-These specifications are part of the [Epic Planning and Marathon SOP](https://ghga.pages.hzdr.de/internal.ghga.de/main/sops/development/epic_planning/). (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
+These specifications are part of the Epic Planning and Marathon SOP. (The SOP still describes the old epic repo and file layout; it will be updated to match the monorepo layout and our current procedures soon.)
 
 ## Writing an epic
 
-The audience is GHGA developers. Follow the [writing style](../style.md) and the structure of the template; what follows is what is specific to an epic.
+The audience is GHGA developers.
+Follow the [writing style](../style.md) and the structure of the template; what follows is what is specific to an epic.
 
 - State requirements with "must", "should" and "may" in the RFC 2119 sense, and keep the template's split between "Included/Required", "Optional" and "Not included".
 - Cover both functional and non-functional requirements, and name the security and performance considerations where there are any.
@@ -32,13 +35,18 @@ The audience is GHGA developers. Follow the [writing style](../style.md) and the
 - Be explicit about assumptions and constraints, and explain a scope decision where it is not obvious.
 - Add a Mermaid diagram where it shows something prose does not.
 - Name the outputs the epic is meant to produce — a document, a prototype, a repository — and link the ones that already exist when it is planned.
-- Link related epics with relative links, and the [ADRs](../adrs/) an epic follows from or leads to. The services, libraries and tools an epic describes live in `services/`, `libs/`, `tools/` and `frontend/`; the delivery side in `deploy/` and `testbed/`.
+- Link related epics with relative links, and the [ADRs](../adrs/) an epic follows from or leads to.
+  The services, libraries and tools an epic describes live in `services/`, `libs/`, `tools/` and `frontend/`; the delivery side in `deploy/` and `testbed/`.
 
 ## The Saga so far
 
-This list is generated by `just docs-check`; do not edit it by hand.
+The two lists below are generated by `just docs-check`, and a new epic starts out under "Unfolding epics".
+When an epic is completed, move its line into "Completed epics"; that placement is the one part edited by hand, and the check keeps it.
+An epic that was resolved in another way than its specification planned counts as completed, too.
 
-<!-- epic-index:start -->
+### Completed epics
+
+<!-- epic-index:completed:start -->
 - (0) [Blobfish](./epic-0000-blob-fish/README.md): Basic Metadata Catalog & UI
 - (1) [Red-lipped Batfish](./epic-0001-red-lipped-batfish/README.md): Basic File IO Service
 - (2) [Horseshoe Bat](./epic-0002-horseshoe-bat/README.md): Metadata Submission via REST API
@@ -63,7 +71,7 @@ This list is generated by `just docs-check`; do not edit it by hand.
 - (24) [Common Raven](./epic-0024-common-raven.md): Integration of all File Services - Download Stream
 - (25) [Pacific Lamprey](./epic-0025-pacific-lamprey.md): Metadata refactoring proof of concept
 - (26) [Dracula Ant](./epic-0026-dracula-ant.md): Implementation of a Work Package Service for CLI client authentication
-- (27) [Paddlefish](./epic-0027-paddlefish.md): Implementation of encryption and parallel file part processing in uploads and downloads for ghga-connector
+- (27) [Paddlefish](./epic-0027-paddlefish.md): Connector Encryption and Parallel File Part Processing
 - (28) [Giant Weta](./epic-0028-giant-weta.md): Batch Download for the CLI Client
 - (29) [Humphead Wrasse](./epic-0029-humphead-wrasse.md): Notification Service
 - (30) [Purple Frog](./epic-0030-purple-frog.md): Integration of Connector (CLI) with the Work Package Service
@@ -89,7 +97,7 @@ This list is generated by `just docs-check`; do not edit it by hand.
 - (50) [Dhole](./epic-0050-dhole.md): Rewriting existing metldata transformations
 - (51) [Ethiopian Wolf](./epic-0051-ethiopian-wolf.md): Monorepo Setup for Multiple Microservices
 - (52) [Hero Shrew](./epic-0052-hero-shrew.md): Outbox Pattern Refactoring
-- (53) [Honey Bee](./epic-0053-honey-bee.md): DevOps Production Preparation 1
+- (53) [Honey Bee](./epic-0053-honey-bee.md): DevOps Production Preparation
 - (54) [Peacock Spider](./epic-0054-peacock-spider.md): Dataset Information Service
 - (55) [Madagascan Sunset Moth](./epic-0055-madagascan-sunset-moth.md): Preliminary Storage Selection
 - (56) [Sphynx Cat](./epic-0056-sphynx-cat/README.md): Kafka Dead Letter Queues
@@ -108,14 +116,13 @@ This list is generated by `just docs-check`; do not edit it by hand.
 - (69) [Common Kingslayer](./epic-0069-common-kingslayer.md): Distributed tracing with OpenTelemetry and Jaeger
 - (70) [Common Furniture Beetle](./epic-0070-common-furniture-beetle.md): Metldata Transformation Finalization
 - (71) [Carpenter Bee](./epic-0071-carpenter-bee/README.md): Metldata Configurable Workflows
-- (72) [Pygmy Goat](./epic-0072-pygmy-goat.md): Hexkit Documentation
 - (73) [Ballan Wrasse](./epic-0073-ballan-wrasse.md): Access Request Management Improvements
 - (74) [Slow Worm](./epic-0074-slow-worm.md): Hexkit Support for BSON UUIDs and Datetimes
 - (75) [Eurasian Blackbird](./epic-0075-eurasian-blackbird.md): Kafka Event IDs
 - (76) [Lynx Boreal](./epic-0076-lynx-boreal/README.md): Upload Service Intermediary Revision
 - (77) [Alpine Longhorn Beetle](./epic-0077-alpine-longhorn-beetle/README.md): Make Metadata Downloadable
 - (78) [Royal Angelfish](./epic-0078-royal-angelfish/README.md): Basic User and Access Management
-- (79) [Miniature Horse](./epic-0079-miniature-horse.md): Data Portal Accessibility, Responsiveness, and Semantics Overhaul and SOPs
+- (79) [Miniature Horse](./epic-0079-miniature-horse.md): Data Portal Accessibility, Responsiveness, Semantics and SOPs
 - (80) [Hedgehog Seahorse](./epic-0080-hedgehog-seahorse.md): GHGA Connector refactoring/rewrite and upload path implementation
 - (81) [Laotian Rock Rat](./epic-0081-laotian-rock-rat/README.md): Client Retry Logic Refactoring for Ratelimiting
 - (82) [Scissor Grinder Cicada](./epic-0082-scissor-grinder-cicada.md): Notification Service Update
@@ -123,11 +130,18 @@ This list is generated by `just docs-check`; do not edit it by hand.
 - (84) [Sarcastic Fringehead](./epic-0084-sarcastic-fringehead/README.md): File Upload Path Pt. 2
 - (85) [Tasselled Wobbegong](./epic-0085-tasselled-wobbegong.md): Support for Key-Value-Store in Hexkit
 - (86) [Archaeopteryx](./epic-0086-archaeopteryx/README.md): Basic Research Data Upload Box Frontend
-- (87) [Mermaid's Purse](./epic-0087-mermaids-purse.md): Global Unique IDs, Aggregate Transformations, and Workflow API
 - (88) [Pistol Shrimp](./epic-0088-pistol-shrimp.md): UCS Upload Permission Guardrails
-- (89) [Apollo](./epic-0089-apollo.md): Initial Version of the GHGA Registry Service
-- (90) [Red-billed Quelea](./epic-0090-red-billed-quelea.md): Support for Batch DAO Operations in Hexkit
 - (91) [Army Ant](./epic-0091-army-ant.md): Parallelize DHFS File Interrogation
 - (92) [Shovelnose Guitarfish](./epic-0092-shovelnose-guitarfish.md): Force Resolution of Failed Uploads
+<!-- epic-index:completed:end -->
+
+### Unfolding epics
+
+<!-- epic-index:unfolding:start -->
+- (72) [Pygmy Goat](./epic-0072-pygmy-goat.md): Hexkit Documentation
+- (87) [Mermaid's Purse](./epic-0087-mermaids-purse.md): Global Unique IDs, Aggregate Transformations, and Workflow API
+- (89) [Apollo](./epic-0089-apollo.md): Initial Version of the GHGA Registry Service
+- (90) [Red-billed Quelea](./epic-0090-red-billed-quelea.md): Support for Batch DAO Operations in Hexkit
 - (93) [Giraffe](./epic-0093-giraffe.md): Early Data Lifecycle Rollout
-<!-- epic-index:end -->
+- (95) [Shoebill](./epic-0095-shoebill/README.md): Upload Box Prioritization for Re-encryption
+<!-- epic-index:unfolding:end -->

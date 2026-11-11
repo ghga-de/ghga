@@ -6,9 +6,9 @@
 
 import { Component, inject, OnInit } from '@angular/core';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
-import { AccessGrantManagerFilterComponent } from '../access-grant-manager-filter/access-grant-manager-filter';
-import { AccessGrantManagerListComponent } from '../access-grant-manager-list/access-grant-manager-list';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
+import { AccessGrantManagerFilter } from '../access-grant-manager-filter/access-grant-manager-filter';
+import { AccessGrantManagerList } from '../access-grant-manager-list/access-grant-manager-list';
 
 /**
  * Access Grant Manager component.
@@ -17,14 +17,10 @@ import { AccessGrantManagerListComponent } from '../access-grant-manager-list/ac
  */
 @Component({
   selector: 'app-access-request-manager',
-  imports: [
-    AccessGrantManagerFilterComponent,
-    AccessGrantManagerListComponent,
-    RefreshButtonComponent,
-  ],
+  imports: [AccessGrantManagerFilter, AccessGrantManagerList, RefreshButton],
   templateUrl: './access-grant-manager.html',
 })
-export class AccessGrantManagerComponent implements OnInit {
+export class AccessGrantManager implements OnInit {
   #ars = inject(AccessRequestService);
   /**
    * Load the access grants when the component is initialized

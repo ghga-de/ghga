@@ -4,23 +4,26 @@
  * @license Apache-2.0
  */
 
+import { WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { By } from '@angular/platform-browser';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
+import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { WritableSignal } from '@angular/core';
-import { VerificationDialogComponent } from './verification-dialog';
+import { VerificationDialog } from './verification-dialog';
 
 /**
- * Shape of the private members of VerificationDialogComponent that the tests
+ * Shape of the private members of VerificationDialog that the tests
  * need to access. Used to type the `as unknown as ...` casts below.
  */
 interface VerificationDialogInternals {
   verificationError: WritableSignal<boolean>;
   codeForm: { code: () => { value: WritableSignal<string> } };
 }
+
+const ERROR_TEXT = 'Verification failed. Please try again.';
 
 const mockDialogRef = {
   close: vitest.fn(),
@@ -38,9 +41,9 @@ class MockIvaService {
   validateCodeForIva = vitest.fn();
 }
 
-describe('VerificationDialogComponent', () => {
-  let component: VerificationDialogComponent;
-  let fixture: ComponentFixture<VerificationDialogComponent>;
+describe('VerificationDialog', () => {
+  let component: VerificationDialog;
+  let fixture: ComponentFixture<VerificationDialog>;
   let ivaService: MockIvaService;
 
   beforeEach(async () => {
@@ -48,8 +51,7 @@ describe('VerificationDialogComponent', () => {
     mockNotificationService.showSuccess.mockReset();
     mockNotificationService.showError.mockReset();
 
-    await TestBed.configureTestingModule({
-      imports: [VerificationDialogComponent],
+    ({ fixture } = await render(VerificationDialog, {
       providers: [
         {
           provide: MAT_DIALOG_DATA,
@@ -57,12 +59,10 @@ describe('VerificationDialogComponent', () => {
         },
         { provide: IvaService, useClass: MockIvaService },
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
-    }).compileComponents();
-
+    }));
     ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
-    fixture = TestBed.createComponent(VerificationDialogComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
@@ -77,9 +77,10 @@ describe('VerificationDialogComponent', () => {
    * @returns the code input element, after the form has settled
    */
   async function enterCode(text: string): Promise<HTMLInputElement> {
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
-    input.value = text;
-    input.dispatchEvent(new Event('input'));
+    const input = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Verification code',
+    });
+    fireEvent.input(input, { target: { value: text } });
     await fixture.whenStable();
     return input;
   }
@@ -95,11 +96,18 @@ describe('VerificationDialogComponent', () => {
 
     const inputElement = await enterCode('ab-12!c3');
 
-    expect(inputElement.value).toBe('AB12C3');
+    expect(inputElement).toHaveValue('AB12C3');
     expect(
       (component as unknown as VerificationDialogInternals).codeForm.code().value(),
     ).toBe('AB12C3');
     expect(onSubmitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not show a rejected character', async () => {
+    await enterCode('AB1');
+    const inputElement = await enterCode('AB1-');
+
+    expect(inputElement).toHaveValue('AB1');
   });
 
   it('should clear verification error when user types', async () => {
@@ -148,19 +156,45 @@ describe('VerificationDialogComponent', () => {
     expect(onSubmitSpy).not.toHaveBeenCalled();
   });
 
-  it('should render form with novalidate and hide error before failure', () => {
-    fixture.detectChanges();
-    const formElement = fixture.debugElement.query(By.css('form')).nativeElement;
+  it('should render form with novalidate and hide error before failure', async () => {
+    await fixture.whenStable();
+    const formElement = screen
+      .getByRole('textbox', { name: 'Verification code' })
+      .closest('form');
 
-    expect(formElement.hasAttribute('novalidate')).toBe(true);
-    expect(fixture.debugElement.query(By.css('mat-error'))).toBeNull();
+    expect(formElement).toHaveAttribute('novalidate');
+    expect(screen.queryByText(ERROR_TEXT)).toBeNull();
   });
 
-  it('should show inline error after a failed submission', () => {
+  it('should show inline error after a failed submission', async () => {
     (component as unknown as VerificationDialogInternals).verificationError.set(true);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
-    expect(fixture.debugElement.query(By.css('mat-error'))).not.toBeNull();
+    expect(screen.getByText(ERROR_TEXT)).toBeInTheDocument();
+  });
+
+  it('should show the address and close the dialog on cancel', async () => {
+    expect(
+      screen.getByRole('heading', { name: 'IVA verification' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('SMS: 123/456')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(mockDialogRef.close).toHaveBeenCalledWith(undefined);
+  });
+
+  it('should close the dialog after a successful verification', async () => {
+    ivaService.validateCodeForIva.mockReturnValue(of(null));
+
+    await enterCode('abc123');
+
+    expect(ivaService.validateCodeForIva).toHaveBeenCalledWith('iva-123', 'ABC123');
+    expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+      'Verification was successful',
+    );
+    await waitFor(() => expect(mockDialogRef.close).toHaveBeenCalledWith(true));
   });
 
   it('should show expired request error for status 410', async () => {

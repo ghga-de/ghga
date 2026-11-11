@@ -17,11 +17,14 @@
 
 import re
 import time
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from playwright.sync_api import expect
 
 from .conftest import (
     JointFixture,
+    given,
     parse,
     scenarios,
     then,
@@ -30,6 +33,10 @@ from .conftest import (
 from .utils import IVA_TYPE_NAMES, UI_TIMEOUT
 
 scenarios("../features/503_data_portal_access_grants.feature")
+
+ARS_UUID_FIELDS = ("_id", "user_id", "iva_id", "changed_by")
+ARS_DATE_FIELDS = ("access_starts", "access_ends", "request_created", "status_changed")
+PERIOD_ENDED_TEXT = "The requested access period ended on"
 
 UI_APP_CONTEXT = {
     "access requests": {
@@ -251,3 +258,152 @@ def deny_access_requests(fixtures: JointFixture, action: str):
     ) as response_info:
         confirm_button.click()
     assert response_info.value.ok, f"Processing failed: {response_info.value.status}"
+
+
+def _ars_request_to_extended_json(document: dict[str, Any]) -> dict[str, Any]:
+    """Restore the UUID and date types that SMS hands out as plain strings.
+
+    SMS replaces the whole document, and ARS cannot read it back with strings
+    where it stored UUIDs and dates.
+    """
+    document = dict(document)
+    for key in ARS_UUID_FIELDS:
+        if document.get(key):
+            document[key] = {"$uuid": document[key]}
+    for key in ARS_DATE_FIELDS:
+        value = document.get(key)
+        if isinstance(value, datetime):
+            value = value.isoformat()
+        if value:
+            document[key] = {"$date": value}
+    metadata = document.get("__metadata__")
+    if metadata and metadata.get("correlation_id"):
+        document["__metadata__"] = {
+            **metadata,
+            "correlation_id": {"$uuid": metadata["correlation_id"]},
+        }
+    return document
+
+
+@given(parse('the access period for "{alias}" has ended'))
+def expire_access_period(fixtures: JointFixture, alias: str):
+    """Move the access period of the pending request into the past.
+
+    ARS refuses to create a request with a period in the past, so it is moved
+    there in the database.
+    """
+    config, mongo = fixtures.config, fixtures.mongo
+    accessions = fixtures.state.get_state("dataset_accessions")
+    accession = accessions[alias]["dataset_accession"]
+    query = {"dataset_id": accession, "status": "pending"}
+    request = mongo.find_document(
+        config.ars_db_name, config.ars_access_requests_collection, query
+    )
+    assert request, f"No pending access request for dataset {alias}"
+
+    starts = datetime.now(UTC) - timedelta(days=30)
+    ends = starts + timedelta(days=7)
+    request.update(access_starts=starts, access_ends=ends)
+    mongo.upsert_document(
+        config.ars_db_name,
+        config.ars_access_requests_collection,
+        _ars_request_to_extended_json(request),
+        extend_mapping=False,
+    )
+
+    request = mongo.find_document(
+        config.ars_db_name, config.ars_access_requests_collection, query
+    )
+    assert request, f"The access request for dataset {alias} has gone"
+    stored_ends = datetime.fromisoformat(request["access_ends"])
+    assert stored_ends.replace(tzinfo=UTC) < datetime.now(UTC), (
+        f"The access period was not moved into the past: {request['access_ends']}"
+    )
+
+
+@then("I am warned that the access period has ended")
+def check_period_ended_warning(fixtures: JointFixture):
+    """Check the warning next to the access duration on the detail page."""
+    page = fixtures.playwright.page
+    expect(page.locator("main")).to_contain_text(PERIOD_ENDED_TEXT, timeout=UI_TIMEOUT)
+
+
+@then("I am no longer warned about the access period")
+def check_no_period_warning(fixtures: JointFixture):
+    """Check that the detail page shows no warning about the access period."""
+    page = fixtures.playwright.page
+    expect(page.locator("main")).not_to_contain_text(PERIOD_ENDED_TEXT)
+
+
+@when("I try to allow the access request")
+def try_to_allow_access_request(fixtures: JointFixture):
+    """Click the Allow button on the detail page."""
+    page = fixtures.playwright.page
+    page.get_by_role("button", name="Allow", exact=True).click()
+
+
+@then("a dialog tells me that the access period has ended")
+def check_period_ended_dialog(fixtures: JointFixture):
+    """Check the dialog that explains why the request cannot be allowed."""
+    dialog = fixtures.playwright.page.get_by_role("dialog")
+    expect(dialog).to_contain_text("The access period has ended", timeout=UI_TIMEOUT)
+    expect(dialog).to_contain_text("Set a new end date")
+
+
+@when("I choose to edit the access duration in the dialog")
+def edit_duration_from_dialog(fixtures: JointFixture):
+    """Open the duration editor with the button of the dialog."""
+    page = fixtures.playwright.page
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_role("button", name="Edit access duration").click()
+    expect(dialog).to_have_count(0, timeout=UI_TIMEOUT)
+    editor = page.locator("app-access-request-duration-edit")
+    expect(editor.get_by_label("End date")).to_be_visible(timeout=UI_TIMEOUT)
+
+
+@when(parse("I set the access end date to {days:d} days from today"))
+def set_access_end_date(fixtures: JointFixture, days: int):
+    """Open the duration editor if needed and save a new end date."""
+    page = fixtures.playwright.page
+    editor = page.locator("app-access-request-duration-edit")
+    end_input = editor.get_by_label("End date")
+    if not end_input.count():  # the dialog may have opened the editor already
+        editor.locator("mat-chip.edit-button").click()
+    expect(end_input).to_be_visible(timeout=UI_TIMEOUT)
+    end_date = datetime.now(UTC).date() + timedelta(days=days)
+    end_input.fill(end_date.isoformat())
+    end_input.press("Tab")  # the date picker takes the date on change
+    save_chip = editor.locator("mat-chip.save-edit-button")
+    expect(save_chip).not_to_have_class(re.compile("chip-disabled"), timeout=UI_TIMEOUT)
+    with page.expect_response(
+        lambda r: "/access-requests/" in r.url and r.request.method == "PATCH"
+    ) as response_info:
+        save_chip.click()
+    assert response_info.value.ok, (
+        f"Saving the end date failed: {response_info.value.status}"
+    )
+
+
+@then(parse('the access grant for dataset "{alias}" ends {days:d} days from today'))
+def check_access_grant_end(fixtures: JointFixture, alias: str, days: int):
+    """Check the end of the access grant in the claims repository.
+
+    The portal sets the end of the chosen day in the browser's time zone, so
+    the check allows for a day either way.
+    """
+    config, mongo = fixtures.config, fixtures.mongo
+    accessions = fixtures.state.get_state("dataset_accessions")
+    accession = accessions[alias]["dataset_accession"]
+    claims = mongo.wait_for_documents(
+        config.ums_db_name,
+        config.ums_claims_collection,
+        {"visa_type": "ControlledAccessGrants"},
+    )
+    assert claims, "No access grants found in the claims repository"
+    grants = [c for c in claims if c["visa_value"].endswith(f"/{accession}")]
+    assert len(grants) == 1, f"Expected one grant for {alias}, got {grants}"
+    valid_until = datetime.fromisoformat(grants[0]["valid_until"])
+    expected = datetime.now(UTC) + timedelta(days=days)
+    assert abs(valid_until.replace(tzinfo=UTC) - expected) < timedelta(days=1), (
+        f"The grant for {alias} ends {valid_until}, not {days} days from today"
+    )

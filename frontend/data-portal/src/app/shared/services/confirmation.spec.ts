@@ -8,7 +8,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
-import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog';
+import { ConfirmDialog } from '../ui/confirm-dialog/confirm-dialog';
 import { ConfirmationService } from './confirmation';
 
 describe('ConfirmationService', () => {
@@ -41,9 +41,24 @@ describe('ConfirmationService', () => {
       ...data,
     });
 
-    expect(matDialogMock.open).toHaveBeenCalledWith(ConfirmDialogComponent, {
+    expect(matDialogMock.open).toHaveBeenCalledWith(ConfirmDialog, {
       data,
     });
+  });
+
+  it('should pass the maximum width to the dialog', () => {
+    service.confirm({ message: 'Test Message', maxWidth: '420px' });
+
+    expect(matDialogMock.open).toHaveBeenLastCalledWith(
+      ConfirmDialog,
+      expect.objectContaining({ maxWidth: '420px' }),
+    );
+  });
+
+  it('should keep the default maximum width if none is given', () => {
+    service.confirm({ message: 'Test Message' });
+
+    expect(matDialogMock.open.mock.lastCall![1]).not.toHaveProperty('maxWidth');
   });
 
   it('should call afterClosed and callback with the correct value', async () => {

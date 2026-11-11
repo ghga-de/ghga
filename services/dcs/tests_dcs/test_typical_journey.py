@@ -341,6 +341,37 @@ async def test_bucket_cleanup_dangling_objects(cleanup_fixture: CleanupFixture, 
     )
 
 
+async def test_bucket_cleanup_non_uuid_key(cleanup_fixture: CleanupFixture, caplog):
+    """Test that a key that is not a UUID is skipped instead of aborting the cleanup."""
+    s3 = cleanup_fixture.s3
+    bucket_id = cleanup_fixture.bucket_id
+    non_uuid_key = "not-a-uuid"
+    with temp_file_object(bucket_id=bucket_id, object_id=non_uuid_key) as f:
+        await s3.populate_file_objects([f])
+
+    with caplog.at_level(logging.WARNING):
+        await cleanup_fixture.bucket_cleaner.cleanup_download_buckets(
+            object_storages_config=cleanup_fixture.config,
+            remove_dangling_objects=True,
+        )
+
+    assert any(
+        non_uuid_key in record.message and "not a UUID" in record.message
+        for record in caplog.records
+    )
+    assert await s3.storage.does_object_exist(
+        bucket_id=bucket_id, object_id=non_uuid_key
+    )
+
+    # the rest of the bucket is still cleaned up
+    expired_object = await cleanup_fixture.mongodb_dao.get_by_id(
+        cleanup_fixture.expired_file_id
+    )
+    assert not await s3.storage.does_object_exist(
+        bucket_id=bucket_id, object_id=str(expired_object.object_id)
+    )
+
+
 class SimulatedConnectionError(Exception):
     """Stand-in for the connection failures the S3 client raises.
 

@@ -22,8 +22,8 @@ for the full set of configurable values.
 | `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
 | `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
 | `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.min_request_interval` | Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests. | `0.0` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.05` |
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
 | `config.data_hub_crypt4gh_public_key_path` | Path to the Data Hub's Crypt4GH public key file. Only needed for running `dhfs verify`. | `null` |
 | `config.inbox_bucket_id` | The inbox bucket ID - only needed for running `dhfs verify`. | `null` |
@@ -48,7 +48,7 @@ for the full set of configurable values.
 | `config.log_traceback` | Whether to include exception tracebacks in log messages. | `true` |
 | `config.min_run_interval_seconds` | The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation. | `60` |
 | `config.interrogation_bucket_id` | The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS. | `null` |
-| `config.max_concurrent_parts` | How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly max_concurrent_parts * 3 * the part size. | `8` |
+| `config.max_concurrent_parts` | How many file parts to process at the same time. Files are processed one at a time, so this is the whole budget for the file in flight. It lets the download of one part overlap the re-encryption of another and the upload of a third, and it is the service's memory budget: peak use is roughly `max_concurrent_parts * 3 * part size`. | `8` |
 | `config.library_log_level` | The log level to use for libraries. This option can be used in tandem with log_level to view DEBUG logs from DHFS without the noise of third-party libraries. Will be overridden by log_level if log_level is higher. By default, this is set to CRITICAL, which will suppress all logs with a log level lower than CRITICAL. | `"CRITICAL"` |
 | `config.library_logger_names` | The list of logger names to target with library_log_level. | `["httpx2", "crypt4gh", "hexkit", "ghga_service_commons", "boto3", "botocore", "httpcore2", "urllib3"]` |
 
@@ -58,6 +58,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"dhfs"` |
@@ -112,7 +113,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
@@ -167,6 +169,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"dhfs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

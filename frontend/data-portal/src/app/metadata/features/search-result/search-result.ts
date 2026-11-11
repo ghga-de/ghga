@@ -11,9 +11,9 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { Hit } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { NotificationService } from '@app/shared/services/notification';
-import { DatasetSummaryComponent } from '../dataset-summary/dataset-summary';
-import { DatasetSummaryStencilComponent } from '../dataset-summary/dataset-summary.stencil';
+import { Notifier } from '@app/shared/services/notification';
+import { DatasetSummaryPanel } from '../dataset-summary/dataset-summary';
+import { DatasetSummaryStencil } from '../dataset-summary/dataset-summary.stencil';
 
 /**
  * Component for the expansion panel for each dataset found in the search results
@@ -25,15 +25,15 @@ import { DatasetSummaryStencilComponent } from '../dataset-summary/dataset-summa
     MatChipsModule,
     MatIconModule,
     MatButtonModule,
-    DatasetSummaryComponent,
-    DatasetSummaryStencilComponent,
+    DatasetSummaryPanel,
+    DatasetSummaryStencil,
   ],
   providers: [MetadataService],
   templateUrl: './search-result.html',
   styleUrl: './search-result.scss',
 })
-export class SearchResultComponent {
-  #notify = inject(NotificationService);
+export class SearchResult {
+  #notify = inject(Notifier);
   #metadata = inject(MetadataService);
   #summary = this.#metadata.datasetSummary;
 

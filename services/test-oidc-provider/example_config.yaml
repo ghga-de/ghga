@@ -8,6 +8,7 @@ cors_allowed_methods:
 - POST
 cors_allowed_origins:
 - https://client.test
+cors_exposed_headers: null
 docs_url: /docs
 generate_correlation_id: true
 host: 0.0.0.0
@@ -20,6 +21,7 @@ port: 8080
 redirect_url: https://client.test/oauth/callback
 service_instance_id: '1'
 service_name: top
+timeout_keep_alive: 90
 user_domain: home.org
 valid_seconds: 3600
 workers: 1

@@ -7,17 +7,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { FacetExpansionPanelComponent } from './facet-expansion-panel';
+import { FacetExpansionPanel } from './facet-expansion-panel';
 
-describe('FacetExpansionPanelComponent', () => {
-  let component: FacetExpansionPanelComponent;
-  let fixture: ComponentFixture<FacetExpansionPanelComponent>;
+describe('FacetExpansionPanel', () => {
+  let component: FacetExpansionPanel;
+  let fixture: ComponentFixture<FacetExpansionPanel>;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FacetExpansionPanelComponent],
+      imports: [FacetExpansionPanel],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(FacetExpansionPanelComponent);
+    fixture = TestBed.createComponent(FacetExpansionPanel);
     fixture.componentRef.setInput('facet', {
       key: 'test',
       name: 'Test Facet',
@@ -47,7 +47,7 @@ describe('FacetExpansionPanelComponent', () => {
 
   it('should be expanded from the start', () => {
     const expansionPanelButton = screen.getByRole('button', {
-      name: 'Test Facet(4)',
+      name: 'Test Facet (4)',
     });
     expect(expansionPanelButton.parentElement?.className.includes('mat-expanded')).toBe(
       true,
@@ -102,7 +102,7 @@ describe('FacetExpansionPanelComponent', () => {
     let emitted: boolean | undefined;
     component.panelExpansionChanged.subscribe((x) => (emitted = x));
     const button = screen.getByRole('button', {
-      name: 'Test Facet(4)',
+      name: 'Test Facet (4)',
     });
     expect(button).toBeTruthy();
     expect(button.parentElement?.className.includes('mat-expanded')).toBe(true);

@@ -85,8 +85,10 @@ class MongoStateStorage(StateStorage):
         self.mongo = mongo
 
     def get_state(self, state_name: str) -> Any:
+        # The database appears with the first state written, so before that the
+        # state is empty rather than missing
         state = self.mongo.find_document(
-            self.DB_NAME, self.COLLECTION_NAME, {"_id": state_name}
+            self.DB_NAME, self.COLLECTION_NAME, {"_id": state_name}, sloppy=True
         )
         return (state or {}).get("value")
 

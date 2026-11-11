@@ -5,13 +5,15 @@
 # Python / uv
 __pycache__/
 *.py[cod]
-.venv/
+# also .venv-docs and .venv-testbed; the ignore file uv writes inside is gone during a rebuild
+.venv*/
 venv/
 *.egg-info/
 build/
 dist/
 .mypy_cache/
 .ruff_cache/
+.rumdl_cache/
 .pytest_cache/
 .coverage
 coverage.xml
@@ -47,8 +49,16 @@ claude-backup/
 !/.claude/agents/
 !/.claude/commands/
 !/.claude/output-styles/
+!/.claude/rules/
 # leave out every local claude settings
 **/.claude/settings.local.json
+# and personal instructions: a committed CLAUDE.local.md would switch AGENTS.md off
+**/CLAUDE.local.md
+**/.claude/rules/*.local.md
+# skill eval cases and results, which `just skill-eval` expands from evals.yaml and writes
+.agents/skills/*/evals/
+# and the same for a skill shipped in a package, reached through its root link
+libs/*/src/*/.agents/skills/*/evals/
 # and the local Copilot settings
 .github/copilot/settings.local.json
 
@@ -59,3 +69,6 @@ metadata.json
 libs/*/great-docs/
 # Playwright traces from failed test-bed runs (diagnostics only, can be large)
 testbed/.traces/
+
+# vale styles, downloaded by `vale sync`
+.vale/

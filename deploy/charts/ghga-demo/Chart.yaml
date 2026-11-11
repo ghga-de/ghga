@@ -31,23 +31,28 @@ dependencies:
     condition: test-oidc-provider.enabled
 
   # ---- app charts (generated; grow this list as demo config wiring lands) --------------
-  # auth-service deploys twice, as in prod: the ext-authz adapter and the registry
-  # APIs (users/claims/access) — selected via config.provide_apis per alias.
+  # auth-service deploys four times, as in prod: the ext-authz adapter, the users
+  # and the claims APIs (selected via config.provide_apis per alias), and the consumer.
   - name: auth-service
     alias: auth-adapter
     version: ">=0.0.0-0"
     repository: file://../auth-service
     condition: auth-adapter.enabled
   - name: auth-service
-    alias: auth-rest
+    alias: auth-users
     version: ">=0.0.0-0"
     repository: file://../auth-service
-    condition: auth-rest.enabled
+    condition: auth-users.enabled
   - name: auth-service
     alias: auth-claims
     version: ">=0.0.0-0"
     repository: file://../auth-service
     condition: auth-claims.enabled
+  - name: auth-service
+    alias: auth-consumer
+    version: ">=0.0.0-0"
+    repository: file://../auth-service
+    condition: auth-consumer.enabled
   - name: wkvs
     version: ">=0.0.0-0"
     repository: file://../wkvs

@@ -60,7 +60,7 @@ type DatasetDetailsRow = Experiment | Sample | File;
   templateUrl: './dataset-details-table.html',
   styleUrl: './dataset-details-table.scss',
 })
-export class DatasetDetailsTableComponent implements AfterViewInit {
+export class DatasetDetailsTable implements AfterViewInit {
   tableName = input.required<'experiments' | 'samples' | 'files'>();
   data = input.required<DatasetDetailsRow[]>();
 

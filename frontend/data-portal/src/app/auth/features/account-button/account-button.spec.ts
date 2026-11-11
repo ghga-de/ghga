@@ -12,7 +12,7 @@ import { screen } from '@testing-library/angular';
 import { RoleNames, UserSession } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth';
 
-import { AccountButtonComponent } from './account-button';
+import { AccountButton } from './account-button';
 
 /**
  * A dummy user object with only the properties needed by the account button
@@ -59,17 +59,17 @@ class MockAuthService {
   );
 }
 
-describe('AccountButtonComponent', () => {
-  let component: AccountButtonComponent;
-  let fixture: ComponentFixture<AccountButtonComponent>;
+describe('AccountButton', () => {
+  let component: AccountButton;
+  let fixture: ComponentFixture<AccountButton>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccountButtonComponent],
+      imports: [AccountButton],
       providers: [{ provide: AuthService, useClass: MockAuthService }],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccountButtonComponent);
+    fixture = TestBed.createComponent(AccountButton);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

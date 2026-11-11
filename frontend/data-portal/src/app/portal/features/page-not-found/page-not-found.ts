@@ -6,14 +6,14 @@
 
 import { Component } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 
 /**
  * This is the PageNotFound Component. It gets displayed if the router cannot resolve a route.
  */
 @Component({
   selector: 'app-page-not-found',
-  imports: [MatIcon, ExternalLinkDirective],
+  imports: [MatIcon, ExternalLink],
   templateUrl: './page-not-found.html',
 })
-export class PageNotFoundComponent {}
+export class PageNotFound {}

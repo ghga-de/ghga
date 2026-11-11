@@ -4,15 +4,20 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, model, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { UploadBoxState, UploadBoxStateFilter } from '@app/upload/models/box';
+import {
+  UploadBoxFileStatesFilter,
+  UploadBoxFileStatesFilterLabel,
+  UploadBoxState,
+  UploadBoxStateFilter,
+} from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /**
@@ -23,7 +28,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
 @Component({
   selector: 'app-upload-box-manager-filter',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatInputModule,
     MatButtonModule,
@@ -33,7 +38,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   ],
   templateUrl: './upload-box-manager-filter.html',
 })
-export class UploadBoxManagerFilterComponent {
+export class UploadBoxManagerFilter {
   #uploadBoxService = inject(UploadBoxService);
 
   #filter = this.#uploadBoxService.uploadBoxesFilter;
@@ -42,22 +47,27 @@ export class UploadBoxManagerFilterComponent {
   displayFilters = signal(false);
 
   /**
-   * The model for upload-box filter properties.
+   * The filter form, starting from the current filter.
    */
-  title = model<string | undefined>(this.#filter().title);
-  state = model<UploadBoxStateFilter | undefined>(
-    this.#filter().state ?? 'not_archived',
+  protected filterForm = form(
+    signal({
+      title: this.#filter().title ?? '',
+      state: (this.#filter().state ?? 'not_archived') as UploadBoxStateFilter | '',
+      location: this.#filter().location ?? '',
+      fileStates: (this.#filter().fileStates ?? '') as UploadBoxFileStatesFilter | '',
+    }),
   );
-  location = model<string | undefined>(this.#filter().location);
 
   /**
    * Communicate filter changes to the upload box service.
    */
   #filterEffect = effect(() => {
+    const { title, state, location, fileStates } = this.filterForm().value();
     this.#uploadBoxService.setUploadBoxesFilter({
-      title: this.title(),
-      state: this.state(),
-      location: this.location(),
+      title: title || undefined,
+      state: state || undefined,
+      location: location || undefined,
+      fileStates: fileStates || undefined,
     });
   });
 
@@ -71,6 +81,27 @@ export class UploadBoxManagerFilterComponent {
       label: s.charAt(0).toUpperCase() + s.slice(1),
     })),
   ];
+
+  /**
+   * All conditions on the file states of a box. Choosing one other than the
+   * check for an empty box loads the file state counts of all open and locked
+   * boxes, so none is disabled for counts that are not loaded yet.
+   */
+  fileStateOptions = Object.entries(UploadBoxFileStatesFilterLabel).map(
+    ([value, label]) => ({ value: value as UploadBoxFileStatesFilter, label }),
+  );
+
+  /**
+   * Why the chosen condition on the file states finds no boxes yet, if it can't.
+   */
+  fileStatesHint = computed(() => {
+    const fileStates = this.filterForm.fileStates().value();
+    if (!fileStates || fileStates === 'no_files') return '';
+    if (this.#uploadBoxService.fileStateCountsByBox()) return '';
+    const counts = this.#uploadBoxService.fileStateCounts;
+    if (counts.error()) return 'The file states could not be loaded.';
+    return counts.isLoading() ? 'Loading the file states…' : '';
+  });
 
   /**
    * All available upload-box locations including display labels.

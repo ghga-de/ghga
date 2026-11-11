@@ -13,8 +13,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { FormField, form, maxLength, required } from '@angular/forms/signals';
+import { FormField, FormRoot, form, maxLength, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import {
@@ -40,8 +39,8 @@ import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
 @Component({
   selector: 'app-new-iva-dialog',
   imports: [
-    FormsModule,
     FormField,
+    FormRoot,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -56,10 +55,8 @@ import { NgxMatInputTelComponent } from 'ngx-mat-input-tel';
   providers: [IvaTypePipe],
   templateUrl: './new-iva-dialog.html',
 })
-export class NewIvaDialogComponent {
-  #dialogRef = inject(
-    MatDialogRef<NewIvaDialogComponent, { type: IvaType; value: string }>,
-  );
+export class NewIvaDialog {
+  #dialogRef = inject(MatDialogRef<NewIvaDialog, { type: IvaType; value: string }>);
   #ivaTypePipe = inject(IvaTypePipe);
 
   protected model = signal<{ type: keyof typeof IvaType | null; value: string }>({
@@ -67,11 +64,15 @@ export class NewIvaDialogComponent {
     value: '',
   });
 
-  protected ivaForm = form(this.model, (p) => {
-    required(p.type);
-    required(p.value);
-    maxLength(p.value, 500);
-  });
+  protected ivaForm = form(
+    this.model,
+    (p) => {
+      required(p.type);
+      required(p.value);
+      maxLength(p.value, 500);
+    },
+    { submission: { action: async () => this.#submit() } },
+  );
 
   protected submitDisabled = computed(() => !this.ivaForm().valid());
 
@@ -79,7 +80,8 @@ export class NewIvaDialogComponent {
    * Value prompts for the different IVA types
    */
   valuePrompts: { [key in keyof typeof IvaType]: string } = {
-    Phone: 'Please enter your phone number to receive an SMS:',
+    Phone:
+      'Please enter your phone number for receiving verification codes by SMS. We use this number only to verify your identity.',
     InPerson: 'Please enter a meeting location:',
     // the following options should not be selectable any more:
     Fax: '',
@@ -133,14 +135,6 @@ export class NewIvaDialogComponent {
   }
 
   /**
-   * Update the value in the model when the input changes
-   * @param value the new value entered by the user
-   */
-  onValueChange(value: string): void {
-    this.model.update((m) => ({ ...m, value }));
-  }
-
-  /**
    * Cancel the dialog
    */
   onCancel(): void {
@@ -150,7 +144,7 @@ export class NewIvaDialogComponent {
   /**
    * Complete the verification and pass the entered IVA data
    */
-  onSubmit(): void {
+  #submit(): void {
     const { type, value } = this.model();
     const trimmedValue = value?.trim();
     if (type && trimmedValue) {

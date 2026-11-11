@@ -16,10 +16,11 @@
 """In this module object construction and dependency injection is carried out."""
 
 from ars.config import Config
-from ars.migrations import run_db_migrations
+from ars.migrations import MIGRATION_MAP
 from ars.prepare import prepare_access_request_dao, prepare_consumer, prepare_rest_app
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
+from hexkit.providers.mongodb.migrations import MigrationManager
 
 DB_VERSION = 3
 
@@ -28,8 +29,6 @@ async def run_rest_app():
     """Run the HTTP REST API."""
     config = Config()
     configure_logging(config=config)
-
-    await run_db_migrations(config=config, target_version=DB_VERSION)
 
     async with prepare_rest_app(config=config) as app:
         await run_server(app=app, config=config)
@@ -40,8 +39,6 @@ async def consume_events(run_forever: bool = True) -> None:
     config = Config()
     configure_logging(config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
-
     async with prepare_consumer(config=config) as consumer:
         await consumer.event_subscriber.run(forever=run_forever)
 
@@ -51,10 +48,18 @@ async def publish_events(*, all: bool = False):
     config = Config()
     configure_logging(config=config)
 
-    await run_db_migrations(config=config, target_version=DB_VERSION)
-
     async with prepare_access_request_dao(config=config) as outbox_publisher:
         if all:
             await outbox_publisher.republish()
         else:
             await outbox_publisher.publish_pending()
+
+
+async def migrate_db() -> None:
+    """Run database migrations as a one-off command."""
+    config = Config()
+    configure_logging(config=config)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

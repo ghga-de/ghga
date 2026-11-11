@@ -19,7 +19,7 @@ import { BaseRouteService } from '@app/shared/services/base-route';
   imports: [MatIconModule, MatButtonModule, MatMenuModule, RouterLink],
   templateUrl: './tools-menu.html',
 })
-export class ToolsMenuComponent {
+export class ToolsMenu {
   #baseRoute = inject(BaseRouteService);
   #route = this.#baseRoute.route;
   isPlaygroundRoute = computed<boolean>(

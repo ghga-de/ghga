@@ -6,10 +6,10 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { within } from '@testing-library/angular';
-import { RefreshButtonComponent } from './refresh-button';
+import { RefreshButton } from './refresh-button';
 
-describe('RefreshButtonComponent', () => {
-  let fixture: ComponentFixture<RefreshButtonComponent>;
+describe('RefreshButton', () => {
+  let fixture: ComponentFixture<RefreshButton>;
 
   // Spec files share one document, since the test builder does not isolate them,
   // so a global query can also see buttons left behind by another spec. Look for
@@ -18,10 +18,10 @@ describe('RefreshButtonComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [RefreshButtonComponent],
+      imports: [RefreshButton],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(RefreshButtonComponent);
+    fixture = TestBed.createComponent(RefreshButton);
     fixture.componentRef.setInput('what', 'the file list');
     await fixture.whenStable();
   });

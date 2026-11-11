@@ -35,7 +35,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     </button>
   `,
 })
-export class RefreshButtonComponent {
+export class RefreshButton {
   /** What is being fetched again, used to build the label, e.g. "the file list". */
   what = input.required<string>();
 

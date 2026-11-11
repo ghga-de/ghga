@@ -16,7 +16,8 @@ So the unit -- not the file -- is the thing that gets checked: a member is check
 own resolves its imports differently and reports ~2x the errors). Given file arguments,
 this checks every unit that owns one of them; with --all, every unit.
 
-Used by the pre-commit hook, by `just typecheck`, and by CI, so all three agree.
+Used by the pre-commit hook, by `just typecheck`, and by CI, so all three agree; the
+agent hook `agent_hooks/check_units.py` checks units the same way.
 
 The unit mapping deliberately does NOT match `affected_targets.py`, which drives CI's
 build matrix: that one adds the reverse-dependency closure (a change to hexkit re-checks
@@ -90,6 +91,21 @@ def unit_paths(unit: str) -> list[str]:
     return paths
 
 
+def run_mypy(
+    unit: str, python: str = sys.executable, capture: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """Run mypy once on `unit` from the repo root, with the output captured or not."""
+    # `-m mypy` rather than a bare `mypy`, so this works under a plain interpreter
+    # from the workspace venv as well as under `uv run`
+    return subprocess.run(
+        [python, "-m", "mypy", *unit_paths(unit)],
+        cwd=REPO,
+        capture_output=capture,
+        text=True,
+        check=False,
+    )
+
+
 def check(units: list[str]) -> int:
     """Run mypy once per unit; return the number of units that failed."""
     failed = []
@@ -98,9 +114,7 @@ def check(units: list[str]) -> int:
         if not paths:
             continue
         print(f"== mypy {' '.join(paths)} ==", flush=True)
-        # `-m mypy` rather than a bare `mypy`, so this works under a plain interpreter
-        # from the workspace venv as well as under `uv run`
-        if subprocess.run([sys.executable, "-m", "mypy", *paths], cwd=REPO).returncode:
+        if run_mypy(unit).returncode:
             failed.append(unit)
     if failed:
         print(f"\nmypy failed in: {', '.join(failed)}", file=sys.stderr)

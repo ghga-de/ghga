@@ -8,14 +8,22 @@ mongodb:
 # This parameter is used as Kafka's group id
 serviceName: auth-service
 
+migrationInitContainer:
+  executable: auth-service
+  executableArgs:
+  - migrate-db
+
 config:
   mongo_dsn:
   host: 0.0.0.0
   enable_opentelemetry: false
   db_version_collection: "authDbVersions"
   migration_wait_sec: 10
+  # replicas waiting on another one's migration fail after this, so a stuck lock shows
+  migration_max_wait_sec: 600
 
-executableArgs: []
+executableArgs:
+- run-rest
 
 _topics:
   authEvents:

@@ -222,16 +222,16 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                 log.error(authorization_error)
                 raise authorization_error
 
-        mapping: dict[str, Any] = {}
+        filter_: dict[str, Any] = {}
         if user_id is not None:
-            mapping["user_id"] = user_id
+            filter_["user_id"] = user_id
         if dataset_id is not None:
-            mapping["dataset_id"] = dataset_id
+            filter_["dataset_id"] = dataset_id
         if status is not None:
-            mapping["status"] = status
+            filter_["status"] = status
 
         requests = [
-            request async for request in self._request_dao.find_all(mapping=mapping)
+            request async for request in self._request_dao.find_all(filter_=filter_)
         ]
 
         # latests requests should be served first
@@ -252,6 +252,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
+        The access period is only checked when it is changed or the request is allowed.
 
         Only data stewards may use this method.
 
@@ -261,6 +262,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         - `AccessRequestClosed` if the access request was already processed
         - `AccessRequestMissingIva` if an IVA is needed but not provided
         - `AccessRequestInvalidDuration` if the end date isn't later than the start date
+          or the access period has ended
         - `AccessRequestServerError` if the access grant could not be registered
         """
         try:
@@ -288,32 +290,48 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             log.error(missing_iva_error)
             raise missing_iva_error
 
+        now = now_utc_ms_prec()
         access_starts = patch_data.access_starts or request.access_starts
         # force start to be not earlier than the current date
-        access_starts = max(now_utc_ms_prec(), access_starts)
+        access_starts = max(now, access_starts)
         access_ends = patch_data.access_ends or request.access_ends
-        if access_starts >= access_ends:
-            invalid_duration_error = self.AccessRequestInvalidDuration(
-                "Access end date must be later than access start date"
-            )
-            raise invalid_duration_error
-        # even the data steward may not extend the access grant ad infinitum
-        if access_ends > access_starts + self._max_extend_duration:
-            invalid_duration_error = self.AccessRequestInvalidDuration(
-                "Access duration is too long"
-            )
-            log.error(invalid_duration_error)
-            raise invalid_duration_error
 
-        update: dict[str, Any] = {
-            "iva_id": iva_id,
-            "access_starts": access_starts,
-            "access_ends": access_ends,
-        }
+        update: dict[str, Any] = {"iva_id": iva_id}
+
+        # check the period only when it changes or access is granted,
+        # so that a request whose period has passed can still be denied
+        period_changed = (
+            patch_data.access_starts is not None or patch_data.access_ends is not None
+        )
+        if period_changed or status == AccessRequestStatus.ALLOWED:
+            if access_starts >= access_ends:
+                # an end date that passed while the request was pending is not
+                # the steward's mistake, so name the cause instead
+                period_ended = (
+                    status == AccessRequestStatus.ALLOWED
+                    and patch_data.access_ends is None
+                    and access_ends <= now
+                )
+                invalid_duration_error = self.AccessRequestInvalidDuration(
+                    "The access period has ended; set a new end date before allowing"
+                    if period_ended
+                    else "Access end date must be later than access start date"
+                )
+                log.error(invalid_duration_error)
+                raise invalid_duration_error
+            # even the data steward may not extend the access grant ad infinitum
+            if access_ends > access_starts + self._max_extend_duration:
+                invalid_duration_error = self.AccessRequestInvalidDuration(
+                    "Access duration is too long"
+                )
+                log.error(invalid_duration_error)
+                raise invalid_duration_error
+            update["access_starts"] = access_starts
+            update["access_ends"] = access_ends
 
         if status != AccessRequestStatus.PENDING:
             update["status"] = status
-            update["status_changed"] = now_utc_ms_prec()
+            update["status_changed"] = now
             update["changed_by"] = user_id
 
         if patch_data.ticket_id is not None:
@@ -323,30 +341,43 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         if patch_data.note_to_requester is not None:
             update["note_to_requester"] = patch_data.note_to_requester or None
         modified_request = request.model_copy(update=update)
-        await self._request_dao.update(modified_request)
 
-        if status == AccessRequestStatus.ALLOWED:
-            # Try to register as download access grant
+        if status != AccessRequestStatus.ALLOWED:
+            await self._request_dao.update(modified_request)
+            return
+
+        # Register the grant before storing the request, since storing it publishes
+        # the allowed status, which the requester is notified about by email.
+        try:
+            grant_id = await self._access_grants.grant_download_access(
+                user_id=request.user_id,
+                iva_id=cast(UUID4, iva_id),  # has already been checked above
+                dataset_id=request.dataset_id,
+                valid_from=access_starts,
+                valid_until=access_ends,
+            )
+            if not grant_id:
+                raise self._access_grants.AccessGrantsError(
+                    "Access grant could not be created"
+                )
+        except self._access_grants.AccessGrantsError as error:
+            server_error = self.AccessRequestServerError(
+                f"Could not register the download access grant: {error}"
+            )
+            log.error(server_error)
+            raise server_error from error
+
+        try:
+            await self._request_dao.update(modified_request)
+        except Exception:
+            # a grant without an allowed request would be duplicated on a retry
             try:
-                grant_id = await self._access_grants.grant_download_access(
-                    user_id=request.user_id,
-                    iva_id=cast(UUID4, iva_id),  # has already been checked above
-                    dataset_id=request.dataset_id,
-                    valid_from=access_starts,
-                    valid_until=access_ends,
+                await self._access_grants.revoke_download_access_grant(grant_id)
+            except self._access_grants.AccessGrantsError as revoke_error:
+                log.error(
+                    "Could not revoke the access grant %s: %s", grant_id, revoke_error
                 )
-                if not grant_id:
-                    raise self._access_grants.AccessGrantsError(
-                        "Access grant could not be created"
-                    )
-            except self._access_grants.AccessGrantsError as error:
-                # roll back the status update
-                await self._request_dao.update(request)
-                server_error = self.AccessRequestServerError(
-                    f"Could not register the download access grant: {error}"
-                )
-                log.error(server_error)
-                raise server_error from error
+            raise
 
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:
@@ -362,7 +393,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         dataset_id = dataset.id
 
         async for request in self._request_dao.find_all(
-            mapping={"dataset_id": dataset_id}
+            filter_={"dataset_id": dataset_id}
         ):
             if request.status == AccessRequestStatus.PENDING:
                 update = {
@@ -397,7 +428,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
             raise dataset_not_found_error from error
 
         async for request in self._request_dao.find_all(
-            mapping={"dataset_id": dataset_id}
+            filter_={"dataset_id": dataset_id}
         ):
             if request.status == AccessRequestStatus.PENDING:
                 update = {

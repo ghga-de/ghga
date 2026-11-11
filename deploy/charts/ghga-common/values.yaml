@@ -6,6 +6,7 @@ exports:
     global:
       imageRegistry: ""
       imagePullSecrets: []
+      localImageIds: {}
 
     commandPrefix: /usr/local/bin/
     commandStyle: shell
@@ -124,10 +125,14 @@ exports:
       initialDelaySeconds: 30
       periodSeconds: 15
 
+    # Ready means answering on the health endpoint, not just accepting connections:
+    # a service that crashes once its dependencies fail still opens its port first.
+    # Values that set another handler, such as `tcpSocket`, replace this `httpGet`.
     readinessProbe:
       enabled: false
-      tcpSocket:
-        port: 8080
+      httpGet:
+        path: "{{ .Values.healthEndpoint }}"
+        port: http
       initialDelaySeconds: 30
       periodSeconds: 15
 
@@ -237,6 +242,14 @@ exports:
     enableServiceLinks: true
 
     successfulJobsHistoryLimit: 5
+
+    # What a cronjob does when a run is still active at the next schedule.
+    # Forbid skips the new run, so hung runs cannot pile up.
+    concurrencyPolicy: Forbid
+    # Kill a cronjob run after this many seconds; null means no limit.
+    activeDeadlineSeconds: null
+    # Skip a cronjob run that could not start within this many seconds of its schedule.
+    startingDeadlineSeconds: null
 
     environment:
       name: default

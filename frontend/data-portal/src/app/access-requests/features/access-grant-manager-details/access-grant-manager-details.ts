@@ -14,7 +14,6 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -30,13 +29,13 @@ import { AccessRequestService } from '@app/access-requests/services/access-reque
 import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
+import { NavigationTracker } from '@app/shared/services/navigation';
 import {
   DEFAULT_DATE_OUTPUT_FORMAT,
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation-dialog/access-grant-revocation-dialog';
+import { AccessGrantRevocationDialog } from '../access-grant-revocation-dialog/access-grant-revocation-dialog';
 
 /**
  * Access Grant Manager Details component.
@@ -46,7 +45,6 @@ import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation
 @Component({
   selector: 'app-access-grant-manager-details',
   imports: [
-    FormsModule,
     MatCardModule,
     MatIconModule,
     MatInputModule,
@@ -64,12 +62,12 @@ import { AccessGrantRevocationDialogComponent } from '../access-grant-revocation
   ],
   templateUrl: './access-grant-manager-details.html',
 })
-export class AccessGrantManagerDetailsComponent implements OnInit {
+export class AccessGrantManagerDetails implements OnInit {
   readonly friendlyDateFormat = FRIENDLY_DATE_FORMAT;
   readonly periodFormat = DEFAULT_DATE_OUTPUT_FORMAT;
   readonly periodTimeZone = DEFAULT_TIME_ZONE;
 
-  #location = inject(NavigationTrackingService);
+  #location = inject(NavigationTracker);
   #ars = inject(AccessRequestService);
   #ivaService = inject(IvaService);
   #dialog = inject(MatDialog);
@@ -187,7 +185,7 @@ export class AccessGrantManagerDetailsComponent implements OnInit {
    * Revoke the grant after confirmation.
    */
   safeRevoke(): void {
-    this.#dialog.open(AccessGrantRevocationDialogComponent, {
+    this.#dialog.open(AccessGrantRevocationDialog, {
       data: {
         grant: this.grant()!,
       },

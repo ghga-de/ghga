@@ -20,11 +20,22 @@ from uuid import UUID
 import pytest
 
 from ars.core.models import AccessRequestStatus
-from ars.migrations import V2Migration, run_db_migrations
-from hexkit.providers.mongodb.migrations import MigrationConfig
+from ars.migrations import MIGRATION_MAP
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationManager,
+)
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 ACCESS_REQUESTS_V1 = [
@@ -99,9 +110,7 @@ async def test_v2_migration(mongodb: MongoDbFixture):
     # Save this for later
     pre_migration_docs = access_request_collection.find().to_list()
 
-    await run_db_migrations(
-        config=migration_config, target_version=2, migration_map={2: V2Migration}
-    )
+    await run_db_migrations(config=migration_config, target_version=2)
 
     # Verify V2 migration was applied correctly
     migrated_docs = access_request_collection.find().to_list()
@@ -125,9 +134,7 @@ async def test_v2_migration(mongodb: MongoDbFixture):
             assert doc[field] is None
 
     # Reverse the V2 migration
-    await run_db_migrations(
-        config=migration_config, target_version=1, migration_map={2: V2Migration}
-    )
+    await run_db_migrations(config=migration_config, target_version=1)
 
     # Make sure contents now match beginning
     reverted_docs = access_request_collection.find().to_list()

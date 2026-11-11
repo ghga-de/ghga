@@ -25,14 +25,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AccessGrantWithIva } from '@app/access-requests/models/access-requests';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
-import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';
+import { Notifier } from '@app/shared/services/notification';
+import { Paragraphs } from '@app/shared/ui/paragraphs/paragraphs';
 import { FRIENDLY_DATE_FORMAT } from '@app/shared/utils/date-formats';
 import { getBackendErrorMessage, MaybeBackendError } from '@app/shared/utils/errors';
 import { DatasetWithExpiration } from '@app/work-packages/models/dataset';
 import { DownloadWorkPackageRequest } from '@app/work-packages/models/work-package';
 import { WorkPackageService } from '@app/work-packages/services/work-package';
-import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-input';
+import { PubkeyField } from '@app/work-packages/ui/pubkey-input/pubkey-input';
 
 /**
  * Dialog for creating download tokens to access datasets via the GHGA connector.
@@ -51,18 +51,18 @@ import { PubkeyFieldComponent } from '@app/work-packages/ui/pubkey-input/pubkey-
     MatInputModule,
     MatProgressSpinnerModule,
     MatCardModule,
-    ParagraphsComponent,
+    Paragraphs,
     DatePipe,
     IvaTypePipe,
-    PubkeyFieldComponent,
+    PubkeyField,
     FormField,
   ],
   templateUrl: './download-work-package-dialog.html',
 })
-export class DownloadWorkPackageDialogComponent {
+export class DownloadWorkPackageDialog {
   #clipboard = inject(Clipboard);
-  #dialogRef = inject(MatDialogRef<DownloadWorkPackageDialogComponent>);
-  #notify = inject(NotificationService);
+  #dialogRef = inject(MatDialogRef<DownloadWorkPackageDialog>);
+  #notify = inject(Notifier);
   #wpService = inject(WorkPackageService);
   #datasets = this.#wpService.datasets;
   #iva = inject(IvaService);
@@ -90,9 +90,9 @@ export class DownloadWorkPackageDialogComponent {
   );
 
   protected model = signal({ files: '', pubkey: '' });
-  protected pubkeyField = viewChild.required(PubkeyFieldComponent);
+  protected pubkeyField = viewChild.required(PubkeyField);
   protected downloadForm = form(this.model, (p) => {
-    apply(p.pubkey, PubkeyFieldComponent.schema);
+    apply(p.pubkey, PubkeyField.schema);
   });
 
   protected token = signal('');

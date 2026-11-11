@@ -81,7 +81,7 @@ async def test_deletion_handler(
         )
 
         await claim_dao.insert(claim)
-        assert await claim_dao.find_one(mapping={"user_id": SOME_USER_ID})
+        assert await claim_dao.find_one(filter_={"user_id": SOME_USER_ID})
 
         event_type = config.dataset_deletion_type
         event_topic = config.dataset_change_topic
@@ -109,7 +109,7 @@ async def test_deletion_handler(
             assert "type=dataset_deleted" in messages[0]
             assert messages[1] == "Deleted 1 claims for dataset DS0815"
             with pytest.raises(NoHitsFoundError):
-                assert not await claim_dao.find_one(mapping={"user_id": SOME_USER_ID})
+                assert not await claim_dao.find_one(filter_={"user_id": SOME_USER_ID})
 
             await kafka.publish_event(
                 payload=payload, type_=event_type, topic=event_topic

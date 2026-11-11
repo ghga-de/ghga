@@ -56,7 +56,7 @@ class FileController(FileControllerPort):
         existing_records = {
             record.pid: record
             async for record in self._file_accession_dao.find_all(
-                mapping={"pid": {"$in": list(file_id_map)}}
+                filter_={"pid": {"$in": list(file_id_map)}}
             )
         }
         unknown_accessions = [
@@ -148,7 +148,7 @@ class FileController(FileControllerPort):
         return {
             record.study_id
             async for record in self._file_accession_dao.find_all(
-                mapping={"study_id": {"$ne": None}, "file_id": None}
+                filter_={"study_id": {"$ne": None}, "file_id": None}
             )
             if record.study_id is not None
         }
@@ -163,7 +163,7 @@ class FileController(FileControllerPort):
         return {
             record.pid: record.file_id
             async for record in self._file_accession_dao.find_all(
-                mapping={"study_id": study_id}
+                filter_={"study_id": study_id}
             )
         }
 
@@ -175,7 +175,7 @@ class FileController(FileControllerPort):
         """
         result = {}
         async for record in self._file_accession_dao.find_all(
-            mapping={"file_id": {"$in": list(file_ids)}}
+            filter_={"file_id": {"$in": list(file_ids)}}
         ):
             # The query only matches mapped records, so file_id is always set.
             if record.file_id is not None:

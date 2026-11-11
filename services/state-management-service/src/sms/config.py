@@ -61,10 +61,10 @@ class SmsConfig(VaultConfig):
     db_permissions: list[str] = Field(
         default=[],
         description=(
-            "List of permissions that can be granted on a collection. Use * to signify"
-            + " 'all'. The format is '<db_name>.<collection_name>:<permissions>', e.g."
-            + " 'db1.collection1.crud'. The permissions are 'r' for read and 'w' for"
-            + " write. '*' can be used to mean both read and write (or 'rw')."
+            "List of permissions that can be granted on a collection. Use `*` to"
+            + " signify 'all'. The format is `<db_name>.<collection_name>:<permissions>`,"
+            + " e.g. `db1.collection1.crud`. The permissions are `r` for read and `w` for"
+            + " write. `*` can be used to mean both read and write (or `rw`)."
             + " Deletion is a write operation. If db_permissions are not set, no"
             + " operations are allowed on any database or collection."
         ),
@@ -78,6 +78,17 @@ class SmsConfig(VaultConfig):
             "*.*:r",
             "*.*:*",
         ],
+    )
+    db_version_collection_suffix: str = Field(
+        default="DbVersions",
+        description=(
+            "Collections whose name ends with this suffix hold a service's migration"
+            + " records and are skipped when deleting with the `*` collection wildcard,"
+            + " since the next migration run without them would migrate the service's"
+            + " current data again. Deleting such a collection by its name still works."
+            + " An empty string turns the protection off."
+        ),
+        examples=["DbVersions", ""],
     )
     mongo_dsn: Secret[MongoDsn] = Field(
         default=...,

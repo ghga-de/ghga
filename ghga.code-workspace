@@ -143,9 +143,31 @@
     "python.testing.unittestEnabled": false,
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
     "python.analysis.autoImportCompletions": true,
+    // The root folder takes its search excludes from `.vscode/settings.json`; this
+    // covers the member folders, such as libs/ghga-jsonsubschema, whose own skill
+    // symlinks would otherwise show every hit twice.
+    "search.exclude": {
+      "**/.claude/skills/**": true
+    },
+    // The fixes the trailing-whitespace and end-of-file-fixer hooks make, applied on save.
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    // Markdown is one sentence per line (ADR-0044), so long lines are read soft-wrapped.
+    // Trailing spaces stay, as the hook keeps them as hard line breaks.
+    "[markdown]": {
+      "editor.wordWrap": "on",
+      "files.trimTrailingWhitespace": false
+    },
+    // Some YAML files, such as the metldata test models and the front end's
+    // pnpm-lock.yaml, exceed the default outline limit of 5000 items.
+    "yaml.maxItemsComputed": 15000,
     // Copilot finds the root `AGENTS.md` by itself, but the nested ones only with
     // this. Window-scoped, so `.vscode/settings.json` does not cover this workspace.
     "chat.useNestedAgentsMdFiles": true,
+    // Lets chat agents open and inspect pages in the integrated browser, such as the
+    // demo's data portal.
+    "workbench.browser.enableChatTools": true,
     // Ruff is the Python formatter/linter (mirrors `just fmt`); scope it to .py so the
     // now-also-installed Prettier doesn't trigger a "multiple formatters" prompt.
     "[python]": {
@@ -155,16 +177,5 @@
         "source.organizeImports.ruff": "explicit"
       }
     }
-  },
-  "extensions": {
-    // frontend/data-portal/.vscode/extensions.json recommends vitest.explorer, and this
-    // multi-root workspace picks up every folder's recommendations. The extension cannot
-    // drive our unit tests: Angular 22 runs them through the @angular/build:unit-test
-    // builder, which the plain-Vitest extension has no VS Code Testing integration for
-    // (use `pnpm test` / `pnpm test:ui`). Suppressed here rather than deleted upstream,
-    // because that file is synced from the data-portal repo and would come back.
-    "unwantedRecommendations": [
-      "vitest.explorer"
-    ]
   }
 }

@@ -10,6 +10,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   OnInit,
   signal,
 } from '@angular/core';
@@ -25,14 +26,15 @@ import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { UserExtIdPipe } from '@app/shared/pipes/user-ext-id-pipe';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import {
   DATE_INPUT_FORMAT_HINT,
   localDateToContractIsoUtc,
@@ -59,6 +61,7 @@ const MAX_USER_RESULTS = 10;
     MatIcon,
     MatProgressSpinner,
     MatRadioModule,
+    MatTooltip,
     RouterLink,
     IvaStatePipe,
     IvaTypePipe,
@@ -66,12 +69,12 @@ const MAX_USER_RESULTS = 10;
   ],
   templateUrl: './upload-grant-creation.html',
 })
-export class UploadGrantCreationComponent implements OnInit {
+export class UploadGrantCreation implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #userService = inject(UserService);
   #ivaService = inject(IvaService);
-  #notification = inject(NotificationService);
-  #location = inject(NavigationTrackingService);
+  #notification = inject(Notifier);
+  #location = inject(NavigationTracker);
 
   /** Route parameter: the ID of the upload box to grant access to. */
   boxId = input.required<string>();
@@ -93,10 +96,13 @@ export class UploadGrantCreationComponent implements OnInit {
   selectedUser = signal<DisplayUser | null>(null);
 
   /**
-   * The IVA ID selected for the grant.
+   * The IVA ID selected for the grant, reset when the selected user changes.
    * `undefined` means the user has not yet made a choice.
    */
-  selectedIvaId = signal<string | undefined>(undefined);
+  selectedIvaId = linkedSignal<DisplayUser | null, string | undefined>({
+    source: this.selectedUser,
+    computation: () => undefined,
+  });
 
   /** Whether the grant creation request is in flight. */
   isSubmitting = signal(false);
@@ -199,10 +205,9 @@ export class UploadGrantCreationComponent implements OnInit {
       this.datesForm().valid(),
   );
 
-  /** When the selected user changes, reload their IVAs and reset the IVA selection. */
+  /** When the selected user changes, load their IVAs. */
   #userChangedEffect = effect(() => {
     const user = this.selectedUser();
-    this.selectedIvaId.set(undefined);
     if (user) {
       this.#ivaService.loadUserIvas(user.id);
     }

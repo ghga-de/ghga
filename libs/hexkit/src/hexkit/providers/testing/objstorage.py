@@ -27,7 +27,12 @@ ObjectID = str
 
 
 class InMemObjectStorage(ObjectStorageProtocol):
-    """In-memory object storage mock just the method used in this service"""
+    """In-memory ObjectStorage provider for tests.
+
+    Tracks which buckets and object IDs exist, but stores no file content.
+    Presigned URLs point to no server, and object sizes, ETags and upload
+    parts are fake values.
+    """
 
     base_url = "https://storage.test"
 

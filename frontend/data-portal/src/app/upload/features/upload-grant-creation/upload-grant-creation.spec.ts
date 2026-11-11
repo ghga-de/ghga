@@ -14,13 +14,13 @@ import { UserStatus } from '@app/auth/models/user';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { Iva, IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
-import { UploadGrantCreationComponent } from './upload-grant-creation';
+import { UploadGrantCreation } from './upload-grant-creation';
 
 const testBox = uploadBoxes.boxes[0];
 
@@ -130,9 +130,9 @@ class MockIvaService {
   }
 }
 
-describe('UploadGrantCreationComponent', () => {
-  let component: UploadGrantCreationComponent;
-  let fixture: ComponentFixture<UploadGrantCreationComponent>;
+describe('UploadGrantCreation', () => {
+  let component: UploadGrantCreation;
+  let fixture: ComponentFixture<UploadGrantCreation>;
   let uploadBoxService: MockUploadBoxService;
   let userService: MockUserService;
   let ivaService: MockIvaService;
@@ -143,14 +143,14 @@ describe('UploadGrantCreationComponent', () => {
     mockNavigationService.back.mockReset();
 
     await TestBed.configureTestingModule({
-      imports: [UploadGrantCreationComponent],
+      imports: [UploadGrantCreation],
       providers: [
         provideNativeDateAdapter(),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: UserService, useClass: MockUserService },
         { provide: IvaService, useClass: MockIvaService },
-        { provide: NotificationService, useValue: mockNotificationService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
+        { provide: Notifier, useValue: mockNotificationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
@@ -161,7 +161,7 @@ describe('UploadGrantCreationComponent', () => {
     userService = TestBed.inject(UserService) as unknown as MockUserService;
     ivaService = TestBed.inject(IvaService) as unknown as MockIvaService;
 
-    fixture = TestBed.createComponent(UploadGrantCreationComponent);
+    fixture = TestBed.createComponent(UploadGrantCreation);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('boxId', testBox.id);
     await fixture.whenStable();
@@ -187,7 +187,7 @@ describe('UploadGrantCreationComponent', () => {
 
   it('should show the search input before a user is selected', () => {
     expect(
-      screen.getByLabelText(/search by name, email or external id/i),
+      screen.getByLabelText(/search by name, LS Login email or LS ID/i),
     ).toBeVisible();
   });
 
@@ -195,7 +195,6 @@ describe('UploadGrantCreationComponent', () => {
     beforeEach(async () => {
       userService.setUsers([testUser, testUser2]);
       component.searchQuery.set('john');
-      fixture.detectChanges();
       await fixture.whenStable();
     });
 
@@ -210,13 +209,12 @@ describe('UploadGrantCreationComponent', () => {
     describe('after selecting a user', () => {
       beforeEach(async () => {
         component.selectUser(testUser);
-        fixture.detectChanges();
         await fixture.whenStable();
       });
 
       it('should hide the search input', () => {
         expect(
-          screen.queryByLabelText(/search by name, email or external id/i),
+          screen.queryByLabelText(/search by name, LS Login email or LS ID/i),
         ).not.toBeInTheDocument();
       });
 
@@ -224,8 +222,12 @@ describe('UploadGrantCreationComponent', () => {
         expect(screen.getByText('Dr. John Doe')).toBeVisible();
       });
 
-      it('should display the selected user email', () => {
-        expect(screen.getByText('doe@home.org')).toBeVisible();
+      it('should display the selected user email as the LS Login email', () => {
+        const email = screen.getByText('doe@home.org');
+        expect(email).toBeVisible();
+        expect(email.parentElement).toHaveTextContent(
+          /^\s*LS Login email:\s*doe@home\.org/,
+        );
       });
 
       it('should show the IVA selection card', () => {
@@ -239,13 +241,12 @@ describe('UploadGrantCreationComponent', () => {
       describe('after clearing the user', () => {
         beforeEach(async () => {
           component.clearUser();
-          fixture.detectChanges();
           await fixture.whenStable();
         });
 
         it('should show the search input again', () => {
           expect(
-            screen.getByLabelText(/search by name, email or external id/i),
+            screen.getByLabelText(/search by name, LS Login email or LS ID/i),
           ).toBeVisible();
         });
       });
@@ -253,7 +254,6 @@ describe('UploadGrantCreationComponent', () => {
       describe('after selecting an IVA', () => {
         beforeEach(async () => {
           component.selectedIvaId.set(testIvas[0].id);
-          fixture.detectChanges();
           await fixture.whenStable();
         });
 
@@ -265,6 +265,22 @@ describe('UploadGrantCreationComponent', () => {
           expect(
             screen.getByRole('button', { name: /create upload grant/i }),
           ).toBeVisible();
+        });
+
+        it('should reset the IVA selection when another user is selected', async () => {
+          component.selectUser(testUser2);
+          await fixture.whenStable();
+          expect(component.selectedIvaId()).toBeUndefined();
+          expect(component.ivaSelectionDone()).toBe(false);
+          expect(
+            screen.queryByRole('button', { name: /create upload grant/i }),
+          ).not.toBeInTheDocument();
+        });
+
+        it('should keep the IVA selection while the user stays the same', async () => {
+          component.selectUser(testUser);
+          await fixture.whenStable();
+          expect(component.selectedIvaId()).toBe(testIvas[0].id);
         });
       });
     });

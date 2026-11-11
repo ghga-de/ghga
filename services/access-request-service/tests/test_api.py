@@ -22,6 +22,7 @@ from uuid import uuid4
 
 import pytest
 
+from ghga_service_commons.http.mock_api import respond
 from hexkit.custom_types import JsonObject
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
@@ -490,6 +491,7 @@ async def test_patch_access_request_status(
 
     # check that access has been granted
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{SOME_IVA_ID}/datasets/DS001"
@@ -583,6 +585,7 @@ async def test_patch_access_request_with_another_iva(
 
     # check that access has been granted using the other IVA
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{another_iva}/datasets/DS001"
@@ -861,6 +864,81 @@ async def test_patch_state_change_of_denied_request(
     assert response.json()["detail"] == "Access request has already been processed"
 
 
+async def test_patch_request_whose_access_period_has_passed(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+    access_grants: AccessGrantsMock,
+):
+    """Test that a request whose period has passed can be denied but not allowed."""
+    client = rest.rest_client
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+
+    # a request cannot be created with a past period, so move it there in the DB
+    past = DATE_NOW - timedelta(days=30)
+    rest.mongodb.client[rest.config.db_name]["accessRequests"].update_many(
+        {}, {"$set": {"access_starts": past, "access_ends": past + timedelta(days=7)}}
+    )
+
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "allowed"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "The access period has ended; set a new end date before allowing"
+    )
+    assert access_grants.last_request is None
+
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "denied", "note_to_requester": "Please ask again"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 204
+
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+    assert response.status_code == 200
+    request = response.json()[0]
+    assert request["status"] == "denied"
+    assert request["note_to_requester"] == "Please ask again"
+    assert request["access_ends"] == isoformat(past + timedelta(days=7))
+
+
+async def test_patch_status_when_granting_access_fails(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+    access_grants: AccessGrantsMock,
+):
+    """Test that a failed access grant is a server error without internal details."""
+    client = rest.rest_client
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+
+    access_grants.on_grant_access = respond(500)
+    response = await client.patch(
+        f"/access-requests/{access_request_id}",
+        json={"status": "allowed"},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Access request could not be modified."
+
+    # the request stays pending, so the steward can try again
+    response = await client.get("/access-requests", headers=auth_headers_steward)
+    assert response.status_code == 200
+    assert response.json()[0]["status"] == "pending"
+
+
 async def test_patch_everything_when_allowing_request(
     rest: RestFixture,
     auth_headers_doe: dict[str, str],
@@ -900,6 +978,7 @@ async def test_patch_everything_when_allowing_request(
 
     # check that access has been granted using the new IVA
     grant_request = access_grants.last_request
+    assert grant_request is not None
     assert grant_request.method == "POST"
     assert str(grant_request.url) == (
         f"http://access/users/{ID_OF_JOHN_DOE}/ivas/{new_iva}/datasets/DS001"
@@ -1040,7 +1119,7 @@ async def test_get_own_access_grants(
     user_id = GRANT_DATA["user_id"]
 
     # mock getting the access grants of the user
-    access_grants.grants = [BASE_GRANT_DATA]
+    access_grants.on_get_grants = respond(200, json=[BASE_GRANT_DATA])
 
     # get own access grants as user without specifying a user ID
     response = await client.get("/access-grants", headers=auth_headers_doe)
@@ -1048,6 +1127,7 @@ async def test_get_own_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
+    assert access_grants.last_request is not None
     assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
 
     # get own access grants specifying a user ID
@@ -1072,7 +1152,7 @@ async def test_get_other_access_grants(
     user_id = GRANT_DATA["user_id"]
 
     # mock getting the access grants
-    access_grants.grants = [BASE_GRANT_DATA]
+    access_grants.on_get_grants = respond(200, json=[BASE_GRANT_DATA])
 
     # get access grants of a specific user as data steward
     response = await client.get(
@@ -1082,6 +1162,7 @@ async def test_get_other_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
+    assert access_grants.last_request is not None
     assert dict(access_grants.last_request.url.params) == {"user_id": user_id}
 
     # get access grants of all users
@@ -1108,7 +1189,7 @@ async def test_get_filtered_access_grants(
     query = f"user_id={user_id}&iva_id={iva_id}&dataset_id={dataset_id}&valid=true"
 
     # mock getting the filtered access grant list
-    access_grants.grants = [BASE_GRANT_DATA]
+    access_grants.on_get_grants = respond(200, json=[BASE_GRANT_DATA])
 
     # get filtered access grant list
     response = await client.get(
@@ -1119,6 +1200,7 @@ async def test_get_filtered_access_grants(
     assert response.status_code == 200
     grants = response.json()
     assert grants == [GRANT_DATA]
+    assert access_grants.last_request is not None
     assert dict(access_grants.last_request.url.params) == {
         "user_id": user_id,
         "iva_id": iva_id,
@@ -1153,7 +1235,7 @@ async def test_get_access_grants_with_invalid_claims(
     """Test that getting access grants when claims repository returns invalid data."""
     client = rest.rest_client
 
-    access_grants.grants = {"foo": "bar"}
+    access_grants.on_get_grants = respond(200, json={"foo": "bar"})
 
     # test getting access grants when there is a downstream schema mismatch
     response = await client.get(
@@ -1172,9 +1254,9 @@ async def test_get_access_grants_with_missing_dataset(
     """Test that if a grant is missing its dataset we get an error."""
     client = rest.rest_client
 
-    access_grants.grants = [
-        {**BASE_GRANT_DATA, "dataset_id": "non-existing-dataset-id"}
-    ]
+    access_grants.on_get_grants = respond(
+        200, json=[{**BASE_GRANT_DATA, "dataset_id": "non-existing-dataset-id"}]
+    )
 
     # test getting access grants when the corresponding dataset is not found
     # (this should not crash the service, but log and return an error
@@ -1208,6 +1290,7 @@ async def test_revoke_existing_access_grant(
 
     # check that the grant has been revoked upstream
     revoke_request = access_grants.last_request
+    assert revoke_request is not None
     assert revoke_request.method == "DELETE"
     assert str(revoke_request.url) == f"http://access/grants/{grant_id}"
 
@@ -1223,7 +1306,7 @@ async def test_revoke_non_existing_access_grant(
     grant_id = GRANT_DATA["id"]
 
     # mock revoking an access grant that does not exist
-    access_grants.revoke_grant_status_code = 404
+    access_grants.on_revoke_grant = respond(404)
 
     response = await client.delete(
         f"/access-grants/{grant_id}",

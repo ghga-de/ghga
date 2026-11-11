@@ -657,7 +657,7 @@ class WorkPackageRepository(WorkPackageRepositoryPort):
         work_package_ids = [
             work_package.id
             async for work_package in self._dao.find_all(
-                mapping={"research_data_upload_box_id": box_id}
+                filter_={"research_data_upload_box_id": box_id}
             )
         ]
         for work_package_id in work_package_ids:

@@ -10,13 +10,13 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { screen } from '@testing-library/angular';
 
 import { allIvasOfDoe } from '@app/../mocks/data';
-import { CodeCreationDialogComponent } from './code-creation-dialog';
+import { CodeCreationDialog } from './code-creation-dialog';
 
 const TEST_IVA = { ...allIvasOfDoe[0], code: 'ABC123' };
 
-describe('CodeCreationDialogComponent', () => {
-  let component: CodeCreationDialogComponent;
-  let fixture: ComponentFixture<CodeCreationDialogComponent>;
+describe('CodeCreationDialog', () => {
+  let component: CodeCreationDialog;
+  let fixture: ComponentFixture<CodeCreationDialog>;
 
   const dialogRef = {
     close: vitest.fn(),
@@ -24,14 +24,14 @@ describe('CodeCreationDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CodeCreationDialogComponent],
+      imports: [CodeCreationDialog],
       providers: [
         { provide: MAT_DIALOG_DATA, useValue: TEST_IVA },
         { provide: MatDialogRef, useValue: dialogRef },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(CodeCreationDialogComponent);
+    fixture = TestBed.createComponent(CodeCreationDialog);
     component = fixture.componentInstance;
     vitest.clearAllMocks();
     await fixture.whenStable();
@@ -58,6 +58,11 @@ describe('CodeCreationDialogComponent', () => {
     const content = compiled.querySelector('.mat-mdc-dialog-content');
     expect(content).toBeTruthy();
     expect(content.textContent).toContain('doe@home.org');
+  });
+
+  it('should label the email of the user as the LS Login email', () => {
+    const row = screen.getByText('doe@home.org').closest('tr');
+    expect(row).toHaveTextContent(/^\s*LS Login email:\s*doe@home\.org\s*$/);
   });
 
   it('should display the IVA type', () => {

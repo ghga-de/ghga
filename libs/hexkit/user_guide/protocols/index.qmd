@@ -19,22 +19,116 @@ title: "Protocols"
  limitations under the License.
 -->
 
-Protocols define abstract interfaces (ports) used by applications and adapters.
-Providers implement these protocols for specific backends.
+A protocol is an abstract interface for one type of infrastructure, such as a database, an event broker or object storage.
+It describes the operations a service needs, such as "insert a resource" or "publish an event", without naming a specific technology.
+Services write their adapters against protocols, so they can switch the backend without changing their own code.
 
-## Supported Protocols
+hexkit defines ten protocols in `hexkit.protocols`, in three categories: events, data and storage.
+
+## Protocols and Providers
+
+Protocols and providers are the two halves of the [Triple Hexagonal Architecture](../arch_concepts/triple_hexagonal_arch.qmd):
+
+- A **protocol** defines *what* an adapter can do.
+  It is abstract and contains no technology-specific code.
+- A **provider** implements a protocol for one technology.
+  `MongoDbDaoFactory`, for example, implements the `DaoFactoryProtocol` for MongoDB, and `KafkaEventPublisher` implements the `EventPublisherProtocol` for Apache Kafka.
+
+Between the core of a service and the provider sits the service's own *translator*, which converts between a port of the core and the protocol.
+For outbound protocols such as `Dao`, the provider hands the translator an object that implements the protocol.
+For inbound protocols such as `EventSubscriberProtocol`, the translator implements the protocol and the provider calls it.
+
+One protocol may have several providers.
+Each provider lists the protocol it implements; see the [Providers](../providers/index.qmd) section for all of them.
+
+## Choosing a Protocol
+
+| If your service needs to... | Use |
+| --- | --- |
+| Store and query its own resources by ID or by field values | [`Dao`](#dao-and-daofactoryprotocol), created by a `DaoFactoryProtocol` |
+| Store its own resources and tell other services about every change | [`DaoPublisher`](#daopublisher-and-daopublisherfactoryprotocol), created by a `DaoPublisherFactoryProtocol` |
+| Keep a copy of resources that another service owns and publishes with a `DaoPublisher` | [`DaoSubscriberProtocol`](#daosubscriberprotocol) |
+| Publish events that are not resource states, such as commands or notifications | [`EventPublisherProtocol`](#eventpublisherprotocol) |
+| React to events from other services | [`EventSubscriberProtocol`](#eventsubscriberprotocol) |
+| Inspect or resolve events that failed in other services | [`DLQSubscriberProtocol`](#dlqsubscriberprotocol) |
+| Store values by key without queries, such as secrets, cache entries or blobs | [`KeyValueStoreProtocol`](#keyvaluestoreprotocol) |
+| Store files and let clients upload or download them directly | [`ObjectStorageProtocol`](#objectstorageprotocol) |
+
+If you are unsure whether to use a `DaoPublisher` or a persistent event publisher, see [Outbox vs. Persistent Publisher](../developer_help/outbox_v_persistent_pub.qmd).
+
+## Event Protocols
+
+The event protocols are the foundation of hexkit's [event-driven architecture](../arch_concepts/event_driven_arch.qmd) support.
+All three are implemented by the [Apache Kafka provider](../providers/kafka/index.qmd).
+
+### EventPublisherProtocol
+
+The [`EventPublisherProtocol`](../../reference/protocols.eventpub.EventPublisherProtocol.qmd) publishes an event with a payload, type, key and topic to an event broker through its `publish()` method.
+A service usually wraps it in a translator with domain methods such as `publish_user_created()`.
+
+It is implemented by the [`KafkaEventPublisher`](../providers/kafka/publisher.qmd), and by the `PersistentKafkaPublisher` of the [MongoDB + Kafka provider](../providers/mongokafka.qmd), which also stores every event so it can be published again.
+The [Kafka Event Publisher](../providers/kafka/publisher.qmd) chapter documents the protocol usage.
+
+### EventSubscriberProtocol
+
+The [`EventSubscriberProtocol`](../../reference/protocols.eventsub.EventSubscriberProtocol.qmd) is implemented by the service's translator.
+The translator declares the topics and event types it is interested in, and the provider passes each matching event to its `consume()` method.
+
+Translators implementing the protocol are run by the [`KafkaEventSubscriber`](../providers/kafka/subscriber.qmd), which also handles retries and the [dead letter queue](../arch_concepts/dlq.qmd).
+The [Kafka Event Subscriber](../providers/kafka/subscriber.qmd#the-translator) chapter documents the protocol usage.
+
+### DLQSubscriberProtocol
+
+The [`DLQSubscriberProtocol`](../../reference/protocols.eventsub.DLQSubscriberProtocol.qmd) is the variant of the `EventSubscriberProtocol` for services that process the dead letter queue.
+Its `consume()` method also receives the timestamp and all headers, which describe where and why the event failed.
+
+A `KafkaEventSubscriber` that runs a DLQ translator consumes only the configured DLQ topic, and it disables its own DLQ so that failed DLQ events are not sent back to the DLQ.
+See [Consuming From the DLQ](../arch_concepts/dlq.qmd#consuming-from-the-dlq).
+
+## Data Protocols
+
+The data protocols persist and share resources described by Pydantic models (DTOs).
+For the architectural background, see [The DAO Pattern](../arch_concepts/dao_pattern.qmd) and the [outbox pattern](../arch_concepts/event_driven_arch.qmd#outbox-pattern).
+
+### Dao and DaoFactoryProtocol
+
+The [`Dao`](../../reference/protocols.dao.Dao.qmd) protocol defines asynchronous CRUD and find operations on one resource type.
+The [`DaoFactoryProtocol`](../../reference/protocols.dao.DaoFactoryProtocol.qmd) describes the factory that creates DAOs, one per resource type.
+Together they let services persist and query data without depending on a specific database.
+
+The protocols are implemented by the [MongoDB provider](../providers/mongodb.qmd#mongodb-dao) and, for unit tests, by an [in-memory mock DAO](../providers/testing.qmd).
+They are documented in depth in the [Data Access Objects](dao.qmd) chapter.
+
+### DaoPublisher and DaoPublisherFactoryProtocol
+
+The [`DaoPublisher`](../../reference/protocols.daopub.DaoPublisher.qmd) protocol extends the `Dao` with event publishing: every insert, update, upsert or delete also publishes an event with the resource's latest state.
+It implements the producing side of the outbox pattern.
+Instances are created by a factory described by the [`DaoPublisherFactoryProtocol`](../../reference/protocols.daopub.DaoPublisherFactoryProtocol.qmd).
+
+The protocols are implemented by the [MongoDB + Kafka provider](../providers/mongokafka.qmd#outbox-publisher) and documented in depth in the [DAO Publisher](daopublisher.qmd) chapter.
+
+### DaoSubscriberProtocol
+
+The [`DaoSubscriberProtocol`](../../reference/protocols.daosub.DaoSubscriberProtocol.qmd) is the consuming side of the outbox pattern.
+It is implemented by the translator of a service that keeps a copy of resources owned by another service.
+The translator declares the event topic and payload model, and handles two methods: `changed()` and `deleted()`.
+
+Translators implementing the protocol are run by the [`KafkaOutboxSubscriber`](../providers/kafka/index.qmd) provider and documented in depth in the [DAO Subscriber](daosubscriber.qmd) chapter.
+
+## Storage Protocols
+
+The storage protocols store data that does not need queries: values by key, or files in buckets.
 
 ### KeyValueStoreProtocol
 
-The [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) defines
-asynchronous operations for storing and retrieving values by key. It is generic
-over the value type `V`, which is determined by the concrete store
-implementation. Keys are ordinary `str` values, i.e. normal Unicode strings.
+The [`KeyValueStoreProtocol`](../../reference/protocols.kvstore.KeyValueStoreProtocol.qmd) defines asynchronous operations for storing and retrieving values by key.
+It is generic over the value type `V`, which is determined by the concrete store implementation.
+Keys are ordinary `str` values, i.e. normal Unicode strings.
 
 Its core operations are:
 
 - `get(key: str, default: V | None = None) -> V | None`: Retrieve a value by key.
-    Returns `default` (or `None`) when the key is not present.
+  Returns `default` (or `None`) when the key is not present.
 - `set(key: str, value: V) -> None`: Store a value for a key.
 - `delete(key: str) -> None`: Remove a key/value pair if present.
 - `exists(key: str) -> bool`: Check whether a key exists.
@@ -54,93 +148,52 @@ Across these families, the same value-type variants are used:
 - `*JsonKeyValueStore`: Stores JSON objects.
 - `*DtoKeyValueStore`: Stores Pydantic model instances (DTOs).
 
-This naming convention is backend-agnostic, so switching provider families does
-not require changing your value model at the protocol level.
+This naming convention is backend-agnostic, so switching provider families does not require changing your value model at the protocol level.
 
-Choose the provider family based on the operational properties you need:
-in-memory for tests, Redis for fast access to small hot values, MongoDB for
-durable structured values, S3 for large or opaque payloads, and Vault for
-secrets or other sensitive values.
+Choose the provider family based on the operational properties you need: in-memory for tests, Redis for fast access to small hot values, MongoDB for durable structured values, S3 for large or opaque payloads, and Vault for secrets or other sensitive values.
 
-Choose the value-type variant based on how much structure and validation you
-want: `Bytes` for binary or already-serialized payloads, `Str` for plain text,
-`Json` for flexible schema-light objects, and `Dto` for schema-validated typed
-models.
-
-### Dao and DaoFactoryProtocol
-
-The [`Dao`](../../reference/protocols.dao.Dao.qmd) protocol defines asynchronous CRUD
-and find operations on resources described by Pydantic models, and the
-[`DaoFactoryProtocol`](../../reference/protocols.dao.DaoFactoryProtocol.qmd) describes
-the factory that constructs DAOs, one per resource type. Together they let services
-persist and query data without depending on a specific database.
-
-The protocol is implemented by the [MongoDB provider](../providers/mongodb.qmd#mongodb-dao)
-for production use and by an [in-memory mock DAO](../providers/testing.qmd) for unit
-testing.
-
-These interfaces are documented in depth in the dedicated
-[Data Access Objects](dao.qmd) chapter; for the architectural background, see
-[The DAO Pattern](../arch_concepts/dao_pattern.qmd).
-
-### DaoPublisher and DaoPublisherFactoryProtocol
-
-The [`DaoPublisher`](../../reference/protocols.daopub.DaoPublisher.qmd) protocol
-extends the `Dao` interface with automatic event publishing: every insert, update,
-or delete also emits a change event, implementing the publishing side of the
-[outbox pattern](../arch_concepts/event_driven_arch.qmd#outbox-pattern).
-Instances are constructed by factories described by the
-[`DaoPublisherFactoryProtocol`](../../reference/protocols.daopub.DaoPublisherFactoryProtocol.qmd).
-
-The protocol is implemented by the
-[MongoDB + Kafka provider](../providers/mongokafka.qmd#outbox-publisher) and
-documented in depth in the dedicated [DAO Publisher](daopublisher.qmd) chapter.
-
-### DaoSubscriberProtocol
-
-The
-[`DaoSubscriberProtocol`](../../reference/protocols.daosub.DaoSubscriberProtocol.qmd)
-is the consuming counterpart of the `DaoPublisher`: a translator interface for
-services that mirror resources owned by another service by consuming its outbox
-events. Implementations declare the event topic and payload model and handle just
-two callbacks: `changed()` and `deleted()`.
-
-Translators implementing the protocol are run by the
-[`KafkaOutboxSubscriber`](../providers/kafka/index.qmd) provider and documented in
-depth in the dedicated [DAO Subscriber](daosubscriber.qmd) chapter.
-
-### EventPublisherProtocol and EventSubscriberProtocol
-
-The
-[`EventPublisherProtocol`](../../reference/protocols.eventpub.EventPublisherProtocol.qmd)
-and
-[`EventSubscriberProtocol`](../../reference/protocols.eventsub.EventSubscriberProtocol.qmd)
-(from `hexkit.protocols.eventpub` and `hexkit.protocols.eventsub`) define the
-publishing and consuming of events through an event broker: `publish()` on the one
-side, and translator classes with topics and types of interest plus a `consume()`
-method on the other. They are the foundation of hexkit's
-[event-driven architecture](../arch_concepts/event_driven_arch.qmd) support.
-
-Both are implemented by the [Apache Kafka provider](../providers/kafka/index.qmd);
-see the [Kafka Event Publisher](../providers/kafka/publisher.qmd) and
-[Kafka Event Subscriber](../providers/kafka/subscriber.qmd) chapters, which also
-document the protocol usage itself.
+Choose the value-type variant based on how much structure and validation you want: `Bytes` for binary or already-serialized payloads, `Str` for plain text, `Json` for flexible schema-light objects, and `Dto` for schema-validated typed models.
 
 ### ObjectStorageProtocol
 
-The
-[`ObjectStorageProtocol`](../../reference/protocols.objstorage.ObjectStorageProtocol.qmd)
-defines asynchronous operations for S3-like object storage: managing buckets and file
-objects, and orchestrating uploads and downloads through presigned URLs, so that file
-content never flows through the service itself.
+The [`ObjectStorageProtocol`](../../reference/protocols.objstorage.ObjectStorageProtocol.qmd) defines asynchronous operations for S3-like object storage: managing buckets and file objects, and orchestrating uploads and downloads through presigned URLs, so that file content never flows through the service itself.
 
-The protocol is implemented by the
-[S3 provider](../providers/s3.qmd#s3-object-storage-provider), which works with any
-S3-compatible backend such as AWS S3, MinIO, or Ceph RGW.
+The protocol is implemented by the [S3 provider](../providers/s3.qmd#s3-object-storage-provider), which works with any S3-compatible backend such as AWS S3, MinIO, or Ceph RGW.
 
-This interface is documented in depth in the dedicated
-[Object Storage](objstorage.qmd) chapter.
+This interface is documented in depth in the dedicated [Object Storage](objstorage.qmd) chapter.
 
 ## Adding Protocols
 
-TBD
+Add a protocol only when no existing one fits and the abstraction serves more than one service.
+The aim is not to model a technology exactly, but to separate the logic every service needs from the logic each service writes for itself; see [The Protocol Definition Matters](../arch_concepts/triple_hexagonal_arch.qmd#the-protocol-definition-matters).
+
+### Defining the Protocol
+
+Put the protocol in its own module under `src/hexkit/protocols/`, and name its operations without referring to any technology.
+Who implements a protocol depends on its direction.
+A provider implements an outbound protocol, such as `ObjectStorageProtocol`, and the service calls it.
+The service's translators implement an inbound protocol, such as `EventSubscriberProtocol`, and the provider calls them.
+
+hexkit's protocols take one of three forms, and a new protocol can use whichever fits:
+
+- **An abstract base class with abstract public methods**, as `DaoSubscriberProtocol` is.
+- **An abstract base class** whose public methods validate their input and then call an abstract method of the same name with a leading underscore, as `ObjectStorageProtocol.does_bucket_exist()` does with `_does_bucket_exist()`.
+  Use this form when every implementation must apply the same validation.
+- **A `typing.Protocol`**, as `Dao` and `KeyValueStoreProtocol` are, which implementations can satisfy by their methods alone, without inheriting from it.
+
+Define the errors that callers must handle as nested classes of the protocol, as `ObjectStorageProtocol.BucketNotFoundError` is, so that one import brings the protocol and its errors, and names cannot clash between protocols.
+A `typing.Protocol` must define them at module level instead, as `hexkit.protocols.dao` does with `ResourceNotFoundError`, because a nested class would become a member that every implementation has to provide.
+Providers then translate their driver's errors into these types, so the service's code keeps working when the provider changes.
+
+### Adding Providers
+
+A protocol needs **at least one provider** for a real backend.
+Put it in that backend's subpackage under `src/hexkit/providers/`, or in a new subpackage with the backend's client library as an optional extra in `pyproject.toml`, like `mongodb` or `s3`.
+Where practical, also add an in-memory provider in `src/hexkit/providers/testing/`, so services can unit-test their code without infrastructure.
+Test the real provider in `tests/integration/providers/` against a testcontainer, and an in-memory provider in `tests/unit/`.
+
+### Documenting the Protocol
+
+1. Write a chapter in `user_guide/protocols/` that documents the protocol independently of any provider, like [Object Storage](objstorage.qmd).
+2. Add the protocol to this page: to its category, and to the table in [Choosing a Protocol](#choosing-a-protocol).
+3. Add the chapter to the `user_guide` section, and the protocol class to the matching `Protocols —` section of `reference`, both in `great-docs.yml`.

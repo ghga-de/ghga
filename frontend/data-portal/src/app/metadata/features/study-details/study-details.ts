@@ -16,9 +16,9 @@ import { RouterLink } from '@angular/router';
 import { Hit, SearchResults } from '@app/metadata/models/search-results';
 import { MetadataService } from '@app/metadata/services/metadata';
 import { ConfigService } from '@app/shared/services/config';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { ExternalLinkDirective } from '@app/shared/ui/external-link/external-link';
-import { ParagraphsComponent } from '@app/shared/ui/paragraphs/paragraphs';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { ExternalLink } from '@app/shared/ui/external-link/external-link';
+import { Paragraphs } from '@app/shared/ui/paragraphs/paragraphs';
 
 const MAX_DATASETS = 100;
 
@@ -35,16 +35,16 @@ const MAX_DATASETS = 100;
     MatIconModule,
     MatButtonModule,
     MatTableModule,
-    ExternalLinkDirective,
-    ParagraphsComponent,
+    ExternalLink,
+    Paragraphs,
     RouterLink,
   ],
   templateUrl: './study-details.html',
   providers: [MetadataService],
 })
-export class StudyDetailsComponent implements OnInit {
+export class StudyDetails implements OnInit {
   #metadataService = inject(MetadataService);
-  #location = inject(NavigationTrackingService);
+  #location = inject(NavigationTracker);
   #study = this.#metadataService.study;
   #config = inject(ConfigService);
   #massUrl = this.#config.massUrl;

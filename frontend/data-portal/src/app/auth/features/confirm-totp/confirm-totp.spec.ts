@@ -5,10 +5,11 @@
  */
 
 import { WritableSignal } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture } from '@angular/core/testing';
 import { AuthService } from '@app/auth/services/auth';
-import { NotificationService } from '@app/shared/services/notification';
-import { ConfirmTotpComponent } from './confirm-totp';
+import { Notifier } from '@app/shared/services/notification';
+import { fireEvent, render, screen } from '@testing-library/angular';
+import { ConfirmTotp } from './confirm-totp';
 
 /**
  * Minimal view of the component's protected/private members accessed by these tests.
@@ -17,6 +18,8 @@ interface ConfirmTotpComponentInternals {
   verificationError: WritableSignal<boolean>;
   totpForm: { code: () => { value: WritableSignal<string> } };
 }
+
+const ERROR_TEXT = 'The submitted authentication code is invalid.';
 
 const mockAuthService = {
   verifyTotpCode: vitest.fn(),
@@ -29,9 +32,9 @@ const mockNotificationService = {
   showError: vitest.fn(),
 };
 
-describe('ConfirmTotpComponent', () => {
-  let component: ConfirmTotpComponent;
-  let fixture: ComponentFixture<ConfirmTotpComponent>;
+describe('ConfirmTotp', () => {
+  let component: ConfirmTotp;
+  let fixture: ComponentFixture<ConfirmTotp>;
 
   beforeEach(async () => {
     mockAuthService.verifyTotpCode.mockReset();
@@ -40,15 +43,12 @@ describe('ConfirmTotpComponent', () => {
     mockNotificationService.showSuccess.mockReset();
     mockNotificationService.showError.mockReset();
 
-    await TestBed.configureTestingModule({
-      imports: [ConfirmTotpComponent],
+    ({ fixture } = await render(ConfirmTotp, {
       providers: [
         { provide: AuthService, useValue: mockAuthService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: Notifier, useValue: mockNotificationService },
       ],
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(ConfirmTotpComponent);
+    }));
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
@@ -59,15 +59,27 @@ describe('ConfirmTotpComponent', () => {
    * @returns the code input element, after the form has settled
    */
   async function enterCode(text: string): Promise<HTMLInputElement> {
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
-    input.value = text;
-    input.dispatchEvent(new Event('input'));
+    const input = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Authentication code',
+    });
+    fireEvent.input(input, { target: { value: text } });
     await fixture.whenStable();
     return input;
   }
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should render the code input with a disabled submit button', () => {
+    expect(
+      screen.getByRole('heading', { name: 'Two-factor authentication' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Authentication code' })).toHaveValue(
+      '',
+    );
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.queryByText(ERROR_TEXT)).toBeNull();
   });
 
   it('should auto-submit on first complete valid input', async () => {
@@ -77,7 +89,7 @@ describe('ConfirmTotpComponent', () => {
 
     const inputElement = await enterCode('123456');
 
-    expect(inputElement.value).toBe('123456');
+    expect(inputElement).toHaveValue('123456');
     expect(onSubmitSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -89,20 +101,43 @@ describe('ConfirmTotpComponent', () => {
     await enterCode('123');
 
     expect(onSubmitSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  });
+
+  it('should not show a rejected character', async () => {
+    await enterCode('123');
+    const inputElement = await enterCode('123a');
+
+    expect(inputElement).toHaveValue('123');
   });
 
   it('should clear verification error on input', async () => {
     (component as unknown as ConfirmTotpComponentInternals).verificationError.set(true);
+    await fixture.whenStable();
+    expect(screen.getByText(ERROR_TEXT)).toBeInTheDocument();
 
     const inputElement = await enterCode('12ab34');
 
-    expect(inputElement.value).toBe('1234');
+    expect(inputElement).toHaveValue('1234');
     expect(
       (component as unknown as ConfirmTotpComponentInternals).totpForm.code().value(),
     ).toBe('1234');
     expect(
       (component as unknown as ConfirmTotpComponentInternals).verificationError(),
     ).toBe(false);
+    expect(screen.queryByText(ERROR_TEXT)).toBeNull();
+  });
+
+  it('should redirect after a successful verification', async () => {
+    mockAuthService.verifyTotpCode.mockResolvedValue(true);
+
+    await enterCode('123456');
+
+    expect(mockAuthService.verifyTotpCode).toHaveBeenCalledWith('123456');
+    expect(mockNotificationService.showSuccess).toHaveBeenCalledWith(
+      'Successfully authenticated.',
+    );
+    expect(mockAuthService.redirectAfterLogin).toHaveBeenCalledTimes(1);
   });
 
   it('should not auto-submit after a previous submission exists', async () => {
@@ -137,5 +172,24 @@ describe('ConfirmTotpComponent', () => {
 
     expect(mockAuthService.verifyTotpCode).toHaveBeenCalledTimes(1);
     vitest.useRealTimers();
+  });
+
+  it('should show the error and disable the submit button after a failed attempt', async () => {
+    mockAuthService.verifyTotpCode.mockResolvedValue(false);
+
+    await enterCode('123456');
+
+    expect(await screen.findByText(ERROR_TEXT)).toBeInTheDocument();
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'Failed to authenticate.',
+    );
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  });
+
+  it('should request a new setup when the token was lost', () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Get new 2FA setup' }));
+
+    expect(mockAuthService.lostTotpSetup).toHaveBeenCalledTimes(1);
+    expect(component.allowNavigation).toBe(true);
   });
 });

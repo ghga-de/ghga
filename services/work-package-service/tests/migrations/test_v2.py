@@ -22,14 +22,26 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationManager,
+)
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from hexkit.utils import now_utc_ms_prec
 from tests.fixtures import fixture_config  # noqa: F401
 from wps.core.models import WorkPackage, WorkPackageType
 from wps.core.tokens import generate_work_package_access_token, hash_token
-from wps.migrations import run_db_migrations
+from wps.migrations import MIGRATION_MAP
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
 
 
 async def test_migration_v2(config, mongodb: MongoDbFixture):

@@ -6,7 +6,8 @@ This Epic aims to provide a script for prototyping all actions done by the futur
 
 ## Principal Components of Exploration
 
-The prototyping script will consist of two parts, upload and download. They should be run in sequence.
+The prototyping script will consist of two parts, upload and download.
+They should be run in sequence.
 
 ### Upload
 
@@ -16,9 +17,9 @@ The prototyping script will consist of two parts, upload and download. They shou
 - request (call function) decryption secret from encrypted key store (first file part attached)
 - receive file encryption secret, secret ID and content offset from encrypted key store
 - read file from disk part by part
-    - compute checksum of individual encrypted file part, store in list
-    - decrypt file part
-    - feed file part into checksum algorithm
+  - compute checksum of individual encrypted file part, store in list
+  - decrypt file part
+  - feed file part into checksum algorithm
 - compare checksum of decrypted object with provided checksum
 - save encrypted file without envelope
 - publish (write to stdout) outcome of validation, list of checksums
@@ -54,8 +55,8 @@ In download, we currently do not use the interrogation room service.
 
 ## Material and Resources
 
-- File Validation and Encryption Concept for the workflow (https://github.com/ghga-de/arch_concepts/blob/main/file_validation_and_encryption.md)
-- Crypt4GH Experiments for header separation (https://github.com/ghga-de/crypt4gh_experiments)
+- File Validation and Encryption Concept for the workflow (<https://github.com/ghga-de/arch_concepts/blob/main/file_validation_and_encryption.md>)
+- Crypt4GH Experiments for header separation (<https://github.com/ghga-de/crypt4gh_experiments>)
 
 ## Additional Implementation Details
 

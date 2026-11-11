@@ -16,6 +16,7 @@
 """Port definition for the RDUBManager."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 
 from pydantic import UUID4, PositiveInt
 
@@ -26,6 +27,7 @@ from rs.core.models import (
     BoxRequeueResult,
     BoxRetrievalResults,
     BoxUploadsPage,
+    FileStateCounts,
     FileUploadBox,
     GrantId,
     GrantWithBoxInfo,
@@ -94,6 +96,18 @@ class RDUBManagerPort(ABC):
     class BoxVersionError(RuntimeError):
         """Raised when changes to a resource can't be made because the request
         references a version of the resource that is not current.
+        """
+
+    class BoxUpdateConflictError(RuntimeError):
+        """Raised when a change could not be recorded on the ResearchDataUploadBox
+        because it kept being changed by concurrent writes.
+
+        Raised from two places, both on purpose:
+        - By the event consumer, so the event is retried and then dead-lettered
+          rather than committed and lost.
+        - By a core call whose change is already applied elsewhere, where it
+          must not read as a version conflict the caller could retry. It has no
+          handler in the router, so it surfaces as a 500 rather than a 409.
         """
 
     class BoxIncompleteOrFailedError(RuntimeError):
@@ -318,6 +332,12 @@ class RDUBManagerPort(ABC):
         """Handle FileUploadBox update events from file box service.
 
         Updates the corresponding ResearchDataUploadBox with latest file count and size.
+
+        Other methods can update the same document (e.g. change description), so each
+        attempt is guarded on the version it reads and retried against a fresh copy.
+
+        Raises:
+            BoxUpdateConflictError: If the RDUB kept changing underneath.
         """
 
     @abstractmethod
@@ -355,6 +375,24 @@ class RDUBManagerPort(ABC):
         with a chosen state.
 
         Returns a BoxRetrievalResults instance with the boxes and unpaginated count.
+        """
+        ...
+
+    @abstractmethod
+    async def get_file_state_counts(
+        self, *, box_ids: Collection[UUID4] | None = None
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state for the open and locked research
+        data upload boxes, keyed by the box ID.
+
+        If `box_ids` is given, only the boxes among them are counted, else all of them.
+        Only the states that count toward a box's `file_count` are included, so each
+        box's counts add up to its `file_count`. Boxes without such file uploads and
+        states without file uploads are absent from the result. Archived boxes are
+        absent too, since all their files are archived.
+
+        Raises:
+            OperationError: If there's a problem querying the file box service.
         """
         ...
 

@@ -3,9 +3,8 @@
   <input
     matInput
     type="text"
-    [(ngModel)]="value"
+    [formField]="keyField"
     [errorStateMatcher]="errorStateMatcher"
-    maxlength="150"
   />
   @if (value() && invalid()) {
     <mat-error class="-mt-2 mb-3">

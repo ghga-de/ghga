@@ -29,7 +29,7 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
   imports: [MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule],
   templateUrl: './upload-box-metadata-alignment.html',
 })
-export class UploadBoxMetadataAlignmentComponent {
+export class UploadBoxMetadataAlignment {
   #uploadBoxService = inject(UploadBoxService);
 
   /** The parsed and validated uploaded metadata, if any */

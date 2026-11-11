@@ -19,6 +19,8 @@ from tests.fixtures.utils import BASE_DIR
 
 METADATA_CONFIG_PATH = BASE_DIR / "metadata_config.yaml"
 ORIGINAL_METADATA_PATH = BASE_DIR / "original_metadata.yaml"
+AMENDED_METADATA_PATH = BASE_DIR / "original_metadata_amended.yaml"
+DROPPED_METADATA_PATH = BASE_DIR / "original_metadata_dropped.yaml"
 ORIGINAL_MODEL_PATH = BASE_DIR / "original_model.yaml"
 
 ARCHIVE_METADATA_CONFIG_PATH = BASE_DIR / "archive_metadata_config.yaml"

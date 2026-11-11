@@ -21,6 +21,6 @@ import { StepDetails } from '@app/tools/models/stepper';
   templateUrl: './stepper.html',
   imports: [MatButtonModule, MatIconModule],
 })
-export class StepperComponent {
+export class Stepper {
   steps = input.required<StepDetails[]>();
 }

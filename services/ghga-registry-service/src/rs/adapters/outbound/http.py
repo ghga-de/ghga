@@ -23,7 +23,7 @@ from uuid import UUID
 
 import httpx2
 from jwcrypto import jwk
-from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr
+from pydantic import UUID4, Field, HttpUrl, PositiveInt, SecretStr, TypeAdapter
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -31,6 +31,7 @@ from rs.constants import (
     EXC_ID_BOX_MAX_SIZE_TOO_LOW,
     EXC_ID_BOX_NOT_FOUND,
     EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_STATS_UNAVAILABLE,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
     EXC_ID_FILE_UPLOAD_STATE_ERROR,
@@ -45,12 +46,14 @@ from rs.core.models import (
     CreateFileBoxWorkOrder,
     DeleteFileBoxWorkOrder,
     DeleteFileUploadWorkOrder,
+    FileStateCounts,
     FileUploadWithAccession,
     GrantId,
     RequeueAllFailedWorkOrder,
     RequeueFailedFileWorkOrder,
     ResizeFileBoxWorkOrder,
     UploadGrant,
+    ViewFileBoxStatsWorkOrder,
     ViewFileBoxWorkOrder,
 )
 from rs.core.tokens import sign_work_order_token
@@ -62,6 +65,8 @@ from rs.ports.outbound.http import (
 log = logging.getLogger(__name__)
 
 DEFAULT_HTTPX_TIMEOUT = 60.0
+
+_file_state_counts_adapter = TypeAdapter(dict[UUID4, FileStateCounts])
 
 
 @asynccontextmanager
@@ -88,7 +93,7 @@ def _extract_exception_id(response: httpx2.Response) -> str | None:
     """
     try:
         return response.json()["exception_id"]
-    except (KeyError, ValueError, TypeError):
+    except KeyError, ValueError, TypeError:
         return None
 
 
@@ -368,6 +373,27 @@ class FileBoxClient(FileBoxClientPort):
         signed_wot = sign_work_order_token(wot, self._signing_key)
         return {"Authorization": f"Bearer {signed_wot}"}
 
+    def _raise_if_stats_unavailable(
+        self, *, response: httpx2.Response, operation: str, box_id: UUID4
+    ) -> None:
+        """Raise FUBStatsUnavailableError for the owning service's 503 stats error.
+
+        Returns without raising for every other response, so callers can put this in
+        front of their generic error handling.
+        """
+        if response.status_code != 503:
+            return
+        if _extract_exception_id(response) != EXC_ID_BOX_STATS_UNAVAILABLE:
+            return
+        log.warning(
+            "FileUploadBox %s stats are stale after the %s operation, but the operation"
+            + " itself succeeded.",
+            box_id,
+            operation,
+            extra={"box_id": box_id, "response_text": response.text},
+        )
+        raise self.FUBStatsUnavailableError(box_id=box_id)
+
     def _raise_for_409(
         self,
         *,
@@ -501,6 +527,8 @@ class FileBoxClient(FileBoxClientPort):
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
         wot = ChangeFileBoxWorkOrder(work_type="lock", box_id=box_id)
         headers = self._auth_header(wot)
@@ -516,6 +544,9 @@ class FileBoxClient(FileBoxClientPort):
                 response=response, body=body, operation="lock", box_id=box_id
             )
         elif response.status_code != 204:
+            self._raise_if_stats_unavailable(
+                response=response, operation="lock", box_id=box_id
+            )
             log.warning(
                 "Error locking FileUploadBox ID %s in external service.",
                 box_id,
@@ -532,6 +563,8 @@ class FileBoxClient(FileBoxClientPort):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
         wot = ChangeFileBoxWorkOrder(work_type="unlock", box_id=box_id)
 
@@ -551,6 +584,9 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
         elif response.status_code != 204:
+            self._raise_if_stats_unavailable(
+                response=response, operation="unlock", box_id=box_id
+            )
             log.warning(
                 "Error unlocking FileUploadBox ID %s in external service.",
                 box_id,
@@ -679,12 +715,53 @@ class FileBoxClient(FileBoxClientPort):
 
         return file_uploads
 
+    async def get_file_state_counts(
+        self, *, box_ids: list[UUID4]
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state in each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included. Boxes
+        without such file uploads, including unknown ones, are absent from the result,
+        as are states without file uploads.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+        wot = ViewFileBoxStatsWorkOrder()
+        headers = self._auth_header(wot)
+        response = await self._client.post(
+            f"{self._ucs_url}/rpc/boxes/file-state-counts",
+            headers=headers,
+            json={"box_ids": [str(box_id) for box_id in box_ids]},
+            timeout=self._standard_timeout,
+        )
+        if response.status_code != 200:
+            log.warning(
+                "Error getting file state counts for %i FileUploadBoxes.",
+                len(box_ids),
+                extra={
+                    "status_code": response.status_code,
+                    "response_text": response.text,
+                },
+            )
+            raise self.OperationError("Failed to get FileUploadBox file state counts.")
+
+        try:
+            return _file_state_counts_adapter.validate_json(response.content)
+        except Exception as err:
+            msg = "Failed to extract file state counts from response body."
+            log.error(msg, exc_info=True)
+            raise self.OperationError(msg) from err
+
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive a FileUploadBox in the owning service.
 
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
         wot = ChangeFileBoxWorkOrder(work_type="archive", box_id=box_id)
         headers = self._auth_header(wot)
@@ -705,6 +782,9 @@ class FileBoxClient(FileBoxClientPort):
                 box_id=box_id,
             )
         elif response.status_code != 204:
+            self._raise_if_stats_unavailable(
+                response=response, operation="archive", box_id=box_id
+            )
             log.warning(
                 "Error archiving FileUploadBox ID %s in external service.",
                 box_id,
@@ -745,6 +825,7 @@ class FileBoxClient(FileBoxClientPort):
                 operation="resize",
                 box_id=box_id,
             )
+
         log.warning(
             "Error resizing FileUploadBox ID %s in external service.",
             box_id,
@@ -760,6 +841,8 @@ class FileBoxClient(FileBoxClientPort):
 
         Raises:
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the file was deleted but the owning
+                service could not update the box stats.
         """
         wot = DeleteFileUploadWorkOrder(box_id=box_id, file_id=file_id)
         headers = self._auth_header(wot)
@@ -797,6 +880,10 @@ class FileBoxClient(FileBoxClientPort):
                 operation="delete file from",
                 box_id=box_id,
             )
+
+        self._raise_if_stats_unavailable(
+            response=response, operation="delete file from", box_id=box_id
+        )
 
         log.warning(
             "Error deleting FileUpload %s from FileUploadBox %s.",

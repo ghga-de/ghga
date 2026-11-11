@@ -29,7 +29,7 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal, Protocol, TypeVar, cast
 from uuid import UUID, uuid4
 
@@ -218,7 +218,7 @@ class ConsumerEvent(Protocol):
 def utc_datetime_from_ms(ms: int) -> datetime:
     """Convert an integer representing UNIX time in milliseconds to a utc timestamp"""
     # python's datetime.fromtimestamp expects seconds, so we divide by 1000
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(ms / 1000, tz=UTC)
 
 
 @dataclass

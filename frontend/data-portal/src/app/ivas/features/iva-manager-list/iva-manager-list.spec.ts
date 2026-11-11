@@ -4,13 +4,21 @@
  * @license Apache-2.0
  */
 
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ActivatedRoute } from '@angular/router';
 import { allIvas } from '@app/../mocks/data';
 import { fakeActivatedRoute } from '@app/../mocks/route';
+import { IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
-import { IvaManagerListComponent } from './iva-manager-list';
+import { ConfirmationService } from '@app/shared/services/confirmation';
+import { toMarkup } from '@app/shared/utils/html';
+import { screen } from '@testing-library/angular';
+import { IvaManagerList } from './iva-manager-list';
+
+const WARN_TITLE =
+  'There are multiple user accounts with this name and LS Login email.';
 
 /**
  * Mock the IVA service as needed by the IVA Manager list component
@@ -18,29 +26,35 @@ import { IvaManagerListComponent } from './iva-manager-list';
 class MockIvaService {
   allIvas = { value: () => allIvas, isLoading: () => false, error: () => undefined };
   allIvasFiltered = () => this.allIvas.value();
-  ambiguousUserIds = () => new Set<string>();
+  ambiguousUserIds = signal(new Set<string>(['jekyll@test.dev', 'hyde@test.dev']));
 }
 
-describe('IvaManagerListComponent', () => {
-  let component: IvaManagerListComponent;
-  let fixture: ComponentFixture<IvaManagerListComponent>;
+describe('IvaManagerList', () => {
+  let component: IvaManagerList;
+  let fixture: ComponentFixture<IvaManagerList>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IvaManagerListComponent],
+      imports: [IvaManagerList],
       providers: [
         { provide: IvaService, useClass: MockIvaService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(IvaManagerListComponent);
+    fixture = TestBed.createComponent(IvaManagerList);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should name the LS Login email in the user column header', () => {
+    expect(
+      screen.getByRole('columnheader', { name: 'User (LS Login email)' }),
+    ).toBeVisible();
   });
 
   it('should show IVA values', () => {
@@ -50,5 +64,45 @@ describe('IvaManagerListComponent', () => {
     expect(text).toContain(
       'c/o Weird Al Yankovic, Dr. John Doe, Wilhelmstraße 123, Apartment 25, Floor 2, 72072 Tübingen, Baden-Württemberg, Deutschland',
     );
+  });
+
+  it('should mark the IVAs of ambiguous users with a warning', () => {
+    const markers = screen.getAllByTitle(WARN_TITLE);
+    expect(markers).toHaveLength(2);
+    for (const marker of markers) {
+      expect(marker.closest('tr')).toHaveTextContent('Dr. Henry Jekyll');
+    }
+  });
+
+  it('should not mark the IVAs of other users with a warning', () => {
+    const rows = screen.getAllByRole('row').filter((row) => !row.closest('thead'));
+    const otherRows = rows.filter((row) => !row.textContent?.includes('Henry Jekyll'));
+    expect(otherRows).toHaveLength(6);
+    for (const row of otherRows) {
+      expect(row.querySelector(`[title="${WARN_TITLE}"]`)).toBeNull();
+    }
+  });
+
+  it('should escape the user name and address in the confirmation dialogs', () => {
+    const confirm = vitest
+      .spyOn(TestBed.inject(ConfirmationService), 'confirm')
+      .mockImplementation(() => undefined);
+    const iva = {
+      ...allIvas[0],
+      type: '<i>Type</i>' as IvaType,
+      user_name: 'Jo <b>Bold</b>',
+      value: 'a&b',
+    };
+
+    component.invalidateWhenConfirmed(iva);
+    component.markAsTransmittedWhenConfirmed(iva);
+    component.deleteWhenConfirmed(iva);
+
+    expect(confirm).toHaveBeenCalledTimes(3);
+    for (const [{ message }] of confirm.mock.calls) {
+      expect(toMarkup(message)).toContain(
+        'the &lt;i&gt;Type&lt;/i&gt; IVA of Jo &lt;b&gt;Bold&lt;/b&gt; with address "a&amp;b"',
+      );
+    }
   });
 });

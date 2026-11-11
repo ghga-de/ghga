@@ -8,7 +8,7 @@ import { HttpClient } from '@angular/common/http';
 import { effect, inject, Service, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { PyodideOutput } from '../models/pyodide';
-import { PyodideService } from './pyodide';
+import { PyodideLoader } from './pyodide';
 
 const YAML_SCHEMA_ASSET_PATH =
   'assets/schemas/ghga_metadata_schema.resolved.schemapack.yaml';
@@ -23,7 +23,7 @@ const validatorScriptPath = '/assets/schemas/validate.py';
  */
 @Service()
 export class MetadataValidationService {
-  #pyodideService = inject(PyodideService);
+  #pyodideService = inject(PyodideLoader);
   #http = inject(HttpClient);
   #isReady = signal(false);
   readonly log = this.#pyodideService.getProcessLog();

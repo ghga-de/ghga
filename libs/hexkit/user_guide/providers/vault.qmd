@@ -19,10 +19,233 @@ title: "Vault"
  limitations under the License.
 -->
 
-Vault providers implement `KeyValueStoreProtocol` on top of Vault KV v2 and are
-suited for secrets and other sensitive values.
+The Vault providers implement the [`KeyValueStoreProtocol`](../protocols/index.qmd#keyvaluestoreprotocol) on the KV version 2 secrets engine of a [HashiCorp Vault](https://developer.hashicorp.com/vault) server.
+Use them for secrets and other sensitive values, such as API keys or the credentials of partner services: Vault encrypts the values it stores and grants access per path through policies.
+For values that are not sensitive, use the [Redis](redis.qmd), [MongoDB](mongodb.qmd#mongodb-kv-store-providers) or [S3](s3.qmd#s3-kv-store-providers) stores.
 
-Available variants are `VaultBytesKeyValueStore`, `VaultStrKeyValueStore`,
-`VaultJsonKeyValueStore`, and `VaultDtoKeyValueStore`.
+To use them, install hexkit with the `vault` extra:
 
-API reference: [hexkit.providers.vault](../../reference/index.qmd#provider-hashicorp-vault)
+```sh
+pip install hexkit[vault]
+```
+
+## Vault KV Store Providers
+
+There is one store per [value-type variant](../protocols/index.qmd#keyvaluestoreprotocol): [`VaultBytesKeyValueStore`](../../reference/providers.vault.VaultBytesKeyValueStore.qmd), [`VaultStrKeyValueStore`](../../reference/providers.vault.VaultStrKeyValueStore.qmd), [`VaultJsonKeyValueStore`](../../reference/providers.vault.VaultJsonKeyValueStore.qmd) and [`VaultDtoKeyValueStore`](../../reference/providers.vault.VaultDtoKeyValueStore.qmd).
+
+### Configuration
+
+Connection parameters are collected in [`VaultConfig`](../../reference/providers.vault.VaultConfig.qmd).
+Inherit your service's config class from it (see [Configuration](../configuration.qmd)), or instantiate it directly:
+
+```python
+from hexkit.providers.vault import VaultConfig
+
+config = VaultConfig(
+    vault_url="https://vault.example.com:8200",
+    vault_path="my-service",
+    vault_role_id="my-role-id",
+    vault_secret_id="my-secret-id",
+)
+```
+
+| Parameter | Description |
+| --------- | ----------- |
+| `vault_url` | The URL of the Vault server. |
+| `vault_path` | The path under which the stores keep all keys, inside the secrets engine, without leading or trailing slashes. An empty string keeps the keys at the top of the engine. |
+| `vault_secrets_mount_point` | The mount point of the KV version 2 secrets engine. Defaults to `secret`. |
+| `vault_role_id`, `vault_secret_id` | The credentials for [AppRole authentication](#authentication), stored as `SecretStr`. |
+| `vault_kube_role` | The role for [Kubernetes authentication](#authentication). |
+| `service_account_token_path` | The file with the Kubernetes service account token, used only for Kubernetes authentication. Defaults to `/var/run/secrets/kubernetes.io/serviceaccount/token`. |
+| `vault_auth_mount_point` | The mount point of the authentication method. If unset, the method's standard mount point is used: `approle` or `kubernetes`. |
+| `vault_verify` | TLS certificate verification: `True` (the default) uses the system's CA bundle, `False` turns verification off, and a file path uses the CA bundle in that file. Validation fails if the file is missing, cannot be read, or contains no certificate. |
+
+### Authentication
+
+The stores support two authentication methods:
+
+- **AppRole:** set `vault_role_id` and `vault_secret_id`.
+- **Kubernetes:** set `vault_kube_role`.
+  The store reads the pod's service account token from `service_account_token_path`.
+
+If `vault_kube_role` is set, the store uses Kubernetes authentication, even when the AppRole credentials are set too.
+
+The store logs in when `construct()` opens it.
+Before every operation, it checks its token with an extra request to Vault, and logs in again if the token has expired or been revoked.
+
+### Policies
+
+The policies of the role must allow these capabilities on the paths of the stores' secrets:
+
+| Operation | Vault API path | Capabilities |
+| --------- | -------------- | ------------ |
+| `set()` | `<mount point>/data/<vault_path>/*` | `create` for a new key, `update` for an existing one |
+| `get()` and `exists()` | `<mount point>/data/<vault_path>/*` | `read` |
+| `delete()` | `<mount point>/metadata/<vault_path>/*` | `delete` |
+
+For a service with the `vault_path` `my-service` on the default `secret` engine, the minimal policy is:
+
+```hcl
+path "secret/data/my-service/*" {
+  capabilities = ["create", "read", "update"]
+}
+path "secret/metadata/my-service/*" {
+  capabilities = ["delete"]
+}
+```
+
+### Creating Stores
+
+The `construct()` async context manager creates a Vault client and logs in:
+
+```python
+from datetime import UTC, datetime
+
+from pydantic import BaseModel
+
+from hexkit.providers.vault import VaultDtoKeyValueStore
+
+
+class ApiCredentials(BaseModel):
+    client_id: str
+    client_secret: str
+    expires: datetime
+
+
+async with VaultDtoKeyValueStore.construct(
+    config=config, dto_model=ApiCredentials
+) as credentials_store:
+    await credentials_store.set(
+        "partner-a",
+        ApiCredentials(
+            client_id="hexkit",
+            client_secret="s3cr3t",
+            expires=datetime(2027, 1, 1, tzinfo=UTC),
+        ),
+    )
+    credentials = await credentials_store.get("partner-a")
+```
+
+Only the `Dto` store takes the extra `dto_model` argument.
+The stores have no argument for their location, like the `key_prefix` of the Redis stores or the `collection_name` of the MongoDB stores: every store built from one config uses the config's `vault_path`.
+To keep stores apart, give each its own config, for example with `config.model_copy(update={"vault_path": "my-service/tokens"})`.
+
+The Vault client is synchronous, so the stores run each request in a worker thread to keep the event loop free.
+
+### Storage Layout
+
+Each key is a separate secret at `<vault_path>/<key>` in the secrets engine, with one field, `value`.
+For example, `credentials_store` above writes the secret `my-service/partner-a`.
+
+| Store | Accepts | Content of the `value` field |
+| ----- | ------- | ---------------------------- |
+| `VaultBytesKeyValueStore` | `bytes` | The bytes as a base64 string |
+| `VaultStrKeyValueStore` | `str` | The string |
+| `VaultJsonKeyValueStore` | `dict` (a JSON object) | The JSON object |
+| `VaultDtoKeyValueStore` | Instances of `dto_model` | The model as a JSON object, validated against `dto_model` on read |
+
+The `Dto` store converts models in JSON mode, so fields such as `UUID` and `datetime` are stored as strings.
+`set()` raises a `TypeError` if a value does not match the store's type.
+The `Json` store accepts only JSON objects, not lists or single values, and no store accepts `None`.
+
+The KV version 2 engine keeps earlier versions of a secret, as many as its `max_versions` setting allows: `set()` writes a new version, and `get()` reads the latest.
+`delete()` removes the secret with all its versions and metadata, so it cannot be undone.
+
+### Error Handling
+
+`get()` returns the default value for a key that does not exist.
+Otherwise, the stores do not translate errors into hexkit errors:
+
+- `ValueError` from `construct()` if no authentication method is configured, and `FileNotFoundError` if the Kubernetes token file is missing.
+- `hvac.exceptions.InvalidRequest` from `construct()` if Vault rejects the AppRole credentials.
+- `requests.exceptions.ConnectionError` from `construct()` or a later operation if the server cannot be reached.
+- `hvac.exceptions.Forbidden` if the token's policies do not allow the operation on the secret's path.
+
+## Vault Test Utils
+
+For integration tests, the `test-vault` extra provides pytest fixtures based on [testcontainers](https://testcontainers-python.readthedocs.io) that start a disposable Vault container from the image named in `VAULT_IMAGE`.
+The `test` extra includes it:
+
+```sh
+pip install hexkit[test-vault]
+```
+
+All utilities live in `hexkit.providers.vault.testutils`.
+
+The container runs Vault in development mode, which keeps all data in memory and provides a KV version 2 engine at `secret`.
+The fixture enables AppRole authentication with a role whose policy allows reading, writing and deleting all secrets in `secret`.
+Its config uses this role and the `vault_path` `test`.
+
+### Fixtures
+
+The `vault_fixture` yields a `VaultFixture` object under the fixture name `vault`.
+Both the container fixture and the Vault fixture must be imported into the test module or its `conftest.py` for pytest to resolve them, hence the `# noqa: F401` comments.
+This test stores credentials with the `ApiCredentials` model from above and reads the raw secret with a separate client:
+
+```python
+from datetime import UTC, datetime
+
+import hvac
+import pytest
+
+from hexkit.providers.vault import VaultDtoKeyValueStore
+from hexkit.providers.vault.testutils import (
+    VAULT_TEST_ROOT_TOKEN,
+    VaultFixture,
+    vault_container_fixture,  # noqa: F401
+    vault_fixture,  # noqa: F401
+)
+
+
+@pytest.mark.asyncio()
+async def test_credentials_store(vault: VaultFixture):
+    credentials = ApiCredentials(
+        client_id="hexkit",
+        client_secret="s3cr3t",
+        expires=datetime(2027, 1, 1, tzinfo=UTC),
+    )
+    async with VaultDtoKeyValueStore.construct(
+        config=vault.config, dto_model=ApiCredentials
+    ) as credentials_store:
+        await credentials_store.set("partner-a", credentials)
+
+    client = hvac.Client(
+        url=vault.config.vault_url, token=VAULT_TEST_ROOT_TOKEN, verify=False
+    )
+    secret = client.secrets.kv.v2.read_secret_version(
+        path="test/partner-a", mount_point="secret", raise_on_deleted_version=True
+    )
+    assert secret["data"]["data"]["value"]["client_id"] == "hexkit"
+```
+
+The fixtures split the work between two scopes:
+
+- `vault_container_fixture` (fixture name `vault_container`) is session-scoped: one Vault container is started and set up per test session and reused by all tests.
+  It yields a `VaultFixture` too.
+- `vault_fixture` (fixture name `vault`) is function-scoped: it deletes all secrets under the configured `vault_path` before each test.
+  `clean_vault_fixture` is an alias for it.
+- `persistent_vault_fixture` is the variant without the cleanup, for tests that intentionally share state.
+  It also uses the fixture name `vault`, so to use both variants in one module, create one of them under another name with its factory function.
+
+The cleanup only covers the fixture's own `vault_path`, `test`.
+A test that copies the config with another `vault_path` should choose a path below it, such as `test/tokens`, or its secrets remain for the following tests.
+
+If the default scopes or names do not fit your test setup, the factory functions `get_vault_container_fixture`, `get_clean_vault_fixture` and `get_persistent_vault_fixture` create the same fixtures with custom `scope` and `name` arguments.
+For example, `get_persistent_vault_fixture(name="vault_persistent")` creates the persistent variant under the name `vault_persistent`.
+
+### The VaultFixture
+
+A `VaultFixture` has two attributes and one method:
+
+- `config`: a `VaultConfig` with the test role's AppRole credentials, to pass to the stores.
+- `container`: the running testcontainers `DockerContainer`.
+- `clear_kv()`: deletes all secrets under `config.vault_path`.
+
+To arrange or inspect secrets outside the stores, create an `hvac.Client` with the root token `VAULT_TEST_ROOT_TOKEN`, as in the example above.
+
+For unit tests without a container, use the [in-memory key-value stores](testing.qmd#in-memory-key-value-stores) instead.
+The provider's own [integration tests](https://github.com/ghga-de/ghga/blob/main/libs/hexkit/tests/integration/providers/kvstore/test_vault_kv.py) show further usage.
+
+## API Reference
+
+See [hexkit.providers.vault](../../reference/index.qmd#provider-hashicorp-vault).

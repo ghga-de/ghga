@@ -18,7 +18,7 @@
 from collections.abc import Collection
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel
@@ -155,6 +155,6 @@ def now_utc_ms_prec() -> datetime:
     This is useful for producing a datetime that is consistent
     with MongoDB's millisecond precision.
     """
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(UTC)
     # Round microseconds to milliseconds
     return round_datetime_to_ms(current_time)

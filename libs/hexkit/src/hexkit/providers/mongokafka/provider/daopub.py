@@ -19,6 +19,7 @@
 Requires dependencies of the `akafka` and `mongodb` extras.
 """
 
+import logging
 from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
@@ -30,7 +31,7 @@ from collections.abc import (
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, contextmanager
 from functools import partial
 from typing import Any, Generic
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from aiokafka import AIOKafkaProducer
 from pymongo import AsyncMongoClient
@@ -43,14 +44,19 @@ from hexkit.protocols.dao import (
     Dao,
     Dto,
     FindResult,
+    PreconditionFailedError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
+    resolve_filter,
 )
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.protocols.eventpub import EventPublisherProtocol
 from hexkit.providers.akafka import KafkaEventPublisher
-from hexkit.providers.akafka.provider.daosub import CHANGE_EVENT_TYPE, DELETE_EVENT_TYPE
 from hexkit.providers.akafka.provider.eventpub import KafkaProducerCompatible
+from hexkit.providers.akafka.provider.eventsub import (
+    CHANGE_EVENT_TYPE,
+    DELETE_EVENT_TYPE,
+)
 from hexkit.providers.mongodb.provider import (
     ConfiguredMongoClient,
     MongoDbDao,
@@ -61,6 +67,11 @@ from hexkit.providers.mongodb.provider import (
 )
 from hexkit.providers.mongodb.provider.dao import MongoDbIndex
 from hexkit.providers.mongokafka.config import MongoKafkaConfig
+
+log = logging.getLogger(__name__)
+
+# How often a publish is repeated when newer writes keep replacing the document
+MAX_REPUBLISH_ROUNDS = 5
 
 
 class ResourceDeletedError(RuntimeError):
@@ -112,9 +123,48 @@ def dto_to_document(
         "published": published,
         "correlation_id": correlation_id,
         "last_event_id": None,
+        "write_id": uuid4(),
     }
 
     return document
+
+
+async def mark_published(
+    collection: AsyncCollection,
+    id_: ID,
+    *,
+    write_id: UUID | None,
+    deleted: bool,
+    event_id: UUID | None,
+) -> bool:
+    """Mark a write as published by setting only its outbox metadata.
+
+    Only the document still carrying the write's `write_id` and deletion state is
+    changed. If another write has replaced the document in the meantime, nothing
+    happens, since marking it would revert that newer write. A `write_id` of None also
+    matches documents written before the field existed; the deletion state keeps such
+    a match from turning a deleted resource into an existing one or vice versa.
+
+    Returns:
+        Whether the write was marked, i.e. no newer write has replaced it.
+    """
+    metadata = {
+        "deleted": deleted,
+        "published": True,
+        "correlation_id": get_correlation_id(),
+        "last_event_id": event_id,
+    }
+    with translate_pymongo_errors():
+        result = await collection.update_one(
+            {
+                "_id": id_,
+                "__metadata__.write_id": write_id,
+                # documents without metadata count as not deleted
+                "__metadata__.deleted": True if deleted else {"$ne": True},
+            },
+            {"$set": {f"__metadata__.{key}": value for key, value in metadata.items()}},
+        )
+    return result.matched_count > 0
 
 
 def get_change_publish_func(
@@ -123,13 +173,17 @@ def get_change_publish_func(
     dto_to_event: Callable[[Dto], JsonObject | None],
     event_publisher: EventPublisherProtocol,
     collection: AsyncCollection,
-) -> Callable[[Dto], Awaitable[None]]:
+) -> Callable[[Dto, ID, UUID | None], Awaitable[bool]]:
     """Generate a function that publishes change events for a specific type of resource."""
 
-    async def publish_change(dto: Dto) -> None:
-        """Publishes a change event and marks the change as published."""
+    async def publish_change(dto: Dto, id_: ID, write_id: UUID | None) -> bool:
+        """Publishes a change event and marks the write with the given ID as
+        published. `id_` is the resource ID as stored in the document.
+
+        Returns whether the write could be marked, see `mark_published`.
+        """
         payload = dto_to_event(dto)
-        document = dto_to_document(dto, id_field=id_field, published=True)
+        event_id = None
         if payload is not None:
             event_id = uuid4()
             await event_publisher.publish(
@@ -140,11 +194,9 @@ def get_change_publish_func(
                 topic=event_topic,
                 event_id=event_id,
             )
-            document["__metadata__"]["last_event_id"] = event_id
-        with translate_pymongo_errors():
-            await collection.replace_one(
-                {"_id": document["_id"]}, document, upsert=True
-            )
+        return await mark_published(
+            collection, id_, write_id=write_id, deleted=False, event_id=event_id
+        )
 
     return publish_change
 
@@ -153,13 +205,17 @@ def get_delete_publish_func(
     event_topic: str,
     event_publisher: EventPublisherProtocol,
     collection: AsyncCollection,
-) -> Callable[[Any], Awaitable[None]]:
+) -> Callable[[Any, UUID | None], Awaitable[bool]]:
     """Generate a function that publishes deletion events for a specific type of
     resource.
     """
 
-    async def publish_deletion(id_: ID) -> None:
-        """Publishes a deletion event and marks the deletion as published."""
+    async def publish_deletion(id_: ID, write_id: UUID | None) -> bool:
+        """Publishes a deletion event and marks the deletion with the given write ID
+        as published.
+
+        Returns whether the deletion could be marked, see `mark_published`.
+        """
         event_id = uuid4()
         await event_publisher.publish(
             payload={},
@@ -169,18 +225,9 @@ def get_delete_publish_func(
             event_id=event_id,
         )
 
-        correlation_id = get_correlation_id()  # Get active correlation first
-        document = {
-            "_id": id_,
-            "__metadata__": {
-                "deleted": True,
-                "published": True,
-                "correlation_id": correlation_id,
-                "last_event_id": event_id,
-            },
-        }
-        with translate_pymongo_errors():
-            await collection.replace_one({"_id": document["_id"]}, document)
+        return await mark_published(
+            collection, id_, write_id=write_id, deleted=True, event_id=event_id
+        )
 
     return publish_deletion
 
@@ -217,8 +264,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         dto_model: type[Dto],
         collection: AsyncCollection,
         dao: MongoDbDao[Dto],
-        publish_change: Callable[[Dto], Awaitable[None]],
-        publish_delete: Callable[[Any], Awaitable[None]],
+        publish_change: Callable[[Dto, ID, UUID | None], Awaitable[bool]],
+        publish_delete: Callable[[Any, UUID | None], Awaitable[bool]],
         autopublish: bool,
     ):
         """Initialize the DAO.
@@ -236,10 +283,13 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 functionality.
             publish_change:
                 A callable returning an awaitable for publishing the current state of a
-                created or changed resource.
+                created or changed resource, given with its stored ID and the ID of
+                the write. The awaitable returns whether the write could be marked as
+                published.
             publish_delete:
                 A callable returning an awaitable for publishing the deletion of a
-                resource.
+                resource, given with the ID of the write. The awaitable returns
+                whether the deletion could be marked as published.
             autopublish:
                 Whether to automatically publish changes.
         """
@@ -266,17 +316,28 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         with assert_not_deleted():
             return await self._dao.get_by_id(id_)
 
-    async def update(self, dto: Dto) -> None:
+    async def update(
+        self, dto: Dto, *, precondition: Mapping[str, Any] | None = None
+    ) -> None:
         """Update an existing resource.
+
+        If `precondition` is supplied, the resource is only updated if its current
+        values match them. The check and the update happen atomically.
 
         Args:
             dto:
                 The updated resource content as a pydantic-based data transfer object
                 including the resource ID.
+            precondition:
+                A mapping of field names to the values the existing resource must have.
+                It does not need to contain the ID field, since that is implied.
 
         Raises:
             ResourceNotFoundError:
                 when resource with the id specified in the dto was not found
+            PreconditionFailedError:
+                when the resource exists but doesn't match `precondition`
+            InvalidMappingError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -284,27 +345,45 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         correlation_id = get_correlation_id()
         document = self._dao._dto_to_document(dto)
         document.setdefault("__metadata__", {})["correlation_id"] = correlation_id
+        existing_filter: dict[str, Any] = {
+            "_id": document["_id"],
+            "$or": [
+                {"__metadata__": {"$exists": False}},
+                {"__metadata__.deleted": False},
+            ],
+        }
+        doc_filter = existing_filter
+
+        # If precondition is supplied, validate it and add it to the doc_filter
+        if precondition:
+            validate_find_mapping(precondition, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            # A separate $and clause keeps an $or in the criteria from replacing the
+            # $or that excludes deleted documents
+            doc_filter = {"$and": [existing_filter, criteria]}
+
         with translate_pymongo_errors():
             try:
-                result = await self._collection.replace_one(
-                    {
-                        "_id": document["_id"],
-                        "$or": [
-                            {"__metadata__": {"$exists": False}},
-                            {"__metadata__.deleted": False},
-                        ],
-                    },
-                    document,
-                )
+                result = await self._collection.replace_one(doc_filter, document)
             except DuplicateKeyError as error:
                 key_value = error.details.get("keyValue", {})  # type: ignore
                 raise UniqueConstraintViolationError(unique_fields=key_value) from error
 
         if result.matched_count == 0:
+            if precondition:
+                # Only for choosing the error; the update itself already failed
+                with translate_pymongo_errors():
+                    exists = await self._collection.count_documents(
+                        existing_filter, limit=1
+                    )
+                if exists:
+                    raise PreconditionFailedError(
+                        id_=document["_id"], precondition=precondition
+                    )
             raise ResourceNotFoundError(id_=document["_id"])
 
         if self._autopublish:
-            await self._publish_change(dto)
+            await self.publish_document(document)
 
     async def delete(self, id_: ID) -> None:
         """Delete a resource by providing its ID.
@@ -316,12 +395,14 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             ResourceNotFoundError: when resource with the specified id_ was not found
         """
         correlation_id = get_correlation_id()
+        write_id = uuid4()
         document = {
             "_id": id_,
             "__metadata__": {
                 "deleted": True,
                 "published": False,
                 "correlation_id": correlation_id,
+                "write_id": write_id,
             },
         }
         with translate_pymongo_errors():
@@ -339,28 +420,36 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             raise ResourceNotFoundError(id_=id_)
 
         if self._autopublish:
-            await self._publish_delete(id_)
+            await self.publish_document(document)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Dto:
-        """Find the resource that matches the specified mapping.
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
+    async def find_one(
+        self,
+        *,
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
+    ) -> Dto:
+        """Find the resource that matches the specified filter.
 
         It is expected that at most one resource matches the constraints.
         An exception is raised if no or multiple hits are found.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
+            mapping:
+                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
-            was found that matches the given mapping.
+            was found that matches the given filter.
 
         Raises:
             NoHitsFoundError:
@@ -368,29 +457,34 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        hits = self.find_all(mapping=mapping)
-        return await get_single_hit(hits=hits, mapping=mapping)
+        filter_ = resolve_filter(filter_, mapping)
+        hits = self.find_all(filter_=filter_)
+        return await get_single_hit(hits=hits, mapping=filter_)
 
+    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any] | None = None,
+        mapping: Mapping[str, Any] | None = None,
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Dto]:
-        """Find all resources that match the specified mapping.
+        """Find all resources that match the specified filter.
 
-        The values in the mapping are used to filter the resources. Provide them
+        The values in the filter are used to select the resources. Provide them
         using the same Python types as the corresponding DTO model fields; UUIDs
         and datetimes are stored and matched natively, so they must not be passed
         as strings. Dictionaries can be passed as values to specify more complex
         MongoDB queries.
 
         Args:
-            mapping:
+            filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
+            mapping:
+                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -410,24 +504,25 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             A FindResult that is async-iterable and also provides total_count().
 
         Raises:
-            InvalidMappingError: If `mapping` doesn't pass validation.
+            InvalidMappingError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
         """
+        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(mapping, dto_model=self._dto_model)
-        mapping = replace_id_field_in_find_mapping(mapping, self._id_field)
+        validate_find_mapping(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
 
         # Ensure we don't retrieve deleted docs. Documents lacking outbox metadata are
         # treated as valid (matching update/delete), and the $and wrapper avoids
-        # clobbering any caller-supplied $or in the mapping.
-        mapping_without_deleted = {
+        # clobbering any caller-supplied $or in the filter.
+        filter_without_deleted = {
             "$and": [
-                dict(mapping),
+                dict(filter_),
                 {
                     "$or": [
                         {"__metadata__": {"$exists": False}},
@@ -450,7 +545,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         async def _total_count() -> int:
             with translate_pymongo_errors():
-                return await collection.count_documents(filter=mapping_without_deleted)
+                return await collection.count_documents(filter=filter_without_deleted)
 
         if limit == 0:
 
@@ -464,7 +559,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         async def _iter() -> AsyncIterator[Dto]:
             with translate_pymongo_errors():
-                cursor = collection.find(filter=mapping_without_deleted)
+                cursor = collection.find(filter=filter_without_deleted)
                 if sort:
                     cursor = cursor.sort(mongodb_sort)
                 cursor = cursor.skip(skip)
@@ -492,10 +587,11 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when inserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        await self._dao.insert(dto=dto)
+        document = self._dao._dto_to_document(dto)
+        await self._dao._insert_document(document)
 
         if self._autopublish:
-            await self._publish_change(dto)
+            await self.publish_document(document)
 
     async def upsert(self, dto: Dto) -> None:
         """Update the provided resource if it already exists, create it otherwise.
@@ -510,25 +606,97 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when upserting the dto would violate a unique index constraint over some
                 field other than the ID field.
         """
-        try:
-            await self._dao.upsert(dto=dto)
-        except DuplicateKeyError as error:
-            key_value = error.details.get("keyValue", {})  # type: ignore
-            raise UniqueConstraintViolationError(unique_fields=key_value) from error
+        document = self._dao._dto_to_document(dto)
+        await self._dao._upsert_document(document)
         if self._autopublish:
-            await self._publish_change(dto)
+            await self.publish_document(document)
 
     async def publish_document(self, document: dict[str, Any]) -> None:
         """Publishes a document"""
-        correlation_id = document.get("__metadata__", {}).get("correlation_id", "")
+        try:
+            marked = await self._publish_document_once(document)
+        except Exception:
+            # The event may already be on the topic behind a newer write's event,
+            # so leave the current state for publish_pending
+            await self._flag_unpublished(document["_id"])
+            raise
+        await self._republish_if_superseded(document["_id"], marked=marked)
+
+    async def _publish_document_once(self, document: dict[str, Any]) -> bool:
+        """Publishes a document and returns whether it could be marked as published."""
+        metadata = document.get("__metadata__", {})
+        correlation_id = metadata.get("correlation_id", "")
+        write_id = metadata.get("write_id")
         async with set_correlation_id(correlation_id):
-            if document.get("__metadata__", {}).get("deleted", False):
-                await self._publish_delete(document["_id"])
-            else:
-                dto = document_to_dto(
-                    document, id_field=self._id_field, dto_model=self._dto_model
+            if metadata.get("deleted", False):
+                return await self._publish_delete(document["_id"], write_id)
+            dto = document_to_dto(
+                document, id_field=self._id_field, dto_model=self._dto_model
+            )
+            return await self._publish_change(dto, document["_id"], write_id)
+
+    async def _republish_if_superseded(self, id_: ID, *, marked: bool) -> None:
+        """Publish the current state of a resource if a newer write replaced the one
+        just published.
+
+        The event just sent may have reached Kafka after the newer write's own event,
+        which would leave an older state as the last event on the topic. Publishing
+        the current state again puts the newest state last. Another round is needed
+        only if yet another write replaced the document in the meantime. If the
+        rounds run out or republishing fails, the document is flagged as unpublished,
+        so that `publish_pending` sends its state again.
+
+        Errors are logged instead of raised: the caller's own write is already stored
+        and published, and the newer write publishes its own event.
+        """
+        try:
+            for _ in range(MAX_REPUBLISH_ROUNDS):
+                if marked:
+                    return
+                with translate_pymongo_errors():
+                    document = await self._collection.find_one({"_id": id_})
+                if document is None:
+                    return
+                marked = await self._publish_document_once(document)
+            if marked:
+                return
+            log.warning(
+                "Stopped republishing resource %s after %d rounds because newer"
+                + " writes kept replacing it; leaving it for publish_pending.",
+                id_,
+                MAX_REPUBLISH_ROUNDS,
+            )
+        except Exception:
+            log.warning(
+                "Could not republish the current state of resource %s; leaving it"
+                + " for publish_pending.",
+                id_,
+                exc_info=True,
+            )
+        await self._flag_unpublished(id_)
+
+    async def _flag_unpublished(self, id_: ID) -> None:
+        """Flag a resource as unpublished, so that `publish_pending` sends it again.
+
+        The new write ID keeps the mark of a newer write that is still in flight from
+        setting the flag back, so that write republishes the current state instead.
+        """
+        try:
+            with translate_pymongo_errors():
+                await self._collection.update_one(
+                    # a document without metadata would be hidden by a partial one
+                    {"_id": id_, "__metadata__": {"$exists": True}},
+                    {
+                        "$set": {
+                            "__metadata__.published": False,
+                            "__metadata__.write_id": uuid4(),
+                        }
+                    },
                 )
-                await self._publish_change(dto)
+        except Exception:
+            log.warning(
+                "Could not flag resource %s as unpublished.", id_, exc_info=True
+            )
 
     async def publish_pending(self) -> None:
         """Publishes all non-published changes."""

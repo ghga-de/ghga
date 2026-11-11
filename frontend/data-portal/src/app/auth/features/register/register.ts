@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { FormField, form, required } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -14,7 +14,7 @@ import { RouterLink } from '@angular/router';
 
 import { AcademicTitle, UserBasicData } from '@app/auth/models/user';
 import { AuthService } from '@app/auth/services/auth';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * User registration page
@@ -31,15 +31,27 @@ import { NotificationService } from '@app/shared/services/notification';
   ],
   templateUrl: './register.html',
 })
-export class RegisterComponent {
-  #notify = inject(NotificationService);
+export class Register {
+  #notify = inject(Notifier);
   #authService = inject(AuthService);
 
   user = this.#authService.user;
 
   allTitles: AcademicTitle[] = [null, 'Dr.', 'Prof.'];
 
-  protected model = signal({ title: null as AcademicTitle, accepted: false });
+  /**
+   * The form model, with the title of a re-registering user pre-populated
+   */
+  protected model = linkedSignal<
+    AcademicTitle | undefined,
+    { title: AcademicTitle; accepted: boolean }
+  >({
+    source: () => this.user()?.title,
+    computation: (title, previous) => ({
+      title: title || previous?.value.title || null,
+      accepted: previous?.value.accepted ?? false,
+    }),
+  });
 
   protected registerForm = form(this.model, (p) => {
     required(p.accepted);
@@ -48,16 +60,6 @@ export class RegisterComponent {
   protected submitDisabled = computed(() => !this.registerForm().valid());
 
   allowNavigation = false; // used by canDeactivate guard
-
-  constructor() {
-    // if a re-registering user already has a title, pre-populate it
-    effect(() => {
-      const title = this.user()?.title;
-      if (title) {
-        this.model.update((m) => ({ ...m, title }));
-      }
-    });
-  }
 
   /**
    * Cancel registration and log out

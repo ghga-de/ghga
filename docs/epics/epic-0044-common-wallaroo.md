@@ -13,7 +13,8 @@ This evaluation can be split into the following tasks:
 - Create a list of criteria for the frontend framework that are relevant for us (like: various core features, maturity, stability, popularity, future support, flexibility, completeness, static typing, documentation, testing, licensing, additional features like SSR).
 - Define weights for these criteria.
 - Evaluate the three frameworks given these criteria, using the insights gained in the Red Kangaroo epic, and finalize the decision for the frontend framework.
-- Find three responsive design systems with open source license that would work for us (e.g. Bootstrap, Google Material Design, Foundation). Consider that the design system should work particularly well on desktop screen sizes, mobile is less important for us.
+- Find three responsive design systems with open source license that would work for us (e.g. Bootstrap, Google Material Design, Foundation).
+  Consider that the design system should work particularly well on desktop screen sizes, mobile is less important for us.
 - Create a list of UI components that are most needed and important for us.
 - Create a list of 6 popular component libraries for the selected frontend framework supporting these components and design systems.
 - Create a list of criteria for these libraries (like: how well do they support the favored design system, how well do they support the selected framework, how well do they support the needed components, maturity, documentation, licensing and possible pricing, maintenance and future support)

@@ -188,6 +188,84 @@ async def test_view_box_endpoint_auth(config: ConfigFixture, app_fixture: AppFix
     assert body["total_count"] == 0
 
 
+async def test_file_state_counts_endpoint_auth(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that the endpoint returns a 401 if auth is not supplied or is invalid or
+    is a token for viewing a single box, and a 200 if the token is correct.
+    """
+    rs_jwk = config.rs_jwk
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    core_mock.get_file_state_counts.return_value = {}
+
+    url = "/rpc/boxes/file-state-counts"
+    body = {"box_ids": [str(TEST_BOX_ID)]}
+    response = await rest_client.post(url, json=body)
+    assert response.status_code == 401
+
+    response = await rest_client.post(url, json=body, headers=INVALID_HEADER)
+    assert response.status_code == 401
+
+    # A token for viewing one box must not grant the counts of any box
+    view_box_token = utils.view_file_box_token_header(jwk=rs_jwk, box_id=TEST_BOX_ID)
+    response = await rest_client.post(url, json=body, headers=view_box_token)
+    assert response.status_code == 401
+
+    # A token signed by the WPS instead of the RS must be rejected as well
+    wps_token = utils.view_file_box_stats_token_header(jwk=config.wps_jwk)
+    response = await rest_client.post(url, json=body, headers=wps_token)
+    assert response.status_code == 401
+
+    good_token = utils.view_file_box_stats_token_header(jwk=rs_jwk)
+    response = await rest_client.post(url, json=body, headers=good_token)
+    assert response.status_code == 200
+    assert response.json() == {}
+
+
+async def test_file_state_counts_endpoint_response_format(
+    config: ConfigFixture, app_fixture: AppFixture
+):
+    """Test that the endpoint forwards the box IDs and returns the counts by box ID."""
+    rest_client = app_fixture.rest_client
+    core_mock = app_fixture.core_mock
+    other_box_id = uuid4()
+    core_mock.get_file_state_counts.return_value = {
+        TEST_BOX_ID: {"inbox": 2, "archived": 5},
+        other_box_id: {"failed_interrogation": 1},
+    }
+
+    token = utils.view_file_box_stats_token_header(jwk=config.rs_jwk)
+    body = {"box_ids": [str(TEST_BOX_ID), str(other_box_id)]}
+    response = await rest_client.post(
+        "/rpc/boxes/file-state-counts", json=body, headers=token
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        str(TEST_BOX_ID): {"inbox": 2, "archived": 5},
+        str(other_box_id): {"failed_interrogation": 1},
+    }
+    core_mock.get_file_state_counts.assert_awaited_once_with(
+        box_ids=[TEST_BOX_ID, other_box_id]
+    )
+
+    # An invalid box ID is a validation error
+    body = {"box_ids": ["not-a-uuid"]}
+    response = await rest_client.post(
+        "/rpc/boxes/file-state-counts", json=body, headers=token
+    )
+    assert response.status_code == 422
+
+    # Any error in the core is an internal error
+    core_mock.get_file_state_counts.side_effect = RuntimeError("Random error")
+    body = {"box_ids": [str(TEST_BOX_ID)]}
+    response = await rest_client.post(
+        "/rpc/boxes/file-state-counts", json=body, headers=token
+    )
+    assert response.status_code == 500
+    assert response.json()["description"] == str(http_exceptions.HttpInternalError())
+
+
 async def test_get_box_uploads_response_format(
     config: ConfigFixture, app_fixture: AppFixture
 ):
@@ -652,7 +730,9 @@ async def test_create_box_endpoint_error_handling(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpInternalError(),
+            http_exceptions.HttpBoxStatsUnavailableError(
+                box_id=TEST_BOX_ID, versioned=True
+            ),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
@@ -972,7 +1052,7 @@ async def test_get_file_part_upload_url_endpoint_error_handling(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpInternalError(),
+            http_exceptions.HttpBoxStatsUnavailableError(box_id=TEST_BOX_ID),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],
@@ -1015,11 +1095,11 @@ async def test_complete_file_upload_endpoint_error_translation(
     assert response.json()["description"] == str(http_error)
 
 
-async def test_box_stats_calc_error_not_re_logged_by_api(
+async def test_box_stats_calc_error_asks_client_to_retry(
     config: ConfigFixture, app_fixture: AppFixture, caplog
 ):
-    """BoxStatsCalcError is already logged by the controller, so the API layer must
-    translate it to a 500 without emitting another error log of its own.
+    """A BoxStatsCalcError becomes a 503. It is already logged by the controller, so
+    the API layer must not emit another error log of its own.
     """
     routes_logger = "ucs.adapters.inbound.fastapi_.routes"
     wps_jwk = config.wps_jwk
@@ -1043,7 +1123,8 @@ async def test_box_stats_calc_error_not_re_logged_by_api(
             json=body,
             headers=token_header,
         )
-    assert response.json()["description"] == str(http_exceptions.HttpInternalError())
+    assert response.status_code == 503
+    assert response.json()["exception_id"] == "boxStatsUnavailable"
     assert not [
         record
         for record in caplog.records
@@ -1080,7 +1161,7 @@ async def test_box_stats_calc_error_not_re_logged_by_api(
         ),
         (
             UploadControllerPort.BoxStatsCalcError(box_id=TEST_BOX_ID),
-            http_exceptions.HttpInternalError(),
+            http_exceptions.HttpBoxStatsUnavailableError(box_id=TEST_BOX_ID),
         ),
         (RuntimeError("Random error"), http_exceptions.HttpInternalError()),
     ],

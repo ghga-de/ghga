@@ -16,12 +16,24 @@
 """Entrypoint of the package"""
 
 import asyncio
+import sys
 
 import typer
 
-from dlqs.main import consume_events, run_rest_app
+from dlqs.config import Config
+from dlqs.main import DB_VERSION, consume_events, migrate_db, run_rest_app
+from hexkit.providers.mongodb.migrations import check_db_version
 
 cli = typer.Typer()
+
+
+@cli.callback(help="")  # an empty help keeps the docstring out of `--help`
+def check_version(ctx: typer.Context):
+    """Run no command but `migrate-db` unless the database is at `DB_VERSION`."""
+    # Click parses a command's own `--help` only after this callback has run
+    if ctx.invoked_subcommand == "migrate-db" or "--help" in sys.argv:
+        return
+    asyncio.run(check_db_version(config=Config(), target_version=DB_VERSION))
 
 
 @cli.command(name="run-rest")
@@ -34,3 +46,9 @@ def sync_run_api():
 def sync_consume_events(run_forever: bool = True):
     """Run an event consumer listening to the specified topic."""
     asyncio.run(consume_events(run_forever=run_forever))
+
+
+@cli.command(name="migrate-db")
+def sync_migrate_db():
+    """Run database migrations."""
+    asyncio.run(migrate_db())

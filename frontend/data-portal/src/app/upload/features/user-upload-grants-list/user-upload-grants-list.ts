@@ -9,8 +9,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
-import { StencilComponent } from '@app/shared/ui/stencil/stencil/stencil';
+import { Notifier } from '@app/shared/services/notification';
+import { Stencil } from '@app/shared/ui/stencil/stencil/stencil';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
 import { UploadBoxService } from '@app/upload/services/upload-box';
@@ -20,9 +20,9 @@ import {
   incompleteOrFailedConflictTitle,
   parseIncompleteOrFailedConflict,
 } from '@app/upload/utils/box-conflict';
-import { UserUploadBoxDetailsDialogComponent } from '@app/upload/features/user-upload-box-details-dialog/user-upload-box-details-dialog';
+import { UserUploadBoxDetailsDialog } from '@app/upload/features/user-upload-box-details-dialog/user-upload-box-details-dialog';
 // eslint-disable-next-line boundaries/dependencies
-import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
+import { UploadWorkPackageDialog } from '@app/work-packages/features/upload-work-package-dialog/upload-work-package-dialog';
 
 /**
  * Shows the current user's open Research Data Upload Boxes (RDUBs).
@@ -30,14 +30,14 @@ import { UploadWorkPackageDialogComponent } from '@app/work-packages/features/up
  */
 @Component({
   selector: 'app-user-upload-grants-list',
-  imports: [StencilComponent, MatIconModule, MatButtonModule],
+  imports: [Stencil, MatIconModule, MatButtonModule],
   templateUrl: './user-upload-grants-list.html',
 })
-export class UserUploadGrantsListComponent implements OnInit {
+export class UserUploadGrantsList implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #confirmation = inject(ConfirmationService);
   #dialog = inject(MatDialog);
-  #notification = inject(NotificationService);
+  #notification = inject(Notifier);
 
   isLoading = this.#uploadBoxService.userGrants.isLoading;
   protected hasError = this.#uploadBoxService.userGrants.error;
@@ -84,7 +84,7 @@ export class UserUploadGrantsListComponent implements OnInit {
    * @param grant - the upload grant with box information
    */
   viewDetails(grant: GrantWithBoxInfo): void {
-    this.#dialog.open(UserUploadBoxDetailsDialogComponent, {
+    this.#dialog.open(UserUploadBoxDetailsDialog, {
       data: grant,
       width: 'clamp(40em, 85vw, 64em)',
       maxWidth: 'calc(100vw - 2rem)',
@@ -99,7 +99,7 @@ export class UserUploadGrantsListComponent implements OnInit {
    * @param grant - the upload grant with box information
    */
   createToken(grant: GrantWithBoxInfo): void {
-    this.#dialog.open(UploadWorkPackageDialogComponent, {
+    this.#dialog.open(UploadWorkPackageDialog, {
       data: grant,
       width: '64rem',
       maxWidth: '96vw',

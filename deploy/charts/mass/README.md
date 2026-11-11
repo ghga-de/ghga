@@ -19,7 +19,6 @@ for the full set of configurable values.
 | Name | Description | Value |
 |------|-------------|-------|
 | `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
-| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.host` | IP of the host. | `"127.0.0.1"` |
 | `config.searchable_classes` | A collection of searchable_classes with facetable and selected fields | `null` |
 | `config.kafka_enable_dlq` | A flag to toggle the dead letter queue. If set to False, the service will crash upon exhausting retries instead of publishing events to the DLQ. If set to True, the service will publish events to the DLQ topic after exhausting all retries | `false` |
@@ -43,6 +42,7 @@ for the full set of configurable values.
 | `config.kafka_max_retries` | The maximum number of times to immediately retry consuming an event upon failure. Works independently of the dead letter queue. | `0` |
 | `config.kafka_dlq_topic` | The name of the topic used to resolve error-causing events. | `"dlq"` |
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
+| `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
 | `config.port` | Port to expose the server on the specified host | `8080` |
 | `config.auto_reload` | A development feature. Set to `True` to automatically reload the server upon code changes | `false` |
@@ -63,6 +63,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"mass"` |
@@ -117,7 +118,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
@@ -172,6 +174,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"mass"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

@@ -25,7 +25,7 @@ const DEFAULT_PULSE = true;
   templateUrl: './stencil.html',
   styleUrl: './stencil.scss',
 })
-export class StencilComponent {
+export class Stencil {
   count = input<number>(DEFAULT_COUNT);
   text = input<string>(DEFAULT_TEXT);
   label = input<string>(DEFAULT_LABEL);

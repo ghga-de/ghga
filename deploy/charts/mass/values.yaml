@@ -7,6 +7,7 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: mass
@@ -75,8 +76,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -181,7 +183,6 @@ configMap:
     enabled: true
 config:
   mongo_dsn:
-  db_name: metadata-store
   host: "0.0.0.0"
   searchable_classes:
     EmbeddedDataset:
@@ -200,6 +201,9 @@ config:
 configPrefix: mass
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 environment:
   name: default
 cluster:

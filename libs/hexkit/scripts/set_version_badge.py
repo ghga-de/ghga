@@ -38,9 +38,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 META_FILE = "_package_meta.json"
 

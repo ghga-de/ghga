@@ -7,6 +7,7 @@
 global:
   imageRegistry: ""
   imagePullSecrets: []
+  localImageIds: {}
 commandPrefix: ''
 commandStyle: exec
 executable: wps
@@ -38,7 +39,7 @@ podSecurityContext:
   fsGroup: 1000
 initContainers: []
 migrationInitContainer:
-  enabled: false
+  enabled: true
   image: ""
   imagePullPolicy:
   executable: wps
@@ -76,8 +77,9 @@ livenessProbe:
   periodSeconds: 15
 readinessProbe:
   enabled: false
-  tcpSocket:
-    port: 8080
+  httpGet:
+    path: "{{ .Values.healthEndpoint }}"
+    port: http
   initialDelaySeconds: 30
   periodSeconds: 15
 startupProbe:
@@ -197,7 +199,6 @@ configMap:
 config:
   auth_key: '{}'
   mongo_dsn:
-  db_name: wps
   access_url: http://claims-repository:8080
   host: "0.0.0.0"
   service_instance_id: 'wps_1'
@@ -207,9 +208,13 @@ config:
   enable_opentelemetry: false
   db_version_collection: "wpsDbVersions"
   migration_wait_sec: 10
+  migration_max_wait_sec: 600
 configPrefix: wps
 enableServiceLinks: true
 successfulJobsHistoryLimit: 5
+concurrencyPolicy: Forbid
+activeDeadlineSeconds:
+startingDeadlineSeconds:
 environment:
   name: default
 cluster:

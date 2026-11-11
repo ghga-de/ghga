@@ -20,10 +20,11 @@ from fis.inject import (
     prepare_event_subscriber,
     prepare_rest_app,
 )
-from fis.migrations import run_db_migrations
+from fis.migrations import MIGRATION_MAP
 from ghga_service_commons.api import run_server
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
+from hexkit.providers.mongodb.migrations import MigrationManager
 
 DB_VERSION = 3
 
@@ -70,4 +71,7 @@ async def migrate_db() -> None:
     """Run database migrations as a one-off command."""
     config = Config()
     configure_logging(config=config)
-    await run_db_migrations(config=config, target_version=DB_VERSION)
+    async with MigrationManager(
+        config=config, target_version=DB_VERSION, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()

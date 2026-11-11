@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { Component, effect, inject, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, viewChild } from '@angular/core';
 
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,9 +19,17 @@ import { IvaStatePipe } from '@app/ivas/pipes/iva-state-pipe';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
 import { IvaService } from '@app/ivas/services/iva';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 import { providePaginatorIntl } from '@app/shared/services/paginator-intl';
-import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creation-dialog';
+import { Html, html } from '@app/shared/utils/html';
+import { CodeCreationDialog } from '../code-creation-dialog/code-creation-dialog';
+
+/**
+ * A table row: an IVA, marked when another account has the same name and email as its user.
+ */
+interface IvaRow extends UserWithIva {
+  warn: boolean;
+}
 
 /**
  * IVA Manager List component.
@@ -46,25 +54,33 @@ import { CodeCreationDialogComponent } from '../code-creation-dialog/code-creati
   templateUrl: './iva-manager-list.html',
   styleUrl: './iva-manager-list.scss',
 })
-export class IvaManagerListComponent {
+export class IvaManagerList {
   #dialog = inject(MatDialog);
   #confirm = inject(ConfirmationService);
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
   #ivaService = inject(IvaService);
   #ivaTypePipe = inject(IvaTypePipe);
 
   #ivas = this.#ivaService.allIvas;
-  ambiguousUserIds = this.#ivaService.ambiguousUserIds;
+  #ambiguousUserIds = this.#ivaService.ambiguousUserIds;
 
   ivas = this.#ivaService.allIvasFiltered;
   ivasAreLoading = this.#ivas.isLoading;
   ivasError = this.#ivas.error;
 
-  source = new MatTableDataSource<UserWithIva>([]);
+  #rows = computed<IvaRow[]>(() => {
+    const ambiguousUserIds = this.#ambiguousUserIds();
+    return this.ivas().map((iva) => ({
+      ...iva,
+      warn: ambiguousUserIds.has(iva.user_id),
+    }));
+  });
+
+  source = new MatTableDataSource<IvaRow>([]);
 
   #duplicateUsers = new Set<string>(); // user IDs where name and email are ambiguous
 
-  #updateSourceEffect = effect(() => (this.source.data = this.ivas()));
+  #updateSourceEffect = effect(() => (this.source.data = this.#rows()));
 
   #ivaSortingAccessor = (iva: UserWithIva, key: string) => {
     switch (key) {
@@ -98,12 +114,13 @@ export class IvaManagerListComponent {
   });
 
   /**
-   * Get the display name for the IVA type
+   * Describe the IVA for a confirmation dialog
    * @param iva the IVA in question
-   * @returns the display name for the type
+   * @returns the type, user name and address of the IVA as HTML
    */
-  #ivaTypeName(iva: UserWithIva): string {
-    return this.#ivaTypePipe.transform(iva.type).name;
+  #ivaDescription(iva: UserWithIva): Html {
+    const ivaType = this.#ivaTypePipe.transform(iva.type).name;
+    return html`the ${ivaType} IVA of ${iva.user_name} with address "${iva.value}"`;
   }
 
   /**
@@ -125,13 +142,15 @@ export class IvaManagerListComponent {
    * @param iva - the IVA to invalidate
    */
   invalidateWhenConfirmed(iva: UserWithIva) {
-    const ivaType = this.#ivaTypeName(iva);
     this.#confirm.confirm({
       title: 'Confirm invalidation of IVA',
-      message:
-        `<p>Do you really wish to <strong>invalidate</strong> the ${ivaType} IVA of` +
-        ` ${iva.user_name} with address "${iva.value}"?` +
-        '</p><p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      message: html`<p>
+          Do you really wish to
+          <strong>invalidate</strong> ${this.#ivaDescription(iva)}?
+        </p>
+        <p>
+          <strong>The user will lose access to any dataset linked to this IVA</strong>.
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm invalidation',
       callback: (confirmed) => {
@@ -163,12 +182,10 @@ export class IvaManagerListComponent {
    * @param iva - the IVA for which the code was transmitted
    */
   markAsTransmittedWhenConfirmed(iva: UserWithIva) {
-    const ivaType = this.#ivaTypeName(iva);
     this.#confirm.confirm({
       title: 'Confirm code transmission',
-      message:
-        'Please confirm the transmission of the verification code' +
-        ` the ${ivaType} IVA of ${iva.user_name} with address "${iva.value}".`,
+      message: html`Please confirm the transmission of the verification code for
+      ${this.#ivaDescription(iva)}.`,
       cancelText: 'Cancel',
       confirmText: 'Confirm transmission',
       callback: (confirmed) => {
@@ -185,7 +202,7 @@ export class IvaManagerListComponent {
     this.#ivaService.createCodeForIva(iva.id).subscribe({
       next: (code) => {
         this.#notify.showSuccess('Verification code has been created');
-        const dialogRef = this.#dialog.open(CodeCreationDialogComponent, {
+        const dialogRef = this.#dialog.open(CodeCreationDialog, {
           data: { ...iva, code },
         });
         dialogRef.afterClosed().subscribe((doConfirm) => {
@@ -220,14 +237,16 @@ export class IvaManagerListComponent {
    * @param iva - the IVA to delete
    */
   deleteWhenConfirmed(iva: UserWithIva): void {
-    const ivaType = this.#ivaTypeName(iva);
     this.#confirm.confirm({
       title: 'Confirm deletion of the IVA',
-      message:
-        `<p>Do you really wish to completely <strong>delete</strong> the ${ivaType} IVA of` +
-        ` ${iva.user_name} with address "${iva.value}"?` +
-        '</p><p>This is not reversible.</p>' +
-        '<p><strong>The user will lose access to any dataset linked to this IVA</strong>.</p>',
+      message: html`<p>
+          Do you really wish to completely
+          <strong>delete</strong> ${this.#ivaDescription(iva)}?
+        </p>
+        <p>This is not reversible.</p>
+        <p>
+          <strong>The user will lose access to any dataset linked to this IVA</strong>.
+        </p>`,
       cancelText: 'Cancel',
       confirmText: 'Confirm deletion',
       callback: (confirmed) => {

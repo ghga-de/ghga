@@ -1092,12 +1092,22 @@ async def test_cleanup_cancels_despite_s3_abort_failure(
 
 @pytest.mark.parametrize("simulate_errors", [True, False])
 async def test_cleanup_of_orphaned_files(
-    joint_fixture: JointFixture, simulate_errors: bool, caplog
+    joint_fixture: JointFixture,
+    simulate_errors: bool,
+    caplog,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """Test that orphaned files are deleted from the inbox by the cleanup job."""
     controller = joint_fixture.upload_controller
     s3_storage = joint_fixture.s3.storage
     bucket_id = joint_fixture.bucket_id
+
+    # The objects are created just now, so drop the minimum age for deletion
+    monkeypatch.setattr(
+        controller,
+        "_config",
+        joint_fixture.config.model_copy(update={"orphaned_object_min_age_hours": 0}),
+    )
 
     # Create a box and initiate a file upload
     async with set_correlation_id(uuid4()):
@@ -1160,7 +1170,7 @@ async def test_cleanup_of_orphaned_files(
 
     # Set the inbox and cancelled docs to the desired states but leave init as is to
     #  simulate race condition
-    file_inbox_doc["inbox"] = "inbox"
+    file_inbox_doc["state"] = "inbox"
     file_cancelled_doc["state"] = "cancelled"
     collection.replace_one(filter={"_id": file_inbox_id}, replacement=file_inbox_doc)
     collection.replace_one(
@@ -1218,14 +1228,17 @@ async def test_cleanup_of_orphaned_files(
         await controller.cleanup_stale_uploads()
 
     deleted_count = 2 if simulate_errors else 3
-    log_msg = (
-        f"Cleaned up {deleted_count} orphaned object(s) from bucket {bucket_id}"
-        + " in storage alias test."
-    )
-
-    if simulate_errors:
-        log_msg += " An additional 1 object(s) could not be deleted."
-    assert log_msg in caplog.messages
+    failed_count = 1 if simulate_errors else 0
+    summaries = [
+        message
+        for message in caplog.messages
+        if message.startswith(
+            f"Cleaned up {deleted_count} orphaned object(s) from bucket {bucket_id}"
+            + " in storage alias test. Kept 0 object(s)"
+        )
+    ]
+    assert len(summaries) == 1
+    assert summaries[0].endswith(f" {failed_count} object(s) could not be deleted.")
 
     # Verify that the orphaned and cancelled files are gone, but init and inbox remain
     all_object_ids = await s3_storage.list_all_object_ids(bucket_id=bucket_id)

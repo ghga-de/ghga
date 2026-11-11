@@ -20,7 +20,7 @@ import { AfterViewInit, Directive, ElementRef, inject, Renderer2 } from '@angula
 @Directive({
   selector: 'a[appExtLink]',
 })
-export class ExternalLinkDirective implements AfterViewInit {
+export class ExternalLink implements AfterViewInit {
   #el = inject(ElementRef);
   #renderer = inject(Renderer2);
 

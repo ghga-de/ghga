@@ -54,7 +54,7 @@ interface Publication {
   author?: string;
   year?: number;
   journal?: string;
-  doi: string;
+  doi?: string;
 }
 
 export interface File {

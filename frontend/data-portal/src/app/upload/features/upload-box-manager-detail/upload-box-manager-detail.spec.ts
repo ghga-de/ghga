@@ -12,8 +12,8 @@ import { uploadBox1FileUploads, uploadBoxes, uploadGrants } from '@app/../mocks/
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { UserService } from '@app/auth/services/user';
 import { MetadataService } from '@app/metadata/services/metadata';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
 import { ResearchDataUploadBox, UploadBoxState } from '@app/upload/models/box';
 import {
   DEFAULT_UPLOADS_PAGE_SIZE,
@@ -22,10 +22,11 @@ import {
 import { UploadGrant } from '@app/upload/models/grant';
 import { StudyService } from '@app/upload/services/study';
 import { UploadBoxService } from '@app/upload/services/upload-box';
+import { toMarkup } from '@app/shared/utils/html';
 import { screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
-import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
-import { UploadBoxManagerDetailComponent } from './upload-box-manager-detail';
+import { UploadBoxMapping } from '../upload-box-mapping/upload-box-mapping';
+import { UploadBoxManagerDetail } from './upload-box-manager-detail';
 
 const TEST_BOX = uploadBoxes.boxes[0];
 
@@ -202,26 +203,26 @@ const mockNotificationService = {
   showWarning: vitest.fn(),
 };
 
-describe('UploadBoxManagerDetailComponent', () => {
-  let component: UploadBoxManagerDetailComponent;
-  let fixture: ComponentFixture<UploadBoxManagerDetailComponent>;
+describe('UploadBoxManagerDetail', () => {
+  let component: UploadBoxManagerDetail;
+  let fixture: ComponentFixture<UploadBoxManagerDetail>;
   let uploadBoxService: MockUploadBoxService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [UploadBoxManagerDetailComponent],
+      imports: [UploadBoxManagerDetail],
       providers: [
         provideRouter([]),
         { provide: UploadBoxService, useClass: MockUploadBoxService },
         { provide: UserService, useClass: MockUserService },
-        { provide: NavigationTrackingService, useValue: mockNavigationService },
-        { provide: NotificationService, useValue: mockNotificationService },
+        { provide: NavigationTracker, useValue: mockNavigationService },
+        { provide: Notifier, useValue: mockNotificationService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
         { provide: StudyService, useClass: MockStudyService },
         { provide: MatDialog, useValue: mockDialog },
       ],
     })
-      .overrideComponent(UploadBoxMappingComponent, {
+      .overrideComponent(UploadBoxMapping, {
         set: {
           providers: [{ provide: MetadataService, useClass: MockMetadataService }],
         },
@@ -231,7 +232,7 @@ describe('UploadBoxManagerDetailComponent', () => {
     uploadBoxService = TestBed.inject(
       UploadBoxService,
     ) as unknown as MockUploadBoxService;
-    fixture = TestBed.createComponent(UploadBoxManagerDetailComponent);
+    fixture = TestBed.createComponent(UploadBoxManagerDetail);
     component = fixture.componentInstance;
   });
 
@@ -276,6 +277,9 @@ describe('UploadBoxManagerDetailComponent', () => {
       uploadBoxService.setBoxGrants(uploadGrants);
       await fixture.whenStable();
       expect(screen.getAllByText('John Doe (doe@home.org)')).toHaveLength(3);
+      expect(
+        screen.getByRole('columnheader', { name: 'Grantee (LS Login email)' }),
+      ).toBeVisible();
     });
 
     it('should mark a grant as active while today is within its validity period', async () => {
@@ -441,7 +445,7 @@ describe('UploadBoxManagerDetailComponent', () => {
       await fixture.whenStable();
 
       const { message } = mockDialog.open.mock.calls[0][1].data;
-      expect(message).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
+      expect(toMarkup(message)).toContain('<strong>&lt;i&gt;x&lt;/i&gt;.bam</strong>');
     });
 
     it('should ask for confirmation and delete on confirm for a re-encrypted file', async () => {
@@ -545,7 +549,7 @@ describe('UploadBoxManagerDetailComponent', () => {
       await fixture.whenStable();
 
       const { message } = mockDialog.open.mock.calls[0][1].data;
-      expect(message).toContain('<strong>a&amp;b.bam</strong>');
+      expect(toMarkup(message)).toContain('<strong>a&amp;b.bam</strong>');
     });
 
     it('should not requeue a file when the confirmation is cancelled', async () => {

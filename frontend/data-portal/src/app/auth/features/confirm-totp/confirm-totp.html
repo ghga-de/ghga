@@ -18,6 +18,7 @@
       class="totp-input-style text-center sm:text-left"
       matInput
       [formField]="totpForm.code"
+      [appNormalize]="toTotpCode"
       autocomplete="one-time-code"
       aria-required="true"
     />

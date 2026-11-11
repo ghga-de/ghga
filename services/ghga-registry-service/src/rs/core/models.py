@@ -36,6 +36,7 @@ from pydantic import (
 from ghga_event_schemas.pydantic_ import (
     FileUpload,
     FileUploadBox,
+    FileUploadState,
     ResearchDataUploadBox,
     UploadBoxState,
 )
@@ -56,8 +57,10 @@ __all__ = [
     "DeleteFileBoxWorkOrder",
     "DeleteFileUploadWorkOrder",
     "FileAccession",
+    "FileStateCounts",
     "FileUpload",
     "FileUploadBox",
+    "FileUploadState",
     "FileUploadWithAccession",
     "GrantAccessRequest",
     "GrantId",
@@ -73,6 +76,7 @@ __all__ = [
     "UpdateUploadBoxRequest",
     "UploadBoxState",
     "UploadGrant",
+    "ViewFileBoxStatsWorkOrder",
     "ViewFileBoxWorkOrder",
 ]
 
@@ -204,6 +208,16 @@ class ViewFileBoxWorkOrder(BaseWorkOrderToken):
     box_id: UUID4 = Field(..., description="ID of the box to view")
 
 
+class ViewFileBoxStatsWorkOrder(BaseWorkOrderToken):
+    """Work order token for viewing the file state counts of all FileUploadBoxes.
+
+    The work type is `"view_stats"` rather than `"view"` so that a
+    `ViewFileBoxWorkOrder` can't validate as a token for every box.
+    """
+
+    work_type: Literal["view_stats"] = "view_stats"
+
+
 class SubmitAccessionMapWorkOrder(BaseWorkOrderToken):
     """Work order token for submitting an accession map."""
 
@@ -298,7 +312,7 @@ class UpdateUploadBoxRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def state_and_max_size_are_exclusive(self) -> "Self":
+    def state_and_max_size_are_exclusive(self) -> Self:
         """Validate that state and max_size are not both set in the same request."""
         if self.state is not None and self.max_size is not None:
             raise ValueError("Cannot update state and max_size in the same request.")
@@ -376,6 +390,10 @@ class BoxRetrievalResults(BaseModel):
     boxes: list[ResearchDataUploadBox] = Field(
         ..., description="The retrieved research data upload boxes"
     )
+
+
+# The number of file uploads per state in an upload box; absent states count zero
+FileStateCounts = dict[FileUploadState, NonNegativeInt]
 
 
 class HubStorageSummary(BaseModel):

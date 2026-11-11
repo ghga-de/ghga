@@ -23,10 +23,23 @@ from uuid import UUID
 import pytest
 
 from auth_service.config import Config
-from auth_service.migrations.entry import run_db_migrations
+from auth_service.migrations import MIGRATION_MAP
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationManager,
+)
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
+
 
 old_date1 = datetime(2025, 8, 10, 10, 10, 59, 234789, tzinfo=UTC).isoformat()
 migrated_date1 = datetime(2025, 8, 10, 10, 10, 59, 235000, tzinfo=UTC)

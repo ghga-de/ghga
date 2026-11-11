@@ -113,6 +113,23 @@ def add_allowed_routes():
         add_allowed_route(route, write=True)
 
 
+@router.api_route(
+    "/health",
+    methods=["GET", "HEAD"],
+    summary="health",
+    tags=["health"],
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def health() -> None:
+    """Used to check that this service is alive, without Basic auth.
+
+    Meant for the kubelet probe. ExtAuth checks carry the original request path, so
+    none arrives as a bare `/health`; answering 204 rather than 200 still keeps one
+    that did from reaching a backend without Basic auth.
+    """
+
+
+# after the health route, so that an allowed path like /* cannot shadow it
 add_allowed_routes()
 
 
@@ -168,7 +185,7 @@ async def login(  # noqa: C901, PLR0913
             user = None  # user has been deleted
     else:
         try:
-            user = await user_dao.find_one(mapping={"ext_id": session.ext_id})
+            user = await user_dao.find_one(filter_={"ext_id": session.ext_id})
         except NoHitsFoundError:
             user = None  # user is not yet registered
 

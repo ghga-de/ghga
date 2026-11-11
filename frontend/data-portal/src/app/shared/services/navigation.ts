@@ -13,7 +13,7 @@ import { filter } from 'rxjs/operators';
  * This service has one key function: Calling the platform's back functionality has the downside that it doesn't work if the page was loaded directly (via the URL for example). This service tracks past navigation events. If the page was loaded directly, it will navigate to a fallback route instead of calling the platform's back functionality.
  */
 @Service()
-export class NavigationTrackingService {
+export class NavigationTracker {
   #navigationCount = 0;
   #location: Location = inject(Location);
   #router: Router = inject(Router);

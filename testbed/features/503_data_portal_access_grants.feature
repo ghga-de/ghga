@@ -48,6 +48,22 @@ Feature: 503 Data Portal Requests
       Then the ticket ID "1234567" is saved
 
 
+    Scenario: Data Steward extends an access period that has ended
+
+      Given the access period for "DS_A" has ended
+      When I load the admin page "Access Request Manager"
+      And I filter "access requests" for dataset "DS_A"
+      And I select the filtered item
+      Then I am warned that the access period has ended
+
+      When I try to allow the access request
+      Then a dialog tells me that the access period has ended
+
+      When I choose to edit the access duration in the dialog
+      And I set the access end date to 30 days from today
+      Then I am no longer warned about the access period
+
+
     Scenario Outline: Data Steward processes an access request
 
       When I load the admin page "Access Request Manager"
@@ -67,3 +83,8 @@ Feature: 503 Data Portal Requests
       | dataset | action | expected_status  |
       | DS_A    | allow  | Allowed          |
       | DS_B    | deny   | Denied           |
+
+
+    Scenario: The access grant runs to the extended end date
+
+      Then the access grant for dataset "DS_A" ends 30 days from today

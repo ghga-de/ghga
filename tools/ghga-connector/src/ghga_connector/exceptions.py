@@ -74,6 +74,24 @@ class BadResponseCodeError(RuntimeError):
         super().__init__(message)
 
 
+class BoxStatsUnavailableError(RuntimeError):
+    """Raised when the Upload API can't refresh a FileUploadBox's aggregate stats.
+
+    The requested action (completing or deleting a file upload) already succeeded on
+    the server; only the box's cached size/file-count totals failed to update after
+    repeated attempts. Retrying the same request is safe.
+    """
+
+    def __init__(self, *, file_alias: str):
+        msg = (
+            f"'{file_alias}' was processed successfully, but the Upload API could not"
+            " refresh the upload box's stats afterward. This does not affect the file"
+            " itself; retry the request if the box's stats need to be current"
+            " immediately."
+        )
+        super().__init__(msg)
+
+
 class ChecksumMismatchError(RuntimeError):
     """Raised when the checksums provided for an upload don't match what S3 calculated."""
 
@@ -607,8 +625,7 @@ class WellKnownValueNotFound(RuntimeError):
 def raise_if_connection_failed(request_error: httpx2.RequestError, url: str):
     """Check if request exception is caused by hitting max retries and raise accordingly"""
     if isinstance(request_error, (httpx2.ConnectError, httpx2.ConnectTimeout)):
-        connection_failure = str(request_error.args[0])
-        raise ConnectionFailedError(url=url, reason=connection_failure)
+        raise ConnectionFailedError(url=url, reason=extract_reason(request_error))
 
 
 # What a request can fail with once the retry transport has given up. Kept beside the

@@ -1,3 +1,6 @@
+studies:
+  - alias: test_study
+    description: A study holding the test samples.
 files:
   - alias: test_sample_01_R1
     filename: test_sample_01_R1.fastq

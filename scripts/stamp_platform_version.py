@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-"""Stamp the platform version onto an installed environment (ADR-0027).
+"""Stamp the platform version onto an installed environment (ADR-0027, ADR-0046).
 
 Run INSIDE an image build, with the image's interpreter, AFTER dependency
 installation (`uv sync`) — never against a development venv you care about.
 
-Two operations on the environment's installed distributions:
+Two operations on the workspace-internal distributions, those installed from
+workspace source (identified by a `file://` `direct_url.json`):
 
-1. The released member's dist-info `Version:` is rewritten to the platform
-   version. Services surface their version via `importlib.metadata` (OpenAPI
-   info etc.), so the running container reports the platform version.
-2. Every other workspace-internal distribution (identified by a `file://`
-   `direct_url.json`, i.e. installed from workspace source) gets a PEP 440
-   local suffix: `8.6.0` -> `8.6.0+ghga.<platform-version>`. Dependency
-   constraints remain satisfied (local versions compare equal to their base),
-   scanner/SBOM metadata stays coherent, and local versions cannot be pushed
-   to PyPI by design.
+1. A platform-lane member declares the placeholder version `0.0.0`; its
+   dist-info `Version:` is rewritten to the platform version. Services surface
+   their version via `importlib.metadata` (OpenAPI info etc.), so the running
+   container reports the platform version. This covers the released member,
+   the platform-lane libraries it uses, and every member of the mono image.
+2. Every other one (the PyPI lane) gets a PEP 440 local suffix:
+   `8.6.0` -> `8.6.0+ghga.<platform-version>`. Dependency constraints remain
+   satisfied (local versions compare equal to their base), scanner/SBOM
+   metadata stays coherent, and local versions cannot be pushed to PyPI by
+   design.
 
 `RECORD` entries for rewritten `METADATA` files are updated so the dist-info
 stays internally consistent. The script is idempotent.
 
-Usage (in a Dockerfile):
+Usage (in a Dockerfile; `--package` fails the build if that member was not stamped):
     python /scripts/stamp_platform_version.py --version "$PLATFORM_VERSION" \
-        --package "$PACKAGE"
+        [--package "$PACKAGE"]
 
 stdlib only.
 """
@@ -40,6 +42,9 @@ from importlib.metadata import Distribution, distributions
 from pathlib import Path
 
 VERSION_LINE = re.compile(r"^Version: .*$", flags=re.MULTILINE)
+
+# What a platform-lane member declares in its pyproject.toml (ADR-0046)
+PLACEHOLDER = "0.0.0"
 
 
 def _record_entry(dist_info: Path, metadata: Path) -> str:
@@ -78,6 +83,10 @@ def _rewrite_version(dist: Distribution, new_version: str) -> str:
     return new_version
 
 
+def _canonical(name: str) -> str:
+    return name.lower().replace("_", "-")
+
+
 def _is_workspace_install(dist: Distribution) -> bool:
     """Whether a distribution was installed from workspace source (not a registry)."""
     raw = dist.read_text("direct_url.json")
@@ -94,33 +103,40 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--version", required=True, help="platform version, e.g. 17.0.0")
     ap.add_argument(
-        "--package", required=True, help="distribution name of the released member"
+        "--package",
+        help="distribution name of the released member, checked to be stamped",
     )
     args = ap.parse_args(argv)
 
-    package = args.package.lower().replace("_", "-")
     suffix = f"+ghga.{args.version.replace('+', '.')}"
-    stamped = suffixed = 0
+    stamped: list[str] = []
+    suffixed = 0
 
     for dist in distributions():
-        name = (dist.metadata["Name"] or "").lower().replace("_", "-")
-        if name == package:
+        if not _is_workspace_install(dist):
+            continue
+        name = _canonical(dist.metadata["Name"] or "")
+        if dist.version == PLACEHOLDER:
             _rewrite_version(dist, args.version)
             print(f"stamped   {name}: {args.version}")
-            stamped += 1
-        elif _is_workspace_install(dist):
-            if "+" in dist.version:
-                continue  # already suffixed (idempotency) or intentionally local
-            _rewrite_version(dist, dist.version + suffix)
-            print(f"suffixed  {name}: {dist.version}{suffix}")
+            stamped.append(name)
+        elif dist.version == args.version:
+            stamped.append(name)  # by an earlier run
+        elif "+" in dist.version:
+            continue  # suffixed by an earlier run, or intentionally local
+        else:
+            # print the returned version: `dist.version` rereads the rewritten METADATA
+            print(f"suffixed  {name}: {_rewrite_version(dist, dist.version + suffix)}")
             suffixed += 1
 
-    if not stamped:
+    if args.package and _canonical(args.package) not in stamped:
         print(
-            f"error: package {package!r} not found in this environment", file=sys.stderr
+            f"error: package {args.package!r} not found in this environment"
+            f" with the placeholder version {PLACEHOLDER}",
+            file=sys.stderr,
         )
         return 1
-    print(f"done: 1 stamped, {suffixed} workspace libs suffixed")
+    print(f"done: {len(stamped)} stamped, {suffixed} workspace libs suffixed")
     return 0
 
 

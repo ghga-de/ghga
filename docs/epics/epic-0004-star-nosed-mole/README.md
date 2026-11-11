@@ -4,7 +4,28 @@
 
 ## Scope
 
-A scope definition can be found here: https://wiki.verbis.dkfz.de/x/fAFzCQ
+### Outline
+
+The aim of this epic is to build a file up-/download client that talks to the API implemented in the "Red-lipped Batfish" epic.
+Moreover, a proof of concept (POC) study should be conducted to investigate whether our service and client implementation is working with the available S3 services in Tübingen and at the DKFZ.
+Moreover, it should be benchmarked whether these production systems are capable of handling terabyte-sized files.
+
+Benchmarking has been moved to a later epic.
+
+### Included/Required
+
+- a simple CLI client for up-/download of files
+- benchmarking / POC criteria:
+  - is our implementation functional on the Tübingen/DKFZ S3
+  - for large files (e.g. 1 TB):
+    - reliability (occurrence of sporadic errors/unavailabilities?)
+    - throughput (is up- and downloading files reasonably fast?)
+    - scalability (is the experience deteriorating when uploading multiple large files at once?)
+
+### Not included
+
+- user authentication & authorization
+- file encryption
 
 ## User Journeys
 
@@ -14,13 +35,23 @@ This epic covers the following user journeys:
 
 ![Data Upload](./images/multipart_data_upload.jpg)
 
-A Data Submitter specifies the file ID, the URL to the Upload Controller API, and the file path on the local file system using the CLI interface of the client (1.0). Internally, the CLI client translates the user-defined data into a request to the Upload Controller API to obtain an upload id (1.1). The client sends a request to the Upload Controller for each individual part of the uploaded file and receives a presigned post for each individual part (1.2). The client reads multiple parts from the source file and uploads them as a stream using the pre-signed post (1.3). Once the upload has been completed the client sends a confirmation to the Upload Controller API (1.4).
+A Data Submitter specifies the file ID, the URL to the Upload Controller API, and the file path on the local file system using the CLI interface of the client (1.0).
+Internally, the CLI client translates the user-defined data into a request to the Upload Controller API to obtain an upload id (1.1).
+The client sends a request to the Upload Controller for each individual part of the uploaded file and receives a presigned post for each individual part (1.2).
+The client reads multiple parts from the source file and uploads them as a stream using the pre-signed post (1.3).
+Once the upload has been completed the client sends a confirmation to the Upload Controller API (1.4).
 
 ### Data Download
 
 ![Data Download](./images/data_download.jpg)
 
-A Data Requester specifies the file ID, the URL to the DRS3 API, and the anticipated destination on the local file system using the CLI interface of the client (1.0). Internally, the CLI client translates the user-defined data into a request to the DRS3 API in order to get a pre-signed download URL (1.1). Typically, the requested file is not already in the outbox. Thus the API instructs the CLI client to retry the request after a specified time again. The client waits the specified time and then repeats the request. This is repeated until the DRS3 API responds with the desired pre signed URL (1.2). The client fetches the file's bytes using the pre signed URL (1.3) and saves them to the local file system (1.4).
+A Data Requester specifies the file ID, the URL to the DRS3 API, and the anticipated destination on the local file system using the CLI interface of the client (1.0).
+Internally, the CLI client translates the user-defined data into a request to the DRS3 API in order to get a pre-signed download URL (1.1).
+Typically, the requested file is not already in the outbox.
+Thus the API instructs the CLI client to retry the request after a specified time again.
+The client waits the specified time and then repeats the request.
+This is repeated until the DRS3 API responds with the desired pre signed URL (1.2).
+The client fetches the file's bytes using the pre signed URL (1.3) and saves them to the local file system (1.4).
 
 ## CLI
 
@@ -70,8 +101,11 @@ upload_status is an Enum and can have the following values:
 
 The column "upload_status" from the table "files" is removed.
 
-Please note, not more than one upload per file_id may have a state that is set to `pending`, `uploaded`, or `accepted`. Moreover, within the list of states from uploads corresponding to one file, these `pending`, `uploaded`, and `accepted` are mutually exclusive.
-This also means that once an upload attempt corresponding to a file is set to `accepted`, no new uploads can be created for that file. In a future epic, we will implement a mechanism that allows controlled re-upload of a file by explicitly requesting to deprecate an old upload. We might also consider an `is_open` flag that is specified per file to control whether new upload attempts are currently allowed for that file.
+Please note, not more than one upload per file_id may have a state that is set to `pending`, `uploaded`, or `accepted`.
+Moreover, within the list of states from uploads corresponding to one file, these `pending`, `uploaded`, and `accepted` are mutually exclusive.
+This also means that once an upload attempt corresponding to a file is set to `accepted`, no new uploads can be created for that file.
+In a future epic, we will implement a mechanism that allows controlled re-upload of a file by explicitly requesting to deprecate an old upload.
+We might also consider an `is_open` flag that is specified per file to control whether new upload attempts are currently allowed for that file.
 
 #### Valid State Changes For One Upload Attempt
 
@@ -82,7 +116,7 @@ stateDiagram-v2
     state "Upload Attempt" as upload_attempt
 
     [*] --> initiate: initiate upload attempt
-    initiate --> uninitiated:
+    initiate --> uninitiated
     note right of uninitiated
     upload attempt for file
     already present
@@ -117,11 +151,12 @@ stateDiagram-v2
 ## Additional Implementation Details
 
 - [Typer](https://typer.tiangolo.com/) can be used to implement the CLI interface.
-- Ideally, avoid piping file bytes through python directly as this will slow down the upload/download significantly. Wrappers around C-based tools such as [pycurl](http://pycurl.io/docs/latest/) should be preferred.
+- Ideally, avoid piping file bytes through python directly as this will slow down the upload/download significantly.
+  Wrappers around C-based tools such as [pycurl](https://github.com/pycurl/pycurl) should be preferred.
 - The installation should make as few assumptions about the execution environment as possible to allow its usage on a large variety of compute infrastructures:
-    - The package should have minimal dependencies.
-    - The existing dependencies should allow maximal flexibility when it comes to versions.
-    - The package should be cross-platform compatible (Linux, Windows, MacOS).
+  - The package should have minimal dependencies.
+  - The existing dependencies should allow maximal flexibility when it comes to versions.
+  - The package should be cross-platform compatible (Linux, Windows, MacOS).
 - The package should be installable via PyPI.
 - Name of the package is up for debate.
 

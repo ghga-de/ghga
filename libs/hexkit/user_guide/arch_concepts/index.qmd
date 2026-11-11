@@ -21,14 +21,17 @@ title: "Architectural Concepts"
 
 This section introduces some key architectural concepts within hexkit.
 
-The hexkit library facilitates the implementation of the Triple Hexagonal Architecture pattern. This pattern is an extension of the traditional Hexagonal Architecture (also known as Ports and Adapters pattern) that addresses code redundancy issues commonly found in microservice environments.
+The hexkit library facilitates the implementation of the Triple Hexagonal Architecture pattern.
+This pattern is an extension of the traditional Hexagonal Architecture (also known as Ports and Adapters pattern) that addresses code redundancy issues commonly found in microservice environments.
 
-To understand the Triple Hexagonal Architecture, it's important to first understand the traditional Hexagonal Architecture that it builds upon. Additionally, hexkit supports and integrates with other architectural patterns commonly used in modern microservice architectures, including event-driven communication and robust error handling mechanisms.
+To understand the Triple Hexagonal Architecture, it's important to first understand the traditional Hexagonal Architecture that it builds upon.
+Additionally, hexkit supports and integrates with other architectural patterns commonly used in modern microservice architectures, including event-driven communication and robust error handling mechanisms.
 
 ## Concepts
 
 - [Hexagonal Architecture](hexagonal_arch.qmd) - the foundational architecture pattern
 - [Triple Hexagonal Architecture](triple_hexagonal_arch.qmd) - hexkit's extension to address microservice code redundancy
+- [Dependency Injection](dependency_injection.qmd) - Wiring the core and its adapters together with plain Python
 - [The DAO Pattern](dao_pattern.qmd) - Database access through Data Access Objects, hexkit's approach to persistence
 - [Event Driven Architecture](event_driven_arch.qmd) - Communication patterns supported by hexkit for decoupled microservices
 - [Dead Letter Queue](dlq.qmd) - Error handling and reliability patterns integrated with hexkit

@@ -34,7 +34,11 @@ from hexkit.providers.akafka import KafkaEventSubscriber
 from hexkit.providers.akafka.testutils import KafkaFixture
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 
-from .access_grants import AccessGrantsMock, access_grants_mock_fixture
+from .access_grants import (
+    DOWNLOAD_ACCESS_URL,
+    AccessGrantsMock,
+    access_grants_mock_fixture,
+)
 
 __all__ = [
     "AUTH_CLAIMS_DOE",
@@ -92,7 +96,7 @@ def config_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> Config:
     """Fixture for creating a test configuration."""
     return Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
-        download_access_url="http://access",
+        download_access_url=DOWNLOAD_ACCESS_URL,
         **kafka.config.model_dump(exclude={"kafka_enable_dlq"}),
         kafka_enable_dlq=True,
         **mongodb.config.model_dump(),

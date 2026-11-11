@@ -15,7 +15,7 @@ import { SchemapackOutputStatus } from '@app/tools/models/status-text';
   imports: [],
   templateUrl: './status-text-box.html',
 })
-export class StatusTextBoxComponent {
+export class StatusTextBox {
   status = input.required<SchemapackOutputStatus>();
   statusText = input.required<string>();
   isError = computed(() => this.status() === SchemapackOutputStatus.ERROR);

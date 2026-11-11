@@ -158,6 +158,7 @@ class AccessRequestRepositoryPort(ABC):
         """Update the status or other fields of the access request.
 
         If the status is set to allowed, an IVA ID must be provided or already exist.
+        The access period is only checked when it is changed or the request is allowed.
 
         Only data stewards may use this method.
 
@@ -167,6 +168,7 @@ class AccessRequestRepositoryPort(ABC):
         - `AccessRequestClosed` if the access request was already processed
         - `AccessRequestMissingIva` if an IVA is needed but not provided
         - `AccessRequestInvalidDuration` if the end date isn't later than the start date
+          or the access period has ended
         - `AccessRequestServerError` if the access grant could not be registered
         """
         ...

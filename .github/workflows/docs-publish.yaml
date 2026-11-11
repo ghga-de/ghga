@@ -55,6 +55,7 @@ jobs:
         run: uv run --script scripts/docs_members.py --check
 
   build:
+    name: build ${{ matrix.member.package }}
     needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -70,6 +71,8 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
+        with:
+          just-version: 1.57.0 # .devcontainer/post-create.sh's JUST_VERSION
       # great-docs renders through Quarto, which is a standalone binary rather than a
       # Python dependency, so the docs group cannot supply it.
       - uses: quarto-dev/quarto-actions/setup@v2
@@ -77,7 +80,7 @@ jobs:
       - run: just docs ${{ matrix.member.path }}
       # One artifact per member, named by the subpath it is deployed under, so the deploy
       # job can reassemble the site without knowing anything about the members.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: docs-${{ matrix.member.package }}
           path: ${{ matrix.member.path }}/great-docs/_site
@@ -103,8 +106,8 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - uses: actions/configure-pages@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           path: artifacts
           pattern: docs-*
@@ -123,4 +126,4 @@ jobs:
           path: site
           include-hidden-files: true # keeps the .well-known/ directories
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

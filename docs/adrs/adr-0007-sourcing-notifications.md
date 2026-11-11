@@ -17,8 +17,7 @@ we decided for **the addition of a new service responsible for sourcing notifica
 
 and neglected **issuing notification events directly from separate microservices**
 
-to achieve **clear separation of concerns at the microservice level, minimized change propagation,**
-**and consolidated notification creation**
+to achieve **clear separation of concerns at the microservice level, minimized change propagation, and consolidated notification creation**
 
 accepting that **the new service will be coupled to multiple other services**.
 
@@ -30,74 +29,62 @@ accepting that **the new service will be coupled to multiple other services**.
   - For the purposes of this ADR, a notification may be thought of as an email to the user.
 
 - "**Notification source**" refers to the reason a notification needs to be sent.
-  If a file upload fails and a notification needs to be sent, the source is the failed file upload (and in code is the
-  place where the microservice became aware of the failure). Publishing the notification "close to the source" would mean
-  publishing a notification event directly from the same service where the file upload failure occurred.
+  If a file upload fails and a notification needs to be sent, the source is the failed file upload (and in code is the place where the microservice became aware of the failure).
+  Publishing the notification "close to the source" would mean publishing a notification event directly from the same service where the file upload failure occurred.
 
 - "**Sourcing notifications**" means identifying notification sources in order to publish notification events.
 
-- "**Notification event**" refers to the `Notification` event type as defined in
-  [`ghga-event-schemas`](https://github.com/ghga-de/ghga-event-schemas/blob/fc23f0a2fda44473ad5993ad592e2c9e7d642fed/src/ghga_event_schemas/pydantic_.py#L348).
+- "**Notification event**" refers to the `Notification` event type as defined in [`ghga-event-schemas`](https://github.com/ghga-de/ghga-event-schemas/blob/fc23f0a2fda44473ad5993ad592e2c9e7d642fed/src/ghga_event_schemas/pydantic_.py#L348).
   This is a command instructing a dedicated service to send a notification.
 
-A microservice called the Notification Service currently exists with the functionality to send notifications, for example
-via email, but it is not yet in use by the wider microservice ecosystem. The only action required to use this service is
-the publication of a notification event, which is then consumed by the Notification Service. This approach is straightforward
-but has drawbacks.
+A microservice called the Notification Service currently exists with the functionality to send notifications, for example via email, but it is not yet in use by the wider microservice ecosystem.
+The only action required to use this service is the publication of a notification event, which is then consumed by the Notification Service.
+This approach is straightforward but has drawbacks.
 
-The main problem is that notification sources are distributed throughout services, so
-any systematic change to notification events is multiplied by the number of services
-involved, with more reviews and more opportunity for error. Even a small change, such as
-writing "data steward" in title case in all notification texts, could affect multiple
-repositories. If it comes with a mandatory template update that requires manual changes,
-each of those services needs a larger pull request and its own review. A dedicated
-service publishing the notification events avoids most of this interference.
+The main problem is that notification sources are distributed throughout services, so any systematic change to notification events is multiplied by the number of services involved, with more reviews and more opportunity for error.
+Even a small change, such as writing "data steward" in title case in all notification texts, could affect multiple repositories.
+If it comes with a mandatory template update that requires manual changes, each of those services needs a larger pull request and its own review.
+A dedicated service publishing the notification events avoids most of this interference.
 
-The number of deployed microservices will also grow as features are added or expanded,
-which makes a sustainable solution more pressing. Adding notifications to a given
-service at will is also scope creep, which we want to avoid for microservices with
-clearly defined responsibilities.
+The number of deployed microservices will also grow as features are added or expanded, which makes a sustainable solution more pressing.
+Adding notifications to a given service at will is also scope creep, which we want to avoid for microservices with clearly defined responsibilities.
 
-Moreover, many notifications require a contextual understanding of a larger user journey that goes far beyond the responsibility of a given microservice. E.g. the upload controller service has the sole responsibility of facilitating the upload of individual files. Once all uploads for a given submission have been completed, we might want to notify not only the uploading user but also all co-applicants of the submission and the responsible data steward. To do so context is needed on (1) which file uploads belong to a submission, i.e. when is a submission completely uploaded, (2) who is co-applicant to the corresponding submission, and (3) who is the responsible data steward. The upload controller service should not worry about any of that. Indeed, it does not even need to know that file uploads are grouped into submissions.
+Moreover, many notifications require a contextual understanding of a larger user journey that goes far beyond the responsibility of a given microservice.
+E.g. the upload controller service has the sole responsibility of facilitating the upload of individual files.
+Once all uploads for a given submission have been completed, we might want to notify not only the uploading user but also all co-applicants of the submission and the responsible data steward.
+To do so context is needed on (1) which file uploads belong to a submission, i.e. when is a submission completely uploaded, (2) who is co-applicant to the corresponding submission, and (3) who is the responsible data steward.
+The upload controller service should not worry about any of that.
+Indeed, it does not even need to know that file uploads are grouped into submissions.
 
-On the other hand, creating notification events separately from the source means that the service which *does* create
-the notification events must possess some knowledge of, and is therefore coupled to, the source service.
+On the other hand, creating notification events separately from the source means that the service which *does* create the notification events must possess some knowledge of, and is therefore coupled to, the source service.
 It is conceivable that changes in a given microservice could create the need to modify this new notification-sourcing service.
 For example, if functionality is removed or modified in such a way that the verbiage of a notification is no longer accurate.
 
 ### Decision
 
-We propose designing and implementing a new microservice (name TBD) that solves the disadvantages of dispersed notification-sourcing
-by centralizing that responsibility. This new service should observe events published by other services and determine when to create
-a notification event. This will require no changes to the existing Notification Service. The exact implementation of the
-notification-sourcing rules should be decided outside of this ADR.
+We propose designing and implementing a new microservice (name TBD) that solves the disadvantages of dispersed notification-sourcing by centralizing that responsibility.
+This new service should observe events published by other services and determine when to create a notification event.
+This will require no changes to the existing Notification Service.
+The exact implementation of the notification-sourcing rules should be decided outside of this ADR.
 
-**Amended 2026-09-15:** The new service is the notification orchestration service
-(`nos`). It publishes `EmailNotification` and `SmsNotification` events, which
-replaced the single `Notification` event type referred to above.
+**Amended 2026-09-15:** The new service is the notification orchestration service (`nos`).
+It publishes `EmailNotification` and `SmsNotification` events, which replaced the single `Notification` event type referred to above.
 
 ### Consequences
 
-The primary advantage of the new service is that the centralized control over notification events minimizes change propagation, maintenance costs,
-and keeps microservices' responsibilities clearly defined. Testing should be easier, too, and prevents notification tests
-from being added to services.
+The primary advantage of the new service is that the centralized control over notification events minimizes change propagation, maintenance costs, and keeps microservices' responsibilities clearly defined.
+Testing should be easier, too, and prevents notification tests from being added to services.
 
 A fringe benefit is that developers won't need to spend time tracking down which service publishes a given notification event.
 
-The tradeoffs are that the new service will be inherently coupled to other services, and any changes in a given microservice
-which impact a notification source could *potentially* require changes in the new sourcing service. Fortunately, the relationship is
-one-way: changes in the new sourcing service should not require changes to other services.
-Creating notification events in an indirect manner also means there is a slight loss of context that will
-necessitate extra diligence during development and testing.
+The tradeoffs are that the new service will be inherently coupled to other services, and any changes in a given microservice which impact a notification source could *potentially* require changes in the new sourcing service.
+Fortunately, the relationship is one-way: changes in the new sourcing service should not require changes to other services.
+Creating notification events in an indirect manner also means there is a slight loss of context that will necessitate extra diligence during development and testing.
 
 ### Alternatives
 
-As an alternative, we could adapt the event publishing in the services concerned and
-publish notification events directly. This would be easier to implement in the short
-term, and the relationship between sources and notification events would be clearer. In
-the long term, however, it would likely need more maintenance: restructuring the
-notification event would mean updating every service that sends one, and a notification
-later deemed unnecessary would have to be removed from its service, tests included.
+As an alternative, we could adapt the event publishing in the services concerned and publish notification events directly.
+This would be easier to implement in the short term, and the relationship between sources and notification events would be clearer.
+In the long term, however, it would likely need more maintenance: restructuring the notification event would mean updating every service that sends one, and a notification later deemed unnecessary would have to be removed from its service, tests included.
 
-If it was determined with reasonable certainty that only one or two kinds of notifications would ever need to be issued by GHGA,
-then perhaps it would make more sense to publish the notification events directly.
+If it was determined with reasonable certainty that only one or two kinds of notifications would ever need to be issued by GHGA, then perhaps it would make more sense to publish the notification events directly.

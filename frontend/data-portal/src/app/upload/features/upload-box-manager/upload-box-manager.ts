@@ -8,12 +8,12 @@ import { Component, inject, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { NotificationService } from '@app/shared/services/notification';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
+import { Notifier } from '@app/shared/services/notification';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
 import { UploadBoxService } from '@app/upload/services/upload-box';
-import { UploadBoxCreationDialogComponent } from '../upload-box-creation-dialog/upload-box-creation-dialog';
-import { UploadBoxManagerFilterComponent } from '../upload-box-manager-filter/upload-box-manager-filter';
-import { UploadBoxManagerListComponent } from '../upload-box-manager-list/upload-box-manager-list';
+import { UploadBoxCreationDialog } from '../upload-box-creation-dialog/upload-box-creation-dialog';
+import { UploadBoxManagerFilter } from '../upload-box-manager-filter/upload-box-manager-filter';
+import { UploadBoxManagerList } from '../upload-box-manager-list/upload-box-manager-list';
 
 /**
  * Upload Box Manager component.
@@ -23,18 +23,18 @@ import { UploadBoxManagerListComponent } from '../upload-box-manager-list/upload
 @Component({
   selector: 'app-upload-box-manager',
   imports: [
-    UploadBoxManagerFilterComponent,
-    UploadBoxManagerListComponent,
+    UploadBoxManagerFilter,
+    UploadBoxManagerList,
     MatButtonModule,
     MatIconModule,
-    RefreshButtonComponent,
+    RefreshButton,
   ],
   templateUrl: './upload-box-manager.html',
 })
-export class UploadBoxManagerComponent implements OnInit {
+export class UploadBoxManager implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #dialog = inject(MatDialog);
-  #notificationService = inject(NotificationService);
+  #notificationService = inject(Notifier);
 
   /**
    * Fetch all upload boxes when the component is initialized. File counts and
@@ -61,7 +61,7 @@ export class UploadBoxManagerComponent implements OnInit {
    * Open the create upload box dialog and handle a successful creation.
    */
   openCreateUploadBoxDialog(): void {
-    const ref = this.#dialog.open(UploadBoxCreationDialogComponent, {
+    const ref = this.#dialog.open(UploadBoxCreationDialog, {
       width: 'clamp(40em, 85vw, 64em)',
       maxWidth: 'calc(100vw - 2rem)',
     });

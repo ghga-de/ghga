@@ -96,6 +96,11 @@ class UploadClient:
                         file_alias=file_alias,  # type: ignore
                         file_upload_box_id=file_upload_box_id,  # type: ignore
                     )
+            case 503:
+                _handle_503(
+                    exception_id=response.json()["exception_id"],
+                    file_alias=file_alias,
+                )
 
         # If we didn't find a matching case, raise default error
         msg = f"Upload API returned status code {status_code}"
@@ -443,6 +448,16 @@ def _handle_404(
             )
         case "s3UploadNotFound":
             raise exceptions.S3UploadMissingError()
+
+
+def _handle_503(*, exception_id: str, file_alias: str | None):
+    """Raise the proper error based on returned info about the 503.
+
+    Called from `UploadClient._handle_bad_status_codes()`.
+    """
+    match exception_id:
+        case "boxStatsUnavailable":
+            raise exceptions.BoxStatsUnavailableError(file_alias=file_alias)  # type: ignore
 
 
 def _handle_409(

@@ -163,6 +163,12 @@
           "type": "array",
           "description": "Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper)",
           "default": []
+        },
+        "localImageIds": {
+          "type": "object",
+          "description": "Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster",
+          "additionalProperties": true,
+          "default": {}
         }
       }
     },
@@ -211,7 +217,7 @@
     },
     "cronjobs": {
       "type": "object",
-      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
+      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `concurrencyPolicy`, `activeDeadlineSeconds`, `startingDeadlineSeconds`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
       "additionalProperties": true,
       "properties": {
         "default": {
@@ -513,13 +519,17 @@
           "description": "Render a container readinessProbe from this block (minus `enabled`)",
           "default": false
         },
-        "tcpSocket": {
+        "httpGet": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
+            "path": {
+              "type": "string",
+              "default": "{{ .Values.healthEndpoint }}"
+            },
             "port": {
-              "type": "number",
-              "default": 8080
+              "type": "string",
+              "default": "http"
             }
           }
         },
@@ -1240,6 +1250,25 @@
             "null"
           ]
         },
+        "migration_max_wait_sec": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
+          "examples": [
+            null,
+            300,
+            600,
+            3600
+          ],
+          "title": "Migration Max Wait Sec"
+        },
         "file_deletion_request_topic": {
           "description": "The name of the topic to receive events informing about files to delete.",
           "examples": [
@@ -1588,25 +1617,6 @@
           ],
           "title": "Mongo Timeout"
         },
-        "migration_max_wait_sec": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "The maximum number of seconds to wait for migrations to complete before raising an error.",
-          "examples": [
-            null,
-            300,
-            600,
-            3600
-          ],
-          "title": "Migration Max Wait Sec"
-        },
         "file_upload_topic": {
           "description": "Topic containing published FileUpload outbox events",
           "examples": [
@@ -1846,6 +1856,26 @@
             "integer",
             "null"
           ]
+        },
+        "orphaned_object_min_age_hours": {
+          "default": 6,
+          "description": "Minimum age in hours before the cleanup job deletes an inbox object that has no matching FileUpload. Applies even when safeguards are ignored. Age is measured from the object's LastModified time, which some S3 backends, including AWS, set to when a multipart upload was initiated rather than completed.",
+          "minimum": 0,
+          "title": "Orphaned Object Min Age Hours",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_orphaned_objects": {
+          "default": 100,
+          "description": "If the cleanup job finds more orphaned inbox objects than this for one storage alias, it deletes no orphaned objects and aborts no orphaned multipart uploads for that alias, unless run with --ignore-safeguards.",
+          "minimum": 0,
+          "title": "Max Orphaned Objects",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },
@@ -1863,6 +1893,19 @@
       "type": "number",
       "description": "Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own",
       "default": 5
+    },
+    "concurrencyPolicy": {
+      "type": "string",
+      "description": "Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run",
+      "default": "Forbid"
+    },
+    "activeDeadlineSeconds": {
+      "description": "Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value",
+      "default": null
+    },
+    "startingDeadlineSeconds": {
+      "description": "Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit",
+      "default": null
     },
     "environment": {
       "type": "object",

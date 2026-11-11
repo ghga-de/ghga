@@ -24,7 +24,6 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
-import httpx2
 from fastapi import Request
 from jwcrypto import jwk, jwt
 from pydantic import UUID4
@@ -55,7 +54,7 @@ from auth_service.user_registry.ports.event_pub import (
     EventPublisherPort,
 )
 from ghga_service_commons.api import ApiConfigBase
-from ghga_service_commons.api.mock_router import MockRouter
+from ghga_service_commons.http.mock_api import respond
 from ghga_service_commons.utils.utc_dates import UTCDatetime, utc_datetime
 from hexkit.config import config_from_yaml
 from hexkit.protocols.dao import (
@@ -78,6 +77,7 @@ from tests.fixtures.constants import (
     IVA_IDS,
     PHONE_OF_JOHN,
 )
+from tests.fixtures.oidc_provider import OidcProviderMock
 
 BASE_DIR = Path(__file__).parent.resolve()
 
@@ -88,12 +88,11 @@ USER_INFO = {
 }
 
 
-def mock_userinfo(router: MockRouter, user_info: Mapping[str, Any] = USER_INFO) -> None:
-    """Register a response for the OIDC userinfo endpoint on the given mock router."""
-
-    @router.get("/userinfo")
-    def _userinfo() -> httpx2.Response:
-        return httpx2.Response(200, json=dict(user_info))
+def mock_userinfo(
+    oidc_provider: OidcProviderMock, user_info: Mapping[str, Any] = USER_INFO
+) -> None:
+    """Have the mocked OIDC provider answer userinfo requests with `user_info`."""
+    oidc_provider.on_get_userinfo = respond(200, json=dict(user_info))
 
 
 @config_from_yaml(prefix="test_auth_service")
@@ -249,9 +248,9 @@ def request_with_authorization(token: str = "") -> Request:
     return Request({"type": "http", "headers": [(b"authorization", authorization)]})
 
 
-def _matches(data: Mapping[str, Any], mapping: Mapping[str, Any]) -> bool:
-    """Check whether the given data matches the given filter mapping."""
-    for key, value in mapping.items():
+def _matches(data: Mapping[str, Any], filter_: Mapping[str, Any]) -> bool:
+    """Check whether the given data matches the given filter."""
+    for key, value in filter_.items():
         if isinstance(value, dict) and "$in" in value:
             # mock the MongoDB "$in" operator
             if data[key] not in value["$in"]:
@@ -264,7 +263,7 @@ def _matches(data: Mapping[str, Any], mapping: Mapping[str, Any]) -> bool:
 def mock_find_all(
     items: list[Any],
     *,
-    mapping: Mapping[str, Any],
+    filter_: Mapping[str, Any],
     skip: int | None = None,
     limit: int | None = None,
     sort: list[str] | None = None,
@@ -274,7 +273,7 @@ def mock_find_all(
     Returns a FindResult that is async-iterable and also provides to_list()
     and total_count(), just like the real DAO implementation.
     """
-    matched = [item for item in items if _matches(item.model_dump(), mapping)]
+    matched = [item for item in items if _matches(item.model_dump(), filter_)]
     if sort:
         for field in reversed(sort):
             reverse = field.startswith("-")
@@ -340,25 +339,25 @@ class MockUserDao:
                 return user
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> User:
+    async def find_one(self, *, filter_: Mapping[str, Any]) -> User:
         """Find the dummy user via LS-ID."""
-        ext_id = mapping.get("ext_id")
+        ext_id = filter_.get("ext_id")
         for user in self.users:
             if not ext_id or ext_id == user.ext_id:
                 return user
-        raise NoHitsFoundError(mapping=mapping)
+        raise NoHitsFoundError(filter_=filter_)
 
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[User]:
         """Find all dummy users with given ID(s)."""
         return mock_find_all(
-            self.users, mapping=mapping, skip=skip, limit=limit, sort=sort
+            self.users, filter_=filter_, skip=skip, limit=limit, sort=sort
         )
 
     async def insert(self, dto: User) -> None:
@@ -427,14 +426,14 @@ class MockIvaDao:
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Iva]:
         """Find all dummy IVAs."""
         return mock_find_all(
-            self.ivas, mapping=mapping, skip=skip, limit=limit, sort=sort
+            self.ivas, filter_=filter_, skip=skip, limit=limit, sort=sort
         )
 
     async def insert(self, dto: Iva) -> None:
@@ -528,26 +527,26 @@ class MockClaimDao:
                 return claim
         raise ResourceNotFoundError(id_=id_)
 
-    async def find_one(self, *, mapping: Mapping[str, Any]) -> Claim:
+    async def find_one(self, *, filter_: Mapping[str, Any]) -> Claim:
         """Find a dummy user claim."""
-        claims = [claim async for claim in self.find_all(mapping=mapping)]
+        claims = [claim async for claim in self.find_all(filter_=filter_)]
         if not claims:
-            raise NoHitsFoundError(mapping=mapping)
+            raise NoHitsFoundError(filter_=filter_)
         if len(claims) > 1:
-            raise MultipleHitsFoundError(mapping=mapping)
+            raise MultipleHitsFoundError(filter_=filter_)
         return claims[0]
 
     def find_all(
         self,
         *,
-        mapping: Mapping[str, Any],
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
     ) -> FindResult[Claim]:
         """Find all dummy user claims."""
         return mock_find_all(
-            self.claims, mapping=mapping, skip=skip, limit=limit, sort=sort
+            self.claims, filter_=filter_, skip=skip, limit=limit, sort=sort
         )
 
     async def update(self, dto: Claim) -> None:

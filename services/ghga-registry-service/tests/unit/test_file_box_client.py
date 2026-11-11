@@ -22,6 +22,7 @@ import httpx2
 import pytest
 from jwcrypto.jwk import JWK
 
+from ghga_service_commons.http.mock_api import respond
 from ghga_service_commons.utils.jwt_helpers import decode_and_validate_token
 from hexkit.utils import now_utc_ms_prec
 from rs.adapters.outbound.http import FileBoxClient
@@ -30,6 +31,7 @@ from rs.constants import (
     EXC_ID_BOX_MAX_SIZE_TOO_LOW,
     EXC_ID_BOX_NOT_FOUND,
     EXC_ID_BOX_STATE_ERROR,
+    EXC_ID_BOX_STATS_UNAVAILABLE,
     EXC_ID_BOX_VERSION_OUTDATED,
     EXC_ID_FILE_UPLOAD_NOT_FOUND,
     EXC_ID_FILE_UPLOAD_STATE_ERROR,
@@ -37,7 +39,7 @@ from rs.constants import (
     EXC_ID_REQUEUE_ERROR,
 )
 from rs.core.models import BoxRequeueResult, FileUploadWithAccession
-from tests.fixtures.external_apis import FileBoxApiMock, in_sequence, respond
+from tests.fixtures.external_apis import FileBoxApiMock
 from tests.fixtures.utils import TEST_MAX_SIZE
 
 pytestmark = pytest.mark.asyncio
@@ -426,22 +428,19 @@ async def test_get_all_file_uploads(
     file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
     file_list_response = _make_file_uploads(5)
     total_count = len(file_list_response)
-    # Three pages: [0, 1], [2, 3], [4]
-    file_box_api.on_get_file_upload_list = in_sequence(
-        *(
-            respond(
-                200,
-                json={
-                    "items": [
-                        x.model_dump(mode="json")
-                        for x in file_list_response[start : start + 2]
-                    ],
-                    "total_count": total_count,
-                },
-            )
-            for start in range(0, total_count, 2)
+
+    def page(request: httpx2.Request) -> httpx2.Response:
+        skip, limit = int(request.url.params["skip"]), int(request.url.params["limit"])
+        items = file_list_response[skip : skip + limit]
+        return httpx2.Response(
+            200,
+            json={
+                "items": [x.model_dump(mode="json") for x in items],
+                "total_count": total_count,
+            },
         )
-    )
+
+    file_box_api.on_get_file_upload_list = page
     file_list = await file_upload_box_client.get_all_file_uploads(
         box_id=TEST_BOX_ID, with_checksums=True
     )
@@ -473,6 +472,53 @@ async def test_get_all_file_uploads_missing_box(
         file_list = await file_upload_box_client.get_all_file_uploads(
             box_id=TEST_BOX_ID, missing_box_ok=False
         )
+
+
+async def test_get_file_state_counts(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    work_order_jwk: JWK,
+):
+    """Test the get_file_state_counts function"""
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    other_box_id = uuid4()
+
+    # Happy path - verify request body and WOT work_type
+    file_box_api.on_get_file_state_counts = respond(
+        200,
+        json={
+            str(TEST_BOX_ID): {"inbox": 2, "archived": 3},
+            str(other_box_id): {"failed_interrogation": 1},
+        },
+    )
+    counts = await file_upload_box_client.get_file_state_counts(
+        box_ids=[TEST_BOX_ID, other_box_id]
+    )
+    assert counts == {
+        TEST_BOX_ID: {"inbox": 2, "archived": 3},
+        other_box_id: {"failed_interrogation": 1},
+    }
+    request = file_box_api.requests[0]
+    assert json.loads(request.content) == {
+        "box_ids": [str(TEST_BOX_ID), str(other_box_id)]
+    }
+    raw_token = request.headers["authorization"].removeprefix("Bearer ")
+    wot_claims = decode_and_validate_token(raw_token, work_order_jwk)
+    assert wot_claims["work_type"] == "view_stats"
+    assert "box_id" not in wot_claims
+
+    # Check off-normal status code
+    file_box_api.on_get_file_state_counts = respond(500, json="Some error occurred.")
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.get_file_state_counts(box_ids=[TEST_BOX_ID])
+
+    # Check with successful status code but garbled response body
+    file_box_api.on_get_file_state_counts = respond(
+        200, json={str(TEST_BOX_ID): {"no_such_state": 1}}
+    )
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.get_file_state_counts(box_ids=[TEST_BOX_ID])
 
 
 async def test_archive_file_upload_box(
@@ -1015,3 +1061,55 @@ async def test_requeue_all_box_uploads_fallback_error(
     assert str(operation_err.value) == (
         f"Failed to requeue the failed files in FileUploadBox {TEST_BOX_ID}."
     )
+
+
+@pytest.mark.parametrize(
+    "operation",
+    ["lock_file_upload_box", "unlock_file_upload_box", "archive_file_upload_box"],
+)
+async def test_state_change_503_means_the_operation_succeeded(
+    config: Config,
+    file_box_api: FileBoxApiMock,
+    httpx_client: httpx2.AsyncClient,
+    operation: str,
+):
+    """Test that a 503 'boxStatsUnavailable' becomes FUBStatsUnavailableError.
+
+    The owning service recomputes the box stats after applying the state change, so
+    this reports a stale stat, not a failed operation, and must be distinguishable
+    from one.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+    call = getattr(file_upload_box_client, operation)
+
+    file_box_api.on_update_file_upload_box = respond(
+        503, json={"exception_id": EXC_ID_BOX_STATS_UNAVAILABLE}
+    )
+    with pytest.raises(FileBoxClient.FUBStatsUnavailableError):
+        await call(box_id=TEST_BOX_ID, version=0)
+
+    # Any other 503 is still a plain failure
+    file_box_api.on_update_file_upload_box = respond(
+        503, json={"exception_id": "other"}
+    )
+    with pytest.raises(FileBoxClient.OperationError):
+        await call(box_id=TEST_BOX_ID, version=0)
+
+
+async def test_resize_503_is_not_a_stats_error(
+    config: Config, file_box_api: FileBoxApiMock, httpx_client: httpx2.AsyncClient
+):
+    """Test that resize does not translate a 503 as a stats failure.
+
+    Unlike the state changes, update_box_max_size never recomputes the box stats, so
+    it cannot report one as stale.
+    """
+    file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
+
+    file_box_api.on_update_file_upload_box = respond(
+        503, json={"exception_id": EXC_ID_BOX_STATS_UNAVAILABLE}
+    )
+    with pytest.raises(FileBoxClient.OperationError):
+        await file_upload_box_client.resize_file_upload_box(
+            box_id=TEST_BOX_ID, version=0, max_size=TEST_MAX_SIZE
+        )

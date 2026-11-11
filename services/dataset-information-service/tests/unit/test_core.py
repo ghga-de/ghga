@@ -64,7 +64,7 @@ async def test_register_dataset_information_update(rig: JointRig):
     )
     await rig.information_service.register_dataset_information(dataset=dataset)
 
-    stored = [x async for x in rig.dataset_dao.find_all(mapping={"accession": "DS001"})]
+    stored = [x async for x in rig.dataset_dao.find_all(filter_={"accession": "DS001"})]
     assert len(stored) == 1
 
     # DINS doesn't store MetadataDatasetOverview directly. Like the F.I.R. event, it
@@ -87,7 +87,7 @@ async def test_delete_dataset_information(rig: JointRig):
     await rig.dataset_dao.insert(dataset_file_accessions)
 
     await rig.information_service.delete_dataset_information(dataset_id="DS001")
-    remaining = rig.dataset_dao.find_all(mapping={"accession": "DS001"})
+    remaining = rig.dataset_dao.find_all(filter_={"accession": "DS001"})
     assert len([x async for x in remaining]) == 0
 
     # Deleting a non-existent dataset should not raise an error
@@ -116,7 +116,7 @@ async def test_register_file_information_duplicate(rig: JointRig):
     )
 
     stored = rig.file_information_dao.find_all(
-        mapping={"accession": file_information.accession}
+        filter_={"accession": file_information.accession}
     )
     assert len([x async for x in stored]) == 1
 
@@ -149,7 +149,7 @@ async def test_delete_file_information(rig: JointRig):
     await rig.file_information_dao.insert(file_information)
 
     await rig.information_service.delete_file_information(file_id=file_id)
-    remaining = rig.file_information_dao.find_all(mapping={"accession": "GHGA001"})
+    remaining = rig.file_information_dao.find_all(filter_={"accession": "GHGA001"})
     assert len([x async for x in remaining]) == 0
 
     # Deleting when no accession map exists should not raise an error
@@ -219,7 +219,7 @@ async def test_store_pending_file_info_duplicate(rig: JointRig):
 
     # Make sure only one record exists
     stored_data = rig.pending_file_info_dao.find_all(
-        mapping={"file_id": fir_event_payload.file_id}
+        filter_={"file_id": fir_event_payload.file_id}
     )
     assert len([x async for x in stored_data]) == 1
 
@@ -293,7 +293,7 @@ async def test_delete_accession_map(rig: JointRig):
     await rig.accession_map_dao.insert(accession_map)
 
     await rig.information_service.delete_accession_map(accession=accession)
-    remaining = rig.accession_map_dao.find_all(mapping={"accession": accession})
+    remaining = rig.accession_map_dao.find_all(filter_={"accession": accession})
     assert len([x async for x in remaining]) == 0
 
     # Deleting a non-existent accession map should not raise an error

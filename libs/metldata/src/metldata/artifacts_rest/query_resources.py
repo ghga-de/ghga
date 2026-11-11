@@ -43,6 +43,7 @@ async def query_artifact_resource(
     artifact.
 
     Raises:
+        DaoNotFoundError: If the artifact or its class does not exist.
         ArtifactResourceNotFoundError: If the resource could not be found.
     """
     dao = await dao_collection.get_dao(

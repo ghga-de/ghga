@@ -11,7 +11,7 @@ import { screen } from '@testing-library/angular';
 
 import { fakeActivatedRoute } from '@app/../mocks/route';
 import { AuthService } from '@app/auth/services/auth';
-import { SiteHeaderComponent } from './site-header';
+import { SiteHeader } from './site-header';
 
 /**
  * Mock the auth service as needed for the site header
@@ -24,20 +24,20 @@ class MockAuthService {
   roleNames = () => ['Data Steward'];
 }
 
-describe('SiteHeaderComponent', () => {
-  let component: SiteHeaderComponent;
-  let fixture: ComponentFixture<SiteHeaderComponent>;
+describe('SiteHeader', () => {
+  let component: SiteHeader;
+  let fixture: ComponentFixture<SiteHeader>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SiteHeaderComponent],
+      imports: [SiteHeader],
       providers: [
         { provide: AuthService, useClass: MockAuthService },
         { provide: ActivatedRoute, useValue: fakeActivatedRoute },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SiteHeaderComponent);
+    fixture = TestBed.createComponent(SiteHeader);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

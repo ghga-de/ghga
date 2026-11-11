@@ -8,7 +8,7 @@ import { ClipboardModule } from '@angular/cdk/clipboard';
 import { Component, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 /**
  * Component for rendering a shortened text with a button to copy the full text
@@ -22,7 +22,7 @@ export class WithCopyButton {
   value = input.required<string>();
   notifyMessage = input<string>('The full text has been copied to clipboard');
 
-  #notify = inject(NotificationService);
+  #notify = inject(Notifier);
 
   /**
    * Notify user after full text was copied to clipboard

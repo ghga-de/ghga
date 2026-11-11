@@ -4,7 +4,7 @@
  * @license Apache-2.0
  */
 
-import { DatePipe as CommonDatePipe } from '@angular/common';
+import { DatePipe as CommonDatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -30,14 +30,14 @@ import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
 import { DatePipe } from '@app/shared/pipes/date-pipe';
 import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { ConfirmationService } from '@app/shared/services/confirmation';
-import { NavigationTrackingService } from '@app/shared/services/navigation';
-import { NotificationService } from '@app/shared/services/notification';
-import { RefreshButtonComponent } from '@app/shared/ui/refresh-button/refresh-button';
+import { NavigationTracker } from '@app/shared/services/navigation';
+import { Notifier } from '@app/shared/services/notification';
+import { RefreshButton } from '@app/shared/ui/refresh-button/refresh-button';
 import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
-import { escapeHtml } from '@app/shared/utils/html';
+import { html } from '@app/shared/utils/html';
 import {
   ResearchDataUploadBox,
   UploadBoxState,
@@ -60,9 +60,9 @@ import {
   describeRequeueError,
   RequeueErrorNotice,
 } from '@app/upload/utils/requeue-errors';
-import { UploadBoxEditDetailsDialogComponent } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
-import { UploadBoxFilesTableComponent } from '../upload-box-files-table/upload-box-files-table';
-import { UploadBoxMappingComponent } from '../upload-box-mapping/upload-box-mapping';
+import { UploadBoxEditDetailsDialog } from '../upload-box-edit-details-dialog/upload-box-edit-details-dialog';
+import { UploadBoxFilesTable } from '../upload-box-files-table/upload-box-files-table';
+import { UploadBoxMapping } from '../upload-box-mapping/upload-box-mapping';
 
 /** An upload grant annotated with whether it is currently active. */
 interface GrantWithStatus extends UploadGrant {
@@ -77,6 +77,7 @@ interface GrantWithStatus extends UploadGrant {
   selector: 'app-upload-box-manager-detail',
   imports: [
     DatePipe,
+    DecimalPipe,
     MatButtonModule,
     MatCardModule,
     MatIcon,
@@ -85,18 +86,18 @@ interface GrantWithStatus extends UploadGrant {
     RouterLink,
     Capitalise,
     ParseBytes,
-    RefreshButtonComponent,
-    UploadBoxFilesTableComponent,
-    UploadBoxMappingComponent,
+    RefreshButton,
+    UploadBoxFilesTable,
+    UploadBoxMapping,
   ],
   providers: [CommonDatePipe, ParseBytes],
   templateUrl: './upload-box-manager-detail.html',
 })
-export class UploadBoxManagerDetailComponent implements OnInit {
+export class UploadBoxManagerDetail implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #userService = inject(UserService);
-  #location = inject(NavigationTrackingService);
-  #notificationService = inject(NotificationService);
+  #location = inject(NavigationTracker);
+  #notificationService = inject(Notifier);
   #confirmationService = inject(ConfirmationService);
   #parseBytes = inject(ParseBytes);
   #dialog = inject(MatDialog);
@@ -403,15 +404,21 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   deleteBox(): void {
     const box = this.uploadBox();
     if (!box || box.state === UploadBoxState.archived) return;
+    const files = `${box.file_count} file${box.file_count === 1 ? '' : 's'}`;
+    const size = this.#parseBytes.transform(box.size);
     const message =
       box.file_count > 0
-        ? `<p>This box currently contains <strong>${box.file_count} ` +
-          `file${box.file_count === 1 ? '' : 's'}</strong> with a total size of ` +
-          `<strong>${this.#parseBytes.transform(box.size)}</strong>.</p>` +
-          '<p>Deleting the box will <strong>permanently remove all files</strong> ' +
-          'it contains. This action <strong>cannot be undone</strong>.</p>'
-        : '<p>This box is currently empty. Deleting it ' +
-          '<strong>cannot be undone</strong>.</p>';
+        ? html`<p>
+              This box currently contains <strong>${files}</strong> with a total size of
+              <strong>${size}</strong>.
+            </p>
+            <p>
+              Deleting the box will <strong>permanently remove all files</strong> it
+              contains. This action <strong>cannot be undone</strong>.
+            </p>`
+        : html`<p>
+            This box is currently empty. Deleting it <strong>cannot be undone</strong>.
+          </p>`;
     this.#confirmationService.confirm({
       title: 'Delete upload box?',
       message,
@@ -452,7 +459,7 @@ export class UploadBoxManagerDetailComponent implements OnInit {
   editDetails(): void {
     const box = this.uploadBox();
     if (!box) return;
-    const ref = this.#dialog.open(UploadBoxEditDetailsDialogComponent, {
+    const ref = this.#dialog.open(UploadBoxEditDetailsDialog, {
       data: box,
       width: 'clamp(40em, 85vw, 64em)',
       maxWidth: 'calc(100vw - 2rem)',
@@ -524,9 +531,10 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     if (file.state !== 'init') {
       this.#confirmationService.confirm({
         title: 'Confirm file deletion',
-        message:
-          `<p>Please confirm that the file <strong>${escapeHtml(file.alias)}</strong> shall be ` +
-          '<strong>deleted</strong> from this upload box.</p>',
+        message: html`<p>
+          Please confirm that the file <strong>${file.alias}</strong> shall be
+          <strong>deleted</strong> from this upload box.
+        </p>`,
         cancelText: 'Cancel',
         confirmText: 'Delete file',
         confirmClass: 'error',
@@ -581,9 +589,10 @@ export class UploadBoxManagerDetailComponent implements OnInit {
     if (!box) return;
     this.#confirmationService.confirm({
       title: 'Retry re-encryption?',
-      message:
-        `<p>This will requeue the file <strong>${escapeHtml(file.alias)}</strong> for re-encryption ` +
-        'without requiring the submitter to upload it again.</p>',
+      message: html`<p>
+        This will requeue the file <strong>${file.alias}</strong> for re-encryption
+        without requiring the submitter to upload it again.
+      </p>`,
       cancelText: 'Cancel',
       confirmText: 'Retry',
       callback: (confirmed) => {

@@ -58,7 +58,8 @@ def restore_root_logging():
 async def test_uvicorn_log_format(capsys, restore_root_logging):
     """Verify that the uvicorn logs are formatted with the configured logging."""
     test_app = FastAPI()
-    config = ApiConfigBase()
+    # port 0 lets the OS pick a free one, as 8080 is the front-end dev server's
+    config = ApiConfigBase(port=0)
 
     configure_app(test_app, config)
 

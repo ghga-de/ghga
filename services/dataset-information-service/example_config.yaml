@@ -9,7 +9,7 @@ cors_exposed_headers: null
 dataset_change_topic: metadata-datasets
 dataset_deletion_type: dataset_deleted
 dataset_upsertion_type: dataset_created
-db_name: dev
+db_name: dataset-information
 docs_url: /docs
 enable_opentelemetry: false
 file_deletion_request_topic: file-deletion-requests

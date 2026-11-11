@@ -29,7 +29,7 @@ from top.api.main import app, oidc_provider
 
 
 @async_fixture(name="client")
-async def fixture_client() -> AsyncGenerator[AsyncTestClient, None]:
+async def fixture_client() -> AsyncGenerator[AsyncTestClient]:
     """Get test client for this application."""
     async with AsyncTestClient(app=app) as client:
         yield client

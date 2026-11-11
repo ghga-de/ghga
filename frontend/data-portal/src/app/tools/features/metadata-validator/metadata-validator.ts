@@ -7,13 +7,13 @@
 import { Component, WritableSignal, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { LogEntry, PyodideOutput } from '@app/tools/models/pyodide';
+import { PyodideOutput } from '@app/tools/models/pyodide';
 import { StepDetails, StepStatus } from '@app/tools/models/stepper';
-import { PyodideService } from '@app/tools/services/pyodide';
+import { PyodideLoader } from '@app/tools/services/pyodide';
 import { MetadataValidationService } from '@app/tools/services/validator';
 import { FormatSchemapackErrorPipe } from '../../pipes/schemapack-error-pipe';
-import { TranspilerService } from '../../services/transpiler';
-import { StepperComponent } from '../stepper/stepper';
+import { Transpiler } from '../../services/transpiler';
+import { Stepper } from '../stepper/stepper';
 
 /**
  * This component works in tandem with the MetadataValidationService to provide
@@ -24,17 +24,12 @@ import { StepperComponent } from '../stepper/stepper';
 @Component({
   selector: 'app-metadata-validator',
   templateUrl: './metadata-validator.html',
-  imports: [
-    MatButtonModule,
-    MatIconModule,
-    StepperComponent,
-    FormatSchemapackErrorPipe,
-  ],
+  imports: [MatButtonModule, MatIconModule, Stepper, FormatSchemapackErrorPipe],
 })
-export class MetadataValidatorComponent {
+export class MetadataValidator {
   #validationService = inject(MetadataValidationService);
-  #transpilerService = inject(TranspilerService);
-  #pyodideService = inject(PyodideService);
+  #transpilerService = inject(Transpiler);
+  #pyodideService = inject(PyodideLoader);
   statusText: WritableSignal<string> = signal('Initializing...');
   isStatusError: WritableSignal<boolean> = signal(false);
   errorText: WritableSignal<string> = signal('');
@@ -42,7 +37,7 @@ export class MetadataValidatorComponent {
   isDragOver: WritableSignal<boolean> = signal(false);
   fileName: WritableSignal<string> = signal('');
   jsonOutput: WritableSignal<string> = signal('Awaiting XLSX file...');
-  processLogEntries: WritableSignal<LogEntry[]> = signal([]);
+  processLogEntries = this.#pyodideService.getProcessLog;
   showLog: WritableSignal<boolean> = signal(false);
   processButtonEnabled: WritableSignal<boolean> = signal(false);
   validationOutputDetails: WritableSignal<string | null> = signal(null);
@@ -59,10 +54,19 @@ export class MetadataValidatorComponent {
   #pyodideStatusEffect = effect(() => {
     const isReady = this.#pyodideService.isPyodideInitialized();
     const isLoading = this.#pyodideService.isPyodideLoading();
+    const failedPackages = this.#pyodideService.failedPackages();
 
     if (isLoading) {
       this.#updateStatus('Loading Pyodide runtime...', false, true);
       this.#resetStepStatus();
+    } else if (isReady && failedPackages.length) {
+      this.#updateStatus(
+        `Could not load ${failedPackages.join(' and ')}. The process log below says why.`,
+        true,
+        false,
+      );
+      this.processButtonEnabled.set(false);
+      this.showLog.set(true);
     } else if (isReady) {
       this.#updateStatus('ghga-transpiler ready.', false, false);
       this.#resetStepStatus();
@@ -75,18 +79,6 @@ export class MetadataValidatorComponent {
         return steps;
       });
     }
-  });
-
-  // Effect to handle process log updates from the service
-  #processLogEffect = effect(() => {
-    this.processLogEntries.set(this.#pyodideService.getProcessLog());
-    // Scroll to bottom of log if it's visible, ensure this runs after DOM update
-    setTimeout(() => {
-      const logContainer = document.getElementById('processLog');
-      if (logContainer) {
-        logContainer.scrollTop = logContainer.scrollHeight;
-      }
-    }, 0);
   });
 
   /**
@@ -203,8 +195,11 @@ export class MetadataValidatorComponent {
       const msg = `File "${file.name}" loaded. Ready to transpile.`;
       this.#updateStatus(msg, false, false);
       this.#setStepStatus(0, 'succeeded');
-      // Enable button only if Pyodide is initialized and a file is loaded
-      this.processButtonEnabled.set(this.#pyodideService.isPyodideInitialized());
+      // Enable button only if Pyodide and its packages are loaded and a file is loaded
+      this.processButtonEnabled.set(
+        this.#pyodideService.isPyodideInitialized() &&
+          !this.#pyodideService.failedPackages().length,
+      );
       this.jsonOutput.set('Ready for transpilation...'); // Update pre tag
     };
 

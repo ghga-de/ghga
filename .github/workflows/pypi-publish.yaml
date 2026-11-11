@@ -208,6 +208,33 @@ jobs:
             # from.
             uv build --out-dir "dist/$package" "$path"
             ls -l "dist/$package"
+            # The tests run in the monorepo: setuptools would ship only tests/test*.py, a
+            # suite that cannot run, so each member's MANIFEST.in prunes them. Only a
+            # top-level tests/ matches; test data inside the package (hexkit's test_files)
+            # stays. No `grep -q`: it would close the pipe early and fail tar under pipefail.
+            shipped=$(tar -tzf "dist/$package"/*.tar.gz | grep '^[^/]*/tests/' || true)
+            if [ -n "$shipped" ]; then
+              echo "::error::$package: the sdist contains tests/; add 'prune tests' to $path/MANIFEST.in"
+              echo "$shipped" | head -5
+              exit 1
+            fi
+            # A skill shipped in the package must reach the wheel, its eval suite must not:
+            # setuptools ships a package's non-Python files only when MANIFEST.in lists them.
+            wheel=$(unzip -Z1 "dist/$package"/*.whl)
+            for skill in "$path"/src/*/.agents/skills/*/SKILL.md; do
+              [ -e "$skill" ] || continue
+              rel=${skill#"$path/src/"}
+              if ! grep -qxF "$rel" <<<"$wheel"; then
+                echo "::error::$package: the wheel lacks $rel; list it in $path/MANIFEST.in"
+                exit 1
+              fi
+            done
+            leaked=$(grep -E '/\.agents/skills/[^/]+/evals(\.yaml$|/)' <<<"$wheel" || true)
+            if [ -n "$leaked" ]; then
+              echo "::error::$package: the wheel ships a skill's eval suite"
+              echo "$leaked" | head -5
+              exit 1
+            fi
             uvx twine check "dist/$package"/*
             echo "::endgroup::"
           done
@@ -259,12 +286,15 @@ jobs:
   # is left alone. A sweep's tag names no member, so each member it uploaded gets its own
   # `name/x.y.z` tag first: its next release needs a previous tag to compare with. A tag
   # pushed with the workflow token starts no workflow, so this does not re-run the release.
+  # A prerelease (PEP 440, e.g. 2.0.0rc1) is tagged but not drafted: only final releases
+  # get a release page.
   draft-releases:
     needs: [plan, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write # to push the tags and create the draft releases
+      pull-requests: read # the upgrade notes are in the descriptions
     steps:
       - uses: actions/checkout@v5
         with:
@@ -281,6 +311,10 @@ jobs:
             if ! git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
               git tag "$tag" "$GITHUB_SHA"
               git push origin "refs/tags/$tag"
+            fi
+            if [ "$(echo "$member" | jq -r '.prerelease')" = "true" ]; then
+              echo "$tag is a prerelease, not drafted"
+              continue
             fi
             # stdin is the member list; the script must not read from it.
             uv run --script scripts/release_notes.py "$tag" --draft </dev/null

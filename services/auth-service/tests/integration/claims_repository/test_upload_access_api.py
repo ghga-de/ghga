@@ -139,7 +139,7 @@ async def test_grant_upload_access(full_client: FullClient):
     assert grant_id
 
     # Check that the claim was created, but check directly with a DAO
-    claim = await claim_dao.find_one(mapping={"visa_type": VisaType.GHGA_UPLOAD})
+    claim = await claim_dao.find_one(filter_={"visa_type": VisaType.GHGA_UPLOAD})
     assert str(claim.visa_value).endswith(str(box_id))
 
 
@@ -318,7 +318,7 @@ async def test_revoke_grant(full_client: FullClient):
     assert response.status_code == status.HTTP_201_CREATED
 
     # Verify that the claim was added by looking for a claim with matching details
-    claim = await claim_dao.find_one(mapping={"visa_type": VisaType.GHGA_UPLOAD})
+    claim = await claim_dao.find_one(filter_={"visa_type": VisaType.GHGA_UPLOAD})
     assert str(claim.visa_value).endswith(str(TEST_BOX_ID))
     assert not claim.revocation_date
 
@@ -328,7 +328,7 @@ async def test_revoke_grant(full_client: FullClient):
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # Make sure the claim was revoked
-    claim = await claim_dao.find_one(mapping={"visa_type": VisaType.GHGA_UPLOAD})
+    claim = await claim_dao.find_one(filter_={"visa_type": VisaType.GHGA_UPLOAD})
 
     assert str(claim.visa_value).endswith(str(TEST_BOX_ID))
     assert claim.revocation_date

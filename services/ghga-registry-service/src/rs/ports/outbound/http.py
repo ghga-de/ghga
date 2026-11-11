@@ -22,6 +22,7 @@ from pydantic import UUID4, PositiveInt
 from ghga_service_commons.utils.utc_dates import UTCDatetime
 from rs.core.models import (
     BoxRequeueResult,
+    FileStateCounts,
     FileUploadWithAccession,
     GrantId,
     UploadGrant,
@@ -112,6 +113,18 @@ class FileBoxClientPort(ABC):
             msg = f"Requested version of FileUploadBox {box_id} is out of date."
             super().__init__(msg)
 
+    class FUBStatsUnavailableError(RuntimeError):
+        """Raised when the owning service applied the operation but could not update
+        the FileUploadBox stats.
+
+        The operation itself succeeded, so callers must not roll back. The stats and
+        the box version arrive later via the FileUploadBox outbox event.
+        """
+
+        def __init__(self, *, box_id: UUID4):
+            msg = f"FileUploadBox {box_id} stats could not be updated by its owner."
+            super().__init__(msg)
+
     class FUBMaxSizeTooLowError(RuntimeError):
         """Raised when the new max_size is smaller than the bytes already uploaded."""
 
@@ -178,6 +191,8 @@ class FileBoxClientPort(ABC):
                 or failed files that require attention.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -187,6 +202,8 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's a problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -246,6 +263,21 @@ class FileBoxClientPort(ABC):
         """
 
     @abstractmethod
+    async def get_file_state_counts(
+        self, *, box_ids: list[UUID4]
+    ) -> dict[UUID4, FileStateCounts]:
+        """Get the number of file uploads per state in each of the given
+        FileUploadBoxes.
+
+        Only the states that count toward a box's `file_count` are included. Boxes
+        without such file uploads, including unknown ones, are absent from the result,
+        as are states without file uploads.
+
+        Raises:
+            OperationError if there's a problem with the operation.
+        """
+
+    @abstractmethod
     async def archive_file_upload_box(self, *, box_id: UUID4, version: int) -> None:
         """Archive a FileUploadBox in the owning service.
 
@@ -254,6 +286,8 @@ class FileBoxClientPort(ABC):
                 been interrogated yet or files that failed interrogation.
             FUBVersionError if the remote box version differs from `version`.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the operation succeeded but the owning
+                service could not recompute the box stats.
         """
 
     @abstractmethod
@@ -276,6 +310,8 @@ class FileBoxClientPort(ABC):
         Raises:
             FUBStateError if the FileUploadBox is locked.
             OperationError if there's any other problem with the operation.
+            FUBStatsUnavailableError if the file was deleted but the owning
+                service could not update the box stats.
         """
 
     @abstractmethod

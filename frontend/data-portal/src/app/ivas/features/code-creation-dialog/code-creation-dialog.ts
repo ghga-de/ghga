@@ -20,7 +20,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UserWithIva } from '@app/ivas/models/iva';
 import { IvaTypePipe } from '@app/ivas/pipes/iva-type-pipe';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 
 type IvaWithCode = UserWithIva & { code: string };
 
@@ -45,10 +45,10 @@ type IvaWithCode = UserWithIva & { code: string };
   ],
   templateUrl: './code-creation-dialog.html',
 })
-export class CodeCreationDialogComponent {
+export class CodeCreationDialog {
   #clipboard = inject(Clipboard);
-  #dialogRef = inject(MatDialogRef<CodeCreationDialogComponent, boolean>);
-  #notify = inject(NotificationService);
+  #dialogRef = inject(MatDialogRef<CodeCreationDialog, boolean>);
+  #notify = inject(Notifier);
 
   iva = inject<IvaWithCode>(MAT_DIALOG_DATA);
 

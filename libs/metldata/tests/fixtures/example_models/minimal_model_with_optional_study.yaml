@@ -1,0 +1,71 @@
+id: https://w3id.org/Minimal-Model-With-Optional-Study
+name: Minimal-Model-With-Optional-Study
+version: 0.9.0
+prefixes:
+  linkml: https://w3id.org/linkml/
+imports:
+  - linkml:types
+
+default_range: string
+
+classes:
+  AliasMixin:
+    mixin: true
+    slots:
+      - alias
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+
+  Study:
+    description: >-
+      A Study is the scope of a submission.
+    mixins: AliasMixin
+
+  File:
+    description: >-
+      A file is an object that contains information generated from a process.
+    mixins: AliasMixin
+    slots:
+      - filename
+    slot_usage:
+      filename:
+        required: true
+
+  Submission:
+    tree_root: true
+    description: >-
+      A grouping entity whose studies anchor has a cardinality of one but is not
+      required, so a submission may leave out the study.
+    slots:
+      - studies
+      - files
+
+    slot_usage:
+      studies:
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+        minimum_cardinality: 1
+        maximum_cardinality: 1
+      files:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+
+slots:
+  alias:
+    description: The alias for an entity.
+
+  studies:
+    description: The study associated with an entity.
+    range: Study
+
+  files:
+    description: The file associated with an entity.
+    range: File
+
+  filename:
+    description: The given filename.

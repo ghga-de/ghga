@@ -15,15 +15,7 @@
 
 """Entrypoint of the package"""
 
-import asyncio
-
-from ns.main import consume_events
-
-
-def run(run_forever: bool = True):
-    """Run the service"""
-    asyncio.run(consume_events(run_forever=run_forever))
-
+from ns.cli import cli
 
 if __name__ == "__main__":
-    run()
+    cli()

@@ -4,8 +4,8 @@
  * @license Apache-2.0
  */
 
-import { Component, computed, effect, inject, model } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
@@ -28,7 +28,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
 @Component({
   selector: 'app-user-manager-filter',
   imports: [
-    FormsModule,
+    FormField,
     MatCardModule,
     MatInputModule,
     MatButtonModule,
@@ -41,7 +41,7 @@ import { DATE_INPUT_FORMAT_HINT } from '@app/shared/utils/date-formats';
   providers: [Capitalise],
   templateUrl: './user-manager-filter.html',
 })
-export class UserManagerFilterComponent {
+export class UserManagerFilter {
   #userService = inject(UserService);
 
   #filter = this.#userService.usersFilter;
@@ -53,20 +53,25 @@ export class UserManagerFilterComponent {
   readonly dateInputFormatHint = DATE_INPUT_FORMAT_HINT;
 
   /**
-   * The model for the filter properties
+   * The filter form, starting from the current filter
    */
-  idStrings = model<string>(this.#filter().idStrings);
-  roles = model<(UserRole | null)[] | undefined>(this.#filter().roles);
-  status = model<UserStatus | string | undefined>(this.#filter().status ?? 'all');
+  protected filterForm = form(
+    signal({
+      idStrings: this.#filter().idStrings,
+      roles: this.#filter().roles ?? ([] as (UserRole | null)[]),
+      status: (this.#filter().status ?? 'all') as UserStatus | 'all',
+    }),
+  );
 
   /**
    * Communicate filter changes to the user service
    */
   #filterEffect = effect(() => {
+    const { idStrings, roles, status } = this.filterForm().value();
     this.#userService.setUsersFilter({
-      idStrings: this.idStrings(),
-      roles: this.roles(),
-      status: this.status() === 'all' ? undefined : (this.status() as UserStatus),
+      idStrings,
+      roles: roles.length ? roles : undefined,
+      status: status === 'all' ? undefined : status,
     });
   });
 
@@ -90,8 +95,10 @@ export class UserManagerFilterComponent {
    * Provides a custom label using OR as joiners, rather than commas.
    */
   roleSelection = computed(() => {
-    return this.roles()
-      ?.map((role: keyof typeof RoleNames | null) =>
+    return this.filterForm
+      .roles()
+      .value()
+      .map((role: keyof typeof RoleNames | null) =>
         role ? RoleNames[role] : 'No assigned role',
       )
       .join(' OR ');

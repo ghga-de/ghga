@@ -23,12 +23,12 @@ import pytest
 
 from ghga_event_schemas.pydantic_ import SearchableResource
 from ghga_service_commons.auth.ghga import AuthContext
+from ghga_service_commons.http.mock_api import respond
 from hexkit.utils import now_utc_ms_prec
 from rs.constants import EXC_ID_BOX_NOT_FOUND
 from rs.core.models import GrantId
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.http import FileBoxClientPort
-from tests.fixtures.external_apis import respond
 from tests.fixtures.joint import JointFixture
 from tests.fixtures.utils import TEST_MAX_SIZE
 
@@ -204,7 +204,9 @@ async def test_typical_journey(joint_fixture: JointFixture):
         box_id=box_id,
         auth_context=user_auth_context,
     )
-    assert box_after_lock.state == box_after_lock.file_upload_box_state == "locked"
+    assert box_after_lock.state == "locked"
+    # file_upload_box_state still mirrors UCS until the FileUploadBox event lands
+    assert box_after_lock.file_upload_box_state == "open"
     assert box_after_lock.version == 3
 
     # Create test file IDs for files in the box
@@ -342,7 +344,9 @@ async def test_typical_journey(joint_fixture: JointFixture):
         auth_context=ds_auth_context,
     )
     assert archived_box.state == "archived"
-    assert archived_box.file_upload_box_state == "archived"
+    # No FileUploadBox event has been consumed since the lock, so the mirrored state
+    # still shows what UCS last reported
+    assert archived_box.file_upload_box_state == "open"
     assert archived_box.version == box_after_mapping.version + 1
 
 

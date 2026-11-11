@@ -173,7 +173,7 @@ class HttpBoxVersionError(HttpCustomExceptionBase):
         """Construct message and init the exception."""
         super().__init__(
             status_code=status_code,
-            description="The resource version is out of date.",
+            description="The resource version is out of date. Please fetch the latest data and try again.",
             data={},
         )
 

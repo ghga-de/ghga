@@ -1,0 +1,9 @@
+readinessProbe:
+  enabled: true
+  tcpSocket:
+    port: 8080
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /health
+    port: http

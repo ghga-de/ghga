@@ -19,7 +19,7 @@ const MAX_ITEMS = 3;
   templateUrl: './summary-badges.html',
   styleUrl: './summary-badges.scss',
 })
-export class SummaryBadgesComponent {
+export class SummaryBadges {
   protected readonly maxItems = MAX_ITEMS;
   readonly data = input.required<
     {

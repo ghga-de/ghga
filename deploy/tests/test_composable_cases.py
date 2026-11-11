@@ -257,7 +257,8 @@ def test_command_style_exec(rendered_chart):
 def test_cronjob_single_backward_compatible(rendered_chart, expected):
     """A single, unnamed cronjobs[] entry keeps the pre-array naming (no suffix).
 
-    and inherits schedule/command/history-limit from the top-level values.
+    and inherits schedule/command/history-limit from the top-level values. By
+    default it forbids overlapping runs and sets no deadlines.
     """
     manifests = rendered_chart("common.yaml", "cronjob_single.yaml")
 
@@ -270,6 +271,12 @@ def test_cronjob_single_backward_compatible(rendered_chart, expected):
         cronjob["spec"]["successfulJobsHistoryLimit"]
         == expected("cronjob_single", "spec")["successfulJobsHistoryLimit"]
     )
+    assert (
+        cronjob["spec"]["concurrencyPolicy"]
+        == expected("cronjob_single", "spec")["concurrencyPolicy"]
+    )
+    assert "startingDeadlineSeconds" not in cronjob["spec"]
+    assert "activeDeadlineSeconds" not in cronjob["spec"]["jobTemplate"]["spec"]
 
     container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"][
         "containers"
@@ -281,7 +288,8 @@ def test_cronjob_single_backward_compatible(rendered_chart, expected):
 def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
     """Deployment and multiple cronjobs can be shipped side by side; each cronjob.
 
-    entry can override its own schedule/history-limit/entrypoint/resources, an
+    entry can override its own schedule/history-limit/concurrency/deadlines/
+    entrypoint/resources, an
     entry with `enabled: false` is skipped, and entries without overrides fall
     back to the top-level values (same as the Deployment uses).
     """
@@ -311,6 +319,14 @@ def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
             job["spec"]["successfulJobsHistoryLimit"]
             == exp["successfulJobsHistoryLimit"]
         )
+        assert job["spec"]["concurrencyPolicy"] == exp["concurrencyPolicy"]
+        assert (
+            job["spec"].get("startingDeadlineSeconds") == exp["startingDeadlineSeconds"]
+        )
+        job_spec = job["spec"]["jobTemplate"]["spec"]
+        assert job_spec["activeDeadlineSeconds"] == exp["activeDeadlineSeconds"]
+        # A pod-level activeDeadlineSeconds would not stop the Job from retrying.
+        assert "activeDeadlineSeconds" not in job_spec["template"]["spec"]
         container = job["spec"]["jobTemplate"]["spec"]["template"]["spec"][
             "containers"
         ][0]
@@ -423,3 +439,52 @@ def test_vault_single_template_applies_to_job_and_cronjob(rendered_chart, expect
     assert strip(cronjob_annotations) == strip(deployment_annotations)
     assert cronjob_container["command"] == deployment_command
     assert cronjob_container["args"] == deployment_args
+
+
+def test_probes_render_one_handler(rendered_chart):
+    """A probe whose values add a handler next to the default renders only the added
+    one, since the API server rejects a probe with two handlers.
+    """
+    manifests = rendered_chart("probes_default.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["readinessProbe"]["httpGet"] == {"path": "/health", "port": "http"}
+    assert "tcpSocket" not in container["readinessProbe"]
+    assert container["livenessProbe"]["tcpSocket"] == {"port": 8080}
+    assert "httpGet" not in container["livenessProbe"]
+
+    manifests = rendered_chart("probes_other_handler.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["readinessProbe"]["tcpSocket"] == {"port": 8080}
+    assert "httpGet" not in container["readinessProbe"]
+    assert container["livenessProbe"]["httpGet"] == {"path": "/health", "port": "http"}
+    assert "tcpSocket" not in container["livenessProbe"]
+
+
+def test_local_image_id_annotates_only_its_own_image(rendered_chart):
+    """A Deployment gets the ID of its own image from global.localImageIds, so a
+    rebuilt local image changes the pod spec; an image not listed adds nothing.
+    """
+    with_ids = rendered_chart("common.yaml", "local_image_ids.yaml")
+    annotations = with_ids["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+    assert annotations["local-image-id"] == "sha256:1111"
+
+    without_ids = rendered_chart("common.yaml")
+    annotations = without_ids["Deployment"]["spec"]["template"]["metadata"][
+        "annotations"
+    ]
+    assert "local-image-id" not in annotations
+
+
+def test_migration_init_container(rendered_chart):
+    """The migration init container runs migrate-db with the main container's env."""
+    manifests = rendered_chart("common.yaml", "migration_init_container.yaml")
+    pod = manifests["Deployment"]["spec"]["template"]["spec"]
+    (init,) = pod["initContainers"]
+    assert init["name"] == "migration"
+    assert init["command"] == ["myexe"]
+    assert init["args"] == ["migrate-db"]
+    assert init["envFrom"] == pod["containers"][0]["envFrom"]
+    assert init["envFrom"] == [
+        {"configMapRef": {"name": "my-env-configmap"}},
+        {"secretRef": {"name": "my-env-secret"}},
+    ]

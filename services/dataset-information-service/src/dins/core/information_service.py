@@ -111,7 +111,7 @@ class InformationService(InformationServicePort):
         """
         try:
             accession_map = await self._accession_map_dao.find_one(
-                mapping={"file_id": file_id}
+                filter_={"file_id": file_id}
             )
         except NoHitsFoundError:
             log.info(
@@ -141,7 +141,7 @@ class InformationService(InformationServicePort):
         """
         try:
             accession_map = await self._accession_map_dao.find_one(
-                mapping={"file_id": file.file_id}
+                filter_={"file_id": file.file_id}
             )
         except NoHitsFoundError:
             pending = PendingFileInfo(
@@ -289,7 +289,7 @@ class InformationService(InformationServicePort):
         file_informations = [
             single_file_information
             async for single_file_information in self._file_information_dao.find_all(
-                mapping=file_accessions_mapping
+                filter_=file_accessions_mapping
             )
         ]
 

@@ -22,14 +22,27 @@ import pytest
 from gridfs import GridFS, GridFSBucket
 from openpyxl import Workbook
 
+from hexkit.providers.mongodb.migrations import (
+    MigrationConfig,
+    MigrationManager,
+)
 from hexkit.providers.mongodb.testutils import MongoDbFixture
 from rts.adapters.outbound.dao import GridFSDaoFactory
 from rts.core.rev_tran import ReverseTranspiler
-from rts.migrations.entry import run_db_migrations
+from rts.migrations import MIGRATION_MAP
 from rts.models import StudyMetadata
 from tests.fixtures.config import get_config
 
 pytestmark = pytest.mark.asyncio()
+
+
+async def run_db_migrations(*, config: MigrationConfig, target_version: int):
+    """Migrate the test database to `target_version` with the service's map."""
+    async with MigrationManager(
+        config=config, target_version=target_version, migration_map=MIGRATION_MAP
+    ) as mm:
+        await mm.migrate_or_wait()
+
 
 METADATA = "metadata"
 WORKBOOKS = "workbooks"

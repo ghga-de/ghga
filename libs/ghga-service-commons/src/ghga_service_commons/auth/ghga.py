@@ -17,7 +17,7 @@
 
 """GHGA specific authentication and authorization context."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
@@ -33,7 +33,7 @@ __all__ = [
 ]
 
 
-class AcademicTitle(str, Enum):
+class AcademicTitle(StrEnum):
     """Academic title."""
 
     DR = "Dr."

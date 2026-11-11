@@ -1,0 +1,2 @@
+# The tests run in the monorepo; setuptools would ship only tests/test*.py, a broken suite.
+prune tests

@@ -35,7 +35,7 @@ const MAX_OPTIONS_BEFORE_FILTERING = 6;
   ],
   templateUrl: './facet-expansion-panel.html',
 })
-export class FacetExpansionPanelComponent {
+export class FacetExpansionPanel {
   readonly maxOptionsBeforeFiltering = MAX_OPTIONS_BEFORE_FILTERING;
 
   readonly facet = input.required<Facet>();

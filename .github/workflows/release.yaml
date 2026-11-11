@@ -84,6 +84,7 @@ jobs:
       mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
+      prerelease: ${{ steps.route.outputs.prerelease }}
       images: ${{ steps.images.outputs.images }}
     steps:
       - uses: actions/checkout@v5
@@ -131,10 +132,17 @@ jobs:
             packages) lane=pypi;     mode=sweep ;;
             *)        lane=pypi;     mode=targeted ;;
           esac
-          echo "name=$name"       >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "lane=$lane"       >> "$GITHUB_OUTPUT"
-          echo "mode=$mode"       >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$name"
+            echo "version=$version"
+            echo "lane=$lane"
+            echo "mode=$mode"
+          } >> "$GITHUB_OUTPUT"
+          # A candidate (x.y.z-rc.N) gets no draft release; the regex above vouched for the
+          # shape, so a `-` is decisive.
+          prerelease=false
+          [[ "$version" == *-* ]] && prerelease=true
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
       # ADR-0027: the release VERIFIES the integrated HEAD, it does not re-test it. CI
       # already proved this commit good; the tag only snapshots that. So the two things
@@ -334,17 +342,18 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - name: Short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
-      # arm64 has no native GitHub-hosted runner, so cross-building it on this amd64
-      # runner needs QEMU emulation registered with the kernel, plus a buildx builder
+      # arm64 is emulated so one buildx call pushes the multi-platform index; native arm64
+      # runners (ubuntu-24.04-arm) would need a job per platform and a manifest merge.
+      # Cross-building on this amd64 runner needs QEMU registered, plus a buildx builder
       # that can actually target multiple platforms in one invocation (the default
       # "docker" driver can't) — the same docker-container builder that attestation
       # export requires (see the Build step below), so no separate builder step needed.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # The hardened base (dhi.io) is auth-gated: log in with the org's Docker Hub
       # credentials (same secrets mainline uses). Skipped if the org secrets are not
       # exposed to this repo — the build then fails at the base-image pull with a
@@ -630,7 +639,7 @@ jobs:
         if: ${{ inputs.push }}
         run: |
           work=$(mktemp -d)
-          while read -r name version; do
+          while read -r name _; do
             c="deploy/charts/${name}/"
             rm -rf "${work:?}"/*
             cp -r "$c" "$work/${name}-chart"
@@ -684,15 +693,23 @@ jobs:
   # The companions, members released with the platform but with notes of their own, are
   # tagged with the platform version here and drafted too. A tag pushed with the workflow
   # token starts no workflow, so their tags do not reach `resolve`. PyPI-lane releases
-  # are drafted in pypi-publish.yaml, once their members are uploaded. Only a green build
-  # is drafted: a release whose images or charts failed has nothing to publish yet.
+  # are drafted in pypi-publish.yaml, once their members are uploaded.
+  #
+  # Only a final release that reached Docker Hub is drafted: a green build of a final
+  # version dispatched with `push`. A candidate gets no release page and its companions
+  # no tags; its notes can still be generated locally. A tag push is build-only, so it
+  # has nothing to publish yet, and neither has a failed build.
   draft-release:
     needs: [resolve, build-images, package-charts]
-    if: ${{ needs.resolve.outputs.lane == 'platform' }}
+    if: >-
+      ${{ needs.resolve.outputs.lane == 'platform'
+      && needs.resolve.outputs.prerelease == 'false'
+      && inputs.push }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write # to push the companions' tags and create the draft releases
+      pull-requests: read # the upgrade notes are in the descriptions
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:

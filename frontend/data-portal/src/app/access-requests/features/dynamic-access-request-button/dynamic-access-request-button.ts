@@ -16,10 +16,10 @@ import {
 } from '@app/access-requests/models/access-requests';
 import { AccessRequestService } from '@app/access-requests/services/access-request';
 import { AuthService } from '@app/auth/services/auth';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
 // eslint-disable-next-line boundaries/dependencies
-import { DownloadWorkPackageDialogComponent } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
-import { AccessRequestDialogComponent } from '../access-request-dialog/access-request-dialog';
+import { DownloadWorkPackageDialog } from '@app/work-packages/features/download-work-package-dialog/download-work-package-dialog';
+import { AccessRequestDialog } from '../access-request-dialog/access-request-dialog';
 
 /**
  * This component wraps some logic about access requests by only showing and controlling the dialog to create one if none exists so far.
@@ -29,12 +29,12 @@ import { AccessRequestDialogComponent } from '../access-request-dialog/access-re
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './dynamic-access-request-button.html',
 })
-export class DynamicAccessRequestButtonComponent {
+export class DynamicAccessRequestButton {
   protected readonly AccessRequestStatus = AccessRequestStatus;
   datasetID = input.required<string>();
   #accessRequestService = inject(AccessRequestService);
   #auth = inject(AuthService);
-  #notification = inject(NotificationService);
+  #notification = inject(Notifier);
   #dialog = inject(MatDialog);
   #userId = computed<string | undefined>(() => this.#auth.user()?.id || undefined);
   #pendingAccessRequests = computed(() =>
@@ -65,7 +65,7 @@ export class DynamicAccessRequestButtonComponent {
   showDownloadTokenDialog = () => {
     const grant = this.#activeGrant();
     if (!grant) return;
-    this.#dialog.open(DownloadWorkPackageDialogComponent, {
+    this.#dialog.open(DownloadWorkPackageDialog, {
       data: grant,
       width: '64rem',
       maxWidth: '96vw',
@@ -88,7 +88,7 @@ export class DynamicAccessRequestButtonComponent {
     };
 
     this.#dialog
-      .open(AccessRequestDialogComponent, {
+      .open(AccessRequestDialog, {
         data,
       })
       .afterClosed()

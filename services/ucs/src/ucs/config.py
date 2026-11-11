@@ -15,7 +15,7 @@
 
 """Config Parameter Modeling and Parsing"""
 
-from pydantic import Field, PositiveInt
+from pydantic import Field, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings
 
 from ghga_service_commons.api import ApiConfigBase
@@ -44,6 +44,8 @@ class Config(
     PublicKeyConfig,
     UploadDaoConfig,
     MongoKafkaConfig,
+    # UCS runs no DB migrations yet, so these settings have no effect until the
+    # first one; keeping them spares deployments a config change at that point.
     MigrationConfig,
     S3ObjectStoragesConfig,
     LoggingConfig,
@@ -71,4 +73,22 @@ class Config(
     cleanup_interval_minutes: int = Field(
         default=60,
         description="How often (in minutes) the cleanup job runs.",
+    )
+    orphaned_object_min_age_hours: NonNegativeInt = Field(
+        default=6,
+        description=(
+            "Minimum age in hours before the cleanup job deletes an inbox object that"
+            + " has no matching FileUpload. Applies even when safeguards are ignored."
+            + " Age is measured from the object's LastModified time, which some S3"
+            + " backends, including AWS, set to when a multipart upload was initiated"
+            + " rather than completed."
+        ),
+    )
+    max_orphaned_objects: NonNegativeInt = Field(
+        default=100,
+        description=(
+            "If the cleanup job finds more orphaned inbox objects than this for one"
+            + " storage alias, it deletes no orphaned objects and aborts no orphaned"
+            + " multipart uploads for that alias, unless run with --ignore-safeguards."
+        ),
     )

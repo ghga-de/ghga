@@ -16,7 +16,6 @@
 """Compare two schema definitions for semantic equality."""
 
 from arcticfreeze import FrozenDict
-from jsonsubschema import is_equivalent
 from schemapack._internals.exceptions import (
     ComparisonError,
     InequivalentContentSchemas,
@@ -69,7 +68,18 @@ def compare_class_relations_semantically(
 def compare_content_semantically(
     schema1: ContentSchema, schema2: ContentSchema
 ) -> bool:
-    """Compare two content schemas to determine whether they are equivalent."""
+    """Compare two content schemas to determine whether they are equivalent.
+
+    This needs ghga-jsonsubschema, which the `schema-comparison` extra installs.
+    It is imported here rather than at the top, so that schemapack works without it.
+    """
+    try:
+        from jsonsubschema import is_equivalent  # noqa: PLC0415
+    except ImportError as exp:
+        raise ImportError(
+            "Comparing content schemas needs ghga-jsonsubschema;"
+            " install schemapack[schema-comparison]."
+        ) from exp
     try:
         return is_equivalent(thaw(schema1), thaw(schema2))
     except Exception as exp:

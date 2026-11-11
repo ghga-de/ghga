@@ -22,14 +22,15 @@ for the full set of configurable values.
 | `config.mongo_dsn` | MongoDB connection string. Might include credentials. For more information see: https://naiveskill.com/mongodb-connection-string/ | `null` |
 | `config.db_version_collection` | The name of the collection containing DB version information for this service | `null` |
 | `config.migration_wait_sec` | The number of seconds to wait before checking the DB version again | `null` |
+| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.enable_opentelemetry` | If set to true, this will run necessary setup code.If set to false, no setup code is run, which leaves tracing disabled. | `false` |
 | `config.ekss_api_url` | The base URL for the EKSS API | `null` |
 | `config.client_exponential_backoff_max` | Maximum number of seconds to wait between retries when using exponential backoff retry strategies. The client timeout might need to be adjusted accordingly. | `60` |
 | `config.client_num_retries` | Number of times to retry failed API calls. | `3` |
 | `config.client_retry_status_codes` | List of status codes that should trigger retrying a request. | `[408, 429, 500, 502, 503, 504]` |
 | `config.client_reraise_from_retry_error` | Specifies if the exception wrapped in the final RetryError is reraised or the RetryError is returned as is. | `true` |
-| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.0` |
-| `config.retry_after_applicable_for_num_requests` | Amount of requests after which the stored delay from a 429 response is ignored again. Can be useful to adjust if concurrent requests are fired in quick succession. | `1` |
+| `config.min_request_interval` | Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests. | `0.0` |
+| `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.05` |
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
@@ -68,7 +69,6 @@ for the full set of configurable values.
 | `config.kafka_retry_backoff` | The number of seconds to wait before retrying a failed event. The backoff time is doubled for each retry attempt. | `0` |
 | `config.db_name` | Name of the database located on the MongoDB server. NOTE: this chart's configmap.tpl always overwrites config.db_name with the value computed from `mongodb.dbName` - a value set directly under config.db_name is silently discarded. Set `mongodb.dbName` instead. | `null` |
 | `config.mongo_timeout` | Timeout in seconds for API calls to MongoDB. The timeout applies to all steps needed to complete the operation, including server selection, connection checkout, serialization, and server-side execution. When the timeout expires, PyMongo raises a timeout exception. If set to None, the operation will not time out (default MongoDB behavior). | `null` |
-| `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.data_hub_auth_keys` | Mapping of storage (data hub) aliases to their public token signature validation keys | `null` |
 | `config.dhfs_version_constraint` | A PEP 440 version specifier controlling which DHFS client versions are accepted. Requests where the reported version does not satisfy this specifier will be rejected with a 426 error. | `null` |
 
@@ -78,6 +78,7 @@ for the full set of configurable values.
 |------|-------------|-------|
 | `global.imageRegistry` | Registry override applied to every image reference in the umbrella (read by the vendored `common` library chart's `common.images.image` helper) | `""` |
 | `global.imagePullSecrets` | Pull secrets applied to every workload in the umbrella, combined with each image's own `pullSecrets` below (read by the vendored `common` library chart's `common.images.renderPullSecrets` helper) | `[]` |
+| `global.localImageIds` | Image ID per image reference, set by `just up` and `just testbed-up` for the images loaded into the kind node; a Deployment whose image is listed gets it as its `local-image-id` pod annotation, so a rebuilt image restarts its pods; empty outside the local cluster | `{}` |
 | `commandPrefix` | Path prefix prepended to `executable` before it's rendered into `command`/`args` | `""` |
 | `commandStyle` | "shell": wrap executable+args in `command` via a shell string (needs a shell in the image). "exec": render command=[prefixed executable], args as a real argv list - for shell-less hardened runtime images. | `"exec"` |
 | `executable` | Executable name and arguments (will be combined into a shell command) | `"fis"` |
@@ -101,7 +102,7 @@ for the full set of configurable values.
 | `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
 | `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
-| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `false` |
+| `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `true` |
 | `migrationInitContainer.image` | Image for the migration init container; defaults to the main container's image when empty | `""` |
 | `migrationInitContainer.imagePullPolicy` | imagePullPolicy for just the migration init container; defaults to the main container's own imagePullPolicy when unset | `null` |
 | `migrationInitContainer.executable` | Executable name and arguments run inside the migration init container | `"fis"` |
@@ -132,7 +133,8 @@ for the full set of configurable values.
 | `livenessProbe.initialDelaySeconds` |  | `30` |
 | `livenessProbe.periodSeconds` |  | `15` |
 | `readinessProbe.enabled` | Render a container readinessProbe from this block (minus `enabled`) | `false` |
-| `readinessProbe.tcpSocket.port` |  | `8080` |
+| `readinessProbe.httpGet.path` |  | `"{{ .Values.healthEndpoint }}"` |
+| `readinessProbe.httpGet.port` |  | `"http"` |
 | `readinessProbe.initialDelaySeconds` |  | `30` |
 | `readinessProbe.periodSeconds` |  | `15` |
 | `startupProbe.enabled` | Render a container startupProbe from this block (minus `enabled`) | `false` |
@@ -187,6 +189,9 @@ for the full set of configurable values.
 | `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"fis"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
+| `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
+| `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
+| `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
 | `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
 | `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |

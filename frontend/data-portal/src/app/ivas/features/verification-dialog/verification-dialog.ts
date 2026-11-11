@@ -25,7 +25,20 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { IvaService } from '@app/ivas/services/iva';
-import { NotificationService } from '@app/shared/services/notification';
+import { Notifier } from '@app/shared/services/notification';
+import { NormalizeInput } from '@app/shared/ui/normalize-input/normalize-input';
+
+/**
+ * Upper-case an entered IVA code and keep only its first 6 alphanumeric characters
+ * @param value - the raw text
+ * @returns the code as the form keeps it
+ */
+export function toIvaCode(value: string): string {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 6);
+}
 
 /**
  * Dialog for entering the IVA verification code
@@ -41,17 +54,26 @@ import { NotificationService } from '@app/shared/services/notification';
     MatDialogTitle,
     MatDialogContent,
     MatDialogActions,
+    NormalizeInput,
   ],
   templateUrl: './verification-dialog.html',
 })
-export class VerificationDialogComponent {
-  #dialogRef = inject(MatDialogRef<VerificationDialogComponent, boolean>);
-  #notify = inject(NotificationService);
+export class VerificationDialog {
+  #dialogRef = inject(MatDialogRef<VerificationDialog, boolean>);
+  #notify = inject(Notifier);
   #ivaService = inject(IvaService);
   protected data = inject<{ id: string; address: string }>(MAT_DIALOG_DATA);
   protected address = computed(() => this.data.address);
 
-  protected codeModel = signal<{ code: string }>({ code: '' });
+  protected toIvaCode = toIvaCode;
+
+  /**
+   * The form model, which upper-cases an entered code and keeps only its
+   * first 6 alphanumeric characters.
+   */
+  protected codeModel = linkedSignal<{ code: string }>(() => ({ code: '' }), {
+    set: (model, rawSet) => rawSet({ ...model, code: toIvaCode(model.code) }),
+  });
 
   protected codeForm = form(this.codeModel, (schemaPath) => {
     required(schemaPath.code);
@@ -78,18 +100,6 @@ export class VerificationDialogComponent {
   protected verificationError = linkedSignal<string, boolean>({
     source: () => this.codeForm.code().value(),
     computation: () => false,
-  });
-
-  /**
-   * Upper-case the entered code and keep only its first 6 alphanumeric characters.
-   */
-  #sanitizeCodeEffect = effect(() => {
-    const code = this.codeForm.code().value();
-    const sanitized = code
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, '')
-      .slice(0, 6);
-    if (sanitized !== code) this.codeForm.code().value.set(sanitized);
   });
 
   /**

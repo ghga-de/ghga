@@ -6,7 +6,7 @@
 
 import { isDevMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app';
+import { App } from './app/app';
 import { appConfig } from './app/app.config';
 
 /**
@@ -14,11 +14,11 @@ import { appConfig } from './app/app.config';
  */
 async function startApp() {
   if (isDevMode() && (window.config.mock_api || window.config.mock_oidc)) {
-    const { worker } = await import('./mocks/setup');
-    await worker.start();
+    const { worker, startOptions } = await import('./mocks/setup');
+    await worker.start(startOptions);
   }
 }
 
 startApp().then(() =>
-  bootstrapApplication(AppComponent, appConfig).catch((err) => console.error(err)),
+  bootstrapApplication(App, appConfig).catch((err) => console.error(err)),
 );

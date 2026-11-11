@@ -107,7 +107,7 @@ class DLQManager(DLQManagerPort):
             events = [
                 x
                 async for x in self._dao.find_all(
-                    mapping={"dlq_info.service": service, "topic": topic},
+                    filter_={"dlq_info.service": service, "topic": topic},
                     sort=["timestamp"],
                     limit=1,
                 )
@@ -171,7 +171,7 @@ class DLQManager(DLQManagerPort):
 
         # TODO: Here we pull back everything just to get a couple fields - this is a
         # limitation of hexkit and is costly/inefficient. Should optimize in the future.
-        results_iter = self._dao.find_all(mapping={})
+        results_iter = self._dao.find_all(filter_={})
         async for event in results_iter:
             service_topics[event.dlq_info.service][event.topic] += 1
         return service_topics
@@ -200,7 +200,7 @@ class DLQManager(DLQManagerPort):
             return [
                 x
                 async for x in self._dao.find_all(
-                    mapping={"dlq_info.service": service, "topic": topic},
+                    filter_={"dlq_info.service": service, "topic": topic},
                     sort=["timestamp"],
                     skip=skip,
                     limit=limit,

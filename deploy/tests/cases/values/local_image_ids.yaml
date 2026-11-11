@@ -1,0 +1,4 @@
+global:
+  localImageIds:
+    docker.io/busybox:latest: sha256:1111
+    docker.io/other:local: sha256:2222
