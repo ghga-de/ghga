@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 
 from metldata.custom_types import Json
 from metldata.metadata_utils import lookup_self_id
-from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.anchors import AnchorPoint, filter_anchor_points
 from metldata.model_utils.essentials import (
     ALIAS_SLOT,
     DATA_ACCESS_COMMITTEE_CLASS,
@@ -146,11 +146,18 @@ class GovernanceMetadata:
     ):
         """Index submissions. Identifier slots hold aliases, and accessions come from
         the accession map.
+
+        Raises:
+            AnchorPointNotFoundError: if a class on the governance chain is not
+                anchored.
         """
+        governance_anchor_points = _filter_governance_anchor_points(
+            anchor_points_by_target=anchor_points_by_target
+        )
         documents = [
             _index_document(
                 content=submission.content or {},
-                anchor_points_by_target=anchor_points_by_target,
+                anchor_points_by_target=governance_anchor_points,
                 lookup_resource_accession=partial(
                     _lookup_submission_accession,
                     accession_map=submission.accession_map,
@@ -158,7 +165,9 @@ class GovernanceMetadata:
             )
             for submission in submissions
         ]
-        return cls(documents=documents, anchor_points_by_target=anchor_points_by_target)
+        return cls(
+            documents=documents, anchor_points_by_target=governance_anchor_points
+        )
 
     @classmethod
     def from_artifacts(
@@ -170,16 +179,25 @@ class GovernanceMetadata:
         """Index artifact contents in which identifier slots hold accessions, such as
         `resolved_restricted`. Embedded artifacts are not supported, because they
         nest the policy in the dataset instead of referencing it.
+
+        Raises:
+            AnchorPointNotFoundError: if a class on the governance chain is not
+                anchored.
         """
+        governance_anchor_points = _filter_governance_anchor_points(
+            anchor_points_by_target=anchor_points_by_target
+        )
         documents = [
             _index_document(
                 content=content,
-                anchor_points_by_target=anchor_points_by_target,
+                anchor_points_by_target=governance_anchor_points,
                 lookup_resource_accession=lambda _anchor_point, accession: accession,
             )
             for content in contents
         ]
-        return cls(documents=documents, anchor_points_by_target=anchor_points_by_target)
+        return cls(
+            documents=documents, anchor_points_by_target=governance_anchor_points
+        )
 
     def _index_files(
         self, *, documents: Sequence[dict[str, list[GovernanceResource]]]
@@ -263,6 +281,25 @@ class GovernanceMetadata:
             raise GovernanceResolutionError(
                 root_slot=root_slot, reference=reference
             ) from error
+
+
+def _filter_governance_anchor_points(
+    *, anchor_points_by_target: dict[str, AnchorPoint]
+) -> dict[str, AnchorPoint]:
+    """Keep the anchor points of the file classes and of the GOVERNANCE_CLASSES.
+
+    Raises:
+        AnchorPointNotFoundError: if one of the GOVERNANCE_CLASSES is not anchored.
+    """
+    file_classes = {
+        class_name
+        for class_name in anchor_points_by_target
+        if class_name.endswith(FILE_CLASS_SUFFIX)
+    }
+    return filter_anchor_points(
+        anchor_points_by_target=anchor_points_by_target,
+        classes_of_interest=file_classes | set(GOVERNANCE_CLASSES),
+    )
 
 
 def _index_document(
