@@ -33,6 +33,9 @@ git checkout --quiet --detach "$PIN"
 # The clone has a branch for whatever the main clone has checked out; no case wants it.
 git for-each-ref --format='%(refname:short)' refs/heads | xargs -r git branch --quiet -D
 git remote remove origin
+# Tags not merged into the pin reach later commits, which would hand a run the answers its
+# case asks for; the repack below keeps only what is still reachable.
+git tag --no-merged "$PIN" | xargs -r git tag -d >/dev/null
 git rm -r --quiet .agents/skills .claude/skills
 # A skill shipped in a package is a root skill too; its files stay behind otherwise.
 git ls-files -z -- ':(glob)libs/*/src/*/.agents/skills/**' | xargs -0r git rm --quiet
@@ -51,6 +54,8 @@ uv run --offline --quiet python scripts/docs_check.py >/dev/null || true
 uv run --offline --quiet python scripts/docs_check.py >/dev/null
 git add -A
 git -c user.name=eval -c user.email=eval@localhost commit --quiet -m "eval: remove the root skills"
+# The reflog keeps the main clone's checkout, the clone's starting commit, reachable.
+git reflog expire --expire=now --all
 git repack -a -d -q
 rm .git/objects/info/alternates
 if [[ $# -eq 2 ]]; then
