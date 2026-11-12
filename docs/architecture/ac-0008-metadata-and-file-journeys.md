@@ -1,7 +1,7 @@
 ---
 status: current
 date: 2026-07-13
-amended: 2026-11-02
+amended: 2026-11-12
 tags: [backend, data, events]
 related: [AC-0001, AC-0002, AC-0007, AC-0009]
 ---
