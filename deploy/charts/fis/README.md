@@ -32,6 +32,7 @@ for the full set of configurable values.
 | `config.min_request_interval` | Minimum number of seconds between requests to one host and first path segment. If left at 0 some jitter is still added to pace concurrent requests. | `0.0` |
 | `config.per_request_jitter` | Max amount of jitter (in seconds) to add to each request. | `0.05` |
 | `config.http_request_timeout_seconds` | Request timeout setting in seconds. | `60.0` |
+| `config.upload_box_priority_topic` | Name of the event topic containing upload box priority events | `null` |
 | `config.file_upload_topic` | Topic containing published FileUpload outbox events | `null` |
 | `config.otel_trace_sampling_rate` | Determines which proportion of spans should be sampled. A value of 1.0 means all and is equivalent to the previous behaviour. Setting this to 0 will result in no spans being sampled, but this does not automatically set `enable_opentelemetry` to False. | `1.0` |
 | `config.log_level` | The minimum log level to capture. | `"INFO"` |

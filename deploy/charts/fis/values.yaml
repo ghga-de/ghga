@@ -148,6 +148,13 @@ _topics:
     kafkaUser:
       operations:
       - Read
+  uploadBoxPriority:
+    topic:
+      name: upload_box_priority_topic
+      value: upload-box-priority
+    kafkaUser:
+      operations:
+      - Read
 _consumerGroup:
   operations:
   - Read

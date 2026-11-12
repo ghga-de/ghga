@@ -14,7 +14,11 @@
 # limitations under the License.
 """Define a DAO port for a DAO that stores/queries file IDs"""
 
-from fis.core.models import FileUnderInterrogation, InterrogationReport
+from fis.core.models import (
+    FileUnderInterrogation,
+    InterrogationReport,
+    UploadBoxPriority,
+)
 from hexkit.protocols.dao import (  # noqa: F401
     Dao,
     MultipleHitsFoundError,
@@ -26,3 +30,4 @@ from hexkit.protocols.dao import (  # noqa: F401
 # port described by a type alias:
 FileDao = Dao[FileUnderInterrogation]
 InterrogationReportDao = Dao[InterrogationReport]
+UploadBoxPriorityDao = Dao[UploadBoxPriority]
