@@ -35,6 +35,7 @@ import pytest
 import pytest_asyncio
 
 from dhfs.adapters.outbound.central import CentralClient
+from dhfs.adapters.outbound.s3 import S3Client
 from dhfs.config import Config
 from dhfs.core.verifier import (
     INTERROGATION_OBJECT_ID,
@@ -148,6 +149,19 @@ async def test_real_interrogator_processes_the_dummy_file(
         bucket_id=verifier_fixture.config.interrogation_bucket_id,
         object_id=str(INTERROGATION_OBJECT_ID),
     )
+
+
+async def test_inconclusive_run_names_the_cause(verifier_fixture: VerifierFixture):
+    """An inconclusive attempt of the real interrogator must fail the verification
+    with the cause DHFS found, not only log it.
+    """
+    with (
+        patch.object(S3Client, "get_is_file_in_inbox", AsyncMock(return_value=False)),
+        pytest.raises(RuntimeError, match="was not found in the inbox"),
+    ):
+        await run_dhfs_verification(verifier_fixture.config, file_size=SMALL_FILE_SIZE)
+
+    assert not await _inbox_has_object(verifier_fixture)
 
 
 async def test_failure_cleans_up(verifier_fixture: VerifierFixture):

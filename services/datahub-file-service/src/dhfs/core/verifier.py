@@ -18,7 +18,7 @@
 import hashlib
 import logging
 import os
-from collections.abc import Callable, Generator
+from collections.abc import Awaitable, Callable, Generator
 from contextlib import suppress
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -38,6 +38,7 @@ from dhfs.config import Config
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH
 from dhfs.core import models
 from dhfs.inject import prepare_interrogator
+from dhfs.ports.outbound.interrogator import InterrogatorPort
 from ghga_service_commons.utils.crypt import generate_key_pair
 from hexkit.providers.s3 import S3Config
 from hexkit.providers.s3.provider import S3ObjectStorage
@@ -124,6 +125,8 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
     ):
         log.info("Performing DHFS file processing.")
         async with prepare_interrogator(config=config) as interrogator:
+            for step in ("_check_file_is_in_inbox", "interrogate_file"):
+                setattr(interrogator, step, _escalate(getattr(interrogator, step)))
             try:
                 await interrogator.interrogate_new_files()
                 _check_report(submit_report)
@@ -139,11 +142,20 @@ async def run_dhfs_verification(config: Config, *, file_size: int):
                 )
 
 
-def _check_report(submit_report: AsyncMock) -> None:
-    """Raise unless DHFS reported the dummy file as successfully processed.
+def _escalate(step: Callable[..., Awaitable[None]]) -> Callable[..., Awaitable[None]]:
+    """Re-raise an inconclusive error of `step` as one the batch loop does not catch."""
 
-    No report means the attempt was inconclusive; DHFS logged why as a warning.
-    """
+    async def escalated(*args, **kwargs) -> None:
+        try:
+            await step(*args, **kwargs)
+        except InterrogatorPort.InconclusiveError as err:
+            raise RuntimeError(err) from err
+
+    return escalated
+
+
+def _check_report(submit_report: AsyncMock) -> None:
+    """Raise unless DHFS reported the dummy file as successfully processed."""
     if not submit_report.await_args:
         raise RuntimeError("DHFS could not process the file conclusively.")
     report: models.InterrogationReport = submit_report.await_args.kwargs["report"]
