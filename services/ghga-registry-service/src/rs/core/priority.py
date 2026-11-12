@@ -48,7 +48,12 @@ BoxIdsChange = Callable[[list[UUID4]], list[UUID4]]
 def _with_missing_boxes(
     box_ids: list[UUID4], boxes: Mapping[UUID4, ResearchDataUploadBox]
 ) -> list[UUID4]:
-    """Append the boxes that are missing from `box_ids`, oldest `last_changed` first."""
+    """Append the boxes in `boxes` that have no entry in `box_ids` yet, oldest
+    `last_changed` first.
+
+    RS writes a box and the list separately, so a box created since the last write to
+    the list has no entry yet. Before the first list is stored, no box has one.
+    """
     listed = set(box_ids)
     missing = sorted(
         (box for box_id, box in boxes.items() if box_id not in listed),
