@@ -36,12 +36,14 @@ async def test_repair_publishes_priority(joint_fixture: JointFixture):
     rdub_manager = joint_fixture.registry.rdub_manager
     priority_manager = joint_fixture.registry.priority_manager
     topic = joint_fixture.config.upload_box_priority_topic
-    joint_fixture.file_box_api.on_create_file_upload_box = respond(
-        201, json=str(uuid4())
-    )
 
     box_ids = []
+    file_upload_box_ids = []
     for i in range(2):
+        file_upload_box_ids.append(uuid4())
+        joint_fixture.file_box_api.on_create_file_upload_box = respond(
+            201, json=str(file_upload_box_ids[-1])
+        )
         await sleep(0.002)  # distinct last_changed values, which MongoDB keeps in ms
         box_ids.append(
             await rdub_manager.create_research_data_upload_box(
@@ -64,6 +66,9 @@ async def test_repair_publishes_priority(joint_fixture: JointFixture):
     assert priority.version == 1
     assert priority.changed_by is None
     assert [entry.research_data_upload_box_id for entry in priority.entries] == box_ids
+    assert [
+        entry.file_upload_box_id for entry in priority.entries
+    ] == file_upload_box_ids
 
     async with joint_fixture.kafka.record_events(in_topic=topic) as recorder:
         await priority_manager.repair()
