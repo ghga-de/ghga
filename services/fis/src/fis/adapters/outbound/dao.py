@@ -14,8 +14,17 @@
 # limitations under the License.
 """DAO translators for accessing the database."""
 
-from fis.core.models import FileUnderInterrogation, InterrogationReport
-from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from fis.constants import UPLOAD_BOX_PRIORITY_COLLECTION
+from fis.core.models import (
+    FileUnderInterrogation,
+    InterrogationReport,
+    UploadBoxPriority,
+)
+from fis.ports.outbound.dao import (
+    FileDao,
+    InterrogationReportDao,
+    UploadBoxPriorityDao,
+)
 from hexkit.protocols.dao import DaoFactoryProtocol
 from hexkit.providers.mongodb import MongoDbIndex
 
@@ -38,4 +47,15 @@ async def get_interrogation_report_dao(
         name="reports",
         dto_model=InterrogationReport,
         id_field="file_id",
+    )
+
+
+async def get_upload_box_priority_dao(
+    *, dao_factory: DaoFactoryProtocol
+) -> UploadBoxPriorityDao:
+    """Setup the DAOs using the specified provider of the DaoFactoryProtocol."""
+    return await dao_factory.get_dao(
+        name=UPLOAD_BOX_PRIORITY_COLLECTION,
+        dto_model=UploadBoxPriority,
+        id_field="id",
     )

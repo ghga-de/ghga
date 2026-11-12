@@ -720,6 +720,38 @@
               }
             }
           }
+        },
+        "uploadBoxPriority": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "topic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "default": "upload_box_priority_topic"
+                },
+                "value": {
+                  "type": "string",
+                  "default": "upload-box-priority"
+                }
+              }
+            },
+            "kafkaUser": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    "Read"
+                  ]
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1025,6 +1057,17 @@
           "title": "Http Request Timeout Seconds",
           "type": [
             "number",
+            "null"
+          ]
+        },
+        "upload_box_priority_topic": {
+          "description": "Name of the event topic containing upload box priority events",
+          "examples": [
+            "upload-box-priority"
+          ],
+          "title": "Upload Box Priority Topic",
+          "type": [
+            "string",
             "null"
           ]
         },

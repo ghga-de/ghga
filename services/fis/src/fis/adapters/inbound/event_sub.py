@@ -18,16 +18,24 @@
 import logging
 from uuid import UUID
 
-from fis.core.models import FileUnderInterrogation
+from fis.core.models import (
+    FileUnderInterrogation,
+    UploadBoxPriority,
+    UploadBoxPriorityEntry,
+)
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
-from ghga_event_schemas.configs import FileUploadEventsConfig
+from ghga_event_schemas import pydantic_ as event_schemas
+from ghga_event_schemas.configs import (
+    FileUploadEventsConfig,
+    UploadBoxPriorityEventsConfig,
+)
 from hexkit.protocols.daosub import DaoSubscriberProtocol
 
 log = logging.getLogger(__name__)
 
 
-class OutboxSubConfig(FileUploadEventsConfig):
-    """Config for the outbox subscriber"""
+class OutboxSubConfig(FileUploadEventsConfig, UploadBoxPriorityEventsConfig):
+    """Config for the outbox subscribers"""
 
 
 class OutboxSubTranslator(DaoSubscriberProtocol):
@@ -59,3 +67,44 @@ class OutboxSubTranslator(DaoSubscriberProtocol):
         """Consume event indicating the cancellation or removal of a FileUpload."""
         file_id = UUID(resource_id)  # this ID is canonically a UUID4
         await self._interrogation_handler.delete_file(file_id=file_id)
+
+
+class UploadBoxPrioritySubTranslator(DaoSubscriberProtocol):
+    """Translator class for the upload box priority list, which RS publishes via
+    the outbox.
+
+    FIS knows only file upload boxes, so it keeps just their IDs, as `box_id`.
+    """
+
+    event_topic: str
+    dto_model = event_schemas.UploadBoxPriority
+
+    def __init__(
+        self,
+        *,
+        config: OutboxSubConfig,
+        interrogation_handler: InterrogationHandlerPort,
+    ):
+        self._config = config
+        self._interrogation_handler = interrogation_handler
+        self.event_topic = config.upload_box_priority_topic
+
+    async def changed(
+        self, resource_id: str, update: event_schemas.UploadBoxPriority
+    ) -> None:
+        """Consume change event for the upload box priority list."""
+        priority = UploadBoxPriority(
+            id=update.id,
+            version=update.version,
+            entries=[
+                UploadBoxPriorityEntry(box_id=entry.file_upload_box_id)
+                for entry in update.entries
+            ],
+        )
+        await self._interrogation_handler.store_upload_box_priority(priority=priority)
+
+    async def deleted(self, resource_id: str) -> None:
+        """Consume event indicating the removal of the upload box priority list."""
+        await self._interrogation_handler.clear_upload_box_priority(
+            priority_id=resource_id
+        )

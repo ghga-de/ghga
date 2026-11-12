@@ -18,7 +18,11 @@
 from pathlib import Path
 from uuid import uuid4
 
-from fis.core.models import FileUnderInterrogation
+from fis.core.models import (
+    FileUnderInterrogation,
+    UploadBoxPriority,
+    UploadBoxPriorityEntry,
+)
 from hexkit.utils import now_utc_ms_prec
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -39,4 +43,13 @@ def create_file_under_interrogation(storage_alias: str):
         state="inbox",
         state_updated=now_utc_ms_prec(),
         can_remove=False,
+    )
+
+
+def make_upload_box_priority(*, version: int) -> UploadBoxPriority:
+    """Make an upload box priority list with two boxes"""
+    return UploadBoxPriority(
+        id="global",
+        version=version,
+        entries=[UploadBoxPriorityEntry(box_id=uuid4()) for _ in range(2)],
     )

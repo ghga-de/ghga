@@ -21,11 +21,18 @@ from contextlib import asynccontextmanager, nullcontext
 
 from fastapi import FastAPI
 
-from fis.adapters.inbound.event_sub import OutboxSubTranslator
+from fis.adapters.inbound.event_sub import (
+    OutboxSubTranslator,
+    UploadBoxPrioritySubTranslator,
+)
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.configure import get_configured_app
 from fis.adapters.inbound.fastapi_.http_authorization import JWT
-from fis.adapters.outbound.dao import get_file_dao, get_interrogation_report_dao
+from fis.adapters.outbound.dao import (
+    get_file_dao,
+    get_interrogation_report_dao,
+    get_upload_box_priority_dao,
+)
 from fis.adapters.outbound.event_pub import EventPubTranslator
 from fis.adapters.outbound.http import get_configured_httpx_client
 from fis.adapters.outbound.secrets import SecretsClient
@@ -89,6 +96,9 @@ async def prepare_core(
         interrogation_report_dao = await get_interrogation_report_dao(
             dao_factory=dao_factory
         )
+        upload_box_priority_dao = await get_upload_box_priority_dao(
+            dao_factory=dao_factory
+        )
         event_publisher = EventPubTranslator(
             config=config, provider=persistent_publisher
         )
@@ -97,6 +107,7 @@ async def prepare_core(
             config=config,
             file_dao=file_dao,
             interrogation_report_dao=interrogation_report_dao,
+            upload_box_priority_dao=upload_box_priority_dao,
             event_publisher=event_publisher,
             secrets_client=secrets_client,
         )
@@ -163,7 +174,13 @@ async def prepare_event_subscriber(
             config=config,
             interrogation_handler=interrogation_handler,
         )
-        combo_translator = ComboTranslator(translators=[file_upload_translator])
+        upload_box_priority_translator = UploadBoxPrioritySubTranslator(
+            config=config,
+            interrogation_handler=interrogation_handler,
+        )
+        combo_translator = ComboTranslator(
+            translators=[file_upload_translator, upload_box_priority_translator]
+        )
 
         async with (
             KafkaEventPublisher.construct(config=config) as dlq_publisher,

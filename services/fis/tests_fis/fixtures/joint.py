@@ -26,7 +26,11 @@ import pytest_asyncio
 from fis.adapters.outbound.event_pub import EventPubTranslator
 from fis.config import Config
 from fis.core.interrogation import InterrogationHandler
-from fis.core.models import FileUnderInterrogation, InterrogationReport
+from fis.core.models import (
+    FileUnderInterrogation,
+    InterrogationReport,
+    UploadBoxPriority,
+)
 from fis.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import FileDao
@@ -47,6 +51,10 @@ InMemFileDao = new_mock_dao_class(dto_model=FileUnderInterrogation, id_field="id
 
 InMemInterrogationReportDao = new_mock_dao_class(
     dto_model=InterrogationReport, id_field="file_id"
+)
+
+InMemUploadBoxPriorityDao = new_mock_dao_class(
+    dto_model=UploadBoxPriority, id_field="id"
 )
 
 
@@ -102,6 +110,7 @@ class JointRig:
     # the in-memory type, not the port: the unit tests use the mock DAO's own API
     file_dao: BaseInMemDao[FileUnderInterrogation]
     interrogation_report_dao: BaseInMemDao[InterrogationReport]
+    upload_box_priority_dao: BaseInMemDao[UploadBoxPriority]
     secrets_client: AsyncMock
     publisher: EventPubTranslatorPort
     event_store: InMemEventStore
@@ -114,6 +123,7 @@ def rig(config: Config) -> JointRig:
     event_store = InMemEventStore()
     file_dao = InMemFileDao()
     interrogation_report_dao = InMemInterrogationReportDao()
+    upload_box_priority_dao = InMemUploadBoxPriorityDao()
     secrets_client = AsyncMock(spec=SecretsClientPort)
     secrets_client.deposit_secret.return_value = "mock-secret-id"
     publisher = EventPubTranslator(
@@ -123,6 +133,7 @@ def rig(config: Config) -> JointRig:
         config=config,
         file_dao=file_dao,
         interrogation_report_dao=interrogation_report_dao,
+        upload_box_priority_dao=upload_box_priority_dao,
         event_publisher=publisher,
         secrets_client=secrets_client,
     )
@@ -130,6 +141,7 @@ def rig(config: Config) -> JointRig:
         config=config,
         file_dao=file_dao,
         interrogation_report_dao=interrogation_report_dao,
+        upload_box_priority_dao=upload_box_priority_dao,
         secrets_client=secrets_client,
         publisher=publisher,
         event_store=event_store,
