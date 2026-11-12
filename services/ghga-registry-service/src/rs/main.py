@@ -24,6 +24,7 @@ import logging
 from contextlib import suppress
 
 from ghga_service_commons.api import run_server
+from hexkit.correlation import set_new_correlation_id
 from hexkit.log import configure_logging
 from hexkit.opentelemetry import configure_opentelemetry
 from hexkit.providers.mongodb.migrations import MigrationManager
@@ -70,7 +71,8 @@ async def run_rest_app():
         prepare_rest_app(config=config, registry_override=registry) as app,
     ):
         with suppress(UploadBoxPriorityManagerPort.PriorityUpdateError):
-            await registry.priority_manager.repair()
+            async with set_new_correlation_id():
+                await registry.priority_manager.repair()
         await run_server(app=app, config=config)
 
 
