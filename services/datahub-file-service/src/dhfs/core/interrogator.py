@@ -195,23 +195,27 @@ class Interrogator(InterrogatorPort):
             self._crypto_executor, functools.partial(context.run, func, *args, **kwargs)
         )
 
-    async def interrogate_new_files(self) -> None:
+    async def interrogate_new_files(self) -> bool:
         """Query the GHGA Central API for new files that need to be re-encrypted.
 
         This method handles InterrogationError exceptions by reporting failures to the
         Central API. CantCompleteError exceptions propagate up to the caller.
+
+        Returns `True` if at least one file was concluded, with success or a reported
+        failure, and `False` if there were no files or every file was inconclusive.
 
         Raises:
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
         """
         new_files = await self._fetch_batch()
         if new_files is None:
-            return
+            return False
 
         log.info("Received a batch of %i file(s) to process.", len(new_files))
 
         # One file at a time. A CriticalError is left uncaught so that it abandons
         #  the rest of the batch, which is the point of that severity.
+        concluded_a_file = False
         for file in new_files:
             try:
                 await self._check_file_is_in_inbox(file=file)
@@ -227,8 +231,11 @@ class Interrogator(InterrogatorPort):
                     file.id,
                     err,
                 )
+                continue
+            concluded_a_file = True
 
         log.info("Finished processing current file batch.")
+        return concluded_a_file
 
     async def _check_file_is_in_inbox(self, *, file: FileUpload) -> None:
         """Verify that the file exists in the inbox before processing it.

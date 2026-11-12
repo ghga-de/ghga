@@ -77,11 +77,14 @@ class InterrogatorPort(ABC):
         ...
 
     @abstractmethod
-    async def interrogate_new_files(self) -> None:
+    async def interrogate_new_files(self) -> bool:
         """Query the GHGA Central API for new files that need to be re-encrypted.
 
         This method handles InterrogationError exceptions by reporting failures to the
         Central API. CantCompleteError exceptions propagate up to the caller.
+
+        Returns `True` if at least one file was concluded, with success or a reported
+        failure, and `False` if there were no files or every file was inconclusive.
 
         Raises:
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
