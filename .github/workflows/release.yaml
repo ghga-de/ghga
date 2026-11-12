@@ -735,6 +735,8 @@ jobs:
       # For trusted publishing in the called workflow, which cannot hold more than its
       # caller grants.
       id-token: write
+      # To read the upgrade notes from the pull request descriptions for the drafts.
+      pull-requests: read
     uses: ./.github/workflows/pypi-publish.yaml
     with:
       mode: ${{ needs.resolve.outputs.mode }}

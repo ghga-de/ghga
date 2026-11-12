@@ -111,6 +111,17 @@ jobs:
         with:
           path: artifacts
           pattern: docs-*
+      # download-artifact puts a lone match straight into `path`, not into a folder of its name.
+      - name: Keep one folder per artifact
+        env:
+          MEMBERS: ${{ needs.plan.outputs.members }}
+        run: |
+          name="docs-$(jq -r '.[0].package' <<<"$MEMBERS")"
+          if [ "$(jq length <<<"$MEMBERS")" -eq 1 ] && [ ! -d "artifacts/$name" ]; then
+            mv artifacts "$RUNNER_TEMP/$name"
+            mkdir artifacts
+            mv "$RUNNER_TEMP/$name" artifacts/
+          fi
       # Each artifact becomes <package>/ in the site root, which also gets an index and a
       # 404 page. In a script rather than inline here so it can be run and read on its own;
       # scripts/assemble_docs_site.py explains why the 404 page earns its keep.
