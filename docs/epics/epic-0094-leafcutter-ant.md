@@ -381,7 +381,7 @@ New unit tests, on the `rig` fixture, with the clock frozen rather than slept th
 
 New integration tests, on `JointFixture` with the Mongo testcontainer, since the in-memory DAO cannot prove these:
 
-- Two concurrent claims through `asyncio.gather` return disjoint sets whose union is everything available.
+- N concurrent claims through `asyncio.gather` over N waiting files return N different files, and one more claim returns 204.
   Only this test proves that the claim is atomic in MongoDB.
 - A renewal and a claim racing on an expired lease: exactly one of them wins.
 - The claim filter matches a document inserted without `leased_until` at all, which proves no migration is needed.
