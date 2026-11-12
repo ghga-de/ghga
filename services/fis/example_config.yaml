@@ -59,4 +59,5 @@ port: 8080
 service_instance_id: '1'
 service_name: fis
 timeout_keep_alive: 90
+upload_box_priority_topic: upload-box-priority
 workers: 1
