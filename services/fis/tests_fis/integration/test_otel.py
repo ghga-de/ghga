@@ -134,8 +134,8 @@ async def test_list_uploads_records_spans(otel, rig: OtelRig):
             "GET /storages/{storage_alias}/uploads",
             "GET /storages/{storage_alias}/uploads http send",
             "GET /storages/{storage_alias}/uploads http send",
-            # Autoinstrumented MongoDB lookup (pymongo)
-            "test.find",
+            # Autoinstrumented MongoDB aggregation (pymongo)
+            "test.aggregate",
         ],
     )
 
