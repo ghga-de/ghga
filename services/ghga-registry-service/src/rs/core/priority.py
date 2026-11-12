@@ -84,9 +84,9 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
     async def repair(self) -> None:
         """Repair the priority list on behalf of the system, as done at startup.
 
-        The repair drops entries for boxes that are archived or no longer exist, and
-        adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
-        the list is already complete.
+        The repair adds missing boxes to the end, oldest `last_changed` first, and
+        drops the entries for boxes that are archived or no longer exist. Writes
+        nothing if the list is already complete.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.
