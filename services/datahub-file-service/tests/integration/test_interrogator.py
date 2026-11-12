@@ -90,7 +90,8 @@ async def test_interrogate_new_files(joint_fixture: JointFixture, caplog):
 
     # Process all files
     with caplog.at_level("INFO"):
-        await joint_fixture.interrogator.interrogate_new_files()
+        concluded_a_file = await joint_fixture.interrogator.interrogate_new_files()
+    assert concluded_a_file
 
     # Check the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -294,8 +295,9 @@ async def test_file_not_in_inbox(joint_fixture: JointFixture, caplog):
     )
     with caplog.at_level("WARNING"):
         caplog.clear()
-        await joint_fixture.interrogator.interrogate_new_files()
+        concluded_a_file = await joint_fixture.interrogator.interrogate_new_files()
     assert err_msg in caplog.text
+    assert not concluded_a_file
 
 
 async def test_file_decryption_error(joint_fixture: JointFixture):
@@ -358,7 +360,7 @@ async def test_file_decryption_error(joint_fixture: JointFixture):
     )
 
     # Process files - should handle the decryption error gracefully
-    await joint_fixture.interrogator.interrogate_new_files()
+    assert await joint_fixture.interrogator.interrogate_new_files()
 
     # Verify that a failure report was submitted
     [report] = joint_fixture.central_api.submitted_reports
@@ -475,6 +477,12 @@ async def test_central_api_error_on_fetch_new_files(
         await joint_fixture.interrogator.interrogate_new_files()
 
     assert "The GHGA Central API returned an error response" in caplog.text
+
+
+async def test_empty_response_is_inconclusive(joint_fixture: JointFixture):
+    """A round in which the Central API returns no files is inconclusive."""
+    joint_fixture.central_api.on_fetch_new_uploads = respond(200, json=[])
+    assert not await joint_fixture.interrogator.interrogate_new_files()
 
 
 async def test_central_api_bad_format_on_fetch_new_files(
