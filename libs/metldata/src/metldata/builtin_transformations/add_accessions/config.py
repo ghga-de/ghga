@@ -37,6 +37,7 @@ class AccessionAdditionConfig(BaseSettings):
         description=(
             "Name of the metadata model class whose entity takes the study PID. The"
             + " accessions of every class missing from the accession map are composed"
-            + " from that PID and the alias."
+            + " from that PID and the alias. dskit sets it from its top-level"
+            + " 'study_class_name'."
         ),
     )

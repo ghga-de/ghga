@@ -110,9 +110,9 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   Only fresh lineages are minted; the version counter stays at `1` until predecessors can be declared → [changed by the feature](../epics/epic-0093-giraffe.md).
 - A dataset gets `{study_pid}.DS.xxx`, unique within its study.
   The submission's accession map stores the study and dataset PIDs only.
-  Which classes are the study and the dataset is set by `study_class_name` and `dataset_class_name` in the config.
+  Which classes are the study and the dataset is set by `study_class_name` and `dataset_class_name` in the config; loading the model checks that it anchors both.
 - Every other entity gets `{study_pid}.{alias}`, which is never stored: the `add_accessions` transformation composes it on every run, from the study PID in the map (`complete_accession_map` in `builtin_transformations/add_accessions/metadata_transform.py`).
-  It takes the study class from its own `study_class_name`, and composes nothing for a flat study accession, whose map must hold every class.
+  It takes the study class from its own `study_class_name`, which dskit sets from the top-level one, and composes nothing for a flat study accession, whose map must hold every class.
   The alias is normalized by `normalize_alias` in `metadata_utils.py`: stripped and lowercased, and every character other than `a–z`, `0–9`, `_` and `-` becomes `-`, so the accession is safe in URLs and file names and holds no further dot.
   The metadata and the accession map keep the alias as submitted.
 - A random block is drawn up to 100 times; if every draw collides, one is picked from the blocks still unused, and `AccessionGenerationError` is raised when none is left.

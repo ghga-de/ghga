@@ -16,9 +16,6 @@
 
 """Handling of the accession handler."""
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
-
 from ghga_service_commons.utils.accessions import (
     BASE32_ALPHABET,
     DATASET_PID_PREFIX,
@@ -31,28 +28,9 @@ from metldata.accession_registry.accession_registry_utils import (
     generate_random_block,
 )
 from metldata.accession_registry.accession_store import AccessionStore
+from metldata.model_utils.config import ModelClassesConfig
 
 MAX_RANDOM_ATTEMPTS = 100
-
-
-class AccessionRegistryConfig(BaseSettings):
-    """Config parameters and their defaults."""
-
-    study_class_name: str = Field(
-        default="Study",
-        description=(
-            "Name of the metadata model class whose entity takes the bare study PID."
-            + " The model does not need to contain it."
-        ),
-    )
-
-    dataset_class_name: str = Field(
-        default="Dataset",
-        description=(
-            "Name of the metadata model class whose entities are accessioned as"
-            + " '{study_pid}.DS.xxx'."
-        ),
-    )
 
 
 class AccessionRegistry:
@@ -63,10 +41,8 @@ class AccessionRegistry:
     class AccessionGenerationError(RuntimeError):
         """Raised when a the generation of a new accession failed."""
 
-    def __init__(
-        self, *, config: AccessionRegistryConfig, accession_store: AccessionStore
-    ):
-        """Initialize with config."""
+    def __init__(self, *, config: ModelClassesConfig, accession_store: AccessionStore):
+        """Initialize with the study and dataset classes and the accession store."""
         self._config = config
         self._accession_store = accession_store
 

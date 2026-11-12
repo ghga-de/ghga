@@ -22,13 +22,36 @@ from pydantic_settings import BaseSettings
 
 from metldata.model_utils.assumptions import (
     check_basic_model_assumption,
+    check_dataset_anchor,
     check_study_anchor,
     check_study_cardinality,
 )
 from metldata.model_utils.essentials import MetadataModel
 
 
-class MetadataModelConfig(BaseSettings):
+class ModelClassesConfig(BaseSettings):
+    """The classes of the metadata model whose entities take the study and dataset
+    PIDs, which loading the model checks.
+    """
+
+    study_class_name: str = Field(
+        default="Study",
+        description=(
+            "Name of the metadata model class whose entity takes the study PID. The"
+            + " model must anchor it on the 'studies' slot."
+        ),
+    )
+
+    dataset_class_name: str = Field(
+        default="Dataset",
+        description=(
+            "Name of the metadata model class whose entities take dataset PIDs. The"
+            + " model must anchor it."
+        ),
+    )
+
+
+class MetadataModelConfig(ModelClassesConfig):
     """Config parameters and their defaults."""
 
     metadata_model_path: Path = Field(
@@ -38,12 +61,14 @@ class MetadataModelConfig(BaseSettings):
     @property
     def metadata_model(self) -> MetadataModel:
         """Load the submission model from the path and check that it meets the basic
-        assumptions and holds exactly one study per submission.
+        assumptions, holds exactly one study per submission and anchors the dataset
+        class.
         """
         model = MetadataModel.init_from_path(self.metadata_model_path)
         check_basic_model_assumption(model)
         # check_study_cardinality only looks at the STUDY_ANCHOR slot, not at the class
         # it holds, so check_study_anchor must run first
-        check_study_anchor(model)
+        check_study_anchor(model=model, study_class_name=self.study_class_name)
         check_study_cardinality(model)
+        check_dataset_anchor(model=model, dataset_class_name=self.dataset_class_name)
         return model

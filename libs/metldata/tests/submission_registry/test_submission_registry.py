@@ -136,6 +136,7 @@ def test_happy(
         {
             "studies": [{"alias": "shared"}],
             "files": [{"alias": "shared", "filename": "shared.fastq"}],
+            "datasets": [],
         },
     ],
     ids=["invalid_against_model", "shared_alias"],
