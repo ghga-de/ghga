@@ -262,13 +262,6 @@ def add_accessions_to_metadata(  # noqa: PLR0913
 
     for target_class_name, anchor_point in anchor_points_by_target.items():
         target_resources = []
-        target_accession_map = accession_map.get(anchor_point.root_slot)
-        if target_accession_map is None:
-            raise MetadataTransformationError(
-                "Could not find accession mapping for target class"
-                + f" {target_class_name}."
-            )
-
         for old_resource in metadata[anchor_point.root_slot]:
             new_resource = add_accession_to_resource(
                 resource=old_resource,
