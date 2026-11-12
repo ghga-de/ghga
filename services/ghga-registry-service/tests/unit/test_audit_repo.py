@@ -307,8 +307,8 @@ async def test_log_box_priority_updated():
         label="UploadBoxPriority updated",
         description=(
             "The upload box priority list was changed to version 8."
-            f" Old order: [{old_box_ids[0]}, {old_box_ids[1]}]."
-            f" New order: [{old_box_ids[1]}]."
+            f"\nOld order:\n  {old_box_ids[0]}\n  {old_box_ids[1]}"
+            f"\nNew order:\n  {old_box_ids[1]}"
         ),
         user_id=None,
         action="U",
