@@ -108,7 +108,9 @@ class InterrogationHandlerPort(ABC):
     async def get_files_not_yet_interrogated(
         self, *, storage_alias: str
     ) -> list[models.BaseFileInformation]:
-        """Return a list of not-yet-interrogated files for a Data Hub"""
+        """Return up to `MAX_FILES_PER_REQUEST` not-yet-interrogated files for a Data
+        Hub, highest priority first.
+        """
 
     @abstractmethod
     async def delete_file(self, *, file_id: UUID4) -> None:

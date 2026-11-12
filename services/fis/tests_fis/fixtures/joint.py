@@ -27,6 +27,7 @@ from fis.adapters.outbound.event_pub import EventPubTranslator
 from fis.config import Config
 from fis.core.interrogation import InterrogationHandler
 from fis.core.models import (
+    BaseFileInformation,
     FileUnderInterrogation,
     InterrogationReport,
     UploadBoxPriority,
@@ -35,6 +36,7 @@ from fis.inject import prepare_core, prepare_event_subscriber, prepare_rest_app
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import FileDao
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
+from fis.ports.outbound.interrogation_queue import InterrogationQueuePort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_service_commons.api.testing import AsyncTestClient
 from hexkit.providers.akafka import KafkaEventSubscriber
@@ -58,6 +60,34 @@ InMemUploadBoxPriorityDao = new_mock_dao_class(
 )
 
 
+class FakeInterrogationQueue(InterrogationQueuePort):
+    """Serves the waiting files of an in-memory file DAO in `id` order.
+
+    The in-memory DAO can't run the aggregation, so this fake ignores the priority
+    list. The integration tests cover the ranking against MongoDB.
+    """
+
+    def __init__(self, *, file_dao: BaseInMemDao[FileUnderInterrogation]):
+        self._file_dao = file_dao
+
+    async def get_waiting_files(
+        self, *, storage_alias: str, limit: int
+    ) -> list[BaseFileInformation]:
+        """Return up to `limit` waiting files of the storage alias in `id` order."""
+        files = [
+            file
+            async for file in self._file_dao.find_all(
+                filter_={
+                    "storage_alias": storage_alias,
+                    "state": "inbox",
+                    "interrogated": False,
+                }
+            )
+        ]
+        files.sort(key=lambda file: file.id)
+        return [BaseFileInformation(**file.model_dump()) for file in files[:limit]]
+
+
 @dataclass
 class JointFixture:
     """A test class that holds the main components of the service for testing"""
@@ -65,6 +95,7 @@ class JointFixture:
     config: Config
     kafka: KafkaFixture
     file_dao: FileDao
+    interrogation_queue: InterrogationQueuePort
     rest_client: httpx2.AsyncClient
     outbox_consumer: KafkaEventSubscriber
     interrogation_handler: InterrogationHandlerPort
@@ -95,6 +126,7 @@ async def joint_fixture(
             config=config,
             kafka=kafka,
             file_dao=interrogation_handler._file_dao,  # type: ignore[attr-defined]
+            interrogation_queue=interrogation_handler._interrogation_queue,  # type: ignore[attr-defined]
             rest_client=rest_client,
             outbox_consumer=outbox_consumer,
             interrogation_handler=interrogation_handler,
@@ -134,6 +166,7 @@ def rig(config: Config) -> JointRig:
         file_dao=file_dao,
         interrogation_report_dao=interrogation_report_dao,
         upload_box_priority_dao=upload_box_priority_dao,
+        interrogation_queue=FakeInterrogationQueue(file_dao=file_dao),
         event_publisher=publisher,
         secrets_client=secrets_client,
     )

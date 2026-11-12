@@ -14,7 +14,7 @@
 # limitations under the License.
 """DAO translators for accessing the database."""
 
-from fis.constants import UPLOAD_BOX_PRIORITY_COLLECTION
+from fis.constants import FILES_COLLECTION, UPLOAD_BOX_PRIORITY_COLLECTION
 from fis.core.models import (
     FileUnderInterrogation,
     InterrogationReport,
@@ -32,10 +32,14 @@ from hexkit.providers.mongodb import MongoDbIndex
 async def get_file_dao(*, dao_factory: DaoFactoryProtocol) -> FileDao:
     """Setup the DAOs using the specified provider of the DaoFactoryProtocol."""
     return await dao_factory.get_dao(
-        name="files",
+        name=FILES_COLLECTION,
         dto_model=FileUnderInterrogation,
         id_field="id",
-        indexes=[MongoDbIndex(fields="object_id")],
+        indexes=[
+            MongoDbIndex(fields="object_id"),
+            # Serves the $match of the waiting files
+            MongoDbIndex(fields={"storage_alias": 1, "state": 1, "interrogated": 1}),
+        ],
     )
 
 

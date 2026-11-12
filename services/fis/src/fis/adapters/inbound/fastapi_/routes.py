@@ -24,7 +24,12 @@ from pydantic import UUID4
 
 from fis.adapters.inbound.fastapi_ import dummies
 from fis.adapters.inbound.fastapi_.http_authorization import JWT, require_data_hub_jwt
-from fis.constants import DHFS_USER_AGENT_PREFIX, OLD_DHFS_USER_AGENT_PREFIX, TRACER
+from fis.constants import (
+    DHFS_USER_AGENT_PREFIX,
+    MAX_FILES_PER_REQUEST,
+    OLD_DHFS_USER_AGENT_PREFIX,
+    TRACER,
+)
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 
@@ -126,6 +131,11 @@ async def health(
 @router.get(
     "/storages/{storage_alias}/uploads",
     summary="Serve a list of new file uploads (yet to be interrogated)",
+    description=(
+        f"Return up to {MAX_FILES_PER_REQUEST} not-yet-interrogated files for a Data"
+        + " Hub (storage_alias). Files of boxes in the upload box priority list come"
+        + " first, in list order."
+    ),
     operation_id="listUploads",
     tags=["FileIngestService"],
     status_code=status.HTTP_200_OK,
@@ -138,7 +148,9 @@ async def list_uploads(
     _token: Annotated[JWT, require_data_hub_jwt],
     _dhfs_version_constraint: dummies.DhfsVersionConstraint,
 ) -> list[models.BaseFileInformation]:
-    """Return a list of not-yet-interrogated files for a Data Hub (storage_alias)"""
+    """Return up to `MAX_FILES_PER_REQUEST` not-yet-interrogated files for a Data Hub
+    (storage_alias), highest priority first.
+    """
     check_and_log_user_agent_header(
         request=request,
         dhfs_version_constraint=_dhfs_version_constraint,
