@@ -420,6 +420,11 @@ class AccessRequestDetails(UserID):
     dataset_description: str | None = Field(
         default=None, description="A description of the dataset"
     )
+    contact_email: EmailStr | None = Field(
+        default=None,
+        description="The contact e-mail address the requester entered for this"
+        " request, which can differ from the e-mail address of the user account",
+    )
     status: AccessRequestStatus = Field(
         default=...,
         description="The status of the access request",

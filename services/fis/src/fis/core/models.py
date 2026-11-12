@@ -14,7 +14,14 @@
 # limitations under the License.
 """Models for internal representation"""
 
-from pydantic import UUID4, BaseModel, Field, SecretBytes, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    NonNegativeFloat,
+    SecretBytes,
+    model_validator,
+)
 
 from ghga_event_schemas.pydantic_ import FileUploadState
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -131,6 +138,19 @@ class InterrogationReport(BaseModel):
     reason: str | None = Field(
         default=None,
         description="Conditional upon failure, contains reason for failure",
+    )
+    wall_time_seconds: NonNegativeFloat | None = Field(
+        default=None,
+        description=(
+            "Elapsed time of processing all file parts in seconds, if DHFS sent it"
+        ),
+    )
+    stage_seconds: dict[str, NonNegativeFloat] | None = Field(
+        default=None,
+        description=(
+            "Seconds spent in each processing stage, summed over all file parts, if"
+            + " DHFS sent it. Parts run concurrently, so the sum can exceed the wall time."
+        ),
     )
 
 

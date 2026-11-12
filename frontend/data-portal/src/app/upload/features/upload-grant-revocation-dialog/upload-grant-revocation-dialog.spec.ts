@@ -65,8 +65,10 @@ describe('UploadGrantRevocationDialog', () => {
     expect(screen.getByText(/dr\. john doe/i)).toBeVisible();
   });
 
-  it('should display the grantee email', () => {
-    expect(screen.getByText(/doe@home\.org/i)).toBeVisible();
+  it('should display the grantee email as the LS Login email', () => {
+    const email = screen.getByText(/doe@home\.org/i);
+    expect(email).toBeVisible();
+    expect(email.parentElement).toHaveTextContent(/with LS Login email doe@home\.org/);
   });
 
   it('should not show a revocation error message initially', () => {

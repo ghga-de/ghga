@@ -49,7 +49,7 @@ class HttpClient(Client):
 
 
 @fixture(name="http", scope="session")
-def http_fixture(config: Config) -> Generator[HttpClient, None, None]:
+def http_fixture(config: Config) -> Generator[HttpClient]:
     """Pytest fixture for tests using an HTTP client."""
     black_box_mode = config.black_box_mode
     if black_box_mode:

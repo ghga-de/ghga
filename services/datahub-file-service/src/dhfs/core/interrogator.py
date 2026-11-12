@@ -21,7 +21,6 @@ import functools
 import io
 import logging
 import os
-import time
 from collections.abc import Callable, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -46,6 +45,7 @@ from dhfs.config import Config
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH, SEGMENT_OVERHEAD
 from dhfs.core.checksums import Checksums
 from dhfs.core.models import FileUpload, InterrogationReport, PartRange
+from dhfs.core.timings import PartTimings
 from dhfs.ports.outbound.central import CentralClientPort
 from dhfs.ports.outbound.interrogator import InterrogatorPort
 from dhfs.ports.outbound.s3 import S3ClientPort
@@ -71,7 +71,7 @@ class _PartContext:
     part_range: PartRange
     part_no: int
     new_object_id: str
-    timings: dict[str, float]
+    timings: PartTimings
 
     @property
     def file_id(self) -> UUID4:
@@ -88,18 +88,6 @@ class _PartContext:
             "file_part_number": self.part_no,
             "content_range": f"{self.part_range.start}-{self.part_range.stop}",
         }
-
-
-@contextmanager
-def _stopwatch(timings: dict[str, float], stage: str) -> Generator[None]:
-    """Add the block's elapsed time to `timings[stage]`.
-
-    Deliberately not exception-safe: a stage that raised did not do its work, so its
-    time is not recorded.
-    """
-    start = time.monotonic()
-    yield
-    timings[stage] += time.monotonic() - start
 
 
 def _flatten_exception_group(error: BaseException) -> list[BaseException]:
@@ -418,7 +406,7 @@ class Interrogator(InterrogatorPort):
         """Download a single encrypted part, translating S3 errors."""
         file_upload = ctx.file_upload
         try:
-            with _stopwatch(ctx.timings, "download"):
+            with ctx.timings.measure_stage("download"):
                 return await self._s3_client.fetch_file_content_range(
                     bucket_id=file_upload.bucket_id,
                     object_id=str(file_upload.object_id),
@@ -439,7 +427,7 @@ class Interrogator(InterrogatorPort):
     ) -> None:
         """Upload a single re-encrypted part, translating S3 errors."""
         try:
-            with _stopwatch(ctx.timings, "upload"):
+            with ctx.timings.measure_stage("upload"):
                 await self._s3_client.upload_file_part(
                     upload_id=upload_id,
                     object_id=ctx.new_object_id,
@@ -472,7 +460,7 @@ class Interrogator(InterrogatorPort):
         InconclusiveError, so an unrecognised failure schedules a retry.
         """
         try:
-            with _stopwatch(ctx.timings, stage):
+            with ctx.timings.measure_stage(stage):
                 return await self._run_crypto(func, **kwargs)
         except Exception as err:
             log.warning(failure_message, ctx.file_id, extra=ctx.log_extra)
@@ -565,7 +553,7 @@ class Interrogator(InterrogatorPort):
         upload_id: str,
         old_secret: SecretBytes,
         new_secret: SecretBytes,
-    ) -> Checksums:
+    ) -> tuple[Checksums, PartTimings]:
         """Perform the decrypt/re-encrypt/decrypt/upload cycle on each file part.
 
         `max_concurrent_parts` workers draw part ranges from a shared iterator; the
@@ -573,8 +561,9 @@ class Interrogator(InterrogatorPort):
         that pool is this file's whole budget - memory, live tasks and S3 transfers.
 
         Returns the `Checksums` object containing the checksums calculated during
-        the file processing. All error translation is done here, but all S3 cleanup is
-        handled from the calling function, `interrogate_file()`.
+        the file processing, and the `PartTimings` of the parts phase. All error translation is done
+        here, but all S3 cleanup is handled from the calling function,
+        `interrogate_file()`.
 
         Raises:
         - DecryptionError if a file part cannot be decrypted.
@@ -589,10 +578,7 @@ class Interrogator(InterrogatorPort):
         #  predecessor to be folded in before folding itself in and releasing the next.
         hashed: list[asyncio.Event] = [asyncio.Event() for _ in part_ranges]
 
-        timings = dict.fromkeys(
-            ("download", "decrypt", "reencrypt", "verify", "digest", "fold", "upload"),
-            0.0,
-        )
+        timings = PartTimings()
 
         async def _handle_part(
             index: int, part_range: PartRange
@@ -622,7 +608,7 @@ class Interrogator(InterrogatorPort):
             #  it can only ever wait on a part that is progressing.
             if index:
                 await hashed[index - 1].wait()
-            with _stopwatch(timings, "fold"):
+            with timings.measure_stage("fold"):
                 await self._run_crypto(checksums.update_unencrypted, verified_part)
             hashed[index].set()
             del verified_part
@@ -648,12 +634,10 @@ class Interrogator(InterrogatorPort):
                     return
                 digests[index] = await _handle_part(index, part_range)
 
-        _wall = time.monotonic()
-        with _collapsing_error_groups():
+        with timings.measure_wall_time(), _collapsing_error_groups():
             async with asyncio.TaskGroup() as task_group:
                 for _ in range(worker_count):
                     task_group.create_task(_part_worker())
-        wall_time = time.monotonic() - _wall
 
         # The group only exits cleanly once every part is done, so there are no holes.
         checksums.set_encrypted_parts(cast(list[tuple[bytes, bytes]], digests))
@@ -662,17 +646,15 @@ class Interrogator(InterrogatorPort):
             file_upload=file_upload,
             part_count=len(part_ranges),
             timings=timings,
-            wall_time=wall_time,
         )
-        return checksums
+        return checksums, timings
 
     def _log_part_metrics(
         self,
         *,
         file_upload: FileUpload,
         part_count: int,
-        timings: dict[str, float],
-        wall_time: float,
+        timings: PartTimings,
     ) -> None:
         """Log throughput metrics for a completed file."""
         size_mib = file_upload.decrypted_size / (1024**2)
@@ -684,14 +666,14 @@ class Interrogator(InterrogatorPort):
             "part_count": part_count,
             "max_concurrent_parts": self._max_concurrent_parts,
         }
-        for stage, elapsed in timings.items():
+        for stage, elapsed in timings.stages.items():
             metrics[f"{stage}_s"] = round(elapsed, 3)
             metrics[f"{stage}_mib_per_s"] = _throughput(elapsed)
 
         # Stage times overlap across parts, so only wall time is the real duration.
-        metrics["stage_total_s"] = round(sum(timings.values()), 3)
-        metrics["total_s"] = round(wall_time, 3)
-        metrics["total_mib_per_s"] = _throughput(wall_time)
+        metrics["stage_total_s"] = round(timings.stage_total, 3)
+        metrics["total_s"] = timings.wall_time_seconds
+        metrics["total_mib_per_s"] = _throughput(timings.wall_time)
 
         log.info(
             "File %s: Re-encryption process complete. See log details for metrics.",
@@ -756,7 +738,7 @@ class Interrogator(InterrogatorPort):
                 file_upload.id,
             )
             # Error translation handled inside ._process_file_parts()
-            checksums = await self._process_file_parts(
+            checksums, timings = await self._process_file_parts(
                 file_upload=file_upload,
                 new_object_id=new_object_id,
                 upload_id=upload_id,
@@ -859,6 +841,8 @@ class Interrogator(InterrogatorPort):
             encrypted_parts_md5=checksums.encrypted_md5,
             encrypted_parts_sha256=checksums.encrypted_sha256,
             encrypted_size=file_upload.encrypted_size - file_upload.offset,
+            wall_time_seconds=timings.wall_time_seconds,
+            stage_seconds=timings.stage_seconds,
         )
 
     async def _clean_up_upload(self, *, upload_id: str, object_id: str, file_id: UUID4):
@@ -890,6 +874,8 @@ class Interrogator(InterrogatorPort):
         encrypted_parts_md5: list[bytes],
         encrypted_parts_sha256: list[bytes],
         encrypted_size: int,
+        wall_time_seconds: float | None = None,
+        stage_seconds: dict[str, float] | None = None,
     ) -> None:
         """Submit an InterrogationReport for a successful interrogation.
 
@@ -908,6 +894,8 @@ class Interrogator(InterrogatorPort):
             encrypted_parts_md5=[h.hex() for h in encrypted_parts_md5],
             encrypted_parts_sha256=[h.hex() for h in encrypted_parts_sha256],
             encrypted_size=encrypted_size,
+            wall_time_seconds=wall_time_seconds,
+            stage_seconds=stage_seconds,
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)

@@ -1,7 +1,7 @@
 ---
 status: current
 date: 2026-07-13
-amended: 2026-10-15
+amended: 2026-11-02
 tags: [backend, data, events]
 related: [AC-0001, AC-0002, AC-0007, AC-0009]
 ---
@@ -140,7 +140,9 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 
 - Root/tree class `Submission`; every entity class is a required, multivalued, `inlined_as_list` slot of it.
   **The model holds exactly one study per submission**: the `studies` slot has a minimum and maximum cardinality of 1, which metldata checks when it loads the model.
-  The fixtures are therefore two submissions, `metadata_study_a.json` (`STUDY_A`) and `metadata_study_b.json` (`STUDY_B`).
+  The fixtures are therefore one submission per study.
+  `metadata_study_a.json` (`STUDY_A`) and `metadata_study_b.json` (`STUDY_B`) go through `submit`.
+  `metadata_study_x.json` (`STUDY_X`) goes through `amend` on the submission record and accession store in `testbed/example_data/metadata/legacy/`, which dskit 5.4.2 wrote before study PIDs, so the test bed covers both accession schemes.
 - Entities reference each other **by alias** at submission time; `add_accessions` swaps aliases for accessions during transform.
 - Study↔Dataset: `Dataset.study` is a **single** alias reference (`testbed/.../metadata_study_a.json`).
   Files (`ResearchDataFile`, `ProcessDataFile`, `*SupportingFile`) carry `alias`, a `name` (filename), a `dataset` ref, and an `ega_accession` slot.

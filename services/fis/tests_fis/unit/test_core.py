@@ -470,6 +470,40 @@ async def test_report_handling_duplicate(rig: JointRig):
     assert db_file.state == "interrogated"
 
 
+async def test_report_handling_duplicate_with_new_timing(rig: JointRig):
+    """Test that a resent report differing only in its timing is a duplicate.
+
+    DHFS measures the timing afresh on every submission, so a resend must not
+    conflict, and the stored report keeps the timing of the first submission.
+    """
+    file = create_file_under_interrogation(HUB1)
+    await rig.file_dao.insert(file)
+
+    report = models.InterrogationReportWithSecret(
+        file_id=file.id,
+        storage_alias=file.storage_alias,
+        interrogated_at=now_utc_ms_prec(),
+        passed=False,
+        reason="Checksum mismatch",
+        wall_time_seconds=12.5,
+        stage_seconds={"reencrypt": 3.0},
+    )
+    await rig.interrogation_handler.handle_interrogation_report(report=report)
+
+    resent = report.model_copy(
+        update={
+            "interrogated_at": now_utc_ms_prec(),
+            "wall_time_seconds": 99.0,
+            "stage_seconds": {"reencrypt": 1.0},
+        }
+    )
+    await rig.interrogation_handler.handle_interrogation_report(report=resent)
+
+    stored = await rig.interrogation_report_dao.get_by_id(file.id)
+    assert stored.wall_time_seconds == report.wall_time_seconds
+    assert stored.stage_seconds == report.stage_seconds
+
+
 async def test_report_handling_conflict(rig: JointRig):
     """Test that a second, contradicting InterrogationReport raises InterrogationReportConflict.
 

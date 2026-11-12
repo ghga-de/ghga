@@ -17,7 +17,7 @@
 
 __all__ = ["JointFixture", "joint_fixture"]
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Collection
 from dataclasses import dataclass
 
 import httpx2
@@ -26,6 +26,7 @@ import pytest_asyncio
 from jwcrypto.jwk import JWK
 from pydantic import UUID4
 
+from ghga_event_schemas.pydantic_ import FileUploadState
 from ghga_service_commons.api.testing import AsyncTestClient
 from ghga_service_commons.auth.ghga import AuthConfig
 from ghga_service_commons.utils.jwt_helpers import generate_jwk
@@ -75,6 +76,20 @@ class InMemBoxStatsAggregator(BoxStatsAggregatorPort):
             file_count += 1
             total_size += file_upload.decrypted_size
         return file_count, total_size
+
+    async def compute_file_state_counts(
+        self, *, box_ids: Collection[UUID4]
+    ) -> dict[UUID4, dict[FileUploadState, int]]:
+        counts: dict[UUID4, dict[FileUploadState, int]] = {}
+        async for file_upload in self._file_upload_dao.find_all(
+            filter_={
+                "box_id": {"$in": list(box_ids)},
+                "state": {"$in": list(COUNTED_UPLOAD_STATES)},
+            }
+        ):
+            box_counts = counts.setdefault(file_upload.box_id, {})
+            box_counts[file_upload.state] = box_counts.get(file_upload.state, 0) + 1
+        return counts
 
 
 @dataclass

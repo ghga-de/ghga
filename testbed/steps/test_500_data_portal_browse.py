@@ -32,9 +32,9 @@ from .conftest import (
 scenarios("../features/500_data_portal_browse.feature")
 
 EXPECTED_STATS = {
-    "Total datasets": 2,
-    "Individuals": 2,
-    "Files": 14,
+    "Total datasets": 3,
+    "Individuals": 3,
+    "Files": 16,
 }
 
 

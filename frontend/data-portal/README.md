@@ -53,6 +53,10 @@ just fe-dev
 Once the server is running, open your browser and navigate to `http://localhost:8080/`.
 The application will automatically reload whenever you modify any of the source files.
 
+The server binds `127.0.0.1`, which a dev container on Docker Engine shares with the host.
+A container runtime that runs containers in a VM may forward only ports bound to all addresses, and then the page does not load; set `data_portal_host=0.0.0.0` in your [`local.env`](#per-developer-settings).
+Do not make that the default: on Docker Engine it would put the dev server on the local network.
+
 By default, this will not use a proxy configuration; the API will be provided via the mock service worker, and the authentication will be faked as well.
 
 The MSW handlers in `src/mocks` intentionally return static responses.

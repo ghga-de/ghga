@@ -21,6 +21,7 @@ Feature: 202 Requeue Failed Upload
     And FIS holds a failed interrogation report for the "third" file
     And the object of the "first" file is still in the "inbox" bucket of "primary" storage
     And the object of the "second" file is still in the "inbox" bucket of "primary" storage
+    And the file states of the box for "primary" storage are "interrogated: 4, failed_interrogation: 3"
 
   Scenario: The box can neither be locked nor archived while files need attention
 
@@ -39,6 +40,9 @@ Feature: 202 Requeue Failed Upload
   Scenario: Data Steward requeues a failed file in the locked box via the portal
 
     Given I am logged in to the Data Portal as "Data Steward"
+    When I load the admin page "Upload Box Manager"
+    Then the box for "primary" storage is listed with the file states "4 ready, 3 failed"
+
     When I open the upload box for "primary" storage in the portal
     Then the "first" file is offered a retry in the portal
     And the "second" file is offered a retry in the portal
@@ -69,6 +73,7 @@ Feature: 202 Requeue Failed Upload
     And the object of the "second" file is gone from the "inbox" bucket of "primary" storage
     And the "second" file is marked as removable in the interrogation service
     And the upload box for "primary" storage holds "6" files
+    And the file states of the box for "primary" storage are "interrogated: 5, failed_interrogation: 1"
 
   @dataportal @frontend
   Scenario: Data Steward requeues all failed files of the box via the portal

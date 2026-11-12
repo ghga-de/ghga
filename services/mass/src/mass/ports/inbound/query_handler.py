@@ -38,6 +38,12 @@ class QueryHandlerPort(ABC):
                 "Error executing search. Possibly a problem with the supplied parameters."
             )
 
+    class RelevanceSortingWithoutQueryError(RuntimeError):
+        """Raised when sorting by relevance is requested without a query"""
+
+        def __init__(self):
+            super().__init__("Sorting by relevance requires a query")
+
     class ResourceNotFoundError(RuntimeError):
         """Raised when a matching resource ID can't be found in the database"""
 
@@ -83,6 +89,8 @@ class QueryHandlerPort(ABC):
         Raises:
             ClassNotConfiguredError - when the class_name parameter does not
                 match any configured class
+            RelevanceSortingWithoutQueryError - when sorting by relevance is
+                requested without a non-blank query
             SearchError - when the search operation fails
             ValidationError - when the results are malformed and fail model validation
         """

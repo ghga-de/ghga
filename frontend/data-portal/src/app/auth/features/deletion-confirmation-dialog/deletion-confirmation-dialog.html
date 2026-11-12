@@ -2,11 +2,11 @@
 <div mat-dialog-content>
   <p>
     Please confirm that the user account of <strong>{{ user.displayName }}</strong> with
-    email <strong>{{ user.email }}</strong> shall be <strong>deleted</strong> by enterin
-    the user's email in the box below.
+    LS Login email <strong>{{ user.email }}</strong> shall be
+    <strong>deleted</strong> by entering this LS Login email in the box below.
   </p>
   <mat-form-field class="w-full">
-    <mat-label>Confirm user email</mat-label>
+    <mat-label>Confirm LS Login email</mat-label>
     <input type="text" matInput class="w-full" [formField]="emailField" />
     <mat-error>{{
       deletionError() ? 'User deletion failed. Please try again.' : ''

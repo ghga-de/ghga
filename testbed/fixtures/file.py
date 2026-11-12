@@ -102,9 +102,7 @@ def create_named_file(
 
 
 @fixture(name="file_fixture")
-def file_fixture(
-    config: Config, dsk: DskFixture
-) -> Generator[dict[str, FileBatch], None, None]:
+def file_fixture(config: Config, dsk: DskFixture) -> Generator[dict[str, FileBatch]]:
     """Batch file fixture that provides temporary files for the metadata.
 
     File sizes are distributed according to the number of files in the metadata.

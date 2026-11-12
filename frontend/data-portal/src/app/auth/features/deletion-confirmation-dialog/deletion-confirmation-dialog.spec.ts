@@ -76,7 +76,7 @@ describe('DeletionConfirmationDialog', () => {
     expect(dialogRef.close).toHaveBeenCalledWith(false);
   });
 
-  it('should call the delete user method when confirmed after confirming the user email', async () => {
+  it('should call the delete user method when confirmed after confirming the LS Login email', async () => {
     const input = screen.getByRole('textbox');
     await userEvent.type(input, 'doe@home.org');
     const deleteSpy = vitest.spyOn(service, 'deleteUser');
@@ -90,10 +90,15 @@ describe('DeletionConfirmationDialog', () => {
     expect(dialogRef.close).toHaveBeenCalledWith(true);
   });
 
+  it('should name the LS Login email as the one to enter', () => {
+    const content = screen.getByText(/shall be/);
+    expect(content).toHaveTextContent(/with LS Login email doe@home\.org shall be/);
+  });
+
   it('should keep the confirm button disabled until the email matches', async () => {
     const button = screen.getByRole('button', { name: 'Confirm deletion' });
     expect(button).toBeDisabled();
-    const input = screen.getByRole('textbox', { name: 'Confirm user email' });
+    const input = screen.getByRole('textbox', { name: 'Confirm LS Login email' });
     await userEvent.type(input, 'doe@home.or');
     expect(button).toBeDisabled();
     await userEvent.clear(input);

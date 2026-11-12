@@ -78,11 +78,17 @@ async def search(  # noqa: PLR0913
         Query(description="Values(s) that shall be used for filtering results"),
     ] = None,
     skip: Annotated[
-        int, Query(description="The number of results to skip for pagination")
+        int,
+        Query(
+            ge=0,
+            le=2**63 - 1,  # MongoDB cannot encode larger ints
+            description="The number of results to skip for pagination",
+        ),
     ] = 0,
     limit: Annotated[
-        int | None, Query(description="Limit the results to this number")
-    ] = None,
+        int,
+        Query(ge=1, le=1000, description="Limit the results to this number"),
+    ] = 100,
     order_by: Annotated[
         list[str] | None,
         Query(description="Field(s) that shall be used for sorting results"),
@@ -129,6 +135,8 @@ async def search(  # noqa: PLR0913
             detail="The specified class name is invalid."
             + " See /search-options for a list of valid class names.",
         ) from err
+    except query_handler.RelevanceSortingWithoutQueryError as err:
+        raise HTTPException(status_code=422, detail=str(err)) from err
     except (query_handler.SearchError, query_handler.ValidationError) as err:
         log.error(err, exc_info=True)
         raise HTTPException(

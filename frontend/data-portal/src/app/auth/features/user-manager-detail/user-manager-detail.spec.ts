@@ -195,7 +195,9 @@ describe('UserManagerDetail', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Dr.')).toBeInTheDocument();
     expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('john@example.com')).toBeInTheDocument();
+    expect(screen.getByText('john@example.com').parentElement).toHaveTextContent(
+      /^\s*LS Login email:\s*john@example\.com\s*$/,
+    );
     expect(screen.getByText('ext123')).toBeInTheDocument();
     expect(screen.getByText('Data Steward')).toBeInTheDocument();
   });
