@@ -1043,6 +1043,17 @@
             "null"
           ]
         },
+        "upload_box_priority_topic": {
+          "description": "Name of the event topic containing upload box priority events",
+          "examples": [
+            "upload-box-priority"
+          ],
+          "title": "Upload Box Priority Topic",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "file_upload_topic": {
           "description": "Topic containing published FileUpload outbox events",
           "examples": [
