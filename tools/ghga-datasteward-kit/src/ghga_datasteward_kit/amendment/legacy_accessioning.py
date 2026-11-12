@@ -30,17 +30,10 @@ from metldata.accession_registry.accession_registry import (
 )
 from metldata.accession_registry.accession_registry_utils import generate_random_block
 from metldata.accession_registry.accession_store import AccessionStore
-from metldata.custom_types import Json, SubmissionContent
+from metldata.custom_types import Json
 from metldata.metadata_utils import lookup_self_id
-from metldata.model_utils.anchors import AnchorPoint, invert_anchor_points_by_target
+from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import raise_on_errors
-from metldata.submission_registry.identifiers import (
-    SubmissionParams,
-    get_accession,
-    get_aliases_for_resources,
-    get_study_pid,
-)
-from metldata.submission_registry.models import AccessionMap
 
 # the prefix per class and the suffix length the flat scheme minted with
 LEGACY_PREFIXES = {
@@ -124,12 +117,18 @@ class LegacyAccessionRegistry(AccessionRegistry):
         super().__init__(config=config, accession_store=accession_store)
         self._legacy_store = accession_store
 
+    def stores_accession(self, class_name: str) -> bool:
+        """Tell that the accessions of every class are kept in the accession map,
+        since flat accessions cannot be derived from the study accession.
+        """
+        return True
+
     def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Get the flat accession of a resource of the given class.
 
-        The study keeps its accession, which `generate_legacy_accession_map` passes as
+        The study keeps its accession, which `generate_accession_map` passes as
         `study_pid`. Every other resource gets a new one, registered in the store.
 
         Raises:
@@ -160,59 +159,3 @@ class LegacyAccessionRegistry(AccessionRegistry):
             f"No unused accession with the prefix '{prefix}' was drawn in"
             + f" {MAX_RANDOM_ATTEMPTS} attempts."
         )
-
-
-def generate_legacy_accession_map(
-    *,
-    content: SubmissionContent,
-    existing_accession_map: AccessionMap,
-    accession_registry: LegacyAccessionRegistry,
-    anchor_points_by_target: dict[str, AnchorPoint],
-) -> AccessionMap:
-    """Generate the accession map of an amended flat-accessioned submission.
-
-    Unlike metldata's `generate_accession_map`, which keeps only the study and dataset
-    PIDs, this map holds every class, since flat accessions cannot be derived from
-    the study accession. An alias in the existing map keeps its accession, a new
-    alias gets a flat one, and an alias no longer in the content is dropped.
-
-    Raises:
-        MissingStudyError: If the content holds no study.
-        AccessionGenerationError: If the class of a new alias has no flat prefix, or
-            no unused accession was drawn.
-    """
-    params = SubmissionParams(
-        accession_registry=accession_registry,
-        target_by_anchor_point=invert_anchor_points_by_target(
-            anchor_points_by_target=anchor_points_by_target
-        ),
-        accession_map=existing_accession_map,
-    )
-
-    # the existing flat study accession, which `get_accession` hands to the study
-    study_pid = get_study_pid(content=content, params=params)
-
-    existing_accessions = {
-        accession
-        for accessions_by_alias in existing_accession_map.values()
-        for accession in accessions_by_alias.values()
-    }
-
-    return {
-        anchor: {
-            alias: get_accession(
-                anchor=anchor,
-                alias=alias,
-                params=params,
-                study_pid=study_pid,
-                used_accessions=existing_accessions,
-            )
-            for alias in get_aliases_for_resources(
-                resources=resources,
-                root_slot=anchor,
-                anchor_points_by_target=anchor_points_by_target,
-                target_by_anchor_point=params.target_by_anchor_point,
-            )
-        }
-        for anchor, resources in content.items()
-    }

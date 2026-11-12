@@ -185,6 +185,12 @@ class AccessionRegistry:
         """Tell whether the given class is the one whose entities take dataset PIDs."""
         return class_name == self._config.dataset_class_name
 
+    def stores_accession(self, class_name: str) -> bool:
+        """Tell whether the accessions of the given class are kept in the accession
+        map, which holds only the study and dataset PIDs.
+        """
+        return self.is_study_class(class_name) or self.is_dataset_class(class_name)
+
     def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
     ) -> str:

@@ -41,6 +41,10 @@ class FakeAccessionRegistry:
         """Tell whether the given class is the dataset class."""
         return class_name == "Dataset"
 
+    def stores_accession(self, class_name: str) -> bool:
+        """Tell whether the accessions of the given class are kept in the map."""
+        return self.is_study_class(class_name) or self.is_dataset_class(class_name)
+
     def generate_study_accession(self) -> str:
         """Generate the PID of a study."""
         return "generated_study_pid"
@@ -104,6 +108,42 @@ def test_generate_accession_map():
     )
 
     assert observed_accession_map == expected_accession_map
+
+
+def test_registry_decides_stored_classes():
+    """A registry that stores the accessions of every class gets every class in the
+    map, as the flat-accessioning registry of dskit's amendment does.
+    """
+
+    class StoreAllAccessionRegistry(FakeAccessionRegistry):
+        def stores_accession(self, class_name: str) -> bool:
+            return True
+
+    content = {
+        "study_anchor": [{"alias": "test_study"}],
+        "class1_anchor": [{"alias": "test_alias1"}],
+    }
+    anchor_points_by_target = {
+        "Study": AnchorPoint(
+            root_slot="study_anchor", target_class="Study", identifier_slot="alias"
+        ),
+        "Class1": AnchorPoint(
+            root_slot="class1_anchor", target_class="Class1", identifier_slot="alias"
+        ),
+    }
+
+    observed_accession_map = generate_accession_map(
+        content=content,
+        accession_registry=StoreAllAccessionRegistry(),  # type: ignore
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
+    assert observed_accession_map == {
+        "study_anchor": {"test_study": "generated_study_pid"},
+        "class1_anchor": {
+            "test_alias1": "generated_study_pid.generated_class1_accession1"
+        },
+    }
 
 
 def test_new_study_alias_keeps_pid():

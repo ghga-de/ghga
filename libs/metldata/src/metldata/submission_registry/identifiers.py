@@ -163,14 +163,13 @@ def get_pid_anchors(
     accession_registry: AccessionRegistry,
     anchor_points_by_target: dict[str, AnchorPoint],
 ) -> set[str]:
-    """Get the anchors of the study and the dataset class, the only classes whose
-    accessions are stored in the accession map.
+    """Get the anchors of the classes whose accessions the accession registry keeps
+    in the accession map.
     """
     return {
         anchor_point.root_slot
         for class_name, anchor_point in anchor_points_by_target.items()
-        if accession_registry.is_study_class(class_name)
-        or accession_registry.is_dataset_class(class_name)
+        if accession_registry.stores_accession(class_name)
     }
 
 
