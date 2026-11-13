@@ -16,9 +16,6 @@
 
 """Handling of the accession handler."""
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
-
 from ghga_service_commons.utils.accessions import (
     BASE32_ALPHABET,
     DATASET_PID_PREFIX,
@@ -31,29 +28,9 @@ from metldata.accession_registry.accession_registry_utils import (
     generate_random_block,
 )
 from metldata.accession_registry.accession_store import AccessionStore
-from metldata.metadata_utils import normalize_alias
+from metldata.model_utils.config import ModelClassesConfig
 
 MAX_RANDOM_ATTEMPTS = 100
-
-
-class AccessionRegistryConfig(BaseSettings):
-    """Config parameters and their defaults."""
-
-    study_class_name: str = Field(
-        default="Study",
-        description=(
-            "Name of the metadata model class whose entity takes the bare study PID."
-            + " The model does not need to contain it."
-        ),
-    )
-
-    dataset_class_name: str = Field(
-        default="Dataset",
-        description=(
-            "Name of the metadata model class whose entities are accessioned as"
-            + " '{study_pid}.DS.xxx'."
-        ),
-    )
 
 
 class AccessionRegistry:
@@ -64,10 +41,8 @@ class AccessionRegistry:
     class AccessionGenerationError(RuntimeError):
         """Raised when a the generation of a new accession failed."""
 
-    def __init__(
-        self, *, config: AccessionRegistryConfig, accession_store: AccessionStore
-    ):
-        """Initialize with config."""
+    def __init__(self, *, config: ModelClassesConfig, accession_store: AccessionStore):
+        """Initialize with the study and dataset classes and the accession store."""
         self._config = config
         self._accession_store = accession_store
 
@@ -178,36 +153,42 @@ class AccessionRegistry:
             study_pid=study_pid, used_accessions=used_accessions
         )
 
-    def generate_alias_accession(self, *, study_pid: str, alias: str) -> str:
-        """Compose the accession '{study_pid}.{alias}' of an entity that is neither
-        the study nor a dataset, from its normalized alias.
-
-        Nothing is drawn or registered: the accession is unique by construction, since
-        the study PID is unique and normalized aliases are unique within the study.
-        """
-        return f"{study_pid}.{normalize_alias(alias)}"
-
     def is_study_class(self, class_name: str) -> bool:
         """Tell whether the given class is the one whose entity takes the study PID."""
         return class_name == self._config.study_class_name
+
+    def is_dataset_class(self, class_name: str) -> bool:
+        """Tell whether the given class is the one whose entities take dataset PIDs."""
+        return class_name == self._config.dataset_class_name
+
+    def stores_accession(self, class_name: str) -> bool:
+        """Tell whether the accessions of the given class are kept in the accession
+        map, which holds only the study and dataset PIDs.
+        """
+        return self.is_study_class(class_name) or self.is_dataset_class(class_name)
 
     def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
     ) -> str:
         """Get the accession of a resource of the given class within a study.
 
-        The study entity takes the study PID, datasets get a PID unique among
-        `used_accessions`, and every other resource is accessioned by its alias.
+        The study entity takes the study PID, and datasets get a PID unique among
+        `used_accessions`. Every other resource is accessioned from the study PID and
+        its alias by the `add_accessions` transformation, so it gets none here.
 
         Raises:
-            AccessionGenerationError: If every dataset PID of the study is taken.
+            AccessionGenerationError: If the class is neither the study nor the
+                dataset class, or every dataset PID of the study is taken.
         """
         if self.is_study_class(class_name):
             return study_pid
 
-        if class_name == self._config.dataset_class_name:
+        if self.is_dataset_class(class_name):
             return self.generate_dataset_accession(
                 study_pid=study_pid, used_accessions=used_accessions
             )
 
-        return self.generate_alias_accession(study_pid=study_pid, alias=alias)
+        raise self.AccessionGenerationError(
+            f"The class '{class_name}' is neither the study nor the dataset class, so"
+            + f" its resource '{alias}' gets no accession from the registry."
+        )

@@ -35,11 +35,12 @@ from linkml_runtime.linkml_model import SchemaDefinition
 # The name of the root class of a model:
 ROOT_CLASS = "Submission"
 
-# The class of the study, of which every submission holds exactly one:
-STUDY_CLASS = "Study"
-
-# The slot of the root class that anchors the study, which the loader reads the
-# study from:
+# The slot of the root class that anchors the study. Unlike the study and dataset
+# class names, which are configurable, this stays fixed: the loader client and the
+# loader API read the study from artifact content by this key, without the model
+# or the config. check_study_anchor ties the configured study class to it.
+# Making it configurable means handing the slot from the transform to the loader,
+# through the artifact events and the artifact infos.
 STUDY_ANCHOR = "studies"
 
 

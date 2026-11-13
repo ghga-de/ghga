@@ -57,9 +57,7 @@ from metldata.model_utils.anchors import (
 from metldata.model_utils.essentials import MetadataModel
 from metldata.model_utils.metadata_validator import MetadataValidator
 from metldata.submission_registry.event_publisher import SourceEventPublisher
-from metldata.submission_registry.identifiers import (
-    generate_accession_map,
-)
+from metldata.submission_registry.identifiers import generate_accession_map
 from metldata.submission_registry.models import Submission, SubmissionStatus
 from metldata.submission_registry.submission_store import SubmissionStore
 
@@ -445,6 +443,7 @@ def amend_metadata(
     if confirm is not None and not confirm(changes):
         raise AmendmentAbortedError()
 
+    # the legacy registry stores every class, so the map stays flat
     updated_accession_map = generate_accession_map(
         content=metadata,
         existing_accession_map=submission.accession_map,

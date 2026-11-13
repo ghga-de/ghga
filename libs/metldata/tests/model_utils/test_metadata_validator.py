@@ -73,6 +73,7 @@ def test_validate_one_study_per_submission(
     metadata = {
         "studies": studies,
         "files": [{"alias": "file_1", "filename": "file_1.fastq"}],
+        "datasets": [],
     }
 
     if expected_message is None:

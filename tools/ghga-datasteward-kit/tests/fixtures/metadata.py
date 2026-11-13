@@ -23,6 +23,11 @@ AMENDED_METADATA_PATH = BASE_DIR / "original_metadata_amended.yaml"
 DROPPED_METADATA_PATH = BASE_DIR / "original_metadata_dropped.yaml"
 ORIGINAL_MODEL_PATH = BASE_DIR / "original_model.yaml"
 
+# a completed submission of the original metadata with flat accessions for every
+# alias, as stored before study PIDs; its content must match ORIGINAL_METADATA_PATH
+LEGACY_SUBMISSION_PATH = BASE_DIR / "legacy_submission.json"
+LEGACY_SUBMISSION_ID = "5b1e0a63-3c4e-4f0a-9d6b-2f8e7c1a9d40"
+
 ARCHIVE_METADATA_CONFIG_PATH = BASE_DIR / "archive_metadata_config.yaml"
 ARCHIVE_ORIGINAL_METADATA_PATH = BASE_DIR / "archive_original_metadata.yaml"
 ARCHIVE_ORIGINAL_MODEL_PATH = BASE_DIR / "archive_original_model.yaml"
