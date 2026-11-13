@@ -162,4 +162,37 @@ describe('DatasetDetailsPage', () => {
     expect(within(publication).queryByText('DOI:')).toBeNull();
     expect(within(publication).queryByText('View Publication')).toBeNull();
   });
+
+  it('should show DAC, data use and policy on separate cards', async () => {
+    await userEvent.click(screen.getByRole('tab', { name: /Data Access/ }));
+    await fixture.whenStable();
+    await screen.findByRole('heading', { level: 2, name: 'Data Access Committee' });
+    const card = (title: string) =>
+      screen
+        .getByRole('heading', { level: 2, name: title })
+        .closest('mat-card') as HTMLElement;
+
+    const dac = card('Data Access Committee');
+    expect(within(dac).getByText('Test DAC')).toBeInTheDocument();
+    expect(within(dac).getByText('test[at]test[dot]de')).toBeInTheDocument();
+
+    const dataUse = card('Data Use');
+    expect(
+      within(dataUse).getByRole('link', { name: /general research use/ }),
+    ).toHaveAttribute('href', 'https://purl.obolibrary.org/obo/DUO_0000042');
+    const modifiers = within(dataUse).getAllByRole('listitem');
+    expect(modifiers.map((item) => item.textContent?.trim())).toEqual([
+      'publication required',
+      'institution specific restriction',
+    ]);
+
+    const dap = card('Data Access Policy');
+    expect(within(dap).getByText('DAP 1')).toBeInTheDocument();
+    expect(within(dap).getByText(/^Test policy text\./)).toBeInTheDocument();
+    expect(
+      within(dap).getByRole('link', {
+        name: 'Look up policy terms online (new tab)',
+      }),
+    ).toHaveAttribute('href', 'https://test.com');
+  });
 });

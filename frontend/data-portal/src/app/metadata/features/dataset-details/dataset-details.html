@@ -215,72 +215,97 @@
         <mat-tab
           ><ng-template mat-tab-label
             ><span class="text-primary flex items-center">
-              <mat-icon fontIcon="data_loss_prevention"></mat-icon> &nbsp;DAP/DAC
+              <mat-icon fontIcon="data_loss_prevention"></mat-icon> &nbsp;Data Access
             </span>
           </ng-template>
           <div class="overflow-x-auto p-4">
-            <div class="min-w-72">
-              @if (dap().policy_url) {
-                <a
-                  appExtLink
-                  mat-stroked-button
-                  class="mb-4 w-full md:float-right md:mb-0 md:w-auto"
-                  [href]="dap().policy_url"
-                  data-umami-event="Dataset Details Visit DAP Policy Clicked"
-                  >Data Access Info Form</a
-                >
-              }
-              <h2
-                class="flex items-center text-2xl sm:inline-flex md:max-w-[26rem] lg:max-w-[unset]"
-              >
-                <span
-                  class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-4xl"
-                  ><mat-icon inline fontIcon="data_loss_prevention"></mat-icon></span
-                ><span>Policy and Data Access Committee</span>
-              </h2>
-              <div
-                class="*:items-start *:text-base lg:grid lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-[fit-content(1px)_fit-content(1px)] lg:gap-x-15"
-              >
-                <p><strong>Data Access Committee:</strong> {{ dac().alias }}</p>
-                <p><strong>e-Mail:</strong> {{ dac().email }}</p>
-                <p>
-                  <strong>Data Use Permission:</strong>&nbsp;<a
-                    appExtLink
-                    [href]="dap().data_use_permission_url"
-                    >{{ dap().data_use_permission_term }}</a
-                  >
-                </p>
-                <p>
-                  @if (dap().data_use_modifiers; as modifiers) {
-                    <strong>Data Use Modifiers:</strong>
-                    @for (
-                      modifier of modifiers;
-                      track modifier.id;
-                      let first = $first;
-                      let last = $last
-                    ) {
-                      @let id = modifier.id;
-                      @let term = modifier.term;
-                      @let url = modifier.url;
-                      {{ first ? ' ' : '' }}
-                      @if (url) {
-                        <a appExtLink [href]="url">{{ term ? term : `${id}` }}</a
-                        >{{ last ? '' : ', ' }}
+            <!-- DAC and data use are short, so they share a row; the policy text is long and gets the full width. -->
+            <div class="grid min-w-72 grid-cols-1 gap-4 lg:grid-cols-2">
+              <mat-card appearance="outlined">
+                <mat-card-content>
+                  <h2 class="mb-4 flex items-center text-xl">
+                    <span
+                      class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-3xl"
+                      ><mat-icon inline fontIcon="groups"></mat-icon></span
+                    ><span>Data Access Committee</span>
+                  </h2>
+                  <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
+                    <dt class="font-bold">Name</dt>
+                    <dd>{{ dac().alias }}</dd>
+                    <dt class="font-bold">E-mail</dt>
+                    <dd class="break-all">{{ dac().email }}</dd>
+                  </dl>
+                </mat-card-content>
+              </mat-card>
+              <mat-card appearance="outlined">
+                <mat-card-content>
+                  <h2 class="mb-4 flex items-center text-xl">
+                    <span
+                      class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-3xl"
+                      ><mat-icon inline fontIcon="fact_check"></mat-icon></span
+                    ><span>Data Use</span>
+                  </h2>
+                  <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
+                    <dt class="font-bold">Permission</dt>
+                    <dd>
+                      <a appExtLink [href]="dap().data_use_permission_url">{{
+                        dap().data_use_permission_term
+                      }}</a>
+                    </dd>
+                    <dt class="font-bold">Modifiers</dt>
+                    <dd>
+                      @if (dap().data_use_modifiers; as modifiers) {
+                        <ul>
+                          @for (modifier of modifiers; track modifier.id) {
+                            <li>
+                              @if (modifier.url) {
+                                <a appExtLink [href]="modifier.url">{{
+                                  modifier.term ?? modifier.id
+                                }}</a>
+                              } @else {
+                                {{ modifier.term }}
+                              }
+                            </li>
+                          }
+                        </ul>
                       } @else {
-                        {{ term }}{{ last ? '' : ', ' }}
+                        none
                       }
+                    </dd>
+                  </dl>
+                </mat-card-content>
+              </mat-card>
+              <mat-card appearance="outlined" class="lg:col-span-2">
+                <mat-card-content>
+                  <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
+                    <h2 class="mb-0 flex items-center text-xl">
+                      <span
+                        class="bg-primary/15 text-primary me-2 inline-flex items-center rounded p-1 text-3xl"
+                        ><mat-icon
+                          inline
+                          fontIcon="data_loss_prevention"
+                        ></mat-icon></span
+                      ><span>Data Access Policy</span>
+                    </h2>
+                    @if (dap().policy_url) {
+                      <!-- The target is whatever the submitter entered (a form, a policy page, an EGA record), so the label stays general. -->
+                      <a
+                        appExtLink
+                        mat-stroked-button
+                        class="w-full sm:w-auto"
+                        [href]="dap().policy_url"
+                        data-umami-event="Dataset Details Visit DAP Policy Clicked"
+                        >Look up policy terms online</a
+                      >
                     }
-                  }
-                </p>
-              </div>
-              <p class="text-base">
-                <strong>Data Access Policy:</strong> {{ dap().name }}
-              </p>
-              <app-paragraphs
-                [text]="dap().policy_text"
-                pClasses="text-base"
-                label="Policy"
-              /> </div></div
+                  </div>
+                  <dl class="mb-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
+                    <dt class="font-bold">Name</dt>
+                    <dd>{{ dap().name }}</dd>
+                  </dl>
+                  <app-paragraphs [text]="dap().policy_text" pClasses="text-base" />
+                </mat-card-content>
+              </mat-card> </div></div
         ></mat-tab>
       </mat-tab-group>
 
