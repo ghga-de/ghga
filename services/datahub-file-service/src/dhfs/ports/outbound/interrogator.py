@@ -77,11 +77,16 @@ class InterrogatorPort(ABC):
         ...
 
     @abstractmethod
-    async def interrogate_new_files(self) -> None:
+    async def interrogate_new_files(self) -> bool:
         """Query the GHGA Central API for new files that need to be re-encrypted.
 
         This method handles InterrogationError exceptions by reporting failures to the
         Central API. CantCompleteError exceptions propagate up to the caller.
+
+        Returns `True` if the Central API accepted the report of at least one file, a
+        success or a failure, and `False` if there were no files, every file was
+        inconclusive, or the Central API rejected every report. A file whose report
+        was rejected stays waiting, so the next request returns it again.
 
         Raises:
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
@@ -89,8 +94,10 @@ class InterrogatorPort(ABC):
         ...
 
     @abstractmethod
-    async def interrogate_file(self, file_upload: FileUpload) -> None:
+    async def interrogate_file(self, file_upload: FileUpload) -> bool:
         """Inspect and re-encrypt a newly uploaded file.
+
+        Returns whether the Central API accepted the success report.
 
         Raises:
         - FileEnvelopeDecryptionError if the Crypt4GH envelope cannot be decrypted.
@@ -115,8 +122,9 @@ class InterrogatorPort(ABC):
         encrypted_size: int,
         wall_time_seconds: float | None = None,
         stage_seconds: dict[str, float] | None = None,
-    ) -> None:
-        """Submit an InterrogationReport for a successful interrogation.
+    ) -> bool:
+        """Submit an InterrogationReport for a successful interrogation, and return
+        whether the Central API accepted it.
 
         Submission errors are logged but not raised; the re-encrypted file is
         left in the interrogation bucket regardless of outcome so that it is not
@@ -125,8 +133,9 @@ class InterrogatorPort(ABC):
         ...
 
     @abstractmethod
-    async def report_failure(self, *, file_id: UUID4, reason: str) -> None:
-        """Submit an InterrogationReport for an unsuccessful interrogation.
+    async def report_failure(self, *, file_id: UUID4, reason: str) -> bool:
+        """Submit an InterrogationReport for an unsuccessful interrogation, and return
+        whether the Central API accepted it.
 
         Submission errors are logged but not raised so that processing of
         remaining files in the batch is not interrupted.
