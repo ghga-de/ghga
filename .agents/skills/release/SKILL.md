@@ -57,7 +57,7 @@ Never create a release with `gh release create` or in the GitHub UI: GitHub then
    Check it with the dev against releases.md's three steps: summaries under New features, Changes and Bug fixes written for users, no PR numbers, empty headings and the hint comments deleted.
    The platform draft names the libraries and tools that changed; `ghga-datasteward-kit` gets a draft of its own when it changed.
 3. The dev publishes each draft; `gh release edit` is denied to agents.
-4. After a hotfix release on `main`, `main` is merged back into `dev` ([branching](../../../docs/conventions.md#branching)).
+4. After a hotfix release on `main`, `main` is merged back into `dev` with a merge commit, never squashed ([branching](../../../docs/conventions.md#branching)).
 
 ## Traps
 
