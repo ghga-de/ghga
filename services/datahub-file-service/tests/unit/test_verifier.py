@@ -27,12 +27,14 @@ from dhfs.config import Config
 from dhfs.core.verifier import (
     INTERROGATION_OBJECT_ID,
     OBJECT_ID_STR,
+    _check_report,
     _clean_buckets,
     _upload_inbox_dummy_file,
     _validate_config_for_verifier,
     run_dhfs_verification,
 )
 from tests.fixtures.central_api import CentralApiMock, get_mocked_httpx_client
+from tests.fixtures.utils import DHFS_CRYPT4GH_PUBLIC_KEY_PATH
 
 
 @pytest.mark.parametrize(
@@ -186,19 +188,9 @@ async def test_upload_inbox_dummy_file_error(caplog):
     config.storage_alias = "test-hub"
     config.inbox_bucket_id = "test-inbox"
 
-    encrypted_object = MagicMock()
-    encrypted_object.checksums.unencrypted_sha256.hexdigest.return_value = "a" * 64
-    encrypted_object.unencrypted_size = 10
-    encrypted_object.encrypted_size = 20
-    encrypted_object.part_size = 5
-
     with (
         patch(
-            "dhfs.core.verifier._generate_encrypted_object",
-            return_value=encrypted_object,
-        ),
-        patch(
-            "dhfs.core.verifier._upload_encrypted_object",
+            "dhfs.core.verifier._upload_dummy_data",
             new=AsyncMock(side_effect=RuntimeError("denied")),
         ),
         caplog.at_level(logging.ERROR, logger="dhfs.core.verifier"),
@@ -207,6 +199,34 @@ async def test_upload_inbox_dummy_file_error(caplog):
             await _upload_inbox_dummy_file(
                 config=config,
                 inbox_write_storage=AsyncMock(),
-                public_key_path=Path("/fake/key.pub"),
+                public_key_path=DHFS_CRYPT4GH_PUBLIC_KEY_PATH,
                 file_size=1024,
             )
+
+
+@pytest.mark.asyncio
+async def test_check_report_accepts_a_passed_report():
+    """A passed report from DHFS means the file was processed."""
+    submit_report = AsyncMock()
+    await submit_report(report=MagicMock(passed=True))
+    _check_report(submit_report)
+
+
+@pytest.mark.parametrize(
+    "report, message",
+    [
+        (None, "could not process the file conclusively"),
+        (MagicMock(passed=False, reason="Checksum mismatch"), "Checksum mismatch"),
+    ],
+    ids=["inconclusive", "failed"],
+)
+@pytest.mark.asyncio
+async def test_check_report_raises_unless_passed(
+    report: MagicMock | None, message: str
+):
+    """No report, or a failed one, must fail the verification with the reason."""
+    submit_report = AsyncMock()
+    if report:
+        await submit_report(report=report)
+    with pytest.raises(RuntimeError, match=message):
+        _check_report(submit_report)
