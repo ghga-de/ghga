@@ -1126,6 +1126,7 @@ source = { editable = "services/datahub-file-service" }
 dependencies = [
     { name = "async-lru" },
     { name = "crypt4gh" },
+    { name = "cryptography" },
     { name = "ghga-service-commons", extra = ["auth", "crypt", "http", "objectstorage", "transports"] },
     { name = "hexkit", extra = ["s3"] },
     { name = "typer" },
@@ -1135,6 +1136,7 @@ dependencies = [
 requires-dist = [
     { name = "async-lru", specifier = ">=2.1.0" },
     { name = "crypt4gh", specifier = ">=1.7" },
+    { name = "cryptography", specifier = ">=47" },
     { name = "ghga-service-commons", extras = ["auth", "http", "objectstorage", "transports", "crypt"], editable = "libs/ghga-service-commons" },
     { name = "hexkit", extras = ["s3"], editable = "libs/hexkit" },
     { name = "typer", specifier = ">=0.25.1" },

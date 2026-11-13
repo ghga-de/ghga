@@ -25,6 +25,10 @@ from math import ceil
 
 import crypt4gh.lib
 import pytest
+from nacl.bindings import (
+    crypto_aead_chacha20poly1305_ietf_decrypt,
+    crypto_aead_chacha20poly1305_ietf_encrypt,
+)
 from pydantic import SecretBytes
 
 from dhfs.constants import ENCRYPTION_SECRET_LENGTH, NONCE_LENGTH, SEGMENT_OVERHEAD
@@ -95,7 +99,7 @@ def test_decrypt_accepts_any_buffer_type(interrogator: Interrogator, size: int):
         decrypted_part=plaintext, new_secret=secret
     )
 
-    for buffer in (ciphertext, bytearray(ciphertext), memoryview(ciphertext)):
+    for buffer in (bytes(ciphertext), ciphertext, memoryview(ciphertext)):
         recovered = interrogator._decrypt_part(encrypted_part=buffer, secret=secret)
         assert bytes(recovered) == plaintext
 
@@ -186,3 +190,51 @@ def test_reencryption_uses_a_fresh_nonce_per_segment(interrogator: Interrogator)
         for i in range(segment_count)
     }
     assert len(nonces) == segment_count
+
+
+@pytest.mark.parametrize("size", PLAINTEXT_SIZES)
+def test_reencrypted_part_decrypts_with_libsodium(
+    interrogator: Interrogator, size: int
+):
+    """A part DHFS writes with cryptography must read back with libsodium.
+
+    Both implement the IETF ChaCha20-Poly1305 that Crypt4GH segments use, and the
+    rest of the Crypt4GH tooling reads them through libsodium.
+    """
+    secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+    plaintext = os.urandom(size)
+    ciphertext = bytes(
+        interrogator._reencrypt_part(decrypted_part=plaintext, new_secret=secret)
+    )
+
+    segments = [
+        ciphertext[i : i + CIPHER_SEGMENT]
+        for i in range(0, len(ciphertext), CIPHER_SEGMENT)
+    ]
+    recovered = b"".join(
+        crypto_aead_chacha20poly1305_ietf_decrypt(
+            segment[NONCE_LENGTH:],
+            None,
+            segment[:NONCE_LENGTH],
+            secret.get_secret_value(),
+        )
+        for segment in segments
+    )
+    assert recovered == plaintext
+
+
+@pytest.mark.parametrize("size", PLAINTEXT_SIZES)
+def test_libsodium_encrypted_part_decrypts(interrogator: Interrogator, size: int):
+    """A part a submitter encrypted with libsodium must decrypt with cryptography."""
+    secret = SecretBytes(os.urandom(ENCRYPTION_SECRET_LENGTH))
+    plaintext = os.urandom(size)
+    ciphertext = b""
+    for i in range(0, size, SEGMENT):
+        nonce = os.urandom(NONCE_LENGTH)
+        ciphertext += nonce + crypto_aead_chacha20poly1305_ietf_encrypt(
+            plaintext[i : i + SEGMENT], None, nonce, secret.get_secret_value()
+        )
+
+    recovered = interrogator._decrypt_part(encrypted_part=ciphertext, secret=secret)
+
+    assert bytes(recovered) == plaintext

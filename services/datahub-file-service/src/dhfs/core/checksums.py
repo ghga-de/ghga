@@ -43,14 +43,14 @@ class Checksums:
         self.unencrypted_sha256.update(part)
 
     @staticmethod
-    def digest_encrypted_part(part: bytes) -> tuple[bytes, bytes]:
+    def digest_encrypted_part(part: bytearray) -> tuple[bytes, bytes]:
         """Return the (md5, sha256) digests of a single encrypted part."""
         return (
             hashlib.md5(part, usedforsecurity=False).digest(),
             hashlib.sha256(part).digest(),
         )
 
-    def update_encrypted(self, part: bytes):
+    def update_encrypted(self, part: bytearray):
         """Update encrypted part checksums"""
         md5, sha256 = self.digest_encrypted_part(part)
         self.encrypted_md5.append(md5)
