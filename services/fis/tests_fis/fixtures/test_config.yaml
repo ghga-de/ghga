@@ -3,6 +3,7 @@ file_interrogations_topic: file-interrogations
 interrogation_success_type: interrogation_success
 interrogation_failure_type: interrogation_failed
 file_upload_topic: file-uploads
+upload_box_priority_topic: upload-box-priority
 service_instance_id: '1'
 kafka_servers: ["kafka:9092"]
 kafka_enable_dlq: True

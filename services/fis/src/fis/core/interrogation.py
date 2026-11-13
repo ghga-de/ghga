@@ -26,7 +26,11 @@ from pydantic import UUID4, SecretBytes
 from fis.config import Config
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
-from fis.ports.outbound.dao import FileDao, InterrogationReportDao
+from fis.ports.outbound.dao import (
+    FileDao,
+    InterrogationReportDao,
+    UploadBoxPriorityDao,
+)
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_event_schemas import pydantic_ as event_schemas
@@ -50,18 +54,20 @@ class InterrogationHandler(InterrogationHandlerPort):
     `InterrogationReport` objects.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         config: Config,
         file_dao: FileDao,
         interrogation_report_dao: InterrogationReportDao,
+        upload_box_priority_dao: UploadBoxPriorityDao,
         event_publisher: EventPubTranslatorPort,
         secrets_client: SecretsClientPort,
     ):
         self._config = config
         self._file_dao = file_dao
         self._interrogation_report_dao = interrogation_report_dao
+        self._upload_box_priority_dao = upload_box_priority_dao
         self._publisher = event_publisher
         self._secrets_client = secrets_client
 
@@ -460,3 +466,47 @@ class InterrogationHandler(InterrogationHandlerPort):
             log.info("Local copy deleted for file ID %s.", file_id)
         except ResourceNotFoundError:
             log.info("Did not find file with ID %s; presumed already deleted.", file_id)
+
+    async def store_upload_box_priority(
+        self, *, priority: models.UploadBoxPriority
+    ) -> None:
+        """Store the upload box priority list.
+
+        Ignore the list if its version is not higher than the stored one's.
+        """
+        with suppress(ResourceNotFoundError):
+            stored_priority = await self._upload_box_priority_dao.get_by_id(priority.id)
+            if priority.version <= stored_priority.version:
+                log.info(
+                    "Ignored upload box priority version %i because it appears to be old.",
+                    priority.version,
+                )
+                return
+
+        await self._upload_box_priority_dao.upsert(priority)
+        log.info(
+            "Stored upload box priority version %i with %i boxes.",
+            priority.version,
+            len(priority.entries),
+        )
+
+    async def clear_upload_box_priority(self, *, priority_id: str) -> None:
+        """Empty the stored upload box priority list, keeping its version.
+
+        Keeping the version stops a replayed older event from restoring the list.
+        If no list is stored, do nothing.
+        """
+        try:
+            stored_priority = await self._upload_box_priority_dao.get_by_id(priority_id)
+        except ResourceNotFoundError:
+            log.info("Received a deleted upload box priority list, but none is stored.")
+            return
+
+        await self._upload_box_priority_dao.update(
+            stored_priority.model_copy(update={"entries": []})
+        )
+        log.warning(
+            "Received a deleted upload box priority list, which RS never deletes."
+            + " Emptied the stored list and kept version %i.",
+            stored_priority.version,
+        )

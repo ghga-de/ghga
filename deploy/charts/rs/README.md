@@ -33,6 +33,7 @@ for the full set of configurable values.
 | `config.migration_max_wait_sec` | The maximum number of seconds to wait for migrations to complete before raising an error. | `null` |
 | `config.httpx_standard_timeout_sec` | The timeout duration, in seconds, to use for most HTTP calls. | `60.0` |
 | `config.httpx_long_timeout_sec` | The timeout duration, in seconds, to use for HTTP calls which have the potential to be especially long-running. | `600.0` |
+| `config.upload_box_priority_topic` | Name of the event topic containing upload box priority events | `null` |
 | `config.study_topic` | Name of the event topic containing study events | `null` |
 | `config.accession_map_topic` | The name of the topic used for file accession map events | `null` |
 | `config.research_data_upload_box_topic` | Name of the event topic containing research data upload box events | `null` |

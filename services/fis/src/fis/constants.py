@@ -22,3 +22,4 @@ AUTH_CHECK_CLAIMS = ["iss", "aud", "iat", "exp", "sub"]
 GHGA = "GHGA"
 DHFS_USER_AGENT_PREFIX = "GHGA DataHubFileService"
 OLD_DHFS_USER_AGENT_PREFIX = "DataHubFileService"
+UPLOAD_BOX_PRIORITY_COLLECTION = "uploadBoxPriority"

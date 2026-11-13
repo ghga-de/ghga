@@ -143,6 +143,13 @@ _topics:
     kafkaUser:
       operations:
       - Write
+  uploadBoxPriorityTopic:
+    topic:
+      name: upload_box_priority_topic
+      value: upload-box-priority
+    kafkaUser:
+      operations:
+      - Write
   deadLetterQueue:
     topic:
       name: kafka_dlq_topic

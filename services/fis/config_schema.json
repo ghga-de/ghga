@@ -70,6 +70,14 @@
       "title": "Ekss Api Url",
       "type": "string"
     },
+    "upload_box_priority_topic": {
+      "description": "Name of the event topic containing upload box priority events",
+      "examples": [
+        "upload-box-priority"
+      ],
+      "title": "Upload Box Priority Topic",
+      "type": "string"
+    },
     "file_upload_topic": {
       "description": "Topic containing published FileUpload outbox events",
       "examples": [
@@ -563,6 +571,7 @@
   },
   "required": [
     "ekss_api_url",
+    "upload_box_priority_topic",
     "file_upload_topic",
     "service_instance_id",
     "file_interrogations_topic",

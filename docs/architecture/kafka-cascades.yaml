@@ -16,7 +16,7 @@
 #            HTML, so they may hold markup and must escape a literal < or &.
 # topics:    the reference table; omit subscribers when nothing in the repo subscribes.
 
-updated: 2026-10-09
+updated: 2026-11-10
 
 services:
   MASS: metadata search & access service
@@ -188,6 +188,10 @@ flows:
       service: WPS
       action: upserts <span class='m'>uploadBoxes</span>
       terminal: true
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: the box joins the end of the priority list; nothing subscribes yet
+      terminal: true
     - use: audit_leaf
 - id: box-archive
   lane: Upload boxes
@@ -214,6 +218,10 @@ flows:
         action: refreshes its view of the upload
         terminal: true
       - use: {fragment: box_echo, reason: box state changed}
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: the box leaves the priority list; nothing subscribes yet
+      terminal: true
     - use: audit_leaf
 - id: box-update
   lane: Upload boxes
@@ -274,6 +282,26 @@ flows:
     - event: {topic: research-data-upload-boxes, type: deleted, class: outbox}
       service: WPS
       action: deletes the <span class='m'>uploadBoxes</span> row
+      terminal: true
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: the box leaves the priority list; nothing subscribes yet
+      terminal: true
+    - use: audit_leaf
+- id: box-priority-repair
+  lane: Upload boxes
+  actor: Ops · deploy
+  call: rs run-rest
+  title: RS repairs the upload box priority list when its REST app starts
+  target: ghga-registry-service
+  root:
+    service: RS
+    action: adds the missing boxes to the priority list, oldest last change first, and drops archived or deleted ones
+    condition: writes, publishes and audits only if the list changed
+    children:
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: published, nothing subscribes yet
       terminal: true
     - use: audit_leaf
 - id: accession-map
@@ -657,7 +685,7 @@ flows:
     children:
     - event: {topic: '&lt;that service''s topics&gt;', type: upserted / deleted, class: outbox}
       service: its subscribers
-      action: outbox DAOs — RS boxes, accession maps and studies; UCS uploads and boxes; ARS requests
+      action: outbox DAOs — RS boxes, accession maps, studies and the upload box priority list; UCS uploads and boxes; ARS requests
       condition: a document whose dto_to_event returns None is marked published without an event
       terminal: true
     - event: {topic: '&lt;that service''s topics&gt;', type: '&lt;original type&gt;', class: persisted}
@@ -698,6 +726,10 @@ topics:
   types: upserted · deleted
   producer: RS
   subscribers: WPS
+- topic: upload-box-priority
+  class: outbox
+  types: upserted
+  producer: RS
 - topic: file-upload-boxes
   class: outbox
   types: upserted · deleted

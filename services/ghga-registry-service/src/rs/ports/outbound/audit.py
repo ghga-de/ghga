@@ -20,7 +20,7 @@ from typing import Literal
 
 from pydantic import UUID4
 
-from rs.core.models import ResearchDataUploadBox
+from rs.core.models import ResearchDataUploadBox, UploadBoxPriority
 
 
 class AuditRepositoryPort(ABC):
@@ -56,6 +56,19 @@ class AuditRepositoryPort(ABC):
         self, *, box: ResearchDataUploadBox, user_id: UUID4
     ) -> None:
         """Log the deletion of a ResearchDataUploadBox."""
+
+    @abstractmethod
+    async def log_box_priority_updated(
+        self,
+        *,
+        priority: UploadBoxPriority,
+        old_box_ids: list[UUID4],
+        user_id: UUID4 | None,
+    ) -> None:
+        """Log a change to the upload box priority list.
+
+        `user_id` is None if the system made the change.
+        """
 
     @abstractmethod
     async def log_access_granted(

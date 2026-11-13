@@ -2,6 +2,14 @@
   "additionalProperties": false,
   "description": "Modifies the original Settings class provided by the user",
   "properties": {
+    "upload_box_priority_topic": {
+      "description": "Name of the event topic containing upload box priority events",
+      "examples": [
+        "upload-box-priority"
+      ],
+      "title": "Upload Box Priority Topic",
+      "type": "string"
+    },
     "study_topic": {
       "description": "Name of the event topic containing study events",
       "examples": [
@@ -598,6 +606,7 @@
     }
   },
   "required": [
+    "upload_box_priority_topic",
     "study_topic",
     "accession_map_topic",
     "research_data_upload_box_topic",

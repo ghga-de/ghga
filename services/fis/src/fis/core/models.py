@@ -95,6 +95,30 @@ class FileUnderInterrogation(BaseFileInformation):
         return self
 
 
+class UploadBoxPriorityEntry(BaseModel):
+    """One file upload box in the upload box priority list"""
+
+    box_id: UUID4 = Field(default=..., description="The ID of the FileUploadBox")
+
+
+class UploadBoxPriority(BaseModel):
+    """The order in which the files of upload boxes are interrogated.
+
+    FIS stores this subset of the `UploadBoxPriority` event published by RS.
+    """
+
+    id: str = Field(
+        default=..., description="The fixed ID of the single priority document"
+    )
+    version: int = Field(
+        default=..., description="A counter indicating resource version"
+    )
+    entries: list[UploadBoxPriorityEntry] = Field(
+        default=...,
+        description="The boxes in priority order. Index 0 is the highest priority.",
+    )
+
+
 class InterrogationReport(BaseModel):
     """Contains the results of file interrogation.
 
