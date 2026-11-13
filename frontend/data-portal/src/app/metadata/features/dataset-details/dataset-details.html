@@ -231,9 +231,9 @@
                   </h2>
                   <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
                     <dt class="font-bold">Name</dt>
-                    <dd>{{ dac().alias }}</dd>
+                    <dd class="wrap-anywhere">{{ dac().alias }}</dd>
                     <dt class="font-bold">E-mail</dt>
-                    <dd class="break-all">{{ dac().email }}</dd>
+                    <dd class="wrap-anywhere">{{ dac().email }}</dd>
                   </dl>
                 </mat-card-content>
               </mat-card>
@@ -256,7 +256,7 @@
                     <dd>
                       @if (dap().data_use_modifiers; as modifiers) {
                         <ul>
-                          @for (modifier of modifiers; track modifier.id) {
+                          @for (modifier of modifiers; track $index) {
                             <li>
                               @if (modifier.url) {
                                 <a appExtLink [href]="modifier.url">{{
@@ -269,7 +269,7 @@
                           }
                         </ul>
                       } @else {
-                        none
+                        None
                       }
                     </dd>
                   </dl>
@@ -301,7 +301,7 @@
                   </div>
                   <dl class="mb-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-base">
                     <dt class="font-bold">Name</dt>
-                    <dd>{{ dap().name }}</dd>
+                    <dd class="wrap-anywhere">{{ dap().name }}</dd>
                   </dl>
                   <app-paragraphs [text]="dap().policy_text" pClasses="text-base" />
                 </mat-card-content>

@@ -24,7 +24,7 @@ class MockConfigService {
  */
 class MockMetadataService {
   datasetDetails = {
-    value: () => datasetDetails,
+    value: signal(datasetDetails),
     isLoading: () => false,
     error: () => undefined,
   };
@@ -194,5 +194,28 @@ describe('DatasetDetailsPage', () => {
         name: 'Look up policy terms online (new tab)',
       }),
     ).toHaveAttribute('href', 'https://test.com');
+  });
+
+  it('should show no modifiers and no policy link if the policy has neither', async () => {
+    const metadata = fixture.debugElement.injector.get(
+      MetadataService,
+    ) as unknown as MockMetadataService;
+    metadata.datasetDetails.value.set({
+      ...datasetDetails,
+      data_access_policy: {
+        ...datasetDetails.data_access_policy,
+        policy_url: undefined,
+        data_use_modifier_ids: [''],
+        data_use_modifier_terms: undefined,
+      },
+    });
+    await userEvent.click(screen.getByRole('tab', { name: /Data Access/ }));
+    await fixture.whenStable();
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Data Use' });
+    const dataUse = heading.closest('mat-card') as HTMLElement;
+    expect(within(dataUse).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(dataUse).getByText('None')).toBeInTheDocument();
+    // Query by text: an anchor without href has no link role and would slip past a role query.
+    expect(screen.queryByText(/Look up policy terms online/)).toBeNull();
   });
 });
