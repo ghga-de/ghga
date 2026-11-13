@@ -46,12 +46,13 @@ async def _insert_files(
     joint_fixture: JointFixture, *, box_id: UUID4 | None, count: int = 1
 ) -> list[FileUnderInterrogation]:
     """Insert `count` waiting files of HUB1 in the given box"""
-    files = [
-        create_file_under_interrogation(HUB1).model_copy(update={"box_id": box_id})
-        for _ in range(count)
-    ]
-    for file in files:
+    files: list[FileUnderInterrogation] = []
+    for _ in range(count):
+        file = create_file_under_interrogation(HUB1).model_copy(
+            update={"box_id": box_id}
+        )
         await joint_fixture.file_dao.insert(file)
+        files.append(file)
     return files
 
 
