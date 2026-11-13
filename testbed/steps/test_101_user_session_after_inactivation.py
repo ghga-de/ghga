@@ -16,6 +16,8 @@
 """Step definition for user session after account inactivation"""
 
 import pytest
+from fixtures import PlaywrightFixture
+from playwright.sync_api import expect
 from pytest_bdd import (  # noqa: RUF100
     given,
     scenarios,
@@ -35,3 +37,40 @@ def user_status(full_name: str, status: str, fixtures: JointFixture):
     assert saved_status, (
         f'Saved status "{saved_status}" does not match with the expected'
     )
+
+
+@when(parse('"{full_name}" tries to log in to the Data Portal'))
+def try_data_portal_login(
+    full_name: str, fixtures: JointFixture, playwright: PlaywrightFixture
+):
+    """Log in through the Data Portal, up to where it loads the session."""
+    auth = fixtures.auth
+    # the test OIDC provider authorizes the browser as the user who logged in last
+    auth.oidc_login(
+        name=full_name, email=auth.get_email(full_name), sub=auth.get_sub(full_name)
+    )
+    playwright.context.clear_cookies()  # start without the session of another user
+    page = playwright.page
+    page.goto(fixtures.config.data_portal_url)
+    page.wait_for_load_state()
+
+    login_button = page.get_by_role("button", name="Log In")
+    expect(login_button).to_be_visible(timeout=3000)
+    login_button.click()
+    ls_login_button = page.get_by_role("menuitem").first
+    expect(ls_login_button).to_be_visible(timeout=1000)
+    ls_login_button.click()
+    page.wait_for_load_state()
+
+
+@then("the Data Portal shows that the account is disabled")
+def data_portal_shows_account_disabled(playwright: PlaywrightFixture):
+    """Check the dialog that tells the user the account is disabled."""
+    page = playwright.page
+    dialog = page.get_by_role("dialog")
+    expect(dialog).to_contain_text("Account disabled", timeout=5000)
+    expect(dialog).to_contain_text("Your GHGA account has been disabled.")
+    dialog.get_by_role("button", name="Close").click()
+    expect(dialog).not_to_be_visible()
+    # the portal has dropped the session, so the user is logged out
+    expect(page.get_by_role("button", name="Log In")).to_be_visible()

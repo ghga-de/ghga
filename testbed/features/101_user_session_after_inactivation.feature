@@ -23,6 +23,12 @@ Feature: 301 User Account Inactivation
     Then the response status code is "403"
     And the response error message is "User account is disabled"
 
+  @frontend
+  Scenario: Inactive user is told so in the Data Portal
+    Given the status of "Dr. John Doe" is "inactive"
+    When "Dr. John Doe" tries to log in to the Data Portal
+    Then the Data Portal shows that the account is disabled
+
   Scenario: Restoring the user account
     Given the status of "Dr. John Doe" is "inactive"
     Then "Data Steward" changes the status of "Dr. John Doe" to "active"
