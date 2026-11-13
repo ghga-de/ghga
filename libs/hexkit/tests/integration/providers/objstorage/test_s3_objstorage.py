@@ -32,6 +32,7 @@ from hexkit.providers.s3.testutils import (
     typical_workflow,
     upload_part,
     upload_part_of_size,
+    upload_part_via_url,
 )
 
 EXAMPLE_BUCKETS = [
@@ -409,6 +410,32 @@ async def test_md5_in_part_url(s3: S3Fixture):
     )
 
     assert "content-md5=dummy-md5" in url
+
+
+async def test_part_url_without_upload_check(
+    s3: S3Fixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Check that `verify_upload=False` presigns a working URL without listing the
+    bucket's multipart uploads.
+    """
+    upload_id, bucket_id, object_id = await s3.get_initialized_upload()
+    list_uploads = Mock(side_effect=AssertionError("uploads were listed"))
+    monkeypatch.setattr(s3.storage, "_list_multipart_uploads_for_object", list_uploads)
+
+    url = await s3.storage.get_part_upload_url(
+        upload_id=upload_id,
+        bucket_id=bucket_id,
+        object_id=object_id,
+        part_number=1,
+        verify_upload=False,
+    )
+
+    list_uploads.assert_not_called()
+    upload_part_via_url(url=url, size=MEBIBYTE)
+    parts = await s3.storage.list_parts(
+        bucket_id=bucket_id, object_id=object_id, upload_id=upload_id
+    )
+    assert [part["PartNumber"] for part in parts] == [1]
 
 
 async def test_list_parts(s3: S3Fixture):
