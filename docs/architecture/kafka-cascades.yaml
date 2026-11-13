@@ -188,6 +188,10 @@ flows:
       service: WPS
       action: upserts <span class='m'>uploadBoxes</span>
       terminal: true
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: the box joins the end of the priority list; nothing subscribes yet
+      terminal: true
     - use: audit_leaf
 - id: box-archive
   lane: Upload boxes
@@ -214,6 +218,10 @@ flows:
         action: refreshes its view of the upload
         terminal: true
       - use: {fragment: box_echo, reason: box state changed}
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: the box leaves the priority list; nothing subscribes yet
+      terminal: true
     - use: audit_leaf
 - id: box-update
   lane: Upload boxes
@@ -274,6 +282,10 @@ flows:
     - event: {topic: research-data-upload-boxes, type: deleted, class: outbox}
       service: WPS
       action: deletes the <span class='m'>uploadBoxes</span> row
+      terminal: true
+    - event: {topic: upload-box-priority, type: upserted, class: outbox}
+      service: —
+      action: the box leaves the priority list; nothing subscribes yet
       terminal: true
     - use: audit_leaf
 - id: box-priority-repair

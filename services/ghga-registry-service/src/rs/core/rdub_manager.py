@@ -48,6 +48,7 @@ from rs.core.models import (
     UploadBoxState,
 )
 from rs.ports.inbound.files import FileControllerPort
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.outbound.audit import AuditRepositoryPort
 from rs.ports.outbound.dao import BoxDao
@@ -96,7 +97,7 @@ def _sort_file_uploads(
 class RDUBManager(RDUBManagerPort):
     """A class for executing operations surrounding ResearchDataUploadBoxes"""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         box_dao: BoxDao,
@@ -104,8 +105,10 @@ class RDUBManager(RDUBManagerPort):
         audit_repository: AuditRepositoryPort,
         file_upload_box_client: FileBoxClientPort,
         access_client: AccessClientPort,
+        priority_manager: UploadBoxPriorityManagerPort,
     ):
         self._box_dao = box_dao
+        self._priority_manager = priority_manager
         self._file_controller = file_controller
         self._audit_repository = audit_repository
         self._file_upload_box_client = file_upload_box_client
@@ -184,8 +187,29 @@ class RDUBManager(RDUBManagerPort):
             )
             raise self.BoxTitleExistsError() from err
 
+        await self._update_priority_list(box_id=box.id, user_id=data_steward_id)
         await self._audit_repository.log_box_created(box=box, user_id=data_steward_id)
         return box.id
+
+    async def _update_priority_list(self, *, box_id: UUID4, user_id: UUID4) -> None:
+        """Repair the priority list after a box was created, archived or deleted,
+        which adds the box to the list or removes it.
+
+        The box is stored at this point, so a failed list write does not fail the
+        request. It is only logged: the next write to the list, or the next start of
+        RS, repairs it.
+        """
+        message = (
+            "Could not update the upload box priority list after a change to box %s."
+            + " The next write to the list or the next start of RS repairs it."
+        )
+        try:
+            await self._priority_manager.repair(user_id=user_id)
+        except UploadBoxPriorityManagerPort.PriorityUpdateError:
+            # race_condition_retries has logged the error already
+            log.warning(message, box_id, extra={"box_id": box_id})
+        except Exception:
+            log.exception(message, box_id, extra={"box_id": box_id})
 
     async def update_research_data_upload_box(  # noqa: PLR0913
         self,
@@ -668,6 +692,8 @@ class RDUBManager(RDUBManagerPort):
         await self._persist_rdub_update(
             box=box, updated_box=updated_box, remote_committed=True
         )
+        if updated_box.state == "archived":
+            await self._update_priority_list(box_id=box.id, user_id=user_id)
         await self._audit_repository.log_box_updated(box=updated_box, user_id=user_id)
 
     async def grant_upload_access(  # noqa: PLR0913
@@ -1371,6 +1397,7 @@ class RDUBManager(RDUBManagerPort):
             log.info(error)
             raise error from err
         else:
+            await self._update_priority_list(box_id=box_id, user_id=user_id)
             await self._audit_repository.log_box_deleted(box=box, user_id=user_id)
             log.info("Deleted RDUB %s and its FileUploadBox %s.", box_id, fub_id)
 
