@@ -1,5 +1,7 @@
 """Composable render cases for the ghga-common library chart."""
 
+import pytest
+
 
 def test_common_labels_reach_every_resource_service_labels_stay_scoped(rendered_chart):
     """commonLabels/commonAnnotations land on every rendered resource - there is no
@@ -84,93 +86,63 @@ def test_kafka_user(rendered_chart, expected):
     )
 
 
-def test_vault_agent(rendered_chart, release_name, expected):
-    """Vault agent annotations and command wrapper render when enabled."""
-    manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
-    exp = expected("vault_enabled", "podAnnotations")
-    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
+def test_secret_env_files(rendered_chart, expected):
+    """With secretEnvFiles enabled, the shell sources every file in its dir first."""
+    manifests = rendered_chart("common.yaml", "secret_env_files.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["command"] == expected("secret_env_files", "command")
+    assert container["args"] == expected("secret_env_files", "args")
 
-    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
-    print(diff)
-    assert not diff, diff
+    manifests = rendered_chart("common.yaml")
+    container = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]
+    assert container["args"] == ["/usr/local/bin/sleep 100000000"]
 
-    assert (
-        expected("vault_enabled", "podAnnotations").items()
-        <= manifests["Deployment"]["spec"]["template"]["metadata"][
-            "annotations"
-        ].items()
+
+def test_secret_env_files_need_a_shell(rendered_chart):
+    """An exec-style command cannot source files, so the render fails loudly."""
+    with pytest.raises(AssertionError, match="cannot source secretEnvFiles"):
+        rendered_chart(
+            "common.yaml", "command_style_exec.yaml", "secret_env_files.yaml"
+        )
+
+
+def test_pod_annotations_and_secret_env_files_reach_every_kind(rendered_chart):
+    """Deployment, Job and CronJob get the same pod annotations and command.
+
+    The platform injects its secrets sidecar through these two values alone, so a
+    kind that missed either would start without its secrets.
+    """
+    manifests = rendered_chart(
+        "common.yaml",
+        "pod_annotations.yaml",
+        "secret_env_files.yaml",
+        "cronjob_pod_annotations.yaml",
     )
+    pods = {
+        "Deployment": manifests["Deployment"]["spec"]["template"],
+        "Job": manifests["Job"]["spec"]["template"],
+        "CronJob": manifests["CronJob"]["spec"]["jobTemplate"]["spec"]["template"],
+    }
+    deployment_container = pods["Deployment"]["spec"]["containers"][0]
+    for kind, pod in pods.items():
+        annotations = pod["metadata"]["annotations"]
+        assert annotations["vault.hashicorp.com/agent-inject"] == "true", kind
+        container = pod["spec"]["containers"][0]
+        assert container["command"] == deployment_container["command"], kind
+        assert container["args"] == deployment_container["args"], kind
 
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
-        "command"
-    ]
-    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
-    assert command == expected("vault_enabled", "command")
-    assert args == expected("vault_enabled", "args")
 
-
-def test_vault_boilerplate_extra_annotations(rendered_chart, release_name, expected):
-    """Extra vault annotations merge into the boilerplate."""
-    manifests = rendered_chart("common.yaml", "vault_boilerplate.yaml")
-    exp = expected("vault_boilerplate", "podAnnotations")
-    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
-
-    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
-    print(diff)
-    assert not diff, diff
-
-    assert (
-        expected("vault_boilerplate", "podAnnotations").items()
-        <= manifests["Deployment"]["spec"]["template"]["metadata"][
-            "annotations"
-        ].items()
+def test_deployment_share_process_namespace_stays_scoped(rendered_chart):
+    """deployment.shareProcessNamespace applies to the Deployment only."""
+    manifests = rendered_chart(
+        "common.yaml",
+        "cronjob_pod_annotations.yaml",
+        "deployment_share_process_namespace.yaml",
     )
-
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
-        "command"
-    ]
-    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
-    assert command == expected("vault_boilerplate", "command")
-    assert args == expected("vault_boilerplate", "args")
-
-
-def test_vault_boilerplate_omits_unset_annotations(rendered_chart):
-    """Unset vault annotations stay absent."""
-    manifests = rendered_chart("common.yaml", "vault_enabled.yaml")
-    annotations = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
-
-    for key in (
-        "vault.hashicorp.com/ca-cert",
-        "vault.hashicorp.com/tls-secret",
-        "vault.hashicorp.com/service",
-        "vault.hashicorp.com/tls-server-name",
-    ):
-        assert key not in annotations
-
-
-def test_vault_single_template(rendered_chart, release_name, expected):
-    """Single-template vault mode renders exec-style command."""
-    manifests = rendered_chart("common.yaml", "vault_single_template.yaml")
-    exp = expected("vault_single_template", "podAnnotations")
-    got = manifests["Deployment"]["spec"]["template"]["metadata"]["annotations"]
-
-    diff = {k: (v, got.get(k)) for k, v in exp.items() if got.get(k) != v}
-    print(diff)
-    assert not diff, diff
-
-    assert (
-        expected("vault_single_template", "podAnnotations").items()
-        <= manifests["Deployment"]["spec"]["template"]["metadata"][
-            "annotations"
-        ].items()
-    )
-
-    command = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0][
-        "command"
-    ]
-    args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][0]["args"]
-    assert command == expected("vault_single_template", "command")
-    assert args == expected("vault_single_template", "args")
+    assert manifests["Deployment"]["spec"]["template"]["spec"]["shareProcessNamespace"]
+    assert not manifests["Job"]["spec"]["template"]["spec"]["shareProcessNamespace"]
+    cronjob_pod = manifests["CronJob"]["spec"]["jobTemplate"]["spec"]["template"]
+    assert not cronjob_pod["spec"]["shareProcessNamespace"]
 
 
 def test_http_route(rendered_chart):
@@ -337,13 +309,13 @@ def test_cronjobs_multiple_with_overrides(rendered_objects, expected):
 
 
 def test_cronjob_pod_annotations_override(rendered_objects, expected):
-    """A cronjob entry can add/override pod annotations (e.g. to run the vault.
+    """A cronjob entry can add or override pod annotations.
 
-    agent as an init-only container for a short-lived Job) without affecting
-    the Deployment or other cronjobs, which keep the shared/vault annotations.
+    For example, to run the Vault agent as an init-only container for a short-lived
+    Job, without affecting the Deployment or other cronjobs.
     """
     objects = rendered_objects(
-        "common.yaml", "vault_enabled.yaml", "cronjob_pod_annotations.yaml"
+        "common.yaml", "pod_annotations.yaml", "cronjob_pod_annotations.yaml"
     )
 
     deployment = next(obj for obj in objects if obj["kind"] == "Deployment")
@@ -368,77 +340,16 @@ def test_cronjob_pod_annotations_override(rendered_objects, expected):
 
 
 def test_cronjob_pod_annotations_override_no_duplicate_key(rendered_text):
-    """Regression test: annotations used to be built by concatenating three raw YAML.
+    """A per-cronjob key that overrides a top-level one is emitted once.
 
-    blocks (top-level podAnnotations, vaultAgent-generated annotations, per-cronjob
-    podAnnotations) with no deduplication. A cronjob overriding a key the vaultAgent
-    block already sets (e.g. agent-pre-populate-only, to run a one-shot job without
-    the agent as a long-lived sidecar) produced a literal duplicate YAML key. That
-    happened to "work" under yaml.safe_load (last occurrence wins) but is invalid
-    under stricter YAML consumers, so assert directly against the rendered text.
+    A duplicate YAML key loads under yaml.safe_load (last one wins) but is invalid
+    for stricter consumers, so assert directly against the rendered text.
     """
     text = rendered_text(
-        "common.yaml", "vault_enabled.yaml", "cronjob_pod_annotations.yaml"
+        "common.yaml", "pod_annotations.yaml", "cronjob_pod_annotations.yaml"
     )
     cronjob_section = text.split("kind: CronJob", 1)[1]
     assert cronjob_section.count("vault.hashicorp.com/agent-pre-populate-only:") == 1
-
-
-def test_vault_single_template_applies_to_job_and_cronjob(rendered_chart, expected):
-    """SingleTemplate mode must fold vault secrets into one combined annotation set for.
-
-    every workload kind (Deployment, Job, CronJob), not just the Deployment. Job and
-    CronJob previously always used the old per-secret annotations regardless of the
-    singleTemplate flag, while the command/args template dropped the vault-secrets
-    sourcing wrapper for *every* kind once singleTemplate was set -- silently leaving
-    Job/CronJob with no way to load their secrets at all.
-    """
-    manifests = rendered_chart(
-        "common.yaml",
-        "vault_single_template.yaml",
-        "vault_single_template_cronjob.yaml",
-    )
-
-    deployment_annotations = manifests["Deployment"]["spec"]["template"]["metadata"][
-        "annotations"
-    ]
-    deployment_command = manifests["Deployment"]["spec"]["template"]["spec"][
-        "containers"
-    ][0]["command"]
-    deployment_args = manifests["Deployment"]["spec"]["template"]["spec"]["containers"][
-        0
-    ]["args"]
-
-    exp = expected("vault_single_template", "podAnnotations")
-    assert exp.items() <= deployment_annotations.items()
-    assert deployment_command == expected("vault_single_template", "command")
-    assert deployment_args == expected("vault_single_template", "args")
-
-    def strip(annotations):
-        return {
-            k: v
-            for k, v in annotations.items()
-            if k not in ("helm.sh/revision", "configmap-hash")
-        }
-
-    job = manifests["Job"]
-    job_container = job["spec"]["template"]["spec"]["containers"][0]
-    assert strip(job["spec"]["template"]["metadata"]["annotations"]) == strip(
-        deployment_annotations
-    )
-    assert job_container["command"] == deployment_command
-    assert job_container["args"] == deployment_args
-
-    cronjob = manifests["CronJob"]
-    cronjob_container = cronjob["spec"]["jobTemplate"]["spec"]["template"]["spec"][
-        "containers"
-    ][0]
-    cronjob_annotations = cronjob["spec"]["jobTemplate"]["spec"]["template"][
-        "metadata"
-    ]["annotations"]
-    assert strip(cronjob_annotations) == strip(deployment_annotations)
-    assert cronjob_container["command"] == deployment_command
-    assert cronjob_container["args"] == deployment_args
 
 
 def test_probes_render_one_handler(rendered_chart):

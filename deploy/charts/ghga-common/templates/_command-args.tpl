@@ -1,6 +1,7 @@
 {{/*
 ghga-common.command-args will take the executable and executableArgs
-and prepends it with a failsafe routine that injects all existing secrets from vault.
+and, when secretEnvFiles.enabled, prepends a routine that sources every file in
+secretEnvFiles.dir, so secrets written there by a sidecar reach the environment.
 
 @param Root context
 @param executable - the executable name (e.g., "pcs")
@@ -23,14 +24,14 @@ and prepends it with a failsafe routine that injects all existing secrets from v
 {{- $cmdString = printf "%s%s" $prefix $cmdString }}
 {{- end }}
 
-{{- /* Exec-style rendering: no shell wrapper. Used by vaultAgent.singleTemplate
-     (secrets are rendered to files, nothing needs sourcing) and by
-     commandStyle=exec (shell-less hardened runtime images). */ -}}
+{{- /* Exec-style rendering: no shell wrapper, for shell-less hardened runtime
+     images and for secrets the service reads from files itself. */ -}}
 {{- $execStyle := eq ((index . 0).Values.commandStyle | default "shell") "exec" }}
-{{- if and $execStyle (index . 0).Values.vaultAgent.enabled (not (index . 0).Values.vaultAgent.singleTemplate) }}
-{{- fail "commandStyle=exec cannot source vault agent env files (no shell in the image); use vaultAgent.singleTemplate or commandStyle=shell" }}
+{{- $secretEnvFiles := (index . 0).Values.secretEnvFiles | default dict }}
+{{- if and $execStyle $secretEnvFiles.enabled }}
+{{- fail "commandStyle=exec cannot source secretEnvFiles (no shell in the image); disable secretEnvFiles or use commandStyle=shell" }}
 {{- end }}
-{{- if or (index . 0).Values.vaultAgent.singleTemplate $execStyle }}
+{{- if $execStyle }}
 {{- /* Command is the prefixed executable, args are passed as a real argv list */ -}}
 {{- $prefixedExec := $executable }}
 {{- if $prefix }}
@@ -44,14 +45,15 @@ args:
 {{- end }}
 {{- else }}
 
-{{- /* Shell style: sh -c wraps the built command string, with a vault secret
-     injection prefix spliced in ahead of it when enabled. Nothing has ever
+{{- /* Shell style: sh -c wraps the built command string, with the secret
+     sourcing prefix spliced in ahead of it when enabled. Nothing has ever
      needed a shell other than sh here, so this isn't a values.yaml knob. */ -}}
 command: ["sh", "-c"]
 {{- $args := list $cmdString }}
-{{- if (index . 0).Values.vaultAgent.enabled }}
-{{- $vaultWrapper := "if [ -d \"/vault/secrets\" ]; then for f in /vault/secrets/*; do if [ -f \"$f\" ]; then . \"$f\"; fi; done; fi; " }}
-{{- $args = list (print $vaultWrapper $cmdString ";") }}
+{{- if $secretEnvFiles.enabled }}
+{{- $dir := $secretEnvFiles.dir }}
+{{- $wrapper := printf "if [ -d \"%s\" ]; then for f in %s/*; do if [ -f \"$f\" ]; then . \"$f\"; fi; done; fi; " $dir $dir }}
+{{- $args = list (print $wrapper $cmdString ";") }}
 {{- end }}
 args: {{ $args | toJson }}
 {{- end }}

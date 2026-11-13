@@ -103,7 +103,9 @@ for the full set of configurable values.
 | `image.pullSecrets` | Extra pull secrets for just this image reference | `[]` |
 | `replicaCount` | Deployment replica count; ignored when autoscaling.enabled | `1` |
 | `revisionHistoryLimit` | Number of old ReplicaSets Kubernetes keeps around for rollback | `1` |
-| `shareProcessNamespace` | Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID) | `false` |
+| `shareProcessNamespace` | Share the pod's process namespace across containers, e.g. so a secrets sidecar can signal the app to reload | `false` |
+| `secretEnvFiles.enabled` | Source every file in `dir` into the shell before the command runs, so secrets a sidecar writes there reach the environment; needs commandStyle=shell | `false` |
+| `secretEnvFiles.dir` | Directory whose files are sourced when enabled | `"/vault/secrets"` |
 | `podSecurityContext.fsGroup` | Group ID Kubernetes chowns mounted volumes to | `1000` |
 | `initContainers` | Extra init containers to run before the main container (the migration init container below is prepended to this list when enabled) | `[]` |
 | `migrationInitContainer.enabled` | Run a dedicated init container for DB migrations before the main container starts | `true` |
@@ -116,7 +118,7 @@ for the full set of configurable values.
 | `migrationInitContainer.volumeMounts` | Extra volume mounts for just the migration init container (on top of the shared volumeMounts every container gets) | `[]` |
 | `hostAliases` | Extra `/etc/hosts` entries for the pod | `[]` |
 | `podLabels` | Labels applied only to the Pod template (Deployment/CronJob/Job pod spec), distinct from `labels`/`commonLabels` on the parent resource | `{}` |
-| `podAnnotations` | Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled | `{}` |
+| `podAnnotations` | Annotations applied only to the Pod template, e.g. the Vault Agent injection annotations the platform renders per release | `{}` |
 | `podAffinityPreset` | Pod-affinity preset name (e.g. "soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
 | `podAntiAffinityPreset` | Pod-anti-affinity preset name (vendored `common` library chart convention); "soft" spreads replicas across nodes when possible | `"soft"` |
 | `nodeAffinityPreset.type` | Node-affinity preset type ("soft"/"hard"), from the vendored `common` library chart; empty disables it | `""` |
@@ -181,8 +183,6 @@ for the full set of configurable values.
 | `kafkaUser.clusterNamespace` |  | `"strimzi"` |
 | `kafkaUser.caCertSecretName` | Secret holding the Kafka cluster's CA cert, mounted alongside the user's own TLS secret | `"kafka-cluster-ca-cert"` |
 | `mongodb.dbName` | Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty | `"registry"` |
-| `mongodb.service.namespace` | Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from | `"mongodb"` |
-| `mongodb.service.name` |  | `"mongodb"` |
 | `apiBasePath` | Public API path prefix; combined with apiBasePathPrefix (set by an aliasing umbrella) and injected into config.yaml as api_root_path | `"/rs/"` |
 | `serviceName` | Logical service name; combined with serviceNamePrefix and injected into config.yaml as service_name | `"rs-rest"` |
 | `serviceInstanceId.fromPodName` | Inject a <CONFIG_PREFIX>_SERVICE_INSTANCE_ID env var sourced from the Kubernetes Downward API (metadata.name), overriding config.service_instance_id per-pod. Env vars beat the YAML config file in hexkit config_from_yaml priority order, so this makes the value genuinely unique per replica instead of the static per-member string every service currently hardcodes in its own chart-values.yaml config block (which collides across replicas once replicaCount > 1, contradicting hexkit KafkaConfig.service_instance_id's own "uniquely identifies this instance" contract). | `false` |
@@ -190,14 +190,12 @@ for the full set of configurable values.
 | `configMap.mountPath` |  | `"/etc/config.yaml"` |
 | `configMap.subPath` |  | `"config.yaml"` |
 | `configMap.envVar.enabled` | Also add a `<CONFIG_PREFIX>_CONFIG_YAML` env var pointing at mountPath | `true` |
-| `configPrefix` | Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name | `"rs"` |
+| `configPrefix` | Prefix for the generated CONFIG_YAML and SERVICE_INSTANCE_ID env vars; create_charts.py derives this automatically from the package name | `"rs"` |
 | `enableServiceLinks` | Standard Kubernetes field: whether to inject `<SVC>_SERVICE_HOST`-style env vars for every Service in the namespace | `true` |
 | `successfulJobsHistoryLimit` | Fallback successfulJobsHistoryLimit for any `cronjobs` entry that doesn't set its own | `5` |
 | `concurrencyPolicy` | Fallback concurrencyPolicy for any `cronjobs` entry that doesn't set its own. `Forbid` skips a run while the previous one is still active, so hung runs cannot pile up; `Allow` runs them side by side; `Replace` kills the active run | `"Forbid"` |
 | `activeDeadlineSeconds` | Fallback activeDeadlineSeconds for any `cronjobs` entry that doesn't set its own: Kubernetes kills a run still active after this many seconds. null means no limit; set it per cronjob, since run times differ too much for a shared value | `null` |
 | `startingDeadlineSeconds` | Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit | `null` |
-| `environment.name` | Identifies which environment this release belongs to; part of the Vault secret path for the "service" secrets bundle | `"default"` |
-| `cluster.name` | Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials | `"default"` |
 | `httpRoute.enabled` | Render an HTTPRoute (Gateway API, ADR-0032) routing to this service | `false` |
 | `httpRoute.port` |  | `8080` |
 | `httpRoute.rewritePath` | strip the base path before forwarding. Services that reconstruct their own public URLs (an OIDC discovery document, for example) need the full path instead and rely on api_root_path to route - set this to false for them. | `true` |
@@ -209,42 +207,3 @@ for the full set of configurable values.
 | `networkPolicy.enabled` | Render a NetworkPolicy restricting ingress traffic to the pod | `false` |
 | `networkPolicy.ingress` | Only allow traffic from namespaces labeled `ghga-ingress: allow`, on the Service's own ports | `[{"from": [{"namespaceSelector": {"matchLabels": {"ghga-ingress": "allow"}}}]}]` |
 | `strimziApiVersion` | apiVersion used for the rendered Strimzi KafkaUser resource | `"kafka.strimzi.io/v1"` |
-| `vaultAgent.enabled` | Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container | `false` |
-| `vaultAgent.annotations.vault.hashicorp.com/tls-skip-verify` |  | `"false"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-inject` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-init-first` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-cache-enable` |  | `"true"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-pre-populate-only` |  | `"false"` |
-| `vaultAgent.annotations.vault.hashicorp.com/agent-run-as-same-user` |  | `"true"` |
-| `vaultAgent.role` | Vault auth role to assume; defaults to the release name when empty | `""` |
-| `vaultAgent.rolePrefix` | Prefix prepended to the resolved role name above | `""` |
-| `vaultAgent.caCert` | Path to a custom CA cert for Vault TLS verification | `""` |
-| `vaultAgent.tlsSecret` | Kubernetes secret providing the Vault Agent's TLS material | `""` |
-| `vaultAgent.service` | Override the Vault service address the agent talks to | `""` |
-| `vaultAgent.tlsServerName` | TLS server name override for the Vault connection | `""` |
-| `vaultAgent.pgrepPattern` | Process name the Agent's "kill -TERM" hook searches for to restart the app on secret rotation | `"python"` |
-| `vaultAgent.secrets.generic` | Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey) | `{}` |
-| `vaultAgent.secrets.mongodb.enabled` | Inject a MongoDB connection string built from a Vault-issued dynamic credential | `false` |
-| `vaultAgent.secrets.mongodb.secretPath` | Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty | `""` |
-| `vaultAgent.secrets.mongodb.connectionString` | Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's | `"mongodb://{{username}}:{{password}}@mongodb:27017/admin"` |
-| `vaultAgent.secrets.service.enabled` | Inject every key/value pair from one Vault secret as env vars | `false` |
-| `vaultAgent.secrets.service.secretPath` | Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty | `""` |
-| `vaultAgent.secrets.service.pathPrefix` |  | `"operational-secrets/data/unique/apps/archive"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.enabled` | Inject GHGA's shared internal Crypt4GH public key | `false` |
-| `vaultAgent.secrets.crypt4ghInternalPub.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.mountPath` | Where to write the key when renderToFile is true | `"/keys/crypt4gh-internal/crypt4gh.pub"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.dataKey` | Field name to read within the Vault secret | `"crypt4gh.pub"` |
-| `vaultAgent.secrets.crypt4ghInternalPub.renderToFile` | true: write to mountPath as a file. false: inject as an env var named parameterName instead | `true` |
-| `vaultAgent.secrets.crypt4ghInternalPub.parameterName` |  | `"CRYPT4GH_PUBLIC_KEY"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.enabled` | Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-internal"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.mountPath` |  | `"/keys/crypt4gh-internal/crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.dataKey` |  | `"crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.renderToFile` |  | `true` |
-| `vaultAgent.secrets.crypt4ghInternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.enabled` | Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above) | `false` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.secretPath` |  | `"operational-secrets/data/shared/managed-keys/crypt4gh-external"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.mountPath` |  | `"/keys/crypt4gh-external/crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.dataKey` |  | `"crypt4gh.sec"` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.renderToFile` |  | `true` |
-| `vaultAgent.secrets.crypt4ghExternalPriv.parameterName` |  | `"CRYPT4GH_PRIVATE_KEY"` |
