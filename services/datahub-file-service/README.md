@@ -267,6 +267,7 @@ The service requires the following configuration parameters:
 - <a id="properties/log_traceback"></a>**`log_traceback`** *(boolean)*: Whether to include exception tracebacks in log messages.
   Default: `true`.
 - <a id="properties/min_run_interval_seconds"></a>**`min_run_interval_seconds`** *(integer)*: The minimum number of seconds to wait before asking the CentralAPI about new files for interrogation.
+  DHFS asks again immediately after a round that concluded at least one file, though.
   Default: `60`.
 - <a id="properties/interrogation_bucket_id"></a>**`interrogation_bucket_id`** *(string, required)*: The name for the S3 'interrogation' bucket, which houses re-encrypted files until they are copied to permanent storage by IFRS.
 - <a id="properties/max_concurrent_parts"></a>**`max_concurrent_parts`** *(integer)*: How many file parts to process at the same time.

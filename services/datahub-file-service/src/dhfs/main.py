@@ -48,9 +48,10 @@ async def run_interrogator(forever: bool = True):
     async with prepare_interrogator(config=config) as interrogator:
         if forever:
             while True:
+                concluded_a_file = False
                 try:
                     start = now_utc_ms_prec()
-                    await interrogator.interrogate_new_files()
+                    concluded_a_file = await interrogator.interrogate_new_files()
                 except InterrogatorPort.CriticalError as err:
                     log.critical(
                         "DHFS cannot continue processing until the following error is resolved: %s",
@@ -64,6 +65,11 @@ async def run_interrogator(forever: bool = True):
                         + " with log_level set to DEBUG for more information.",
                         extra={"exc": err},
                     )
+
+                # More files may be waiting, and a priority change applies from the
+                #  next request, so only wait if the round was 100% inconclusive
+                if concluded_a_file:
+                    continue
 
                 stop = now_utc_ms_prec()
                 # .seconds would drop whole days and the sub-second remainder
