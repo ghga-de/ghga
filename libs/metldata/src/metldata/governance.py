@@ -39,18 +39,13 @@ from metldata.model_utils.essentials import (
     DATASET_CLASS,
     DATASET_DATA_ACCESS_POLICY_SLOT,
     EGA_ACCESSION_SLOT,
-    FILE_CLASS_SUFFIX,
     FILE_DATASET_SLOT,
+    GOVERNANCE_CLASSES,
     REUSED_ACCESSION_SLOT,
+    is_file_class,
 )
 from metldata.submission_registry.identifiers import lookup_accession
 from metldata.submission_registry.models import AccessionMap, Submission
-
-GOVERNANCE_CLASSES = (
-    DATASET_CLASS,
-    DATA_ACCESS_POLICY_CLASS,
-    DATA_ACCESS_COMMITTEE_CLASS,
-)
 
 
 class GovernanceResolutionError(RuntimeError):
@@ -227,7 +222,7 @@ class GovernanceMetadata:
         position = 0
         for document_index, document in enumerate(documents):
             for class_name, resources in document.items():
-                if not class_name.endswith(FILE_CLASS_SUFFIX):
+                if not is_file_class(class_name):
                     continue
                 for file in resources:
                     own_and_reused_accessions: set[str] = {
@@ -309,7 +304,7 @@ def _filter_governance_anchor_points(
     file_classes = {
         class_name
         for class_name in anchor_points_by_target
-        if class_name.endswith(FILE_CLASS_SUFFIX)
+        if is_file_class(class_name)
     }
     return filter_anchor_points(
         anchor_points_by_target=anchor_points_by_target,

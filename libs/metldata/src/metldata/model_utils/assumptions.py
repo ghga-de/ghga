@@ -31,9 +31,11 @@ from metldata.model_utils.essentials import (
     DATASET_DATA_ACCESS_POLICY_SLOT,
     FILE_CLASS_SUFFIX,
     FILE_DATASET_SLOT,
+    GOVERNANCE_CLASSES,
     ROOT_CLASS,
     STUDY_ANCHOR,
     MetadataModel,
+    is_file_class,
 )
 
 
@@ -193,20 +195,15 @@ def check_governance_anchors(model: MetadataModel) -> None:
     Raises:
         MetadataModelAssumptionError: if validation fails.
     """
-    governance_classes = [
-        DATASET_CLASS,
-        DATA_ACCESS_POLICY_CLASS,
-        DATA_ACCESS_COMMITTEE_CLASS,
-    ]
-    for class_name in governance_classes:
+    for class_name in GOVERNANCE_CLASSES:
         check_class_exists(model=model, class_name=class_name)
-    check_anchor_points(model=model, classes=governance_classes)
+    check_anchor_points(model=model, classes=list(GOVERNANCE_CLASSES))
 
     anchor_points_by_target = get_anchors_points_by_target(model=model)
     file_classes = [
         class_name
         for class_name in anchor_points_by_target
-        if class_name.endswith(FILE_CLASS_SUFFIX)
+        if is_file_class(class_name)
     ]
     if not file_classes:
         raise MetadataModelAssumptionError(

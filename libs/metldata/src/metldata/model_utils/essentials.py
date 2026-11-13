@@ -50,6 +50,21 @@ DATASET_CLASS = "Dataset"
 DATA_ACCESS_POLICY_CLASS = "DataAccessPolicy"
 DATA_ACCESS_COMMITTEE_CLASS = "DataAccessCommittee"
 
+# The classes on the governance chain after the file classes, in traversal order:
+GOVERNANCE_CLASSES = (
+    DATASET_CLASS,
+    DATA_ACCESS_POLICY_CLASS,
+    DATA_ACCESS_COMMITTEE_CLASS,
+)
+
+
+def is_file_class(class_name: str) -> bool:
+    """Tell whether a class is a file class, from which the governance traversal
+    starts.
+    """
+    return class_name.endswith(FILE_CLASS_SUFFIX)
+
+
 # The slots that link each class on the governance chain to the next one:
 FILE_DATASET_SLOT = "dataset"
 DATASET_DATA_ACCESS_POLICY_SLOT = "data_access_policy"
