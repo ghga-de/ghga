@@ -17,6 +17,7 @@
 """Test the governance traversal."""
 
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 
 import pytest
@@ -43,6 +44,7 @@ ARTIFACT_INFOS_PATH = BASE_DIR / "load" / "example_models" / "artifact_infos.jso
 SUBMISSION_PATH = BASE_DIR / "governance" / "submission.json"
 RESOLVED_RESTRICTED_PATH = BASE_DIR / "governance" / "resolved_restricted.json"
 UNKNOWN_FILE_ACCESSION = "GHGAF00000000000000"
+STUDY_CLASS_NAME = "Study"
 
 
 def _load_artifact_anchor_points() -> dict[str, AnchorPoint]:
@@ -173,6 +175,7 @@ def both_representations(studies: list[Study]) -> list[GovernanceMetadata]:
         GovernanceMetadata.from_submissions(
             submissions=[study.submission for study in studies],
             anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
+            study_class_name=STUDY_CLASS_NAME,
         ),
     ]
 
@@ -200,7 +203,9 @@ def test_same_answer_for_submission_and_its_artifact():
     from_submission = resolve_files_governance(
         file_accessions=file_accessions,
         metadata=GovernanceMetadata.from_submissions(
-            submissions=[submission], anchor_points_by_target=SUBMISSION_ANCHOR_POINTS
+            submissions=[submission],
+            anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
+            study_class_name=STUDY_CLASS_NAME,
         ),
     )
 
@@ -273,6 +278,7 @@ def test_submission_without_accessions():
         metadata=GovernanceMetadata.from_submissions(
             submissions=[study_a.submission, new_submission],
             anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
+            study_class_name=STUDY_CLASS_NAME,
         ),
     )
 
@@ -459,22 +465,57 @@ def test_root_slots_from_anchor_points():
 
 
 def test_submission_file_without_accession():
-    """Test that a submission with accessions raises a MissingAccessionError for a
-    file without one, instead of leaving the file out.
+    """Test that a submission whose accession map holds a file class but not one of
+    its files raises a MissingAccessionError, instead of leaving the file out.
     """
     submission = Submission.model_validate_json(SUBMISSION_PATH.read_text())
-    datasets_and_studies_only = {
-        root_slot: accessions
-        for root_slot, accessions in submission.accession_map.items()
-        if root_slot in ("studies", "datasets")
-    }
+    accession_map = deepcopy(submission.accession_map)
+    del accession_map["research_data_files"]["RESEARCH_DATA_FILE_1"]
 
-    with pytest.raises(MissingAccessionError, match="has no accession"):
+    with pytest.raises(MissingAccessionError, match="RESEARCH_DATA_FILE_1"):
         GovernanceMetadata.from_submissions(
             submissions=[
-                submission.model_copy(
-                    update={"accession_map": datasets_and_studies_only}
-                )
+                submission.model_copy(update={"accession_map": accession_map})
             ],
             anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
+            study_class_name=STUDY_CLASS_NAME,
         )
+
+
+def test_submission_with_study_pid():
+    """Test that a submission with a study PID, whose accession map holds the study
+    and dataset accessions only, resolves with the other accessions composed from
+    the study PID and the aliases.
+    """
+    study_pid = "GHGA.26.ABC.1"
+    submission = Submission.model_validate_json(SUBMISSION_PATH.read_text())
+    assert submission.content
+    content = {
+        **submission.content,
+        "studies": [
+            study
+            for study in submission.content["studies"]
+            if study["alias"] == "STUDY_A"
+        ],
+    }
+    accession_map = {
+        "studies": {"STUDY_A": study_pid},
+        "datasets": {"DS_A": f"{study_pid}.DS.AAA", "DS_B": f"{study_pid}.DS.BBB"},
+    }
+    metadata = GovernanceMetadata.from_submissions(
+        submissions=[
+            submission.model_copy(
+                update={"content": content, "accession_map": accession_map}
+            )
+        ],
+        anchor_points_by_target=SUBMISSION_ANCHOR_POINTS,
+        study_class_name=STUDY_CLASS_NAME,
+    )
+
+    [governance] = resolve_file_governance(
+        file_accession=f"{study_pid}.research_data_file_1", metadata=metadata
+    )
+
+    assert governance.dataset_accession == f"{study_pid}.DS.AAA"
+    assert governance.data_access_policy_accession == f"{study_pid}.dap_1"
+    assert governance.data_access_committee_accession == f"{study_pid}.dac_1"

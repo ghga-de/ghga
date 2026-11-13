@@ -28,6 +28,9 @@ from functools import partial
 
 from pydantic import BaseModel, Field
 
+from metldata.builtin_transformations.add_accessions.metadata_transform import (
+    complete_accession_map,
+)
 from metldata.custom_types import Json
 from metldata.metadata_utils import lookup_self_id
 from metldata.model_utils.anchors import AnchorPoint, filter_anchor_points
@@ -151,15 +154,21 @@ class GovernanceMetadata:
         *,
         submissions: Sequence[Submission],
         anchor_points_by_target: dict[str, AnchorPoint],
+        study_class_name: str,
     ):
         """Index submissions. Identifier slots hold aliases, and accessions come from
-        the accession map.
+        the accession map. A submission with a study PID stores only the study and
+        dataset accessions, so the others are composed from the study PID and the
+        aliases, as the `add_accessions` transformation does.
 
         Raises:
             AnchorPointNotFoundError: if a class on the governance chain is not
                 anchored.
             MissingAccessionError: if a submission with accessions holds a resource
                 on the governance chain that has none.
+            MetadataTransformationError: if a submission's accession map lacks a
+                class on the governance chain and holds no study PID to compose its
+                accessions from.
         """
         governance_anchor_points = _filter_governance_anchor_points(
             anchor_points_by_target=anchor_points_by_target
@@ -170,7 +179,12 @@ class GovernanceMetadata:
                 anchor_points_by_target=governance_anchor_points,
                 lookup_resource_accession=partial(
                     _lookup_submission_accession,
-                    accession_map=submission.accession_map,
+                    accession_map=_complete_submission_accession_map(
+                        submission=submission,
+                        anchor_points_by_target=anchor_points_by_target,
+                        governance_anchor_points=governance_anchor_points,
+                        study_class_name=study_class_name,
+                    ),
                 ),
             )
             for submission in submissions
@@ -345,6 +359,45 @@ def _index_document(
             )
         document[class_name] = resources
     return document
+
+
+def _complete_submission_accession_map(
+    *,
+    submission: Submission,
+    anchor_points_by_target: dict[str, AnchorPoint],
+    governance_anchor_points: dict[str, AnchorPoint],
+    study_class_name: str,
+) -> AccessionMap:
+    """Add the accessions of the governance chain that the submission's accession
+    map does not store, composed from its study PID. A submission without
+    accessions yet keeps its empty map.
+
+    Raises:
+        MetadataTransformationError: if the map lacks a class on the governance
+            chain and holds no study PID to compose its accessions from.
+    """
+    if not submission.accession_map:
+        return submission.accession_map
+
+    content = submission.content or {}
+    # Only the classes present in the content are composed, and the study class
+    # is passed so that its PID can be found in the map:
+    completed_anchor_points = {
+        class_name: anchor_point
+        for class_name, anchor_point in governance_anchor_points.items()
+        if anchor_point.root_slot in content
+    }
+    if study_class_name in anchor_points_by_target:
+        completed_anchor_points[study_class_name] = anchor_points_by_target[
+            study_class_name
+        ]
+
+    return complete_accession_map(
+        metadata=content,
+        accession_map=submission.accession_map,
+        anchor_points_by_target=completed_anchor_points,
+        study_class_name=study_class_name,
+    )
 
 
 def _lookup_submission_accession(
