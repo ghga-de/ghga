@@ -28,7 +28,9 @@ with the platform version and drafts its release, unless nothing it ships has ch
 
 The previous release is the highest tag of the same name below this one. A final
 release compares with the previous final release, a candidate with any earlier tag. A
-first release compares with the first platform tag before it.
+final tag without a GitHub release does not count: deleting the draft abandons the
+release, and its changes then go to the next one. A first release compares with the
+first platform tag before it.
 
 Only final releases are drafted. The notes of a candidate can still be printed, to see
 what changed since the previous one.
@@ -181,15 +183,18 @@ def _parse_version(text: str) -> Version | None:
         return None
 
 
-def previous_tag(tag: str) -> str | None:
+def previous_tag(tag: str, released: frozenset[str] | None = None) -> str | None:
     """Finds the release a tag's notes compare with.
 
     Args:
         tag: The release tag, e.g. `ghga/15.4.0` or `hexkit/8.7.0`.
+        released: The tags that have a GitHub release, drafts included. A final tag
+            missing from it was abandoned and is skipped. None counts every tag.
 
     Returns:
         The highest tag of the same name below `tag`, skipping release candidates
-        unless `tag` is one itself. Without one, the first platform tag before `tag`,
+        unless `tag` is one itself, and abandoned final releases. Without one, the
+        first platform tag before `tag`,
         so that a first release lists what was merged since the monorepo's first
         release rather than the history imported from the old repositories. None when
         there is neither.
@@ -201,6 +206,8 @@ def previous_tag(tag: str) -> str | None:
         if version >= current:
             continue
         if version.is_prerelease and not current.is_prerelease:
+            continue
+        if released is not None and not version.is_prerelease and other not in released:
             continue
         earlier[version] = other
     if earlier:
@@ -333,6 +340,42 @@ def pr_description(pr: int) -> str:
     ).stdout
 
 
+@functools.cache
+def release_tags() -> frozenset[str]:
+    """Lists the tags that have a GitHub release, drafts included, through `gh`."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "ghga-de/ghga")
+    return frozenset(
+        subprocess.run(
+            ["gh", "release", "list", "--repo", repo, "--limit", "10000",
+             "--json", "tagName", "--jq", ".[].tagName"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+    )  # fmt: skip
+
+
+def _released(strict: bool) -> frozenset[str] | None:
+    """Fetches `release_tags`, or None when GitHub cannot be reached and not `strict`.
+
+    Raises:
+        SystemExit: if `strict` and the releases cannot be listed.
+    """
+    try:
+        return release_tags()
+    except (OSError, subprocess.CalledProcessError) as error:
+        reason = getattr(error, "stderr", None) or error
+        if strict:
+            sys.exit(f"error: cannot list the GitHub releases: {reason}")
+        print(
+            f"warning: cannot list the GitHub releases ({reason}); the previous"
+            " release may be one that was abandoned",
+            file=sys.stderr,
+        )
+        return None
+
+
 def with_descriptions(changes: list[Entry], strict: bool) -> list[Entry]:
     """Takes the upgrade notes of each pull request from its description.
 
@@ -460,31 +503,34 @@ def component_lines(previous: str, tag: str) -> list[str]:
 
 
 def notes(
-    tag: str, previous: str | None = None, descriptions: bool | None = None
+    tag: str, previous: str | None = None, github: bool | None = None
 ) -> tuple[str, bool]:
     """Writes the notes for `tag`, compared with `previous` or the previous tag.
 
-    `descriptions` reads the upgrade notes from the pull request descriptions: True
-    requires them, False reads only the commit messages, and None tries the
-    descriptions and falls back to the commit messages.
+    `github` says whether the notes consult GitHub, for the upgrade notes in the pull
+    request descriptions and for the releases that tell an abandoned tag: True requires
+    it, False reads only the commit messages and the tags, and None tries GitHub and
+    falls back to them.
 
     Returns:
         The notes, and whether there is anything to release: False only when there is
         a previous release and no pull request since changed what `tag` ships.
     """
-    previous = previous or previous_tag(tag)
+    if previous is None:
+        released = None if github is False else _released(strict=bool(github))
+        previous = previous_tag(tag, released)
     if previous is None:
         return render(tag, None, []), True
     name = tag.rpartition("/")[0]
     changes = select(entries(previous, tag), release_prefixes(name))
-    if descriptions is not False:
-        changes = with_descriptions(changes, strict=bool(descriptions))
+    if github is not False:
+        changes = with_descriptions(changes, strict=bool(github))
     components = component_lines(previous, tag) if name == PLATFORM else []
     return render(tag, previous, changes, components), bool(changes)
 
 
 def companion_releases(
-    platform_tag: str, descriptions: bool | None = None
+    platform_tag: str, github: bool | None = None
 ) -> list[tuple[str, str, bool]]:
     """Tags the companions at a platform tag, locally, and writes their notes.
 
@@ -502,7 +548,7 @@ def companion_releases(
         created = not _has_tag(tag)
         if created:
             _git("tag", tag, f"{platform_tag}^{{commit}}")
-        text, changed = notes(tag, descriptions=descriptions)
+        text, changed = notes(tag, github=github)
         if changed:
             releases.append((tag, text, created))
         elif created:
@@ -626,7 +672,7 @@ def main(argv: list[str] | None = None) -> int:
     # A draft must not lose an upgrade note because GitHub was briefly unreachable.
     # The companions are tagged first, so that the platform's notes can link them.
     companions = companion_releases(args.tag, True) if name == PLATFORM else []
-    draft(args.tag, notes(args.tag, args.previous, descriptions=True)[0])
+    draft(args.tag, notes(args.tag, args.previous, github=True)[0])
     for tag, companion_text, created in companions:
         if created:
             # Pushed with the workflow token, the tag starts no release run.
