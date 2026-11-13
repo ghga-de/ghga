@@ -136,7 +136,7 @@ for the full set of configurable values.
 | `extraVolumes` | Extra volumes for the pod (on top of the config/kafka-secret volumes this chart already renders) | `[]` |
 | `extraVolumeMounts` | Extra volume mounts for the main container (on top of the shared ones every container gets) | `[]` |
 | `sidecars` | Extra full container specs appended alongside the main container | `[]` |
-| `envVars` | Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled) | `[]` |
+| `envVars` | Extra literal env vars for the main container (the generated CONFIG_YAML env var is appended to this list when configMap.envVar.enabled) | `[{"name": "LD_PRELOAD", "value": "/usr/lib/libjemalloc.so.2"}]` |
 | `envVarsConfigMap` | Name of a ConfigMap to load as bulk env vars via `envFrom` | `""` |
 | `envVarsSecret` | Name of a Secret to load as bulk env vars via `envFrom` | `""` |
 | `service.enabled` | Render the Service resource | `false` |

@@ -93,6 +93,16 @@ RUN ln -s /app/.venv/bin/python /app/entrypoint && test -e /app/entrypoint
 # hadolint ignore=DL3006
 FROM venv-${VARIANT} AS builder
 
+# ---- allocator: jemalloc, for members that preload it -----------------------------------
+# musl's default allocator, malloc can be slow at many small allocations.
+# A member that needs a faster allocator preloads jemalloc with LD_PRELOAD.
+# The runner has no package manager, so the library is copied in on its own
+# and does not appear in the image's package database.
+# hadolint ignore=DL3006
+FROM ${BASE}-sfw-dev AS allocator
+# hadolint ignore=DL3018
+RUN apk add --no-cache jemalloc
+
 # ---- runner: plain hardened base (non-root, no shell) -----------------------------------
 # hadolint ignore=DL3006
 FROM ${BASE} AS runner
@@ -101,6 +111,7 @@ ARG GIT_SHA=unknown
 ARG UID=1000
 COPY --from=builder --chown=${UID}:${UID} /app/.venv /app/.venv
 COPY --from=builder /app/entrypoint /app/entrypoint
+COPY --from=allocator /usr/lib/libjemalloc.so.2 /usr/lib/libjemalloc.so.2
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     GHGA_PLATFORM_VERSION="${PLATFORM_VERSION}"

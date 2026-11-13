@@ -9,6 +9,12 @@
 executableArgs:
   - interrogate
 
+# The image ships jemalloc as a drop-in replacement for musl's default
+# allocator, improving performance of the re-encryption loop
+envVars:
+  - name: LD_PRELOAD
+    value: /usr/lib/libjemalloc.so.2
+
 service:
   enabled: false
 containerPorts:
