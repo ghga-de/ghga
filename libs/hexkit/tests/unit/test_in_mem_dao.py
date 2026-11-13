@@ -22,7 +22,7 @@ import pytest
 from pydantic import BaseModel
 
 from hexkit.protocols.dao import (
-    InvalidMappingError,
+    InvalidFilterError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceNotFoundError,
@@ -116,12 +116,12 @@ async def test_update_precondition(handle_mql: bool):
         await dao.update(item, precondition={"count": 1})
 
     # An unknown field is rejected before the existence check, as in the real provider
-    with pytest.raises(InvalidMappingError):
+    with pytest.raises(InvalidFilterError):
         await dao.update(item, precondition={"no_such_field": 1})
 
     await dao.insert(item)
 
-    with pytest.raises(InvalidMappingError):
+    with pytest.raises(InvalidFilterError):
         await dao.update(item, precondition={"no_such_field": 1})
 
     # A resource that doesn't match the criteria is left unchanged
@@ -191,9 +191,9 @@ async def test_find_invalid_filter():
     dao = DaoClass()
 
     for filter_ in ({"no_such_field": 1}, {"": 1}):
-        with pytest.raises(InvalidMappingError):
+        with pytest.raises(InvalidFilterError):
             await dao.find_one(filter_=filter_)
-        with pytest.raises(InvalidMappingError):
+        with pytest.raises(InvalidFilterError):
             _ = dao.find_all(filter_=filter_)
 
 

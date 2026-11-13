@@ -35,14 +35,13 @@ from hexkit.protocols.dao import (
     Dto,
     FindResult,
     IndexBase,
-    InvalidMappingError,
+    InvalidFilterError,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
-    resolve_filter,
 )
 from hexkit.providers.mongodb.config import MongoDbConfig
 from hexkit.providers.mongodb.provider.client import ConfiguredMongoClient
@@ -58,48 +57,48 @@ __all__ = [
     "MongoDbDaoFactory",
     "MongoDbIndex",
     "get_single_hit",
-    "replace_id_field_in_find_mapping",
-    "validate_find_mapping",
+    "replace_id_field_in_find_filter",
+    "validate_find_filter",
 ]
 
 
-def validate_find_mapping(mapping: Mapping[str, Any], *, dto_model: type[Dto]):
-    """Validates a key/value mapping used in find methods against the provided DTO model
-    by checking if the mapping keys exist as model fields.
+def validate_find_filter(filter_: Mapping[str, Any], *, dto_model: type[Dto]):
+    """Validates a key/value filter used in find methods against the provided DTO model
+    by checking if the filter keys exist as model fields.
 
     Raises:
-        InvalidMappingError: If `mapping` doesn't pass validation.
+        InvalidFilterError: If `filter_` doesn't pass validation.
     """
     try:
-        validate_fields_in_model(model=dto_model, fields=set(mapping))
+        validate_fields_in_model(model=dto_model, fields=set(filter_))
     except FieldNotInModelError as error:
-        raise InvalidMappingError(
-            f"The provided find mapping was invalid: {error}."
+        raise InvalidFilterError(
+            f"The provided find filter was invalid: {error}."
         ) from error
 
 
-def replace_id_field_in_find_mapping(
-    mapping: Mapping[str, Any], id_field: str
+def replace_id_field_in_find_filter(
+    filter_: Mapping[str, Any], id_field: str
 ) -> Mapping[str, Any]:
-    """If the provided find mapping includes the ID field, it is replaced with MongoDB's
+    """If the provided find filter includes the ID field, it is replaced with MongoDB's
     internal ID field name.
     """
-    if id_field in mapping:
-        mapping = dict(mapping)
-        mapping["_id"] = mapping.pop(id_field)
+    if id_field in filter_:
+        filter_ = dict(filter_)
+        filter_["_id"] = filter_.pop(id_field)
 
-    return mapping
+    return filter_
 
 
 async def get_single_hit(
-    *, hits: AsyncIterator[Dto], mapping: Mapping[str, Any]
+    *, hits: AsyncIterator[Dto], filter_: Mapping[str, Any]
 ) -> Dto:
     """Asserts that there is exactly one hit in the provided AsyncIterator of hits and
     returns it.
 
     Args:
         hits: An AsyncIterator of hits resulting from a find operation.
-        mapping: The mapping that was used to obtain the hits.
+        filter_: The filter that was used to obtain the hits.
 
     Raises:
         NoHitsFoundError: If no hit was found.
@@ -108,7 +107,7 @@ async def get_single_hit(
     try:
         dto = await hits.__anext__()
     except StopAsyncIteration as error:
-        raise NoHitsFoundError(filter_=mapping) from error
+        raise NoHitsFoundError(filter_=filter_) from error
 
     try:
         _ = await hits.__anext__()
@@ -116,7 +115,7 @@ async def get_single_hit(
         # This is expected:
         return dto
 
-    raise MultipleHitsFoundError(filter_=mapping)
+    raise MultipleHitsFoundError(filter_=filter_)
 
 
 FieldName: TypeAlias = str
@@ -258,7 +257,7 @@ class MongoDbDao(Generic[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidMappingError: when `precondition` doesn't pass validation
+            InvalidFilterError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -268,8 +267,8 @@ class MongoDbDao(Generic[Dto]):
         doc_filter: dict[str, Any] = id_filter
 
         if precondition:
-            validate_find_mapping(precondition, dto_model=self._dto_model)
-            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            validate_find_filter(precondition, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_filter(precondition, self._id_field)
             # A separate $and clause keeps an ID in the criteria from replacing the
             # one on the supplied dto instance
             doc_filter = {"$and": [id_filter, criteria]}
@@ -314,12 +313,10 @@ class MongoDbDao(Generic[Dto]):
         # (trusting MongoDB that matching on the _id field can only yield one or
         # zero matches)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
         """Find the resource that matches the specified filter.
 
@@ -336,8 +333,6 @@ class MongoDbDao(Generic[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
-            mapping:
-                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
@@ -349,16 +344,13 @@ class MongoDbDao(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        filter_ = resolve_filter(filter_, mapping)
         hits = self.find_all(filter_=filter_)
-        return await get_single_hit(hits=hits, mapping=filter_)
+        return await get_single_hit(hits=hits, filter_=filter_)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -375,8 +367,6 @@ class MongoDbDao(Generic[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
-            mapping:
-                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -395,7 +385,6 @@ class MongoDbDao(Generic[Dto]):
         Returns:
             A FindResult that is async-iterable and also provides total_count().
         """
-        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
 
         if skip < 0:
@@ -403,8 +392,8 @@ class MongoDbDao(Generic[Dto]):
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(filter_, dto_model=self._dto_model)
-        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_filter(filter_, self._id_field)
 
         # Convert generic sort spec to MongoDB-specific sort spec
         mongodb_sort: list[tuple[str, int]] = []

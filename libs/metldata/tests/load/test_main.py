@@ -136,7 +136,7 @@ async def test_load_artifacts_endpoint_happy(joint_fixture: JointFixture):  # no
     stats_dao = await joint_fixture.mongodb.dao_factory.get_dao(
         name=STATS_COLLECTION_NAME, dto_model=GlobalStats, id_field="id"
     )
-    async for stats in stats_dao.find_all(mapping={}):
+    async for stats in stats_dao.find_all(filter_={}):
         assert stats.id == "global"
         assert abs((now_as_utc() - stats.created).seconds) < 5
         assert stats.resource_stats == expected_resource_stats

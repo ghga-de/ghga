@@ -108,7 +108,7 @@ class ArtifactDaoCollection:
         all_artifact_tags: set[tuple[str, str]] = {
             (artifact_name, artifact.study_accession)
             for artifact_name, dao in self._whole_artifact_daos.items()
-            async for artifact in dao.find_all(mapping={})
+            async for artifact in dao.find_all(filter_={})
         }
 
         return all_artifact_tags
@@ -124,9 +124,9 @@ class ArtifactDaoCollection:
         all_resource_tags: list[tuple[str, str, str]] = []
         for artifact_type, class_name_dao in self._artifact_resource_daos.items():
             for class_name, resource_dao in class_name_dao.items():
-                # empty mapping should yield all resources
+                # empty filter should yield all resources
                 resource_ids = [
-                    resource.id_ async for resource in resource_dao.find_all(mapping={})
+                    resource.id_ async for resource in resource_dao.find_all(filter_={})
                 ]
                 all_resource_tags.extend(
                     (artifact_type, class_name, resource_id)
