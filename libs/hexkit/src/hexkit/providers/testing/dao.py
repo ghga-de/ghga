@@ -32,13 +32,12 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
-    resolve_filter,
 )
 from hexkit.providers.mongodb.provider import (
     document_to_dto,
     dto_to_document,
-    replace_id_field_in_find_mapping,
-    validate_find_mapping,
+    replace_id_field_in_find_filter,
+    validate_find_filter,
 )
 
 __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
@@ -445,25 +444,21 @@ class BaseInMemDao(Generic[DTO]):
             return self._deserialize(self.resources[id_])
         raise ResourceNotFoundError(id_=id_)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> DTO:
         """Find the resource that matches the specified filter.
 
         Args:
             filter_: A mapping of field names to the values to select on.
-            mapping: Deprecated alias for `filter_`.
 
         Raises:
-            InvalidMappingError: If `filter_` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
             NoHitsFoundError: If no matching resource is found.
             MultipleHitsFoundError: If more than one matching resource is found.
         """
-        filter_ = resolve_filter(filter_, mapping)
         hits = self.find_all(filter_=filter_)
         try:
             dto = await hits.__anext__()
@@ -492,12 +487,10 @@ class BaseInMemDao(Generic[DTO]):
                 return False
         return True
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -506,21 +499,19 @@ class BaseInMemDao(Generic[DTO]):
 
         Args:
             filter_: A mapping of field names to the values to select on.
-            mapping: Deprecated alias for `filter_`.
 
         Raises:
             ValueError: If `skip` or `limit` is negative.
-            InvalidMappingError: If `filter_` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
         """
-        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(filter_, dto_model=self._dto_model)
-        _filter = replace_id_field_in_find_mapping(filter_, self._id_field)
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        _filter = replace_id_field_in_find_filter(filter_, self._id_field)
         predicates = build_predicates(_filter) if self._handle_mql else []
 
         matching = [
@@ -580,7 +571,7 @@ class BaseInMemDao(Generic[DTO]):
     ) -> None:
         """Update a resource.
 
-        Raises an InvalidMappingError if `precondition` doesn't pass validation, a
+        Raises an InvalidFilterError if `precondition` doesn't pass validation, a
         ResourceNotFoundError if no resource with a matching ID is found, and a
         PreconditionFailedError if the resource doesn't match `precondition`.
         """
@@ -589,13 +580,13 @@ class BaseInMemDao(Generic[DTO]):
         # Validated before the existence check, so an invalid mapping produces the same
         # error here as it does in the MongoDB provider
         if precondition:
-            validate_find_mapping(precondition, dto_model=self._dto_model)
+            validate_find_filter(precondition, dto_model=self._dto_model)
 
         if dto_id not in self.resources:
             raise ResourceNotFoundError(id_=dto_id)
 
         if precondition:
-            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            criteria = replace_id_field_in_find_filter(precondition, self._id_field)
             predicates = build_predicates(criteria) if self._handle_mql else []
             if not self._resource_matches(self.resources[dto_id], criteria, predicates):
                 raise PreconditionFailedError(id_=dto_id, precondition=precondition)

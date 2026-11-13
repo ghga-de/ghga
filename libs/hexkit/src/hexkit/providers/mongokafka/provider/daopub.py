@@ -47,7 +47,6 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceNotFoundError,
     UniqueConstraintViolationError,
-    resolve_filter,
 )
 from hexkit.protocols.daopub import DaoPublisher, DaoPublisherFactoryProtocol
 from hexkit.protocols.eventpub import EventPublisherProtocol
@@ -61,9 +60,9 @@ from hexkit.providers.mongodb.provider import (
     ConfiguredMongoClient,
     MongoDbDao,
     get_single_hit,
-    replace_id_field_in_find_mapping,
+    replace_id_field_in_find_filter,
     translate_pymongo_errors,
-    validate_find_mapping,
+    validate_find_filter,
 )
 from hexkit.providers.mongodb.provider.dao import MongoDbIndex
 from hexkit.providers.mongokafka.config import MongoKafkaConfig
@@ -337,7 +336,7 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidMappingError: when `precondition` doesn't pass validation
+            InvalidFilterError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -356,8 +355,8 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
 
         # If precondition is supplied, validate it and add it to the doc_filter
         if precondition:
-            validate_find_mapping(precondition, dto_model=self._dto_model)
-            criteria = replace_id_field_in_find_mapping(precondition, self._id_field)
+            validate_find_filter(precondition, dto_model=self._dto_model)
+            criteria = replace_id_field_in_find_filter(precondition, self._id_field)
             # A separate $and clause keeps an $or in the criteria from replacing the
             # $or that excludes deleted documents
             doc_filter = {"$and": [existing_filter, criteria]}
@@ -422,12 +421,10 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         if self._autopublish:
             await self.publish_document(document)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
         """Find the resource that matches the specified filter.
 
@@ -444,8 +441,6 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
-            mapping:
-                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
@@ -457,16 +452,13 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             MultipleHitsFoundError:
                 Raised when obtaining more than one hit.
         """
-        filter_ = resolve_filter(filter_, mapping)
         hits = self.find_all(filter_=filter_)
-        return await get_single_hit(hits=hits, mapping=filter_)
+        return await get_single_hit(hits=hits, filter_=filter_)
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(  # noqa: C901
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -483,8 +475,6 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
-            mapping:
-                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -504,18 +494,17 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
             A FindResult that is async-iterable and also provides total_count().
 
         Raises:
-            InvalidMappingError: If `filter_` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
         """
-        filter_ = resolve_filter(filter_, mapping)
         skip = skip or 0
         if skip < 0:
             raise ValueError("skip must be >= 0")
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_mapping(filter_, dto_model=self._dto_model)
-        filter_ = replace_id_field_in_find_mapping(filter_, self._id_field)
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        filter_ = replace_id_field_in_find_filter(filter_, self._id_field)
 
         # Ensure we don't retrieve deleted docs. Documents lacking outbox metadata are
         # treated as valid (matching update/delete), and the $and wrapper avoids
