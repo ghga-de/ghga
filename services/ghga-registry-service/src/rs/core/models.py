@@ -75,9 +75,13 @@ __all__ = [
     "Study",
     "StudyStatus",
     "SubmitAccessionMapWorkOrder",
+    "UpdateUploadBoxPriorityRequest",
     "UpdateUploadBoxRequest",
     "UploadBoxPriority",
     "UploadBoxPriorityEntry",
+    "UploadBoxPriorityMove",
+    "UploadBoxPriorityResponse",
+    "UploadBoxPrioritySaveResult",
     "UploadBoxState",
     "UploadGrant",
     "ViewFileBoxStatsWorkOrder",
@@ -474,4 +478,79 @@ class BoxUploadsPage(BaseModel):
     total_count: int = Field(
         ...,
         description="The total number of file uploads in the box (unpaginated)",
+    )
+
+
+class UploadBoxPriorityResponse(BaseModel):
+    """The upload box priority list as the API returns it.
+
+    Before the first list is stored, the version is 0 and the other fields are empty.
+    """
+
+    version: NonNegativeInt = Field(
+        ..., description="A counter indicating resource version"
+    )
+    changed_by: UUID4 | None = Field(
+        ...,
+        description="ID of the user who performed the latest change, or None if the"
+        + " system made it or no list is stored yet",
+    )
+    last_changed: UTCDatetime | None = Field(
+        ...,
+        description="Timestamp of the latest change, or None if no list is stored yet",
+    )
+    entries: list[UploadBoxPriorityEntry] = Field(
+        ...,
+        description="The boxes in priority order. Index 0 is the highest priority.",
+    )
+
+    @classmethod
+    def from_priority(cls, priority: UploadBoxPriority | None) -> Self:
+        """Make the response for the stored list, or for no list if None."""
+        if priority is None:
+            return cls(version=0, changed_by=None, last_changed=None, entries=[])
+        return cls(**priority.model_dump(exclude={"id"}))
+
+
+class UploadBoxPriorityMove(BaseModel):
+    """A move of a box in the upload box priority list."""
+
+    box_id: UUID4 = Field(
+        ..., description="The ID of the research data upload box to move"
+    )
+    before: UUID4 | None = Field(
+        ...,
+        description="The ID of the research data upload box to put the moved box"
+        + " directly before, or None to put it at the end",
+    )
+
+
+class UpdateUploadBoxPriorityRequest(BaseModel):
+    """Request model for moving boxes in the upload box priority list."""
+
+    version: NonNegativeInt = Field(
+        ...,
+        description="The version of the list the moves were made on. It does not have"
+        + " to match the stored version.",
+    )
+    moves: list[UploadBoxPriorityMove] = Field(
+        ..., description="The moves to apply, in order"
+    )
+
+
+class UploadBoxPrioritySaveResult(BaseModel):
+    """The outcome of moving boxes in the upload box priority list."""
+
+    priority: UploadBoxPriorityResponse = Field(
+        ..., description="The stored list after the save"
+    )
+    skipped: list[UploadBoxPriorityMove] = Field(
+        ...,
+        description="The moves that were skipped because the box they should go"
+        + " before was not in the list, or was the moved box itself",
+    )
+    includes_other_changes: bool = Field(
+        ...,
+        description="Whether the list was changed after the version the moves were"
+        + " made on",
     )

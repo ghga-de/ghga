@@ -32,6 +32,9 @@ from rs.core.models import (
     ResearchDataUploadBox,
     UploadBoxPriority,
     UploadBoxPriorityEntry,
+    UploadBoxPriorityMove,
+    UploadBoxPriorityResponse,
+    UploadBoxPrioritySaveResult,
 )
 from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.outbound.audit import AuditRepositoryPort
@@ -60,6 +63,30 @@ def _with_missing_boxes(
         key=lambda box: (box.last_changed, box.id),
     )
     return [*box_ids, *(box.id for box in missing)]
+
+
+def _apply_moves(
+    box_ids: list[UUID4], moves: list[UploadBoxPriorityMove]
+) -> tuple[list[UUID4], list[UploadBoxPriorityMove]]:
+    """Apply the moves to `box_ids` in order, and return the result and the skipped
+    moves.
+
+    A move of a box that is not in the list inserts it. A move is skipped if `before`
+    is neither None nor in the list, or is the moved box itself.
+    """
+    box_ids = list(box_ids)
+    skipped: list[UploadBoxPriorityMove] = []
+    for move in moves:
+        if move.before == move.box_id or (
+            move.before is not None and move.before not in box_ids
+        ):
+            skipped.append(move)
+            continue
+        if move.box_id in box_ids:
+            box_ids.remove(move.box_id)
+        position = len(box_ids) if move.before is None else box_ids.index(move.before)
+        box_ids.insert(position, move.box_id)
+    return box_ids, skipped
 
 
 class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
@@ -95,6 +122,46 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         """
         await self._update_priority(user_id=user_id)
 
+    async def get_priority(self) -> UploadBoxPriorityResponse:
+        """Get the stored priority list, or an empty one with version 0 if none is
+        stored yet.
+        """
+        return UploadBoxPriorityResponse.from_priority(
+            await self._get_stored_priority()
+        )
+
+    async def move_boxes(
+        self, *, version: int, moves: list[UploadBoxPriorityMove], user_id: UUID4
+    ) -> UploadBoxPrioritySaveResult:
+        """Apply the moves of a data steward to the stored priority list, in order.
+
+        Adds the missing boxes before the moves, and drops the entries for unknown,
+        archived and deleted boxes after the last move, so that later moves can refer
+        to such a box. A move of a box that is not in the list inserts it. A move is
+        skipped if `before` is neither None nor in the list, or is the moved box
+        itself. A skipped move does not stop the moves after it. `version` is the
+        version the moves were made on, and only sets `includes_other_changes`.
+
+        Raises:
+            PriorityUpdateError: If other writes kept changing the list first.
+        """
+        skipped: list[UploadBoxPriorityMove] = []
+
+        def change(box_ids: list[UUID4]) -> list[UUID4]:
+            # Runs again on a fresh read after a lost race
+            nonlocal skipped
+            box_ids, skipped = _apply_moves(box_ids, moves)
+            return box_ids
+
+        read_version, priority = await self._update_priority(
+            user_id=user_id, change=change
+        )
+        return UploadBoxPrioritySaveResult(
+            priority=UploadBoxPriorityResponse.from_priority(priority),
+            skipped=skipped,
+            includes_other_changes=read_version != version,
+        )
+
     async def _get_stored_priority(self) -> UploadBoxPriority | None:
         """Get the stored priority list, or None if none was stored yet."""
         try:
@@ -104,7 +171,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
 
     async def _update_priority(
         self, *, user_id: UUID4 | None, change: BoxIdsChange | None = None
-    ) -> UploadBoxPriority | None:
+    ) -> tuple[int, UploadBoxPriority | None]:
         """Apply `change` to the priority list and repair it, retrying on a lost race.
 
         Each attempt reads the list and the boxes, adds the missing boxes, applies the
@@ -112,8 +179,9 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         result is written only if the stored `version` is unchanged.
         If the result is the same as the stored list, return early.
 
-        Returns the stored priority list, or None if none is stored and none is
-        needed because there is no box.
+        Returns the version the successful attempt read, or 0 if no list was stored,
+        and the stored list after the update. The list is None if none is stored and
+        none is needed because there is no box.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.
@@ -128,6 +196,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         ):
             with attempt:
                 stored = await self._get_stored_priority()
+                read_version = stored.version if stored else 0
                 boxes = {
                     box.id: box
                     async for box in self._box_dao.find_all(
@@ -151,13 +220,13 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
                     if box_id in boxes
                 ]
                 if stored is None and not entries:
-                    return None
+                    return read_version, None
                 if stored is not None and entries == stored.entries:
-                    return stored
+                    return read_version, stored
 
                 new_priority = UploadBoxPriority(
                     id=BOX_PRIORITY_EVENT_KEY,
-                    version=stored.version + 1 if stored else 1,
+                    version=read_version + 1,
                     changed_by=user_id,
                     last_changed=now_utc_ms_prec(),
                     entries=entries,
@@ -179,7 +248,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
                 await self._audit_repository.log_box_priority_updated(
                     priority=new_priority, old_box_ids=old_box_ids, user_id=user_id
                 )
-                return new_priority
+                return read_version, new_priority
 
         # Not reached: race_condition_retries raises once the last attempt failed
         raise self.PriorityUpdateError()
