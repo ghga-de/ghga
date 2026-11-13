@@ -15,6 +15,9 @@ db_version_collection: arsDbVersions
 
 access_request_topic: access_request_events
 
+notification_topic: notifications
+sms_notification_type: sms_notification
+
 dataset_change_topic: metadata_datasets
 dataset_upsertion_type: dataset_created
 dataset_deletion_type: dataset_deleted

@@ -136,6 +136,16 @@ _topics:
     kafkaUser:
       operations:
       - Write
+  notificationEvent:
+    topic:
+      name: notification_topic
+      value: notifications
+    types:
+    - name: sms_notification_type
+      value: sms_notification
+    kafkaUser:
+      operations:
+      - Write
   datasetChangeEvent:
     topic:
       name: dataset_change_topic

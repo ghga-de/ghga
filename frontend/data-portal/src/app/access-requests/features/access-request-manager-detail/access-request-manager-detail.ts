@@ -23,6 +23,7 @@ import { form, FormField } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
@@ -59,6 +60,7 @@ import { html } from '@app/shared/utils/html';
 import { AccessRequestDurationEdit } from '../access-request-duration-edit/access-request-duration-edit';
 import { interval, map } from 'rxjs';
 import { AccessRequestFieldEdit } from '../access-request-field-edit/access-request-field-edit';
+import { VerificationSmsDialog } from '../verification-sms-dialog/verification-sms-dialog';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -102,6 +104,7 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
   #confirmationService = inject(ConfirmationService);
   #notificationService = inject(Notifier);
   #accessRequestService = inject(AccessRequestService);
+  #dialog = inject(MatDialog);
 
   #authUrl = this.#config.authUrl;
   #usersUrl = `${this.#authUrl}/users`;
@@ -396,6 +399,62 @@ export class AccessRequestManagerDetail implements OnInit, HasPendingEdits {
    */
   saveIva() {
     this.#update({ iva_id: this.selectedIvaIdRadioButton() });
+  }
+
+  /**
+   * Open the dialog for sending a verification code to the DAC by SMS.
+   * The backend records the sending in the internal note, so an unsaved
+   * edit of that note would be lost and needs to be confirmed first.
+   */
+  sendVerificationSms(): void {
+    if (this.#pendingEdits.has('internal_note')) {
+      this.#confirmationService.confirm({
+        title: 'Unsaved internal note',
+        message:
+          'Sending the code adds a line to the internal note,' +
+          ' which discards your unsaved changes of the note.',
+        cancelText: 'Cancel',
+        confirmText: 'Discard Changes',
+        confirmClass: 'danger',
+        callback: (wantsToDiscard) => {
+          if (wantsToDiscard) this.#openVerificationSmsDialog();
+        },
+      });
+    } else {
+      this.#openVerificationSmsDialog();
+    }
+  }
+
+  /**
+   * Open the dialog for sending a verification code and take over the new note.
+   * The dialog does not close by itself, since a send may still be running.
+   * If it closes with null, the note is unknown and the request is reloaded.
+   */
+  #openVerificationSmsDialog(): void {
+    const request = this.request();
+    if (!request) return;
+    this.#dialog
+      .open<VerificationSmsDialog, AccessRequest, string | null>(
+        VerificationSmsDialog,
+        {
+          data: request,
+          width: '40rem',
+          maxWidth: '95vw',
+          disableClose: true,
+        },
+      )
+      .afterClosed()
+      .subscribe((note) => {
+        if (note === undefined) return;
+        this.#pendingEdits.delete('internal_note');
+        if (note === null) {
+          this.#cachedRequest.set(undefined);
+          this.#accessRequestService.reloadAccessRequest(request.id);
+          return;
+        }
+        // the service has updated its copies, but this one is a snapshot
+        this.#cachedRequest.update((ar) => ar && { ...ar, internal_note: note });
+      });
   }
 
   /**

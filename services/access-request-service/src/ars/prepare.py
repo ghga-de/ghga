@@ -27,6 +27,7 @@ from ars.adapters.inbound.event_sub import EventSubTranslator
 from ars.adapters.inbound.fastapi_ import dummies
 from ars.adapters.inbound.fastapi_.configure import get_configured_app
 from ars.adapters.outbound.daos import get_access_request_dao, get_dataset_dao
+from ars.adapters.outbound.event_pub import SmsNotifier
 from ars.adapters.outbound.http import AccessGrantsAdapter
 from ars.config import Config
 from ars.core.repository import AccessRequestRepository
@@ -70,12 +71,15 @@ async def prepare_core(
         AccessGrantsAdapter.construct(
             config=config, transport=access_grants_transport
         ) as access_grants,
+        KafkaEventPublisher.construct(config=config) as event_publisher,
     ):
         dataset_dao = await get_dataset_dao(dao_factory=dao_factory)
+        sms_notifier = SmsNotifier(config=config, event_publisher=event_publisher)
         yield AccessRequestRepository(
             access_request_dao=access_request_dao,
             dataset_dao=dataset_dao,
             access_grants=access_grants,
+            sms_notifier=sms_notifier,
             config=config,
         )
 

@@ -30,6 +30,8 @@ for the full set of configurable values.
 | `config.access_grant_min_days` | The minimum number of days that the access will be granted | `7` |
 | `config.access_grant_max_days` | The maximum number of days that the access can be granted | `730` |
 | `config.access_grant_max_extend` | This is a factor that the maximum number of days is multiplied with for data stewards. Set this to 1 to disable extension. | `5` |
+| `config.notification_topic` | Name of the topic used for notification events. | `null` |
+| `config.sms_notification_type` | The type used for SMS notification events. | `null` |
 | `config.access_request_topic` | Name of the event topic containing access request events | `null` |
 | `config.dataset_change_topic` | Name of the topic announcing, among other things, the list of files included in a new dataset. | `null` |
 | `config.dataset_deletion_type` | Event type used for communicating dataset deletions | `null` |

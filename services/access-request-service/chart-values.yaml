@@ -41,6 +41,18 @@ _topics:
       operations:
       - Write
 
+  notificationEvent:
+    # as producer
+    topic:
+      name: notification_topic
+      value: notifications
+    types:
+    - name: sms_notification_type
+      value: sms_notification
+    kafkaUser:
+      operations:
+      - Write
+
   datasetChangeEvent:
     # as consumer
     topic:

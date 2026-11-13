@@ -56,7 +56,10 @@ describe('NewIvaDialog', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'SMS' }));
     await fixture.whenStable();
 
-    await userEvent.type(screen.getByRole('textbox'), '1701234567');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Phone number' }),
+      '1701234567',
+    );
     await fixture.whenStable();
 
     const submit = screen.getByRole('button', { name: 'Submit' });

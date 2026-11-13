@@ -25,9 +25,11 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    field_validator,
     model_validator,
 )
 
+from ars.core.phone import validate_phone_number
 from ghga_event_schemas.pydantic_ import AccessRequestStatus
 from ghga_service_commons.utils.accessions import DatasetAccession
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -38,6 +40,8 @@ __all__ = [
     "AccessRequestPatchData",
     "AccessRequestStatus",
     "Dataset",
+    "VerificationSmsData",
+    "VerificationSmsResult",
 ]
 
 
@@ -231,3 +235,55 @@ class GrantValidity(BaseModel):
             raise ValueError("'valid_until' must be later than 'valid_from'")
 
         return self
+
+
+class VerificationSmsData(BaseDto):
+    """An SMS with a verification code for confirming an access request.
+
+    A data steward sends it to a person authorized to act for the DAC,
+    who sends the code back via the helpdesk.
+    """
+
+    phone: str = Field(
+        default=...,
+        description="Mobile phone number of the recipient with international prefix",
+        examples=["+49 1512 3456789"],
+    )
+    text: str = Field(
+        default=...,
+        min_length=1,
+        max_length=480,
+        description="The text of the SMS, including the verification code",
+    )
+    code: str = Field(
+        default=...,
+        min_length=4,
+        max_length=16,
+        pattern=r"^[A-Za-z0-9]+$",
+        description="The verification code contained in the text,"
+        " to be recorded in the internal note of the access request",
+    )
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        """Validate the phone number and normalize it to E.164 format."""
+        return validate_phone_number(value)
+
+    @model_validator(mode="after")
+    def text_contains_code(self):
+        """Validate that the code recorded in the internal note is the one sent."""
+        if self.code not in self.text:
+            raise ValueError("The text must contain the verification code")
+
+        return self
+
+
+class VerificationSmsResult(BaseDto):
+    """The outcome of sending a verification SMS for an access request."""
+
+    internal_note: str = Field(
+        default=...,
+        description="The internal note of the access request,"
+        " including the record of the sent SMS",
+    )

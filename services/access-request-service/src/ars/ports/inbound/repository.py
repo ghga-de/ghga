@@ -27,6 +27,7 @@ from ars.core.models import (
     AccessRequestPatchData,
     AccessRequestStatus,
     Dataset,
+    VerificationSmsData,
 )
 from ghga_service_commons.auth.ghga import AuthContext
 
@@ -170,6 +171,31 @@ class AccessRequestRepositoryPort(ABC):
         - `AccessRequestInvalidDuration` if the end date isn't later than the start date
           or the access period has ended
         - `AccessRequestServerError` if the access grant could not be registered
+        """
+        ...
+
+    @abstractmethod
+    async def send_verification_sms(
+        self,
+        access_request_id: UUID4,
+        *,
+        sms_data: VerificationSmsData,
+        auth_context: AuthContext,
+    ) -> str:
+        """Send an SMS with a verification code for the given access request.
+
+        The recipient is a person authorized to act for the DAC, who confirms the
+        approval by sending the code back via the helpdesk. The sending is recorded
+        in the internal note of the access request.
+
+        Only data stewards may use this method, and only for pending requests.
+
+        Returns the new internal note.
+
+        Raises:
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessRequestClosed` if the access request was already processed
         """
         ...
 

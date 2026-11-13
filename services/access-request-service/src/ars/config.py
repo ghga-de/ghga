@@ -19,6 +19,7 @@ from pydantic import Field
 
 from ars.adapters.inbound.event_sub import EventSubTranslatorConfig
 from ars.adapters.outbound.daos import AccessRequestDaoConfig
+from ars.adapters.outbound.event_pub import SmsNotifierConfig
 from ars.adapters.outbound.http import AccessGrantsConfig
 from ars.core.repository import AccessRequestConfig
 from ghga_service_commons.api import ApiConfigBase
@@ -41,6 +42,7 @@ class Config(
     EventSubTranslatorConfig,
     AccessRequestDaoConfig,
     AccessGrantsConfig,
+    SmsNotifierConfig,
     AccessRequestConfig,
 ):
     """Config parameters and their defaults."""
