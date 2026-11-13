@@ -32,6 +32,7 @@ const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
  */
 class MockConfigService {
   authUrl = 'http://mock.dev/auth';
+  contactUrl = 'https://contact.mock.dev/';
 }
 
 /**
@@ -152,7 +153,7 @@ describe('AuthService', () => {
       expect(confirmation.confirm).toHaveBeenCalledTimes(1);
       expect(confirmation.confirm.mock.calls[0][0].title).toBe('Account disabled');
       expect(String(confirmation.confirm.mock.calls[0][0].message)).toContain(
-        'https://www.ghga.de/about-us/contact',
+        'https://contact.mock.dev/',
       );
       expect(notify.showError).not.toHaveBeenCalled();
     });

@@ -10,6 +10,7 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { IvaState, IvaType } from '@app/ivas/models/iva';
 import { IvaService } from '@app/ivas/services/iva';
+import { ConfigService } from '@app/shared/services/config';
 import { Notifier } from '@app/shared/services/notification';
 import { UploadBoxState } from '@app/upload/models/box';
 import { GrantWithBoxInfo } from '@app/upload/models/grant';
@@ -120,6 +121,7 @@ describe('UploadWorkPackageDialog', () => {
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: WorkPackageService, useValue: wpServiceMock },
         { provide: Notifier, useValue: notifyMock },
+        { provide: ConfigService, useValue: { contactUrl: 'https://contact.test/' } },
         { provide: Clipboard, useValue: clipboardMock },
         { provide: IvaService, useClass: MockIvaService },
       ],
@@ -257,6 +259,10 @@ describe('UploadWorkPackageDialog', () => {
     await result.fixture.whenStable();
 
     expect(screen.getByText(/could not be created/)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'contact us' })).toHaveAttribute(
+      'href',
+      'https://contact.test/',
+    );
     expect(notificationService.showError).toHaveBeenCalled();
   });
 

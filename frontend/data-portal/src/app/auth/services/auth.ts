@@ -43,8 +43,6 @@ import {
 } from '../models/user';
 import { CsrfService } from './csrf';
 
-const CONTACT_URL = 'https://www.ghga.de/about-us/contact';
-
 /**
  * Check whether an error response has the given status and detail
  *
@@ -425,6 +423,7 @@ export class AuthService {
    * and would otherwise retry without knowing why it fails.
    */
   showAccountDisabled(): void {
+    const contactUrl = this.#config.contactUrl;
     this.#confirmation.confirm({
       title: 'Account disabled',
       message: html`<p>
@@ -433,7 +432,7 @@ export class AuthService {
         </p>
         <p>
           Please
-          <a href="${CONTACT_URL}" target="_blank" rel="noreferrer noopener"
+          <a href="${contactUrl}" target="_blank" rel="noreferrer noopener"
             >contact GHGA</a
           >
           to have it reactivated.
@@ -441,7 +440,7 @@ export class AuthService {
       cancelText: 'Close',
       confirmText: 'Contact GHGA',
       callback: (confirmed) => {
-        if (confirmed) window.open(CONTACT_URL, '_blank', 'noreferrer,noopener');
+        if (confirmed) window.open(contactUrl, '_blank', 'noreferrer,noopener');
       },
     });
   }
