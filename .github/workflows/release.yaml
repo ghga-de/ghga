@@ -10,6 +10,9 @@
 #                  re-derives the set from the index and publishes every lane member ahead
 #                  of it, dependencies first. The version component is a label; it names
 #                  no member and is not checked against one.
+#   name/X.Y.Z of a companion (a platform-lane member with release notes of its own,
+#                  ADR-0043) -> nothing to do: it ships with ghga/X.Y.Z, and `resolve`
+#                  only checks that it tags the same commit.
 #
 # A pre-release ref (ghga/X.Y.Z-rc.N) is a normal platform-lane cut for staging: same
 # mechanism, same lockstep guarantee, just a SemVer pre-release identifier — not a
@@ -80,7 +83,8 @@ jobs:
       contents: read
       actions: read # to read this commit's CI run conclusion
     outputs:
-      lane: ${{ steps.route.outputs.lane }}
+      # A companion's tag leaves the lane `companion`, which no job below runs for.
+      lane: ${{ steps.member.outputs.lane || steps.route.outputs.lane }}
       mode: ${{ steps.route.outputs.mode }}
       name: ${{ steps.route.outputs.name }}
       version: ${{ steps.route.outputs.version }}
@@ -191,7 +195,7 @@ jobs:
             what="a release candidate is cut from dev; hotfixes are released from main without one"
           else
             branch=main
-            what="a PyPI tag is cut from main — the PyPI lane moves in lockstep with the platform release"
+            what="a PyPI or companion tag is cut from main — both move in lockstep with the platform release"
           fi
 
           git fetch --no-tags --quiet origin "+refs/heads/$branch:refs/remotes/origin/$branch"
@@ -288,15 +292,24 @@ jobs:
       #
       # Targeted tags only: a sweep deliberately names no member, so there is nothing here
       # for it to match against.
+      #
+      # A companion's tag is pushed with the workflow token by the platform release's
+      # draft-release job, which starts no run. One pushed by hand does, and it is fine
+      # as long as it tags the commit of the platform release it belongs to.
       - name: Check the tag against the member it names
+        id: member
         if: ${{ steps.route.outputs.mode == 'targeted' }}
         env:
           NAME: ${{ steps.route.outputs.name }}
           VERSION: ${{ steps.route.outputs.version }}
         run: |
           uv run --script scripts/pypi_members.py --members > /tmp/members.json
-          python3 - <<'EOF'
-          import json, os, re, sys
+          # release_notes knows the companions; it needs `packaging`, like pypi_members.
+          uv run --no-project --with 'packaging>=25' python - <<'EOF'
+          import json, os, re, subprocess, sys
+
+          sys.path.insert(0, "scripts")
+          from release_notes import PLATFORM, layout
 
           def canon(name):  # PEP 503: the tag spells the distribution either way
               return re.sub(r"[-_.]+", "-", name).lower()
@@ -304,6 +317,18 @@ jobs:
           name, version = os.environ["NAME"], os.environ["VERSION"]
           members = {canon(m["package"]): m for m in json.load(open("/tmp/members.json"))}
           member = members.get(canon(name))
+          if member is None and canon(name) in layout().companions:
+              platform = f"{PLATFORM}/{version}"
+              found = subprocess.run(
+                  ["git", "rev-parse", "--verify", "--quiet", f"{platform}^{{commit}}"],
+                  capture_output=True, text=True,
+              ).stdout.strip()
+              if found != os.environ["GITHUB_SHA"]:
+                  sys.exit(f"::error::{name} is released with the platform: tag the commit of {platform}")
+              print(f"{name} {version} ships with {platform}; nothing to build or publish")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                  output.write("lane=companion\n")
+              sys.exit(0)
           if member is None:
               known = ", ".join(sorted(members))
               sys.exit(f"::error::{name} is not a PyPI-lane member (lane: {known})")

@@ -145,10 +145,13 @@ Once the workflow has created the draft, edit it.
 
 - `release.yaml` drafts one for a final `ghga/` tag once a dispatch with `push` has pushed its images and charts; the build-only run of the tag push drafts nothing.
   It also tags the companions, the platform-lane members with `notes = true`, now only `ghga-datasteward-kit`, as `name/X.Y.Z` with the platform version and drafts theirs, unless nothing they ship has changed.
+  A companion's tag pushed by hand starts a run of its own, which only checks that it tags the commit of `ghga/X.Y.Z`.
 - `pypi-publish.yaml` drafts one for each member it uploaded, except for a prerelease version.
   A sweep first tags each of them as `name/x.y.z`, prereleases included, so the next release has a tag to compare with.
 
 The draft lists the pull requests since the previous release of the same name, grouped by commit type; a first release lists those since the first `ghga/` tag.
+A final tag without a GitHub release counts as abandoned: deleting a draft abandons its release, and the next release lists its pull requests.
+Keep the draft of a library or tool that was uploaded: PyPI keeps the version, and without the draft its pull requests move to the notes of the next one.
 For the platform, those are the ones that touched `services/`, `frontend/`, `deploy/` or `uv.lock`; for a library or tool, those that changed its shipped files.
 The platform's draft also names each library and tool that changed, with its version and a link to its release; a release tagged after the draft is not linked yet.
 The `Upgrade:` lines of those pull requests' descriptions ([names](conventions.md#names-branches-prs-commits)) are listed under Upgrade notes, above the lists; `Upgrade: none` is left out.
