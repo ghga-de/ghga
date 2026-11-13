@@ -21,6 +21,7 @@ from uuid import uuid4
 
 import pytest
 
+from fis.constants import MAX_FILES_PER_REQUEST
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import ResourceNotFoundError
@@ -362,7 +363,11 @@ async def test_process_file_upload_requeue(rig: JointRig, local_state: str):
 
 
 async def test_get_files_not_yet_interrogated(rig: JointRig):
-    """Test the `.get_files_not_yet_interrogated()` method"""
+    """Test that `.get_files_not_yet_interrogated()` serves at most
+    `MAX_FILES_PER_REQUEST` waiting files of the storage alias.
+
+    The integration tests cover which files wait and in which order.
+    """
     # Assert that when there are no files, we still get an empty list
     assert (
         await rig.interrogation_handler.get_files_not_yet_interrogated(
@@ -371,53 +376,18 @@ async def test_get_files_not_yet_interrogated(rig: JointRig):
         == []
     )
 
-    # Insert files for hub1 and hub 2
-    hub1_files = [create_file_under_interrogation(HUB1) for _ in range(3)]
-    hub2_files = [create_file_under_interrogation(HUB2) for _ in range(3)]
-    for file in hub2_files + hub1_files:
+    hub1_files = [
+        create_file_under_interrogation(HUB1) for _ in range(MAX_FILES_PER_REQUEST + 1)
+    ]
+    for file in [*hub1_files, create_file_under_interrogation(HUB2)]:
         await rig.file_dao.insert(file)
 
-    hub1_ids = {f.id for f in hub1_files}
-    hub2_ids = {f.id for f in hub2_files}
-
-    # Make sure the query mapping works by querying for one of the hubs
-    retrieve_h1 = await rig.interrogation_handler.get_files_not_yet_interrogated(
+    served_files = await rig.interrogation_handler.get_files_not_yet_interrogated(
         storage_alias=HUB1
     )
-    assert {f.id for f in retrieve_h1} == hub1_ids
-
-    # Set a file to 'interrogated'
-    hub1_files[0].interrogated = True
-    hub1_files[0].can_remove = True
-    hub1_files[0].state = "interrogated"
-    await rig.file_dao.update(hub1_files[0])
-
-    # Set another file to 'failed'
-    hub2_files[0].state = "failed"
-    hub2_files[0].interrogated = False
-    hub2_files[0].can_remove = True
-    await rig.file_dao.update(hub2_files[0])
-
-    # Set another file to 'cancelled'
-    hub2_files[1].state = "cancelled"
-    hub2_files[1].interrogated = True
-    hub2_files[1].can_remove = True
-    await rig.file_dao.update(hub2_files[1])
-
-    # Compare Hub 1 results
-    hub1_ids.remove(hub1_files[0].id)
-    results_h1 = await rig.interrogation_handler.get_files_not_yet_interrogated(
-        storage_alias=HUB1
-    )
-    assert {f.id for f in results_h1} == hub1_ids
-
-    # Compare Hub 2 results
-    hub2_ids.remove(hub2_files[0].id)
-    hub2_ids.remove(hub2_files[1].id)
-    results_h2 = await rig.interrogation_handler.get_files_not_yet_interrogated(
-        storage_alias=HUB2
-    )
-    assert {f.id for f in results_h2} == hub2_ids
+    assert [file.id for file in served_files] == sorted(file.id for file in hub1_files)[
+        :MAX_FILES_PER_REQUEST
+    ]
 
 
 @pytest.mark.parametrize("report_is_present", [True, False])

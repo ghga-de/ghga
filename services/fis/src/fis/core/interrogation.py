@@ -24,6 +24,7 @@ from typing import cast
 from pydantic import UUID4, SecretBytes
 
 from fis.config import Config
+from fis.constants import MAX_FILES_PER_REQUEST
 from fis.core import models
 from fis.ports.inbound.interrogation import InterrogationHandlerPort
 from fis.ports.outbound.dao import (
@@ -32,6 +33,7 @@ from fis.ports.outbound.dao import (
     UploadBoxPriorityDao,
 )
 from fis.ports.outbound.event_pub import EventPubTranslatorPort
+from fis.ports.outbound.interrogation_queue import InterrogationQueuePort
 from fis.ports.outbound.secrets import SecretsClientPort
 from ghga_event_schemas import pydantic_ as event_schemas
 from hexkit.protocols.dao import (
@@ -61,6 +63,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         file_dao: FileDao,
         interrogation_report_dao: InterrogationReportDao,
         upload_box_priority_dao: UploadBoxPriorityDao,
+        interrogation_queue: InterrogationQueuePort,
         event_publisher: EventPubTranslatorPort,
         secrets_client: SecretsClientPort,
     ):
@@ -68,6 +71,7 @@ class InterrogationHandler(InterrogationHandlerPort):
         self._file_dao = file_dao
         self._interrogation_report_dao = interrogation_report_dao
         self._upload_box_priority_dao = upload_box_priority_dao
+        self._interrogation_queue = interrogation_queue
         self._publisher = event_publisher
         self._secrets_client = secrets_client
 
@@ -432,17 +436,12 @@ class InterrogationHandler(InterrogationHandlerPort):
     async def get_files_not_yet_interrogated(
         self, *, storage_alias: str
     ) -> list[models.BaseFileInformation]:
-        """Return a list of not-yet-interrogated files for a Data Hub (storage_alias)"""
-        files = [
-            models.BaseFileInformation(**x.model_dump())
-            async for x in self._file_dao.find_all(
-                filter_={
-                    "storage_alias": storage_alias,
-                    "state": "inbox",
-                    "interrogated": False,
-                }
-            )
-        ]
+        """Return up to `MAX_FILES_PER_REQUEST` not-yet-interrogated files for a Data
+        Hub (storage_alias), highest priority first.
+        """
+        files = await self._interrogation_queue.get_waiting_files(
+            storage_alias=storage_alias, limit=MAX_FILES_PER_REQUEST
+        )
         log.info(
             "Fetched list of %i files for storage_alias %s.", len(files), storage_alias
         )
