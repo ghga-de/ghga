@@ -280,6 +280,12 @@ class GovernanceMetadata:
         """
         root_slot = self._anchor_points_by_target[class_name].root_slot
         reference = resource.content.get(slot_name)
+        # The walk follows one direct reference per step, which is specific to the
+        # relations of the GHGA metadata schema version 2: each file has exactly one
+        # dataset, each dataset exactly one data access policy and each policy
+        # exactly one data access committee, so a link is never empty. If these
+        # relations change, the walk needs reference inference, which belongs to
+        # the transformation step.
         if not isinstance(reference, str):
             raise GovernanceResolutionError(
                 root_slot=root_slot,
