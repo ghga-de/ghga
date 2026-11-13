@@ -70,7 +70,7 @@
     },
     "cronjobs": {
       "type": "object",
-      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `concurrencyPolicy`, `activeDeadlineSeconds`, `startingDeadlineSeconds`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations` (and any vault agent annotations), taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
+      "description": "A map of CronJobs to render alongside (or instead of) the Deployment. It's a map rather than a list so downstream values files can override a single cronjob's fields (e.g. `cronjobs.cleanup.schedule`) without having to redefine the whole list - Helm only deep-merges maps, not lists.\nThe map key also becomes a suffix on the CronJob's name (`<fullname>-<key>`), except for the reserved key `default`, which renders with no suffix - use that key for the common case of a single cronjob.\nEach entry may override `schedule`, `successfulJobsHistoryLimit`, `concurrencyPolicy`, `activeDeadlineSeconds`, `startingDeadlineSeconds`, `executable`, and `executableArgs` independently of the Deployment/other cronjobs; unset fields fall back to the top-level values.\n`podAnnotations` on an entry are added on top of the top-level `podAnnotations`, taking precedence on conflicting keys - e.g. to set `vault.hashicorp.com/agent-pre-populate-only: \"true\"` only for a cronjob while the Deployment keeps the vault agent sidecar running.",
       "additionalProperties": true,
       "properties": {
         "default": {
@@ -159,8 +159,24 @@
     },
     "shareProcessNamespace": {
       "type": "boolean",
-      "description": "Share the pod's process namespace across containers; forced true whenever vaultAgent.enabled (the agent sends signals to the app's PID)",
+      "description": "Share the pod's process namespace across containers, e.g. so a secrets sidecar can signal the app to reload",
       "default": false
+    },
+    "secretEnvFiles": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Source every file in `dir` into the shell before the command runs, so secrets a sidecar writes there reach the environment; needs commandStyle=shell",
+          "default": false
+        },
+        "dir": {
+          "type": "string",
+          "description": "Directory whose files are sourced when enabled",
+          "default": "/vault/secrets"
+        }
+      }
     },
     "podSecurityContext": {
       "type": "object",
@@ -237,7 +253,7 @@
     },
     "podAnnotations": {
       "type": "object",
-      "description": "Annotations applied only to the Pod template; combined with any Vault Agent annotations when vaultAgent.enabled",
+      "description": "Annotations applied only to the Pod template, e.g. the Vault Agent injection annotations the platform renders per release",
       "additionalProperties": true,
       "default": {}
     },
@@ -875,21 +891,6 @@
           "type": "string",
           "description": "Database name; combined with dbNamePrefix and injected into config.yaml as db_name. NOTE: mongodb.dbName is the fallback used when the top-level dbName (set per-member, not defaulted here) is empty",
           "default": "access-request"
-        },
-        "service": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "namespace": {
-              "type": "string",
-              "description": "Together with mongodb.service.name and cluster.name, forms the Vault KV path this chart reads a dynamic MongoDB credential from",
-              "default": "mongodb"
-            },
-            "name": {
-              "type": "string",
-              "default": "mongodb"
-            }
-          }
         }
       }
     },
@@ -1628,7 +1629,7 @@
     },
     "configPrefix": {
       "type": "string",
-      "description": "Prefix for the generated CONFIG_YAML env var and every Vault Agent-injected env var; create_charts.py derives this automatically from the package name",
+      "description": "Prefix for the generated CONFIG_YAML and SERVICE_INSTANCE_ID env vars; create_charts.py derives this automatically from the package name",
       "default": "ars"
     },
     "enableServiceLinks": {
@@ -1653,28 +1654,6 @@
     "startingDeadlineSeconds": {
       "description": "Fallback startingDeadlineSeconds for any `cronjobs` entry that doesn't set its own: a run that could not start within this many seconds of its schedule is skipped. null means no limit",
       "default": null
-    },
-    "environment": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Identifies which environment this release belongs to; part of the Vault secret path for the \"service\" secrets bundle",
-          "default": "default"
-        }
-      }
-    },
-    "cluster": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Identifies which cluster this release belongs to; part of the Vault secret path for MongoDB credentials",
-          "default": "default"
-        }
-      }
     },
     "httpRoute": {
       "type": "object",
@@ -1766,232 +1745,6 @@
       "type": "string",
       "description": "apiVersion used for the rendered Strimzi KafkaUser resource",
       "default": "kafka.strimzi.io/v1"
-    },
-    "vaultAgent": {
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Inject a Vault Agent sidecar (via pod annotations) that populates secrets/env vars from Vault before/alongside the main container",
-          "default": false
-        },
-        "annotations": {
-          "type": "object",
-          "description": "Base set of vault.hashicorp.com/* sidecar-injection annotations merged onto the pod",
-          "additionalProperties": true,
-          "properties": {
-            "vault.hashicorp.com/tls-skip-verify": {
-              "type": "string",
-              "default": "false"
-            },
-            "vault.hashicorp.com/agent-inject": {
-              "type": "string",
-              "default": "true"
-            },
-            "vault.hashicorp.com/agent-init-first": {
-              "type": "string",
-              "default": "true"
-            },
-            "vault.hashicorp.com/agent-cache-enable": {
-              "type": "string",
-              "default": "true"
-            },
-            "vault.hashicorp.com/agent-pre-populate-only": {
-              "type": "string",
-              "default": "false"
-            },
-            "vault.hashicorp.com/agent-run-as-same-user": {
-              "type": "string",
-              "default": "true"
-            }
-          }
-        },
-        "role": {
-          "type": "string",
-          "description": "Vault auth role to assume; defaults to the release name when empty",
-          "default": ""
-        },
-        "rolePrefix": {
-          "type": "string",
-          "description": "Prefix prepended to the resolved role name above",
-          "default": ""
-        },
-        "caCert": {
-          "type": "string",
-          "description": "Path to a custom CA cert for Vault TLS verification",
-          "default": ""
-        },
-        "tlsSecret": {
-          "type": "string",
-          "description": "Kubernetes secret providing the Vault Agent's TLS material",
-          "default": ""
-        },
-        "service": {
-          "type": "string",
-          "description": "Override the Vault service address the agent talks to",
-          "default": ""
-        },
-        "tlsServerName": {
-          "type": "string",
-          "description": "TLS server name override for the Vault connection",
-          "default": ""
-        },
-        "pgrepPattern": {
-          "type": "string",
-          "description": "Process name the Agent's \"kill -TERM\" hook searches for to restart the app on secret rotation",
-          "default": "python"
-        },
-        "secrets": {
-          "type": "object",
-          "additionalProperties": true,
-          "properties": {
-            "generic": {
-              "type": "object",
-              "description": "Arbitrary Vault KV paths to inject as individual env vars, keyed by name; each entry needs path/parameterName (and optionally dataKey)",
-              "additionalProperties": true,
-              "default": {}
-            },
-            "mongodb": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Inject a MongoDB connection string built from a Vault-issued dynamic credential",
-                  "default": false
-                },
-                "secretPath": {
-                  "type": "string",
-                  "description": "Vault KV path to read the credential from; computed from mongodb.service.{namespace,name} + cluster.name when empty",
-                  "default": ""
-                },
-                "connectionString": {
-                  "type": "string",
-                  "description": "Connection-string template; {{username}}/{{password}} are substituted by Vault's own templating, not Helm's",
-                  "default": "mongodb://{{username}}:{{password}}@mongodb:27017/admin"
-                }
-              }
-            },
-            "service": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Inject every key/value pair from one Vault secret as env vars",
-                  "default": false
-                },
-                "secretPath": {
-                  "type": "string",
-                  "description": "Vault KV path to read from; computed from pathPrefix + environment.name + the release name when empty",
-                  "default": ""
-                },
-                "pathPrefix": {
-                  "type": "string",
-                  "default": "operational-secrets/data/unique/apps/archive"
-                }
-              }
-            },
-            "crypt4ghInternalPub": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Inject GHGA's shared internal Crypt4GH public key",
-                  "default": false
-                },
-                "secretPath": {
-                  "type": "string",
-                  "default": "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-                },
-                "mountPath": {
-                  "type": "string",
-                  "description": "Where to write the key when renderToFile is true",
-                  "default": "/keys/crypt4gh-internal/crypt4gh.pub"
-                },
-                "dataKey": {
-                  "type": "string",
-                  "description": "Field name to read within the Vault secret",
-                  "default": "crypt4gh.pub"
-                },
-                "renderToFile": {
-                  "type": "boolean",
-                  "description": "true: write to mountPath as a file. false: inject as an env var named parameterName instead",
-                  "default": true
-                },
-                "parameterName": {
-                  "type": "string",
-                  "default": "CRYPT4GH_PUBLIC_KEY"
-                }
-              }
-            },
-            "crypt4ghInternalPriv": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Inject GHGA's shared internal Crypt4GH private key (same fields as crypt4ghInternalPub above)",
-                  "default": false
-                },
-                "secretPath": {
-                  "type": "string",
-                  "default": "operational-secrets/data/shared/managed-keys/crypt4gh-internal"
-                },
-                "mountPath": {
-                  "type": "string",
-                  "default": "/keys/crypt4gh-internal/crypt4gh.sec"
-                },
-                "dataKey": {
-                  "type": "string",
-                  "default": "crypt4gh.sec"
-                },
-                "renderToFile": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "parameterName": {
-                  "type": "string",
-                  "default": "CRYPT4GH_PRIVATE_KEY"
-                }
-              }
-            },
-            "crypt4ghExternalPriv": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "description": "Inject GHGA's shared external-facing Crypt4GH private key (same fields as crypt4ghInternalPub above)",
-                  "default": false
-                },
-                "secretPath": {
-                  "type": "string",
-                  "default": "operational-secrets/data/shared/managed-keys/crypt4gh-external"
-                },
-                "mountPath": {
-                  "type": "string",
-                  "default": "/keys/crypt4gh-external/crypt4gh.sec"
-                },
-                "dataKey": {
-                  "type": "string",
-                  "default": "crypt4gh.sec"
-                },
-                "renderToFile": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "parameterName": {
-                  "type": "string",
-                  "default": "CRYPT4GH_PRIVATE_KEY"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   }
 }
