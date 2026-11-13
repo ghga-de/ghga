@@ -35,7 +35,12 @@ from rs.adapters.inbound.event_sub import OutboxSubTranslator, ResourceSubTransl
 from rs.adapters.inbound.fastapi_ import dummies
 from rs.adapters.inbound.fastapi_.configure import get_configured_app
 from rs.adapters.outbound.audit import AuditRepository
-from rs.adapters.outbound.dao import get_box_dao, get_file_accession_dao, get_study_dao
+from rs.adapters.outbound.dao import (
+    get_box_dao,
+    get_file_accession_dao,
+    get_study_dao,
+    get_upload_box_priority_dao,
+)
 from rs.adapters.outbound.event_pub import EventPubTranslator
 from rs.adapters.outbound.http import (
     AccessClient,
@@ -46,6 +51,7 @@ from rs.config import Config
 from rs.constants import SERVICE_NAME
 from rs.core.files import FileController
 from rs.core.legacy_resources import LegacyResourceManager
+from rs.core.priority import UploadBoxPriorityManager
 from rs.core.rdub_manager import RDUBManager
 from rs.core.registry import Registry
 from rs.ports.inbound.registry import RegistryPort
@@ -111,6 +117,14 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[RegistryPort]:
         legacy_resource_manager = LegacyResourceManager(
             study_dao=study_dao, file_controller=file_controller
         )
+        priority_dao = await get_upload_box_priority_dao(
+            config=config, dao_publisher_factory=dao_publisher_factory
+        )
+        priority_manager = UploadBoxPriorityManager(
+            priority_dao=priority_dao,
+            box_dao=box_dao,
+            audit_repository=audit_repository,
+        )
         access_client = AccessClient(config=config, httpx_client=httpx_client)
         file_upload_box_client = FileBoxClient(config=config, httpx_client=httpx_client)
 
@@ -127,6 +141,7 @@ async def prepare_core(*, config: Config) -> AsyncGenerator[RegistryPort]:
             legacy_resource_manager=legacy_resource_manager,
             study_dao=study_dao,
             file_controller=file_controller,
+            priority_manager=priority_manager,
         )
 
 

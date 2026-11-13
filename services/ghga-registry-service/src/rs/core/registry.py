@@ -18,6 +18,7 @@ from hexkit.protocols.dao import ResourceNotFoundError
 from rs.core.models import Study
 from rs.ports.inbound.files import FileControllerPort
 from rs.ports.inbound.legacy_resources import LegacyResourceManagerPort
+from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 from rs.ports.inbound.rdub_manager import RDUBManagerPort
 from rs.ports.inbound.registry import RegistryPort
 from rs.ports.outbound.dao import StudyDao
@@ -33,8 +34,10 @@ class Registry(RegistryPort):
         legacy_resource_manager: LegacyResourceManagerPort,
         study_dao: StudyDao,
         file_controller: FileControllerPort,
+        priority_manager: UploadBoxPriorityManagerPort,
     ) -> None:
         self._rdub_manager = rdub_manager
+        self._priority_manager = priority_manager
         self._legacy_resource_manager = legacy_resource_manager
         self._study_dao = study_dao
         # Owns file accession / file ID mappings; exposed via the file_controller
@@ -55,6 +58,11 @@ class Registry(RegistryPort):
     def file_controller(self) -> FileControllerPort:
         """The FileController component."""
         return self._file_controller
+
+    @property
+    def priority_manager(self) -> UploadBoxPriorityManagerPort:
+        """The UploadBoxPriorityManager component."""
+        return self._priority_manager
 
     async def get_study(self, study_id: str) -> Study:
         """Get a single study by its ID."""

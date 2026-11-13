@@ -21,6 +21,7 @@ from pydantic_settings import BaseSettings
 from ghga_event_schemas.configs import (
     FileAccessionMappingEventsConfig,
     ResearchDataUploadBoxEventsConfig,
+    UploadBoxPriorityEventsConfig,
 )
 from ghga_event_schemas.pydantic_ import FileAccessionMapping
 from hexkit.providers.mongodb import MongoDbIndex
@@ -29,15 +30,27 @@ from rs.constants import (
     FILE_ACCESSION_COLLECTION,
     RESEARCH_DATA_UPLOAD_BOX_COLLECTION,
     STUDY_COLLECTION,
+    UPLOAD_BOX_PRIORITY_COLLECTION,
 )
-from rs.core.models import FileAccession, ResearchDataUploadBox, Study
-from rs.ports.outbound.dao import BoxDao, FileAccessionDao, StudyDao
+from rs.core.models import (
+    FileAccession,
+    ResearchDataUploadBox,
+    Study,
+    UploadBoxPriority,
+)
+from rs.ports.outbound.dao import (
+    BoxDao,
+    FileAccessionDao,
+    StudyDao,
+    UploadBoxPriorityDao,
+)
 
 __all__ = [
     "OutboxPubConfig",
     "get_box_dao",
     "get_file_accession_dao",
     "get_study_dao",
+    "get_upload_box_priority_dao",
 ]
 
 
@@ -60,6 +73,7 @@ class OutboxPubConfig(
     ResearchDataUploadBoxEventsConfig,
     FileAccessionMappingEventsConfig,
     StudyEventsConfig,
+    UploadBoxPriorityEventsConfig,
 ):
     """Config needed to publish outbox events"""
 
@@ -137,4 +151,20 @@ async def get_study_dao(
             MongoDbIndex(fields="status"),
             MongoDbIndex(fields="title"),
         ],
+    )
+
+
+async def get_upload_box_priority_dao(
+    *, config: OutboxPubConfig, dao_publisher_factory: MongoKafkaDaoPublisherFactory
+) -> UploadBoxPriorityDao:
+    """Construct an UploadBoxPriority outbox DAO from the provided
+    dao_publisher_factory.
+    """
+    return await dao_publisher_factory.get_dao(
+        name=UPLOAD_BOX_PRIORITY_COLLECTION,
+        dto_model=UploadBoxPriority,
+        id_field="id",
+        autopublish=True,
+        dto_to_event=lambda dto: dto.model_dump(mode="json"),
+        event_topic=config.upload_box_priority_topic,
     )

@@ -403,7 +403,7 @@
   // kafka-map-data:start
   // Generated from docs/architecture/kafka-cascades.yaml by scripts/kafka_map.py.
   // Edit the YAML and run `just kafka-map`; do not edit this block.
-  var META = { "updated": "2026-10-09", "topics": 23, "entrypoints": 22 };
+  var META = { "updated": "2026-11-10", "topics": 24, "entrypoints": 23 };
 
   var SVC = {
     "MASS": "metadata search & access service",
@@ -781,6 +781,33 @@
             "e": { "tp": "research-data-upload-boxes", "ty": "deleted", "k": "outbox" },
             "s": "WPS",
             "a": "deletes the <span class='m'>uploadBoxes</span> row",
+            "term": true
+          },
+          {
+            "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
+            "s": "—",
+            "a": "append-only stewardship record",
+            "term": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "box-priority-repair",
+      "lane": "Upload boxes",
+      "actor": "Ops · deploy",
+      "call": "rs run-rest",
+      "title": "RS repairs the upload box priority list when its REST app starts",
+      "target": "ghga-registry-service",
+      "root": {
+        "s": "RS",
+        "a": "adds the missing boxes to the priority list, oldest last change first, and drops archived or deleted ones",
+        "cond": "writes, publishes and audits only if the list changed",
+        "kids": [
+          {
+            "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
+            "s": "—",
+            "a": "published, nothing subscribes yet",
             "term": true
           },
           {
@@ -1437,7 +1464,7 @@
           {
             "e": { "tp": "&lt;that service's topics&gt;", "ty": "upserted / deleted", "k": "outbox" },
             "s": "its subscribers",
-            "a": "outbox DAOs — RS boxes, accession maps and studies; UCS uploads and boxes; ARS requests",
+            "a": "outbox DAOs — RS boxes, accession maps, studies and the upload box priority list; UCS uploads and boxes; ARS requests",
             "cond": "a document whose dto_to_event returns None is marked published without an event",
             "term": true
           },
@@ -1460,6 +1487,7 @@
     ["accession-maps", "outbox", "upserted · deleted", "RS", "WPS, DINS"],
     ["audit-records", "persist", "audit_record_logged", "RS", null],
     ["research-data-upload-boxes", "outbox", "upserted · deleted", "RS", "WPS"],
+    ["upload-box-priority", "outbox", "upserted", "RS", null],
     ["file-upload-boxes", "outbox", "upserted · deleted", "UCS", "RS"],
     ["file-uploads", "outbox", "upserted · deleted", "UCS", "FIS, IFRS"],
     ["interrogations", "persist", "file_interrogation_success · _failed", "FIS", "UCS"],

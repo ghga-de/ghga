@@ -38,6 +38,8 @@ from ghga_event_schemas.pydantic_ import (
     FileUploadBox,
     FileUploadState,
     ResearchDataUploadBox,
+    UploadBoxPriority,
+    UploadBoxPriorityEntry,
     UploadBoxState,
 )
 from ghga_service_commons.utils.utc_dates import UTCDatetime
@@ -74,6 +76,8 @@ __all__ = [
     "StudyStatus",
     "SubmitAccessionMapWorkOrder",
     "UpdateUploadBoxRequest",
+    "UploadBoxPriority",
+    "UploadBoxPriorityEntry",
     "UploadBoxState",
     "UploadGrant",
     "ViewFileBoxStatsWorkOrder",
