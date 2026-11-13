@@ -99,7 +99,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
 - Registry ops (`submission_registry.py`): `init_submission` → `upsert_submission_content` (validates via metldata's own `MetadataValidator`, regenerates the accession map, publishes a source event) → `complete_submission`.
   **Only `PENDING`→`COMPLETED` is ever used.**
   `upsert_submission_content` refuses anything but `PENDING`, and nothing in metldata amends a completed submission.
-  dskit does that itself (`ghga_datasteward_kit/amendment/`), driving `SubmissionStore`, its own `generate_legacy_accession_map` and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
+  dskit does that itself (`ghga_datasteward_kit/amendment/`), driving `SubmissionStore`, `generate_accession_map` with its own `LegacyAccessionRegistry`, and `SourceEventPublisher` directly rather than through the registry — see Journey A's accession notes below.
 - `SubmissionStatus` (`models.py:31`) *defines* `DEPRECATED_*`, `PUBLISHED`, `HIDDEN_*`, `EMPTIED_*`, `CANCELED`, `IN_REVIEW` — **none are ever set**.
   There is no replaces/replaced-by field and no versioning anywhere today. → [changed by the feature](../epics/epic-0093-giraffe.md).
 
@@ -126,7 +126,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   **`dskit metadata amend --submission-id <id>` extends a submission accessioned in the flat scheme**, whose study accession is `GHGA`, one letter and 14 digits.
   A submission with a study PID is refused with `AccessionNotLegacyError`, so study PIDs are only ever minted by `submit`.
   It loads the completed submission, validates the new metadata against the model, and checks that no alias is repeated within its class; a flat accession holds no alias, so uniqueness across classes is not needed.
-  It hands the stored map to `generate_legacy_accession_map` with dskit's `LegacyAccessionRegistry` (both in `amendment/legacy_accessioning.py`), which keeps every class in the map and mints `prefix + 14 digits` for each new alias and registers it under `legacy`, so a flat accession is never given out twice.
+  It hands the stored map to metldata's `generate_accession_map` with dskit's `LegacyAccessionRegistry` (in `amendment/legacy_accessioning.py`), whose `stores_accession` keeps every class in the map and which mints `prefix + 14 digits` for each new alias and registers it under `legacy`, so a flat accession is never given out twice.
   It writes the result back under the same ID and republishes the source event, so existing accessions survive and only new aliases are minted.
   Before writing, it reports the dropped, new and kept files of the five file classes, each with its count and up to 20 aliases.
   It asks for confirmation when files would be dropped or none kept, and refuses such an amendment when stdin is not a terminal, so a pipe cannot answer for a steward.
