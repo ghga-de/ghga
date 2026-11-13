@@ -108,7 +108,9 @@ resources:
 extraVolumes: []
 extraVolumeMounts: []
 sidecars: []
-envVars: []
+envVars:
+- name: LD_PRELOAD
+  value: /usr/lib/libjemalloc.so.2
 envVarsConfigMap: ""
 envVarsSecret: ""
 service:
