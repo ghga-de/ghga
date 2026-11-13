@@ -51,6 +51,7 @@ Two long-lived branches ([ADR-0038](adrs/adr-0038-branching-strategy.md)): **`de
 - **Pull requests into `dev` are squashed** — one pull request, one commit.
   Rebase merges are off.
 - **Hotfixes are the exception:** branch from `main`, merge back into `main` with a merge commit (`main` takes no squash), release, then merge `main` back into `dev` so the fix survives the next release.
+  The back-merge takes a merge commit too: a squash leaves `main`'s commits outside `dev`'s history, so the next release merge shows the hotfix again as a change.
 - **Release:** `dev` is merged into `main` with a merge commit (never squashed or rebased — that is why "Require linear history" is off for `main`).
 - **Long-lived feature branches** are allowed, and decided case by case.
 - Committing directly to either branch is blocked by `no-commit-to-branch` ([ADR-0036](adrs/adr-0036-pre-commit-hooks.md)).
