@@ -27,7 +27,10 @@ from fis.ports.outbound.dao import ResourceNotFoundError
 from fis.ports.outbound.secrets import SecretsClientPort
 from hexkit.utils import now_utc_ms_prec
 from tests_fis.fixtures.joint import JointRig
-from tests_fis.fixtures.utils import create_file_under_interrogation
+from tests_fis.fixtures.utils import (
+    create_file_under_interrogation,
+    make_upload_box_priority,
+)
 
 pytestmark = pytest.mark.asyncio()
 
@@ -216,6 +219,27 @@ async def test_process_file_upload_outdated(
     assert db_file.state == local_file.state
     assert db_file.state_updated != outdated_file.state_updated
     assert db_file.state_updated == local_file.state_updated
+
+
+async def test_process_file_upload_fills_box_id(rig: JointRig):
+    """Test that an outdated event fills in a missing box ID and changes nothing
+    else, as when UCS republishes its events for files stored before FIS kept it.
+    """
+    local_file = create_file_under_interrogation(HUB1)
+    local_file.box_id = None
+    await rig.file_dao.insert(local_file)
+
+    republished_file = create_file_under_interrogation(HUB1).model_copy(
+        update={
+            "id": local_file.id,
+            "state": "archived",
+            "state_updated": local_file.state_updated - timedelta(hours=1),
+        }
+    )
+    await rig.interrogation_handler.process_file_upload(file=republished_file)
+
+    db_file = await rig.file_dao.get_by_id(local_file.id)
+    assert db_file == local_file.model_copy(update={"box_id": republished_file.box_id})
 
 
 async def test_process_file_upload_updates(
@@ -606,3 +630,52 @@ async def test_report_handling_after_requeue(rig: JointRig, passed: bool):
     # Verify the event for the second interrogation was published
     event = rig.event_store.get(rig.config.file_interrogations_topic)
     assert event.payload["file_id"] == str(file.id)
+
+
+async def test_store_upload_box_priority_newer(rig: JointRig):
+    """Test that a newer upload box priority list replaces the stored one"""
+    handler = rig.interrogation_handler
+    await handler.store_upload_box_priority(
+        priority=make_upload_box_priority(version=1)
+    )
+
+    newer_priority = make_upload_box_priority(version=2)
+    await handler.store_upload_box_priority(priority=newer_priority)
+
+    stored_priority = await rig.upload_box_priority_dao.get_by_id("global")
+    assert stored_priority == newer_priority
+
+
+@pytest.mark.parametrize("version", [3, 2], ids=["same_version", "lower_version"])
+async def test_store_upload_box_priority_outdated(rig: JointRig, version: int):
+    """Test that an upload box priority list with the same or a lower version is
+    ignored.
+    """
+    handler = rig.interrogation_handler
+    priority = make_upload_box_priority(version=3)
+    await handler.store_upload_box_priority(priority=priority)
+
+    outdated_priority = make_upload_box_priority(version=version)
+    await handler.store_upload_box_priority(priority=outdated_priority)
+
+    stored_priority = await rig.upload_box_priority_dao.get_by_id("global")
+    assert stored_priority == priority
+
+
+async def test_clear_upload_box_priority(rig: JointRig):
+    """Test that a deleted upload box priority list leaves an empty list with the
+    stored version, and that clearing a list that isn't stored does nothing.
+    """
+    handler = rig.interrogation_handler
+    await handler.clear_upload_box_priority(priority_id="global")
+    with pytest.raises(ResourceNotFoundError):
+        await rig.upload_box_priority_dao.get_by_id("global")
+
+    await handler.store_upload_box_priority(
+        priority=make_upload_box_priority(version=4)
+    )
+    await handler.clear_upload_box_priority(priority_id="global")
+
+    stored_priority = await rig.upload_box_priority_dao.get_by_id("global")
+    assert stored_priority.entries == []
+    assert stored_priority.version == 4

@@ -48,7 +48,12 @@ BoxIdsChange = Callable[[list[UUID4]], list[UUID4]]
 def _with_missing_boxes(
     box_ids: list[UUID4], boxes: Mapping[UUID4, ResearchDataUploadBox]
 ) -> list[UUID4]:
-    """Append the boxes that are missing from `box_ids`, oldest `last_changed` first."""
+    """Append the boxes in `boxes` that have no entry in `box_ids` yet, oldest
+    `last_changed` first.
+
+    RS writes a box and the list separately, so a box created since the last write to
+    the list has no entry yet. Before the first list is stored, no box has one.
+    """
     listed = set(box_ids)
     missing = sorted(
         (box for box_id, box in boxes.items() if box_id not in listed),
@@ -79,11 +84,11 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
     async def repair(self, *, user_id: UUID4 | None = None) -> None:
         """Repair the priority list on behalf of a user, or of the system if None.
 
-        The repair drops entries for boxes that are archived or no longer exist, and
-        adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
-        the list is already complete. RS runs it once at startup on behalf of the
-        system, and after a data steward creates, archives or deletes a box on behalf
-        of that steward.
+        The repair adds missing boxes to the end, oldest `last_changed` first, and
+        drops the entries for boxes that are archived or no longer exist. Writes
+        nothing if the list is already complete. RS runs it once at startup on behalf
+        of the system, and after a data steward creates, archives or deletes a box on
+        behalf of that steward.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.

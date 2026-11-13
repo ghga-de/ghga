@@ -121,16 +121,19 @@ class AuditRepository(AuditRepositoryPort):
         so the audit log alone can reconstruct the history of the list.
         `user_id` is None if the system made the change.
         """
-        old_order = ", ".join(str(box_id) for box_id in old_box_ids)
-        new_order = ", ".join(
-            str(entry.research_data_upload_box_id) for entry in priority.entries
+        # One ID per line, highest priority first
+        old_order = "".join(f"\n  {box_id}" for box_id in old_box_ids) or " none"
+        new_order = (
+            "".join(
+                f"\n  {entry.research_data_upload_box_id}" for entry in priority.entries
+            )
+            or " none"
         )
         await self.create_audit_record(
             label="UploadBoxPriority updated",
             description=(
                 f"The upload box priority list was changed to version"
-                f" {priority.version}. Old order: [{old_order}]."
-                f" New order: [{new_order}]."
+                f" {priority.version}.\nOld order:{old_order}\nNew order:{new_order}"
             ),
             user_id=user_id,
             action="U",

@@ -24,7 +24,7 @@ class UploadBoxPriorityManagerPort(ABC):
     """Port for a class that manages the priority order of the upload boxes.
 
     The order decides which box's files are re-encrypted first. It holds every
-    research data upload box that is not archived.
+    research data- and file upload box ID that is not archived.
     """
 
     class PriorityUpdateError(RuntimeError):

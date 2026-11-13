@@ -63,6 +63,10 @@ class BaseFileInformation(BaseModel):
 class FileUnderInterrogation(BaseFileInformation):
     """A user-submitted file upload that needs to be interrogated"""
 
+    box_id: UUID4 | None = Field(
+        default=None,
+        description="The ID of the FileUploadBox this file is associated with.",
+    )
     state: FileUploadState = Field(
         default="init", description="The state of the FileUpload"
     )
@@ -89,6 +93,30 @@ class FileUnderInterrogation(BaseFileInformation):
                 f"The field decrypted_sha256 cannot be empty when state is {self.state}."
             )
         return self
+
+
+class UploadBoxPriorityEntry(BaseModel):
+    """One file upload box in the upload box priority list"""
+
+    box_id: UUID4 = Field(default=..., description="The ID of the FileUploadBox")
+
+
+class UploadBoxPriority(BaseModel):
+    """The order in which the files of upload boxes are interrogated.
+
+    FIS stores this subset of the `UploadBoxPriority` event published by RS.
+    """
+
+    id: str = Field(
+        default=..., description="The fixed ID of the single priority document"
+    )
+    version: int = Field(
+        default=..., description="A counter indicating resource version"
+    )
+    entries: list[UploadBoxPriorityEntry] = Field(
+        default=...,
+        description="The boxes in priority order. Index 0 is the highest priority.",
+    )
 
 
 class InterrogationReport(BaseModel):
