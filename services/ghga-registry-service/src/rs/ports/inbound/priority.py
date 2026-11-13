@@ -19,6 +19,12 @@ from abc import ABC, abstractmethod
 
 from pydantic import UUID4
 
+from rs.core.models import (
+    UploadBoxPriorityMove,
+    UploadBoxPriorityResponse,
+    UploadBoxPrioritySaveResult,
+)
+
 
 class UploadBoxPriorityManagerPort(ABC):
     """Port for a class that manages the priority order of the upload boxes.
@@ -42,11 +48,36 @@ class UploadBoxPriorityManagerPort(ABC):
     async def repair(self, *, user_id: UUID4 | None = None) -> None:
         """Repair the priority list on behalf of a user, or of the system if None.
 
-        The repair drops entries for boxes that are archived or no longer exist, and
-        adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
-        the list is already complete. RS runs it once at startup on behalf of the
-        system, and after a data steward creates, archives or deletes a box on behalf
-        of that steward.
+        The repair adds missing boxes to the end, oldest `last_changed` first, and
+        drops the entries for boxes that are archived or no longer exist. Writes
+        nothing if the list is already complete. RS runs it once at startup on behalf
+        of the system, and after a data steward creates, archives or deletes a box on
+        behalf of that steward.
+
+        Raises:
+            PriorityUpdateError: If other writes kept changing the list first.
+        """
+        ...
+
+    @abstractmethod
+    async def get_priority(self) -> UploadBoxPriorityResponse:
+        """Get the stored priority list, or an empty one with version 0 if none is
+        stored yet.
+        """
+        ...
+
+    @abstractmethod
+    async def move_boxes(
+        self, *, version: int, moves: list[UploadBoxPriorityMove], user_id: UUID4
+    ) -> UploadBoxPrioritySaveResult:
+        """Apply the moves of a data steward to the stored priority list, in order.
+
+        Adds the missing boxes before the moves, and drops the entries for unknown,
+        archived and deleted boxes after the last move, so that later moves can refer
+        to such a box. A move of a box that is not in the list inserts it. A move is
+        skipped if `before` is neither None nor in the list, or is the moved box
+        itself. A skipped move does not stop the moves after it. `version` is the
+        version the moves were made on, and only sets `includes_other_changes`.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.

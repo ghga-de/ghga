@@ -235,10 +235,11 @@ async def test_change_by_user(rig: PriorityRig):
         assert box_ids == [listed.id, missing.id]
         return [unknown_box_id, missing.id, listed.id]
 
-    priority = await rig.priority_manager._update_priority(
+    read_version, priority = await rig.priority_manager._update_priority(
         user_id=TEST_DS_ID, change=change
     )
 
+    assert read_version == 1
     assert priority == await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
     assert priority.version == 2
     assert priority.changed_by == TEST_DS_ID
