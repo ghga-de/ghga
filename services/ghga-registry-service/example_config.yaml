@@ -60,5 +60,6 @@ service_name: rs
 study_topic: studies
 timeout_keep_alive: 90
 ucs_url: http://127.0.0.1/upload
+upload_box_priority_topic: upload-box-priority
 work_order_signing_key: '**********'
 workers: 1
