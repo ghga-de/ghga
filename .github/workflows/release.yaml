@@ -195,7 +195,7 @@ jobs:
             what="a release candidate is cut from dev; hotfixes are released from main without one"
           else
             branch=main
-            what="a PyPI tag is cut from main — the PyPI lane moves in lockstep with the platform release"
+            what="a PyPI or companion tag is cut from main — both move in lockstep with the platform release"
           fi
 
           git fetch --no-tags --quiet origin "+refs/heads/$branch:refs/remotes/origin/$branch"

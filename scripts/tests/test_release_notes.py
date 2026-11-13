@@ -398,11 +398,18 @@ def test_unlisted_releases_fail_a_draft(repo, monkeypatch):
         release_notes.notes("ghga/1.1.0", github=True)
 
 
-def test_unlisted_releases_count_every_tag(capsys, monkeypatch):
+def test_unlisted_releases_count_every_tag(
+    renamed_flag, capsys, monkeypatch, deleted_releases
+):
     """Printed notes still come out offline; every tag then counts as a release."""
+    _git(renamed_flag, "tag", "ghga/1.0.5", "ghga/1.1.0-rc.1")
+    deleted_releases.add("ghga/1.0.5")
+    skipping = release_notes.notes("ghga/1.1.0")
+    counting = release_notes.notes("ghga/1.1.0", "ghga/1.0.5")
+    assert skipping != counting
     monkeypatch.setattr(release_notes, "release_tags", _offline)
-    assert release_notes._released(strict=False) is None
-    assert capsys.readouterr().err.count("warning:") == 1
+    assert release_notes.notes("ghga/1.1.0") == counting
+    assert "cannot list the GitHub releases" in capsys.readouterr().err
 
 
 def test_render_without_previous_release_offers_every_summary():

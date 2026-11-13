@@ -151,6 +151,7 @@ Once the workflow has created the draft, edit it.
 
 The draft lists the pull requests since the previous release of the same name, grouped by commit type; a first release lists those since the first `ghga/` tag.
 A final tag without a GitHub release counts as abandoned: deleting a draft abandons its release, and the next release lists its pull requests.
+Keep the draft of a library or tool that was uploaded: PyPI keeps the version, and without the draft its pull requests move to the notes of the next one.
 For the platform, those are the ones that touched `services/`, `frontend/`, `deploy/` or `uv.lock`; for a library or tool, those that changed its shipped files.
 The platform's draft also names each library and tool that changed, with its version and a link to its release; a release tagged after the draft is not linked yet.
 The `Upgrade:` lines of those pull requests' descriptions ([names](conventions.md#names-branches-prs-commits)) are listed under Upgrade notes, above the lists; `Upgrade: none` is left out.
