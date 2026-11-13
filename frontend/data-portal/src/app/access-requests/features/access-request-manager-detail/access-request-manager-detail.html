@@ -155,6 +155,18 @@
                 }
               </span>
             </p>
+            @if (changeable()) {
+              <p class="mt-4">
+                <button
+                  mat-stroked-button
+                  (click)="sendVerificationSms()"
+                  data-umami-event="Access Request Manager Verification SMS Clicked"
+                >
+                  <mat-icon fontIcon="sms"></mat-icon>
+                  Send verification code to DAC
+                </button>
+              </p>
+            }
           </mat-card-content>
         </mat-card>
       </div>

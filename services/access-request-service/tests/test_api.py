@@ -1333,3 +1333,85 @@ async def test_revoke_access_grant_unauthorized(
         headers=auth_headers_doe,
     )
     assert response.status_code == 403
+
+
+SMS_DATA = {
+    "phone": "+49 1512 3456789",
+    "text": "Please send the code AB23CD to the GHGA helpdesk.",
+    "code": "AB23CD",
+}
+
+
+async def test_send_verification_sms(
+    rest: RestFixture,
+    auth_headers_doe: dict[str, str],
+    auth_headers_steward: dict[str, str],
+):
+    """Test that data stewards can send a verification SMS for a request."""
+    client = rest.rest_client
+    response = await client.post(
+        "/access-requests", json=CREATION_DATA, headers=auth_headers_doe
+    )
+    assert response.status_code == 201
+    access_request_id = response.json()
+
+    config = rest.config
+    async with rest.kafka.record_events(in_topic=config.notification_topic) as recorder:
+        response = await client.post(
+            f"/access-requests/{access_request_id}/verification-sms",
+            json=SMS_DATA,
+            headers=auth_headers_steward,
+        )
+        assert response.status_code == 200
+        returned_note = response.json()["internal_note"]
+
+    assert len(recorder.recorded_events) == 1
+    event = recorder.recorded_events[0]
+    assert event.type_ == config.sms_notification_type
+    assert event.key == access_request_id
+    assert event.payload == {"phone": "+4915123456789", "text": SMS_DATA["text"]}
+
+    response = await client.get(
+        f"/access-requests/{access_request_id}", headers=auth_headers_steward
+    )
+    assert response.status_code == 200
+    note = response.json()["internal_note"]
+    assert note.endswith(": Verification code AB23CD sent to +49…6789 by Rod Steward.")
+    assert returned_note == note
+
+
+async def test_send_verification_sms_as_user(
+    rest: RestFixture, auth_headers_doe: dict[str, str]
+):
+    """Test that only data stewards can send a verification SMS."""
+    response = await rest.rest_client.post(
+        f"/access-requests/{uuid4()}/verification-sms",
+        json=SMS_DATA,
+        headers=auth_headers_doe,
+    )
+    assert response.status_code == 403
+
+
+async def test_send_verification_sms_for_non_existing_request(
+    rest: RestFixture, auth_headers_steward: dict[str, str]
+):
+    """Test that sending a verification SMS for an unknown request fails."""
+    response = await rest.rest_client.post(
+        f"/access-requests/{uuid4()}/verification-sms",
+        json=SMS_DATA,
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("phone", ["01512 3456789", "+49 6221 42 4242"])
+async def test_send_verification_sms_with_invalid_phone(
+    rest: RestFixture, auth_headers_steward: dict[str, str], phone: str
+):
+    """Test that a phone number without prefix or a landline number is rejected."""
+    response = await rest.rest_client.post(
+        f"/access-requests/{uuid4()}/verification-sms",
+        json={**SMS_DATA, "phone": phone},
+        headers=auth_headers_steward,
+    )
+    assert response.status_code == 422

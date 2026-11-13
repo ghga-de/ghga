@@ -32,7 +32,9 @@ from ars.core.models import (
     AccessRequestPatchData,
     AccessRequestStatus,
     Dataset,
+    VerificationSmsData,
 )
+from ars.core.phone import mask_phone_number
 from ars.core.roles import DATA_STEWARD_ROLE
 from ars.ports.inbound.repository import AccessRequestRepositoryPort
 from ars.ports.outbound.access_grants import AccessGrantsPort
@@ -41,6 +43,7 @@ from ars.ports.outbound.daos import (
     DatasetDaoPort,
     ResourceNotFoundError,
 )
+from ars.ports.outbound.sms import SmsNotifierPort
 from ghga_service_commons.auth.ghga import AuthContext, has_role
 from hexkit.utils import now_utc_ms_prec
 
@@ -85,8 +88,9 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         access_request_dao: AccessRequestDaoPort,
         dataset_dao: DatasetDaoPort,
         access_grants: AccessGrantsPort,
+        sms_notifier: SmsNotifierPort,
     ):
-        """Initialize with specific configuration and outbound adapter."""
+        """Initialize with specific configuration and outbound adapters."""
         self._max_lead_time = timedelta(days=config.access_upfront_max_days)
         self._min_duration = timedelta(days=config.access_grant_min_days)
         self._max_duration = timedelta(days=config.access_grant_max_days)
@@ -96,6 +100,7 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
         self._request_dao = access_request_dao
         self._dataset_dao = dataset_dao
         self._access_grants = access_grants
+        self._sms_notifier = sms_notifier
 
     async def create(
         self, creation_data: AccessRequestCreationData, *, auth_context: AuthContext
@@ -378,6 +383,70 @@ class AccessRequestRepository(AccessRequestRepositoryPort):
                     "Could not revoke the access grant %s: %s", grant_id, revoke_error
                 )
             raise
+
+    async def send_verification_sms(
+        self,
+        access_request_id: UUID4,
+        *,
+        sms_data: VerificationSmsData,
+        auth_context: AuthContext,
+    ) -> str:
+        """Send an SMS with a verification code for the given access request.
+
+        The recipient is a person authorized to act for the DAC, who confirms the
+        approval by sending the code back via the helpdesk. The sending is recorded
+        in the internal note of the access request.
+
+        Only data stewards may use this method, and only for pending requests.
+
+        Returns the new internal note.
+
+        Raises:
+        - `AccessRequestNotFoundError` if the specified request was not found
+        - `AccessRequestAuthorizationError` if the user is not authorized
+        - `AccessRequestClosed` if the access request was already processed
+        """
+        if not (auth_context.id and has_role(auth_context, DATA_STEWARD_ROLE)):
+            authorization_error = self.AccessRequestAuthorizationError()
+            log.error(authorization_error)
+            raise authorization_error
+
+        try:
+            request = await self._request_dao.get_by_id(access_request_id)
+        except ResourceNotFoundError as error:
+            not_found_error = self.AccessRequestNotFoundError()
+            log.error(not_found_error, extra={"access_request_id": access_request_id})
+            raise not_found_error from error
+
+        if request.status != AccessRequestStatus.PENDING:
+            invalid_state_error = self.AccessRequestClosed()
+            log.error(invalid_state_error)
+            raise invalid_state_error
+
+        # the note is the only record of the code outside the helpdesk ticket
+        line = (
+            f"{now_utc_ms_prec().date().isoformat()}:"
+            f" Verification code {sms_data.code} sent"
+            f" to {mask_phone_number(sms_data.phone)} by {auth_context.name}."
+        )
+        note = f"{request.internal_note}\n{line}" if request.internal_note else line
+
+        # Record before sending: a line for an SMS that never went out does no harm,
+        # while a code that was sent but recorded nowhere cannot be verified.
+        await self._request_dao.update(
+            request.model_copy(update={"internal_note": note})
+        )
+        await self._sms_notifier.send_sms(
+            phone=sms_data.phone, text=sms_data.text, key=str(access_request_id)
+        )
+        log.info(
+            "Verification SMS sent",
+            extra={
+                "access_request_id": access_request_id,
+                "steward_id": auth_context.id,
+            },
+        )
+        return note
 
     @staticmethod
     def _hide_internals(request: AccessRequest) -> AccessRequest:

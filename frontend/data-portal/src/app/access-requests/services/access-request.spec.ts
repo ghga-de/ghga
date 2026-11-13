@@ -6,7 +6,10 @@
 
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpCache } from '@ngneat/cashew';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ConfigService } from '@app/shared/services/config';
 import { AccessGrant, AccessGrantStatus } from '../models/access-requests';
@@ -128,6 +131,24 @@ describe('AccessRequestService', () => {
         AccessGrantStatus.expired,
         AccessGrantStatus.active,
       ]);
+    });
+  });
+
+  describe('sending a verification SMS', () => {
+    it('posts the SMS and returns the new internal note', () => {
+      const httpMock = TestBed.inject(HttpTestingController);
+      const sms = { phone: '+49 1512 3456789', text: 'Code AB23CD', code: 'AB23CD' };
+      let note: string | undefined;
+      service.sendVerificationSms('ar-1', sms).subscribe((n) => (note = n));
+
+      const post = httpMock.expectOne(
+        'http://mock.dev/ars/access-requests/ar-1/verification-sms',
+      );
+      expect(post.request.method).toBe('POST');
+      expect(post.request.body).toEqual(sms);
+      post.flush({ internal_note: 'Code AB23CD sent' });
+
+      expect(note).toBe('Code AB23CD sent');
     });
   });
 });

@@ -30,6 +30,22 @@
       "title": "Access Grant Max Extend",
       "type": "number"
     },
+    "notification_topic": {
+      "description": "Name of the topic used for notification events.",
+      "examples": [
+        "notifications"
+      ],
+      "title": "Notification Topic",
+      "type": "string"
+    },
+    "sms_notification_type": {
+      "description": "The type used for SMS notification events.",
+      "examples": [
+        "sms_notification"
+      ],
+      "title": "Sms Notification Type",
+      "type": "string"
+    },
     "download_access_url": {
       "description": "URL pointing to the internal download access API.",
       "examples": [
@@ -534,6 +550,8 @@
     }
   },
   "required": [
+    "notification_topic",
+    "sms_notification_type",
     "download_access_url",
     "access_request_topic",
     "dataset_change_topic",

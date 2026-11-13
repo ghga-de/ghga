@@ -11,7 +11,7 @@ import { ConfigService } from '@app/shared/services/config';
 import { Notifier } from '@app/shared/services/notification';
 import { volatileCacheContext } from '@app/shared/utils/http-cache';
 import { CacheBucket, HttpCacheManager } from '@ngneat/cashew';
-import { Observable, tap } from 'rxjs';
+import { map, Observable, tap } from 'rxjs';
 import {
   AccessGrant,
   AccessGrantFilter,
@@ -20,6 +20,7 @@ import {
   AccessRequestDetailData,
   AccessRequestFilter,
   AccessRequestStatus,
+  VerificationSms,
 } from '../models/access-requests';
 
 /**
@@ -390,6 +391,23 @@ export class AccessRequestService {
     return this.#http
       .patch<null>(`${this.#arsRequestsUrl}/${id}`, changes)
       .pipe(tap(() => this.#updateAccessRequestLocally(id, changes)));
+  }
+
+  /**
+   * Send an SMS with a verification code for an access request to the DAC.
+   * This can only be done by a data steward.
+   * The backend records the sending in the internal note and returns the note,
+   * which is then updated in the local state.
+   * @param id - the access request ID
+   * @param sms - the phone number, the text and the code contained in the text
+   * @returns An observable that emits the new internal note
+   */
+  sendVerificationSms(id: string, sms: VerificationSms): Observable<string> {
+    const url = `${this.#arsRequestsUrl}/${id}/verification-sms`;
+    return this.#http.post<{ internal_note: string }>(url, sms).pipe(
+      map(({ internal_note }) => internal_note),
+      tap((internal_note) => this.#updateAccessRequestLocally(id, { internal_note })),
+    );
   }
 
   // signal to load all users' access grants

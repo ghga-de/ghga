@@ -97,6 +97,8 @@ def config_fixture(kafka: KafkaFixture, mongodb: MongoDbFixture) -> Config:
     return Config(
         auth_key=AUTH_KEY_PAIR.export_public(),  # pyright: ignore
         download_access_url=DOWNLOAD_ACCESS_URL,
+        notification_topic="notifications",
+        sms_notification_type="sms_notification",
         **kafka.config.model_dump(exclude={"kafka_enable_dlq"}),
         kafka_enable_dlq=True,
         **mongodb.config.model_dump(),

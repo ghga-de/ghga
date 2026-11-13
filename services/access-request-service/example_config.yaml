@@ -49,9 +49,11 @@ migration_max_wait_sec: null
 migration_wait_sec: 10
 mongo_dsn: '**********'
 mongo_timeout: null
+notification_topic: notifications
 openapi_url: /openapi.json
 port: 8080
 service_instance_id: '1'
 service_name: ars
+sms_notification_type: sms_notification
 timeout_keep_alive: 90
 workers: 1

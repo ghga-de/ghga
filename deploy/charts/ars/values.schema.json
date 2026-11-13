@@ -660,6 +660,47 @@
             }
           }
         },
+        "notificationEvent": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "topic": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "default": "notification_topic"
+                },
+                "value": {
+                  "type": "string",
+                  "default": "notifications"
+                }
+              }
+            },
+            "types": {
+              "type": "array",
+              "default": [
+                {
+                  "name": "sms_notification_type",
+                  "value": "sms_notification"
+                }
+              ]
+            },
+            "kafkaUser": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "operations": {
+                  "type": "array",
+                  "default": [
+                    "Write"
+                  ]
+                }
+              }
+            }
+          }
+        },
         "datasetChangeEvent": {
           "type": "object",
           "additionalProperties": true,
@@ -1045,6 +1086,28 @@
           "title": "Access Grant Max Extend",
           "type": [
             "number",
+            "null"
+          ]
+        },
+        "notification_topic": {
+          "description": "Name of the topic used for notification events.",
+          "examples": [
+            "notifications"
+          ],
+          "title": "Notification Topic",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sms_notification_type": {
+          "description": "The type used for SMS notification events.",
+          "examples": [
+            "sms_notification"
+          ],
+          "title": "Sms Notification Type",
+          "type": [
+            "string",
             "null"
           ]
         },
