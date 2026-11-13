@@ -321,3 +321,268 @@ async def test_give_up_after_three_lost_races(
 
     assert lose_race.await_count == 3
     rig.audit_repository.log_box_priority_updated.assert_not_awaited()
+
+
+def _move(box_id: UUID, before: UUID | None) -> models.UploadBoxPriorityMove:
+    """Make a move of the box with `box_id` before the box with `before`."""
+    return models.UploadBoxPriorityMove(box_id=box_id, before=before)
+
+
+async def _store_lettered_boxes(
+    rig: PriorityRig, letters: str, *, version: int = 1
+) -> dict[str, models.ResearchDataUploadBox]:
+    """Store a box per letter and a priority list holding them in letter order."""
+    boxes = {
+        letter: _make_box(days_ago=len(letters) - index)
+        for index, letter in enumerate(letters)
+    }
+    await _store_boxes(rig, *boxes.values())
+    await rig.priority_dao.insert(
+        _make_priority(version=version, entries=_entries(*boxes.values()))
+    )
+    return boxes
+
+
+async def test_get_priority(rig: PriorityRig):
+    """Test that the stored list is returned without its ID"""
+    boxes = await _store_lettered_boxes(rig, "AB")
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+
+    priority = await rig.priority_manager.get_priority()
+
+    assert priority == models.UploadBoxPriorityResponse(
+        version=1,
+        changed_by=TEST_DS_ID,
+        last_changed=stored.last_changed,
+        entries=_entries(boxes["A"], boxes["B"]),
+    )
+
+
+async def test_get_priority_without_list(rig: PriorityRig):
+    """Test that an empty list with version 0 is returned if none is stored yet"""
+    priority = await rig.priority_manager.get_priority()
+
+    assert priority == models.UploadBoxPriorityResponse(
+        version=0, changed_by=None, last_changed=None, entries=[]
+    )
+
+
+@pytest.mark.parametrize(
+    "box, before, expected_order",
+    [("C", "A", "CAB"), ("A", "C", "BAC"), ("A", None, "BCA")],
+    ids=["to_the_top", "between", "to_the_end"],
+)
+async def test_move_applies(
+    rig: PriorityRig, box: str, before: str | None, expected_order: str
+):
+    """Test that a move puts the box directly before `before`, or at the end, and
+    that the saving data steward is recorded.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABC")
+    old_box_ids = [boxes[letter].id for letter in "ABC"]
+
+    result = await rig.priority_manager.move_boxes(
+        version=1,
+        moves=[_move(boxes[box].id, boxes[before].id if before else None)],
+        user_id=TEST_DS_ID,
+    )
+
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    assert stored.entries == _entries(*(boxes[letter] for letter in expected_order))
+    assert stored.version == 2
+    assert stored.changed_by == TEST_DS_ID
+    assert result == models.UploadBoxPrioritySaveResult(
+        priority=models.UploadBoxPriorityResponse.from_priority(stored),
+        skipped=[],
+        includes_other_changes=False,
+    )
+    rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
+        priority=stored, old_box_ids=old_box_ids, user_id=TEST_DS_ID
+    )
+
+
+@pytest.mark.parametrize("before", ["itself", "a box not in the list"])
+async def test_move_is_skipped(rig: PriorityRig, before: str):
+    """Test that a move is skipped if `before` is the moved box itself or is not in
+    the list, and that the list is then left unchanged.
+    """
+    boxes = await _store_lettered_boxes(rig, "AB")
+    move = _move(boxes["A"].id, boxes["A"].id if before == "itself" else uuid4())
+
+    result = await rig.priority_manager.move_boxes(
+        version=1, moves=[move], user_id=TEST_DS_ID
+    )
+
+    assert result.skipped == [move]
+    assert result.priority.version == 1
+    assert result.priority.entries == _entries(boxes["A"], boxes["B"])
+    rig.audit_repository.log_box_priority_updated.assert_not_awaited()
+
+
+async def test_moves_apply_in_order(rig: PriorityRig):
+    """Test that the moves apply in order, and that a skipped move does not stop the
+    moves after it.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABCD")
+    skipped_move = _move(boxes["A"].id, uuid4())
+    moves = [
+        _move(boxes["D"].id, boxes["A"].id),  # D, A, B, C
+        skipped_move,
+        _move(boxes["B"].id, boxes["D"].id),  # B, D, A, C
+    ]
+
+    result = await rig.priority_manager.move_boxes(
+        version=1, moves=moves, user_id=TEST_DS_ID
+    )
+
+    assert result.skipped == [skipped_move]
+    assert result.priority.entries == _entries(*(boxes[letter] for letter in "BDAC"))
+
+
+@pytest.mark.parametrize("gone_box", ["unknown", "archived", "deleted"])
+async def test_moves_of_box_not_in_list(rig: PriorityRig, gone_box: str):
+    """Test that a move of a box that is not in the list inserts it, that later moves
+    can refer to it, and that RS drops it after the last move.
+
+    This is the example from the epic: X was archived or deleted while the data
+    steward was editing.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABCDE")
+    gone = _make_box(days_ago=0, state="archived")
+    if gone_box != "unknown":
+        await rig.box_dao.insert(gone)
+    if gone_box == "deleted":
+        await rig.box_dao.delete(gone.id)
+    moves = [
+        _move(gone.id, boxes["E"].id),  # A, B, C, D, X, E
+        _move(boxes["A"].id, gone.id),  # B, C, D, A, X, E
+        _move(boxes["B"].id, boxes["A"].id),  # C, D, B, A, X, E
+    ]
+
+    result = await rig.priority_manager.move_boxes(
+        version=1, moves=moves, user_id=TEST_DS_ID
+    )
+
+    assert result.skipped == []
+    assert result.priority.entries == _entries(*(boxes[letter] for letter in "CDBAE"))
+
+
+async def test_move_before_box_not_in_list(rig: PriorityRig):
+    """Test that a move before a box that is not in the list is skipped, unless an
+    earlier move in the same save placed that box.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABC")
+    unknown_box_id = uuid4()
+    skipped_move = _move(boxes["A"].id, unknown_box_id)
+    moves = [
+        skipped_move,
+        _move(unknown_box_id, boxes["A"].id),  # X, A, B, C
+        _move(boxes["C"].id, unknown_box_id),  # C, X, A, B
+    ]
+
+    result = await rig.priority_manager.move_boxes(
+        version=1, moves=moves, user_id=TEST_DS_ID
+    )
+
+    assert result.skipped == [skipped_move]
+    assert result.priority.entries == _entries(*(boxes[letter] for letter in "CAB"))
+
+
+@pytest.mark.parametrize(
+    "request_version, includes_other_changes", [(3, False), (2, True)]
+)
+async def test_save_based_on_older_version(
+    rig: PriorityRig, request_version: int, includes_other_changes: bool
+):
+    """Test that a save is applied to the stored list whatever version it was based
+    on, and that it says whether the list changed after that version.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABC", version=3)
+
+    result = await rig.priority_manager.move_boxes(
+        version=request_version,
+        moves=[_move(boxes["C"].id, boxes["A"].id)],
+        user_id=TEST_DS_ID,
+    )
+
+    assert result.includes_other_changes is includes_other_changes
+    assert result.priority.version == 4
+    assert result.priority.entries == _entries(*(boxes[letter] for letter in "CAB"))
+
+
+async def test_first_save(rig: PriorityRig):
+    """Test that a save before the first list is stored is based on version 0 and
+    stores the first list.
+    """
+    first = _make_box(days_ago=2)
+    second = _make_box(days_ago=1)
+    await _store_boxes(rig, first, second)
+
+    result = await rig.priority_manager.move_boxes(
+        version=0, moves=[_move(second.id, first.id)], user_id=TEST_DS_ID
+    )
+
+    assert result.includes_other_changes is False
+    assert result.priority.version == 1
+    assert result.priority.entries == _entries(second, first)
+
+
+async def test_save_without_change(rig: PriorityRig):
+    """Test that a save whose moves leave the list unchanged writes nothing and
+    returns the stored list with the same version.
+    """
+    boxes = await _store_lettered_boxes(rig, "AB")
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+
+    result = await rig.priority_manager.move_boxes(
+        version=1,
+        moves=[_move(boxes["A"].id, boxes["B"].id)],
+        user_id=uuid4(),
+    )
+
+    assert result == models.UploadBoxPrioritySaveResult(
+        priority=models.UploadBoxPriorityResponse.from_priority(stored),
+        skipped=[],
+        includes_other_changes=False,
+    )
+    assert await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY) == stored
+    rig.audit_repository.log_box_priority_updated.assert_not_awaited()
+
+
+async def test_save_after_lost_race(rig: PriorityRig, monkeypatch: pytest.MonkeyPatch):
+    """Test that a save that loses a race applies its moves again to the fresh list,
+    so the skipped moves reflect that list.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABC")
+    new_box = _make_box(days_ago=0)
+    # Skipped on the first attempt, because the new box isn't stored yet
+    move_before_new_box = _move(boxes["C"].id, new_box.id)
+    moves = [move_before_new_box, _move(boxes["A"].id, None)]
+    original_update = rig.priority_dao.update
+
+    async def update_after_other_write(dto, *, precondition=None):
+        # Another write creates a box and lists it before this write is stored
+        monkeypatch.setattr(rig.priority_dao, "update", original_update)
+        await rig.box_dao.insert(new_box)
+        await original_update(
+            dto.model_copy(
+                update={
+                    "version": 2,
+                    "entries": _entries(*boxes.values(), new_box),
+                }
+            )
+        )
+        await original_update(dto, precondition=precondition)
+
+    monkeypatch.setattr(rig.priority_dao, "update", update_after_other_write)
+
+    result = await rig.priority_manager.move_boxes(
+        version=1, moves=moves, user_id=TEST_DS_ID
+    )
+
+    assert result.skipped == []
+    assert result.includes_other_changes is True
+    assert result.priority.version == 3
+    assert result.priority.entries == _entries(
+        boxes["B"], boxes["C"], new_box, boxes["A"]
+    )
