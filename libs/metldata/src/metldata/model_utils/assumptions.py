@@ -33,7 +33,6 @@ from metldata.model_utils.essentials import (
     FILE_DATASET_SLOT,
     ROOT_CLASS,
     STUDY_ANCHOR,
-    STUDY_CLASS,
     MetadataModel,
 )
 
@@ -129,22 +128,33 @@ def check_anchor_points(model: MetadataModel, classes: list[str] | None = None) 
             ) from error
 
 
-def check_study_anchor(model: MetadataModel) -> None:
-    """Check that the STUDY_CLASS is anchored on the root class under the slot named
+def check_study_anchor(model: MetadataModel, study_class_name: str) -> None:
+    """Check that the study class is anchored on the root class under the slot named
     in STUDY_ANCHOR, which the loader reads the study from.
 
     Raises:
         MetadataModelAssumptionError: if validation fails.
     """
-    check_class_exists(model=model, class_name=STUDY_CLASS)
-    check_anchor_points(model=model, classes=[STUDY_CLASS])
+    check_class_exists(model=model, class_name=study_class_name)
+    check_anchor_points(model=model, classes=[study_class_name])
 
-    root_slot = get_anchors_points_by_target(model=model)[STUDY_CLASS].root_slot
+    root_slot = get_anchors_points_by_target(model=model)[study_class_name].root_slot
     if root_slot != STUDY_ANCHOR:
         raise MetadataModelAssumptionError(
-            f"The '{STUDY_CLASS}' class must be anchored on the slot"
+            f"The '{study_class_name}' class must be anchored on the slot"
             + f" '{STUDY_ANCHOR}', not '{root_slot}'."
         )
+
+
+def check_dataset_anchor(model: MetadataModel, dataset_class_name: str) -> None:
+    """Check that the dataset class is anchored on the root class, since the
+    accession registry mints dataset PIDs for its entities.
+
+    Raises:
+        MetadataModelAssumptionError: if validation fails.
+    """
+    check_class_exists(model=model, class_name=dataset_class_name)
+    check_anchor_points(model=model, classes=[dataset_class_name])
 
 
 def check_study_cardinality(model: MetadataModel) -> None:

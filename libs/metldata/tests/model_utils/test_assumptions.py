@@ -25,6 +25,7 @@ from metldata.model_utils.assumptions import (
     check_basic_model_assumption,
     check_class_exists,
     check_class_slot_exists,
+    check_dataset_anchor,
     check_governance_anchors,
     check_study_anchor,
     check_study_cardinality,
@@ -105,7 +106,7 @@ def test_check_class_slot_exists(
 def test_check_study_anchor(model: MetadataModel, is_valid: bool):
     """Test that only a model anchoring the study on STUDY_ANCHOR passes."""
     with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
-        check_study_anchor(model=model)
+        check_study_anchor(model=model, study_class_name="Study")
 
 
 @pytest.mark.parametrize(
@@ -166,3 +167,16 @@ def test_check_governance_anchors(model: MetadataModel, is_valid: bool):
     """Test that only a model with the governance chain passes."""
     with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
         check_governance_anchors(model=model)
+
+
+@pytest.mark.parametrize(
+    "model, is_valid",
+    [
+        (MINIMAL_MODEL_WITH_STUDY, True),
+        (MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES, False),  # has no dataset class
+    ],
+)
+def test_check_dataset_anchor(model: MetadataModel, is_valid: bool):
+    """Test that only a model anchoring the dataset class passes."""
+    with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
+        check_dataset_anchor(model=model, dataset_class_name="Dataset")

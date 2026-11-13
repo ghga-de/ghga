@@ -23,7 +23,6 @@ import shutil
 import sys
 from collections.abc import Generator
 from functools import partial
-from itertools import count
 from pathlib import Path
 
 import pytest
@@ -47,6 +46,8 @@ from tests.fixtures.metadata import (
     ARCHIVE_ORIGINAL_METADATA_PATH,
     ARCHIVE_ORIGINAL_MODEL_PATH,
     DROPPED_METADATA_PATH,
+    LEGACY_SUBMISSION_ID,
+    LEGACY_SUBMISSION_PATH,
     METADATA_CONFIG_PATH,
     ORIGINAL_METADATA_PATH,
     ORIGINAL_MODEL_PATH,
@@ -133,38 +134,25 @@ TEST_LEGACY_PREFIXES = {
 }
 
 
-def make_legacy(*, submission_id: str) -> dict[str, dict[str, str]]:
-    """Give a stored submission flat accessions, as if it was accessioned before
-    study PIDs, and return its new accession map.
-    """
-    path = Path("submission_store") / f"{submission_id}.json"
-    submission = json.loads(path.read_text(encoding="utf-8"))
-
-    flat_accessions = (f"GHGAT{index:014d}" for index in count())
-    submission["accession_map"] = {
-        anchor: {alias: next(flat_accessions) for alias in accessions}
-        for anchor, accessions in submission["accession_map"].items()
-    }
-    path.write_text(json.dumps(submission), encoding="utf-8")
-
-    return submission["accession_map"]
-
-
-def submit_legacy() -> tuple[str, dict[str, dict[str, str]]]:
-    """Submit the original metadata with flat accessions, as only a submission
-    accessioned before study PIDs can be amended, and return the submission ID and
-    accession map.
-
-    Must be called from within a work directory fixture, like `submit_original`.
-    """
-    submission_id, _ = submit_original()
-    return submission_id, make_legacy(submission_id=submission_id)
-
-
 def read_accession_map(*, submission_id: str) -> dict[str, dict[str, str]]:
     """Read the accession map of a stored submission."""
     path = Path("submission_store") / f"{submission_id}.json"
     return json.loads(path.read_text(encoding="utf-8"))["accession_map"]
+
+
+def submit_legacy() -> tuple[str, dict[str, dict[str, str]]]:
+    """Store a completed submission accessioned before study PIDs, as only such a
+    submission can be amended, and return its ID and accession map.
+
+    Copied from a fixture rather than submitted, since `submit` mints study PIDs
+    only. Must be called from within a work directory fixture, like
+    `submit_original`.
+    """
+    shutil.copyfile(
+        LEGACY_SUBMISSION_PATH,
+        Path("submission_store") / f"{LEGACY_SUBMISSION_ID}.json",
+    )
+    return LEGACY_SUBMISSION_ID, read_accession_map(submission_id=LEGACY_SUBMISSION_ID)
 
 
 class _TerminalStdin(io.StringIO):
@@ -202,8 +190,17 @@ def test_amend_preserves_accessions(example_workdir: Path):
         for alias, accession in accessions.items():
             assert accessions_after[anchor][alias] == accession
 
-    assert "test_sample_03_R1" in accessions_after["sample_files"]
-    assert "test_sample_03_R1" not in accessions_before["sample_files"]
+    minted = {
+        (anchor, alias)
+        for anchor, accessions in accessions_after.items()
+        for alias in accessions
+        if alias not in accessions_before.get(anchor, {})
+    }
+    assert minted == {("sample_files", "test_sample_03_R1")}, (
+        "amend minted accessions for aliases other than the added one; if the"
+        + " fixtures changed, legacy_submission.json may no longer hold the content"
+        + " of original_metadata.yaml"
+    )
 
     # the submission and its source event are replaced, not duplicated:
     assert len(list(Path("submission_store").glob("*.json"))) == 1

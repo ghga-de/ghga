@@ -16,12 +16,14 @@
 
 """Logic for transforming metadata."""
 
+import re
 from collections import defaultdict
 from typing import TypeAlias
 
 from pydantic import Json
 
-from metldata.metadata_utils import lookup_self_id
+from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
+from metldata.metadata_utils import lookup_self_id, normalize_alias
 from metldata.model_utils.anchors import AnchorPoint, lookup_anchor_point
 from metldata.model_utils.essentials import MetadataModel
 from metldata.submission_registry.models import AccessionMap
@@ -140,31 +142,126 @@ def add_accession_to_resource(  # noqa: PLR0913
     return new_resource
 
 
-def add_accessions_to_metadata(
+def compose_accession(*, study_pid: str, alias: str) -> str:
+    """Compose the accession '{study_pid}.{alias}' of an entity that is neither the
+    study nor a dataset, from its normalized alias.
+    """
+    return f"{study_pid}.{normalize_alias(alias)}"
+
+
+def lookup_study_pid(
+    *,
+    accession_map: AccessionMap,
+    anchor_points_by_target: dict[str, AnchorPoint],
+    study_class_name: str,
+) -> str:
+    """Look up the study PID in the accession map: the one accession stored under
+    the study class.
+
+    Raises:
+        MetadataTransformationError:
+            if the model has no study class, the map holds not exactly one study
+            accession, or that accession is not a study PID.
+    """
+    anchor_point = anchor_points_by_target.get(study_class_name)
+    if anchor_point is None:
+        raise MetadataTransformationError(
+            f"The model has no anchored study class '{study_class_name}', so the"
+            + " accessions missing from the accession map cannot be composed."
+        )
+
+    study_accessions = list(accession_map.get(anchor_point.root_slot, {}).values())
+    if len(study_accessions) != 1:
+        raise MetadataTransformationError(
+            f"Expected exactly one accession of the class '{study_class_name}' in the"
+            + f" accession map, found {len(study_accessions)}."
+        )
+
+    study_pid = study_accessions[0]
+    if not re.fullmatch(STUDY_PID_PATTERN, study_pid):
+        raise MetadataTransformationError(
+            f"The study accession '{study_pid}' is not a study PID, so no accession"
+            + " can be composed from it. A flat-accessioned submission must hold"
+            + " every class in its accession map."
+        )
+
+    return study_pid
+
+
+def complete_accession_map(
+    *,
+    metadata: Json,
+    accession_map: AccessionMap,
+    anchor_points_by_target: dict[str, AnchorPoint],
+    study_class_name: str,
+) -> AccessionMap:
+    """Complete the accession map with an entry for every anchored class.
+
+    A submission with a study PID stores only the study and dataset accessions, so
+    every class missing from the map gets the accessions composed from the study
+    PID and the aliases in the metadata. A class in the map keeps its entry as
+    stored, so a flat-accessioned map, which holds every class, is returned as is.
+
+    Raises:
+        MetadataTransformationError:
+            if a class is missing and no study PID can be found to compose from.
+    """
+    missing_anchor_points = [
+        anchor_point
+        for anchor_point in anchor_points_by_target.values()
+        if anchor_point.root_slot not in accession_map
+    ]
+    if not missing_anchor_points:
+        return accession_map
+
+    study_pid = lookup_study_pid(
+        accession_map=accession_map,
+        anchor_points_by_target=anchor_points_by_target,
+        study_class_name=study_class_name,
+    )
+
+    completed_accession_map = dict(accession_map)
+    for anchor_point in missing_anchor_points:
+        aliases = (
+            lookup_self_id(
+                resource=resource, identifier_slot=anchor_point.identifier_slot
+            )
+            for resource in metadata[anchor_point.root_slot]
+        )
+        completed_accession_map[anchor_point.root_slot] = {
+            alias: compose_accession(study_pid=study_pid, alias=alias)
+            for alias in aliases
+        }
+
+    return completed_accession_map
+
+
+def add_accessions_to_metadata(  # noqa: PLR0913
     *,
     metadata: Json,
     accession_slot_name: str,
     accession_map: AccessionMap,
     references: References,
     anchor_points_by_target: dict[str, AnchorPoint],
+    study_class_name: str,
 ) -> Json:
-    """Add an accessions to metadata.
+    """Add accessions to metadata, composing those missing from the accession map
+    from the study PID, as `complete_accession_map` does.
 
     Raises:
         MetadataTransformationError:
             if the transformation of the metadata fails.
     """
+    accession_map = complete_accession_map(
+        metadata=metadata,
+        accession_map=accession_map,
+        anchor_points_by_target=anchor_points_by_target,
+        study_class_name=study_class_name,
+    )
     modified_metadata = {}
 
     for target_class_name, anchor_point in anchor_points_by_target.items():
         target_resources = []
-        target_accession_map = accession_map.get(anchor_point.root_slot)
-        if target_accession_map is None:
-            raise MetadataTransformationError(
-                "Could not find accession mapping for target class"
-                + f" {target_class_name}."
-            )
-
         for old_resource in metadata[anchor_point.root_slot]:
             new_resource = add_accession_to_resource(
                 resource=old_resource,

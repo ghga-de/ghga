@@ -32,3 +32,12 @@ class AccessionAdditionConfig(BaseSettings):
         "The accession for an entity.",
         description="The description of the slot to contain the accessions to.",
     )
+    study_class_name: str = Field(
+        "Study",
+        description=(
+            "Name of the metadata model class whose entity takes the study PID. The"
+            + " accessions of every class missing from the accession map are composed"
+            + " from that PID and the alias. dskit sets it from its top-level"
+            + " 'study_class_name'."
+        ),
+    )
