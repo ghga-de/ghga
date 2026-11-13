@@ -46,32 +46,30 @@ import { CsrfService } from './csrf';
 const CONTACT_URL = 'https://www.ghga.de/about-us/contact';
 
 /**
- * Check whether an error response says that the user account is disabled
+ * Check whether an error response has the given status and detail
  *
- * The detail is checked as well, so that a 403 from the ingress is not taken
- * for a disabled account.
+ * The detail is checked as well, so that, for instance, a 403 from the ingress
+ * is not taken for a disabled account.
  * @param error - the error raised by the HTTP client
- * @returns true if the user account is disabled
+ * @param status - the expected status code
+ * @param detail - the expected detail in the response body
+ * @returns true if both match
  */
-function isAccountDisabled(error: unknown): boolean {
+function hasErrorDetail(error: unknown, status: number, detail: string): boolean {
   return (
     error instanceof HttpErrorResponse &&
-    error.status === 403 &&
-    error.error?.detail === 'User account is disabled'
+    error.status === status &&
+    error.error?.detail === detail
   );
 }
 
 /**
- * Check whether an error response says that too many TOTP codes were wrong
+ * Check whether an error response says that the user account is disabled
  * @param error - the error raised by the HTTP client
- * @returns true if the session has ended after too many failed attempts
+ * @returns true if the user account is disabled
  */
-function isTotpLocked(error: unknown): boolean {
-  return (
-    error instanceof HttpErrorResponse &&
-    error.status === 401 &&
-    error.error?.detail === 'Too many failed attempts'
-  );
+function isAccountDisabled(error: unknown): boolean {
+  return hasErrorDetail(error, 403, 'User account is disabled');
 }
 
 /**
@@ -404,7 +402,6 @@ export class AuthService {
         ),
       ).then(async () => {
         await this.#clearUser();
-        sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
         this.#notify.showSuccess('You have been logged out.');
       });
@@ -418,6 +415,7 @@ export class AuthService {
     await this.#oidcUserManager.removeUser();
     this.#userSignal.set(null);
     this.#csrf.token = null;
+    sessionStorage.removeItem('afterLogin');
   }
 
   /**
@@ -434,14 +432,14 @@ export class AuthService {
           authentication codes.
         </p>
         <p>
-          Please contact the GHGA helpdesk via the
+          Please
           <a href="${CONTACT_URL}" target="_blank" rel="noreferrer noopener"
-            >contact form</a
+            >contact GHGA</a
           >
           to have it reactivated.
         </p>`,
       cancelText: 'Close',
-      confirmText: 'Contact helpdesk',
+      confirmText: 'Contact GHGA',
       callback: (confirmed) => {
         if (confirmed) window.open(CONTACT_URL, '_blank', 'noreferrer,noopener');
       },
@@ -681,13 +679,13 @@ export class AuthService {
         }),
         catchError((error) => {
           console.error('Failed to verify TOTP code');
-          return of<TotpVerification>(
-            isAccountDisabled(error)
-              ? 'disabled'
-              : isTotpLocked(error)
-                ? 'locked'
-                : 'invalid',
-          );
+          let verification: TotpVerification = 'invalid';
+          if (isAccountDisabled(error)) {
+            verification = 'disabled';
+          } else if (hasErrorDetail(error, 401, 'Too many failed attempts')) {
+            verification = 'locked';
+          }
+          return of(verification);
         }),
       ),
     );

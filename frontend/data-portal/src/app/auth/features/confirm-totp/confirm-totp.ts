@@ -112,16 +112,14 @@ export class ConfirmTotp {
         this.allowNavigation = true;
         this.#authService.redirectAfterLogin();
         break;
+      // in the next two cases, the session has ended, so leave the page
       case 'disabled':
+        this.#authService.showAccountDisabled();
+        this.#leave();
+        break;
       case 'locked':
-        // the session has ended, so this page cannot be used any more
-        if (verification === 'disabled') {
-          this.#authService.showAccountDisabled();
-        } else {
-          this.#notify.showError('Too many failed attempts, please log in again.');
-        }
-        this.allowNavigation = true;
-        this.#router.navigate(['/']);
+        this.#notify.showError('Too many failed attempts, please log in again.');
+        this.#leave();
         break;
       default:
         this.#notify.showError('Failed to authenticate.');
@@ -130,6 +128,14 @@ export class ConfirmTotp {
           this.#isProcessing.set(false);
         });
     }
+  }
+
+  /**
+   * Go to the home page after the session has ended
+   */
+  #leave(): void {
+    this.allowNavigation = true;
+    this.#router.navigate(['/']);
   }
 
   /**

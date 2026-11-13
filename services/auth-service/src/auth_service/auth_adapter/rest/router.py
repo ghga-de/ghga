@@ -214,7 +214,7 @@ async def login(  # noqa: C901, PLR0913
             status_code=status.HTTP_403_FORBIDDEN,
             content={"detail": "User account is disabled"},
         )
-        if not session_created:
+        if session_id:  # the cookie may also point to an expired session
             _delete_session_cookie(denied)
         return denied
 

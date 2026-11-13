@@ -329,6 +329,25 @@ async def test_login_with_deactivated_user(
     assert "X-Session" not in response.headers
 
 
+async def test_login_with_stale_cookie_and_deactivated_user(
+    bare_client: BareClient, oidc_provider: OidcProviderMock
+):
+    """Test that a failed login clears a cookie that points to no session."""
+    mock_userinfo(oidc_provider, USER_INFO)
+
+    setup_daos(bare_client.app, status=UserStatus.INACTIVE)
+
+    auth = f"Bearer {create_access_token()}"
+    headers = {"Authorization": auth, "Cookie": f"{SESSION_COOKIE}=expired"}
+    response = await bare_client.post(LOGIN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
+
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    assert await store.get_size() == 0
+    assert_cookie_deleted(response)
+
+
 async def test_login_with_cookie_and_deactivated_user(bare_client: BareClient):
     """Test that a login request with a session of a deactivated user ends it."""
     setup_daos(bare_client.app, status=UserStatus.INACTIVE)
