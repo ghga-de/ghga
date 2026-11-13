@@ -24,7 +24,7 @@ class MockConfigService {
  */
 class MockMetadataService {
   datasetDetails = {
-    value: () => datasetDetails,
+    value: signal(datasetDetails),
     isLoading: () => false,
     error: () => undefined,
   };
@@ -161,5 +161,61 @@ describe('DatasetDetailsPage', () => {
     expect(within(publication).getByText(/Test author/)).toBeInTheDocument();
     expect(within(publication).queryByText('DOI:')).toBeNull();
     expect(within(publication).queryByText('View Publication')).toBeNull();
+  });
+
+  it('should show DAC, data use and policy on separate cards', async () => {
+    await userEvent.click(screen.getByRole('tab', { name: /Data Access/ }));
+    await fixture.whenStable();
+    await screen.findByRole('heading', { level: 2, name: 'Data Access Committee' });
+    const card = (title: string) =>
+      screen
+        .getByRole('heading', { level: 2, name: title })
+        .closest('mat-card') as HTMLElement;
+
+    const dac = card('Data Access Committee');
+    expect(within(dac).getByText('Test DAC')).toBeInTheDocument();
+    expect(within(dac).getByText('test[at]test[dot]de')).toBeInTheDocument();
+
+    const dataUse = card('Data Use');
+    expect(
+      within(dataUse).getByRole('link', { name: /general research use/ }),
+    ).toHaveAttribute('href', 'https://purl.obolibrary.org/obo/DUO_0000042');
+    const modifiers = within(dataUse).getAllByRole('listitem');
+    expect(modifiers.map((item) => item.textContent?.trim())).toEqual([
+      'publication required',
+      'institution specific restriction',
+    ]);
+
+    const dap = card('Data Access Policy');
+    expect(within(dap).getByText('DAP 1')).toBeInTheDocument();
+    expect(within(dap).getByText(/^Test policy text\./)).toBeInTheDocument();
+    expect(
+      within(dap).getByRole('link', {
+        name: 'Look up policy terms online (new tab)',
+      }),
+    ).toHaveAttribute('href', 'https://test.com');
+  });
+
+  it('should show no modifiers and no policy link if the policy has neither', async () => {
+    const metadata = fixture.debugElement.injector.get(
+      MetadataService,
+    ) as unknown as MockMetadataService;
+    metadata.datasetDetails.value.set({
+      ...datasetDetails,
+      data_access_policy: {
+        ...datasetDetails.data_access_policy,
+        policy_url: undefined,
+        data_use_modifier_ids: [''],
+        data_use_modifier_terms: undefined,
+      },
+    });
+    await userEvent.click(screen.getByRole('tab', { name: /Data Access/ }));
+    await fixture.whenStable();
+    const heading = await screen.findByRole('heading', { level: 2, name: 'Data Use' });
+    const dataUse = heading.closest('mat-card') as HTMLElement;
+    expect(within(dataUse).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(dataUse).getByText('None')).toBeInTheDocument();
+    // Query by text: an anchor without href has no link role and would slip past a role query.
+    expect(screen.queryByText(/Look up policy terms online/)).toBeNull();
   });
 });

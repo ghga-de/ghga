@@ -97,7 +97,7 @@ def check_dataset_detail(
     for publication in dataset["details"]["study"]["publications"]:
         expect(main).to_contain_text(publication["title"])
 
-    main.get_by_role("tab").get_by_text("DAP/DAC").click()
+    main.get_by_role("tab").get_by_text("Data Access").click()
     expect(main).to_contain_text("Data Access Committee")
     expect(main).to_contain_text(
         dataset["details"]["data_access_policy"]["alias"].replace("_", " ")
