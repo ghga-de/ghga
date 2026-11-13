@@ -152,8 +152,13 @@ describe('AuthService', () => {
       expect(service.sessionState()).toBe('LoggedOut');
       expect(confirmation.confirm).toHaveBeenCalledTimes(1);
       expect(confirmation.confirm.mock.calls[0][0].title).toBe('Account disabled');
-      expect(String(confirmation.confirm.mock.calls[0][0].message)).toContain(
+      expect(confirmation.confirm.mock.calls[0][0].confirmText).toBe('Contact GHGA');
+      const open = vitest.spyOn(window, 'open').mockReturnValue(null);
+      confirmation.confirm.mock.calls[0][0].callback(true);
+      expect(open).toHaveBeenCalledWith(
         'https://contact.mock.dev/',
+        '_blank',
+        'noreferrer,noopener',
       );
       expect(notify.showError).not.toHaveBeenCalled();
     });

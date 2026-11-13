@@ -16,7 +16,6 @@ import { RedirectCommand, Router } from '@angular/router';
 import { ConfigService } from '@app/shared/services/config';
 import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
-import { html } from '@app/shared/utils/html';
 import type { OidcMetadata, UserManagerSettings } from 'oidc-client-ts';
 import {
   Log as OidcLog,
@@ -426,17 +425,9 @@ export class AuthService {
     const contactUrl = this.#config.contactUrl;
     this.#confirmation.confirm({
       title: 'Account disabled',
-      message: html`<p>
-          Your GHGA account has been disabled, for example after too many wrong
-          authentication codes.
-        </p>
-        <p>
-          Please
-          <a href="${contactUrl}" target="_blank" rel="noreferrer noopener"
-            >contact GHGA</a
-          >
-          to have it reactivated.
-        </p>`,
+      message:
+        'Your GHGA account has been disabled.' +
+        ' Please contact GHGA to have it reactivated.',
       cancelText: 'Close',
       confirmText: 'Contact GHGA',
       callback: (confirmed) => {
