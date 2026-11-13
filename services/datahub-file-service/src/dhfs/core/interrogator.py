@@ -201,8 +201,10 @@ class Interrogator(InterrogatorPort):
         This method handles InterrogationError exceptions by reporting failures to the
         Central API. CantCompleteError exceptions propagate up to the caller.
 
-        Returns `True` if at least one file was concluded, with success or a reported
-        failure, and `False` if there were no files or every file was inconclusive.
+        Returns `True` if the Central API accepted the report of at least one file, a
+        success or a failure, and `False` if there were no files, every file was
+        inconclusive, or the Central API rejected every report. A file whose report
+        was rejected stays waiting, so the next request returns it again.
 
         Raises:
         - CantCompleteError if an error prevents interrogation from completing (e.g., network issues, S3 unavailable).
@@ -219,12 +221,14 @@ class Interrogator(InterrogatorPort):
         for file in new_files:
             try:
                 await self._check_file_is_in_inbox(file=file)
-                await self.interrogate_file(file)
+                report_accepted = await self.interrogate_file(file)
             except self.ConclusiveError as err:
                 reason = getattr(err, "reason", None) or "Unexpected error"
                 # Errors in .report_failure() are logged without re-raising, because
                 #  the solution to the error is simply to move on to the next file
-                await self.report_failure(file_id=file.id, reason=reason)
+                report_accepted = await self.report_failure(
+                    file_id=file.id, reason=reason
+                )
             except self.InconclusiveError as err:
                 log.warning(
                     "File %s: Unable to conclusively process file - will retry later. Reason: %s",
@@ -232,7 +236,8 @@ class Interrogator(InterrogatorPort):
                     err,
                 )
                 continue
-            concluded_a_file = True
+            if report_accepted:
+                concluded_a_file = True
 
         log.info("Finished processing current file batch.")
         return concluded_a_file
@@ -688,8 +693,10 @@ class Interrogator(InterrogatorPort):
             extra=metrics,
         )
 
-    async def interrogate_file(self, file_upload: FileUpload) -> None:
+    async def interrogate_file(self, file_upload: FileUpload) -> bool:
         """Inspect and re-encrypt a newly uploaded file.
+
+        Returns whether the Central API accepted the success report.
 
         Raises:
         - FileEnvelopeDecryptionError if the Crypt4GH envelope cannot be decrypted.
@@ -840,7 +847,7 @@ class Interrogator(InterrogatorPort):
             "File %s: S3 ETag check passed - submitting success report.",
             file_upload.id,
         )
-        await self.report_success(
+        return await self.report_success(
             file_id=file_upload.id,
             bucket_id=self._interrogation_bucket_id,
             object_id=UUID(new_object_id),
@@ -883,8 +890,9 @@ class Interrogator(InterrogatorPort):
         encrypted_size: int,
         wall_time_seconds: float | None = None,
         stage_seconds: dict[str, float] | None = None,
-    ) -> None:
-        """Submit an InterrogationReport for a successful interrogation.
+    ) -> bool:
+        """Submit an InterrogationReport for a successful interrogation, and return
+        whether the Central API accepted it.
 
         Submission errors are logged but not raised; the re-encrypted file is
         left in the interrogation bucket regardless of outcome so that it is not
@@ -906,6 +914,7 @@ class Interrogator(InterrogatorPort):
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
+            return True
         except ConnectionFailedError as err:
             raise InterrogatorPort.InconclusiveError(
                 "Unable to reach the GHGA Central API.",
@@ -933,9 +942,11 @@ class Interrogator(InterrogatorPort):
                 file_id,
                 extra={"err_msg": str(err)},
             )
+        return False
 
-    async def report_failure(self, *, file_id: UUID4, reason: str) -> None:
-        """Submit an InterrogationReport for an unsuccessful interrogation.
+    async def report_failure(self, *, file_id: UUID4, reason: str) -> bool:
+        """Submit an InterrogationReport for an unsuccessful interrogation, and return
+        whether the Central API accepted it.
 
         Submission errors are logged but not raised so that processing of
         remaining files in the batch is not interrupted.
@@ -949,6 +960,7 @@ class Interrogator(InterrogatorPort):
         )
         try:
             await self._central_client.submit_interrogation_report(report=report)
+            return True
         except CentralClientPort.UpgradeRequiredError as err:
             raise InterrogatorPort.CriticalError(err) from err
         except ConnectionFailedError as err:
@@ -975,3 +987,4 @@ class Interrogator(InterrogatorPort):
                 file_id,
                 extra={"err_msg": str(err)},
             )
+        return False

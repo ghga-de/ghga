@@ -18,7 +18,7 @@
 import asyncio
 import time
 from typing import cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -181,7 +181,7 @@ async def test_report_failure(joint_fixture: JointFixture):
     failure_reason = "Test failure: File decryption failed"
 
     # Call report_failure
-    await joint_fixture.interrogator.report_failure(
+    assert await joint_fixture.interrogator.report_failure(
         file_id=file_id, reason=failure_reason
     )
 
@@ -250,8 +250,9 @@ async def test_api_down_during_report_submission(
     # Monkeypatch the uuid4 function so it produces the above ID
     monkeypatch.setattr("dhfs.core.interrogator.uuid4", lambda: interrogation_object_id)
 
-    # Processing should complete without raising despite the failed submission
-    await joint_fixture.interrogator.interrogate_new_files()
+    # Processing should complete without raising despite the failed submission, and
+    #  the file isn't concluded, because it stays waiting
+    assert not await joint_fixture.interrogator.interrogate_new_files()
 
     # Verify the re-encrypted file is still in the interrogation bucket
     s3_client: S3Client = joint_fixture.interrogator._s3_client  # type: ignore
@@ -515,7 +516,7 @@ async def test_central_api_error_on_report_success(
     joint_fixture.central_api.on_submit_report = respond(status_code)
 
     with caplog.at_level("ERROR"):
-        await joint_fixture.interrogator.report_success(
+        assert not await joint_fixture.interrogator.report_success(
             file_id=uuid4(),
             bucket_id=config.interrogation_bucket_id,
             object_id=uuid4(),
@@ -543,7 +544,7 @@ async def test_central_api_error_on_report_failure(
     joint_fixture.central_api.on_submit_report = respond(status_code)
 
     with caplog.at_level("ERROR"):
-        await joint_fixture.interrogator.report_failure(
+        assert not await joint_fixture.interrogator.report_failure(
             file_id=uuid4(), reason="test failure"
         )
 
@@ -563,7 +564,7 @@ async def test_connection_failed_on_report_failure(
     joint_fixture.central_api.on_submit_report = fail_to_connect()
 
     with caplog.at_level("ERROR"):
-        await joint_fixture.interrogator.report_failure(
+        assert not await joint_fixture.interrogator.report_failure(
             file_id=uuid4(), reason="test failure"
         )
 
@@ -611,6 +612,38 @@ async def _stage_batch(
     )
     joint_fixture.central_api.on_submit_report = respond(201, json={})
     return file_uploads
+
+
+@pytest.mark.parametrize(
+    "statuses, concluded_a_file",
+    [((201, 409), True), ((409, 201), True), ((409, 409), False)],
+    ids=["first_accepted", "second_accepted", "all_rejected"],
+)
+@pytest.mark.parametrize("report", ["success", "failure"])
+async def test_round_concludes_with_an_accepted_report(
+    joint_fixture: JointFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    statuses: tuple[int, int],
+    concluded_a_file: bool,
+    report: str,
+):
+    """A round concludes a file only if the Central API accepts its report, because
+    a file whose report was rejected stays waiting.
+    """
+    await _stage_batch(joint_fixture, count=2)
+    responses = iter([respond(status) for status in statuses])
+    joint_fixture.central_api.on_submit_report = lambda request: next(responses)(
+        request
+    )
+    if report == "failure":
+        monkeypatch.setattr(
+            joint_fixture.interrogator,
+            "interrogate_file",
+            AsyncMock(side_effect=InterrogatorPort.DecryptionError()),
+        )
+
+    assert await joint_fixture.interrogator.interrogate_new_files() is concluded_a_file
+    assert len(joint_fixture.central_api.submitted_reports) == 2
 
 
 async def test_files_are_processed_one_at_a_time(joint_fixture: JointFixture):
