@@ -93,9 +93,10 @@ async def test_typical_journey(joint_fixture: JointFixture):
             data_steward_id=ds_user_id,
             max_size=TEST_MAX_SIZE,
         )
-    assert audit_event_recorder.recorded_events
-    audit_event = audit_event_recorder.recorded_events[0]
-    assert audit_event.payload["label"] == "ResearchDataUploadBox created"  # suffices
+    # The box joins the priority list before the box audit record is written
+    assert [
+        event.payload["label"] for event in audit_event_recorder.recorded_events
+    ] == ["UploadBoxPriority updated", "ResearchDataUploadBox created"]
     assert box_id is not None
     assert box_event_recorder.recorded_events
     assert len(box_event_recorder.recorded_events) == 1
@@ -330,10 +331,11 @@ async def test_typical_journey(joint_fixture: JointFixture):
             auth_context=ds_auth_context,
         )
 
-    # Verify audit and box events were published
-    assert audit_event_recorder.recorded_events
-    audit_event = audit_event_recorder.recorded_events[0]
-    assert audit_event.payload["label"] == "ResearchDataUploadBox updated"
+    # Verify audit and box events were published, the box leaving the priority list
+    #  before the box audit record is written
+    assert [
+        event.payload["label"] for event in audit_event_recorder.recorded_events
+    ] == ["UploadBoxPriority updated", "ResearchDataUploadBox updated"]
     assert box_event_recorder.recorded_events
     assert len(box_event_recorder.recorded_events) == 1
     assert box_event_recorder.recorded_events[0].payload["state"] == "archived"

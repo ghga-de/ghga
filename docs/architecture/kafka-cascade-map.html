@@ -578,6 +578,12 @@
             "term": true
           },
           {
+            "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
+            "s": "—",
+            "a": "the box joins the end of the priority list; nothing subscribes yet",
+            "term": true
+          },
+          {
             "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
             "s": "—",
             "a": "append-only stewardship record",
@@ -670,6 +676,12 @@
                 ]
               }
             ]
+          },
+          {
+            "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
+            "s": "—",
+            "a": "the box leaves the priority list; nothing subscribes yet",
+            "term": true
           },
           {
             "e": { "tp": "audit-records", "ty": "audit_record_logged", "k": "persist" },
@@ -781,6 +793,12 @@
             "e": { "tp": "research-data-upload-boxes", "ty": "deleted", "k": "outbox" },
             "s": "WPS",
             "a": "deletes the <span class='m'>uploadBoxes</span> row",
+            "term": true
+          },
+          {
+            "e": { "tp": "upload-box-priority", "ty": "upserted", "k": "outbox" },
+            "s": "—",
+            "a": "the box leaves the priority list; nothing subscribes yet",
             "term": true
           },
           {

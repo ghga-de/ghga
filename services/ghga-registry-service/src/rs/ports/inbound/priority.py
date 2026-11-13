@@ -17,6 +17,8 @@
 
 from abc import ABC, abstractmethod
 
+from pydantic import UUID4
+
 
 class UploadBoxPriorityManagerPort(ABC):
     """Port for a class that manages the priority order of the upload boxes.
@@ -37,12 +39,14 @@ class UploadBoxPriorityManagerPort(ABC):
             )
 
     @abstractmethod
-    async def repair(self) -> None:
-        """Repair the priority list on behalf of the system, as done at startup.
+    async def repair(self, *, user_id: UUID4 | None = None) -> None:
+        """Repair the priority list on behalf of a user, or of the system if None.
 
         The repair drops entries for boxes that are archived or no longer exist, and
         adds missing boxes to the end, oldest `last_changed` first. Writes nothing if
-        the list is already complete.
+        the list is already complete. RS runs it once at startup on behalf of the
+        system, and after a data steward creates, archives or deletes a box on behalf
+        of that steward.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.
