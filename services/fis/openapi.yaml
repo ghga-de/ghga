@@ -254,7 +254,8 @@ paths:
       - FileIngestService
   /storages/{storage_alias}/uploads:
     get:
-      description: Return a list of not-yet-interrogated files for a Data Hub (storage_alias)
+      description: Return up to 5 not-yet-interrogated files for a Data Hub (storage_alias).
+        Files of boxes in the upload box priority list come first, in list order.
       operationId: listUploads
       parameters:
       - in: path
