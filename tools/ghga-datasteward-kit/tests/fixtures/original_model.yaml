@@ -25,6 +25,7 @@ classes:
       - filename
       - checksum
       - sample
+      - dataset
     slot_usage:
       alias:
         required: true
@@ -41,6 +42,10 @@ classes:
         required: true
         multivalued: false
         inlined: false
+      dataset:
+        required: true
+        multivalued: false
+        inlined: false
 
   ExperimentFile:
     slots:
@@ -50,6 +55,7 @@ classes:
       - filename
       - checksum
       - experiment
+      - dataset
     slot_usage:
       alias:
         required: true
@@ -66,6 +72,10 @@ classes:
         required: true
         multivalued: false
         inlined: false
+      dataset:
+        required: true
+        multivalued: false
+        inlined: false
 
   Dataset:
     description: >-
@@ -74,6 +84,7 @@ classes:
       - alias
       - sample_files
       - experiment_files
+      - data_access_policy
     slot_usage:
       alias:
         required: true
@@ -86,6 +97,35 @@ classes:
         required: true
         multivalued: true
         inlined: false
+      data_access_policy:
+        required: true
+        multivalued: false
+        inlined: false
+
+  DataAccessPolicy:
+    description: >-
+      A data access policy states the conditions under which a Dataset is shared.
+    slots:
+      - alias
+      - data_access_committee
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
+      data_access_committee:
+        required: true
+        multivalued: false
+        inlined: false
+
+  DataAccessCommittee:
+    description: >-
+      A data access committee decides on access to the Datasets of its policies.
+    slots:
+      - alias
+    slot_usage:
+      alias:
+        required: true
+        identifier: true
 
   Sample:
     description: >-
@@ -129,6 +169,8 @@ classes:
       - sample_files
       - experiment_files
       - datasets
+      - data_access_policies
+      - data_access_committees
       - samples
       - experiments
     slot_usage:
@@ -150,6 +192,16 @@ classes:
         inlined: true
         inlined_as_list: true
       datasets:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      data_access_policies:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      data_access_committees:
         required: true
         multivalued: true
         inlined: true
@@ -191,6 +243,31 @@ slots:
     description: >-
       The datasets associated with an entity.
     range: Dataset
+
+  dataset:
+    description: >-
+      The dataset associated with an entity.
+    range: Dataset
+
+  data_access_policies:
+    description: >-
+      The data access policies associated with an entity.
+    range: DataAccessPolicy
+
+  data_access_policy:
+    description: >-
+      The data access policy associated with an entity.
+    range: DataAccessPolicy
+
+  data_access_committees:
+    description: >-
+      The data access committees associated with an entity.
+    range: DataAccessCommittee
+
+  data_access_committee:
+    description: >-
+      The data access committee associated with an entity.
+    range: DataAccessCommittee
 
   sample:
     description: >-

@@ -33,15 +33,17 @@ from tests.fixtures.metadata_models import (
 
 @pytest.mark.parametrize(
     "model, is_valid",
-    [(MINIMAL_MODEL_WITH_STUDY, True), (VALID_ADVANCED_METADATA_MODEL, True)]
+    [(MINIMAL_MODEL_WITH_STUDY, True)]
     # models without a study class, or allowing any number of studies:
     + [(VALID_MINIMAL_METADATA_MODEL, False)]
     + [(MINIMAL_MODEL_WITH_UNBOUNDED_STUDIES, False)]
+    # a model without data access policies and committees:
+    + [(VALID_ADVANCED_METADATA_MODEL, False)]
     + [(invalid_model, False) for invalid_model in INVALID_METADATA_MODELS],
 )
 def test_config(model: MetadataModel, is_valid: bool):
-    """Test that only a submission model with exactly one study per submission
-    loads.
+    """Test that only a submission model with exactly one study per submission and
+    with the governance chain loads.
     """
     with model.temporary_yaml_path() as model_path:
         with nullcontext() if is_valid else pytest.raises(MetadataModelAssumptionError):
