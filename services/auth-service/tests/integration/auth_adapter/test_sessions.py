@@ -67,6 +67,22 @@ def expected_set_cookie(session_id: str) -> str:
     return f"session={session_id}; HttpOnly; Path=/; SameSite=lax; Secure"
 
 
+def assert_cookie_deleted(response: Response) -> None:
+    """Assert that the response tells the client to delete the session cookie."""
+    cookie = response.headers.get("Set-Cookie")
+    assert cookie
+    assert "expires=" in cookie
+    assert "Max-Age=0" in cookie
+    cookie = ";".join(
+        filter(
+            lambda part: not part.startswith(" expires=") and part != " Max-Age=0",
+            cookie.split(";"),
+        )
+    )
+    assert cookie == expected_set_cookie('""')
+    assert SESSION_COOKIE not in response.cookies
+
+
 def setup_daos(
     app: FastAPI,
     iva_state: IvaState = IvaState.VERIFIED,
@@ -113,19 +129,7 @@ async def test_logout(bare_client: BareClient):
     assert response.status_code == status.HTTP_204_NO_CONTENT
     assert not await store.get_session(session.session_id)
 
-    cookie = response.headers.get("Set-Cookie")
-    assert cookie
-    assert "expires=" in cookie
-    assert "Max-Age=0" in cookie
-    cookie = ";".join(
-        filter(
-            lambda part: not part.startswith(" expires=") and part != " Max-Age=0",
-            cookie.split(";"),
-        )
-    )
-    assert cookie == expected_set_cookie('""')
-
-    assert SESSION_COOKIE not in response.cookies
+    assert_cookie_deleted(response)
     assert "X-Session" not in response.headers
 
 
@@ -315,8 +319,37 @@ async def test_login_with_deactivated_user(
 
     auth = f"Bearer {create_access_token()}"
     response = await bare_client.post(LOGIN_PATH, headers={"Authorization": auth})
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "User account is disabled"}
+
+    # no session is left behind, and no cookie is set
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    assert await store.get_size() == 0
+    assert "Set-Cookie" not in response.headers
+    assert "X-Session" not in response.headers
+
+
+async def test_login_with_cookie_and_deactivated_user(bare_client: BareClient):
+    """Test that a login request with a session of a deactivated user ends it."""
+    setup_daos(bare_client.app, status=UserStatus.INACTIVE)
+
+    store = bare_client.app.dependency_overrides[get_session_store]()
+    session = await store.create_session(
+        ext_id="john@aai.org",
+        user_id=str(ID_OF_JOHN),
+        user_name="John Doe",
+        user_email="john@home.org",
+    )
+    assert await store.get_session(session.session_id)
+    headers = headers_for_session(session)
+    response = await bare_client.post(LOGIN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
+
+    # the session has been removed, and the client is told to delete the cookie
+    assert not await store.get_session(session.session_id)
+    assert_cookie_deleted(response)
+    assert "X-Session" not in response.headers
 
 
 async def test_login_without_access_token(bare_client: BareClient):

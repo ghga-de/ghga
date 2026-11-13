@@ -20,7 +20,7 @@ Feature: 301 User Account Inactivation
   Scenario: Inactive user attempts to log in
     Given the status of "Dr. John Doe" is "inactive"
     When "Dr. John Doe" tries to log in
-    Then the response status code is "401"
+    Then the response status code is "403"
     And the response error message is "User account is disabled"
 
   Scenario: Restoring the user account

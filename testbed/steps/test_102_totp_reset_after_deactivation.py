@@ -46,7 +46,9 @@ def deactivate_with_wrong_totp(full_name: str, fixtures: JointFixture):
             # Pause for rate limits and processing before the final attempt
             time.sleep(1)
         response = fixtures.auth.verify_totp(wrong_totp, headers=session_headers)
-        assert response.status_code == 401, response.text
+        if i < fixtures.config.totp_max_failed_attempts:
+            assert response.status_code == 401, response.text
 
     # Verify deactivation on the last response
-    assert response.json().get("detail") == "Too many failed attempts", response.text
+    assert response.status_code == 403, response.text
+    assert response.json().get("detail") == "User account is disabled", response.text

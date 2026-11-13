@@ -396,8 +396,8 @@ async def test_total_limit_totp(
         VERIFY_TOTP_PATH,
         headers=with_totp_code(headers, secret),
     )
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Too many failed attempts"}
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
 
     warning_messages = [rec.getMessage() for rec in caplog.records]
     assert len(warning_messages) == 1

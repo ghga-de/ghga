@@ -808,6 +808,10 @@ not_implemented = NotImplementedError("Implemented by the auth adapter.")
     summary="Create or get user session",
     description="Endpoint used when a user wants to log in",
     status_code=204,
+    responses={
+        401: {"description": "The access token is missing or invalid."},
+        403: {"description": "The user account is disabled."},
+    },
 )
 async def login(
     authorization: Annotated[str | None, Header()] = None,
@@ -849,6 +853,12 @@ async def create_new_totp_token(
     summary="Verify a TOTP code",
     description="Endpoint used to verify a TOTP code",
     status_code=204,
+    responses={
+        401: {"description": "The TOTP code is invalid, or the session has ended."},
+        403: {
+            "description": "Too many failed attempts have disabled the user account."
+        },
+    },
 )
 async def rpc_verify_totp(
     x_authorization: Annotated[

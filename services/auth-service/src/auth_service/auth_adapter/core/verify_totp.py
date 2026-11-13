@@ -111,6 +111,12 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             await session_store.save_session(session)
             if user_token:
                 await token_dao.update(user_token)
+        if limit and user:
+            # the account is disabled now, which login() will report as well
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is disabled",
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Too many failed attempts" if limit else "Invalid TOTP code",

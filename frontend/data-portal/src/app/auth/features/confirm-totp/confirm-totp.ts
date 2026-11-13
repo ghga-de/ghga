@@ -16,6 +16,7 @@ import { form, FormField, maxLength, pattern, required } from '@angular/forms/si
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { Router } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth';
 import { Notifier } from '@app/shared/services/notification';
 import { NormalizeInput } from '@app/shared/ui/normalize-input/normalize-input';
@@ -47,6 +48,7 @@ export function toTotpCode(value: string): string {
 export class ConfirmTotp {
   #notify = inject(Notifier);
   #authService = inject(AuthService);
+  #router = inject(Router);
 
   protected toTotpCode = toTotpCode;
 
@@ -103,17 +105,30 @@ export class ConfirmTotp {
     this.#isProcessing.set(true);
     const code = this.totpForm.code().value();
     this.#previousSubmission.set(code);
-    const verified = await this.#authService.verifyTotpCode(code);
-    if (verified) {
-      this.#notify.showSuccess('Successfully authenticated.');
-      this.allowNavigation = true;
-      this.#authService.redirectAfterLogin();
-    } else {
-      this.#notify.showError('Failed to authenticate.');
-      this.verificationError.set(true);
-      await new Promise((r) => setTimeout(r, 2500)).finally(() => {
-        this.#isProcessing.set(false);
-      });
+    const verification = await this.#authService.verifyTotpCode(code);
+    switch (verification) {
+      case 'verified':
+        this.#notify.showSuccess('Successfully authenticated.');
+        this.allowNavigation = true;
+        this.#authService.redirectAfterLogin();
+        break;
+      case 'disabled':
+      case 'locked':
+        // the session has ended, so this page cannot be used any more
+        if (verification === 'disabled') {
+          this.#authService.showAccountDisabled();
+        } else {
+          this.#notify.showError('Too many failed attempts, please log in again.');
+        }
+        this.allowNavigation = true;
+        this.#router.navigate(['/']);
+        break;
+      default:
+        this.#notify.showError('Failed to authenticate.');
+        this.verificationError.set(true);
+        await new Promise((r) => setTimeout(r, 2500)).finally(() => {
+          this.#isProcessing.set(false);
+        });
     }
   }
 

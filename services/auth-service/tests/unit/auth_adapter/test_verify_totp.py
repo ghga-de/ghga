@@ -136,12 +136,18 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert session.totp_token is None
     else:
         assert exc_info
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        expected_message = (
-            "Too many failed attempts"
-            if limit_reached and has_token
-            else "Invalid TOTP code"
-        )
+        if limit_reached and user_has_token:
+            # a stored user has been disabled
+            expected_status = status.HTTP_403_FORBIDDEN
+            expected_message = "User account is disabled"
+        elif limit_reached:
+            # a new TOTP token only ends the session
+            expected_status = status.HTTP_401_UNAUTHORIZED
+            expected_message = "Too many failed attempts"
+        else:
+            expected_status = status.HTTP_401_UNAUTHORIZED
+            expected_message = "Invalid TOTP code"
+        assert exc_info.value.status_code == expected_status
         assert exc_info.value.detail == expected_message
         assert session.state is session_state
         assert session.totp_token is totp_token

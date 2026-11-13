@@ -6,6 +6,7 @@
 
 import {
   HttpClient,
+  HttpErrorResponse,
   HttpHeaders,
   HttpParams,
   HttpResponse,
@@ -13,7 +14,9 @@ import {
 import { computed, inject, Service, signal } from '@angular/core';
 import { RedirectCommand, Router } from '@angular/router';
 import { ConfigService } from '@app/shared/services/config';
+import { ConfirmationService } from '@app/shared/services/confirmation';
 import { Notifier } from '@app/shared/services/notification';
+import { html } from '@app/shared/utils/html';
 import type { OidcMetadata, UserManagerSettings } from 'oidc-client-ts';
 import {
   Log as OidcLog,
@@ -33,11 +36,43 @@ import {
 import {
   LoginState,
   RoleNames,
+  TotpVerification,
   UserBasicData,
   UserRole,
   UserSession,
 } from '../models/user';
 import { CsrfService } from './csrf';
+
+const CONTACT_URL = 'https://www.ghga.de/about-us/contact';
+
+/**
+ * Check whether an error response says that the user account is disabled
+ *
+ * The detail is checked as well, so that a 403 from the ingress is not taken
+ * for a disabled account.
+ * @param error - the error raised by the HTTP client
+ * @returns true if the user account is disabled
+ */
+function isAccountDisabled(error: unknown): boolean {
+  return (
+    error instanceof HttpErrorResponse &&
+    error.status === 403 &&
+    error.error?.detail === 'User account is disabled'
+  );
+}
+
+/**
+ * Check whether an error response says that too many TOTP codes were wrong
+ * @param error - the error raised by the HTTP client
+ * @returns true if the session has ended after too many failed attempts
+ */
+function isTotpLocked(error: unknown): boolean {
+  return (
+    error instanceof HttpErrorResponse &&
+    error.status === 401 &&
+    error.error?.detail === 'Too many failed attempts'
+  );
+}
 
 /**
  * Authentication service
@@ -52,6 +87,7 @@ export class AuthService {
   #router = inject(Router);
   #csrf = inject(CsrfService);
   #notify = inject(Notifier);
+  #confirmation = inject(ConfirmationService);
   #userSignal = signal<UserSession | null | undefined>(undefined);
 
   #oidcUserManager: OidcUserManager;
@@ -367,14 +403,49 @@ export class AuthService {
           catchError(() => of(false)),
         ),
       ).then(async () => {
-        await this.#oidcUserManager.removeUser();
-        this.#userSignal.set(null);
-        this.#csrf.token = null;
+        await this.#clearUser();
         sessionStorage.removeItem('afterLogin');
         this.#router.navigate(['/']);
         this.#notify.showSuccess('You have been logged out.');
       });
     }
+  }
+
+  /**
+   * Forget the user locally after the backend session has ended
+   */
+  async #clearUser(): Promise<void> {
+    await this.#oidcUserManager.removeUser();
+    this.#userSignal.set(null);
+    this.#csrf.token = null;
+  }
+
+  /**
+   * Tell the user that the account is disabled and whom to contact
+   *
+   * This is a dialog rather than a toast, since the user cannot log in again
+   * and would otherwise retry without knowing why it fails.
+   */
+  showAccountDisabled(): void {
+    this.#confirmation.confirm({
+      title: 'Account disabled',
+      message: html`<p>
+          Your GHGA account has been disabled, for example after too many wrong
+          authentication codes.
+        </p>
+        <p>
+          Please contact the GHGA helpdesk via the
+          <a href="${CONTACT_URL}" target="_blank" rel="noreferrer noopener"
+            >contact form</a
+          >
+          to have it reactivated.
+        </p>`,
+      cancelText: 'Close',
+      confirmText: 'Contact helpdesk',
+      callback: (confirmed) => {
+        if (confirmed) window.open(CONTACT_URL, '_blank', 'noreferrer,noopener');
+      },
+    });
   }
 
   /**
@@ -428,6 +499,7 @@ export class AuthService {
   async #loadUserSession(accessToken: string | undefined = undefined): Promise<void> {
     console.debug('Loading user session...');
     const userSignal = this.#userSignal;
+    let accountDisabled = false;
     let headers = new HttpHeaders();
     if (accessToken) headers = headers.set('X-Authorization', `Bearer ${accessToken}`);
     this.#http
@@ -440,9 +512,10 @@ export class AuthService {
           if (!session) return undefined;
           return this.#parseUserFromSession(session);
         }),
-        catchError((error) =>
-          of([401, 403, 404].includes(error?.status) ? null : undefined),
-        ),
+        catchError((error) => {
+          accountDisabled = isAccountDisabled(error);
+          return of([401, 403, 404].includes(error?.status) ? null : undefined);
+        }),
       )
       .subscribe((user: UserSession | null | undefined) => {
         if (user) {
@@ -464,7 +537,11 @@ export class AuthService {
               break;
           }
         } else {
-          if (accessToken || user === undefined) {
+          // shown with or without an access token, so that a user who was
+          // disabled while logged in learns it at the next page load
+          if (accountDisabled) {
+            this.showAccountDisabled();
+          } else if (accessToken || user === undefined) {
             this.#notify.showError('Failed to load user session.');
           }
           this.#oidcUserManager.removeUser();
@@ -580,31 +657,44 @@ export class AuthService {
 
   /**
    * Verify the given TOTP code
+   *
+   * When the outcome is "locked" or "disabled", the backend has already ended
+   * the session, and the user is forgotten locally as well.
    * @param code - the 6-digit TOTP code to verify
-   * @returns a promise that resolves to true if the code is valid
+   * @returns a promise that resolves to the outcome of the verification
    */
-  async verifyTotpCode(code: string): Promise<boolean> {
+  async verifyTotpCode(code: string): Promise<TotpVerification> {
     const state = this.sessionState();
-    if (!['NewTotpToken', 'HasTotpToken'].includes(state)) return false;
+    if (!['NewTotpToken', 'HasTotpToken'].includes(state)) return 'invalid';
     let headers = new HttpHeaders();
     headers = headers.set('X-Authorization', `Bearer TOTP:${code}`);
     if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
       console.error('Invalid TOTP code');
-      return false;
+      return 'invalid';
     }
-    return firstValueFrom(
+    const verification = await firstValueFrom(
       this.#http.post<null>(this.#verifyTotpUrl, null, { headers }).pipe(
-        map(() => {
+        map((): TotpVerification => {
           console.info('TOTP code verified');
           this.#setNewState('Authenticated');
-          return true;
+          return 'verified';
         }),
-        catchError(() => {
+        catchError((error) => {
           console.error('Failed to verify TOTP code');
-          return of(false);
+          return of<TotpVerification>(
+            isAccountDisabled(error)
+              ? 'disabled'
+              : isTotpLocked(error)
+                ? 'locked'
+                : 'invalid',
+          );
         }),
       ),
     );
+    if (verification === 'locked' || verification === 'disabled') {
+      await this.#clearUser();
+    }
+    return verification;
   }
 
   /**

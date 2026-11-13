@@ -1514,6 +1514,10 @@ paths:
       responses:
         '204':
           description: Successful Response
+        '401':
+          description: The access token is missing or invalid.
+        '403':
+          description: The user account is disabled.
         '422':
           content:
             application/json:
@@ -1549,6 +1553,10 @@ paths:
       responses:
         '204':
           description: Successful Response
+        '401':
+          description: The TOTP code is invalid, or the session has ended.
+        '403':
+          description: Too many failed attempts have disabled the user account.
         '422':
           content:
             application/json:
