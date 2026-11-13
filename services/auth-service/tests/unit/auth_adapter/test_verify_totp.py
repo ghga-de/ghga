@@ -136,12 +136,18 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert session.totp_token is None
     else:
         assert exc_info
-        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        expected_message = (
-            "Too many failed attempts"
-            if limit_reached and has_token
-            else "Invalid TOTP code"
-        )
+        if limit_reached and user_has_token:
+            # a stored user has been disabled
+            expected_status = status.HTTP_403_FORBIDDEN
+            expected_message = "User account is disabled"
+        elif limit_reached:
+            # a new TOTP token only ends the session
+            expected_status = status.HTTP_401_UNAUTHORIZED
+            expected_message = "Too many failed attempts"
+        else:
+            expected_status = status.HTTP_401_UNAUTHORIZED
+            expected_message = "Invalid TOTP code"
+        assert exc_info.value.status_code == expected_status
         assert exc_info.value.detail == expected_message
         assert session.state is session_state
         assert session.totp_token is totp_token
@@ -186,3 +192,44 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
         assert iva_state is IvaState.UNVERIFIED
     else:
         assert iva_state is IvaState.VERIFIED
+
+
+@pytest.mark.parametrize(
+    "session_state", [SessionState.HAS_TOTP_TOKEN, SessionState.AUTHENTICATED]
+)
+@pytest.mark.asyncio()
+async def test_verify_totp_for_disabled_user(session_state: SessionState):
+    """Test that a user disabled after login cannot verify a TOTP code."""
+    session_store = MemorySessionStore(config=config)
+    session = await session_store.create_session(**SESSION_ARGS)
+    session.state = session_state
+
+    totp_handler = TOTPHandler(config=config)
+    totp_token = totp_handler.generate_token()
+    totp_handler.verify_code = Mock(return_value=True)
+
+    user_registry = MockUserRegistry(config=config)
+    user_dao = user_registry.mock_user_dao
+    user_dao.users[-1] = user_dao.user.model_copy(
+        update={"status": UserStatus.INACTIVE}
+    )
+    user_token_dao = MockUserTokenDao()
+    await user_token_dao.upsert(
+        UserToken(user_id=user_dao.user.id, totp_token=totp_token)
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await verify_totp(
+            "423715",
+            session_store=session_store,
+            session=session,
+            totp_handler=totp_handler,
+            user_registry=user_registry,
+            token_dao=cast(UserTokenDao, user_token_dao),
+        )
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc_info.value.detail == "User account is disabled"
+
+    totp_handler.verify_code.assert_not_called()
+    assert not await session_store.get_session(session.session_id)
+    assert session.state is session_state

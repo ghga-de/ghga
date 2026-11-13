@@ -39,6 +39,7 @@ const mockConfig = {
   umami_website_id: null,
   mock_api: true,
   mock_oidc: true,
+  contact_url: 'https://contact.test',
   helpdesk_url: 'https://helpdesk.test',
   helpdesk_ticket_url: '/#ticket/',
   version: '1.2.3',
@@ -108,6 +109,10 @@ describe('ConfigService', () => {
 
   it('should provide the OIDC account URL', () => {
     expect(service.oidcAccountUrl).toBe('https://account.test');
+  });
+
+  it('should provide the contact URL', () => {
+    expect(service.contactUrl).toBe('https://contact.test');
   });
 
   it('should provide the helpdesk URL', () => {

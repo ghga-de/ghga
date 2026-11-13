@@ -37,6 +37,7 @@ interface Config {
   mock_oidc: boolean;
   umami_url: string | null;
   umami_website_id: string | null;
+  contact_url: string;
   helpdesk_url: string;
   helpdesk_ticket_url: string;
   version: string; // set by the runner
@@ -304,6 +305,14 @@ export class ConfigService {
    */
   get umami_website_id(): string | null {
     return this.#config.umami_website_id || null;
+  }
+
+  /**
+   * Gets the URL of the public GHGA contact page
+   * @returns the URL of the contact page
+   */
+  get contactUrl(): string {
+    return this.#config.contact_url;
   }
 
   /**

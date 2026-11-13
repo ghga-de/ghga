@@ -4,6 +4,7 @@
  * @license Apache-2.0
  */
 
+import { ConfigService } from '@app/shared/services/config';
 import { render, RenderResult, screen } from '@testing-library/angular';
 
 import { PageNotFound } from './page-not-found';
@@ -12,7 +13,11 @@ describe('PageNotFound', () => {
   let result: RenderResult<PageNotFound>;
 
   beforeEach(async () => {
-    result = await render(PageNotFound);
+    result = await render(PageNotFound, {
+      providers: [
+        { provide: ConfigService, useValue: { contactUrl: 'https://contact.test/' } },
+      ],
+    });
   });
 
   it('should create', () => {
@@ -28,6 +33,13 @@ describe('PageNotFound', () => {
     const paragraph = screen.getByRole('paragraph');
     expect(paragraph).toHaveTextContent(
       "Sorry, we can't seem to find the page you're looking for",
+    );
+  });
+
+  it('should link the configured contact page', () => {
+    expect(screen.getByRole('link', { name: 'Link to contact page' })).toHaveAttribute(
+      'href',
+      'https://contact.test/',
     );
   });
 });

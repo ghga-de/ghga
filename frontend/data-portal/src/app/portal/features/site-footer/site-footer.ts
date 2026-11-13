@@ -5,11 +5,12 @@
  */
 
 import { DatePipe, NgOptimizedImage } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
+import { ConfigService } from '@app/shared/services/config';
 import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 
 /**
@@ -33,6 +34,8 @@ import { ExternalLink } from '@app/shared/ui/external-link/external-link';
   },
 })
 export class SiteFooter {
+  /** The URL of the public GHGA contact page */
+  protected contactUrl = inject(ConfigService).contactUrl;
   date = new Date();
   svg = `<svg width="1440" height="120" preserveAspectRatio="none"
     viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg"><path

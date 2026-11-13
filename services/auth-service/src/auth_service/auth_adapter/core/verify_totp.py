@@ -37,6 +37,14 @@ __all__ = ["verify_totp"]
 log = logging.getLogger(__name__)
 
 
+def _account_disabled() -> HTTPException:
+    """Get the error for a user whose account is disabled."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="User account is disabled",
+    )
+
+
 async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
     totp: str,
     *,
@@ -68,6 +76,10 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
         except user_registry.UserDoesNotExistError:
             user = user_token = None
         else:
+            if user.status is not UserStatus.ACTIVE:
+                # the account was disabled after the user logged in
+                await session_store.delete_session(session.session_id)
+                raise _account_disabled()
             try:
                 user_token = await token_dao.get_by_id(user.id)
             except ResourceNotFoundError:
@@ -80,7 +92,7 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             # reset the TOTP token again
             totp_handler.reset(totp_token)
             # too many invalid TOTP codes
-            if user and user.status is UserStatus.ACTIVE:
+            if user:
                 # disable the user account (only the specified fields will be changed)
                 modified_user_data = UserModifiableData(status=UserStatus.INACTIVE)
                 await user_registry.update_user(
@@ -111,6 +123,9 @@ async def verify_totp(  # noqa: C901, PLR0912, PLR0913, PLR0915
             await session_store.save_session(session)
             if user_token:
                 await token_dao.update(user_token)
+        if limit and user:
+            # the account is disabled now, which login() will report as well
+            raise _account_disabled()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Too many failed attempts" if limit else "Invalid TOTP code",
