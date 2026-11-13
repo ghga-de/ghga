@@ -33,6 +33,11 @@ classes:
       filename:
         required: true
 
+  Dataset:
+    description: >-
+      A dataset is a set of files a requester can be granted access to.
+    mixins: AliasMixin
+
   Submission:
     tree_root: true
     description: >-
@@ -40,6 +45,7 @@ classes:
     slots:
       - studies
       - files
+      - datasets
 
     slot_usage:
       studies:
@@ -50,6 +56,11 @@ classes:
         minimum_cardinality: 1
         maximum_cardinality: 1
       files:
+        required: true
+        multivalued: true
+        inlined: true
+        inlined_as_list: true
+      datasets:
         required: true
         multivalued: true
         inlined: true
@@ -66,6 +77,10 @@ slots:
   files:
     description: The file associated with an entity.
     range: File
+
+  datasets:
+    description: The dataset associated with an entity.
+    range: Dataset
 
   filename:
     description: The given filename.

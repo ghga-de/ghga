@@ -26,13 +26,13 @@ from string import digits
 from metldata.accession_registry.accession_registry import (
     MAX_RANDOM_ATTEMPTS,
     AccessionRegistry,
-    AccessionRegistryConfig,
 )
 from metldata.accession_registry.accession_registry_utils import generate_random_block
 from metldata.accession_registry.accession_store import AccessionStore
 from metldata.custom_types import Json
 from metldata.metadata_utils import lookup_self_id
 from metldata.model_utils.anchors import AnchorPoint
+from metldata.model_utils.config import ModelClassesConfig
 from metldata.model_utils.metadata_validator import raise_on_errors
 
 # the prefix per class and the suffix length the flat scheme minted with
@@ -111,11 +111,19 @@ class LegacyAccessionRegistry(AccessionRegistry):
     """Accession registry minting flat accessions instead of study-PID ones."""
 
     def __init__(
-        self, *, config: AccessionRegistryConfig, accession_store: LegacyAccessionStore
+        self, *, config: ModelClassesConfig, accession_store: LegacyAccessionStore
     ):
-        """Initialize with config."""
+        """Initialize with the study and dataset classes and the accession store,
+        which also takes flat accessions.
+        """
         super().__init__(config=config, accession_store=accession_store)
         self._legacy_store = accession_store
+
+    def stores_accession(self, class_name: str) -> bool:
+        """Tell that the accessions of every class are kept in the accession map,
+        since flat accessions cannot be derived from the study accession.
+        """
+        return True
 
     def generate_accession(
         self, *, class_name: str, alias: str, study_pid: str, used_accessions: set[str]
