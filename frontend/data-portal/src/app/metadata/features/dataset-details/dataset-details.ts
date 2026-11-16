@@ -16,6 +16,7 @@ import {
   input,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
@@ -49,6 +50,7 @@ import { DatasetDetailsTable } from '../dataset-details-table/dataset-details-ta
   imports: [
     MatIconModule,
     MatButtonModule,
+    MatCardModule,
     MatChipsModule,
     MatTabsModule,
     MatExpansionModule,
@@ -115,19 +117,17 @@ export class DatasetDetailsPage implements OnInit {
     const modifierIds = dap.data_use_modifier_ids || [];
     const modifierTerms = dap.data_use_modifier_terms || [];
     const numModifiers = Math.max(modifierIds.length, modifierTerms.length);
-    const data_use_modifiers = numModifiers
-      ? Array.from({ length: numModifiers }, (_, idx) => {
-          return {
-            id: modifierIds[idx],
-            url: modifierIds[idx]
-              ? `${this.baseDuoUrl}${modifierIds[idx].replace(':', '_')}`
-              : undefined,
-            term: modifierTerms[idx]
-              ? modifierTerms[idx].toLowerCase().replaceAll('_', ' ')
-              : undefined,
-          };
-        })
-      : undefined;
+    // A trailing separator in the submitted id list yields an empty id with no term.
+    const modifiers = Array.from({ length: numModifiers }, (_, idx) => ({
+      id: modifierIds[idx],
+      url: modifierIds[idx]
+        ? `${this.baseDuoUrl}${modifierIds[idx].replace(':', '_')}`
+        : undefined,
+      term: modifierTerms[idx]
+        ? modifierTerms[idx].toLowerCase().replaceAll('_', ' ')
+        : undefined,
+    })).filter((modifier) => modifier.id || modifier.term);
+    const data_use_modifiers = modifiers.length ? modifiers : undefined;
     return {
       ...dap,
       data_use_permission_term,
