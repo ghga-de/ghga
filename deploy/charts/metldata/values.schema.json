@@ -1584,6 +1584,18 @@
             []
           ],
           "title": "Cors Exposed Headers"
+        },
+        "governance_artifact_name": {
+          "default": "added_accessions",
+          "description": "Name of the artifact from which the governance of each file is resolved at load. Its resources must reference each other by accession.",
+          "examples": [
+            "added_accessions"
+          ],
+          "title": "Governance Artifact Name",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
