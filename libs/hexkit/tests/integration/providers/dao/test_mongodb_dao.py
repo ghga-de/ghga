@@ -16,6 +16,7 @@
 
 """Test the MongoDB-based DAO factory provider."""
 
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -33,6 +34,7 @@ from hexkit.protocols.dao import (
     BatchOperationError,
     Dao,
     DbTimeoutError,
+    InvalidChangesError,
     InvalidFilterError,
     MultipleHitsFoundError,
     NoHitsFoundError,
@@ -1374,3 +1376,149 @@ async def test_dao_delete_many_rejects_a_single_id(mongodb: MongoDbFixture):
 
     for dto in (named, by_character):
         assert await dao.get_by_id(dto.custom_id) == dto
+
+
+async def test_dao_update_first_filter_sort_and_changed_fields(mongodb: MongoDbFixture):
+    """Test that update_first() respects filter and sort, changes only the given
+    fields and returns the changed resource.
+    """
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    resources = [ExampleDto(field_a="x", field_b=i) for i in range(5)]
+    resources.append(ExampleDto(field_a="y", field_b=-1))
+    for resource in resources:
+        await dao.insert(resource)
+
+    changed = await dao.update_first(
+        filter_={"field_a": "x", "field_b": {"$gte": 1}},
+        changes={"field_c": False},
+        sort=["-field_b"],
+    )
+
+    expected = resources[4].model_copy(update={"field_c": False})
+    assert changed == expected
+    assert await dao.get_by_id(expected.id) == expected
+    # no other resource was touched
+    for resource in resources[:4] + resources[5:]:
+        assert await dao.get_by_id(resource.id) == resource
+
+
+async def test_dao_update_first_serializes_values(mongodb: MongoDbFixture):
+    """Test that plain values are stored the same way as `insert` stores them."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    resource = ExampleDto()
+    await dao.insert(resource)
+
+    new_timestamp = now_utc_ms_prec()
+    changed = await dao.update_first(
+        filter_={},
+        changes={"field_d": new_timestamp, "field_e": Path("/some/path")},
+    )
+
+    assert changed.field_d == new_timestamp
+    assert changed.field_e == Path("/some/path")
+    document = mongodb.client[mongodb.config.db_name]["example"].find_one(
+        {"_id": resource.id}
+    )
+    assert document is not None
+    assert document["field_e"] == "/some/path"
+
+
+async def test_dao_update_first_inc(mongodb: MongoDbFixture):
+    """Test that update_first() applies MongoDB update operators."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    resource = ExampleDto(field_b=10)
+    await dao.insert(resource)
+
+    changed = await dao.update_first(
+        filter_={}, changes={"field_a": "changed", "$inc": {"field_b": 5}}
+    )
+
+    assert changed.field_a == "changed"
+    assert changed.field_b == 15
+    assert await dao.get_by_id(resource.id) == changed
+
+
+async def test_dao_update_first_no_hits(mongodb: MongoDbFixture):
+    """Test that update_first() raises NoHitsFoundError if nothing matches."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    resource = ExampleDto(field_b=1)
+    await dao.insert(resource)
+
+    with pytest.raises(NoHitsFoundError):
+        await dao.update_first(filter_={"field_b": 2}, changes={"field_a": "changed"})
+    assert await dao.get_by_id(resource.id) == resource
+
+
+async def test_dao_update_first_invalid_changes(mongodb: MongoDbFixture):
+    """Test that update_first() rejects invalid changes before writing anything."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    resource = ExampleDto(field_a="before", field_b=1)
+    await dao.insert(resource)
+
+    for changes in (
+        {"field_a": "changed", "field_b": "not a number"},
+        {"field_a": "changed", "not_a_field": 1},
+        {"id": uuid.uuid4()},
+        {},
+    ):
+        with pytest.raises(InvalidChangesError):
+            await dao.update_first(filter_={}, changes=changes)
+    with pytest.raises(InvalidFilterError):
+        await dao.update_first(
+            filter_={"not_a_field": 1}, changes={"field_a": "changed"}
+        )
+
+    assert await dao.get_by_id(resource.id) == resource
+
+
+async def test_dao_update_first_concurrent(mongodb: MongoDbFixture):
+    """Test that concurrent update_first() calls return different resources."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    count = 10
+    for index in range(count):
+        await dao.insert(ExampleDto(field_a="waiting", field_b=index))
+
+    claimed = await asyncio.gather(
+        *(
+            dao.update_first(
+                filter_={"field_a": "waiting"},
+                changes={"field_a": "claimed"},
+                sort=["field_b"],
+            )
+            for _ in range(count)
+        )
+    )
+
+    assert {resource.id for resource in claimed} == {
+        resource.id async for resource in dao.find_all(filter_={})
+    }
+    assert sorted(resource.field_b for resource in claimed) == list(range(count))
+    with pytest.raises(NoHitsFoundError):
+        await dao.update_first(
+            filter_={"field_a": "waiting"}, changes={"field_a": "claimed"}
+        )
+
+
+async def test_dao_update_first_operators_only(mongodb: MongoDbFixture):
+    """Test that update_first() works with only update operators in `changes`."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    resource = ExampleDto(field_b=10)
+    await dao.insert(resource)
+
+    changed = await dao.update_first(filter_={}, changes={"$inc": {"field_b": 1}})
+
+    assert changed == resource.model_copy(update={"field_b": 11})

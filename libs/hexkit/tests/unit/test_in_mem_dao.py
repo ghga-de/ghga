@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, PydanticInvalidForJsonSchema
 from hexkit.protocols.dao import (
     BatchOperationError,
     DaoFactoryBase,
+    InvalidChangesError,
     InvalidFilterError,
     NoHitsFoundError,
     PreconditionFailedError,
@@ -1156,3 +1157,109 @@ async def test_delete_many_rejects_a_single_id():
         await dao.delete_many("Wrench")
 
     assert await stored_titles(dao) == ["Wrench", "Candle", "Hammer"]
+    # Sorting by a nested sub-field of the ID field is a no-op (insertion order kept)
+    assert [x.label async for x in dao.find_all(filter_={}, sort=["inner.x"])] == [
+        1,
+        2,
+        3,
+    ]
+
+
+class Counter(BaseModel):
+    """A model with a few fields to change"""
+
+    name: str
+    group: str
+    count: int = 0
+    note: str | None = None
+
+
+CounterDao = new_mock_dao_class(dto_model=Counter, id_field="name")
+
+
+async def _counter_dao() -> Any:
+    dao = CounterDao()
+    for name, group, count in [
+        ("a", "x", 3),
+        ("b", "x", 1),
+        ("c", "x", 2),
+        ("d", "y", 0),
+    ]:
+        await dao.insert(Counter(name=name, group=group, count=count))
+    return dao
+
+
+async def test_update_first_filter_sort_and_changed_fields():
+    """update_first respects filter and sort and changes only the given fields."""
+    dao = await _counter_dao()
+
+    changed = await dao.update_first(
+        filter_={"group": "x"}, changes={"note": "claimed"}, sort=["count"]
+    )
+
+    assert changed == Counter(name="b", group="x", count=1, note="claimed")
+    assert await dao.get_by_id("b") == changed
+    for name, count in [("a", 3), ("c", 2), ("d", 0)]:
+        assert (await dao.get_by_id(name)).note is None
+        assert (await dao.get_by_id(name)).count == count
+
+    changed = await dao.update_first(
+        filter_={"group": "x"}, changes={"note": "again"}, sort=["-count"]
+    )
+    assert changed.name == "a"
+
+
+async def test_update_first_inc():
+    """update_first applies `$inc` along with plain values."""
+    dao = await _counter_dao()
+
+    changed = await dao.update_first(
+        filter_={"name": "a"}, changes={"note": "n", "$inc": {"count": 2}}
+    )
+
+    assert changed == Counter(name="a", group="x", count=5, note="n")
+    assert await dao.get_by_id("a") == changed
+
+
+async def test_update_first_no_hits():
+    """update_first raises NoHitsFoundError if nothing matches."""
+    dao = await _counter_dao()
+
+    with pytest.raises(NoHitsFoundError):
+        await dao.update_first(filter_={"group": "z"}, changes={"note": "n"})
+
+
+async def test_update_first_invalid_changes():
+    """update_first rejects invalid changes without writing anything."""
+    dao = await _counter_dao()
+    before = [dao.resources[name].copy() for name in "abcd"]
+
+    for changes in (
+        {"note": "n", "count": "not a number"},
+        {"note": "n", "not_a_field": 1},
+        {"name": "other"},
+        {},
+    ):
+        with pytest.raises(InvalidChangesError):
+            await dao.update_first(filter_={}, changes=changes)
+    with pytest.raises(InvalidFilterError):
+        await dao.update_first(filter_={"not_a_field": 1}, changes={"note": "n"})
+    with pytest.raises(MQLError):
+        await dao.update_first(filter_={}, changes={"$push": {"note": "n"}})
+
+    assert [dao.resources[name] for name in "abcd"] == before
+
+
+async def test_update_first_operators_only_and_id():
+    """update_first works with only operators, but refuses to change the ID."""
+    dao = await _counter_dao()
+
+    changed = await dao.update_first(
+        filter_={"name": "d"}, changes={"$inc": {"count": 1}}
+    )
+    assert changed.count == 1
+
+    for operators in ({"$set": {"name": "other"}}, {"$inc": {"name": 1}}):
+        with pytest.raises(InvalidChangesError):
+            await dao.update_first(filter_={}, changes=operators)
+    assert set(dao.resources) == set("abcd")
