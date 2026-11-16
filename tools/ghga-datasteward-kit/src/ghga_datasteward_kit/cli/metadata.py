@@ -22,7 +22,7 @@ from pathlib import Path
 import typer
 
 from ghga_datasteward_kit import metadata
-from ghga_datasteward_kit.amendment import amendment
+from ghga_datasteward_kit.amendment import amendment, legacy_submission
 from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import AmendmentAbortedError
 from ghga_transpiler.cli import transpile
@@ -63,6 +63,57 @@ def submit(
         metadata_path=metadata_path,
         config_path=config_path,
     )
+
+
+@cli.command(no_args_is_help=True)
+def submit_legacy(
+    submission_title: str = typer.Option(..., help="The title of the submission."),
+    submission_description: str = typer.Option(
+        ..., help="The description of the submission."
+    ),
+    study_accession: str = typer.Option(
+        ...,
+        help=(
+            "The flat accession the study was promised: 'GHGA', one letter and 14"
+            " digits."
+        ),
+    ),
+    metadata_path: Path = typer.Option(
+        ...,
+        help="The path to the metadata JSON file.",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+        readable=True,
+    ),
+    config_path: Path = typer.Option(
+        ...,
+        help="Path to a config YAML.",
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        readable=True,
+    ),
+):
+    """Submit metadata for a study that was promised a flat accession.
+
+    Use this instead of 'submit' when the study's accession was handed out under the
+    flat scheme before its metadata arrived: the study gets that accession, and every
+    other resource gets a new flat one instead of one derived from a study PID.
+
+    The accession must not be in the accession store yet; the command registers it
+    there, so it cannot be given to a second submission.
+    """
+    logging.basicConfig(level=logging.CRITICAL)
+    submission_id = legacy_submission.submit_legacy_metadata_from_path(
+        submission_title=submission_title,
+        submission_description=submission_description,
+        study_accession=study_accession,
+        metadata_path=metadata_path,
+        config_path=config_path,
+    )
+    # only reached once the submission is written and its source event published
+    typer.echo(f"Submission {submission_id} submitted.")
 
 
 def _report_and_confirm_amendment(

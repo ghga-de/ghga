@@ -33,9 +33,12 @@ from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import (
     AccessionNotLegacyError,
     AmendmentStatusError,
+    StudyAccessionInUseError,
     StudyAccessionMissingError,
+    StudyAccessionNotFlatError,
 )
 from ghga_datasteward_kit.cli.metadata import amend, submit, transform
+from ghga_datasteward_kit.cli.metadata import submit_legacy as submit_legacy_command
 from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import MetadataValidationError
@@ -596,3 +599,218 @@ def test_check_alias_uniqueness_per_class():
             content={"files": [{"alias": "a"}, {"alias": "a"}, {"alias": "b"}]},
             anchor_points_by_target=LEGACY_ANCHORS,
         )
+
+
+# a flat study accession handed out before the study's metadata arrived
+PROMISED_STUDY_ACCESSION = "GHGAS00000000000001"
+
+# the flat prefix per anchor of the test model, the study aside
+TEST_LEGACY_PREFIXES_BY_ANCHOR = {
+    "sample_files": "GHGAF",
+    "experiment_files": "GHGAF",
+    "datasets": "GHGAD",
+    "samples": "GHGAN",
+    "experiments": "GHGAX",
+}
+
+
+def submit_promised(
+    *,
+    metadata_path: Path = ORIGINAL_METADATA_PATH,
+    study_accession: str = PROMISED_STUDY_ACCESSION,
+) -> None:
+    """Run `submit-legacy` on the given metadata with the given study accession.
+
+    Must be called from within a work directory fixture, like `submit_original`.
+    """
+    submit_legacy_command(
+        submission_title="Test Title",
+        submission_description="Test Description",
+        study_accession=study_accession,
+        metadata_path=metadata_path,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+
+def read_single_submission() -> dict:
+    """Read the one submission in the submission store."""
+    submission_paths = list(Path("submission_store").glob("*.json"))
+    assert len(submission_paths) == 1
+    return json.loads(submission_paths[0].read_text(encoding="utf-8"))
+
+
+def write_changed_metadata(*, old: str, new: str) -> Path:
+    """Write the original metadata with one text replaced, and return its path."""
+    original = ORIGINAL_METADATA_PATH.read_text(encoding="utf-8")
+    assert old in original
+    path = Path("changed_metadata.yaml")
+    path.write_text(original.replace(old, new), encoding="utf-8")
+    return path
+
+
+def assert_nothing_submitted() -> None:
+    """Check that no submission and no source event were written."""
+    assert not list(Path("submission_store").glob("*.json"))
+    assert not list(Path("event_store").rglob("*.json"))
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_mints_flat_accessions(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Test that `submit-legacy` gives the study the promised accession and every
+    other resource a flat one, registers all of them in the accession store, stores
+    the submission as completed and reports its ID last.
+    """
+    submit_promised()
+
+    submission = read_single_submission()
+    accession_map = submission["accession_map"]
+
+    output_lines = capsys.readouterr().out.splitlines()
+    assert output_lines[-1] == f"Submission {submission['id']} submitted."
+
+    assert accession_map["studies"] == {"test_study": PROMISED_STUDY_ACCESSION}
+
+    # a flat map holds every class, and an accession for each of its aliases
+    assert set(accession_map) == set(submission["content"])
+    for anchor, prefix in TEST_LEGACY_PREFIXES_BY_ANCHOR.items():
+        aliases = {resource["alias"] for resource in submission["content"][anchor]}
+        assert set(accession_map[anchor]) == aliases
+        for accession in accession_map[anchor].values():
+            assert re.fullmatch(rf"{prefix}\d{{14}}", accession)
+
+    all_accessions = [
+        accession
+        for accessions in accession_map.values()
+        for accession in accessions.values()
+    ]
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    assert sorted(accession_store["legacy"]) == sorted(all_accessions)
+    assert accession_store["years"] == {}
+
+    assert submission["status_history"][-1]["new_status"] == "completed"
+    assert len(list(Path("event_store/source_events").glob("*.json"))) == 1
+
+    transform(config_path=METADATA_CONFIG_PATH)
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_can_be_amended(example_workdir: Path):
+    """Test that a submission from `submit-legacy` is amended like one from before
+    study PIDs: an added file gets an accession and all others are kept.
+    """
+    submit_promised()
+    submission = read_single_submission()
+
+    amend(
+        submission_id=submission["id"],
+        metadata_path=AMENDED_METADATA_PATH,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    accessions_after = read_accession_map(submission_id=submission["id"])
+    for anchor, accessions in submission["accession_map"].items():
+        for alias, accession in accessions.items():
+            assert accessions_after[anchor][alias] == accession
+    assert re.fullmatch(
+        r"GHGAF\d{14}", accessions_after["sample_files"]["test_sample_03_R1"]
+    )
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+@pytest.mark.parametrize(
+    "study_accession",
+    ["GHGA.26.ABC.1", "GHGAS123", "ghgas00000000000001", "GHGAS000000000000012"],
+    ids=["study_pid", "too_short", "lower_case", "too_long"],
+)
+def test_submit_legacy_refuses_non_flat_accession(
+    example_workdir: Path, study_accession: str
+):
+    """Test that a study accession that is not a flat one is refused by name, before
+    anything is minted or written.
+    """
+    with pytest.raises(StudyAccessionNotFlatError, match=re.escape(study_accession)):
+        submit_promised(study_accession=study_accession)
+
+    assert_nothing_submitted()
+    assert Path("accession_store").read_text(encoding="utf-8") == ""
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_refuses_registered_accession(example_workdir: Path):
+    """Test that a study accession already in the accession store is refused, so a
+    second run with the same accession adds no second submission and mints nothing.
+    """
+    submit_promised()
+    accession_store_before = Path("accession_store").read_text(encoding="utf-8")
+
+    with pytest.raises(StudyAccessionInUseError, match=PROMISED_STUDY_ACCESSION):
+        submit_promised()
+
+    read_single_submission()
+    assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_alias_repeated_in_class(example_workdir: Path):
+    """Test that an alias used twice within one class is refused before anything is
+    minted, and that the study accession is still free for the corrected metadata.
+    """
+    metadata_path = write_changed_metadata(
+        old="  - alias: test_sample_02\n", new="  - alias: test_sample_01\n"
+    )
+
+    with pytest.raises(MetadataValidationError, match="test_sample_01"):
+        submit_promised(metadata_path=metadata_path)
+
+    assert_nothing_submitted()
+    assert Path("accession_store").read_text(encoding="utf-8") == ""
+
+    submit_promised()
+    assert read_single_submission()["accession_map"]["studies"] == {
+        "test_study": PROMISED_STUDY_ACCESSION
+    }
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_alias_shared_across_classes(example_workdir: Path):
+    """Test that the same alias in two classes is accepted and gets two accessions,
+    since a flat accession does not contain the alias.
+    """
+    metadata_path = write_changed_metadata(
+        old="test_experiment_01", new="test_sample_01"
+    )
+
+    submit_promised(metadata_path=metadata_path)
+
+    accession_map = read_single_submission()["accession_map"]
+    assert (
+        accession_map["samples"]["test_sample_01"]
+        != accession_map["experiments"]["test_sample_01"]
+    )
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_class_without_flat_prefix(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a class without a flat prefix is refused by name, with nothing
+    submitted and the study accession still free.
+    """
+    prefixes = {
+        class_name: prefix
+        for class_name, prefix in TEST_LEGACY_PREFIXES.items()
+        if class_name != "Experiment"
+    }
+    monkeypatch.setattr(legacy_accessioning, "LEGACY_PREFIXES", prefixes)
+
+    with pytest.raises(
+        legacy_accessioning.LegacyAccessionRegistry.AccessionGenerationError,
+        match="'Experiment'",
+    ):
+        submit_promised()
+
+    assert_nothing_submitted()
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    assert PROMISED_STUDY_ACCESSION not in accession_store["legacy"]

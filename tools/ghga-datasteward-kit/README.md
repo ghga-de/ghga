@@ -62,6 +62,8 @@ This is performed with the following steps:
    Please see [this section](#metadata) for further details.
    If the submission was accessioned with flat accessions, before study PIDs, and only gained files since, use the `ghga-datasteward-kit metadata amend` command instead, so that the accessions already assigned are kept.
    Please see [this section](#metadata-amend) for further details.
+   If the study was promised a flat accession before its metadata arrived, use the `ghga-datasteward-kit metadata submit-legacy` command instead, so that the study gets that accession.
+   Please see [this section](#metadata-submit-legacy) for further details.
 4. **Produce Metadata Artifacts**: A transformation workflow is run on all submissions in the submission registry to produce multiple query-specific metadata artifacts using the `ghga-datasteward-kit metadata transform` command.
    Please see [this section](#metadata) for further details.
 5. **Publish Metadata**: To publish all metadata artifacts of all submissions to the running system so that they are available on the GHGA website, the `ghga-datasteward-kit load` command can be used.
@@ -87,6 +89,37 @@ Some of them require a configuration file as described in the [metadata config](
 The production accession store from before study PIDs is a flat list of accessions.
 Convert it once with `ghga-datasteward-kit metadata migrate-accession-store --config-path <config>` before the next `metadata submit`; the original is kept next to it as `<store>.bak`.
 A later release removes the command once the production store is converted.
+
+#### metadata submit-legacy
+
+Submits metadata as a new submission with flat accessions, for a study that was promised a flat accession before its metadata arrived.
+A flat accession is `GHGA`, one letter and 14 digits, such as `GHGAS12345678901234`, the scheme used before study PIDs.
+
+Use this, not `metadata submit`, for such a study only.
+`submit` mints a study PID and derives every other accession from it, so the accession already handed out, and possibly published, would not be the study's.
+
+```text
+ghga-datasteward-kit metadata submit-legacy \
+  --submission-title <title> \
+  --submission-description <description> \
+  --study-accession <flat accession> \
+  --metadata-path <metadata JSON> \
+  --config-path <metadata config YAML>
+```
+
+The study gets the given accession.
+Every other resource gets a new flat accession, such as `GHGAF` and 14 digits for a file, and the accession map holds every class.
+The submission is stored as completed, and the command prints `Submission <id> submitted.`; keep the ID, since `metadata amend` asks for it when the submission gains files.
+
+The command refuses, before minting or writing anything:
+
+- a study accession that is not a flat one (`StudyAccessionNotFlatError`);
+- a study accession already listed under `legacy` in the accession store (`StudyAccessionInUseError`), which is how a second submission with the same accession is caught;
+- metadata that fails validation against the model, or uses an alias twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias.
+
+The command itself adds the study accession to `legacy`, as its last step before writing the submission.
+Do not enter a promised accession there by hand: the command would then refuse it.
+A run refused for its metadata leaves the study accession free, so it can be repeated once the metadata is corrected.
 
 #### metadata amend
 

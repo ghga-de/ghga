@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Exceptions raised when amending a submission."""
+"""Exceptions raised when amending a submission or submitting one with flat
+accessions.
+"""
 
 
 class AmendmentAbortedError(Exception):
@@ -55,4 +57,29 @@ class AccessionNotLegacyError(Exception):
             f"The study accession '{study_accession}' of the submission"
             f" '{submission_id}' is not a flat accession, so the submission cannot be"
             " amended."
+        )
+
+
+class StudyAccessionNotFlatError(Exception):
+    """Raised when the study accession given for a new flat-accessioned submission is
+    not a flat accession.
+    """
+
+    def __init__(self, *, study_accession: str):
+        super().__init__(
+            f"The study accession '{study_accession}' is not a flat accession, which"
+            " is 'GHGA', one letter and 14 digits. Nothing was submitted."
+        )
+
+
+class StudyAccessionInUseError(Exception):
+    """Raised when the study accession given for a new flat-accessioned submission is
+    already registered in the accession store.
+    """
+
+    def __init__(self, *, study_accession: str):
+        super().__init__(
+            f"The study accession '{study_accession}' is already registered in the"
+            " accession store, so it cannot be given to a new submission. Nothing was"
+            " submitted."
         )
