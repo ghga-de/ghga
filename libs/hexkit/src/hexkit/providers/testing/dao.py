@@ -577,7 +577,7 @@ class BaseInMemDao(Generic[DTO]):
         """
         dto_id = getattr(dto, self._id_field)
 
-        # Validated before the existence check, so an invalid mapping produces the same
+        # Validated before the existence check, so an invalid filter produces the same
         # error here as it does in the MongoDB provider
         if precondition:
             validate_find_filter(precondition, dto_model=self._dto_model)

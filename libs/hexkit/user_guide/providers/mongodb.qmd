@@ -112,7 +112,7 @@ Since MongoDB stores datetimes with millisecond precision, truncate them accordi
 
 Field types without a BSON equivalent (such as `pathlib.Path`) need a `field_serializer` on the DTO model that converts them to something storable; the provider raises an error otherwise.
 
-You never interact with `_id` yourself: in DTOs, find mappings, sort specifications, and index definitions, always use the field name from your model.
+You never interact with `_id` yourself: in DTOs, filters, sort specifications, and index definitions, always use the field name from your model.
 
 ### CRUD Operations
 
@@ -175,8 +175,8 @@ either = book_dao.find_all(
 )
 ```
 
-Keep in mind that operator-based mappings tie the calling code to MongoDB.
-That is a perfectly reasonable trade-off inside a translator, but if you want your code to stay provider-agnostic, stick to plain equality mappings.
+Keep in mind that operator-based filters tie the calling code to MongoDB.
+That is a perfectly reasonable trade-off inside a translator, but if you want your code to stay provider-agnostic, stick to plain equality filters.
 The [in-memory mock DAO](testing.qmd) understands a subset of these operators, so most operator-based queries remain testable without a database.
 
 For pagination and sorting, `find_all` accepts `skip`, `limit`, and `sort` arguments, and returns a [`FindResult`](../../reference/protocols.dao.FindResult.qmd) that also reports the total number of matches:

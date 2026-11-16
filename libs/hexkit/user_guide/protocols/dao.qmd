@@ -161,7 +161,6 @@ await book_dao.delete(book.id)
 Beyond lookups by ID, DAOs support searching by field values.
 Both find methods take a filter as the `filter_` argument: a mapping from field names of the DTO model to the values a matching resource must have.
 Multiple entries must all match (a logical AND).
-The argument used to be called `mapping`, which still works until hexkit v11 but emits a `DeprecationWarning`:
 
 ```python
 # Exactly one match expected:
@@ -299,7 +298,6 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
-    resolve_filter,
 )
 
 
@@ -360,14 +358,11 @@ class DictDao(Generic[Dto]):
     def _matches(dto: Dto, filter_: Mapping[str, Any]) -> bool:
         return all(getattr(dto, field) == value for field, value in filter_.items())
 
-    # `mapping` is the deprecated name of `filter_`, accepted until hexkit v11
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
-        filter_ = resolve_filter(filter_, mapping)
         hits = await self.find_all(filter_=filter_).to_list()
         if not hits:
             raise NoHitsFoundError(filter_=filter_)
@@ -378,13 +373,11 @@ class DictDao(Generic[Dto]):
     def find_all(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,  # sorting omitted for brevity
     ) -> FindResult[Dto]:
-        filter_ = resolve_filter(filter_, mapping)
         hits = [dto for dto in self._resources.values() if self._matches(dto, filter_)]
         end = None if limit is None else (skip or 0) + limit
         page = hits[skip or 0 : end]
