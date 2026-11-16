@@ -59,7 +59,7 @@
   <legend>Prototype controls (not part of the page)</legend>
   <p><button type="button" id="create-box">Another steward creates a box now (it joins the end)</button></p>
   <p><label><input type="checkbox" id="sim-other"> Next save: another steward saved in the meantime (moved Box E to the top)</label></p>
-  <p><label><input type="checkbox" id="sim-gone"> Next save: a box you moved was archived in the meantime</label></p>
+  <p><label><input type="checkbox" id="sim-gone"> Next save: your top box was archived in the meantime</label></p>
   <p><label><input type="checkbox" id="sim-error"> Next save: server error (500)</label></p>
   <p><button type="button" id="reset">Reset prototype</button></p>
   <details open>
@@ -91,8 +91,8 @@ const STATE_ORDER = { locked: 0, open: 1, archived: 2 };
 const now = () => new Date().toISOString().slice(0, 16).replace("T", " ");
 
 // server: the document stored in the simulated RS
-// loaded: what the page loaded from it; order and moves: the steward's unsaved changes
-let boxes, server, loaded, order, moves, sortByPriority, createdCount, dragId, highlightId, highlightTimer;
+// loaded: what the page loaded from it; order: the steward's unsaved order
+let boxes, server, loaded, order, sortByPriority, createdCount, dragId, highlightId, highlightTimer;
 const marker = document.createElement("li");
 marker.setAttribute("aria-hidden", "true");
 marker.append(document.createElement("hr"));
@@ -100,6 +100,7 @@ marker.append(document.createElement("hr"));
 const $ = (id) => document.getElementById(id);
 const boxById = (id) => boxes.find((box) => box.id === id);
 const notArchived = (id) => boxById(id) && boxById(id).state !== "archived";
+const hasChanges = () => order.join() !== loaded.boxIds.join();
 
 // The repair RS does on every write; the page shows the same result.
 // Appends missing boxes, oldest last change first
@@ -127,7 +128,6 @@ function reset() {
 function loadFromServer() {
   loaded = { ...server, boxIds: repaired(server.boxIds) };
   order = [...loaded.boxIds];
-  moves = [];
   $("status").textContent = "";
   render();
 }
@@ -143,31 +143,21 @@ function writeList(boxIds, changedBy) {
   server = { version: server.version + 1, boxIds, changedBy, lastChanged: now() };
 }
 
-// Simulated PATCH /upload-box-priority. Gone boxes are dropped only after the last
-// move, because a later move can refer to them.
-function applyMoves(version, requestedMoves) {
-  const list = withMissing(server.boxIds);
-  const skipped = [];
-  for (const move of requestedMoves) {
-    if (move.before === move.box_id || (move.before !== null && !list.includes(move.before))) {
-      skipped.push(move);
-      continue;
-    }
-    if (list.includes(move.box_id)) list.splice(list.indexOf(move.box_id), 1);
-    list.splice(move.before === null ? list.length : list.indexOf(move.before), 0, move.box_id);
+// Simulated PUT /upload-box-priority. RS saves the new order only if it is based on
+// the stored version and holds the same boxes as the repaired list.
+function saveOrder(version, boxIds) {
+  const list = repaired(server.boxIds);
+  if (version !== server.version || [...boxIds].sort().join() !== [...list].sort().join()) {
+    return { status: 409 };
   }
-  const result = pruned(list);
-  const includesOtherChanges = server.version !== version;
-  if (result.join() !== server.boxIds.join()) writeList(result, CURRENT_STEWARD);
-  return { priority: server, skipped, includesOtherChanges };
+  if (boxIds.join() !== server.boxIds.join()) writeList([...boxIds], CURRENT_STEWARD);
+  return { status: 200, priority: server };
 }
 
-// Each change updates the local order and records one move
+// Each change updates the local order
 function move(from, to) {
   const [id] = order.splice(from, 1);
   order.splice(to, 0, id);
-  moves.push({ box_id: id, before: order[to + 1] ?? null });
-  if (order.join() === loaded.boxIds.join()) moves = [];
   $("status").textContent = "";
   highlightId = id;
   clearTimeout(highlightTimer);
@@ -178,8 +168,8 @@ function move(from, to) {
 function render(focus) {
   renderList();
   renderReorder(focus);
-  $("request").textContent = moves.length
-    ? JSON.stringify({ version: loaded.version, moves }, null, 2)
+  $("request").textContent = hasChanges()
+    ? JSON.stringify({ version: loaded.version, box_ids: order }, null, 2)
     : "(no changes)";
 }
 
@@ -229,8 +219,8 @@ function renderReorder(focus) {
   } else {
     $("last-change").textContent = "no edit history yet";
   }
-  $("save").disabled = moves.length === 0;
-  if (moves.length > 0 && !$("status").textContent) {
+  $("save").disabled = !hasChanges();
+  if (hasChanges() && !$("status").textContent) {
     $("status").textContent = "You have unsaved changes to the priority order.";
   }
   if (focus) {
@@ -328,28 +318,25 @@ $("save").addEventListener("click", () => {
   }
   if ($("sim-gone").checked) {
     $("sim-gone").checked = false;
-    const gone = boxById(moves[0].box_id);
+    const gone = boxById(order[0]);
     gone.state = "archived";
     writeList(repaired(server.boxIds), "Steward C");
   }
 
   const versionBefore = server.version;
-  const response = applyMoves(loaded.version, moves);
-  const notes = [
+  const response = saveOrder(loaded.version, order);
+  if (response.status === 409) {
+    loadFromServer();
+    $("status").textContent =
+      "The priority order changed while you were editing. This is the current order;" +
+      " please make your change again.";
+    render();
+    return;
+  }
+  $("notice").textContent =
     response.priority.version === versionBefore
       ? `Nothing changed; the priority order is still version ${versionBefore}.`
-      : `Saved as version ${response.priority.version}. Data Hubs use it from their next batch.`,
-  ];
-  if (response.includesOtherChanges) {
-    notes.push("The saved order includes changes made since you started editing.");
-  }
-  if (response.skipped.length > 0) {
-    notes.push(
-      `${response.skipped.length} of your changes no longer applied and were skipped,` +
-      " for example because a box was archived in the meantime.",
-    );
-  }
-  $("notice").textContent = notes.join(" ");
+      : `Saved as version ${response.priority.version}. Data Hubs use it from their next batch.`;
   loadFromServer();
   showMode("list");
 });
@@ -368,7 +355,7 @@ $("create-box").addEventListener("click", () => {
 $("reset").addEventListener("click", reset);
 
 window.addEventListener("beforeunload", (event) => {
-  if (moves.length > 0) event.preventDefault();
+  if (hasChanges()) event.preventDefault();
 });
 
 reset();
