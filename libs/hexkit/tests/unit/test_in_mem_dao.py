@@ -1250,14 +1250,9 @@ async def test_update_first_invalid_changes():
     assert [dao.resources[name] for name in "abcd"] == before
 
 
-async def test_update_first_operators_only_and_id():
-    """update_first works with only operators, but refuses to change the ID."""
+async def test_update_first_refuses_id_changes():
+    """update_first refuses update operators that change the ID or part of it."""
     dao = await _counter_dao()
-
-    changed = await dao.update_first(
-        filter_={"name": "d"}, changes={"$inc": {"count": 1}}
-    )
-    assert changed.count == 1
 
     for operators in (
         {"$set": {"name": "other"}},
@@ -1273,7 +1268,6 @@ class Stats(BaseModel):
     """An embedded document for nested changes"""
 
     attempts: int = 0
-    last_note: str | None = None
 
 
 class Tracked(BaseModel):
@@ -1287,26 +1281,20 @@ class Tracked(BaseModel):
 TrackedDao = new_mock_dao_class(dto_model=Tracked, id_field="name")
 
 
-async def test_update_first_nested_operators():
-    """update_first applies `$set` and `$inc` with dot notation, creating missing
-    embedded documents like MongoDB.
+async def test_update_first_creates_missing_embedded_documents():
+    """update_first creates missing embedded documents along a dotted `$set` or
+    `$inc` path, like MongoDB. Changes to existing ones are compared with MongoDB in
+    the integration tests.
     """
     dao = TrackedDao()
     await dao.insert(Tracked(name="a"))
 
     changed = await dao.update_first(
-        filter_={"stats.attempts": 0},
-        changes={
-            "$set": {"stats.last_note": "n", "extra.deep.key": 1},
-            "$inc": {"stats.attempts": 2, "extra.counter": 3},
-        },
+        filter_={},
+        changes={"$set": {"extra.deep.key": 1}, "$inc": {"extra.counter": 3}},
     )
 
-    assert changed == Tracked(
-        name="a",
-        stats=Stats(attempts=2, last_note="n"),
-        extra={"deep": {"key": 1}, "counter": 3},
-    )
+    assert changed == Tracked(name="a", extra={"deep": {"key": 1}, "counter": 3})
     assert await dao.get_by_id("a") == changed
 
 

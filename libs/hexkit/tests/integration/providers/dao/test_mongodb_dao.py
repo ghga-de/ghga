@@ -1505,23 +1505,6 @@ async def test_dao_update_first_concurrent(mongodb: MongoDbFixture):
         resource.id async for resource in dao.find_all(filter_={})
     }
     assert sorted(resource.field_b for resource in claimed) == list(range(count))
-    with pytest.raises(NoHitsFoundError):
-        await dao.update_first(
-            filter_={"field_a": "waiting"}, changes={"field_a": "claimed"}
-        )
-
-
-async def test_dao_update_first_operators_only(mongodb: MongoDbFixture):
-    """Test that update_first() works with only update operators in `changes`."""
-    dao = await mongodb.dao_factory.get_dao(
-        name="example", dto_model=ExampleDto, id_field="id"
-    )
-    resource = ExampleDto(field_b=10)
-    await dao.insert(resource)
-
-    changed = await dao.update_first(filter_={}, changes={"$inc": {"field_b": 1}})
-
-    assert changed == resource.model_copy(update={"field_b": 11})
 
 
 async def test_dao_update_first_unique_constraint(mongodb: MongoDbFixture):

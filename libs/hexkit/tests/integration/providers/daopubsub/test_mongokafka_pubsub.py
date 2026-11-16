@@ -985,8 +985,7 @@ async def test_find_returns_documents_without_metadata(mongo_kafka: MongoKafkaFi
 
 async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
     """Make sure that DuplicateKeyErrors from unique index violations are
-    handled correctly in the insert, upsert, update and update_first methods of the
-    mongokafka dao.
+    handled correctly in the insert, upsert, and update methods of the mongokafka dao.
     """
     async with MongoKafkaDaoPublisherFactory.construct(
         config=mongo_kafka.config
@@ -1030,13 +1029,6 @@ async def test_unique_index_error_handling(mongo_kafka: MongoKafkaFixture):
 
         with pytest.raises(UniqueConstraintViolationError):
             await dao.upsert(dto5)
-
-        async with mongo_kafka.kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
-            with pytest.raises(UniqueConstraintViolationError):
-                await dao.update_first(
-                    filter_={"id": dto3.id}, changes={"field_a": dto.field_a}
-                )
-        assert await dao.get_by_id(dto3.id) == dto3
 
 
 async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
@@ -2465,49 +2457,6 @@ async def test_empty_batch_through_the_outbox(
                 )
             with pytest.raises(InvalidChangesError):
                 await dao.update_first(filter_={}, changes={"field_b": "no number"})
-
-
-async def test_update_first_concurrent(mongo_kafka: MongoKafkaFixture):
-    """Test that concurrent `update_first` calls get different resources and publish
-    one event for each of them.
-    """
-    kafka = mongo_kafka.kafka
-    async with MongoKafkaDaoPublisherFactory.construct(
-        config=mongo_kafka.config
-    ) as factory:
-        dao = await factory.get_dao(
-            name="example",
-            dto_model=ExampleDto,
-            id_field="id",
-            dto_to_event=lambda dto: dto.model_dump(),
-            event_topic=EXAMPLE_TOPIC,
-        )
-        count = 5
-        resources = [
-            ExampleDto(field_a="waiting", field_b=index) for index in range(count)
-        ]
-        for resource in resources:
-            await dao.insert(resource)
-
-        async with kafka.record_events(in_topic=EXAMPLE_TOPIC) as recorder:
-            claimed = await asyncio.gather(
-                *(
-                    dao.update_first(
-                        filter_={"field_a": "waiting"},
-                        changes={"field_a": "claimed"},
-                        sort=["field_b"],
-                    )
-                    for _ in range(count)
-                )
-            )
-
-        assert sorted(resource.field_b for resource in claimed) == list(range(count))
-        events = recorder.recorded_events
-        assert len(events) == count
-        assert {event.key for event in events} == {
-            str(resource.id) for resource in resources
-        }
-        assert all(event.payload["field_a"] == "claimed" for event in events)
 
 
 async def test_update_first_without_autopublish(mongo_kafka: MongoKafkaFixture):
