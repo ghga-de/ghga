@@ -220,3 +220,26 @@ test('can create an upload box from the manager page', async ({ adminPage: page 
   const main = page.locator('main');
   await expect(main.getByText(title)).toBeVisible();
 });
+
+test('can change the priority order', async ({ adminPage: page }) => {
+  const main = page.locator('main');
+  await main.getByRole('button', { name: 'Change priority' }).click();
+
+  const reorderMode = main.getByRole('region', { name: 'Change priority' });
+  await expect(reorderMode).toContainText(
+    'Version 5. Last changed by Dr. John Doe on 10 February 2025.',
+  );
+  await expect(reorderMode.getByRole('link', { name: 'Dr. John Doe' })).toBeVisible();
+  const order = main.getByRole('list', { name: 'Priority order' });
+  await expect(order.getByRole('listitem').first()).toContainText('Large Cohort');
+
+  await main
+    .getByRole('button', { name: 'Move Research Data Upload Box of John up' })
+    .click();
+  await main.getByRole('button', { name: 'Save priority' }).click();
+
+  const notification = page.locator('app-custom-snack-bar');
+  await expect(notification).toContainText('Saved as version 6.');
+  await expect(reorderMode).toHaveCount(0);
+  await expect(main.locator('table')).toBeVisible();
+});
