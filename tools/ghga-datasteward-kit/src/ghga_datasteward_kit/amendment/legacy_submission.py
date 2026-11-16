@@ -76,8 +76,9 @@ def submit_legacy_metadata(
     of the submission.
 
     The study accession is registered in the accession store only once the metadata
-    is validated and the other accessions are minted, so a refused run can be
-    repeated with the same accession.
+    is validated, the other accessions are minted and the submission is written, so
+    a run that was refused or could not write can be repeated with the same
+    accession.
 
     Raises:
         StudyAccessionNotFlatError:
@@ -141,8 +142,11 @@ def submit_legacy_metadata(
         ),
     )
 
-    accession_store.save_legacy(accession=study_accession)
+    # the submission first: if it cannot be written, the study accession stays free
+    # for the next run. Should the publishing fail, `metadata amend` with the same
+    # metadata publishes the source event of the stored submission.
     SubmissionStore(config=config).insert_new(submission=submission)
+    accession_store.save_legacy(accession=study_accession)
     SourceEventPublisher(
         config=config, provider=FileSystemEventPublisher(config=config)
     ).publish_submission(submission)

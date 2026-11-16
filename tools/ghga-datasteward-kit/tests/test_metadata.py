@@ -774,6 +774,26 @@ def test_submit_legacy_alias_repeated_in_class(example_workdir: Path):
 
 
 @pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_failed_write_keeps_accession_free(example_workdir: Path):
+    """Test that a run that cannot write the submission does not register the study
+    accession, so the next run with the same accession goes through.
+    """
+    Path("submission_store").rmdir()
+
+    with pytest.raises(FileNotFoundError):
+        submit_promised()
+
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    assert PROMISED_STUDY_ACCESSION not in accession_store["legacy"]
+
+    Path("submission_store").mkdir()
+    submit_promised()
+    assert read_single_submission()["accession_map"]["studies"] == {
+        "test_study": PROMISED_STUDY_ACCESSION
+    }
+
+
+@pytest.mark.usefixtures("legacy_amendment")
 def test_submit_legacy_alias_shared_across_classes(example_workdir: Path):
     """Test that the same alias in two classes is accepted and gets two accessions,
     since a flat accession does not contain the alias.
