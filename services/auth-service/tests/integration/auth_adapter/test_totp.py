@@ -64,7 +64,7 @@ def get_valid_totp_code(
     """Generate a valid TOTP code for the given secret."""
     if not when:
         when = now_utc_ms_prec()
-    return pyotp.TOTP(secret).at(when, offset)
+    return pyotp.TOTP(secret).at(when, counter_offset=offset)
 
 
 def get_invalid_totp_code(secret: str, when: datetime | None = None) -> str:
