@@ -57,6 +57,7 @@ Look at the stored data, not the event, when choosing between the outbox and the
 - Filter with `filter_=`; hexkit 11 removed `mapping=`.
 - `find_all` is not awaited: it returns a lazy `FindResult` with `to_list()` and `total_count()`.
   Always pass `sort` with `skip` and `limit`.
+- To take the next waiting resource and change it atomically, use `update_first(filter_=, changes=, sort=)` instead of `find_all` followed by `update`; it raises `NoHitsFoundError` when nothing matches.
 - For read-modify-write under concurrent writers, pass `precondition=` to `update` and wrap the read and the update in `race_condition_retries` from `hexkit.protocols.dao`, which retries on `PreconditionFailedError`; do not write a retry loop of your own.
 - MongoDB keeps milliseconds: create timestamps with `hexkit.utils.now_utc_ms_prec()`, timezone-aware, or a value read back no longer equals the one written.
 - MongoDB query operators (`{"$gt": 3}`) tie the caller to MongoDB; keep them in the outbound adapter.
