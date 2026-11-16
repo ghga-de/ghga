@@ -37,7 +37,7 @@ from hexkit.correlation import (
 )
 from hexkit.custom_types import JsonObject
 from hexkit.protocols.dao import (
-    InvalidMappingError,
+    InvalidFilterError,
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
@@ -1052,12 +1052,12 @@ async def test_update_precondition(mongo_kafka: MongoKafkaFixture):
         await dao.insert(example)
 
         # Criteria mismatch should raise NotHitsFoundError
-        # Bogus fields for precondition should raise InvalidMappingError
+        # Bogus fields for precondition should raise InvalidFilterError
         # and in either of the above cases, no events should be published
         async with kafka.expect_events(events=[], in_topic=EXAMPLE_TOPIC):
             with pytest.raises(PreconditionFailedError):
                 await dao.update(example_update, precondition={"field_b": 3})
-            with pytest.raises(InvalidMappingError):
+            with pytest.raises(InvalidFilterError):
                 await dao.update(example_update, precondition={"not_a_field": 1})
         assert await dao.get_by_id(example.id) == example
 
