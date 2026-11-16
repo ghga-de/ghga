@@ -320,7 +320,7 @@ class TokenGenerator:
         )
         if for_time is None:
             for_time = now_as_utc()
-        return totp.at(for_time, offset)
+        return totp.at(for_time, counter_offset=offset)
 
     def generate_wrong_totp(self, totp_token: str) -> str:
         """Generate valid TOTP but with the wrong time window."""

@@ -46,5 +46,7 @@ umami_website_id: null
 
 root_files: {}
 
+contact_url: https://www.ghga.de/about-us/contact
+
 helpdesk_url: https://helpdesk.ghga.de/
 helpdesk_ticket_url: '/#ticket/zoom/'

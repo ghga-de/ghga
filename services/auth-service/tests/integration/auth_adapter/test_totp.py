@@ -64,7 +64,7 @@ def get_valid_totp_code(
     """Generate a valid TOTP code for the given secret."""
     if not when:
         when = now_utc_ms_prec()
-    return pyotp.TOTP(secret).at(when, offset)
+    return pyotp.TOTP(secret).at(when, counter_offset=offset)
 
 
 def get_invalid_totp_code(secret: str, when: datetime | None = None) -> str:
@@ -396,8 +396,8 @@ async def test_total_limit_totp(
         VERIFY_TOTP_PATH,
         headers=with_totp_code(headers, secret),
     )
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Too many failed attempts"}
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
 
     warning_messages = [rec.getMessage() for rec in caplog.records]
     assert len(warning_messages) == 1
@@ -503,3 +503,53 @@ async def test_recreate_existing_totp_token(
 
     # should notify because the token was overwritten
     assert user_registry.published_events == [("2fa_recreation", ID_OF_JOHN)]
+
+
+async def test_recreate_totp_token_for_disabled_user(
+    client_with_session: ClientWithSession,
+):
+    """Test that a user disabled after login cannot replace the TOTP token."""
+    client, session, user_registry, user_token_dao = client_with_session
+    headers = headers_for_session(session)
+
+    # set up a TOTP token while the account is still active
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    secret = parse_qs(urlparse(response.json()["uri"]).query)["secret"][0]
+    response = await client.post(
+        VERIFY_TOTP_PATH, headers=with_totp_code(headers, secret)
+    )
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    user_dao = user_registry.mock_user_dao
+    user_token = await user_token_dao.get_by_id(user_dao.user.id)
+
+    # log in again, so that the session has passed the first factor only
+    response = await client.post(LOGOUT_PATH, headers=headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    client.cookies.clear()
+    session = await query_new_session(client)
+    assert session.state is SessionState.HAS_TOTP_TOKEN
+    headers = headers_for_session(session)
+
+    user_dao.users[-1] = user_dao.user.model_copy(
+        update={"status": UserStatus.INACTIVE}
+    )
+
+    # the session may still ask for a new TOTP token
+    response = await client.post(TOTP_TOKEN_PATH + "?force=true", headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    new_secret = parse_qs(urlparse(response.json()["uri"]).query)["secret"][0]
+
+    # but a code for the new token is not accepted
+    response = await client.post(
+        VERIFY_TOTP_PATH, headers=with_totp_code(headers, new_secret)
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "User account is disabled"}
+
+    # the stored token is kept and the session has ended
+    assert await user_token_dao.get_by_id(user_dao.user.id) is user_token
+    assert not user_registry.published_events
+    response = await client.post(TOTP_TOKEN_PATH, headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Not logged in"}

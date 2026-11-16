@@ -6,6 +6,7 @@
 
 import { WritableSignal } from '@angular/core';
 import { ComponentFixture } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { AuthService } from '@app/auth/services/auth';
 import { Notifier } from '@app/shared/services/notification';
 import { fireEvent, render, screen } from '@testing-library/angular';
@@ -25,7 +26,10 @@ const mockAuthService = {
   verifyTotpCode: vitest.fn(),
   redirectAfterLogin: vitest.fn(),
   lostTotpSetup: vitest.fn(),
+  showAccountDisabled: vitest.fn(),
 };
+
+const mockRouter = { navigate: vitest.fn() };
 
 const mockNotificationService = {
   showSuccess: vitest.fn(),
@@ -40,6 +44,8 @@ describe('ConfirmTotp', () => {
     mockAuthService.verifyTotpCode.mockReset();
     mockAuthService.redirectAfterLogin.mockReset();
     mockAuthService.lostTotpSetup.mockReset();
+    mockAuthService.showAccountDisabled.mockReset();
+    mockRouter.navigate.mockReset();
     mockNotificationService.showSuccess.mockReset();
     mockNotificationService.showError.mockReset();
 
@@ -47,6 +53,7 @@ describe('ConfirmTotp', () => {
       providers: [
         { provide: AuthService, useValue: mockAuthService },
         { provide: Notifier, useValue: mockNotificationService },
+        { provide: Router, useValue: mockRouter },
       ],
     }));
     component = fixture.componentInstance;
@@ -129,7 +136,7 @@ describe('ConfirmTotp', () => {
   });
 
   it('should redirect after a successful verification', async () => {
-    mockAuthService.verifyTotpCode.mockResolvedValue(true);
+    mockAuthService.verifyTotpCode.mockResolvedValue('verified');
 
     await enterCode('123456');
 
@@ -141,7 +148,7 @@ describe('ConfirmTotp', () => {
   });
 
   it('should not auto-submit after a previous submission exists', async () => {
-    mockAuthService.verifyTotpCode.mockResolvedValue(true);
+    mockAuthService.verifyTotpCode.mockResolvedValue('verified');
     (component as unknown as ConfirmTotpComponentInternals).totpForm
       .code()
       .value.set('123456');
@@ -159,7 +166,7 @@ describe('ConfirmTotp', () => {
 
   it('should block re-submitting the same code after a failed attempt', async () => {
     vitest.useFakeTimers();
-    mockAuthService.verifyTotpCode.mockResolvedValue(false);
+    mockAuthService.verifyTotpCode.mockResolvedValue('invalid');
     (component as unknown as ConfirmTotpComponentInternals).totpForm
       .code()
       .value.set('123456');
@@ -175,7 +182,7 @@ describe('ConfirmTotp', () => {
   });
 
   it('should show the error and disable the submit button after a failed attempt', async () => {
-    mockAuthService.verifyTotpCode.mockResolvedValue(false);
+    mockAuthService.verifyTotpCode.mockResolvedValue('invalid');
 
     await enterCode('123456');
 
@@ -184,6 +191,31 @@ describe('ConfirmTotp', () => {
       'Failed to authenticate.',
     );
     expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  });
+
+  it('should tell a disabled user and leave the page', async () => {
+    mockAuthService.verifyTotpCode.mockResolvedValue('disabled');
+
+    await enterCode('123456');
+
+    expect(mockAuthService.showAccountDisabled).toHaveBeenCalledTimes(1);
+    expect(mockNotificationService.showError).not.toHaveBeenCalled();
+    expect(component.allowNavigation).toBe(true);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
+    expect(screen.queryByText(ERROR_TEXT)).toBeNull();
+  });
+
+  it('should ask a locked user to log in again and leave the page', async () => {
+    mockAuthService.verifyTotpCode.mockResolvedValue('locked');
+
+    await enterCode('123456');
+
+    expect(mockNotificationService.showError).toHaveBeenCalledWith(
+      'Too many failed attempts, please log in again.',
+    );
+    expect(mockAuthService.showAccountDisabled).not.toHaveBeenCalled();
+    expect(component.allowNavigation).toBe(true);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
   });
 
   it('should request a new setup when the token was lost', () => {
