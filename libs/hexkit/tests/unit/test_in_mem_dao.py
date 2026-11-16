@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from pydantic import BaseModel, ConfigDict, PydanticInvalidForJsonSchema
+from pydantic import BaseModel, ConfigDict, Field, PydanticInvalidForJsonSchema
 
 from hexkit.protocols.dao import (
     BatchOperationError,
@@ -1259,7 +1259,84 @@ async def test_update_first_operators_only_and_id():
     )
     assert changed.count == 1
 
-    for operators in ({"$set": {"name": "other"}}, {"$inc": {"name": 1}}):
+    for operators in (
+        {"$set": {"name": "other"}},
+        {"$inc": {"name": 1}},
+        {"$set": {"name.part": "other"}},
+    ):
         with pytest.raises(InvalidChangesError):
             await dao.update_first(filter_={}, changes=operators)
     assert set(dao.resources) == set("abcd")
+
+
+class Stats(BaseModel):
+    """An embedded document for nested changes"""
+
+    attempts: int = 0
+    last_note: str | None = None
+
+
+class Tracked(BaseModel):
+    """A model with embedded documents"""
+
+    name: str
+    stats: Stats = Field(default_factory=Stats)
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+TrackedDao = new_mock_dao_class(dto_model=Tracked, id_field="name")
+
+
+async def test_update_first_nested_operators():
+    """update_first applies `$set` and `$inc` with dot notation, creating missing
+    embedded documents like MongoDB.
+    """
+    dao = TrackedDao()
+    await dao.insert(Tracked(name="a"))
+
+    changed = await dao.update_first(
+        filter_={"stats.attempts": 0},
+        changes={
+            "$set": {"stats.last_note": "n", "extra.deep.key": 1},
+            "$inc": {"stats.attempts": 2, "extra.counter": 3},
+        },
+    )
+
+    assert changed == Tracked(
+        name="a",
+        stats=Stats(attempts=2, last_note="n"),
+        extra={"deep": {"key": 1}, "counter": 3},
+    )
+    assert await dao.get_by_id("a") == changed
+
+
+async def test_update_first_nested_operator_through_non_document():
+    """update_first refuses an operator path through a value that is not a document
+    and leaves the resource unchanged.
+    """
+    dao = TrackedDao()
+    await dao.insert(Tracked(name="a"))
+    before = await dao.get_by_id("a")
+
+    for changes in (
+        {"$set": {"stats.attempts.part": 1}},
+        {"$inc": {"stats.attempts.part": 1}},
+    ):
+        with pytest.raises(MQLError):
+            await dao.update_first(filter_={}, changes=changes)
+
+    assert await dao.get_by_id("a") == before
+
+
+async def test_update_first_copies_set_values():
+    """A dict passed to `$set` is copied, so changing it later doesn't change the
+    stored resource.
+    """
+    dao = TrackedDao()
+    await dao.insert(Tracked(name="a"))
+    extra: dict[str, Any] = {"key": 1}
+
+    await dao.update_first(filter_={}, changes={"$set": {"extra": extra}})
+    extra["key"] = 2
+
+    assert (await dao.get_by_id("a")).extra == {"key": 1}

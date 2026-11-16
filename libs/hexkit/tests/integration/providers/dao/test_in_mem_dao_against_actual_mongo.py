@@ -471,3 +471,40 @@ async def test_serialized_id(
     observed = await serialized_id_outcome(MockShoutedDaoClass(), call)
 
     assert observed == expected
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        pytest.param({"$inc": {"other_data.sold_last_week": 5}}, id="IncNested"),
+        pytest.param(
+            {"$set": {"other_data.sold_last_week": 0}, "count": 1},
+            id="SetNestedWithPlainValue",
+        ),
+        pytest.param(
+            {"$set": {"other_data": {"sold_last_week": 1, "next_restock": DATE4}}},
+            id="SetEmbeddedDocument",
+        ),
+    ],
+)
+async def test_update_first_nested(
+    real_item_dao, mock_item_dao, changes: Mapping[str, Any]
+):
+    """Test that the InMemDao applies update operators with dot notation like
+    MongoDB, and changes the same resource.
+    """
+    filter_ = {"other_data.next_restock": DATE1}
+    sort = ["-count"]
+
+    mongodb_result = await real_item_dao.update_first(
+        filter_=filter_, changes=changes, sort=sort
+    )
+    inmem_result = await mock_item_dao.update_first(
+        filter_=filter_, changes=changes, sort=sort
+    )
+
+    assert mongodb_result.title == "apples"
+    assert inmem_result == mongodb_result
+    mongodb_items = await real_item_dao.find_all(filter_={}, sort=["title"]).to_list()
+    inmem_items = await mock_item_dao.find_all(filter_={}, sort=["title"]).to_list()
+    assert inmem_items == mongodb_items

@@ -120,6 +120,25 @@ def _get_nested_value(resource: Document, field_path: str) -> Any:
     return value
 
 
+def _set_nested_value(resource: Document, field_path: str, value: Any) -> None:
+    """Set a nested value in a resource using dot notation.
+
+    Missing embedded documents along the path are created, like MongoDB's `$set`
+    does. Raises an MQLError if the path runs through a value that is not a document.
+    """
+    keys = field_path.split(".")
+    if not all(keys):
+        raise MQLError(f"Update key {field_path} uses improper dot notation")
+
+    parent = resource
+    for key in keys[:-1]:
+        child = parent.setdefault(key, {})
+        if not isinstance(child, dict):
+            raise MQLError(f"Cannot set {field_path!r}: {key!r} is not a document")
+        parent = child
+    parent[keys[-1]] = value
+
+
 def _sort_key(resource: Document, *, field_path: str) -> tuple[bool, Any]:
     """Build a sort key for a (possibly nested) field path of a resource.
 
@@ -534,13 +553,16 @@ class BaseInMemDao(Generic[DTO]):
         and return the changed resource.
 
         Plain values in `changes` are validated against their fields. Of the MongoDB
-        update operators, only `$inc` and `$set` are supported.
+        update operators, only `$inc` and `$set` are supported, including dot notation
+        for fields of embedded documents.
 
         Raises:
             InvalidFilterError: If `filter_` doesn't pass validation.
             InvalidChangesError: If `changes` doesn't pass validation.
             NoHitsFoundError: If no matching resource is found.
-            MQLError: If `changes` contains an unsupported update operator.
+            MQLError:
+                If `changes` contains an unsupported update operator, or an operator
+                path that runs through a value that is not a document.
         """
         field_values, operators = split_changes(
             changes, dto_model=self._dto_model, id_field=self._id_field
@@ -551,8 +573,12 @@ class BaseInMemDao(Generic[DTO]):
                 + " use with the InMemDao."
             )
 
-        id_changes = {*operators.get("$set", {}), *operators.get("$inc", {})}
-        if self._id_field in id_changes or "_id" in id_changes:
+        # MongoDB refuses to change the ID or any part of it
+        changed_top_level_fields = {
+            path.split(".")[0]
+            for path in [*operators.get("$set", {}), *operators.get("$inc", {})]
+        }
+        if changed_top_level_fields & {self._id_field, "_id"}:
             raise InvalidChangesError("The ID field cannot be changed.")
         matching = self._select(filter_, sort=sort)
         if not matching:
@@ -560,10 +586,13 @@ class BaseInMemDao(Generic[DTO]):
 
         # Work on a copy, so that a changed resource that fails validation is not stored
         document = deepcopy(matching[0])
-        document.update(operators.get("$set", {}))
+        for path, value in operators.get("$set", {}).items():
+            # A copy keeps later changes to the caller's value out of the stored one
+            _set_nested_value(document, path, deepcopy(value))
         document.update(field_values)
-        for field, amount in operators.get("$inc", {}).items():
-            document[field] = (document.get(field) or 0) + amount
+        for path, amount in operators.get("$inc", {}).items():
+            current_value = _get_nested_value(document, path) or 0
+            _set_nested_value(document, path, current_value + amount)
 
         dto = self._deserialize(document)
         self.resources[document["_id"]] = document
