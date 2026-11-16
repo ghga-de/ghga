@@ -1556,7 +1556,7 @@ paths:
         '401':
           description: The TOTP code is invalid, or the session has ended.
         '403':
-          description: Too many failed attempts have disabled the user account.
+          description: The user account is disabled.
         '422':
           content:
             application/json:

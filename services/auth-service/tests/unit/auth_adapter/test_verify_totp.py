@@ -195,7 +195,12 @@ async def test_verify_totp(session_state: SessionState, totp_code: str):  # noqa
 
 
 @pytest.mark.parametrize(
-    "session_state", [SessionState.HAS_TOTP_TOKEN, SessionState.AUTHENTICATED]
+    "session_state",
+    [
+        SessionState.NEW_TOTP_TOKEN,
+        SessionState.HAS_TOTP_TOKEN,
+        SessionState.AUTHENTICATED,
+    ],
 )
 @pytest.mark.asyncio()
 async def test_verify_totp_for_disabled_user(session_state: SessionState):
@@ -207,6 +212,10 @@ async def test_verify_totp_for_disabled_user(session_state: SessionState):
     totp_handler = TOTPHandler(config=config)
     totp_token = totp_handler.generate_token()
     totp_handler.verify_code = Mock(return_value=True)
+    new_totp_token = None
+    if session_state is SessionState.NEW_TOTP_TOKEN:
+        # the user asked to replace the stored token
+        new_totp_token = session.totp_token = totp_handler.generate_token()
 
     user_registry = MockUserRegistry(config=config)
     user_dao = user_registry.mock_user_dao
@@ -233,3 +242,9 @@ async def test_verify_totp_for_disabled_user(session_state: SessionState):
     totp_handler.verify_code.assert_not_called()
     assert not await session_store.get_session(session.session_id)
     assert session.state is session_state
+    assert session.totp_token is new_totp_token
+
+    # the stored token has not been replaced
+    user_token = await user_token_dao.get_by_id(user_dao.user.id)
+    assert user_token.totp_token is totp_token
+    assert not user_registry.published_events

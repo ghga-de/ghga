@@ -855,9 +855,7 @@ async def create_new_totp_token(
     status_code=204,
     responses={
         401: {"description": "The TOTP code is invalid, or the session has ended."},
-        403: {
-            "description": "Too many failed attempts have disabled the user account."
-        },
+        403: {"description": "The user account is disabled."},
     },
 )
 async def rpc_verify_totp(
