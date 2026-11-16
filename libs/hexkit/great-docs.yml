@@ -290,7 +290,7 @@ reference:
       - protocols.dao.UniqueConstraintViolationError
       - protocols.dao.PreconditionFailedError
       - protocols.dao.FindError
-      - protocols.dao.InvalidMappingError
+      - protocols.dao.InvalidFilterError
       - protocols.dao.MultipleHitsFoundError
       - protocols.dao.NoHitsFoundError
       - protocols.dao.DbTimeoutError

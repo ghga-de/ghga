@@ -19,7 +19,6 @@ with the database.
 """
 
 import typing
-import warnings
 from abc import ABC, abstractmethod
 from asyncio import sleep
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Mapping
@@ -113,45 +112,12 @@ class PreconditionFailedError(DaoError):
         super().__init__(message)
 
 
-# TODO: Remove `mapping` when moving hexkit to v11.0.0
-MAPPING_DEPRECATION_MESSAGE = (
-    "The mapping parameter is being renamed to filter_, and support for mapping will"
-    " be removed in hexkit v11.0.0."
-)
-
-
-# TODO: Remove `mapping` when moving hexkit to v11.0.0
-def resolve_filter(
-    filter_: Mapping[str, Any] | None,
-    mapping: Mapping[str, Any] | None,
-    *,
-    stacklevel: int = 3,
-) -> Mapping[str, Any]:
-    """Return the filter to use, accepting the deprecated `mapping` name for it.
-
-    Deprecated because `mapping` is being renamed to `filter_`. Passing `mapping`
-    warns; passing both, or neither, is an error.
-    """
-    if mapping is None:
-        if filter_ is None:
-            raise TypeError("Missing required keyword argument: 'filter_'")
-        return filter_
-
-    if filter_ is not None:
-        raise TypeError("Pass either 'filter_' or 'mapping', not both")
-
-    warnings.warn(
-        MAPPING_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=stacklevel
-    )
-    return mapping
-
-
 class FindError(DaoError):
     """Base for all error related to DAO find operations."""
 
 
-class InvalidMappingError(FindError):
-    """Raised when an invalid mapping was passed provided to find."""
+class InvalidFilterError(FindError):
+    """Raised when an invalid filter was provided to find."""
 
 
 class MultipleHitsFoundError(FindError):
@@ -159,14 +125,11 @@ class MultipleHitsFoundError(FindError):
     single hit was expected.
     """
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def __init__(
         self,
         *,
-        filter_: Mapping[str, str] | None = None,
-        mapping: Mapping[str, str] | None = None,
+        filter_: Mapping[str, str],
     ):
-        filter_ = resolve_filter(filter_, mapping)
         message = (
             "Multiple hits were found for the following key-value pairs while only a"
             f" single one was expected: {filter_}"
@@ -179,14 +142,11 @@ class NoHitsFoundError(FindError):
     single hit was expected.
     """
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def __init__(
         self,
         *,
-        filter_: Mapping[str, str] | None = None,
-        mapping: Mapping[str, str] | None = None,
+        filter_: Mapping[str, str],
     ):
-        filter_ = resolve_filter(filter_, mapping)
         message = (
             "No hits were found for the following key-value pairs while a single one"
             f" was expected: {filter_}"
@@ -298,7 +258,7 @@ class Dao(typing.Protocol[Dto]):
                 when resource with the id specified in the dto was not found
             PreconditionFailedError:
                 when the resource exists but doesn't match `precondition`
-            InvalidMappingError: when `precondition` doesn't pass validation
+            InvalidFilterError: when `precondition` doesn't pass validation
             UniqueConstraintViolationError:
                 when updating the dto would violate a unique index constraint over some
                 field other than the ID field.
@@ -316,12 +276,10 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     async def find_one(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
     ) -> Dto:
         """Find the resource that matches the specified filter.
 
@@ -337,8 +295,6 @@ class Dao(typing.Protocol[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields
-            mapping:
-                Deprecated alias for `filter_`.
 
         Returns:
             Returns a hit in the form of the respective DTO model if exactly one hit
@@ -352,12 +308,10 @@ class Dao(typing.Protocol[Dto]):
         """
         ...
 
-    # TODO: Remove `mapping` when moving hexkit to v11.0.0
     def find_all(
         self,
         *,
-        filter_: Mapping[str, Any] | None = None,
-        mapping: Mapping[str, Any] | None = None,
+        filter_: Mapping[str, Any],
         skip: int | None = None,
         limit: int | None = None,
         sort: list[str] | None = None,
@@ -373,8 +327,6 @@ class Dao(typing.Protocol[Dto]):
             filter_:
                 A mapping where the keys correspond to the names of resource fields
                 and the values correspond to the actual values of the resource fields.
-            mapping:
-                Deprecated alias for `filter_`.
             skip:
                 Number of matching resources to skip before yielding results.
                 Defaults to None (no skipping).
@@ -394,7 +346,7 @@ class Dao(typing.Protocol[Dto]):
             A FindResult that is async-iterable and also provides total_count().
 
         Raises:
-            InvalidMappingError: If `mapping` doesn't pass validation.
+            InvalidFilterError: If `filter_` doesn't pass validation.
             ValueError: if `skip` or `limit` are less than 0.
         """
         ...
