@@ -24,18 +24,25 @@ import pytest
 from ghga_service_commons.utils.utc_dates import now_as_utc
 from hexkit.protocols.dao import ResourceNotFoundError
 from metldata.artifacts_rest.artifact_dao import ArtifactDaoCollection
+from metldata.artifacts_rest.artifact_info import get_artifact_info_dict
 from metldata.artifacts_rest.load_resources import (
     convert_file_information,
     get_file_slots,
 )
 from metldata.artifacts_rest.models import ArtifactResource, GlobalStats
 from metldata.load.auth import generate_token
+from metldata.load.file_governance import (
+    get_file_governance_dao,
+    resolve_governance_records,
+)
+from metldata.load.models import ArtifactResourceDict, FileGovernanceRecord
 from metldata.load.stats import STATS_COLLECTION_NAME
 from tests.fixtures.load.joint import (
     EMBEDDED_DATASET_TEST_PATH,
     JointFixture,
     joint_fixture,  # noqa: F401
 )
+from tests.fixtures.load.utils import copy_as_other_study
 from tests.fixtures.workflows import EXAMPLE_ARTIFACTS
 
 pytestmark = pytest.mark.asyncio()
@@ -421,6 +428,112 @@ async def test_load_artifacts_endpoint_invalid_publishable_artifact(
     assert expected_detail in response.json()["detail"]
     db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
     assert not db["added_accessions"].find().to_list()
+
+
+async def _load(
+    joint_fixture: JointFixture,  # noqa: F811
+    artifact_resources: ArtifactResourceDict,
+) -> None:
+    """Load the given artifacts and expect success."""
+    response = await joint_fixture.client.post(
+        "/rpc/load-artifacts",
+        json=artifact_resources,
+        headers={"Authorization": f"Bearer {joint_fixture.token}"},
+    )
+    assert response.status_code == 204
+
+
+async def _stored_governance_records(
+    joint_fixture: JointFixture,  # noqa: F811
+) -> list[FileGovernanceRecord]:
+    """Return the stored governance records, sorted by file accession."""
+    dao = await get_file_governance_dao(dao_factory=joint_fixture.mongodb.dao_factory)
+    return sorted(
+        [record async for record in dao.find_all(filter_={})],
+        key=lambda record: record.file_accession,
+    )
+
+
+def _expected_governance_records(
+    joint_fixture: JointFixture,  # noqa: F811
+    artifact_resources: ArtifactResourceDict,
+) -> list[FileGovernanceRecord]:
+    """Resolve the governance records of the given artifacts, sorted by file
+    accession.
+    """
+    return sorted(
+        resolve_governance_records(
+            artifact_resources=artifact_resources,
+            artifact_info_dict=get_artifact_info_dict(
+                artifact_infos=joint_fixture.artifact_infos
+            ),
+            governance_artifact_name=joint_fixture.config.governance_artifact_name,
+        ),
+        key=lambda record: record.file_accession,
+    )
+
+
+async def test_governance_records_follow_full_state(
+    joint_fixture: JointFixture,  # noqa: F811
+):
+    """Test that the loader stores the governance of every file of the loaded
+    studies, and that a load which drops a study deletes the records of its files.
+    """
+    artifacts_to_load = deepcopy(joint_fixture.artifact_resources)
+    governance_artifact_name = joint_fixture.config.governance_artifact_name
+    first_study = artifacts_to_load[governance_artifact_name][0]
+    second_study = copy_as_other_study(first_study, prefix="SECOND_")
+    artifacts_to_load[governance_artifact_name].append(second_study)
+
+    await _load(joint_fixture, artifacts_to_load)
+    stored_records = await _stored_governance_records(joint_fixture)
+    first_study_file_count = len(
+        _expected_governance_records(
+            joint_fixture, {governance_artifact_name: [first_study]}
+        )
+    )
+    assert first_study_file_count > 0
+    assert len(stored_records) == 2 * first_study_file_count
+    assert stored_records == _expected_governance_records(
+        joint_fixture, artifacts_to_load
+    )
+
+    artifacts_to_load[governance_artifact_name] = [second_study]
+    await _load(joint_fixture, artifacts_to_load)
+    stored_records = await _stored_governance_records(joint_fixture)
+    assert len(stored_records) == first_study_file_count
+    assert stored_records == _expected_governance_records(
+        joint_fixture, artifacts_to_load
+    )
+
+    await _load(joint_fixture, {})
+    assert await _stored_governance_records(joint_fixture) == []
+
+
+async def test_invalid_governance_rejected(
+    joint_fixture: JointFixture,  # noqa: F811
+):
+    """Test that artifacts whose governance cannot be resolved are rejected with
+    422 before anything is written to the database.
+    """
+    artifacts_to_load = deepcopy(joint_fixture.artifact_resources)
+    governance_artifact = artifacts_to_load[
+        joint_fixture.config.governance_artifact_name
+    ][0]
+    for dataset in governance_artifact["content"]["datasets"]:
+        dataset["data_access_policy"] = "DANGLING"
+
+    response = await joint_fixture.client.post(
+        "/rpc/load-artifacts",
+        json=artifacts_to_load,
+        headers={"Authorization": f"Bearer {joint_fixture.token}"},
+    )
+
+    assert response.status_code == 422
+    assert "DANGLING" in response.json()["detail"]
+    db = joint_fixture.mongodb.client[joint_fixture.config.db_name]
+    for collection_name in db.list_collection_names():
+        assert not db[collection_name].find().to_list(), collection_name
 
 
 async def test_load_artifacts_endpoint_invalid_token(
