@@ -29,8 +29,8 @@ export interface UploadBoxPriority {
 /**
  * Put the upload boxes that are not archived in priority order. Entries that
  * match no box or an archived box are ignored. Boxes missing from the list come
- * after the listed ones, oldest `last_changed` first, which is where the RS puts
- * them when it next repairs the list.
+ * after the listed ones, oldest `last_changed` first and then by ID, which is
+ * where the RS puts them when it next repairs the list.
  * @param boxes - all upload boxes
  * @param priority - the priority order loaded from the RS
  * @returns the upload boxes that are not archived, the highest priority first
@@ -49,6 +49,9 @@ export function prioritizeBoxes<
   const listedIds = new Set(listedBoxes.map((box) => box.id));
   const missingBoxes = [...boxesById.values()]
     .filter((box) => !listedIds.has(box.id))
-    .sort((a, b) => a.last_changed.localeCompare(b.last_changed));
+    .sort(
+      (a, b) =>
+        a.last_changed.localeCompare(b.last_changed) || a.id.localeCompare(b.id),
+    );
   return [...listedBoxes, ...missingBoxes];
 }

@@ -68,6 +68,22 @@ describe('prioritizeBoxes', () => {
     ]);
   });
 
+  it('should put missing boxes with the same last change in ID order', () => {
+    const last_changed = '2025-01-01T09:00:00Z';
+    const newBoxes = [
+      { id: 'f', state: open, last_changed },
+      { id: 'e', state: open, last_changed },
+    ];
+    const priority = priorityOf(['a', 'b', 'c']);
+    expect(idsOf(prioritizeBoxes([...BOXES, ...newBoxes], priority))).toEqual([
+      'a',
+      'b',
+      'c',
+      'e',
+      'f',
+    ]);
+  });
+
   it('should put all boxes oldest first before the first change', () => {
     const priority: UploadBoxPriority = {
       version: 0,

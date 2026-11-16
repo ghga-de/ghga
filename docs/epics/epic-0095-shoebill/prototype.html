@@ -24,11 +24,11 @@
     <table>
       <thead>
         <tr>
-          <th id="priority-header"><button type="button" id="sort-priority">Priority</button></th>
           <th>Title</th>
           <th>State</th>
           <th>Files</th>
           <th>Location</th>
+          <th id="priority-header"><button type="button" id="sort-priority">Prio</button></th>
           <th>Last change</th>
         </tr>
       </thead>
@@ -182,7 +182,7 @@ function renderList() {
   const rows = [...boxes].sort(sortByPriority ? byPriority : byDefault);
   $("box-rows").replaceChildren(...rows.map((box) => {
     const row = document.createElement("tr");
-    for (const value of [position(box.id) || "", box.title, box.state, box.files, box.storage, box.lastChange]) {
+    for (const value of [box.title, box.state, box.files, box.storage, position(box.id) || "", box.lastChange]) {
       const cell = document.createElement("td");
       cell.textContent = value;
       row.append(cell);

@@ -44,9 +44,11 @@ test('can use Upload Box manager when logged in', async ({ adminPage: page }) =>
   ).toBeVisible();
 
   // the priority order arrives in a request of its own as well
-  await expect(table.getByRole('columnheader', { name: 'Priority' })).toBeVisible();
+  await expect(table.getByRole('columnheader', { name: 'Prio' })).toBeVisible();
+  const headers = await table.getByRole('columnheader').allTextContents();
+  const prio = headers.findIndex((header) => header.includes('Prio'));
   const cohortRow = table.getByRole('row', { name: /Large Cohort/ });
-  await expect(cohortRow.getByRole('cell').first()).toHaveText('1');
+  await expect(cohortRow.getByRole('cell').nth(prio)).toHaveText('1');
 
   // Check for filter controls. On large viewports the filter panel is always visible (no toggle button),
   // while on small viewports a toggle button is used.

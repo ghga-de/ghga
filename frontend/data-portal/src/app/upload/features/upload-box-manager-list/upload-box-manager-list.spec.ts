@@ -66,14 +66,26 @@ const notifyMock = {
 };
 
 /**
- * Get the text in the Priority column of the table body, from top to bottom.
- * @returns the priority of each row, empty for rows without one
+ * Get the text in the Prio column of a row.
+ * @param row - a row of the table body
+ * @returns the position of the box, empty for a box without one
  */
-function priorityColumn(): string[] {
+function prioOf(row: HTMLElement): string {
+  const column = screen
+    .getAllByRole('columnheader')
+    .findIndex((header) => header.textContent?.includes('Prio'));
+  return within(row).getAllByRole('cell')[column].textContent?.trim() ?? '';
+}
+
+/**
+ * Get the text in the Prio column of the table body, from top to bottom.
+ * @returns the position of each box, empty for boxes without one
+ */
+function prioColumn(): string[] {
   return screen
     .getAllByRole('row')
     .filter((row) => !row.closest('thead'))
-    .map((row) => within(row).getAllByRole('cell')[0].textContent?.trim() ?? '');
+    .map(prioOf);
 }
 
 describe('UploadBoxManagerList', () => {
@@ -156,9 +168,7 @@ describe('UploadBoxManagerList', () => {
 
   it('should show the position of each box that is not archived', () => {
     const positionOf = (title: RegExp) =>
-      within(screen.getByRole('row', { name: title }))
-        .getAllByRole('cell')[0]
-        .textContent?.trim();
+      prioOf(screen.getByRole('row', { name: title }));
     expect(positionOf(/Large Cohort/)).toBe('1');
     expect(positionOf(/Upload Box of John/)).toBe('3');
     // Joan's box is archived
@@ -166,17 +176,17 @@ describe('UploadBoxManagerList', () => {
   });
 
   it('should sort by priority, archived boxes last', async () => {
-    const header = screen.getByRole('columnheader', { name: /Priority/ });
+    const header = screen.getByRole('columnheader', { name: /Prio/ });
     await userEvent.click(header);
     await result.fixture.whenStable();
-    expect(priorityColumn()).toEqual(['1', '2', '3', '4', '5', '6', '']);
+    expect(prioColumn()).toEqual(['1', '2', '3', '4', '5', '6', '']);
 
     await userEvent.click(header);
     await result.fixture.whenStable();
-    expect(priorityColumn()).toEqual(['6', '5', '4', '3', '2', '1', '']);
+    expect(prioColumn()).toEqual(['6', '5', '4', '3', '2', '1', '']);
   });
 
-  it('should leave the Priority column empty if the priority order fails', async () => {
+  it('should leave the Prio column empty if the priority order fails', async () => {
     expect(screen.queryByText(/error retrieving the priority order/)).toBeNull();
 
     uploadBoxService.boxPriority.error.set(new Error('backend unavailable'));
@@ -186,7 +196,7 @@ describe('UploadBoxManagerList', () => {
     expect(
       screen.getByText(/There was an error retrieving the priority order/),
     ).toBeVisible();
-    expect(priorityColumn()).toEqual(Array(uploadBoxes.boxes.length).fill(''));
+    expect(prioColumn()).toEqual(Array(uploadBoxes.boxes.length).fill(''));
     // The boxes are still listed
     expect(screen.getByText('Research Data Upload Box of John')).toBeVisible();
   });
