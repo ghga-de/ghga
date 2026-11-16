@@ -1522,3 +1522,26 @@ async def test_dao_update_first_operators_only(mongodb: MongoDbFixture):
     changed = await dao.update_first(filter_={}, changes={"$inc": {"field_b": 1}})
 
     assert changed == resource.model_copy(update={"field_b": 11})
+
+
+async def test_dao_update_first_unique_constraint(mongodb: MongoDbFixture):
+    """Test that update_first() raises UniqueConstraintViolationError when a change
+    would violate a unique index, and leaves the resource unchanged.
+    """
+    dao = await mongodb.dao_factory.get_dao(
+        name="example",
+        dto_model=ExampleDto,
+        id_field="id",
+        indexes=[MongoDbIndex(fields="field_a", properties={"unique": True})],
+    )
+    first = ExampleDto(field_a="first")
+    second = ExampleDto(field_a="second")
+    await dao.insert(first)
+    await dao.insert(second)
+
+    with pytest.raises(UniqueConstraintViolationError):
+        await dao.update_first(
+            filter_={"field_a": "second"}, changes={"field_a": "first"}
+        )
+
+    assert await dao.get_by_id(second.id) == second
