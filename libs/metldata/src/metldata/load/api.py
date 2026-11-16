@@ -32,6 +32,11 @@ from metldata.load.aggregator import DbAggregator
 from metldata.load.auth import check_token
 from metldata.load.config import ArtifactLoaderAPIConfig
 from metldata.load.event_publisher import EventPubTranslator
+from metldata.load.file_governance import (
+    get_file_governance_dao,
+    load_governance_records_using_dao,
+    resolve_governance_records,
+)
 from metldata.load.load import (
     ArtifactResourcesInvalid,
     check_artifact_resources,
@@ -85,6 +90,7 @@ async def rest_api_factory(  # noqa: PLR0913
         artifact_infos=artifact_infos,
         publishable_artifacts=config.publishable_artifacts,
     )
+    file_governance_dao = await get_file_governance_dao(dao_factory=dao_factory)
 
     async def require_token_context(
         credentials: HTTPAuthorizationCredentials = Depends(
@@ -113,6 +119,13 @@ async def rest_api_factory(  # noqa: PLR0913
                 artifact_infos=artifact_info_dict,
                 publishable_artifacts=config.publishable_artifacts,
             )
+            # resolved before anything is written, so that a failure leaves the
+            # database untouched:
+            governance_records = resolve_governance_records(
+                artifact_resources=artifact_resources,
+                artifact_info_dict=artifact_info_dict,
+                governance_artifact_name=config.governance_artifact_name,
+            )
         except ArtifactResourcesInvalid as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -133,6 +146,10 @@ async def rest_api_factory(  # noqa: PLR0913
                 artifact_resources=artifact_resources,
                 event_publisher=event_publisher,
                 dao_collection=dao_collection,
+            )
+
+            await load_governance_records_using_dao(
+                records=governance_records, dao=file_governance_dao
             )
 
             await create_stats_using_aggregator(

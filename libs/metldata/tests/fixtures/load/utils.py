@@ -17,4 +17,29 @@
 
 from pathlib import Path
 
+from metldata.load.models import ArtifactJson
+
 BASE_DIR = Path(__file__).parent.resolve()
+
+
+def copy_as_other_study(artifact: ArtifactJson, *, prefix: str) -> ArtifactJson:
+    """Copy an artifact as another study by prefixing every accession in it,
+    including the study accession it is sent with.
+    """
+    accessions = {
+        resource["accession"]
+        for resources in artifact["content"].values()
+        for resource in resources
+        if "accession" in resource
+    }
+
+    def prefixed(value):
+        if isinstance(value, str) and value in accessions:
+            return f"{prefix}{value}"
+        if isinstance(value, list):
+            return [prefixed(item) for item in value]
+        if isinstance(value, dict):
+            return {key: prefixed(item) for key, item in value.items()}
+        return value
+
+    return prefixed(artifact)
