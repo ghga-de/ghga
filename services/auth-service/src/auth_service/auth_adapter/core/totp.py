@@ -224,7 +224,7 @@ class TOTPHandler(TOTPHandlerPort[TOTPToken]):
         )
         if for_time is None:
             for_time = now_as_utc()
-        return totp.at(for_time, counter_offset)
+        return totp.at(for_time, counter_offset=counter_offset)
 
     def verify_code(
         self,

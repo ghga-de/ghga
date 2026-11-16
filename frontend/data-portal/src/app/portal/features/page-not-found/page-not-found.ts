@@ -4,8 +4,9 @@
  * @license Apache-2.0
  */
 
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
+import { ConfigService } from '@app/shared/services/config';
 import { ExternalLink } from '@app/shared/ui/external-link/external-link';
 
 /**
@@ -16,4 +17,7 @@ import { ExternalLink } from '@app/shared/ui/external-link/external-link';
   imports: [MatIcon, ExternalLink],
   templateUrl: './page-not-found.html',
 })
-export class PageNotFound {}
+export class PageNotFound {
+  /** The URL of the public GHGA contact page */
+  protected contactUrl = inject(ConfigService).contactUrl;
+}

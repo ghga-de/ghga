@@ -32,6 +32,7 @@ from fastapi import (
     Response,
     status,
 )
+from fastapi.responses import JSONResponse
 from pydantic import UUID4, SecretStr
 
 from auth_service.claims_repository.core.utils import get_active_roles
@@ -133,6 +134,17 @@ async def health() -> None:
 add_allowed_routes()
 
 
+def _delete_session_cookie(response: Response) -> None:
+    """Tell the client to delete the session cookie."""
+    response.delete_cookie(
+        key=SESSION_COOKIE,
+        # must use the same params as in set_cookie
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+
 @router.post(
     AUTH_PATH + "/rpc/login",
     operation_id="login",
@@ -189,11 +201,22 @@ async def login(  # noqa: C901, PLR0913
         except NoHitsFoundError:
             user = None  # user is not yet registered
 
+    # Every response of this endpoint other than a 200 counts as denied for the
+    # ExtAuth protocol. We rely on the API gateway to pass all headers of a denied
+    # response on to the client, so that the session cookie can be set and deleted.
+    # With Istio, this means that headersToDownstreamOnDeny must stay unset or
+    # must contain Set-Cookie and X-Session.
+
     if user and user.status is not UserStatus.ACTIVE:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is disabled",
+        # The user is authenticated, but not allowed to use the session.
+        await session_store.delete_session(session.session_id)
+        denied = JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "User account is disabled"},
         )
+        if session_id:  # the cookie may also point to an expired session
+            _delete_session_cookie(denied)
+        return denied
 
     async def _get_roles(user: User) -> list[str]:
         """Get the active roles of the given user.
@@ -251,13 +274,7 @@ async def logout(
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     if session:
         await session_store.delete_session(session.session_id)
-        response.delete_cookie(
-            key=SESSION_COOKIE,
-            # must use the same params as in set_cookie
-            secure=True,
-            httponly=True,
-            samesite="lax",
-        )
+        _delete_session_cookie(response)
     return response
 
 
