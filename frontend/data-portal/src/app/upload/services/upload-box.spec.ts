@@ -26,6 +26,7 @@ import {
   UploadBoxState,
   UploadBoxVirtualFilter,
 } from '../models/box';
+import { UploadBoxPriority } from '../models/box-priority';
 import {
   BoxUploadsPage,
   DEFAULT_UPLOADS_PAGE_SIZE,
@@ -91,6 +92,25 @@ const ALPHA_AND_BETA_COUNTS_URL =
   FILE_STATE_COUNTS_URL +
   '?box_id=0a36607a-b53f-49ed-bf3e-a5f2dbc68001&box_id=0a36607a-b53f-49ed-bf3e-a5f2dbc68002';
 
+const PRIORITY_URL = 'http://mock.dev/rs/upload-box-priority';
+
+// Beta comes before Alpha, and Gamma is archived, so the RS has dropped it
+const TEST_PRIORITY: UploadBoxPriority = {
+  version: 2,
+  entries: [
+    {
+      research_data_upload_box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68002',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68002',
+    },
+    {
+      research_data_upload_box_id: '0a36607a-b53f-49ed-bf3e-a5f2dbc68001',
+      file_upload_box_id: 'b0f11e00-0000-4000-8000-a5f2dbc68001',
+    },
+  ],
+  changed_by: 'doe@test.dev',
+  last_changed: '2025-03-02T09:00:00Z',
+};
+
 /**
  * Mock the config service as needed for the upload box service.
  */
@@ -142,6 +162,10 @@ describe('UploadBoxService', () => {
     httpMock
       .match((req) => req.url === FILE_STATE_COUNTS_URL)
       .forEach((req) => req.flush({}));
+    // And the priority order, which loads together with the boxes.
+    httpMock
+      .match((req) => req.url === PRIORITY_URL)
+      .forEach((req) => req.flush(TEST_PRIORITY));
 
     httpMock.verify();
   });
@@ -378,6 +402,50 @@ describe('UploadBoxService', () => {
     await Promise.resolve();
 
     expect(service.fileStateCountsByBox()).toEqual({});
+  });
+
+  it('should fetch the priority order together with all upload boxes', async () => {
+    await loadBoxes();
+    expect(service.prioritizedUploadBoxes()).toBeUndefined();
+
+    const req = httpMock.expectOne(PRIORITY_URL);
+    expect(req.request.method).toBe('GET');
+    req.flush(TEST_PRIORITY);
+    await Promise.resolve();
+
+    const [alpha, beta] = TEST_BOX_RETRIEVAL_RESULTS.boxes;
+    expect(service.prioritizedUploadBoxes()).toEqual([beta, alpha]);
+  });
+
+  it('should fetch the priority order again when reloading all upload boxes', async () => {
+    await loadBoxes();
+    httpMock.expectOne(PRIORITY_URL).flush(TEST_PRIORITY);
+    await Promise.resolve();
+
+    service.reloadAllUploadBoxes();
+    testBed.tick();
+
+    httpMock
+      .expectOne('http://mock.dev/rs/upload-boxes')
+      .flush(TEST_BOX_RETRIEVAL_RESULTS);
+    httpMock.expectOne(PRIORITY_URL).flush({ ...TEST_PRIORITY, entries: [] });
+    await Promise.resolve();
+
+    // Without entries, the boxes come oldest first
+    const [alpha, beta] = TEST_BOX_RETRIEVAL_RESULTS.boxes;
+    expect(service.prioritizedUploadBoxes()).toEqual([alpha, beta]);
+  });
+
+  it('should keep the upload boxes when the priority order fails', async () => {
+    await loadBoxes();
+    httpMock
+      .expectOne(PRIORITY_URL)
+      .flush({ detail: 'RS unavailable' }, { status: 500, statusText: 'Error' });
+    await Promise.resolve();
+
+    expect(service.boxPriority.error()).toBeInstanceOf(HttpErrorResponse);
+    expect(service.prioritizedUploadBoxes()).toBeUndefined();
+    expect(service.uploadBoxes()).toEqual(TEST_BOX_RETRIEVAL_RESULTS.boxes);
   });
 
   it('should resolve storage aliases to storage location labels', async () => {

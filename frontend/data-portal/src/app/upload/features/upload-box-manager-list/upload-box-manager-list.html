@@ -5,8 +5,24 @@
 } @else if (uploadBoxesAreLoading()) {
   <p class="text-base">Loading upload boxes...</p>
 } @else {
+  @if (priorityError()) {
+    <p class="text-error"
+      >There was an error retrieving the priority order, so the Priority column is
+      empty. Please try again later.</p
+    >
+  }
   @let columns =
-    ['title', 'state', 'files', 'size', 'limit', 'location', 'last_change', 'details'];
+    [
+      'priority',
+      'title',
+      'state',
+      'files',
+      'size',
+      'limit',
+      'location',
+      'last_change',
+      'details',
+    ];
   <div class="overflow-auto">
     <table
       mat-table
@@ -17,6 +33,11 @@
       matSortDirection="asc"
       #sort="matSort"
     >
+      <ng-container matColumnDef="priority">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="w-24">Priority</th>
+        <td mat-cell *matCellDef="let box" class="tabular-nums">{{ box.priority }}</td>
+      </ng-container>
+
       <ng-container matColumnDef="title">
         <th mat-header-cell *matHeaderCellDef mat-sort-header class="min-w-64"
           >Title</th
