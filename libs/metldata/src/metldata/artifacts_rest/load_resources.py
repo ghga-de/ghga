@@ -41,6 +41,7 @@ from metldata.metadata_utils import (
     lookup_self_id,
     lookup_slot_in_resource,
 )
+from metldata.model_utils.essentials import FILE_CLASS_SUFFIX
 
 
 def extract_class_resources_from_artifact(
@@ -285,7 +286,7 @@ def get_file_slots(artifact_info: ArtifactInfo, resource: ArtifactResource):
     """Get files resource slots from file class names"""
     file_slots = []
     for class_name, resource_class in artifact_info.resource_classes.items():
-        if class_name.endswith("File"):
+        if class_name.endswith(FILE_CLASS_SUFFIX):
             anchor_point = resource_class.anchor_point
             slot_name = anchor_point.root_slot
 

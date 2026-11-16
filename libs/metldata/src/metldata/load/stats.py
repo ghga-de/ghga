@@ -27,6 +27,7 @@ from metldata.artifacts_rest.models import (
     ValueCount,
 )
 from metldata.load.aggregator import DbAggregator
+from metldata.model_utils.essentials import FILE_CLASS_SUFFIX
 
 STATS_COLLECTION_NAME = "stats"
 
@@ -36,7 +37,7 @@ STATS_COLLECTION_NAME = "stats"
 
 def get_stat_slot(resource_class: str) -> str | None:
     """Get the name of the slot that shall be used as grouping key."""
-    if resource_class.endswith("File"):
+    if resource_class.endswith(FILE_CLASS_SUFFIX):
         return "format"
     if resource_class.endswith("Protocol"):  # v1
         return "type"

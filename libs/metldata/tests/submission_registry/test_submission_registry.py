@@ -135,8 +135,18 @@ def test_happy(
         INVALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLE,
         {
             "studies": [{"alias": "shared"}],
-            "files": [{"alias": "shared", "filename": "shared.fastq"}],
-            "datasets": [],
+            "data_access_committees": [{"alias": "test_dac"}],
+            "data_access_policies": [
+                {"alias": "test_dap", "data_access_committee": "test_dac"}
+            ],
+            "datasets": [{"alias": "test_dataset", "data_access_policy": "test_dap"}],
+            "files": [
+                {
+                    "alias": "shared",
+                    "filename": "shared.fastq",
+                    "dataset": "test_dataset",
+                }
+            ],
         },
     ],
     ids=["invalid_against_model", "shared_alias"],

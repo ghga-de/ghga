@@ -71,9 +71,8 @@ def test_validate_one_study_per_submission(
     """
     validator = MetadataValidator(model=MINIMAL_MODEL_WITH_STUDY)
     metadata = {
+        **deepcopy(VALID_MINIMAL_METADATA_WITH_STUDY_EXAMPLES[0]),
         "studies": studies,
-        "files": [{"alias": "file_1", "filename": "file_1.fastq"}],
-        "datasets": [],
     }
 
     if expected_message is None:

@@ -127,6 +127,8 @@ TEST_LEGACY_PREFIXES = {
     "SampleFile": "GHGAF",
     "ExperimentFile": "GHGAF",
     "Dataset": "GHGAD",
+    "DataAccessPolicy": "GHGAP",
+    "DataAccessCommittee": "GHGAC",
     "Sample": "GHGAN",
     "Experiment": "GHGAX",
 }
