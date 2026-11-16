@@ -18,14 +18,21 @@
 Utilities for testing are located in `../testutils.py`.
 """
 
+from collections.abc import Mapping
 from contextlib import contextmanager
-from typing import Any
+from typing import Annotated, Any
 
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from pymongo.errors import DocumentTooLarge, PyMongoError
 
-from hexkit.protocols.dao import DaoError, DbTimeoutError, Dto
+from hexkit.protocols.dao import DaoError, DbTimeoutError, Dto, InvalidChangesError
 
-__all__ = ["document_to_dto", "dto_to_document", "translate_pymongo_errors"]
+__all__ = [
+    "document_to_dto",
+    "dto_to_document",
+    "split_changes",
+    "translate_pymongo_errors",
+]
 
 
 @contextmanager
@@ -67,3 +74,62 @@ def dto_to_document(dto: Dto, *, id_field: str) -> dict[str, Any]:
     document["_id"] = document.pop(id_field)
 
     return document
+
+
+def split_changes(
+    changes: Mapping[str, Any], *, dto_model: type[BaseModel], id_field: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split the `changes` of an `update_first` call into the serialized values of
+    model fields and the update operators.
+
+    Each plain value is validated against the type of its field and serialized the
+    same way as in `dto_to_document`. The values of update operators are passed on
+    as they are.
+
+    Returns:
+        A tuple of a mapping from field names to serialized values and a mapping
+        from operators (keys starting with `$`) to their values.
+
+    Raises:
+        InvalidChangesError:
+            If `changes` is empty, names the ID field or a field that is not in
+            the model, or contains a value that doesn't fit its field.
+    """
+    if not changes:
+        raise InvalidChangesError("The provided changes were empty.")
+
+    validated_values: dict[str, Any] = {}
+    operators: dict[str, Any] = {}
+    for key, value in changes.items():
+        if key.startswith("$"):
+            operators[key] = value
+            continue
+        if key == id_field:
+            raise InvalidChangesError(
+                f"The provided changes were invalid: the ID field '{id_field}'"
+                + " cannot be changed."
+            )
+        field_info = dto_model.model_fields.get(key)
+        if field_info is None:
+            raise InvalidChangesError(
+                f"The provided changes were invalid: '{key}' is not a field of"
+                + f" {dto_model.__name__}."
+            )
+        field_type: Any = field_info.annotation
+        for constraint in field_info.metadata:
+            field_type = Annotated[field_type, constraint]
+        adapter: TypeAdapter = TypeAdapter(field_type)
+        try:
+            validated_values[key] = adapter.validate_python(value)
+        except ValidationError as error:
+            raise InvalidChangesError(
+                f"The provided changes were invalid: the value for '{key}' does"
+                + f" not fit the field: {error}"
+            ) from error
+
+    # Serializing through the model applies its field serializers, as `model_dump`
+    # does for a whole DTO
+    field_values = dto_model.model_construct(**validated_values).model_dump(
+        include=set(validated_values)
+    )
+    return field_values, operators

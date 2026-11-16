@@ -30,6 +30,7 @@ from hexkit.protocols.dao import (
     DaoError,
     DaoFactoryBase,
     FindResult,
+    InvalidChangesError,
     MultipleHitsFoundError,
     NoHitsFoundError,
     PreconditionFailedError,
@@ -43,6 +44,7 @@ from hexkit.providers.mongodb.provider import (
     replace_id_field_in_find_filter,
     validate_find_filter,
 )
+from hexkit.providers.mongodb.provider.utils import split_changes
 
 __all__ = ["SUPPORTED_MQL_OPERATORS", "MockDAOEmptyError", "new_mock_dao_class"]
 
@@ -492,6 +494,81 @@ class BaseInMemDao(Generic[DTO]):
                 return False
         return True
 
+    def _select(
+        self, filter_: Mapping[str, Any], *, sort: list[str] | None
+    ) -> list[Document]:
+        """Return the stored documents that match the filter, in the given sort order.
+
+        Raises an InvalidFilterError if `filter_` doesn't pass validation.
+        """
+        validate_find_filter(filter_, dto_model=self._dto_model)
+        _filter = replace_id_field_in_find_filter(filter_, self._id_field)
+        predicates = build_predicates(_filter) if self._handle_mql else []
+
+        matching = [
+            resource
+            for resource in self.resources.values()
+            if self._resource_matches(resource, filter_, predicates)
+        ]
+
+        # Interpret the sorting specification and sort our resources accordingly
+        for spec in reversed(sort or []):
+            desc = spec.startswith("-")
+            field = spec.removeprefix("-")
+            # Only the exact ID field is translated to the internal "_id" field, matching
+            # the MongoDB provider. Other fields (including nested sub-fields of the ID,
+            # which MongoDB cannot sort by) are looked up as-is and resolve to None when
+            # absent, sorting consistently rather than raising - again like MongoDB.
+            doc_field = "_id" if field == self._id_field else field
+            matching.sort(key=partial(_sort_key, field_path=doc_field), reverse=desc)
+        return matching
+
+    async def update_first(
+        self,
+        *,
+        filter_: Mapping[str, Any],
+        changes: Mapping[str, Any],
+        sort: list[str] | None = None,
+    ) -> DTO:
+        """Change the first resource that matches the filter in the given sort order
+        and return the changed resource.
+
+        Plain values in `changes` are validated against their fields. Of the MongoDB
+        update operators, only `$inc` and `$set` are supported.
+
+        Raises:
+            InvalidFilterError: If `filter_` doesn't pass validation.
+            InvalidChangesError: If `changes` doesn't pass validation.
+            NoHitsFoundError: If no matching resource is found.
+            MQLError: If `changes` contains an unsupported update operator.
+        """
+        field_values, operators = split_changes(
+            changes, dto_model=self._dto_model, id_field=self._id_field
+        )
+        if unsupported := set(operators) - {"$inc", "$set"}:
+            raise MQLError(
+                f"The {sorted(unsupported)} update operators are not supported for"
+                + " use with the InMemDao."
+            )
+
+        id_changes = {*operators.get("$set", {}), *operators.get("$inc", {})}
+        if self._id_field in id_changes or "_id" in id_changes:
+            raise InvalidChangesError("The ID field cannot be changed.")
+        matching = self._select(filter_, sort=sort)
+        if not matching:
+            raise NoHitsFoundError(filter_=filter_)
+
+        # Work on a copy, so that a changed resource that fails validation is not stored
+        document = deepcopy(matching[0])
+        document.update(operators.get("$set", {}))
+        document.update(field_values)
+        for field, amount in operators.get("$inc", {}).items():
+            document[field] = (document.get(field) or 0) + amount
+
+        dto = self._deserialize(document)
+        self.resources[document["_id"]] = document
+        return dto
+
     def find_all(
         self,
         *,
@@ -515,26 +592,7 @@ class BaseInMemDao(Generic[DTO]):
         if limit is not None and limit < 0:
             raise ValueError("limit must be >= 0")
 
-        validate_find_filter(filter_, dto_model=self._dto_model)
-        _filter = replace_id_field_in_find_filter(filter_, self._id_field)
-        predicates = build_predicates(_filter) if self._handle_mql else []
-
-        matching = [
-            resource
-            for resource in self.resources.values()
-            if self._resource_matches(resource, filter_, predicates)
-        ]
-
-        # Interpret the sorting specification and sort our resources accordingly
-        for spec in reversed(sort or []):
-            desc = spec.startswith("-")
-            field = spec.removeprefix("-")
-            # Only the exact ID field is translated to the internal "_id" field, matching
-            # the MongoDB provider. Other fields are looked up as-is and resolve to None
-            # when absent, sorting consistently rather than raising - again like MongoDB.
-            doc_field = "_id" if field == self._id_field else field
-            matching.sort(key=partial(_sort_key, field_path=doc_field), reverse=desc)
-
+        matching = self._select(filter_, sort=sort)
         total = len(matching)
 
         async def _total_count() -> int:
