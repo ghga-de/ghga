@@ -609,23 +609,26 @@ components:
       title: StudyStatus
       type: string
     UpdateUploadBoxPriorityRequest:
-      description: Request model for moving boxes in the upload box priority list.
+      description: Request model for setting the order of the upload box priority
+        list.
       properties:
-        moves:
-          description: The moves to apply, in order
+        box_ids:
+          description: The IDs of all research data upload boxes that are not archived,
+            in the new order. Index 0 is the highest priority.
           items:
-            $ref: '#/components/schemas/UploadBoxPriorityMove'
-          title: Moves
+            format: uuid4
+            type: string
+          title: Box Ids
           type: array
         version:
-          description: The version of the list the moves were made on. It does not
-            have to match the stored version.
+          description: The version of the list the new order is based on, which must
+            be the stored version, or 0 if no list is stored yet
           minimum: 0.0
           title: Version
           type: integer
       required:
       - version
-      - moves
+      - box_ids
       title: UpdateUploadBoxPriorityRequest
       type: object
     UpdateUploadBoxRequest:
@@ -693,27 +696,6 @@ components:
       - file_upload_box_id
       title: upload_box_priority_entry
       type: object
-    UploadBoxPriorityMove:
-      description: A move of a box in the upload box priority list.
-      properties:
-        before:
-          anyOf:
-          - format: uuid4
-            type: string
-          - type: 'null'
-          description: The ID of the research data upload box to put the moved box
-            directly before, or None to put it at the end
-          title: Before
-        box_id:
-          description: The ID of the research data upload box to move
-          format: uuid4
-          title: Box Id
-          type: string
-      required:
-      - box_id
-      - before
-      title: UploadBoxPriorityMove
-      type: object
     UploadBoxPriorityResponse:
       description: 'The upload box priority list as the API returns it.
 
@@ -754,30 +736,6 @@ components:
       - last_changed
       - entries
       title: UploadBoxPriorityResponse
-      type: object
-    UploadBoxPrioritySaveResult:
-      description: The outcome of moving boxes in the upload box priority list.
-      properties:
-        includes_other_changes:
-          description: Whether the list was changed after the version the moves were
-            made on
-          title: Includes Other Changes
-          type: boolean
-        priority:
-          $ref: '#/components/schemas/UploadBoxPriorityResponse'
-          description: The stored list after the save
-        skipped:
-          description: The moves that were skipped because the box they should go
-            before was not in the list, or was the moved box itself
-          items:
-            $ref: '#/components/schemas/UploadBoxPriorityMove'
-          title: Skipped
-          type: array
-      required:
-      - priority
-      - skipped
-      - includes_other_changes
-      title: UploadBoxPrioritySaveResult
       type: object
     ValidationError:
       properties:
@@ -1085,14 +1043,12 @@ paths:
       summary: Get the upload box priority list
       tags:
       - UploadBoxPriority
-    patch:
-      description: Applies the moves to the stored list in order. A move puts a box
-        directly before another box, or at the end if `before` is null. A move is
-        skipped if `before` is not in the list or is the moved box itself, and the
-        moves after it still apply. Boxes that are archived or no longer exist are
-        dropped after the last move. `version` does not have to match the stored version;
-        it only sets `includes_other_changes`. Requires the Data Steward role.
-      operationId: update_upload_box_priority_upload_box_priority_patch
+    put:
+      description: Replaces the order of the stored list with `box_ids`, which must
+        hold every research data upload box that is not archived, once. `version`
+        must be the stored version, or 0 if no list is stored yet. Returns the stored
+        list after the save. Requires the Data Steward role.
+      operationId: set_upload_box_priority_upload_box_priority_put
       requestBody:
         content:
           application/json:
@@ -1104,19 +1060,22 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UploadBoxPrioritySaveResult'
-          description: Moves saved.
+                $ref: '#/components/schemas/UploadBoxPriorityResponse'
+          description: Order saved.
         '401':
           description: Not authenticated.
         '403':
           description: Not authorized.
+        '409':
+          description: The list changed since `version`, or holds other boxes than
+            `box_ids`.
         '422':
           description: Validation error in request body.
         '500':
-          description: The list kept changing during the save, or another error occurred.
+          description: Internal error.
       security:
       - HTTPBearer: []
-      summary: Move boxes in the upload box priority list
+      summary: Set the order of the upload box priority list
       tags:
       - UploadBoxPriority
   /upload-boxes:

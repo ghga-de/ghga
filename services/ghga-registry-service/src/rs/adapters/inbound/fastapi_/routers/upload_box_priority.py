@@ -22,13 +22,12 @@ from fastapi import APIRouter, status
 
 from rs.adapters.inbound.fastapi_ import dummies
 from rs.adapters.inbound.fastapi_.auth import StewardAuthContext
-from rs.adapters.inbound.fastapi_.http_exceptions import HttpInternalError
-from rs.constants import TRACER
-from rs.core.models import (
-    UpdateUploadBoxPriorityRequest,
-    UploadBoxPriorityResponse,
-    UploadBoxPrioritySaveResult,
+from rs.adapters.inbound.fastapi_.http_exceptions import (
+    HttpBoxVersionError,
+    HttpInternalError,
 )
+from rs.constants import TRACER
+from rs.core.models import UpdateUploadBoxPriorityRequest, UploadBoxPriorityResponse
 from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
 
 log = logging.getLogger(__name__)
@@ -67,51 +66,47 @@ async def get_upload_box_priority(
         ) from err
 
 
-@priority_router.patch(
+@priority_router.put(
     "",
-    summary="Move boxes in the upload box priority list",
-    description="Applies the moves to the stored list in order. A move puts a box"
-    + " directly before another box, or at the end if `before` is null. A move is"
-    + " skipped if `before` is not in the list or is the moved box itself, and the"
-    + " moves after it still apply. Boxes that are archived or no longer exist are"
-    + " dropped after the last move. `version` does not have to match the stored"
-    + " version; it only sets `includes_other_changes`. Requires the Data Steward"
-    + " role.",
-    response_model=UploadBoxPrioritySaveResult,
+    summary="Set the order of the upload box priority list",
+    description="Replaces the order of the stored list with `box_ids`, which must hold"
+    + " every research data upload box that is not archived, once. `version` must be"
+    + " the stored version, or 0 if no list is stored yet. Returns the stored list"
+    + " after the save. Requires the Data Steward role.",
+    response_model=UploadBoxPriorityResponse,
     status_code=status.HTTP_200_OK,
     responses={
-        200: {"description": "Moves saved."},
+        200: {"description": "Order saved."},
         401: {"description": "Not authenticated."},
         403: {"description": "Not authorized."},
-        422: {"description": "Validation error in request body."},
-        500: {
+        409: {
             "description": (
-                "The list kept changing during the save, or another error occurred."
+                "The list changed since `version`, or holds other boxes than"
+                + " `box_ids`."
             )
         },
+        422: {"description": "Validation error in request body."},
+        500: {"description": "Internal error."},
     },
 )
-@TRACER.start_as_current_span("routes.update_upload_box_priority")
-async def update_upload_box_priority(
+@TRACER.start_as_current_span("routes.set_upload_box_priority")
+async def set_upload_box_priority(
     request: UpdateUploadBoxPriorityRequest,
     registry: dummies.RegistryDummy,
     auth_context: StewardAuthContext,
-) -> UploadBoxPrioritySaveResult:
-    """Move boxes in the upload box priority list.
+) -> UploadBoxPriorityResponse:
+    """Set the order of the upload box priority list.
 
     Requires Data Steward role.
     """
     try:
-        return await registry.priority_manager.move_boxes(
+        return await registry.priority_manager.set_order(
             version=request.version,
-            moves=request.moves,
+            box_ids=request.box_ids,
             user_id=UUID(auth_context.id),
         )
-    except UploadBoxPriorityManagerPort.PriorityUpdateError as err:
-        log.error(err)
-        raise HttpInternalError(
-            message="The upload box priority list kept changing, please try again"
-        ) from err
+    except UploadBoxPriorityManagerPort.PriorityChangedError as err:
+        raise HttpBoxVersionError() from err
     except Exception as err:
         log.error(err, exc_info=True)
         raise HttpInternalError(

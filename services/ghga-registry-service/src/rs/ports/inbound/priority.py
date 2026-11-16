@@ -19,11 +19,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import UUID4
 
-from rs.core.models import (
-    UploadBoxPriorityMove,
-    UploadBoxPriorityResponse,
-    UploadBoxPrioritySaveResult,
-)
+from rs.core.models import UploadBoxPriorityResponse
 
 
 class UploadBoxPriorityManagerPort(ABC):
@@ -42,6 +38,17 @@ class UploadBoxPriorityManagerPort(ABC):
             super().__init__(
                 "Could not update the upload box priority list because it kept"
                 + " changing."
+            )
+
+    class PriorityChangedError(RuntimeError):
+        """Raised when a new order is based on an outdated version of the priority
+        list, or does not hold the same boxes as the list.
+        """
+
+        def __init__(self, *, version: int) -> None:
+            super().__init__(
+                f"The new order is based on version {version} of the upload box"
+                + " priority list, but the list has changed since or holds other boxes."
             )
 
     @abstractmethod
@@ -67,19 +74,17 @@ class UploadBoxPriorityManagerPort(ABC):
         ...
 
     @abstractmethod
-    async def move_boxes(
-        self, *, version: int, moves: list[UploadBoxPriorityMove], user_id: UUID4
-    ) -> UploadBoxPrioritySaveResult:
-        """Apply the moves of a data steward to the stored priority list, in order.
+    async def set_order(
+        self, *, version: int, box_ids: list[UUID4], user_id: UUID4
+    ) -> UploadBoxPriorityResponse:
+        """Replace the order of the priority list with the order of a data steward.
 
-        Adds the missing boxes before the moves, and drops the entries for unknown,
-        archived and deleted boxes after the last move, so that later moves can refer
-        to such a box. A move of a box that is not in the list inserts it. A move is
-        skipped if `before` is neither None nor in the list, or is the moved box
-        itself. A skipped move does not stop the moves after it. `version` is the
-        version the moves were made on, and only sets `includes_other_changes`.
+        `box_ids` must hold every box that is not archived, once, and `version` must
+        be the stored version, or 0 if no list is stored yet. Returns the stored list
+        after the save. If the order is unchanged, writes nothing.
 
         Raises:
-            PriorityUpdateError: If other writes kept changing the list first.
+            PriorityChangedError: If the list changed since `version`, or does not
+                hold the same boxes as `box_ids`.
         """
         ...

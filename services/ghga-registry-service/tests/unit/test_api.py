@@ -45,9 +45,7 @@ from rs.core.models import (
     Study,
     StudyStatus,
     UploadBoxPriorityEntry,
-    UploadBoxPriorityMove,
     UploadBoxPriorityResponse,
-    UploadBoxPrioritySaveResult,
 )
 from rs.inject import prepare_rest_app
 from rs.ports.inbound.priority import UploadBoxPriorityManagerPort
@@ -1978,69 +1976,75 @@ async def test_get_upload_box_priority(
         assert response.status_code == 500
 
 
-async def test_update_upload_box_priority(
+async def test_set_upload_box_priority(
     config: Config, ds_auth_headers, user_auth_headers, bad_auth_headers
 ):
-    """Test the PATCH /upload-box-priority endpoint"""
+    """Test the PUT /upload-box-priority endpoint"""
     registry = AsyncMock()
     async with (
         prepare_rest_app(config=config, registry_override=registry) as app,
         AsyncTestClient(app=app) as rest_client,
     ):
         url = "/upload-box-priority"
-        move = UploadBoxPriorityMove(box_id=uuid4(), before=None)
-        body = {"version": 7, "moves": [move.model_dump(mode="json")]}
+        box_ids = [uuid4(), uuid4()]
+        body = {"version": 7, "box_ids": [str(box_id) for box_id in box_ids]}
 
         # unauthenticated
-        response = await rest_client.patch(url, json=body)
+        response = await rest_client.put(url, json=body)
         assert response.status_code == 401
 
         # bad credentials
-        response = await rest_client.patch(url, json=body, headers=bad_auth_headers)
+        response = await rest_client.put(url, json=body, headers=bad_auth_headers)
         assert response.status_code == 401
 
         # normal response but user is not a data steward (no data_steward role)
-        response = await rest_client.patch(url, json=body, headers=user_auth_headers)
+        response = await rest_client.put(url, json=body, headers=user_auth_headers)
         assert response.status_code == 403
-        registry.priority_manager.move_boxes.assert_not_called()
+        registry.priority_manager.set_order.assert_not_called()
 
         # normal response with data steward role
-        entry = UploadBoxPriorityEntry(
-            research_data_upload_box_id=move.box_id, file_upload_box_id=uuid4()
+        priority = UploadBoxPriorityResponse(
+            version=8,
+            changed_by=TEST_DS_ID,
+            last_changed=now_utc_ms_prec(),
+            entries=[
+                UploadBoxPriorityEntry(
+                    research_data_upload_box_id=box_id, file_upload_box_id=uuid4()
+                )
+                for box_id in box_ids
+            ],
         )
-        result = UploadBoxPrioritySaveResult(
-            priority=UploadBoxPriorityResponse(
-                version=8,
-                changed_by=TEST_DS_ID,
-                last_changed=now_utc_ms_prec(),
-                entries=[entry],
-            ),
-            skipped=[move],
-            includes_other_changes=True,
-        )
-        registry.priority_manager.move_boxes.return_value = result
-        response = await rest_client.patch(url, json=body, headers=ds_auth_headers)
+        registry.priority_manager.set_order.return_value = priority
+        response = await rest_client.put(url, json=body, headers=ds_auth_headers)
         assert response.status_code == 200
-        assert response.json() == result.model_dump(mode="json")
-        registry.priority_manager.move_boxes.assert_awaited_once_with(
-            version=7, moves=[move], user_id=TEST_DS_ID
+        assert response.json() == priority.model_dump(mode="json")
+        registry.priority_manager.set_order.assert_awaited_once_with(
+            version=7, box_ids=box_ids, user_id=TEST_DS_ID
         )
 
         # malformed body
         registry.reset_mock()
         for bad_body in [
-            {"moves": body["moves"]},
-            {"version": 7, "moves": [{"box_id": str(move.box_id)}]},
-            {"version": -1, "moves": []},
+            {"box_ids": body["box_ids"]},
+            {"version": 7},
+            {"version": -1, "box_ids": []},
+            {"version": 7, "box_ids": [str(box_ids[0])] * 2},
         ]:
-            response = await rest_client.patch(
+            response = await rest_client.put(
                 url, json=bad_body, headers=ds_auth_headers
             )
             assert response.status_code == 422
-        registry.priority_manager.move_boxes.assert_not_called()
+        registry.priority_manager.set_order.assert_not_called()
 
-        # the list kept changing, or another error occurred
-        for error in [UploadBoxPriorityManagerPort.PriorityUpdateError(), TypeError()]:
-            registry.priority_manager.move_boxes.side_effect = error
-            response = await rest_client.patch(url, json=body, headers=ds_auth_headers)
-            assert response.status_code == 500
+        # the list changed since the version, or holds other boxes
+        registry.priority_manager.set_order.side_effect = (
+            UploadBoxPriorityManagerPort.PriorityChangedError(version=7)
+        )
+        response = await rest_client.put(url, json=body, headers=ds_auth_headers)
+        assert response.status_code == 409
+        assert response.json()["exception_id"] == EXC_ID_BOX_VERSION_OUTDATED
+
+        # handle other exception
+        registry.priority_manager.set_order.side_effect = TypeError()
+        response = await rest_client.put(url, json=body, headers=ds_auth_headers)
+        assert response.status_code == 500

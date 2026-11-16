@@ -79,9 +79,7 @@ __all__ = [
     "UpdateUploadBoxRequest",
     "UploadBoxPriority",
     "UploadBoxPriorityEntry",
-    "UploadBoxPriorityMove",
     "UploadBoxPriorityResponse",
-    "UploadBoxPrioritySaveResult",
     "UploadBoxState",
     "UploadGrant",
     "ViewFileBoxStatsWorkOrder",
@@ -512,45 +510,24 @@ class UploadBoxPriorityResponse(BaseModel):
         return cls(**priority.model_dump(exclude={"id"}))
 
 
-class UploadBoxPriorityMove(BaseModel):
-    """A move of a box in the upload box priority list."""
-
-    box_id: UUID4 = Field(
-        ..., description="The ID of the research data upload box to move"
-    )
-    before: UUID4 | None = Field(
-        ...,
-        description="The ID of the research data upload box to put the moved box"
-        + " directly before, or None to put it at the end",
-    )
-
-
 class UpdateUploadBoxPriorityRequest(BaseModel):
-    """Request model for moving boxes in the upload box priority list."""
+    """Request model for setting the order of the upload box priority list."""
 
     version: NonNegativeInt = Field(
         ...,
-        description="The version of the list the moves were made on. It does not have"
-        + " to match the stored version.",
+        description="The version of the list the new order is based on, which must be"
+        + " the stored version, or 0 if no list is stored yet",
     )
-    moves: list[UploadBoxPriorityMove] = Field(
-        ..., description="The moves to apply, in order"
-    )
-
-
-class UploadBoxPrioritySaveResult(BaseModel):
-    """The outcome of moving boxes in the upload box priority list."""
-
-    priority: UploadBoxPriorityResponse = Field(
-        ..., description="The stored list after the save"
-    )
-    skipped: list[UploadBoxPriorityMove] = Field(
+    box_ids: list[UUID4] = Field(
         ...,
-        description="The moves that were skipped because the box they should go"
-        + " before was not in the list, or was the moved box itself",
+        description="The IDs of all research data upload boxes that are not archived,"
+        + " in the new order. Index 0 is the highest priority.",
     )
-    includes_other_changes: bool = Field(
-        ...,
-        description="Whether the list was changed after the version the moves were"
-        + " made on",
-    )
+
+    @field_validator("box_ids")
+    @classmethod
+    def must_not_repeat(cls, box_ids: list[UUID4]) -> list[UUID4]:
+        """Reject a list that holds a box more than once."""
+        if len(set(box_ids)) != len(box_ids):
+            raise ValueError("The list must not hold a box more than once.")
+        return box_ids
