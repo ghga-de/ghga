@@ -615,13 +615,13 @@ class BaseInMemDao(Generic[DTO]):
         dtos: Collection[DTO],
         write: Callable[[DTO], Awaitable[None]],
         *,
-        expected: type[DaoError],
-        stop: bool,
+        ordered: bool,
     ) -> None:
-        """Write the DTOs one by one, collecting `expected` errors per ID.
+        """Write the DTOs one by one, collecting each DaoError per ID.
 
-        With `stop`, the first expected error ends the batch, like a write error in an
-        ordered MongoDB bulk write.
+        Ordered, the batch ends at its first error other than a missing resource, like
+        an ordered MongoDB bulk write, which ends at its first write error and does not
+        count a missing resource as one.
         """
         dtos = list(dtos)
         ids = [getattr(dto, self._id_field) for dto in dtos]
@@ -630,9 +630,9 @@ class BaseInMemDao(Generic[DTO]):
         for position, dto in enumerate(dtos):
             try:
                 await write(dto)
-            except expected as error:
+            except DaoError as error:
                 errors[ids[position]] = error
-                if stop:
+                if ordered and not isinstance(error, ResourceNotFoundError):
                     skipped = ids[position + 1 :]
                     raise BatchOperationError(
                         errors=errors, not_attempted=skipped
@@ -647,9 +647,7 @@ class BaseInMemDao(Generic[DTO]):
 
         This DAO has no unique indexes, so the only failure is an existing ID.
         """
-        await self._write_each(
-            dtos, self.insert, expected=ResourceAlreadyExistsError, stop=ordered
-        )
+        await self._write_each(dtos, self.insert, ordered=ordered)
 
 
 def new_mock_dao_class(

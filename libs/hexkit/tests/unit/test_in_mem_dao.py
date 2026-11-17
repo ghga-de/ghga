@@ -28,6 +28,7 @@ from hexkit.protocols.dao import (
     PreconditionFailedError,
     ResourceAlreadyExistsError,
     ResourceNotFoundError,
+    UniqueConstraintViolationError,
 )
 from hexkit.providers.testing import MockDAOEmptyError, new_mock_dao_class
 from hexkit.providers.testing.dao import (
@@ -994,6 +995,36 @@ async def test_insert_many_ordered():
     assert list(caught.value.errors) == ["Candle"]
     assert caught.value.not_attempted == ("Hammer",)
     assert await stored_titles(dao) == ["Candle", "Wrench"]
+
+
+@pytest.mark.parametrize(
+    ("ordered", "not_attempted", "stored"),
+    [(False, (), ["Wrench", "Hammer"]), (True, ("Hammer",), ["Wrench"])],
+)
+async def test_insert_many_with_other_dao_error(
+    monkeypatch: pytest.MonkeyPatch,
+    ordered: bool,
+    not_attempted: tuple[str, ...],
+    stored: list[str],
+):
+    """Test that a batch fails only the DTO whose write raised another DaoError."""
+    dao = DaoClass()
+    insert = dao.insert
+
+    async def insert_without_candle(dto: InventoryItem) -> None:
+        if dto.title == "Candle":
+            raise UniqueConstraintViolationError(unique_fields={"count": dto.count})
+        await insert(dto)
+
+    monkeypatch.setattr(dao, "insert", insert_without_candle)
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.insert_many([WRENCH, CANDLE, HAMMER], ordered=ordered)
+
+    assert list(caught.value.errors) == ["Candle"]
+    assert isinstance(caught.value.errors["Candle"], UniqueConstraintViolationError)
+    assert caught.value.not_attempted == not_attempted
+    assert await stored_titles(dao) == stored
 
 
 @pytest.mark.parametrize("method", ["insert_many"])
