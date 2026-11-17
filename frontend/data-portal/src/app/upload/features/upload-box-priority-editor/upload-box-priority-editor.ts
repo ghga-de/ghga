@@ -101,9 +101,23 @@ export class UploadBoxPriorityEditor {
 
   protected saving = signal(false);
 
-  /** Whether the order can't be changed right now, while saving or loading */
+  /**
+   * Whether the order can't be changed right now, while saving or loading.
+   * Both the boxes and the order must have loaded, since each of them resets
+   * the steward's order when it arrives.
+   */
   protected busy = computed(
-    () => this.saving() || this.#uploadBoxService.boxPriority.isLoading(),
+    () =>
+      this.saving() ||
+      this.#uploadBoxService.boxRetrievalResults.isLoading() ||
+      this.#uploadBoxService.boxPriority.isLoading(),
+  );
+
+  /** Whether the boxes or their order failed to load */
+  protected loadFailed = computed(
+    () =>
+      !!this.#uploadBoxService.boxRetrievalResults.error() ||
+      !!this.#uploadBoxService.boxPriority.error(),
   );
 
   protected canSave = computed(
@@ -116,10 +130,10 @@ export class UploadBoxPriorityEditor {
   protected status = computed(() => {
     switch (this.#saveError()) {
       case 'conflict':
-        return (
-          'The priority order changed while you were editing. ' +
-          'This is the current order; please make your change again.'
-        );
+        return this.loadFailed()
+          ? 'The priority order changed while you were editing.'
+          : 'The priority order changed while you were editing. ' +
+              'This is the current order; please make your change again.';
       case 'failed':
         return 'Saving failed. Your changes are kept; please try again.';
     }

@@ -58,6 +58,10 @@ const STEWARD = { id: 'doe@test.dev', displayName: 'Dr. John Doe' } as DisplayUs
  * Mock the upload box service as needed by the reorder mode.
  */
 class MockUploadBoxService {
+  boxRetrievalResults = {
+    error: signal<Error | undefined>(undefined),
+    isLoading: signal(false),
+  };
   boxPriority = {
     value: signal<UploadBoxPriority>(PRIORITY),
     error: signal<Error | undefined>(undefined),
@@ -297,6 +301,54 @@ describe('UploadBoxPriorityEditor', () => {
     ).toBeVisible();
     expect(screen.getByRole('button', { name: 'Save priority' })).toBeDisabled();
   });
+
+  it('should not let the steward move boxes before the boxes have loaded again', async () => {
+    uploadBoxService.saveBoxPriority.mockReturnValue(
+      throwError(() => new HttpErrorResponse({ status: 409 })),
+    );
+    await click('Move Box B up');
+    await click('Save priority');
+
+    // The order arrives before the boxes
+    uploadBoxService.boxRetrievalResults.isLoading.set(true);
+    uploadBoxService.boxPriority.value.set({ ...PRIORITY, version: 8 });
+    uploadBoxService.prioritizedUploadBoxes.set([BOXES[2], BOXES[0], BOXES[1]]);
+    await result.fixture.whenStable();
+    expect(screen.getByRole('button', { name: 'Move Box A up' })).toBeDisabled();
+
+    uploadBoxService.boxRetrievalResults.isLoading.set(false);
+    await result.fixture.whenStable();
+    expect(screen.getByRole('button', { name: 'Move Box A up' })).toBeEnabled();
+  });
+
+  it.each(['boxes', 'order'])(
+    'should show an error if the %s fail to load again after a conflict',
+    async (failed) => {
+      uploadBoxService.saveBoxPriority.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 409 })),
+      );
+      await click('Move Box B up');
+      await click('Save priority');
+
+      const error = new HttpErrorResponse({ status: 500 });
+      if (failed === 'boxes') {
+        uploadBoxService.boxRetrievalResults.error.set(error);
+        uploadBoxService.prioritizedUploadBoxes.set([]);
+      } else {
+        uploadBoxService.boxPriority.error.set(error);
+        uploadBoxService.prioritizedUploadBoxes.set(undefined);
+      }
+      await result.fixture.whenStable();
+
+      expect(
+        screen.getByText(/error retrieving the upload boxes or their priority order/),
+      ).toBeVisible();
+      expect(screen.queryByText(/no boxes that are not archived/)).toBeNull();
+      expect(screen.queryByText(/This is the current order/)).toBeNull();
+      expect(screen.getByText(/The priority order changed/)).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Save priority' })).toBeDisabled();
+    },
+  );
 
   it('should keep the changes if the save fails', async () => {
     uploadBoxService.saveBoxPriority.mockReturnValue(

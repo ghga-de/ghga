@@ -52,7 +52,12 @@
     {{ status() }}
   </p>
 
-  @if (rows().length) {
+  @if (loadFailed()) {
+    <p class="text-error mb-0">
+      There was an error retrieving the upload boxes or their priority order. Please try
+      again later.
+    </p>
+  } @else if (rows().length) {
     <ol
       cdkDropList
       aria-label="Priority order"
