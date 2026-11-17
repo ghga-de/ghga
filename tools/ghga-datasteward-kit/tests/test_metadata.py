@@ -42,6 +42,7 @@ from ghga_datasteward_kit.cli.metadata import submit_legacy as submit_legacy_com
 from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import MetadataValidationError
+from metldata.submission_registry.models import Submission
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
     AMENDED_METADATA_PATH,
@@ -648,6 +649,11 @@ def write_changed_metadata(*, old: str, new: str) -> Path:
     return path
 
 
+def failing_insert_new(self: SubmissionStore, *, submission: Submission) -> None:
+    """Stand in for a submission store that cannot write."""
+    raise OSError("cannot write the submission")
+
+
 def assert_nothing_submitted() -> None:
     """Check that no submission and no source event were written."""
     assert not list(Path("submission_store").glob("*.json"))
@@ -744,18 +750,44 @@ def test_submit_legacy_refuses_non_flat_accession(
 
 
 @pytest.mark.usefixtures("legacy_amendment")
-def test_submit_legacy_refuses_registered_accession(example_workdir: Path):
-    """Test that a study accession already in the accession store is refused, so a
-    second run with the same accession adds no second submission and mints nothing.
+def test_submit_legacy_refuses_accession_of_stored_submission(example_workdir: Path):
+    """Test that a study accession a stored submission already has is refused, even
+    when it is missing from the accession store, so a second run adds no second
+    submission and mints nothing.
     """
     submit_promised()
+    submission_id = read_single_submission()["id"]
+
+    # as if registering the study accession had failed after the submission was written
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    accession_store["legacy"].remove(PROMISED_STUDY_ACCESSION)
+    Path("accession_store").write_text(json.dumps(accession_store), encoding="utf-8")
     accession_store_before = Path("accession_store").read_text(encoding="utf-8")
 
-    with pytest.raises(StudyAccessionInUseError, match=PROMISED_STUDY_ACCESSION):
+    with pytest.raises(StudyAccessionInUseError, match=submission_id):
         submit_promised()
 
     read_single_submission()
     assert Path("accession_store").read_text(encoding="utf-8") == accession_store_before
+
+
+@pytest.mark.usefixtures("legacy_amendment")
+def test_submit_legacy_accepts_accession_entered_by_hand(example_workdir: Path):
+    """Test that a study accession already in the accession store, but not used by
+    any submission, is accepted and stays registered once.
+    """
+    Path("accession_store").write_text(
+        json.dumps({"legacy": [PROMISED_STUDY_ACCESSION], "years": {}}),
+        encoding="utf-8",
+    )
+
+    submit_promised()
+
+    assert read_single_submission()["accession_map"]["studies"] == {
+        "test_study": PROMISED_STUDY_ACCESSION
+    }
+    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
+    assert accession_store["legacy"].count(PROMISED_STUDY_ACCESSION) == 1
 
 
 @pytest.mark.usefixtures("legacy_amendment")
@@ -780,19 +812,20 @@ def test_submit_legacy_alias_repeated_in_class(example_workdir: Path):
 
 
 @pytest.mark.usefixtures("legacy_amendment")
-def test_submit_legacy_failed_write_keeps_accession_free(example_workdir: Path):
+def test_submit_legacy_failed_write_keeps_accession_free(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Test that a run that cannot write the submission does not register the study
-    accession, so the next run with the same accession goes through.
+    accession, and that the next run with the same accession goes through.
     """
-    Path("submission_store").rmdir()
-
-    with pytest.raises(FileNotFoundError):
-        submit_promised()
+    with monkeypatch.context() as patch:
+        patch.setattr(SubmissionStore, "insert_new", failing_insert_new)
+        with pytest.raises(OSError, match="cannot write the submission"):
+            submit_promised()
 
     accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
     assert PROMISED_STUDY_ACCESSION not in accession_store["legacy"]
 
-    Path("submission_store").mkdir()
     submit_promised()
     assert read_single_submission()["accession_map"]["studies"] == {
         "test_study": PROMISED_STUDY_ACCESSION

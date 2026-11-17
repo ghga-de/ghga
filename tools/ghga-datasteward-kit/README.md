@@ -114,16 +114,16 @@ Make note of the ID, since `metadata amend` asks for it when the submission gain
 Before minting or writing anything, the command refuses any of the following:
 
 - a study accession that is not a flat study accession, `GHGAS` and 14 digits (`StudyAccessionNotFlatError`);
-- a study accession already listed under `legacy` in the accession store (`StudyAccessionInUseError`), which is how a second submission with the same accession is caught;
+- a study accession that a submission in the submission store already has as its study accession (`StudyAccessionInUseError`, naming that submission);
 - metadata that fails validation against the model, or uses an alias twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias;
 - metadata with resources of a class that has no flat prefix (`AccessionGenerationError`).
 
-The command itself adds the study accession to `legacy`, once the submission is written.
-Do not enter a promised accession there by hand: the command would then refuse it.
-A run that is refused for its metadata, or cannot write the submission, leaves the study accession free, so it can be repeated once the cause is corrected.
+A study accession already listed under `legacy` in the accession store is accepted, since it may have been entered there by hand.
+Once the submission is written, the command adds the study accession to `legacy` if it is not there yet.
+A run that is refused for its metadata, or cannot write the submission, stores no submission, so it can be repeated once the cause is corrected.
 
-If the command fails after that, while publishing the source event, it prints no ID, and a rerun is refused because the study accession is now registered.
-The submission is stored all the same: it is the file `<submission_store_dir>/<id>.json` that holds the study accession, which `grep -l <study accession> <submission_store_dir>/*.json` finds.
+If the command fails after that, while publishing the source event, it prints no ID, and a rerun is refused because the stored submission holds the study accession.
+The refusal names that submission; `grep -l <study accession> <submission_store_dir>/*.json` finds it as well.
 Run `metadata amend --submission-id <id>` with the same metadata path to publish its source event; it keeps every accession and asks nothing.
 
 #### metadata amend

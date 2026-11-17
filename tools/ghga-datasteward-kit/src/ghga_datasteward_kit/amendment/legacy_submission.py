@@ -78,16 +78,14 @@ def submit_legacy_metadata(
     flat accession and whose other resources get new flat accessions. Returns the ID
     of the submission.
 
-    The study accession is registered in the accession store only once the metadata
-    is validated, the other accessions are minted and the submission is written, so
-    a run that was refused or could not write can be repeated with the same
-    accession.
+    A study accession already in the accession store is accepted, and registered
+    there once the submission is written if it is not.
 
     Raises:
         StudyAccessionNotFlatError:
             when the given study accession is not a flat study accession.
         StudyAccessionInUseError:
-            when the given study accession is already in the accession store.
+            when a stored submission already has the given study accession.
         MetadataValidator.ValidationError:
             when the metadata failed validation against the metadata model or an
             alias is repeated in its class.
@@ -104,13 +102,23 @@ def submit_legacy_metadata(
             study_accession=study_accession, study_prefix=study_prefix
         )
 
-    accession_store = LegacyAccessionStore(config=config)
-    if accession_store.has_legacy(accession=study_accession):
-        raise StudyAccessionInUseError(study_accession=study_accession)
-
     # loaded once: every access to `config.metadata_model` reads the model file again
     model = config.metadata_model
     anchor_points_by_target = get_anchors_points_by_target(model=model)
+    study_anchor = lookup_anchor_point(
+        class_name=config.study_class_name,
+        anchor_points_by_target=anchor_points_by_target,
+    )
+
+    # the submission store, not the accession store, tells whether a study holds the
+    # accession: a promised accession may have been entered there by hand
+    submission_store = SubmissionStore(config=config)
+    for submission_id in submission_store.get_all_submission_ids():
+        stored_map = submission_store.get_by_id(submission_id).accession_map
+        if study_accession in stored_map.get(study_anchor.root_slot, {}).values():
+            raise StudyAccessionInUseError(
+                study_accession=study_accession, submission_id=submission_id
+            )
 
     MetadataValidator(model=model).validate(metadata)
     # a flat accession holds no alias, so only a repeat within a class matters
@@ -125,10 +133,6 @@ def submit_legacy_metadata(
         study_class_name=config.study_class_name,
     )
 
-    study_anchor = lookup_anchor_point(
-        class_name=config.study_class_name,
-        anchor_points_by_target=anchor_points_by_target,
-    )
     # the model allows exactly one study, so the validated metadata holds one
     study_alias = lookup_self_id(
         resource=metadata[study_anchor.root_slot][0],
@@ -137,6 +141,7 @@ def submit_legacy_metadata(
 
     # the study is found in the map and kept; the legacy registry mints the rest and
     # stores every class, so the map is flat throughout
+    accession_store = LegacyAccessionStore(config=config)
     accession_map = generate_accession_map(
         content=metadata,
         existing_accession_map={study_anchor.root_slot: {study_alias: study_accession}},
@@ -159,11 +164,13 @@ def submit_legacy_metadata(
         ),
     )
 
-    # the submission first: if it cannot be written, the study accession stays free
-    # for the next run. Should the publishing fail, `metadata amend` with the same
-    # metadata publishes the source event of the stored submission.
-    SubmissionStore(config=config).insert_new(submission=submission)
-    accession_store.save_legacy(accession=study_accession)
+    # the submission first: it is what refuses a second run with the same accession.
+    # Should the publishing fail, `metadata amend` with the same metadata publishes
+    # the source event of the stored submission.
+    submission_store.insert_new(submission=submission)
+    # registered so it is never minted; it may already be there, entered by hand
+    if not accession_store.has_legacy(accession=study_accession):
+        accession_store.save_legacy(accession=study_accession)
     SourceEventPublisher(
         config=config, provider=FileSystemEventPublisher(config=config)
     ).publish_submission(submission)

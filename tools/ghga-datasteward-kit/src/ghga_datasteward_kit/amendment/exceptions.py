@@ -74,11 +74,11 @@ class StudyAccessionNotFlatError(Exception):
 
 class StudyAccessionInUseError(Exception):
     """Raised when the study accession given for a new flat-accessioned submission is
-    already registered in the accession store.
+    already the study accession of a stored submission.
     """
 
-    def __init__(self, *, study_accession: str):
+    def __init__(self, *, study_accession: str, submission_id: str):
         super().__init__(
-            f"The study accession '{study_accession}' is already registered in the"
-            " accession store, so it cannot be reused. Nothing was submitted."
+            f"The study accession '{study_accession}' is already used by submission"
+            f" '{submission_id}', so it cannot be reused. Nothing was submitted."
         )
