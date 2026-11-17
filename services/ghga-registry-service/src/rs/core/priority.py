@@ -70,6 +70,10 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
     RS writes a box and the list separately, so every write to the list also repairs
     it: before the change, it adds the missing boxes and drops the entries for
     unknown, archived and deleted boxes.
+
+    Every write sets `changed_by` and `last_changed`. Only a data steward's save sets
+    `reordered_by` and `reordered_at`, so the list keeps naming the steward who chose
+    the order after repairs, which never reorder the boxes already listed.
     """
 
     def __init__(
@@ -90,7 +94,7 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         drops the entries for boxes that are archived or no longer exist. Writes
         nothing if the list is already complete. RS runs it once at startup on behalf
         of the system, and after a data steward creates, archives or deletes a box on
-        behalf of that steward.
+        behalf of that steward. Keeps `reordered_by` and `reordered_at`.
 
         Raises:
             PriorityUpdateError: If other writes kept changing the list first.
@@ -112,7 +116,8 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
 
         `box_ids` must hold every box that is not archived, once, and `version` must
         be the stored version, or 0 if no list is stored yet. Returns the stored list
-        after the save. If the order is unchanged, writes nothing.
+        after the save, which names the steward in `reordered_by`. If the order is
+        unchanged, writes nothing.
 
         Raises:
             PriorityChangedError: If the list changed since `version`, or does not
@@ -145,6 +150,8 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
         the version it read, or 0 if no list is stored. The change must return only
         IDs of the boxes it got. The result is written only if the stored `version` is
         unchanged. If the result is the same as the stored list, return early.
+        `reordered_by` and `reordered_at` change only with a change, since only a save
+        passes one.
 
         Returns the stored list after the update, or None if none is stored and none
         is needed because there is no box.
@@ -193,11 +200,23 @@ class UploadBoxPriorityManager(UploadBoxPriorityManagerPort):
                 if stored is not None and entries == stored.entries:
                     return stored
 
+                now = now_utc_ms_prec()
+                if change:
+                    reordered_by, reordered_at = user_id, now
+                elif stored:
+                    reordered_by, reordered_at = (
+                        stored.reordered_by,
+                        stored.reordered_at,
+                    )
+                else:
+                    reordered_by, reordered_at = None, None
                 new_priority = UploadBoxPriority(
                     id=BOX_PRIORITY_EVENT_KEY,
                     version=read_version + 1,
                     changed_by=user_id,
-                    last_changed=now_utc_ms_prec(),
+                    last_changed=now,
+                    reordered_by=reordered_by,
+                    reordered_at=reordered_at,
                     entries=entries,
                 )
                 if stored:

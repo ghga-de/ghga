@@ -725,6 +725,22 @@ components:
           description: Timestamp of the latest change, or None if no list is stored
             yet
           title: Last Changed
+        reordered_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: When a data steward last saved a new order, or None if none
+            has yet
+          title: Reordered At
+        reordered_by:
+          anyOf:
+          - format: uuid4
+            type: string
+          - type: 'null'
+          description: ID of the data steward who last saved a new order, or None
+            if none has yet
+          title: Reordered By
         version:
           description: A counter indicating resource version
           minimum: 0.0
@@ -734,6 +750,8 @@ components:
       - version
       - changed_by
       - last_changed
+      - reordered_by
+      - reordered_at
       - entries
       title: UploadBoxPriorityResponse
       type: object
