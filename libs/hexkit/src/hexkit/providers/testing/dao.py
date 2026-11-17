@@ -28,6 +28,7 @@ from hexkit.custom_types import ID
 from hexkit.protocols.dao import (
     BatchOperationError,
     DaoError,
+    DaoFactoryBase,
     FindResult,
     MultipleHitsFoundError,
     NoHitsFoundError,
@@ -665,7 +666,13 @@ def new_mock_dao_class(
     simple to match, such as comparing against null or missing fields. Other edge cases,
     like ordering values of different types, may raise or match differently than
     MongoDB. Cover those with integration tests against MongoDB instead.
+
+    Raises:
+        DaoFactoryBase.IdFieldNotFoundError: If `dto_model` has no field `id_field`.
+        DaoFactoryBase.IdTypeNotSupportedError: If the ID field is neither a string nor
+            an integer, which the DAO factories reject as well.
     """
+    DaoFactoryBase._validate_dto_model_id(dto_model=dto_model, id_field=id_field)
 
     class MockDao(BaseInMemDao[DTO]):
         """Mock dao that stores data in memory"""

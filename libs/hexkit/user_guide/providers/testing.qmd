@@ -77,6 +77,7 @@ async def test_add_book():
 
 The mock DAO implements the [CRUD](../protocols/dao.qmd#crud-operations), [batch](../protocols/dao.qmd#batch-operations) and find operations of the `Dao` protocol, including pagination and sorting in `find_all()`, and raises the same errors as the MongoDB provider.
 It converts DTOs to documents with the MongoDB provider's own functions, so the stored form matches what the MongoDB DAO would write.
+`new_mock_dao_class()` checks the ID field as `get_dao()` does: it raises an `IdFieldNotFoundError` for a missing ID field and an `IdTypeNotSupportedError` for one that is neither a string nor an integer.
 
 Two attributes help with test setup and assertions:
 

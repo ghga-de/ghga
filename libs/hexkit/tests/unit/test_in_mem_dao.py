@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from hexkit.protocols.dao import (
     BatchOperationError,
+    DaoFactoryBase,
     InvalidFilterError,
     NoHitsFoundError,
     PreconditionFailedError,
@@ -924,40 +925,30 @@ async def test_sort_with_missing_values_matches_mongodb():
     assert desc == [1, 3, 2, 4]
 
 
-async def test_nested_id_sort_matches_mongodb():
-    """The in-mem DAO matches MongoDB's (limited) behavior: it cannot sort by a nested
-    sub-field of the ID field, because the ID is stored under "_id". Such a sort is a
-    no-op that preserves the existing order rather than raising or secretly resolving
-    the value - exactly as MongoDB would silently fail to sort by "inner.x".
-    """
+class ModelId(BaseModel):
+    """An ID that is a model itself, which the DAO factories reject"""
 
-    class InnerDto(BaseModel):
-        def __hash__(self) -> int:
-            return self.x
+    x: int
 
-        x: int
 
-    class OuterDto(BaseModel):
-        inner: InnerDto
-        label: int
+class ModelIdDto(BaseModel):
+    """A DTO whose `inner` field holds a model"""
 
-    OuterDtoDao = new_mock_dao_class(dto_model=OuterDto, id_field="inner")  # noqa: N806
-    dao = OuterDtoDao()
+    inner: ModelId
+    label: int
 
-    dtos = [
-        OuterDto(inner=InnerDto(x=3), label=1),
-        OuterDto(inner=InnerDto(x=1), label=2),
-        OuterDto(inner=InnerDto(x=7), label=3),
-    ]
-    for dto in dtos:
-        await dao.insert(dto)
 
-    # Sorting by a nested sub-field of the ID field is a no-op (insertion order kept)
-    assert [x.label async for x in dao.find_all(filter_={}, sort=["inner.x"])] == [
-        1,
-        2,
-        3,
-    ]
+@pytest.mark.parametrize(
+    "id_field, error",
+    [
+        ("missing", DaoFactoryBase.IdFieldNotFoundError),
+        ("inner", DaoFactoryBase.IdTypeNotSupportedError),
+    ],
+)
+async def test_rejected_id_field(id_field: str, error: type[TypeError]):
+    """Test that the mock DAO rejects the ID fields the DAO factories reject."""
+    with pytest.raises(error):
+        new_mock_dao_class(dto_model=ModelIdDto, id_field=id_field)
 
 
 WRENCH = InventoryItem(title="Wrench", count=12)
