@@ -71,7 +71,7 @@ Further rules:
 - **Chart tests** are defined in [deploy/AGENTS.md](deploy/AGENTS.md).
 - **Test bed** (`just testbed`) is defined in [testbed/AGENTS.md](testbed/AGENTS.md).
   It is the only level that can verify a cross-service flow end to end, so a test whose outcome depends on backend state changing belongs there.
-- **Front-end levels** (Vitest unit tests, Playwright smoke tests against MSW mocks) are defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md).
+- **Front-end levels** (Vitest unit tests, mocked E2E tests with Playwright) are defined in [frontend/data-portal/AGENTS.md](frontend/data-portal/AGENTS.md).
 
 ## Execution policy
 

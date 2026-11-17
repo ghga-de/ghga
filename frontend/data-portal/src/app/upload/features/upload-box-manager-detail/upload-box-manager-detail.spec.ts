@@ -528,6 +528,28 @@ describe('UploadBoxManagerDetail', () => {
       expect(component.canDeleteFile(failedFile)).toBe(false);
     });
 
+    it('should not offer a retry for a file that failed before re-encryption', () => {
+      expect(component.canRequeueFileFn({ ...failedFile, state: 'failed' })).toBe(
+        false,
+      );
+    });
+
+    it('should offer no retry in an archived box', async () => {
+      const archived = {
+        ...lockedBox,
+        id: 'archived-box',
+        state: UploadBoxState.archived,
+      };
+      uploadBoxService.setSingleBox(archived);
+      fixture.componentRef.setInput('id', archived.id);
+      await fixture.whenStable();
+
+      expect(component.canRequeueFileFn(failedFile)).toBe(false);
+      expect(
+        screen.queryByRole('button', { name: /retry failed re-encryptions/i }),
+      ).not.toBeInTheDocument();
+    });
+
     it('should requeue a file after confirmation', async () => {
       component.requeueFile(failedFile);
       await fixture.whenStable();

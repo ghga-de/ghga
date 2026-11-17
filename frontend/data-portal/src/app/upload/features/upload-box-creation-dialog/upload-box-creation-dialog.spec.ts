@@ -101,6 +101,35 @@ describe('UploadBoxCreationDialog', () => {
     expect(screen.getByRole('button', { name: /^ok$/i })).toBeEnabled();
   });
 
+  it('should keep OK disabled when title and description are only whitespace', async () => {
+    await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), '   ');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Description' }), '   ');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Storage location' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Tuebingen 1' }));
+    await userEvent.type(
+      screen.getByRole('spinbutton', { name: 'Size limit (in TiB)' }),
+      '1',
+    );
+    await fixture.whenStable();
+
+    expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
+  });
+
+  it('should keep OK disabled when no storage location is chosen', async () => {
+    await userEvent.type(screen.getByRole('textbox', { name: 'Title' }), 'New Box');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Description' }),
+      'Description',
+    );
+    await userEvent.type(
+      screen.getByRole('spinbutton', { name: 'Size limit (in TiB)' }),
+      '1',
+    );
+    await fixture.whenStable();
+
+    expect(screen.getByRole('button', { name: /^ok$/i })).toBeDisabled();
+  });
+
   it('should keep OK disabled when size limit is missing', async () => {
     const titleInput = screen.getByRole('textbox', { name: 'Title' });
     const descriptionInput = screen.getByRole('textbox', {

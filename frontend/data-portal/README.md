@@ -20,7 +20,7 @@ It lives in the [GHGA monorepo](../../README.md) as a self-contained pnpm worksp
 - [Automated tests](#automated-tests)
   - [Test levels](#test-levels)
   - [Unit-tests](#unit-tests)
-  - [End-to-end tests](#end-to-end-tests)
+  - [Mocked E2E tests](#mocked-e2e-tests)
     - [Issues relating to headed execution](#issues-relating-to-headed-execution)
 - [Analytics](#analytics)
 - [The architecture matrix](#the-architecture-matrix)
@@ -247,17 +247,19 @@ Apart from seeing the linter warnings when you (try to) commit or run the linter
 
 ### Test levels
 
-Two levels of automated tests live in this repository, and a third lives elsewhere.
-They can prove quite different things, so it is worth choosing deliberately:
+Two levels of automated tests of the app live in this directory, and a third in `testbed/` of the monorepo.
+A further level, the launcher tests in `run.test.js`, covers the plain Node `run.js` launcher rather than the app; `pnpm test` runs them after the unit tests.
+The app's levels can prove quite different things, so it is worth choosing deliberately:
 
-| Level                    | Runs against                                                                               | Answers                                           |
-| ------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Unit tests (Vitest)      | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
-| "E2E" tests (Playwright) | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
-| GHGA archive test bed    | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
+| Level                                             | Runs against                                                                               | Answers                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| Unit tests (Vitest)                               | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
+| Mocked E2E tests (Playwright)                     | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
+| Full E2E tests (test bed: pytest-bdd, Playwright) | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
 
-Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring all belong there.
+Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring all belong there, in every branch and state including the error paths.
 The two other levels each add something the level above cannot see, and each costs more to run.
+So put each assertion at the cheapest level that could see it break.
 
 ### Unit-tests
 
@@ -277,17 +279,18 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 Use `pnpm test` / `pnpm test:ui` instead.
 See also [this issue](https://github.com/angular/angular-cli/issues/31734).
 
-### End-to-end tests
+### Mocked E2E tests
 
-We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project.
+We are using [Playwright](https://playwright.dev/) for the mocked end-to-end (E2E) tests in this project.
 See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
-"End-to-end" is admittedly a misnomer here.
-These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design.
-What is covered is the frontend from the browser inwards — everything above the network boundary.
-Comprehensive end-to-end tests for real backend behavior are maintained in the GHGA archive test bed, in `testbed/` of this monorepo.
+These are end-to-end tests as the [Angular docs](https://angular.dev/tools/cli/end-to-end) use the term: they drive the whole app in a real browser, the way a user would.
+"Mocked" is our own qualifier: the tests stop at the network layer and do not reach the real backend and database.
+The backend here is the same [MSW mocks](#local-development) that back the development server.
+They return static responses and keep no state, by design, so they are no full replacement for a real backend.
+A journey that needs the backend to change belongs in the full E2E tests of the GHGA archive test bed, in `testbed/` of this monorepo.
 
-Within that boundary, however, these tests are considerably more real than unit tests, and catch a class of problems unit tests structurally cannot:
+Up to the network layer, these tests reach deeper than unit tests, and catch a class of problems unit tests structurally cannot:
 
 - **The application really boots.**
   It starts from `app.config.ts` with the actual providers, routes lazy-load their real chunks, and guards run.
@@ -299,7 +302,7 @@ Within that boundary, however, these tests are considerably more real than unit 
   Unit tests replace services with hand-written mocks, which can silently drift from the API of the service they stand in for.
   Here the actual implementations are used, against each other.
 - **It is a real browser.**
-  Layout, focus handling, Angular Material overlays (dialogs, menus, snack bars) and view transitions all behave as they do for users, none of which jsdom reproduces.
+  Layout, focus handling, pointer input such as drag and drop, Angular Material overlays (dialogs, menus, snack bars) and view transitions all behave as they do for users, none of which jsdom reproduces.
   `pnpm e2e:all` additionally runs across the configured browsers.
 - **Journeys span components and pages.**
   Navigation, shared services and cross-page state are exercised together rather than one unit at a time.
@@ -307,10 +310,13 @@ Within that boundary, however, these tests are considerably more real than unit 
   Mock handlers are registered per URL and query parameters, so a request the application makes that no handler matches surfaces immediately.
 
 What they cannot show is anything that depends on the backend actually changing state, because the mocks answer identically before and after a mutation.
-Do not write a test here that performs a change and then asserts that the change is reflected — it could only assert that a request was sent, which a unit test does more precisely and far more cheaply.
+A test here may make a change and check what the page shows next, from the mocked response or from state the app updates itself, such as a notification or a row that a service changes in its own signals.
+It must not check anything that needs the data fetched again, such as the page after a reload, since the mocks would show the old state.
 Such flows belong in the archive test bed, which is more expensive to run.
 
-Treat the tests in this repository as a fast smoke layer: keep them few and cheap, so they stay useful for quick feedback during frontend development.
+Keep the tests in this repository few and cheap, so they stay useful for quick feedback during frontend development.
+Write one journey along the main path per user task, such as creating a box or changing the priority order.
+Cover an error path here only when it needs the browser, such as a dialog that opens on a failure.
 
 They need only the development server — the API is mocked in the browser — so the demo platform (`just up` in the monorepo) is not required for them and only competes for memory.
 If a run hangs with no output at all, that competition is the first thing to check; `just down` frees it.
