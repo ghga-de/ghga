@@ -1286,6 +1286,29 @@ async def test_dao_update_many_write_concern_error(
         assert await dao.get_by_id(changed.id) == changed
 
 
+async def test_dao_update_many_failed_lookup(
+    mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a failed lookup of the missing IDs notes the batch's own failures."""
+    async with counted_dao(mongodb, unique_field_a=True) as (dao, _):
+        taken, other = ExampleDto(field_a="taken"), ExampleDto(field_a="other")
+        for dto in taken, other:
+            await dao.insert(dto)
+        clashing = other.model_copy(update={"field_a": "taken"})
+        missing = ExampleDto(field_a="missing")
+
+        async def time_out(*args: Any, **kwargs: Any) -> Any:
+            raise DbTimeoutError("lookup timed out")
+
+        monkeypatch.setattr(dao, "_existing_ids", time_out)
+        with pytest.raises(DbTimeoutError) as caught:
+            await dao.update_many([clashing, missing])
+
+        assert caught.value.__notes__ == [
+            f"The batch had failed for {clashing.id!r}: UniqueConstraintViolationError"
+        ]
+
+
 async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
     """Test that an ordered update_many stops at a unique-index clash but not at a
     missing resource, and reports both kinds of failure.

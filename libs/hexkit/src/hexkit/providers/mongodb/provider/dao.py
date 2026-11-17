@@ -717,6 +717,7 @@ class MongoDbDao(Generic[Dto]):
 
         Raises:
             BatchOperationError: when some documents were missing or failed.
+            DaoError: when the lookup failed; a note names the batch's own failures.
         """
         if not documents:
             return
@@ -729,7 +730,17 @@ class MongoDbDao(Generic[Dto]):
         unattempted = set(errors) | set(skipped)
         attempted = [id_ for id_ in ids if id_ not in unattempted]
         if matched < len(attempted):
-            existing = await self._existing_ids(attempted, extra)
+            try:
+                existing = await self._existing_ids(attempted, extra)
+            except DaoError as lookup_error:
+                # Raised alone, the lookup's error would hide the batch's own failures
+                if errors:
+                    named = ", ".join(
+                        f"{id_!r}: {type(error).__name__}"
+                        for id_, error in errors.items()
+                    )
+                    lookup_error.add_note(f"The batch had failed for {named}")
+                raise
             errors |= {
                 id_: ResourceNotFoundError(id_=id_)
                 for id_ in attempted
