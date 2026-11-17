@@ -105,7 +105,7 @@ class FileAccession(BaseModel):
     (unmapped), in which case no outbox event is published.
     """
 
-    pid: PID = Field(..., description="The primary file accession number (primary key)")
+    pid: PID = Field(description="The primary file accession number (primary key)")
     file_id: UUID4 | None = Field(
         default=None,
         description="The corresponding internal file ID, if the accession is mapped",
@@ -138,26 +138,21 @@ class Study(BaseModel):
     Persisted via the outbox DAO.
     """
 
-    id: PID = Field(..., description="The PID of the study (primary key)")
-    title: str = Field(..., description="Comprehensive title for the study")
+    id: PID = Field(description="The PID of the study (primary key)")
+    title: str = Field(description="Comprehensive title for the study")
     description: str = Field(
-        ...,
         description="Detailed description (abstract) describing the goals of the study",
     )
-    types: list[str] = Field(
-        ..., description="The type(s) of this study (as list of codes)"
-    )
+    types: list[str] = Field(description="The type(s) of this study (as list of codes)")
     affiliations: list[str] = Field(
-        ..., description="The affiliation(s) associated with this study"
+        description="The affiliation(s) associated with this study"
     )
-    status: StudyStatus = Field(..., description="The current status of the study")
+    status: StudyStatus = Field(description="The current status of the study")
     created: UTCDatetime = Field(
         default_factory=now_utc_ms_prec,
         description="When the entry was first created",
     )
-    created_by: UUID4 = Field(
-        ..., description="The id of the user who uploaded the study"
-    )
+    created_by: UUID4 = Field(description="The id of the user who uploaded the study")
     approved: UTCDatetime | None = Field(
         default=None, description="When the study was approved"
     )
@@ -197,21 +192,21 @@ class ChangeFileBoxWorkOrder(BaseWorkOrderToken):
     """Work order token for changing FileUploadBox state."""
 
     work_type: Literal["lock", "unlock", "archive"]
-    box_id: UUID4 = Field(..., description="ID of the box to change")
+    box_id: UUID4 = Field(description="ID of the box to change")
 
 
 class ResizeFileBoxWorkOrder(BaseWorkOrderToken):
     """Work order token for resizing a FileUploadBox."""
 
     work_type: Literal["resize"] = "resize"
-    box_id: UUID4 = Field(..., description="ID of the box to resize")
+    box_id: UUID4 = Field(description="ID of the box to resize")
 
 
 class ViewFileBoxWorkOrder(BaseWorkOrderToken):
     """Work order token for viewing FileUploadBox contents."""
 
     work_type: Literal["view"] = "view"
-    box_id: UUID4 = Field(..., description="ID of the box to view")
+    box_id: UUID4 = Field(description="ID of the box to view")
 
 
 class ViewFileBoxStatsWorkOrder(BaseWorkOrderToken):
@@ -236,8 +231,8 @@ class DeleteFileUploadWorkOrder(BaseWorkOrderToken):
     """Work order token for deleting a FileUpload."""
 
     work_type: Literal["delete"] = "delete"
-    box_id: UUID4 = Field(..., description="ID of the box containing the file")
-    file_id: UUID4 = Field(..., description="ID of the file upload to delete")
+    box_id: UUID4 = Field(description="ID of the box containing the file")
+    file_id: UUID4 = Field(description="ID of the file upload to delete")
 
 
 class DeleteFileBoxWorkOrder(BaseWorkOrderToken):
@@ -248,15 +243,15 @@ class DeleteFileBoxWorkOrder(BaseWorkOrderToken):
     """
 
     work_type: Literal["delete_box"] = "delete_box"
-    box_id: UUID4 = Field(..., description="ID of the box to delete")
+    box_id: UUID4 = Field(description="ID of the box to delete")
 
 
 class RequeueFailedFileWorkOrder(BaseWorkOrderToken):
     """Work order token for requeueing a FileUpload that failed interrogation."""
 
     work_type: Literal["requeue"] = "requeue"
-    box_id: UUID4 = Field(..., description="ID of the box containing the file")
-    file_id: UUID4 = Field(..., description="ID of the file upload to requeue")
+    box_id: UUID4 = Field(description="ID of the box containing the file")
+    file_id: UUID4 = Field(description="ID of the file upload to requeue")
 
 
 class RequeueAllFailedWorkOrder(BaseWorkOrderToken):
@@ -267,18 +262,17 @@ class RequeueAllFailedWorkOrder(BaseWorkOrderToken):
     """
 
     work_type: Literal["requeue_box"] = "requeue_box"
-    box_id: UUID4 = Field(..., description="ID of the box whose files are requeued")
+    box_id: UUID4 = Field(description="ID of the box whose files are requeued")
 
 
 # API Request/Response models
 class CreateUploadBoxRequest(BaseModel):
     """Request model for creating a new research data upload box."""
 
-    title: str = Field(..., description="Short meaningful name for the box")
-    description: str = Field(..., description="Describes the upload box in more detail")
-    storage_alias: str = Field(..., description="S3 storage alias to use for uploads")
+    title: str = Field(description="Short meaningful name for the box")
+    description: str = Field(description="Describes the upload box in more detail")
+    storage_alias: str = Field(description="S3 storage alias to use for uploads")
     max_size: PositiveInt = Field(
-        ...,
         description=(
             "Maximum number of bytes allowed to be uploaded to the box across all files"
         ),
@@ -297,13 +291,13 @@ class CreateUploadBoxRequest(BaseModel):
 class CreateUploadBoxResponse(BaseModel):
     """Response model for creating a new research data upload box."""
 
-    box_id: UUID4 = Field(..., description="ID of the newly created upload box")
+    box_id: UUID4 = Field(description="ID of the newly created upload box")
 
 
 class UpdateUploadBoxRequest(BaseModel):
     """Request model for updating a research data upload box."""
 
-    version: int = Field(..., description="A counter indicating resource version")
+    version: int = Field(description="A counter indicating resource version")
     title: str | None = Field(default=None, description="Updated title")
     description: str | None = Field(default=None, description="Updated description")
     state: UploadBoxState | None = Field(default=None, description="Updated state")
@@ -328,17 +322,17 @@ class UpdateUploadBoxRequest(BaseModel):
 class GrantId(BaseModel):
     """The ID of an access grant."""
 
-    id: UUID4 = Field(..., description="Internal grant ID (same as claim ID)")
+    id: UUID4 = Field(description="Internal grant ID (same as claim ID)")
 
 
 class GrantAccessRequest(BaseModel):
     """Request model for granting upload access to a user."""
 
-    box_id: UUID4 = Field(..., description="ID of the upload box")
-    user_id: UUID4 = Field(..., description="ID of the user to grant access to")
-    iva_id: UUID4 = Field(..., description="ID of the IVA verification")
-    valid_from: UTCDatetime = Field(..., description="Start date of validity")
-    valid_until: UTCDatetime = Field(..., description="End date of validity")
+    box_id: UUID4 = Field(description="ID of the upload box")
+    user_id: UUID4 = Field(description="ID of the user to grant access to")
+    iva_id: UUID4 = Field(description="ID of the IVA verification")
+    valid_from: UTCDatetime = Field(description="Start date of validity")
+    valid_until: UTCDatetime = Field(description="End date of validity")
 
     @field_validator("valid_until")
     @classmethod
@@ -353,7 +347,7 @@ class GrantAccessRequest(BaseModel):
 class UploadGrant(GrantId):
     """An upload access grant."""
 
-    user_id: UUID4 = Field(..., description="Internal user ID")
+    user_id: UUID4 = Field(description="Internal user ID")
     iva_id: UUID4 | None = Field(
         default=None, description="ID of an IVA associated with this grant"
     )
@@ -363,10 +357,10 @@ class UploadGrant(GrantId):
     created: UTCDatetime = Field(
         default=..., description="Date of creation of this grant"
     )
-    valid_from: UTCDatetime = Field(..., description="Start date of validity")
-    valid_until: UTCDatetime = Field(..., description="End date of validity")
+    valid_from: UTCDatetime = Field(description="Start date of validity")
+    valid_until: UTCDatetime = Field(description="End date of validity")
 
-    user_name: str = Field(..., description="Full name of the user")
+    user_name: str = Field(description="Full name of the user")
     user_email: EmailStr = Field(
         default=...,
         description="The email address of the user",
@@ -379,12 +373,10 @@ class UploadGrant(GrantId):
 class GrantWithBoxInfo(UploadGrant):
     """An UploadGrant with the ResearchDataUploadBox title and description."""
 
-    box_title: str = Field(..., description="Short meaningful name for the box")
-    box_description: str = Field(
-        ..., description="Describes the upload box in more detail"
-    )
-    box_state: UploadBoxState = Field(..., description="The state of the upload box")
-    box_version: int = Field(..., description="The upload box version")
+    box_title: str = Field(description="Short meaningful name for the box")
+    box_description: str = Field(description="Describes the upload box in more detail")
+    box_state: UploadBoxState = Field(description="The state of the upload box")
+    box_version: int = Field(description="The upload box version")
 
 
 class BoxRetrievalResults(BaseModel):
@@ -392,9 +384,9 @@ class BoxRetrievalResults(BaseModel):
     thereof.
     """
 
-    count: int = Field(..., description="The total number of unpaginated results")
+    count: int = Field(description="The total number of unpaginated results")
     boxes: list[ResearchDataUploadBox] = Field(
-        ..., description="The retrieved research data upload boxes"
+        description="The retrieved research data upload boxes"
     )
 
 
@@ -405,23 +397,19 @@ FileStateCounts = dict[FileUploadState, NonNegativeInt]
 class HubStorageSummary(BaseModel):
     """Aggregated upload box storage statistics for a single data hub."""
 
-    storage_alias: str = Field(
-        ..., description="S3 storage alias identifying the data hub"
-    )
+    storage_alias: str = Field(description="S3 storage alias identifying the data hub")
     total_size: NonNegativeInt = Field(
-        ...,
         description=(
             "Total number of bytes uploaded across all upload boxes for this hub"
         ),
     )
     file_count: NonNegativeInt = Field(
-        ...,
         description=(
             "Total number of file uploads across all upload boxes for this hub"
         ),
     )
     box_count: NonNegativeInt = Field(
-        ..., description="Number of upload boxes using this hub's storage"
+        description="Number of upload boxes using this hub's storage"
     )
 
 
@@ -452,11 +440,9 @@ class BoxRequeueResult(BaseModel):
     """The outcome of requeueing every failed file upload in an upload box."""
 
     requeued: list[UUID4] = Field(
-        ...,
         description="The IDs of the file uploads that were set back to the inbox state",
     )
     skipped: list[UUID4] = Field(
-        ...,
         description=(
             "The IDs of the file uploads that couldn't be requeued due to an error"
         ),
@@ -467,14 +453,12 @@ class BoxUploadsPage(BaseModel):
     """A page of file uploads for an upload box, plus the total unpaginated count."""
 
     items: list[FileUploadWithAccession] = Field(
-        ...,
         description=(
             "The file uploads on this page, in the requested sort order"
             + " (alias by default)"
         ),
     )
     total_count: int = Field(
-        ...,
         description="The total number of file uploads in the box (unpaginated)",
     )
 
@@ -485,20 +469,15 @@ class UploadBoxPriorityResponse(BaseModel):
     Before the first list is stored, the version is 0 and the other fields are empty.
     """
 
-    version: NonNegativeInt = Field(
-        ..., description="A counter indicating resource version"
-    )
+    version: NonNegativeInt = Field(description="A counter indicating resource version")
     changed_by: UUID4 | None = Field(
-        ...,
         description="ID of the user who performed the latest change, or None if the"
         + " system made it or no list is stored yet",
     )
     last_changed: UTCDatetime | None = Field(
-        ...,
         description="Timestamp of the latest change, or None if no list is stored yet",
     )
     entries: list[UploadBoxPriorityEntry] = Field(
-        ...,
         description="The boxes in priority order. Index 0 is the highest priority.",
     )
 
@@ -514,12 +493,10 @@ class UpdateUploadBoxPriorityRequest(BaseModel):
     """Request model for setting the order of the upload box priority list."""
 
     version: NonNegativeInt = Field(
-        ...,
         description="The version of the list the new order is based on, which must be"
         + " the stored version, or 0 if no list is stored yet",
     )
     box_ids: list[UUID4] = Field(
-        ...,
         description="The IDs of all research data upload boxes that are not archived,"
         + " in the new order. Index 0 is the highest priority.",
     )
