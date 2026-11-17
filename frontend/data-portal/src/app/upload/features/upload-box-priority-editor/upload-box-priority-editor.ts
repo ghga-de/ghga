@@ -31,6 +31,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
@@ -64,6 +65,7 @@ type MoveAction = 'up' | 'down' | 'top';
     DatePipe,
     MatButtonModule,
     MatIcon,
+    MatTooltip,
     RouterLink,
   ],
   templateUrl: './upload-box-priority-editor.html',

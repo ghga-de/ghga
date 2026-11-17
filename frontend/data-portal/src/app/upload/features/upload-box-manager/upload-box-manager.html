@@ -9,7 +9,8 @@
         [disabled]="!canChangePriority()"
         (click)="reordering.set(true)"
       >
-        Change priority
+        <mat-icon fontIcon="swap_vert"></mat-icon>
+        Change order
       </button>
       <app-refresh-button
         what="the upload boxes"

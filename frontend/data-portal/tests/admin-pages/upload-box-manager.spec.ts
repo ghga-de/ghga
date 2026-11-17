@@ -225,16 +225,16 @@ test('can change the priority order', async ({ adminPage: page }) => {
   // Wiring only: the mock answers the same before and after the save, and the
   // test bed covers the flow against the real RS
   const main = page.locator('main');
-  await main.getByRole('button', { name: 'Change priority' }).click();
+  await main.getByRole('button', { name: 'Change order' }).click();
 
-  const reorderMode = main.getByRole('region', { name: 'Change priority' });
+  const reorderMode = main.getByRole('region', { name: 'Priority order' });
   await expect(reorderMode).toContainText(
     'Last changed by Dr. John Doe on 10 February 2025.',
   );
   await main
     .getByRole('button', { name: 'Move Research Data Upload Box of John up' })
     .click();
-  await main.getByRole('button', { name: 'Save priority' }).click();
+  await main.getByRole('button', { name: 'Save order' }).click();
 
   await expect(reorderMode).toHaveCount(0);
   await expect(main.locator('table')).toBeVisible();

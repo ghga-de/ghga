@@ -200,6 +200,18 @@ describe('UploadBoxPriorityEditor', () => {
     expect(lastChangeLine()).toBe('No edit history yet.');
   });
 
+  it('should describe the move buttons in tooltips', () => {
+    expect(
+      screen.getByRole('button', { name: 'Move Box B up' }),
+    ).toHaveAccessibleDescription('Move up');
+    expect(
+      screen.getByRole('button', { name: 'Move Box B down' }),
+    ).toHaveAccessibleDescription('Move down');
+    expect(
+      screen.getByRole('button', { name: 'Move Box B to top' }),
+    ).toHaveAccessibleDescription('Move to top');
+  });
+
   it('should move a box with its buttons', async () => {
     await click('Move Box C up');
     expect(titles()).toEqual(['Box A', 'Box C', 'Box B']);
@@ -233,7 +245,7 @@ describe('UploadBoxPriorityEditor', () => {
   });
 
   it('should disable saving when the order is back to the loaded one', async () => {
-    const save = screen.getByRole('button', { name: 'Save priority' });
+    const save = screen.getByRole('button', { name: 'Save order' });
     expect(save).toBeDisabled();
 
     await click('Move Box B up');
@@ -260,7 +272,7 @@ describe('UploadBoxPriorityEditor', () => {
     });
 
     await click('Move Box B up');
-    await click('Save priority');
+    await click('Save order');
 
     expect(uploadBoxService.saveBoxPriority).toHaveBeenCalledWith(7, [
       'box-b',
@@ -281,7 +293,7 @@ describe('UploadBoxPriorityEditor', () => {
     );
 
     await click('Move Box B up');
-    await click('Save priority');
+    await click('Save order');
 
     // Once when it opened, once after the conflict
     expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledTimes(2);
@@ -296,7 +308,7 @@ describe('UploadBoxPriorityEditor', () => {
     expect(
       screen.getByText(/The priority order changed while you were editing/),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Save priority' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save order' })).toBeDisabled();
   });
 
   it('should not let the steward move boxes before the boxes have loaded again', async () => {
@@ -304,7 +316,7 @@ describe('UploadBoxPriorityEditor', () => {
       throwError(() => new HttpErrorResponse({ status: 409 })),
     );
     await click('Move Box B up');
-    await click('Save priority');
+    await click('Save order');
 
     // The order arrives before the boxes
     uploadBoxService.boxRetrievalResults.isLoading.set(true);
@@ -325,7 +337,7 @@ describe('UploadBoxPriorityEditor', () => {
         throwError(() => new HttpErrorResponse({ status: 409 })),
       );
       await click('Move Box B up');
-      await click('Save priority');
+      await click('Save order');
 
       const error = new HttpErrorResponse({ status: 500 });
       if (failed === 'boxes') {
@@ -343,7 +355,7 @@ describe('UploadBoxPriorityEditor', () => {
       expect(screen.queryByText(/no boxes that are not archived/)).toBeNull();
       expect(screen.queryByText(/This is the current order/)).toBeNull();
       expect(screen.getByText(/The priority order changed/)).toBeVisible();
-      expect(screen.getByRole('button', { name: 'Save priority' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Save order' })).toBeDisabled();
     },
   );
 
@@ -353,13 +365,13 @@ describe('UploadBoxPriorityEditor', () => {
     );
 
     await click('Move Box B up');
-    await click('Save priority');
+    await click('Save order');
 
     expect(
       screen.getByText('Saving failed. Your changes are kept; please try again.'),
     ).toBeVisible();
     expect(titles()).toEqual(['Box B', 'Box A', 'Box C']);
-    expect(screen.getByRole('button', { name: 'Save priority' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save order' })).toBeEnabled();
     // Only when it opened
     expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledOnce();
     expect(done).not.toHaveBeenCalled();

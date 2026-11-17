@@ -205,8 +205,8 @@ describe('UploadBoxManager', () => {
       await fixture.whenStable();
     }
 
-    it('should disable Change priority if the priority order is not loaded', async () => {
-      const changePriority = screen.getByRole('button', { name: 'Change priority' });
+    it('should disable Change order if the priority order is not loaded', async () => {
+      const changePriority = screen.getByRole('button', { name: 'Change order' });
       expect(changePriority).toBeEnabled();
 
       uploadBoxService.prioritizedUploadBoxes.set(undefined);
@@ -215,23 +215,23 @@ describe('UploadBoxManager', () => {
     });
 
     it('should switch between the list and the reorder mode', async () => {
-      await click('Change priority');
+      await click('Change order');
 
-      expect(screen.getByRole('heading', { name: 'Change priority' })).toBeVisible();
+      expect(screen.getByRole('heading', { name: 'Priority order' })).toBeVisible();
       expect(screen.getByRole('list', { name: 'Priority order' })).toBeVisible();
       expect(screen.queryByRole('button', { name: /create upload box/i })).toBeNull();
-      expect(screen.queryByRole('button', { name: 'Change priority' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Change order' })).toBeNull();
 
       await click('Cancel');
 
-      expect(screen.queryByRole('heading', { name: 'Change priority' })).toBeNull();
+      expect(screen.queryByRole('heading', { name: 'Priority order' })).toBeNull();
       expect(screen.getByRole('button', { name: /create upload box/i })).toBeVisible();
     });
 
     it('should report unsaved changes to the leave guard until Cancel', async () => {
       expect(component.hasPendingEdits()).toBe(false);
 
-      await click('Change priority');
+      await click('Change order');
       expect(component.hasPendingEdits()).toBe(false);
 
       await click('Move Other Upload Box up');

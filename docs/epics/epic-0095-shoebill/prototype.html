@@ -20,7 +20,7 @@
 
   <section id="list-mode" aria-label="Upload boxes">
     <p>[Filters, unchanged and not prototyped]</p>
-    <p><button type="button" id="change-priority">Change priority</button></p>
+    <p><button type="button" id="change-priority">Change order</button></p>
     <table>
       <thead>
         <tr>
@@ -38,13 +38,13 @@
   </section>
 
   <section id="reorder-mode" aria-labelledby="reorder-heading" hidden>
-    <nav aria-label="Breadcrumb">Upload Box Manager / Change priority</nav>
-    <h2 id="reorder-heading">Change priority</h2>
+    <nav aria-label="Breadcrumb">Upload Box Manager / Priority order</nav>
+    <h2 id="reorder-heading">Priority order</h2>
     <p>Files of boxes higher up are re-encrypted first. Changes apply from the next batch each Data Hub starts.</p>
     <p id="last-change"></p>
     <p>
       <button type="button" id="cancel">Cancel</button>
-      <button type="button" id="save">Save priority</button>
+      <button type="button" id="save">Save order</button>
     </p>
     <p id="status" role="status"></p>
     <p id="empty-ranked" hidden>There are no boxes that are not archived.</p>

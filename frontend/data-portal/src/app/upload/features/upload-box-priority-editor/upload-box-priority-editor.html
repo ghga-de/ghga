@@ -1,6 +1,6 @@
 <section aria-labelledby="priority-editor-heading" class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <h2 id="priority-editor-heading" class="mb-0">Change priority</h2>
+    <h2 id="priority-editor-heading" class="mb-0">Priority order</h2>
     <div class="flex gap-2">
       <button mat-button type="button" [disabled]="saving()" (click)="cancel()">
         Cancel
@@ -12,7 +12,8 @@
         [disabled]="!canSave()"
         (click)="save()"
       >
-        Save priority
+        <mat-icon fontIcon="save"></mat-icon>
+        Save order
       </button>
     </div>
   </div>
@@ -59,7 +60,7 @@
   } @else if (rows().length) {
     <ol
       cdkDropList
-      aria-label="Priority order"
+      aria-labelledby="priority-editor-heading"
       class="flex flex-col gap-1"
       [cdkDropListDisabled]="busy()"
       (cdkDropListDropped)="drop($event)"
@@ -92,6 +93,7 @@
               mat-icon-button
               type="button"
               data-action="up"
+              matTooltip="Move up"
               [attr.aria-label]="'Move ' + row.box.title + ' up'"
               [disabled]="row.isFirst || busy()"
               (click)="moveWithButton(row.index, 'up')"
@@ -102,6 +104,7 @@
               mat-icon-button
               type="button"
               data-action="down"
+              matTooltip="Move down"
               [attr.aria-label]="'Move ' + row.box.title + ' down'"
               [disabled]="row.isLast || busy()"
               (click)="moveWithButton(row.index, 'down')"
@@ -112,6 +115,7 @@
               mat-icon-button
               type="button"
               data-action="top"
+              matTooltip="Move to top"
               [attr.aria-label]="'Move ' + row.box.title + ' to top'"
               [disabled]="row.isFirst || busy()"
               (click)="moveWithButton(row.index, 'top')"
