@@ -233,6 +233,7 @@ The pymongo driver splits a batch above 100,000 operations or 48 MB into several
 A batch is not atomic, and there are no transactions yet to make it so.
 A `BatchOperationError` names every failed, unconfirmed and skipped ID.
 A write concern error names every resource it leaves unconfirmed, with `DbTimeoutError` when it timed out and `DaoError` otherwise; those writes stay stored unless a failover rolls them back.
+A retryable write concern error, such as one after a failover, is the exception: the driver stops the batch at it and sends none of a split batch's later messages, so the batch raises a plain `DaoError` and its outcome is unknown.
 Any other error leaves the outcome unknown, such as a timeout, a lost connection or a failure after the driver sent part of a split batch; `find_all` shows what arrived.
 
 ### Error Handling
