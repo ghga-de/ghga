@@ -60,11 +60,12 @@ Put each assertion at the cheapest level that could see it break.
 - **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, state transitions, cache invalidation, rendering and event wiring, in every branch and state including the error paths.
   Services are tested against `HttpTestingController`, components against mocked services.
 - **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
-- **Mocked E2E tests** (Playwright, `tests`): end-to-end in Angular's sense, the whole app in a real browser, which does not include the real backend.
+- **Mocked E2E tests** (Playwright, `tests`): what the Angular docs call end-to-end tests, driving the whole app in a real browser the way a user would.
+  "Mocked" is our own qualifier: the real backend is not part of them.
   They boot the real app with the real services and interceptors, against the MSW mocks that stand in for the backend.
   The mocks keep no state, so these tests cannot follow a journey that needs the backend to change; that belongs in the test bed.
   Write one journey along the main path per user task, such as creating a box or changing the priority order.
-  Assert only what a unit test cannot see: that a route loads behind its guard, requests through the real interceptors, dialogs and menus opened from the page that uses them, focus, and pointer input such as drag and drop.
+  Assert only what a unit test cannot see: that a route loads behind its guard, requests through the real interceptors, real services working against each other, journeys that span pages, dialogs and menus opened from the page that uses them, focus, and pointer input such as drag and drop.
   Cover an error path here only when it needs the browser.
 - **Full E2E tests** (the test bed, `testbed/` in this monorepo): real backend and database, and the only level that can verify a flow whose outcome depends on the backend changing state.
 

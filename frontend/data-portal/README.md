@@ -247,8 +247,9 @@ Apart from seeing the linter warnings when you (try to) commit or run the linter
 
 ### Test levels
 
-Two levels of automated tests live in this directory, and a third in `testbed/` of the monorepo.
-They can prove quite different things, so it is worth choosing deliberately:
+Two levels of automated tests of the app live in this directory, and a third in `testbed/` of the monorepo.
+A further level, the launcher tests in `run.test.js`, covers the plain Node `run.js` launcher rather than the app; `pnpm test` runs them after the unit tests.
+The app's levels can prove quite different things, so it is worth choosing deliberately:
 
 | Level                                             | Runs against                                                                               | Answers                                           |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
@@ -283,8 +284,8 @@ See also [this issue](https://github.com/angular/angular-cli/issues/31734).
 We are using [Playwright](https://playwright.dev/) for the mocked end-to-end (E2E) tests in this project.
 See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
-"End-to-end" is meant in Angular's sense: tests that run the whole app in a real browser, down to the network layer.
-Do not read it as reaching the real backend and database.
+These are end-to-end tests as the [Angular docs](https://angular.dev/tools/cli/end-to-end) use the term: they drive the whole app in a real browser, the way a user would.
+"Mocked" is our own qualifier: the tests stop at the network layer and do not reach the real backend and database.
 The backend here is the same [MSW mocks](#local-development) that back the development server.
 They return static responses and keep no state, by design, so they are no full replacement for a real backend.
 A journey that needs the backend to change belongs in the full E2E tests of the GHGA archive test bed, in `testbed/` of this monorepo.
