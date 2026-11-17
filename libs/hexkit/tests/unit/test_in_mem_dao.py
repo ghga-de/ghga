@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, PydanticInvalidForJsonSchema
 
 from hexkit.protocols.dao import (
     BatchOperationError,
@@ -938,17 +938,33 @@ class ModelIdDto(BaseModel):
     label: int
 
 
+class Opaque:
+    """A type that Pydantic cannot describe in a JSON schema"""
+
+
+class OpaqueDto(BaseModel):
+    """A DTO without a JSON schema, which the DAO factories reject"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    id: str
+    opaque: Opaque
+
+
 @pytest.mark.parametrize(
-    "id_field, error",
+    "dto_model, id_field, error",
     [
-        ("missing", DaoFactoryBase.IdFieldNotFoundError),
-        ("inner", DaoFactoryBase.IdTypeNotSupportedError),
+        (ModelIdDto, "missing", DaoFactoryBase.IdFieldNotFoundError),
+        (ModelIdDto, "inner", DaoFactoryBase.IdTypeNotSupportedError),
+        (OpaqueDto, "id", PydanticInvalidForJsonSchema),
     ],
 )
-async def test_rejected_id_field(id_field: str, error: type[TypeError]):
-    """Test that the mock DAO rejects the ID fields the DAO factories reject."""
+async def test_rejected_id_field(
+    dto_model: type[BaseModel], id_field: str, error: type[Exception]
+):
+    """Test that the mock DAO rejects the DTO models the DAO factories reject."""
     with pytest.raises(error):
-        new_mock_dao_class(dto_model=ModelIdDto, id_field=id_field)
+        new_mock_dao_class(dto_model=dto_model, id_field=id_field)
 
 
 WRENCH = InventoryItem(title="Wrench", count=12)

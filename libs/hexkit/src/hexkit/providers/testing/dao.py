@@ -673,6 +673,8 @@ def new_mock_dao_class(
         DaoFactoryBase.IdFieldNotFoundError: If `dto_model` has no field `id_field`.
         DaoFactoryBase.IdTypeNotSupportedError: If the ID field is neither a string nor
             an integer, which the DAO factories reject as well.
+        PydanticInvalidForJsonSchema: If `dto_model` has no JSON schema, from which
+            the check reads the ID field's type, as the DAO factories do.
     """
     DaoFactoryBase._validate_dto_model_id(dto_model=dto_model, id_field=id_field)
 
