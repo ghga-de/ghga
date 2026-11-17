@@ -134,7 +134,7 @@ The test bed runs the same sequence against a deployment, in `testbed/steps/test
   The other classes follow the same alias matching without being reported; the study keeps its accession even under a new alias.
   A field changed on an already-accessioned resource is not an accession change at all — no report entry, no prompt, and the next `load` upserts that resource.
   Confining amendments to added files is an operational rule, not one the tool enforces.
-  **`dskit metadata submit-legacy --study-accession <accession>` submits a new submission in the flat scheme**, for a study that was promised a flat accession before its metadata arrived.
+  **`dskit metadata submit-legacy --study-accession <accession>` submits a new submission in the flat scheme**, for a study that was assigned a flat accession before the associated metadata arrived.
   It refuses an accession that is not a flat one or is already under `legacy`, and applies the same validation and alias check as `amend`.
   It seeds the map with the study's alias and the given accession, so `generate_accession_map` keeps it as the study accession and the `LegacyAccessionRegistry` mints a flat accession for every other resource.
   It stores the submission as completed under a new ID, registers the study accession under `legacy`, and publishes the source event.
