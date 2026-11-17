@@ -21,7 +21,7 @@ from pathlib import Path
 
 import typer
 
-from ghga_datasteward_kit import metadata
+from ghga_datasteward_kit import metadata, study_pid_reservation
 from ghga_datasteward_kit.amendment import amendment, legacy_submission
 from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import AmendmentAbortedError
@@ -110,6 +110,87 @@ def submit_legacy(
     )
     # only reached once the submission is written and its source event published
     typer.echo(f"Submission {submission_id} submitted.")
+
+
+@cli.command(no_args_is_help=True)
+def reserve_study_pid(
+    submission_title: str = typer.Option(
+        ..., help="The internal name of the study, until its metadata arrives."
+    ),
+    submission_description: str | None = typer.Option(
+        None, help="An optional description of the reservation."
+    ),
+    config_path: Path = typer.Option(
+        ...,
+        help="Path to a config YAML.",
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        readable=True,
+    ),
+):
+    """Reserve a study PID for a study whose metadata has not arrived yet.
+
+    The PID is kept in a new pending submission without content. Hand the PID to the
+    submitter, and keep the submission ID: 'submit-pending' needs both once the
+    metadata arrives.
+    """
+    logging.basicConfig(level=logging.CRITICAL)
+    submission_id, study_pid = study_pid_reservation.reserve_study_pid_from_path(
+        submission_title=submission_title,
+        submission_description=submission_description,
+        config_path=config_path,
+    )
+    typer.echo(f"Study PID {study_pid} reserved in submission {submission_id}.")
+
+
+@cli.command(no_args_is_help=True)
+def submit_pending(  # noqa: PLR0913
+    submission_id: str = typer.Option(
+        ..., help="The ID of the pending submission, as 'reserve-study-pid' printed it."
+    ),
+    study_pid: str = typer.Option(
+        ..., help="The study PID the pending submission holds."
+    ),
+    submission_title: str = typer.Option(..., help="The title of the submission."),
+    submission_description: str = typer.Option(
+        ..., help="The description of the submission."
+    ),
+    metadata_path: Path = typer.Option(
+        ...,
+        help="The path to the metadata JSON file.",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+        readable=True,
+    ),
+    config_path: Path = typer.Option(
+        ...,
+        help="Path to a config YAML.",
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        readable=True,
+    ),
+):
+    """Submit metadata to a pending submission, such as a reserved study PID, and
+    complete it.
+
+    The study keeps the PID the submission holds, and the datasets get PIDs derived
+    from it. Both the submission ID and the study PID are asked for, so that a
+    mixed-up ID is refused. A submission that is not pending is refused too.
+    """
+    logging.basicConfig(level=logging.CRITICAL)
+    reserved_title = study_pid_reservation.submit_pending_metadata_from_path(
+        submission_id=submission_id,
+        study_pid=study_pid,
+        submission_title=submission_title,
+        submission_description=submission_description,
+        metadata_path=metadata_path,
+        config_path=config_path,
+    )
+    # only reached once the submission is completed and its source event published
+    typer.echo(f"Submission {submission_id} ('{reserved_title}') submitted.")
 
 
 def _report_and_confirm_amendment(

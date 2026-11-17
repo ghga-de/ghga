@@ -28,6 +28,7 @@ from pathlib import Path
 import pytest
 import typer
 
+from ghga_datasteward_kit import study_pid_reservation
 from ghga_datasteward_kit.amendment import amendment, legacy_accessioning
 from ghga_datasteward_kit.amendment.amendment import AccessionChanges
 from ghga_datasteward_kit.amendment.exceptions import (
@@ -38,11 +39,17 @@ from ghga_datasteward_kit.amendment.exceptions import (
     StudyAccessionNotFlatError,
 )
 from ghga_datasteward_kit.cli.metadata import amend, submit, transform
+from ghga_datasteward_kit.cli.metadata import (
+    reserve_study_pid as reserve_study_pid_command,
+)
 from ghga_datasteward_kit.cli.metadata import submit_legacy as submit_legacy_command
+from ghga_datasteward_kit.cli.metadata import submit_pending as submit_pending_command
+from ghga_datasteward_kit.study_pid_reservation import StudyPidMismatchError
 from ghga_service_commons.utils.accessions import STUDY_PID_PATTERN
 from metldata.model_utils.anchors import AnchorPoint
 from metldata.model_utils.metadata_validator import MetadataValidationError
 from metldata.submission_registry.models import Submission
+from metldata.submission_registry.submission_registry import SubmissionRegistry
 from metldata.submission_registry.submission_store import SubmissionStore
 from tests.fixtures.metadata import (
     AMENDED_METADATA_PATH,
@@ -872,3 +879,154 @@ def test_submit_legacy_class_without_flat_prefix(
 
     assert_nothing_submitted()
     assert Path("accession_store").read_text(encoding="utf-8") == ""
+
+
+INTERNAL_NAME = "Internal Name"
+
+
+def reserve() -> tuple[str, str]:
+    """Reserve a study PID and return the submission ID and the PID.
+
+    Must be called from within a work directory fixture, like `submit_original`.
+    """
+    return study_pid_reservation.reserve_study_pid_from_path(
+        submission_title=INTERNAL_NAME,
+        submission_description=None,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+
+def submit_reserved(
+    *,
+    submission_id: str,
+    study_pid: str,
+    metadata_path: Path = ORIGINAL_METADATA_PATH,
+) -> None:
+    """Run `submit-pending` on the given submission with the given study PID."""
+    submit_pending_command(
+        submission_id=submission_id,
+        study_pid=study_pid,
+        submission_title="Test Title",
+        submission_description="Test Description",
+        metadata_path=metadata_path,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+
+def read_submission(*, submission_id: str) -> dict:
+    """Read a stored submission."""
+    path = Path("submission_store") / f"{submission_id}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def failing_complete_submission(self: SubmissionRegistry, *, id_: str) -> None:
+    """Stand in for a run that stops before the submission is completed."""
+    raise OSError("stopped before completing")
+
+
+def test_reserve_study_pid(example_workdir: Path, capsys: pytest.CaptureFixture[str]):
+    """Test that `reserve-study-pid` reports the reserved study PID and the ID of the
+    submission that holds it.
+    """
+    reserve_study_pid_command(
+        submission_title=INTERNAL_NAME,
+        submission_description=None,
+        config_path=METADATA_CONFIG_PATH,
+    )
+
+    submission = read_single_submission()
+    study_pid = next(iter(submission["accession_map"]["studies"].values()))
+    assert re.fullmatch(STUDY_PID_PATTERN, study_pid)
+    assert capsys.readouterr().out.splitlines()[-1] == (
+        f"Study PID {study_pid} reserved in submission {submission['id']}."
+    )
+
+
+def test_submit_pending_keeps_reserved_pid(
+    example_workdir: Path, capsys: pytest.CaptureFixture[str]
+):
+    """Test that `submit-pending` files the reserved PID under the real study alias,
+    derives the dataset PIDs from it, replaces the internal name with the title,
+    completes the submission and reports the internal name.
+    """
+    submission_id, study_pid = reserve()
+
+    submit_reserved(submission_id=submission_id, study_pid=study_pid)
+
+    submission = read_single_submission()
+    assert submission["accession_map"]["studies"] == {"test_study": study_pid}
+    dataset_pids = submission["accession_map"]["datasets"].values()
+    assert dataset_pids
+    assert all(pid.startswith(f"{study_pid}.DS.") for pid in dataset_pids)
+    assert submission["title"] == "Test Title"
+    assert submission["description"] == "Test Description"
+    assert submission["status_history"][-1]["new_status"] == "completed"
+    assert capsys.readouterr().out.splitlines()[-1] == (
+        f"Submission {submission_id} ('{INTERNAL_NAME}') submitted."
+    )
+
+    transform(config_path=METADATA_CONFIG_PATH)
+
+
+def test_submit_pending_refuses_mismatched_pid(example_workdir: Path):
+    """Test that the ID of one reservation with the PID of another is refused before
+    anything is written.
+    """
+    submission_id, _ = reserve()
+    _, other_study_pid = reserve()
+    submission_before = read_submission(submission_id=submission_id)
+
+    with pytest.raises(StudyPidMismatchError, match=re.escape(other_study_pid)):
+        submit_reserved(submission_id=submission_id, study_pid=other_study_pid)
+
+    assert read_submission(submission_id=submission_id) == submission_before
+    assert not list(Path("event_store").rglob("*.json"))
+
+
+def test_submit_pending_invalid_metadata_keeps_reservation(example_workdir: Path):
+    """Test that metadata failing validation leaves the reservation as it was, the
+    internal name included, so the corrected metadata can be submitted to it.
+    """
+    submission_id, study_pid = reserve()
+    submission_before = read_submission(submission_id=submission_id)
+    metadata_path = write_changed_metadata(
+        old="  - alias: test_sample_02\n", new="  - alias: test_sample_01\n"
+    )
+
+    with pytest.raises(MetadataValidationError, match="test_sample_01"):
+        submit_reserved(
+            submission_id=submission_id,
+            study_pid=study_pid,
+            metadata_path=metadata_path,
+        )
+
+    assert read_submission(submission_id=submission_id) == submission_before
+
+    submit_reserved(submission_id=submission_id, study_pid=study_pid)
+    submission = read_submission(submission_id=submission_id)
+    assert submission["accession_map"]["studies"] == {"test_study": study_pid}
+
+
+def test_submit_pending_rerun_after_stop_before_completion(
+    example_workdir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Test that a run that stopped after storing the metadata but before completing
+    the submission can be repeated, keeping every PID it minted.
+    """
+    submission_id, study_pid = reserve()
+
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            SubmissionRegistry, "complete_submission", failing_complete_submission
+        )
+        with pytest.raises(OSError, match="stopped before completing"):
+            submit_reserved(submission_id=submission_id, study_pid=study_pid)
+
+    stopped = read_submission(submission_id=submission_id)
+    assert stopped["status_history"][-1]["new_status"] == "pending"
+
+    submit_reserved(submission_id=submission_id, study_pid=study_pid)
+
+    submission = read_submission(submission_id=submission_id)
+    assert submission["accession_map"] == stopped["accession_map"]
+    assert submission["status_history"][-1]["new_status"] == "completed"

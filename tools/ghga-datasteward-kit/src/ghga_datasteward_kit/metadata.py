@@ -85,14 +85,8 @@ class MetadataConfig(
         return self
 
 
-def submit_metadata(
-    *,
-    submission_title: str,
-    submission_description: str,
-    metadata: Json,
-    config: MetadataConfig,
-) -> str:
-    """Submit metadata to the submission registry."""
+def build_submission_registry(*, config: MetadataConfig) -> SubmissionRegistry:
+    """Build the submission registry and the stores it works with from the config."""
     submission_store = SubmissionStore(config=config)
     event_publisher = FileSystemEventPublisher(config=config)
     source_event_publisher = SourceEventPublisher(
@@ -102,12 +96,23 @@ def submit_metadata(
     accession_registry = AccessionRegistry(
         config=config, accession_store=accession_store
     )
-    submission_registry = SubmissionRegistry(
+    return SubmissionRegistry(
         config=config,
         submission_store=submission_store,
         event_publisher=source_event_publisher,
         accession_registry=accession_registry,
     )
+
+
+def submit_metadata(
+    *,
+    submission_title: str,
+    submission_description: str,
+    metadata: Json,
+    config: MetadataConfig,
+) -> str:
+    """Submit metadata to the submission registry."""
+    submission_registry = build_submission_registry(config=config)
 
     submission_header = SubmissionHeader(
         title=submission_title, description=submission_description
