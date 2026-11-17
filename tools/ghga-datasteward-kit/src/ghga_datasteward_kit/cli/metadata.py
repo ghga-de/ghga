@@ -101,8 +101,7 @@ def submit_legacy(
     flat scheme before its metadata arrived: the study gets that accession, and every
     other resource gets a new flat one instead of one derived from a study PID.
 
-    The accession must not be in the accession store yet; the command registers it
-    there, so it cannot be given to a second submission.
+    The accession must not be in the accession store yet.
     """
     logging.basicConfig(level=logging.CRITICAL)
     submission_id = legacy_submission.submit_legacy_metadata_from_path(
