@@ -95,8 +95,7 @@ A later release removes the command once the production store is converted.
 Submits metadata as a new submission with flat accessions, for a study that was promised a flat accession before its metadata arrived.
 A flat accession is `GHGA`, one letter and 14 digits, such as `GHGAS12345678901234`, the scheme used before study PIDs.
 
-Use this, not `metadata submit`, for such a study only.
-`submit` mints a study PID and derives every other accession from it, so the accession already handed out, and possibly published, would not be the study's.
+Make sure to only use this command for flat-accessioned studies, and *do not* use `metadata submit`, because the latter will generate a new study PID using the current structured PID scheme instead of the flat format.
 
 ```text
 ghga-datasteward-kit metadata submit-legacy \
@@ -105,11 +104,6 @@ ghga-datasteward-kit metadata submit-legacy \
   --study-accession <flat accession> \
   --metadata-path <metadata JSON> \
   --config-path <metadata config YAML>
-```
-
-The study gets the given accession.
-Every other resource gets a new flat accession, such as `GHGAF` and 14 digits for a file, and the accession map holds every class.
-The submission is stored as completed, and the command prints `Submission <id> submitted.`; keep the ID, since `metadata amend` asks for it when the submission gains files.
 
 Before minting or writing anything, the command refuses any of the following:
 
