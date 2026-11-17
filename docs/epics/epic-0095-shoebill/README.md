@@ -98,9 +98,10 @@ The [basic prototype](./prototype.html) walks through each journey.
 2. **Change the order.**
    The steward clicks **Change priority**.
    The list is replaced by the reorder view, which shows all non-archived boxes in priority order.
-   The view also shows the version of the order, and who changed it last and when.
+   Opening the view loads the boxes and the order again, so the steward starts from the current order.
+   The view also shows who changed the order last and when.
    The steward drags boxes, or uses their buttons, to move them.
-   **Save priority** sends the new order and switches back to the list, which confirms the new version.
+   **Save priority** sends the new order and switches back to the list, which confirms the save.
 3. **Cancel.**
    **Cancel** throws away the changes and switches back to the list.
    If the steward tries to leave the page with unsaved changes, the page asks first.
@@ -293,11 +294,13 @@ The list already sorts and pages in the browser (`upload-box-manager-list.ts`), 
 If the priority list fails to load, the column stays empty, **Change priority** is disabled, and the page shows a message.
 
 **Reorder mode** opens when the steward clicks **Change priority**.
+Opening it loads the boxes and the order again, so the steward doesn't learn about a newer order only from a `409` after making the change.
 It replaces the filters, the table and the paginator with one list of all non-archived boxes in priority order.
 Reorder mode has no paging, filters or column sorting, because they don't work with reordering.
 A box cannot be dragged to another page, and "move up" would skip boxes that are hidden.
 
-The header shows the version and "Last changed by <name> on <date>".
+The header shows "Last changed by <name> on <date>".
+It doesn't show the version, which only the save needs.
 The page turns `changed_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
 If that fails, it shows the plain ID.
 If `changed_by` is `null` because of a repair at startup, the header shows "Last changed automatically on <date>".
@@ -313,7 +316,7 @@ After a move, the row stays highlighted for about 1.5 seconds, so the steward ca
 If the steward brings the order back to the one the page loaded, the page disables **Save priority**.
 
 **Save priority** sends the new order and the loaded version with `PUT /upload-box-priority`.
-If RS answers `200`, the page switches to list mode, shows the order from the response, and confirms the new version.
+If RS answers `200`, the page switches to list mode, shows the order from the response, and confirms the save.
 If RS answers `409`, the page says that the order changed while the steward was editing, loads the current order, and stays in reorder mode, so the steward can make the change again.
 If the save fails otherwise, the page stays in reorder mode, keeps the changes, and asks the steward to try again.
 **Cancel** throws away the changes and switches to list mode.
@@ -344,7 +347,7 @@ Reorder mode:
 ```text
 Upload Box Manager / Change priority                 [Cancel] [Save priority]
 Files of boxes higher up are re-encrypted first.
-Version 7, last changed by _Steward A_ on 2026-10-14 15:02
+Last changed by _Steward A_ on 2026-10-14 15:02
 
 | You have unsaved changes to the priority order.                          |
 
@@ -486,7 +489,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
 - DHFS: the wait is skipped after a round that concluded at least one file, and kept after an empty response or a round in which every file was inconclusive.
 - Data Portal, against a mocked RS:
   - the Prio column, and sorting by it
-  - switching between the two modes
+  - switching between the two modes, and loading the boxes and the order again when reorder mode opens
   - the order after a drag and after each button
   - disabling **Save priority** when the order is back to the loaded one
   - **Cancel** and the leave guard
@@ -522,7 +525,7 @@ Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps
 
 - The data steward opens the Upload Box Manager, clicks **Change priority**, moves the primary box once by dragging and once with a button, and saves.
 - The Prio column shows the box at the position it was moved to.
-- The reorder view shows the new version and "Last changed by" with the steward's name.
+- The reorder view shows "Last changed by" with the steward's name.
 - After the archival scenario, the box's Prio cell is empty, and the reorder view does not show the box.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.

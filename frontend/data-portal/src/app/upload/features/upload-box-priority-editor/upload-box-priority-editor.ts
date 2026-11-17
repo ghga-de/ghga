@@ -25,6 +25,7 @@ import {
   inject,
   Injector,
   linkedSignal,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
@@ -67,7 +68,7 @@ type MoveAction = 'up' | 'down' | 'top';
   ],
   templateUrl: './upload-box-priority-editor.html',
 })
-export class UploadBoxPriorityEditor {
+export class UploadBoxPriorityEditor implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
   #userService = inject(UserService);
   #notifier = inject(Notifier);
@@ -182,6 +183,14 @@ export class UploadBoxPriorityEditor {
   }
 
   /**
+   * Load the boxes and their order again, so that the steward starts from the
+   * current order rather than learning about a newer one only when saving.
+   */
+  ngOnInit(): void {
+    this.#uploadBoxService.reloadAllUploadBoxes();
+  }
+
+  /**
    * Move a box with one of its buttons. The focus stays on that button, or on
    * another button of the row if the move disabled it.
    * @param index - the position of the box in the list, starting at 0
@@ -246,11 +255,10 @@ export class UploadBoxPriorityEditor {
     this.#saveError.set(undefined);
     const boxIds = this.#order().map((box) => box.id);
     this.#uploadBoxService.saveBoxPriority(priority.version, boxIds).subscribe({
-      next: (savedPriority) => {
+      next: () => {
         this.saving.set(false);
         this.#notifier.showSuccess(
-          `Saved as version ${savedPriority.version}. ` +
-            'Data Hubs use it from their next batch.',
+          'Saved the new order. Data Hubs use it from their next batch.',
         );
         this.done.emit();
       },

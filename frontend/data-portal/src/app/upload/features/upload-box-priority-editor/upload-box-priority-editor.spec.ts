@@ -108,12 +108,12 @@ function titles(): string[] {
 }
 
 /**
- * Get the text of the header line with the version and the last change.
+ * Get the text of the header line about the last change.
  * @returns the text, with the whitespace collapsed
  */
-function versionLine(): string {
+function lastChangeLine(): string {
   return screen
-    .getByText(/^\s*Version/)
+    .getByText(/^\s*(Last changed|No edit history)/)
     .textContent!.replace(/\s+/g, ' ')
     .trim();
 }
@@ -140,6 +140,10 @@ describe('UploadBoxPriorityEditor', () => {
     result.fixture.componentInstance.done.subscribe(done);
   });
 
+  it('should load the boxes and the order again when it opens', () => {
+    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledOnce();
+  });
+
   /**
    * Click a button and wait for the page to update.
    * @param name - the accessible name of the button
@@ -156,11 +160,9 @@ describe('UploadBoxPriorityEditor', () => {
     expect(row).toHaveTextContent('Tübingen 1 – Open – 3 files');
   });
 
-  it('should show the version and the steward who changed the order last', () => {
+  it('should show the steward who changed the order last', () => {
     expect(userService.fetcher.load).toHaveBeenCalledWith('doe@test.dev');
-    expect(versionLine()).toBe(
-      'Version 7. Last changed by Dr. John Doe on 10 February 2025.',
-    );
+    expect(lastChangeLine()).toBe('Last changed by Dr. John Doe on 10 February 2025.');
     expect(screen.getByRole('link', { name: 'Dr. John Doe' })).toHaveAttribute(
       'href',
       '/user-manager/doe@test.dev',
@@ -171,9 +173,7 @@ describe('UploadBoxPriorityEditor', () => {
     userService.fetcher.resource.error.set(new Error('not found'));
     await result.fixture.whenStable();
 
-    expect(versionLine()).toBe(
-      'Version 7. Last changed by doe@test.dev on 10 February 2025.',
-    );
+    expect(lastChangeLine()).toBe('Last changed by doe@test.dev on 10 February 2025.');
     expect(screen.queryByRole('link')).toBeNull();
   });
 
@@ -185,9 +185,7 @@ describe('UploadBoxPriorityEditor', () => {
     });
     await result.fixture.whenStable();
 
-    expect(versionLine()).toBe(
-      'Version 1. Last changed automatically on 10 February 2025.',
-    );
+    expect(lastChangeLine()).toBe('Last changed automatically on 10 February 2025.');
   });
 
   it('should say that there is no edit history before the first write', async () => {
@@ -199,7 +197,7 @@ describe('UploadBoxPriorityEditor', () => {
     });
     await result.fixture.whenStable();
 
-    expect(versionLine()).toBe('Version 0. No edit history yet.');
+    expect(lastChangeLine()).toBe('No edit history yet.');
   });
 
   it('should move a box with its buttons', async () => {
@@ -270,12 +268,10 @@ describe('UploadBoxPriorityEditor', () => {
       'box-c',
     ]);
     expect(notifyMock.showSuccess).toHaveBeenCalledWith(
-      'Saved as version 8. Data Hubs use it from their next batch.',
+      'Saved the new order. Data Hubs use it from their next batch.',
     );
     expect(done).toHaveBeenCalledOnce();
-    expect(versionLine()).toBe(
-      'Version 8. Last changed by Dr. John Doe on 11 February 2025.',
-    );
+    expect(lastChangeLine()).toBe('Last changed by Dr. John Doe on 11 February 2025.');
     expect(result.fixture.componentInstance.hasChanges()).toBe(false);
   });
 
@@ -287,7 +283,8 @@ describe('UploadBoxPriorityEditor', () => {
     await click('Move Box B up');
     await click('Save priority');
 
-    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledOnce();
+    // Once when it opened, once after the conflict
+    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledTimes(2);
     expect(done).not.toHaveBeenCalled();
 
     // The reload brings another steward's order
@@ -363,7 +360,8 @@ describe('UploadBoxPriorityEditor', () => {
     ).toBeVisible();
     expect(titles()).toEqual(['Box B', 'Box A', 'Box C']);
     expect(screen.getByRole('button', { name: 'Save priority' })).toBeEnabled();
-    expect(uploadBoxService.reloadAllUploadBoxes).not.toHaveBeenCalled();
+    // Only when it opened
+    expect(uploadBoxService.reloadAllUploadBoxes).toHaveBeenCalledOnce();
     expect(done).not.toHaveBeenCalled();
   });
 

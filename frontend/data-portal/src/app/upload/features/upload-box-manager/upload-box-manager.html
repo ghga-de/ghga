@@ -23,10 +23,7 @@
 
 @if (reordering()) {
   <app-upload-box-priority-editor (done)="reordering.set(false)" />
-}
-
-<!-- Hidden rather than removed in reorder mode, so the list keeps its sorting and page -->
-<div [hidden]="reordering()">
+} @else {
   <div class="flex flex-col gap-4">
     <app-upload-box-manager-filter></app-upload-box-manager-filter>
     <app-upload-box-manager-list></app-upload-box-manager-list>
@@ -40,4 +37,4 @@
       Create Upload Box
     </button>
   </div>
-</div>
+}

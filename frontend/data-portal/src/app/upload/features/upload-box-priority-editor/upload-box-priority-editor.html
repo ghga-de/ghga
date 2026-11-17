@@ -25,7 +25,6 @@
   @let current = priority();
   @if (current) {
     <p class="mb-0">
-      Version {{ current.version }}.
       @if (!current.last_changed) {
         No edit history yet.
       } @else if (current.changed_by) {

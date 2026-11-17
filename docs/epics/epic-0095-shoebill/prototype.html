@@ -41,7 +41,7 @@
     <nav aria-label="Breadcrumb">Upload Box Manager / Change priority</nav>
     <h2 id="reorder-heading">Change priority</h2>
     <p>Files of boxes higher up are re-encrypted first. Changes apply from the next batch each Data Hub starts.</p>
-    <p>Version <span id="version"></span>, <span id="last-change"></span></p>
+    <p id="last-change"></p>
     <p>
       <button type="button" id="cancel">Cancel</button>
       <button type="button" id="save">Save priority</button>
@@ -210,14 +210,13 @@ function renderReorder(focus) {
   });
   $("empty-ranked").hidden = order.length > 0;
 
-  $("version").textContent = loaded.version;
   // changed_by resolves to a display name linking to /user-manager/<id> in the real page
   if (loaded.changedBy) {
-    $("last-change").innerHTML = `last changed by <a href="#">${loaded.changedBy}</a> on ${loaded.lastChanged}`;
+    $("last-change").innerHTML = `Last changed by <a href="#">${loaded.changedBy}</a> on ${loaded.lastChanged}`;
   } else if (loaded.lastChanged) {
-    $("last-change").textContent = `last changed automatically on ${loaded.lastChanged}`;
+    $("last-change").textContent = `Last changed automatically on ${loaded.lastChanged}`;
   } else {
-    $("last-change").textContent = "no edit history yet";
+    $("last-change").textContent = "No edit history yet";
   }
   $("save").disabled = !hasChanges();
   if (hasChanges() && !$("status").textContent) {
@@ -335,8 +334,8 @@ $("save").addEventListener("click", () => {
   }
   $("notice").textContent =
     response.priority.version === versionBefore
-      ? `Nothing changed; the priority order is still version ${versionBefore}.`
-      : `Saved as version ${response.priority.version}. Data Hubs use it from their next batch.`;
+      ? "Nothing changed; the order is the same as before."
+      : "Saved the new order. Data Hubs use it from their next batch.";
   loadFromServer();
   showMode("list");
 });
