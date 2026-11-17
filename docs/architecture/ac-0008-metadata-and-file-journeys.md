@@ -68,7 +68,7 @@ Canonical sequence, with a [metadata config](../../tools/ghga-datasteward-kit/me
    ```
 
 3. `metadata submit` — validate + register a submission locally, mint accessions, publish a source event.
-   For a submission with flat accessions that only gained files, `metadata amend --submission-id <id>` instead, which keeps them.
+   For a submission with flat accessions that only gained files, use `metadata amend --submission-id <id>` instead, which keeps them.
    For a study that was promised a flat accession before its metadata arrived, `metadata submit-legacy --study-accession <accession>` instead, which gives the study that accession.
 
    ```bash
