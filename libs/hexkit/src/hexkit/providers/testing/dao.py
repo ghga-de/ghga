@@ -655,11 +655,11 @@ class BaseInMemDao(Generic[DTO]):
     async def upsert_many(
         self, dtos: Collection[DTO], *, ordered: bool = False
     ) -> None:
-        """Upsert resources one by one.
+        """Upsert resources one by one, collecting failures as MongoDB does.
 
-        Without unique indexes an upsert cannot fail here, so `ordered` changes nothing.
+        This DAO has no unique indexes, so an upsert fails only where a test patched it.
         """
-        await self._write_each(dtos, self.upsert, ordered=False)
+        await self._write_each(dtos, self.upsert, ordered=ordered)
 
 
 def new_mock_dao_class(
