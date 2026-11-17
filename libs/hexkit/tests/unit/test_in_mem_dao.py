@@ -1087,6 +1087,39 @@ async def test_update_many():
     assert await stored_titles(dao) == ["Wrench", "Candle"]
 
 
+async def test_update_many_ordered_with_other_dao_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test that an ordered update_many goes on past a missing resource and stops at
+    the first other failure.
+    """
+    dao = DaoClass()
+    await dao.insert(WRENCH)
+    await dao.insert(CANDLE)
+    update = dao.update
+
+    async def update_without_candle(dto: InventoryItem) -> None:
+        if dto.title == "Candle":
+            raise UniqueConstraintViolationError(unique_fields={"count": dto.count})
+        await update(dto)
+
+    monkeypatch.setattr(dao, "update", update_without_candle)
+    changed = [
+        HAMMER,
+        CANDLE.model_copy(update={"count": 2}),
+        WRENCH.model_copy(update={"count": 1}),
+    ]
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.update_many(changed, ordered=True)
+
+    assert list(caught.value.errors) == ["Hammer", "Candle"]
+    assert isinstance(caught.value.errors["Hammer"], ResourceNotFoundError)
+    assert isinstance(caught.value.errors["Candle"], UniqueConstraintViolationError)
+    assert caught.value.not_attempted == ("Wrench",)
+    assert (await dao.get_by_id("Wrench")).count == 12
+
+
 async def test_upsert_many():
     """Test that upsert_many creates new items and replaces existing ones."""
     dao = DaoClass()
