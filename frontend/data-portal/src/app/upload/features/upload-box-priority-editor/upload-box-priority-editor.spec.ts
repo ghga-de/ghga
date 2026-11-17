@@ -50,6 +50,8 @@ const PRIORITY: UploadBoxPriority = {
   })),
   changed_by: 'doe@test.dev',
   last_changed: '2025-02-10T14:30:00Z',
+  reordered_by: 'doe@test.dev',
+  reordered_at: '2025-02-10T14:30:00Z',
 };
 
 const STEWARD = { id: 'doe@test.dev', displayName: 'Dr. John Doe' } as DisplayUser;
@@ -112,12 +114,12 @@ function titles(): string[] {
 }
 
 /**
- * Get the text of the header line about the last change.
+ * Get the text of the header line about the last new order.
  * @returns the text, with the whitespace collapsed
  */
-function lastChangeLine(): string {
+function lastReorderLine(): string {
   return screen
-    .getByText(/^\s*(Last changed|No edit history)/)
+    .getByText(/^\s*(Last reordered|Not reordered)/)
     .textContent!.replace(/\s+/g, ' ')
     .trim();
 }
@@ -166,9 +168,11 @@ describe('UploadBoxPriorityEditor', () => {
     expect(within(row).getByText('Open')).toHaveClass('text-success');
   });
 
-  it('should show the steward who changed the order last', () => {
+  it('should show the steward who last reordered the boxes', () => {
     expect(userService.fetcher.load).toHaveBeenCalledWith('doe@test.dev');
-    expect(lastChangeLine()).toBe('Last changed by Dr. John Doe on 10 February 2025.');
+    expect(lastReorderLine()).toBe(
+      'Last reordered by Dr. John Doe on 10 February 2025.',
+    );
     expect(screen.getByRole('link', { name: 'Dr. John Doe' })).toHaveAttribute(
       'href',
       '/user-manager/doe@test.dev',
@@ -179,32 +183,45 @@ describe('UploadBoxPriorityEditor', () => {
     userService.fetcher.resource.error.set(new Error('not found'));
     await result.fixture.whenStable();
 
-    expect(lastChangeLine()).toBe('Last changed by doe@test.dev on 10 February 2025.');
+    expect(lastReorderLine()).toBe(
+      'Last reordered by doe@test.dev on 10 February 2025.',
+    );
     expect(screen.queryByRole('link')).toBeNull();
   });
 
-  it('should say that the RS changed the order after a repair at startup', async () => {
+  it('should keep naming the steward after a repair that follows a save', async () => {
     uploadBoxService.boxPriority.value.set({
       ...PRIORITY,
-      version: 1,
+      version: 8,
       changed_by: null,
+      last_changed: '2025-02-12T10:00:00Z',
     });
     await result.fixture.whenStable();
 
-    expect(lastChangeLine()).toBe('Last changed automatically on 10 February 2025.');
+    expect(lastReorderLine()).toBe(
+      'Last reordered by Dr. John Doe on 10 February 2025.',
+    );
   });
 
-  it('should say that there is no edit history before the first write', async () => {
-    uploadBoxService.boxPriority.value.set({
-      version: 0,
-      entries: [],
-      changed_by: null,
-      last_changed: null,
-    });
-    await result.fixture.whenStable();
+  it.each([
+    ['before the first write', null, null],
+    ['after only repairs and box changes', 'doe@test.dev', '2025-02-10T14:30:00Z'],
+  ])(
+    'should say that nobody reordered the boxes %s',
+    async (_, changedBy, lastChanged) => {
+      uploadBoxService.boxPriority.value.set({
+        ...PRIORITY,
+        changed_by: changedBy,
+        last_changed: lastChanged,
+        reordered_by: null,
+        reordered_at: null,
+      });
+      await result.fixture.whenStable();
 
-    expect(lastChangeLine()).toBe('No edit history yet.');
-  });
+      expect(lastReorderLine()).toBe('Not reordered yet.');
+      expect(screen.queryByRole('link')).toBeNull();
+    },
+  );
 
   it('should describe the move buttons in tooltips', () => {
     expect(
@@ -270,6 +287,7 @@ describe('UploadBoxPriorityEditor', () => {
       version: 8,
       entries: [PRIORITY.entries[1], PRIORITY.entries[0], PRIORITY.entries[2]],
       last_changed: '2025-02-11T09:00:00Z',
+      reordered_at: '2025-02-11T09:00:00Z',
     };
     uploadBoxService.saveBoxPriority.mockImplementation(() => {
       uploadBoxService.boxPriority.value.set(savedPriority);
@@ -289,7 +307,9 @@ describe('UploadBoxPriorityEditor', () => {
       'Saved the new order. Data Hubs use it from their next batch.',
     );
     expect(done).toHaveBeenCalledOnce();
-    expect(lastChangeLine()).toBe('Last changed by Dr. John Doe on 11 February 2025.');
+    expect(lastReorderLine()).toBe(
+      'Last reordered by Dr. John Doe on 11 February 2025.',
+    );
     expect(result.fixture.componentInstance.hasChanges()).toBe(false);
   });
 

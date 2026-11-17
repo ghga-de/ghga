@@ -24,6 +24,8 @@ function priorityOf(boxIds: string[]): UploadBoxPriority {
     })),
     changed_by: 'steward@test.dev',
     last_changed: '2025-03-01T09:00:00Z',
+    reordered_by: 'steward@test.dev',
+    reordered_at: '2025-03-01T09:00:00Z',
   };
 }
 
@@ -90,6 +92,8 @@ describe('prioritizeBoxes', () => {
       entries: [],
       changed_by: null,
       last_changed: null,
+      reordered_by: null,
+      reordered_at: null,
     };
     expect(idsOf(prioritizeBoxes(BOXES, priority))).toEqual(['a', 'b', 'c']);
   });

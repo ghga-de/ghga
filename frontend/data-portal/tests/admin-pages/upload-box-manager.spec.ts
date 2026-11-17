@@ -229,7 +229,7 @@ test('can change the priority order', async ({ adminPage: page }) => {
 
   const reorderMode = main.getByRole('region', { name: 'Priority order' });
   await expect(reorderMode).toContainText(
-    'Last changed by Dr. John Doe on 10 February 2025.',
+    'Last reordered by Dr. John Doe on 10 February 2025.',
   );
   await main
     .getByRole('button', { name: 'Move Research Data Upload Box of John up' })

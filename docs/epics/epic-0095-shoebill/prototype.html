@@ -83,8 +83,8 @@ const INITIAL_BOXES = [
 const INITIAL_PRIORITY = {
   version: 7,
   boxIds: ["b", "a", "z", "d", "c", "e", "f"],
-  changedBy: "Steward A",
-  lastChanged: "2026-10-14 15:02",
+  reorderedBy: "Steward A",
+  reorderedAt: "2026-10-14 15:02",
 };
 const CURRENT_STEWARD = "Steward B (you)";
 const STATE_ORDER = { locked: 0, open: 1, archived: 2 };
@@ -139,8 +139,11 @@ function showMode(mode) {
 }
 
 // Simulated RS writes
-function writeList(boxIds, changedBy) {
-  server = { version: server.version + 1, boxIds, changedBy, lastChanged: now() };
+// Only a save sets who reordered the boxes; repairs and box changes keep it
+function writeList(boxIds, { reorderedBy } = {}) {
+  server = reorderedBy
+    ? { version: server.version + 1, boxIds, reorderedBy, reorderedAt: now() }
+    : { ...server, version: server.version + 1, boxIds };
 }
 
 // Simulated PUT /upload-box-priority. RS saves the new order only if it is based on
@@ -150,7 +153,7 @@ function saveOrder(version, boxIds) {
   if (version !== server.version || [...boxIds].sort().join() !== [...list].sort().join()) {
     return { status: 409 };
   }
-  if (boxIds.join() !== server.boxIds.join()) writeList([...boxIds], CURRENT_STEWARD);
+  if (boxIds.join() !== server.boxIds.join()) writeList([...boxIds], { reorderedBy: CURRENT_STEWARD });
   return { status: 200, priority: server };
 }
 
@@ -211,13 +214,11 @@ function renderReorder(focus) {
   });
   $("empty-ranked").hidden = order.length > 0;
 
-  // changed_by resolves to a display name linking to /user-manager/<id> in the real page
-  if (loaded.changedBy) {
-    $("last-change").innerHTML = `Last changed by <a href="#">${loaded.changedBy}</a> on ${loaded.lastChanged}`;
-  } else if (loaded.lastChanged) {
-    $("last-change").textContent = `Last changed automatically on ${loaded.lastChanged}`;
+  // reordered_by resolves to a display name linking to /user-manager/<id> in the real page
+  if (loaded.reorderedBy) {
+    $("last-change").innerHTML = `Last reordered by <a href="#">${loaded.reorderedBy}</a> on ${loaded.reorderedAt}`;
   } else {
-    $("last-change").textContent = "No edit history yet";
+    $("last-change").textContent = "Not reordered yet";
   }
   $("save").disabled = !hasChanges();
   if (hasChanges() && !$("status").textContent) {
@@ -314,13 +315,13 @@ $("save").addEventListener("click", () => {
   }
   if ($("sim-other").checked) {
     $("sim-other").checked = false;
-    writeList(["e", ...repaired(server.boxIds).filter((id) => id !== "e")], "Steward C");
+    writeList(["e", ...repaired(server.boxIds).filter((id) => id !== "e")], { reorderedBy: "Steward C" });
   }
   if ($("sim-gone").checked) {
     $("sim-gone").checked = false;
     const gone = boxById(order[0]);
     gone.state = "archived";
-    writeList(repaired(server.boxIds), "Steward C");
+    writeList(repaired(server.boxIds));
   }
 
   const versionBefore = server.version;
@@ -346,7 +347,7 @@ $("create-box").addEventListener("click", () => {
   createdCount += 1;
   const id = `new${createdCount}`;
   boxes.push({ id, title: `New box ${createdCount}`, storage: "Heidelberg", state: "open", files: 0, size: "0 B of 1.0 TiB", lastChange: now() });
-  writeList([...repaired(server.boxIds).filter((other) => other !== id), id], "Steward C");
+  writeList([...repaired(server.boxIds).filter((other) => other !== id), id]);
   if (!$("list-mode").hidden) loadFromServer();
   $("notice").textContent = `Another steward created New box ${createdCount}.`;
   render();

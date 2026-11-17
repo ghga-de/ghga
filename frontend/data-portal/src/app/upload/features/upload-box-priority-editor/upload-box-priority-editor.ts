@@ -174,21 +174,24 @@ export class UploadBoxPriorityEditor implements OnInit {
     }));
   });
 
-  #changedByFetcher = this.#userService.createUserFetcher();
+  #reorderedByFetcher = this.#userService.createUserFetcher();
 
-  #loadChangedByEffect = effect(() => {
-    const changedById = this.priority()?.changed_by;
-    if (changedById) this.#changedByFetcher.load(changedById);
+  #loadReorderedByEffect = effect(() => {
+    const reorderedById = this.priority()?.reordered_by;
+    if (reorderedById) this.#reorderedByFetcher.load(reorderedById);
   });
 
-  /** The steward who changed the order last, undefined while loading, null on error */
-  protected changedBy = computed<DisplayUser | null | undefined>(() => {
-    const changedById = this.priority()?.changed_by;
-    if (!changedById) return undefined;
-    const changedByResource = this.#changedByFetcher.resource;
-    if (changedByResource.error()) return null;
-    const changedByUser = changedByResource.value();
-    return changedByUser?.id === changedById ? changedByUser : undefined;
+  /**
+   * The data steward who last saved a new order, undefined while loading, null on
+   * error. Unlike `changed_by`, creating, archiving or deleting a box keeps it.
+   */
+  protected reorderedBy = computed<DisplayUser | null | undefined>(() => {
+    const reorderedById = this.priority()?.reordered_by;
+    if (!reorderedById) return undefined;
+    const reorderedByResource = this.#reorderedByFetcher.resource;
+    if (reorderedByResource.error()) return null;
+    const reorderedByUser = reorderedByResource.value();
+    return reorderedByUser?.id === reorderedById ? reorderedByUser : undefined;
   });
 
   constructor() {

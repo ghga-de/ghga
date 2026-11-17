@@ -109,6 +109,8 @@ const TEST_PRIORITY: UploadBoxPriority = {
   ],
   changed_by: 'doe@test.dev',
   last_changed: '2025-03-02T09:00:00Z',
+  reordered_by: 'doe@test.dev',
+  reordered_at: '2025-03-02T09:00:00Z',
 };
 
 /**

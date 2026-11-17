@@ -26,24 +26,21 @@
   @let current = priority();
   @if (current) {
     <p class="mb-0">
-      @if (!current.last_changed) {
-        No edit history yet.
-      } @else if (current.changed_by) {
-        Last changed
-        @if (changedBy()) {
+      @if (current.reordered_by) {
+        Last reordered
+        @if (reorderedBy()) {
           by
           <a
-            [routerLink]="'/user-manager/' + current.changed_by"
+            [routerLink]="'/user-manager/' + current.reordered_by"
             class="text-primary"
-            >{{ changedBy()!.displayName }}</a
+            >{{ reorderedBy()!.displayName }}</a
           >
-        } @else if (changedBy() === null) {
-          by {{ current.changed_by }}
+        } @else if (reorderedBy() === null) {
+          by {{ current.reordered_by }}
         }
-        on {{ current.last_changed | date: friendlyDateFormat : timeZone }}.
+        on {{ current.reordered_at | date: friendlyDateFormat : timeZone }}.
       } @else {
-        Last changed automatically on
-        {{ current.last_changed | date: friendlyDateFormat : timeZone }}.
+        Not reordered yet.
       }
     </p>
   }

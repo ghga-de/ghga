@@ -99,7 +99,7 @@ The [basic prototype](./prototype.html) walks through each journey.
    The steward clicks **Change order**.
    The list is replaced by the reorder view, which shows all non-archived boxes in priority order.
    Opening the view loads the boxes and the order again, so the steward starts from the current order.
-   The view also shows who changed the order last and when.
+   The view also shows who last reordered the boxes and when.
    The steward drags boxes, or uses their buttons, to move them.
    **Save order** sends the new order and switches back to the list, which confirms the save.
 3. **Cancel.**
@@ -300,12 +300,12 @@ It replaces the filters, the table and the paginator with one list of all non-ar
 Reorder mode has no paging, filters or column sorting, because they don't work with reordering.
 A box cannot be dragged to another page, and "move up" would skip boxes that are hidden.
 
-The header shows "Last changed by <name> on <date>".
+The header shows "Last reordered by <name> on <date>", from `reordered_by` and `reordered_at`.
 It doesn't show the version, which only the save needs.
-The page turns `changed_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
+The page turns `reordered_by` into a display name with a link to `/user-manager/<id>`, as the upload box detail page does.
 If that fails, it shows the plain ID.
-If `changed_by` is `null` because of a repair at startup, the header shows "Last changed automatically on <date>".
-Before the first write, the header shows "No edit history yet".
+Until a steward first saves an order, the header shows "Not reordered yet".
+The header doesn't use `changed_by`, which repairs and box changes also set, so it often wouldn't name the steward who chose the order.
 The page takes these values from the priority document, because it cannot read the audit log.
 
 Each row shows the box's title, storage location, state, size and limit (for example "2.5 GiB of 10.0 TiB"), and position.
@@ -353,7 +353,7 @@ Reorder mode:
 ```text
 Upload Box Manager / Priority order                     [Cancel] [Save order]
 Files of boxes higher up are re-encrypted first.
-Last changed by _Steward A_ on 2026-10-14 15:02
+Last reordered by _Steward A_ on 2026-10-14 15:02
 
 | You have unsaved changes to the priority order.                          |
 
@@ -499,7 +499,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
   - the order after a drag and after each button
   - disabling **Save order** when the order is back to the loaded one
   - **Cancel** and the leave guard
-  - the "Last changed" line before the first write, after a repair at startup, and after a save
+  - the "Last reordered" line before the first save, after a save, and after a repair or box change that follows a save
   - ignoring entries for archived or deleted boxes, and showing missing boxes at the end
   - a save that fails with `409`
   - a failed save
@@ -531,7 +531,7 @@ Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps
 
 - The data steward opens the Upload Box Manager, clicks **Change order**, moves the primary box once by dragging and once with a button, and saves.
 - The Prio column shows the box at the position it was moved to.
-- The reorder view shows "Last changed by" with the steward's name.
+- The reorder view shows "Last reordered by" with the steward's name.
 - After the archival scenario, the box's Prio cell is empty, and the reorder view does not show the box.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.

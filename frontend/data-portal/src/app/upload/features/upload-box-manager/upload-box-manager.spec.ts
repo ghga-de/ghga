@@ -44,6 +44,8 @@ const TEST_PRIORITY: UploadBoxPriority = {
   entries: [],
   changed_by: null,
   last_changed: '2025-02-10T14:30:00Z',
+  reordered_by: null,
+  reordered_at: null,
 };
 
 /**
