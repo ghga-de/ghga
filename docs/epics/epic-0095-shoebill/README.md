@@ -316,6 +316,8 @@ The steward drags a row to move it (Angular CDK `cdkDropList`, already a depende
 The move up, move down and move to top buttons do the same for keyboard users, and each has a tooltip.
 While the steward drags a row, a bar between two rows shows where the row will be dropped.
 After a move, the row stays highlighted for about 1.5 seconds, so the steward can find it again.
+The rows slide to their new places: while dragging with the CDK's standard transitions, and after a button move in 200 ms, however far the row moves, so moving to the top of a long list is not slower.
+Both animations are skipped if the user prefers reduced motion.
 
 If the steward brings the order back to the one the page loaded, the page disables **Save order**.
 

@@ -21,3 +21,16 @@
     );
   }
 }
+
+// The CDK's standard transitions, so that the rows slide while dragging and the
+// dropped row slides into place, instead of jumping. Outside the layer, so that
+// they replace the transition of the colours while dragging.
+@media (prefers-reduced-motion: no-preference) {
+  .cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}

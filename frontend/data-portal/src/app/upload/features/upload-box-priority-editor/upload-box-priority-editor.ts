@@ -47,6 +47,12 @@ import { UploadBoxService } from '@app/upload/services/upload-box';
 /** How long a moved row stays highlighted, in milliseconds */
 const HIGHLIGHT_DURATION = 1500;
 
+/**
+ * How long the rows take to slide to their new places after a button move, in
+ * milliseconds. Fixed, so that moving to the top of a long list is not slower.
+ */
+const MOVE_ANIMATION_DURATION = 200;
+
 /** The move buttons of a row */
 type MoveAction = 'up' | 'down' | 'top';
 
@@ -198,17 +204,20 @@ export class UploadBoxPriorityEditor implements OnInit {
   }
 
   /**
-   * Move a box with one of its buttons. The focus stays on that button, or on
-   * another button of the row if the move disabled it.
+   * Move a box with one of its buttons. The rows slide to their new places, and
+   * the focus stays on that button, or on another button of the row if the move
+   * disabled it.
    * @param index - the position of the box in the list, starting at 0
    * @param action - the button that was used
    */
   protected moveWithButton(index: number, action: MoveAction): void {
     const boxId = this.#order()[index].id;
     const target = { up: index - 1, down: index + 1, top: 0 }[action];
+    const oldTops = this.#rowTops();
     this.#move(index, target);
     afterNextRender(
       () => {
+        this.#slideRows(oldTops);
         const row = this.#host.nativeElement.querySelector(`[data-box-id="${boxId}"]`);
         const button =
           row?.querySelector<HTMLButtonElement>(`[data-action="${action}"]:enabled`) ??
@@ -217,6 +226,39 @@ export class UploadBoxPriorityEditor implements OnInit {
       },
       { injector: this.#injector },
     );
+  }
+
+  /**
+   * Get where each row is on the screen.
+   * @returns the top of each row, by box ID
+   */
+  #rowTops(): Map<string, number> {
+    const rows =
+      this.#host.nativeElement.querySelectorAll<HTMLElement>('[data-box-id]');
+    return new Map(
+      [...rows].map((row) => [row.dataset['boxId']!, row.getBoundingClientRect().top]),
+    );
+  }
+
+  /**
+   * Slide the rows that moved from their old places to their new ones (FLIP),
+   * unless the user prefers reduced motion.
+   * @param oldTops - the top of each row before the move, by box ID
+   */
+  #slideRows(oldTops: Map<string, number>): void {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    const rows =
+      this.#host.nativeElement.querySelectorAll<HTMLElement>('[data-box-id]');
+    for (const row of rows) {
+      const oldTop = oldTops.get(row.dataset['boxId']!);
+      if (oldTop === undefined || typeof row.animate !== 'function') continue;
+      const offset = oldTop - row.getBoundingClientRect().top;
+      if (!offset) continue;
+      row.animate([{ transform: `translateY(${offset}px)` }, { transform: 'none' }], {
+        duration: MOVE_ANIMATION_DURATION,
+        easing: 'ease-out',
+      });
+    }
   }
 
   /**

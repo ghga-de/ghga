@@ -390,4 +390,52 @@ describe('UploadBoxPriorityEditor', () => {
     expect(done).toHaveBeenCalledOnce();
     expect(uploadBoxService.saveBoxPriority).not.toHaveBeenCalled();
   });
+
+  describe('after a button move', () => {
+    let animate: Mock;
+
+    beforeEach(() => {
+      // jsdom has no layout and no Web Animations: each row is 50 px high
+      vitest
+        .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+        .mockImplementation(function (this: HTMLElement) {
+          const rows = [...(this.parentElement?.children ?? [])];
+          return { top: rows.indexOf(this) * 50 } as DOMRect;
+        });
+      animate = vitest.fn();
+      HTMLElement.prototype.animate = animate;
+    });
+
+    afterEach(() => {
+      vitest.restoreAllMocks();
+      vitest.unstubAllGlobals();
+      delete (HTMLElement.prototype as Partial<HTMLElement>).animate;
+    });
+
+    it('should slide the rows to their new places in a fixed time', async () => {
+      await click('Move Box C to top');
+
+      const offsets = animate.mock.calls.map(([keyframes]) => keyframes[0].transform);
+      // Box C comes up from the bottom, Box A and Box B go down one row
+      expect(offsets).toEqual([
+        'translateY(100px)',
+        'translateY(-50px)',
+        'translateY(-50px)',
+      ]);
+      for (const [, options] of animate.mock.calls) {
+        expect(options.duration).toBe(200);
+      }
+    });
+
+    it('should not slide the rows if the user prefers reduced motion', async () => {
+      vitest.stubGlobal('matchMedia', (query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+      }));
+
+      await click('Move Box C to top');
+
+      expect(titles()).toEqual(['Box C', 'Box A', 'Box B']);
+      expect(animate).not.toHaveBeenCalled();
+    });
+  });
 });
