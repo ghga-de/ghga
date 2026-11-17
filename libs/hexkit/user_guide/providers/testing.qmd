@@ -81,7 +81,7 @@ It converts DTOs to documents with the MongoDB provider's own functions, so the 
 
 Two attributes help with test setup and assertions:
 
-- `resources`: the dictionary of stored documents, keyed by resource ID.
+- `resources`: the dictionary of stored documents, keyed by each document's `_id`, which is the resource ID as the DTO serializes it.
 - `latest`: the most recently inserted resource, as a DTO.
   It raises a `MockDAOEmptyError` if the DAO is empty.
 

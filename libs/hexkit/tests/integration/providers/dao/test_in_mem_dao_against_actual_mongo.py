@@ -15,15 +15,15 @@
 
 """Tests meant to verify the reliability of the InMemDao"""
 
-from collections.abc import AsyncGenerator, Mapping
+from collections.abc import AsyncGenerator, Awaitable, Callable, Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
 import pytest_asyncio
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
-from hexkit.protocols.dao import BatchOperationError, Dao
+from hexkit.protocols.dao import BatchOperationError, Dao, DaoError
 from hexkit.providers.mongodb.provider import MongoDbDaoFactory
 from hexkit.providers.mongodb.testutils import (
     MongoDbFixture,
@@ -396,5 +396,73 @@ async def test_batch_methods(
     """Test that a batch method fails and writes the same in memory as in MongoDB."""
     expected = await batch_outcome(real_item_dao, method, args, kwargs)
     observed = await batch_outcome(mock_item_dao, method, args, kwargs)
+
+    assert observed == expected
+
+
+class ShoutedItem(BaseModel):
+    """A model whose ID is stored in another form than the DTO holds it"""
+
+    title: str
+    count: int = 0
+
+    @field_serializer("title")
+    def _shout(self, title: str) -> str:
+        return title.upper()
+
+
+MockShoutedDaoClass = new_mock_dao_class(dto_model=ShoutedItem, id_field="title")
+
+
+async def serialized_id_outcome(dao, call: Callable[[Any], Awaitable[Any]]):
+    """Run a call on a DAO holding one item and return its outcome and the stored IDs."""
+    await dao.insert(ShoutedItem(title="apples"))
+    try:
+        outcome = await call(dao)
+    except BatchOperationError as error:
+        outcome = {id_: str(err) for id_, err in error.errors.items()}
+    except (DaoError, ValueError) as error:
+        outcome = (type(error), str(error))
+    stored = [item.title async for item in dao.find_all(filter_={})]
+    return outcome, sorted(stored)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        pytest.param(lambda dao: dao.get_by_id("apples"), id="get_by_id-dto-id"),
+        pytest.param(lambda dao: dao.get_by_id("APPLES"), id="get_by_id-stored-id"),
+        pytest.param(
+            lambda dao: dao.update(ShoutedItem(title="apples", count=1)), id="update"
+        ),
+        pytest.param(lambda dao: dao.delete("apples"), id="delete-dto-id"),
+        pytest.param(lambda dao: dao.delete("APPLES"), id="delete-stored-id"),
+        pytest.param(
+            lambda dao: dao.insert(ShoutedItem(title="apples")), id="insert-existing"
+        ),
+        pytest.param(
+            lambda dao: dao.insert_many(
+                [ShoutedItem(title="apples"), ShoutedItem(title="pears")]
+            ),
+            id="insert_many-existing",
+        ),
+        pytest.param(
+            lambda dao: dao.insert_many(
+                [ShoutedItem(title="pears"), ShoutedItem(title="PEARS")]
+            ),
+            id="insert_many-same-stored-id",
+        ),
+    ],
+)
+async def test_serialized_id(
+    call: Callable[[Any], Awaitable[Any]], mongodb: MongoDbFixture
+):
+    """Test that a DTO's ID is stored and found as it serializes, as in MongoDB."""
+    async with MongoDbDaoFactory.construct(config=mongodb.config) as dao_factory:
+        real_dao = await dao_factory.get_dao(
+            name="shouted", dto_model=ShoutedItem, id_field="title"
+        )
+        expected = await serialized_id_outcome(real_dao, call)
+    observed = await serialized_id_outcome(MockShoutedDaoClass(), call)
 
     assert observed == expected

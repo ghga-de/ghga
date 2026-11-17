@@ -426,6 +426,7 @@ class BaseInMemDao(Generic[DTO]):
         raise NotImplementedError()
 
     def __init__(self) -> None:
+        # Keyed by each document's _id, the ID as the DTO serializes it, as in MongoDB
         self.resources: dict[ID, Document] = {}
 
     @property
@@ -565,10 +566,11 @@ class BaseInMemDao(Generic[DTO]):
 
         Raises a ResourceAlreadyExistsError if a resource with a matching ID exists already.
         """
-        dto_id = getattr(dto, self._id_field)
+        document = self._serialize(dto)
+        dto_id = document["_id"]
         if dto_id in self.resources:
             raise ResourceAlreadyExistsError(id_=dto_id)
-        self.resources[dto_id] = self._serialize(dto)
+        self.resources[dto_id] = document
 
     async def update(
         self, dto: DTO, *, precondition: Mapping[str, Any] | None = None
@@ -579,7 +581,8 @@ class BaseInMemDao(Generic[DTO]):
         ResourceNotFoundError if no resource with a matching ID is found, and a
         PreconditionFailedError if the resource doesn't match `precondition`.
         """
-        dto_id = getattr(dto, self._id_field)
+        document = self._serialize(dto)
+        dto_id = document["_id"]
 
         # Validated before the existence check, so an invalid filter produces the same
         # error here as it does in the MongoDB provider
@@ -595,7 +598,7 @@ class BaseInMemDao(Generic[DTO]):
             if not self._resource_matches(self.resources[dto_id], criteria, predicates):
                 raise PreconditionFailedError(id_=dto_id, precondition=precondition)
 
-        self.resources[dto_id] = self._serialize(dto)
+        self.resources[dto_id] = document
 
     async def delete(self, id_: ID) -> None:
         """Delete a resource by ID.
@@ -608,8 +611,8 @@ class BaseInMemDao(Generic[DTO]):
 
     async def upsert(self, dto: DTO) -> None:
         """Upsert a resource."""
-        dto_id = getattr(dto, self._id_field)
-        self.resources[dto_id] = self._serialize(dto)
+        document = self._serialize(dto)
+        self.resources[document["_id"]] = document
 
     async def _write_each(
         self,
@@ -625,7 +628,7 @@ class BaseInMemDao(Generic[DTO]):
         count a missing resource as one.
         """
         dtos = list(dtos)
-        ids = [getattr(dto, self._id_field) for dto in dtos]
+        ids = [self._serialize(dto)["_id"] for dto in dtos]
         ensure_distinct_ids(ids)
         errors: dict[ID, DaoError] = {}
         for position, dto in enumerate(dtos):
