@@ -530,9 +530,8 @@ class BaseInMemDao(Generic[DTO]):
             desc = spec.startswith("-")
             field = spec.removeprefix("-")
             # Only the exact ID field is translated to the internal "_id" field, matching
-            # the MongoDB provider. Other fields (including nested sub-fields of the ID,
-            # which MongoDB cannot sort by) are looked up as-is and resolve to None when
-            # absent, sorting consistently rather than raising - again like MongoDB.
+            # the MongoDB provider. Other fields are looked up as-is and resolve to None
+            # when absent, sorting consistently rather than raising - again like MongoDB.
             doc_field = "_id" if field == self._id_field else field
             matching.sort(key=partial(_sort_key, field_path=doc_field), reverse=desc)
 
