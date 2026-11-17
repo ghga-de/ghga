@@ -545,6 +545,9 @@ describe('UploadBoxManagerDetail', () => {
       await fixture.whenStable();
 
       expect(component.canRequeueFileFn(failedFile)).toBe(false);
+      expect(
+        screen.queryByRole('button', { name: /retry failed re-encryptions/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('should requeue a file after confirmation', async () => {
