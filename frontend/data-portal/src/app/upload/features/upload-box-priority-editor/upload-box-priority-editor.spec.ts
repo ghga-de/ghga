@@ -34,9 +34,9 @@ function box(letter: string): ResearchDataUploadBox {
     last_changed: '2025-02-01T09:00:00Z',
     changed_by: 'doe@test.dev',
     file_count: 3,
-    size: 0,
+    size: 2.5 * 1024 ** 3,
     storage_alias: 'TUE01',
-    max_size: 1_000_000,
+    max_size: 10 * 1024 ** 4,
   };
 }
 
@@ -104,7 +104,11 @@ const notifyMock = { showSuccess: vitest.fn() };
 function titles(): string[] {
   return within(screen.getByRole('list', { name: 'Priority order' }))
     .getAllByRole('listitem')
-    .map((row) => row.querySelector('strong')?.textContent?.trim() ?? '');
+    .map((row) =>
+      within(row)
+        .getByText(/^Box [A-Z]$/)
+        .textContent!.trim(),
+    );
 }
 
 /**
@@ -156,8 +160,10 @@ describe('UploadBoxPriorityEditor', () => {
   it('should list the boxes in the loaded order', () => {
     expect(titles()).toEqual(['Box A', 'Box B', 'Box C']);
     const row = screen.getAllByRole('listitem')[1];
-    expect(row).toHaveTextContent('2');
-    expect(row).toHaveTextContent('Tübingen 1 – Open – 3 files');
+    expect(row).toHaveTextContent('Tübingen 1 – Open – 2.5 GiB of 10.0 TiB');
+    expect(within(row).getByText('2')).toHaveClass('text-right');
+    // In the colours of the table
+    expect(within(row).getByText('Open')).toHaveClass('text-success');
   });
 
   it('should show the steward who changed the order last', () => {

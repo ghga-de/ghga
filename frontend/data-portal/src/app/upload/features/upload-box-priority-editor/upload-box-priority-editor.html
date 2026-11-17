@@ -68,9 +68,8 @@
       @for (row of rows(); track row.box.id) {
         <li
           cdkDrag
-          class="border-outline flex flex-wrap items-center gap-2 rounded border p-2 transition-colors"
+          class="box-row border-outline flex flex-wrap items-center gap-2 rounded border p-2 transition-colors"
           [class.bg-yellow-100]="row.highlighted"
-          [class.bg-white]="!row.highlighted"
           [attr.data-box-id]="row.box.id"
         >
           <mat-icon
@@ -79,15 +78,20 @@
             aria-hidden="true"
             class="shrink-0 cursor-move"
           ></mat-icon>
-          <span class="w-8 shrink-0 text-right tabular-nums">{{ row.position }}</span>
           <!-- On narrow screens, the buttons wrap below the title -->
           <div class="min-w-0 grow basis-48">
-            <strong class="block break-words">{{ row.box.title }}</strong>
-            <span class="text-sm"
-              >{{ row.storageLabel }} – {{ row.box.state | CapitalisePipe }} –
-              {{ row.box.file_count }} files</span
+            <span class="block break-words">{{ row.box.title }}</span>
+            <span
+              >{{ row.storageLabel }} –
+              <span class="{{ row.stateClass }}">{{
+                row.box.state | CapitalisePipe
+              }}</span>
+              – {{ row.box.size | parseBytes: 1 }} of
+              {{ row.box.max_size | parseBytes: 1 }}</span
             >
           </div>
+          <!-- Right-aligned, like the Prio column of the table -->
+          <span class="w-12 shrink-0 text-right tabular-nums">{{ row.position }}</span>
           <div class="ms-auto flex shrink-0">
             <button
               mat-icon-button
@@ -127,17 +131,17 @@
           <!-- The CDK resets the background and border of the preview's root element -->
           <div *cdkDragPreview>
             <div
-              class="border-outline flex items-center gap-2 rounded border bg-white p-2 shadow-lg"
+              class="box-row border-outline flex items-center gap-2 rounded border p-2 shadow-lg"
             >
               <mat-icon
                 fontIcon="drag_indicator"
                 aria-hidden="true"
                 class="shrink-0"
               ></mat-icon>
-              <span class="w-8 shrink-0 text-right tabular-nums">{{
+              <span class="truncate">{{ row.box.title }}</span>
+              <span class="w-12 shrink-0 text-right tabular-nums">{{
                 row.position
               }}</span>
-              <strong class="truncate">{{ row.box.title }}</strong>
             </div>
           </div>
         </li>

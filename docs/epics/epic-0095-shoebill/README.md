@@ -308,7 +308,10 @@ If `changed_by` is `null` because of a repair at startup, the header shows "Last
 Before the first write, the header shows "No edit history yet".
 The page takes these values from the priority document, because it cannot read the audit log.
 
-Each row shows the box's position, title, storage alias, state and file count.
+Each row shows the box's title, storage location, state, size and limit (for example "2.5 GiB of 10.0 TiB"), and position.
+The size matters more for the re-encryption order than the file count.
+The rows look like the rows of the table, in the same font, size and background, with the state in the table's colours, so the steward finds the boxes again at a glance.
+The position is on the right, right-aligned like the **Prio** column, and the drag handle on the left.
 The steward drags a row to move it (Angular CDK `cdkDropList`, already a dependency).
 The move up, move down and move to top buttons do the same for keyboard users, and each has a tooltip.
 While the steward drags a row, a bar between two rows shows where the row will be dropped.
@@ -352,24 +355,24 @@ Last changed by _Steward A_ on 2026-10-14 15:02
 
 | You have unsaved changes to the priority order.                          |
 
-+- Priority order --------------------------------------+
-| :: (1) Box B                             [^] [v] [^^] |
-|        Tuebingen - locked - 8 files                   |
-|=======================================================|
-| :: (2) Box A                             [^] [v] [^^] |
-|        Heidelberg - open - 120 files                  |
-|                                                       |
-| :: (3) Box D                             [^] [v] [^^] |
-|        Koeln - open - 60 files                        |
-|                                                       |
-| :: (4) Box C                             [^] [v] [^^] |
-|        Heidelberg - open - 35 files                   |
-|                                                       |
-| :: (5) Box E                             [^] [v] [^^] |
-|        Tuebingen - open - 12 files                    |
-|                                                       |
-| Drag a row or use the buttons to change its position. |
-+-------------------------------------------------------+
++- Priority order ----------------------------------------+
+| :: Box B                                 1 [^] [v] [^^] |
+|    Tuebingen - locked - 0.8 TiB of 2.0 TiB              |
+|=========================================================|
+| :: Box A                                 2 [^] [v] [^^] |
+|    Heidelberg - open - 3.1 TiB of 10.0 TiB              |
+|                                                         |
+| :: Box D                                 3 [^] [v] [^^] |
+|    Koeln - open - 1.4 TiB of 5.0 TiB                    |
+|                                                         |
+| :: Box C                                 4 [^] [v] [^^] |
+|    Heidelberg - open - 512.0 GiB of 1.0 TiB             |
+|                                                         |
+| :: Box E                                 5 [^] [v] [^^] |
+|    Tuebingen - open - 96.0 GiB of 1.0 TiB               |
+|                                                         |
+| Drag a row or use the buttons to change its position.   |
++---------------------------------------------------------+
 
 ::    drag handle          ===  drop position while dragging
 [^] [v]  move up, down     [^^] move to top

@@ -35,11 +35,13 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { DisplayUser, UserService } from '@app/auth/services/user';
 import { Capitalise } from '@app/shared/pipes/capitalise-pipe';
+import { ParseBytes } from '@app/shared/pipes/parse-bytes-pipe';
 import { Notifier } from '@app/shared/services/notification';
 import {
   DEFAULT_TIME_ZONE,
   FRIENDLY_DATE_FORMAT,
 } from '@app/shared/utils/date-formats';
+import { UploadBoxStateClass } from '@app/upload/models/box';
 import { UploadBoxService } from '@app/upload/services/upload-box';
 
 /** How long a moved row stays highlighted, in milliseconds */
@@ -66,9 +68,11 @@ type MoveAction = 'up' | 'down' | 'top';
     MatButtonModule,
     MatIcon,
     MatTooltip,
+    ParseBytes,
     RouterLink,
   ],
   templateUrl: './upload-box-priority-editor.html',
+  styleUrl: './upload-box-priority-editor.scss',
 })
 export class UploadBoxPriorityEditor implements OnInit {
   #uploadBoxService = inject(UploadBoxService);
@@ -157,6 +161,7 @@ export class UploadBoxPriorityEditor implements OnInit {
       index,
       position: index + 1,
       storageLabel: this.#uploadBoxService.getStorageLocationLabel(box.storage_alias),
+      stateClass: UploadBoxStateClass[box.state],
       highlighted: box.id === highlightedId,
       isFirst: index === 0,
       isLast: index === order.length - 1,

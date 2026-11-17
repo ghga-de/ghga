@@ -1,0 +1,23 @@
+// The rows look like the rows of the table in list mode, so that stewards find
+// the boxes again at a glance. The variables are the ones the table reads.
+// In Tailwind's components layer, so that its utilities, such as the
+// highlight after a move, take precedence.
+@layer components {
+  .box-row {
+    background-color: var(--mat-table-background-color, var(--mat-sys-surface));
+    color: var(--mat-table-row-item-label-text-color, var(--mat-sys-on-surface));
+    font-family: var(
+      --mat-table-row-item-label-text-font,
+      var(--mat-sys-body-medium-font)
+    );
+    font-size: var(--mat-sys-body-large-size);
+    font-weight: var(
+      --mat-table-row-item-label-text-weight,
+      var(--mat-sys-body-medium-weight)
+    );
+    line-height: var(
+      --mat-table-row-item-label-text-line-height,
+      var(--mat-sys-body-medium-line-height)
+    );
+  }
+}
