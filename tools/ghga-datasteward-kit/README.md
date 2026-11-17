@@ -104,16 +104,27 @@ ghga-datasteward-kit metadata submit-legacy \
   --study-accession <flat accession> \
   --metadata-path <metadata JSON> \
   --config-path <metadata config YAML>
+```
+
+The study gets the accession specified in `--study-accession`.
+Every other resource gets a new flat accession.
+The submission is stored as completed, and the command prints `Submission <id> submitted.` as its last line.
+Make note of the ID, since `metadata amend` asks for it when the submission gains files.
 
 Before minting or writing anything, the command refuses any of the following:
 
-- a study accession that is not flat (`StudyAccessionNotFlatError`);
+- a study accession that is not a flat study accession, `GHGAS` and 14 digits (`StudyAccessionNotFlatError`);
 - a study accession already listed under `legacy` in the accession store (`StudyAccessionInUseError`), which is how a second submission with the same accession is caught;
-- metadata that fails validation against the model, or uses an alias twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias.
+- metadata that fails validation against the model, or uses an alias twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias;
+- metadata with resources of a class that has no flat prefix (`AccessionGenerationError`).
 
 The command itself adds the study accession to `legacy`, once the submission is written.
 Do not enter a promised accession there by hand: the command would then refuse it.
 A run that is refused for its metadata, or cannot write the submission, leaves the study accession free, so it can be repeated once the cause is corrected.
+
+If the command fails after that, while publishing the source event, it prints no ID, and a rerun is refused because the study accession is now registered.
+The submission is stored all the same: it is the file `<submission_store_dir>/<id>.json` that holds the study accession, which `grep -l <study accession> <submission_store_dir>/*.json` finds.
+Run `metadata amend --submission-id <id>` with the same metadata path to publish its source event; it keeps every accession and asks nothing.
 
 #### metadata amend
 

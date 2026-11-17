@@ -65,10 +65,10 @@ class StudyAccessionNotFlatError(Exception):
     not a flat accession.
     """
 
-    def __init__(self, *, study_accession: str):
+    def __init__(self, *, study_accession: str, study_prefix: str):
         super().__init__(
-            f"The study accession '{study_accession}' is not a flat accession, which"
-            " is 'GHGA', one letter and 14 digits. Nothing was submitted."
+            f"The study accession '{study_accession}' is not a flat study accession,"
+            f" which is '{study_prefix}' and 14 digits. Nothing was submitted."
         )
 
 

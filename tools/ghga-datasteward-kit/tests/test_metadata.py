@@ -721,8 +721,14 @@ def test_submit_legacy_can_be_amended(example_workdir: Path):
 @pytest.mark.usefixtures("legacy_amendment")
 @pytest.mark.parametrize(
     "study_accession",
-    ["GHGA.26.ABC.1", "GHGAS123", "ghgas00000000000001", "GHGAS000000000000012"],
-    ids=["study_pid", "too_short", "lower_case", "too_long"],
+    [
+        "GHGA.26.ABC.1",
+        "GHGAS123",
+        "ghgas00000000000001",
+        "GHGAS000000000000012",
+        "GHGAF00000000000001",
+    ],
+    ids=["study_pid", "too_short", "lower_case", "too_long", "other_class"],
 )
 def test_submit_legacy_refuses_non_flat_accession(
     example_workdir: Path, study_accession: str
@@ -815,8 +821,8 @@ def test_submit_legacy_alias_shared_across_classes(example_workdir: Path):
 def test_submit_legacy_class_without_flat_prefix(
     example_workdir: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    """Test that a class without a flat prefix is refused by name, with nothing
-    submitted and the study accession still free.
+    """Test that a class without a flat prefix is refused by name before anything is
+    minted, with nothing submitted and the accession store untouched.
     """
     prefixes = {
         class_name: prefix
@@ -832,5 +838,4 @@ def test_submit_legacy_class_without_flat_prefix(
         submit_promised()
 
     assert_nothing_submitted()
-    accession_store = json.loads(Path("accession_store").read_text(encoding="utf-8"))
-    assert PROMISED_STUDY_ACCESSION not in accession_store["legacy"]
+    assert Path("accession_store").read_text(encoding="utf-8") == ""

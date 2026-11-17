@@ -166,3 +166,29 @@ class LegacyAccessionRegistry(AccessionRegistry):
             f"No unused accession with the prefix '{prefix}' was drawn in"
             + f" {MAX_RANDOM_ATTEMPTS} attempts."
         )
+
+
+def check_flat_prefixes(
+    *,
+    content: Json,
+    anchor_points_by_target: dict[str, AnchorPoint],
+    study_class_name: str,
+) -> None:
+    """Check that every class with resources in the content, the study aside, has a
+    flat prefix, so that such a class is refused before anything is minted.
+
+    Raises:
+        AccessionGenerationError: naming every class without a flat prefix.
+    """
+    missing = sorted(
+        class_name
+        for class_name, anchor_point in anchor_points_by_target.items()
+        if class_name != study_class_name
+        and class_name not in LEGACY_PREFIXES
+        and content.get(anchor_point.root_slot)
+    )
+    if missing:
+        raise LegacyAccessionRegistry.AccessionGenerationError(
+            f"The classes {missing} have no flat accession prefix, so they cannot be"
+            + " accessioned in a flat-accessioned submission."
+        )

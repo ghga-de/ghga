@@ -25,19 +25,22 @@ Like amendment, this drives metldata through its public API, so that metldata it
 needs no changes.
 """
 
+import re
 from pathlib import Path
 
 import yaml
 
-from ghga_datasteward_kit.amendment.amendment import is_legacy_study_accession
 from ghga_datasteward_kit.amendment.exceptions import (
     StudyAccessionInUseError,
     StudyAccessionNotFlatError,
 )
 from ghga_datasteward_kit.amendment.legacy_accessioning import (
+    LEGACY_PREFIXES,
+    LEGACY_SUFFIX_LENGTH,
     LegacyAccessionRegistry,
     LegacyAccessionStore,
     check_alias_uniqueness_per_class,
+    check_flat_prefixes,
 )
 from ghga_datasteward_kit.metadata import MetadataConfig
 from ghga_datasteward_kit.utils import load_config_yaml
@@ -82,7 +85,7 @@ def submit_legacy_metadata(
 
     Raises:
         StudyAccessionNotFlatError:
-            when the given study accession is not a flat one.
+            when the given study accession is not a flat study accession.
         StudyAccessionInUseError:
             when the given study accession is already in the accession store.
         MetadataValidator.ValidationError:
@@ -91,8 +94,15 @@ def submit_legacy_metadata(
         AccessionGenerationError:
             when a class in the metadata has no flat prefix.
     """
-    if not is_legacy_study_accession(study_accession=study_accession):
-        raise StudyAccessionNotFlatError(study_accession=study_accession)
+    # stricter than amend's check, which only tells flat from PID: the accession is
+    # typed by hand, so one of another class must not pass as the study's
+    study_prefix = LEGACY_PREFIXES[config.study_class_name]
+    if not re.fullmatch(
+        rf"{study_prefix}[0-9]{{{LEGACY_SUFFIX_LENGTH}}}", study_accession
+    ):
+        raise StudyAccessionNotFlatError(
+            study_accession=study_accession, study_prefix=study_prefix
+        )
 
     accession_store = LegacyAccessionStore(config=config)
     if accession_store.has_legacy(accession=study_accession):
@@ -106,6 +116,13 @@ def submit_legacy_metadata(
     # a flat accession holds no alias, so only a repeat within a class matters
     check_alias_uniqueness_per_class(
         content=metadata, anchor_points_by_target=anchor_points_by_target
+    )
+    # before minting: the registry would find a missing prefix only when it reaches
+    # that class, leaving the accessions minted for the classes before it unused
+    check_flat_prefixes(
+        content=metadata,
+        anchor_points_by_target=anchor_points_by_target,
+        study_class_name=config.study_class_name,
     )
 
     study_anchor = lookup_anchor_point(

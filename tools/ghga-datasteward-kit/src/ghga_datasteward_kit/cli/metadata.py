@@ -73,10 +73,7 @@ def submit_legacy(
     ),
     study_accession: str = typer.Option(
         ...,
-        help=(
-            "The flat accession the study was promised: 'GHGA', one letter and 14"
-            " digits."
-        ),
+        help="The flat accession pre-assigned to the study: 'GHGAS' and 14 digits.",
     ),
     metadata_path: Path = typer.Option(
         ...,
