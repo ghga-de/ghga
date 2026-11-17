@@ -228,7 +228,8 @@ A unique index is also the mechanism behind `UniqueConstraintViolationError`: wr
 ### Batch Operations
 
 The [batch operations](../protocols/dao.qmd#batch-operations) of the DAO protocol each send one bulk command per batch.
-The pymongo driver splits a batch above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
+The pymongo driver splits the writes of `insert_many`, `upsert_many` and `update_many` above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
+`delete_many` and the lookups of `update_many` send every ID in one filter, which MongoDB caps at 16 MB, a few hundred thousand IDs; a larger batch raises `DaoError`.
 
 A batch is not atomic, and there are no transactions yet to make it so.
 A `BatchOperationError` names every failed, unconfirmed and skipped ID.

@@ -774,6 +774,7 @@ class MongoDbDao(Generic[Dto]):
         if not ids:
             return
         with translate_pymongo_errors():
+            # Every ID goes into one filter; chunks can follow if a caller needs more
             await self._collection.delete_many({"_id": {"$in": list(ids)}})
 
 
