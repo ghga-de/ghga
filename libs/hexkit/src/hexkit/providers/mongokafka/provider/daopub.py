@@ -674,7 +674,9 @@ class MongoKafkaDaoPublisher(Generic[Dto]):
         Every ID not reported missing or failed gets an event. A resource that another
         writer creates between the write and the lookup of the missing IDs counts as
         written: it gets the batch's event, which was never stored, and then its stored
-        state. Please see the `Dao` protocol for the arguments and the errors.
+        state. One that another writer deletes in between counts as missing: it gets no
+        event from the batch, and its deletion event follows. Please see the `Dao`
+        protocol for the arguments and the errors.
         """
         write = partial(self._dao._replace_existing, extra=NOT_DELETED, ordered=ordered)
         await self._write_and_publish(dtos, write)
