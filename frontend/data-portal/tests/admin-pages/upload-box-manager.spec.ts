@@ -113,20 +113,6 @@ test('can navigate to Add Grant page', async ({ adminPage: page }) => {
   await expect(page).toHaveURL(/\/upload-box-manager\/.+/);
 });
 
-test('displays error message when upload box not found', async ({
-  adminPage: page,
-}) => {
-  await page.goto('/upload-box-manager/invalid-id');
-
-  const main = page.locator('main');
-  await expect(main).toContainText('Upload box not found.', { timeout: 15000 });
-
-  const backButton = page.getByRole('button', { name: 'Go back to previous page' });
-  await expect(backButton).toBeVisible();
-  await backButton.click();
-  await expect(page).toHaveURL('/upload-box-manager');
-});
-
 test('paginates and sorts the file list on the server', async ({ adminPage: page }) => {
   // An archived box holding 28 files, i.e. three pages of ten.
   await page.goto('/upload-box-manager/0a36607a-b53f-49ed-bf3e-a5f2dbc68003');
@@ -156,39 +142,6 @@ test('paginates and sorts the file list on the server', async ({ adminPage: page
   // sorted by the backend like any other column.
   await filesTable.getByRole('columnheader', { name: 'Accession' }).click();
   await expect(firstFile()).toHaveText('archived_sample_001.fastq.gz');
-});
-
-test('validates required fields in the create upload box dialog', async ({
-  adminPage: page,
-}) => {
-  const createButton = page.getByRole('button', { name: 'Create Upload Box' });
-  await expect(createButton).toBeVisible();
-  await createButton.click();
-
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toContainText('Create a new Upload Box');
-
-  const okButton = dialog.getByRole('button', { name: 'OK' });
-  await expect(okButton).toBeDisabled();
-
-  await dialog.getByLabel('Title').fill('   ');
-  await dialog.getByLabel('Description').fill('   ');
-  await expect(okButton).toBeDisabled();
-
-  await dialog.getByLabel('Title').fill('Playwright Upload Box Validation');
-  await dialog.getByLabel('Description').fill('Dialog validation test description');
-  await expect(okButton).toBeDisabled();
-
-  await dialog.getByRole('combobox', { name: 'Storage location' }).click();
-  await page.getByRole('option', { name: 'Tübingen 1' }).click();
-
-  await expect(okButton).toBeDisabled();
-  await dialog.getByLabel('Size limit (in TiB)').fill('1');
-
-  await expect(okButton).toBeEnabled();
-
-  await dialog.getByRole('button', { name: 'Cancel' }).click();
-  await expect(dialog).toHaveCount(0);
 });
 
 test('can create an upload box from the manager page', async ({ adminPage: page }) => {

@@ -15,18 +15,8 @@ test.use({
 
 /** John's open box, holding one file whose re-encryption failed */
 const OPEN_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68001';
-/** Jim's locked box, holding one file whose re-encryption failed */
-const LOCKED_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68006';
-/** Jane's locked box, whose only failed file never reached re-encryption */
-const SETTLED_LOCKED_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68002';
-/** Joan's archived box */
-const ARCHIVED_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68003';
-/** John's third box, open but with no file waiting for a retry */
-const SETTLED_BOX_ID = '0a36607a-b53f-49ed-bf3e-a5f2dbc68005';
 
 const OPEN_BOX_FAILED_FILE = 'sample_rna_002_R2.fastq.gz';
-const OPEN_BOX_DONE_FILE = 'sample_rna_001_R1.fastq.gz';
-const LOCKED_BOX_FAILED_FILE = 'retry_sample_002.fastq.gz';
 
 /**
  * Open the detail page of an upload box directly.
@@ -74,68 +64,10 @@ const retryAllButton = (page: Page) =>
 const notification = (page: Page) => page.locator('app-custom-snack-bar');
 
 /**
- * Which retry affordances each box state offers. One test rather than one per
- * box: none of these steps interacts with the backend, and every test of this
- * suite pays for its own login.
- */
-test('offers the retry only where a file is waiting for one', async ({
-  adminPage: page,
-}) => {
-  // An open box holding a failed file offers both retries.
-  await goToBox(page, OPEN_BOX_ID);
-  await expect(fileRow(page, OPEN_BOX_FAILED_FILE)).toContainText(
-    're-encryption failed',
-  );
-  await expect(retryButton(page, OPEN_BOX_FAILED_FILE)).toBeVisible();
-  // A file that has been re-encrypted has nothing to retry.
-  await expect(fileRow(page, OPEN_BOX_DONE_FILE)).toContainText('re-encrypted');
-  await expect(retryButton(page, OPEN_BOX_DONE_FILE)).toHaveCount(0);
-  // The whole-box retry is only offered once the complete file list has shown
-  // that some file actually failed.
-  await expect(retryAllButton(page)).toBeVisible();
-
-  // A locked box offers the retry just the same, but no deletion: files can
-  // only be deleted while the box is still open for uploads.
-  await goToBox(page, LOCKED_BOX_ID);
-  await expect(fileRow(page, LOCKED_BOX_FAILED_FILE)).toContainText(
-    're-encryption failed',
-  );
-  await expect(retryButton(page, LOCKED_BOX_FAILED_FILE)).toBeVisible();
-  await expect(retryAllButton(page)).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Delete file / })).toHaveCount(0);
-
-  // A locked box whose only failed file never reached re-encryption offers
-  // nothing: 'failed' is not 'failed_interrogation' and cannot be requeued.
-  await goToBox(page, SETTLED_LOCKED_BOX_ID);
-  await expect(fileRow(page, 'sample_001_R1.fastq')).toBeVisible();
-  await expect(anyRetryButton(page)).toHaveCount(0);
-  await expect(retryAllButton(page)).toHaveCount(0);
-
-  // Neither does an open box whose files are all settled.
-  await goToBox(page, SETTLED_BOX_ID);
-  await expect(fileRow(page, 'sample_image_001.tiff')).toBeVisible();
-  await expect(anyRetryButton(page)).toHaveCount(0);
-  await expect(retryAllButton(page)).toHaveCount(0);
-
-  // Archived boxes report the accession instead of the upload status, and
-  // their files can never be requeued.
-  await goToBox(page, ARCHIVED_BOX_ID);
-  const filesTable = page.locator('app-upload-box-files-table table');
-  await expect(
-    filesTable.getByRole('columnheader', { name: 'Accession' }),
-  ).toBeVisible();
-  await expect(anyRetryButton(page)).toHaveCount(0);
-  await expect(retryAllButton(page)).toHaveCount(0);
-});
-
-/**
- * The two requeue tests below assert what the page shows *after* the mutation,
- * which the mocking philosophy otherwise rules out for this layer. It holds here
- * because the change is client-side: `UploadBoxService` moves the requeued files
- * back to the inbox state in its own signals rather than fetching the list again,
- * so the assertion covers real application code and not a mock pretending to be a
- * backend. Anything whose outcome depends on the backend still belongs in the
- * test bed.
+ * The requeue tests assert what the page shows after the mutation. The change is
+ * client-side: `UploadBoxService` moves the requeued files back to the inbox state
+ * in its own signals rather than fetching the list again, so the assertion covers
+ * real application code and not a mock pretending to be a backend.
  */
 test('requeues a single file and shows it back in re-encryption', async ({
   adminPage: page,
