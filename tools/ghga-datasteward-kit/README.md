@@ -111,9 +111,9 @@ The study gets the given accession.
 Every other resource gets a new flat accession, such as `GHGAF` and 14 digits for a file, and the accession map holds every class.
 The submission is stored as completed, and the command prints `Submission <id> submitted.`; keep the ID, since `metadata amend` asks for it when the submission gains files.
 
-The command refuses, before minting or writing anything:
+Before minting or writing anything, the command refuses any of the following:
 
-- a study accession that is not a flat one (`StudyAccessionNotFlatError`);
+- a study accession that is not flat (`StudyAccessionNotFlatError`);
 - a study accession already listed under `legacy` in the accession store (`StudyAccessionInUseError`), which is how a second submission with the same accession is caught;
 - metadata that fails validation against the model, or uses an alias twice within one class; the same alias in two classes is allowed, since a flat accession does not contain the alias.
 
