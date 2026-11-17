@@ -14,10 +14,11 @@
 # limitations under the License.
 
 """Mint accessions in the flat scheme 'prefix + digits' that predates study PIDs, for
-amending a submission accessioned under it.
+amending a submission accessioned under it and for submitting one whose study was
+promised a flat accession.
 
-Amendment is the only user, so this module goes with it: metldata keeps the flat
-accessions in the store's `legacy` list but does not mint them.
+Only the kit uses them, so this module lives here: metldata keeps the flat accessions
+in the store's `legacy` list but does not mint them.
 """
 
 from collections import Counter
@@ -93,6 +94,10 @@ class LegacyAccessionStore(AccessionStore):
         def __init__(self, *, accession: str):
             super().__init__(f"The accession '{accession}' already exists.")
 
+    def has_legacy(self, *, accession: str) -> bool:
+        """Tell whether the flat accession is registered."""
+        return accession in self._load().legacy
+
     def save_legacy(self, *, accession: str) -> None:
         """Save a new flat accession.
 
@@ -160,4 +165,30 @@ class LegacyAccessionRegistry(AccessionRegistry):
         raise self.AccessionGenerationError(
             f"No unused accession with the prefix '{prefix}' was drawn in"
             + f" {MAX_RANDOM_ATTEMPTS} attempts."
+        )
+
+
+def check_flat_prefixes(
+    *,
+    content: Json,
+    anchor_points_by_target: dict[str, AnchorPoint],
+    study_class_name: str,
+) -> None:
+    """Check that every class with resources in the content, the study aside, has a
+    flat prefix, so that such a class is refused before anything is minted.
+
+    Raises:
+        AccessionGenerationError: naming every class without a flat prefix.
+    """
+    missing = sorted(
+        class_name
+        for class_name, anchor_point in anchor_points_by_target.items()
+        if class_name != study_class_name
+        and class_name not in LEGACY_PREFIXES
+        and content.get(anchor_point.root_slot)
+    )
+    if missing:
+        raise LegacyAccessionRegistry.AccessionGenerationError(
+            f"The classes {missing} have no flat accession prefix, so they cannot be"
+            + " accessioned in a flat-accessioned submission."
         )
