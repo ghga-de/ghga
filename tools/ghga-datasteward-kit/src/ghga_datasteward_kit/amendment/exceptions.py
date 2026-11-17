@@ -80,6 +80,5 @@ class StudyAccessionInUseError(Exception):
     def __init__(self, *, study_accession: str):
         super().__init__(
             f"The study accession '{study_accession}' is already registered in the"
-            " accession store, so it cannot be given to a new submission. Nothing was"
-            " submitted."
+            " accession store, so it cannot be reused. Nothing was submitted."
         )
