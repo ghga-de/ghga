@@ -20,7 +20,7 @@ It lives in the [GHGA monorepo](../../README.md) as a self-contained pnpm worksp
 - [Automated tests](#automated-tests)
   - [Test levels](#test-levels)
   - [Unit-tests](#unit-tests)
-  - [End-to-end tests](#end-to-end-tests)
+  - [Mocked E2E tests](#mocked-e2e-tests)
     - [Issues relating to headed execution](#issues-relating-to-headed-execution)
 - [Analytics](#analytics)
 - [The architecture matrix](#the-architecture-matrix)
@@ -247,16 +247,16 @@ Apart from seeing the linter warnings when you (try to) commit or run the linter
 
 ### Test levels
 
-Two levels of automated tests live in this repository, and a third lives elsewhere.
+Two levels of automated tests live in this directory, and a third in `testbed/` of the monorepo.
 They can prove quite different things, so it is worth choosing deliberately:
 
-| Level                    | Runs against                                                                               | Answers                                           |
-| ------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Unit tests (Vitest)      | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
-| "E2E" tests (Playwright) | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
-| GHGA archive test bed    | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
+| Level                                             | Runs against                                                                               | Answers                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| Unit tests (Vitest)                               | mocked services, mocked HTTP backend                                                       | does this service or component behave correctly?  |
+| Mocked E2E tests (Playwright)                     | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
+| Full E2E tests (test bed: pytest-bdd, Playwright) | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
 
-Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring, in every branch and state including the error paths all belong there.
+Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring all belong there, in every branch and state including the error paths.
 The two other levels each add something the level above cannot see, and each costs more to run.
 So put each assertion at the cheapest level that could see it break.
 
@@ -278,17 +278,18 @@ Note: the VS Code Vitest extension runs plain `vitest` directly, which does not 
 Use `pnpm test` / `pnpm test:ui` instead.
 See also [this issue](https://github.com/angular/angular-cli/issues/31734).
 
-### End-to-end tests
+### Mocked E2E tests
 
-We are using [Playwright](https://playwright.dev/) for end-to-end (e2e) testing in this project.
+We are using [Playwright](https://playwright.dev/) for the mocked end-to-end (E2E) tests in this project.
 See the [documentation for Playwright](https://playwright.dev/docs/intro) for details.
 
-"End-to-end" is admittedly a misnomer here.
-These tests do not reach the actual backend and database: the API is served by the same [MSW mocks](#local-development) that back the development server, and those return static responses by design.
-What is covered is the frontend from the browser inwards — everything above the network boundary.
-Comprehensive end-to-end tests for real backend behavior are maintained in the GHGA archive test bed, in `testbed/` of this monorepo.
+"End-to-end" is meant in Angular's sense: tests that run the whole app in a real browser, down to the network layer.
+Do not read it as reaching the real backend and database.
+The backend here is the same [MSW mocks](#local-development) that back the development server.
+They return static responses and keep no state, by design, so they are no full replacement for a real backend.
+A journey that needs the backend to change belongs in the full E2E tests of the GHGA archive test bed, in `testbed/` of this monorepo.
 
-Within that boundary, however, these tests are considerably more real than unit tests, and catch a class of problems unit tests structurally cannot:
+Up to the network layer, these tests reach deeper than unit tests, and catch a class of problems unit tests structurally cannot:
 
 - **The application really boots.**
   It starts from `app.config.ts` with the actual providers, routes lazy-load their real chunks, and guards run.

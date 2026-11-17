@@ -31,7 +31,7 @@ How we work on the Angular data portal, on top of the repo-wide rules in the roo
 - `docs`: developer documentation
 - `src/app`: the Angular application code
 - `src/mocks`: MSW handlers with static API/auth responses
-- `tests`: end-to-end tests
+- `tests`: mocked E2E tests
 
 ## API mocking philosophy
 
@@ -60,14 +60,15 @@ Put each assertion at the cheapest level that could see it break.
 - **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, state transitions, cache invalidation, rendering and event wiring, in every branch and state including the error paths.
   Services are tested against `HttpTestingController`, components against mocked services.
 - **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
-- **E2E tests here** (Playwright, `tests`): despite the name, they stop at the network boundary, since the MSW mocks serve them too.
-  They boot the real app in a real browser with the real services and interceptors.
+- **Mocked E2E tests** (Playwright, `tests`): end-to-end in Angular's sense, the whole app in a real browser, which does not include the real backend.
+  They boot the real app with the real services and interceptors, against the MSW mocks that stand in for the backend.
+  The mocks keep no state, so these tests cannot follow a journey that needs the backend to change; that belongs in the test bed.
   Write one journey along the main path per user task, such as creating a box or changing the priority order.
   Assert only what a unit test cannot see: that a route loads behind its guard, requests through the real interceptors, dialogs and menus opened from the page that uses them, focus, and pointer input such as drag and drop.
   Cover an error path here only when it needs the browser.
-- **Test bed** (`testbed/` in this monorepo): real backend and database, and the only level that can verify a flow whose outcome depends on the backend changing state.
+- **Full E2E tests** (the test bed, `testbed/` in this monorepo): real backend and database, and the only level that can verify a flow whose outcome depends on the backend changing state.
 
-The practical consequence: a Playwright test here may make a change and check what the page shows next, from the mocked response or from state the app updates itself, such as a notification or a row that a service changes in its own signals.
+The practical consequence: a mocked E2E test may make a change and check what the page shows next, from the mocked response or from state the app updates itself, such as a notification or a row that a service changes in its own signals.
 It must **not** check anything that needs the data fetched again, such as the page after a reload, since the mocks answer identically before and after the change.
 Leave those flows to the test bed, which is more expensive to run.
 

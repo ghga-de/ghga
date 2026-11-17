@@ -91,8 +91,8 @@ Each level is defined in the root [AGENTS.md](../../AGENTS.md#test-levels) and t
   A service's suite gets real Kafka, MongoDB and S3 from testcontainers, so persistence and event handling are tested there.
 - **Consumers of a library:** after a change under `libs/`, run `just test-affected`, which tests every member `just affected` lists.
 - **Chart tests** (`just charts-test`, `just demo-template`) render the charts; run them for any change under `deploy/`.
-- **Front-end tests** are Vitest unit tests (`just fe-test`) and Playwright tests against mocked APIs ([data portal README](../../frontend/data-portal/README.md#test-levels)).
-- **The test bed** (`just testbed`) runs the whole platform on the local cluster, and is the only level that checks a flow across services.
+- **Front-end tests** are Vitest unit tests (`just fe-test`) and mocked E2E tests with Playwright ([data portal README](../../frontend/data-portal/README.md#test-levels)).
+- **The test bed** (`just testbed`) runs full E2E tests on the whole platform on the local cluster, and is the only level that checks a flow across services.
   It is slow to set up; run it locally when your change crosses services, following the [walkthrough](../../README.md#run-the-test-bed-locally).
 
 CI runs the same levels: `ci.yaml` lints the whole repo and tests the affected members, and `integration.yaml` runs the test bed on every pull request with relevant changes.
