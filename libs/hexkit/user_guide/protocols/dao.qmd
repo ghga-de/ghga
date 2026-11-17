@@ -190,8 +190,9 @@ Every batch also follows these rules:
   Such a batch raises `ValueError` before anything is written.
 - An empty batch writes nothing and raises nothing.
 
-`update_many` names the missing IDs with one lookup after its write.
+`update_many` names the missing IDs with one lookup after its write, so it reports what is missing when the lookup runs.
 A resource that another writer creates in between is therefore not reported as missing, although the batch did not update it.
+A resource that another writer deletes in between is reported as missing, although the batch did update it.
 
 ## Finding Resources
 

@@ -710,8 +710,9 @@ class MongoDbDao(Generic[Dto]):
         """Replace the documents that exist and match `extra`, and name the others.
 
         A replacement that matches nothing is no write error, and the bulk result only
-        counts matches, so a lookup after the write names the missing IDs. A resource
-        created in between is therefore not reported, although it was not replaced.
+        counts matches, so a lookup after the write names the IDs missing at that time.
+        A resource created in between is therefore not reported, although it was not
+        replaced, and one deleted in between is reported, although it was replaced.
 
         Raises:
             BatchOperationError: when some documents were missing or failed.
