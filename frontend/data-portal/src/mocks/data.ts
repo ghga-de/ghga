@@ -20,6 +20,7 @@ import {
   needsFileStateCounts,
   UploadBoxState,
 } from '@app/upload/models/box';
+import { UploadBoxPriority } from '@app/upload/models/box-priority';
 import {
   BoxUploadsPage,
   FileUploadState,
@@ -1264,6 +1265,30 @@ export const uploadBoxes: BoxRetrievalResults = {
       max_size: 109_951_162_777_600, // 100 TiB
     },
   ],
+};
+
+/**
+ * The priority order of all upload boxes that are not archived, as returned by
+ * the RS. Box 3 is archived, so the RS has dropped it.
+ */
+export const uploadBoxPriority: UploadBoxPriority = {
+  version: 5,
+  entries: [7, 2, 1, 6, 4, 5].map((n) => ({
+    research_data_upload_box_id: `0a36607a-b53f-49ed-bf3e-a5f2dbc6800${n}`,
+    file_upload_box_id: `b0f11e00-0000-4000-8000-a5f2dbc6800${n}`,
+  })),
+  changed_by: 'doe@test.dev',
+  last_changed: '2025-02-10T14:30:00Z',
+};
+
+/**
+ * The response to any new priority order. The mock stores nothing, so it returns
+ * the next version of the same order.
+ */
+export const savedUploadBoxPriority: UploadBoxPriority = {
+  ...uploadBoxPriority,
+  version: uploadBoxPriority.version + 1,
+  last_changed: '2025-02-11T09:00:00Z',
 };
 
 /**

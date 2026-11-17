@@ -89,7 +89,7 @@ Only data stewards can see box priority or use the endpoints.
 The [basic prototype](./prototype.html) walks through each journey.
 
 1. **See where a box is in the queue.**
-   The Upload Box Manager has a new **Priority** column.
+   The Upload Box Manager has a new **Prio** column.
    It shows the position of each box that is not archived, starting at 1, and is empty for archived boxes.
    The steward can sort the list by this column.
 2. **Change the order.**
@@ -280,8 +280,9 @@ It already loads all boxes with `GET /upload-boxes`, and now also loads the prio
 It ignores entries that match no box or an archived box.
 If a non-archived box is missing from the list, the page shows it after the listed boxes, oldest `last_changed` first, which is where the next repair puts it.
 
-**List mode** is the current list plus a sortable **Priority** column.
+**List mode** is the current list plus a sortable **Prio** column between the storage location and the last change.
 The column shows each non-archived box's position, starting at 1, and is empty for archived boxes.
+It is right-aligned like **Size** and **Limit**, so that multi-digit positions line up.
 Sorting by it puts archived boxes last.
 The list already sorts and pages in the browser (`upload-box-manager-list.ts`), so the column needs no further RS change.
 If the priority list fails to load, the column stays empty, **Change priority** is disabled, and the page shows a message.
@@ -322,14 +323,14 @@ List mode, with the new column and button (the other columns stay the same):
 Upload Box Manager                                                [Change priority]
 [Filters                                                                          ]
 
-| Priority ^ | Title | State    | Files | Location   | Last change      | Details |
-|------------|-------|----------|-------|------------|------------------|---------|
-| 1          | Box B | locked   | 8     | Tuebingen  | 2026-10-12 09:40 | [>]     |
-| 2          | Box A | open     | 120   | Heidelberg | 2026-10-14 11:20 | [>]     |
-| 3          | Box D | open     | 60    | Koeln      | 2026-10-10 16:05 | [>]     |
-| 4          | Box C | open     | 35    | Heidelberg | 2026-10-13 08:15 | [>]     |
-| 5          | Box E | open     | 12    | Tuebingen  | 2026-10-11 14:30 | [>]     |
-|            | Box G | archived | 40    | Heidelberg | 2026-10-01 12:00 | [>]     |
+| Title | State    | Files | Location   | ^ Prio | Last change      | Details |
+|-------|----------|-------|------------|--------|------------------|---------|
+| Box B | locked   | 8     | Tuebingen  |      1 | 2026-10-12 09:40 | [>]     |
+| Box A | open     | 120   | Heidelberg |      2 | 2026-10-14 11:20 | [>]     |
+| Box D | open     | 60    | Koeln      |      3 | 2026-10-10 16:05 | [>]     |
+| Box C | open     | 35    | Heidelberg |      4 | 2026-10-13 08:15 | [>]     |
+| Box E | open     | 12    | Tuebingen  |      5 | 2026-10-11 14:30 | [>]     |
+| Box G | archived | 40    | Heidelberg |        | 2026-10-01 12:00 | [>]     |
                                              Upload boxes per page: 25   1 - 6 of 6
 ```
 
@@ -478,7 +479,7 @@ No database migration is needed: `box_id` defaults to `None`, and the republish 
   A save that leaves the list unchanged returns the stored document and leaves `version`, `changed_by` and `last_changed` unchanged, with no event and no audit record.
 - DHFS: the wait is skipped after a round that concluded at least one file, and kept after an empty response or a round in which every file was inconclusive.
 - Data Portal, against a mocked RS:
-  - the Priority column, and sorting by it
+  - the Prio column, and sorting by it
   - switching between the two modes
   - the order after a drag and after each button
   - disabling **Save priority** when the order is back to the loaded one
@@ -514,9 +515,9 @@ Additions and removals, in the existing features, which already create, archive 
 Data Portal, in `502_data_portal_uploads.feature`, before the scenario that maps and archives the box:
 
 - The data steward opens the Upload Box Manager, clicks **Change priority**, moves the primary box once by dragging and once with a button, and saves.
-- The Priority column shows the box at the position it was moved to.
+- The Prio column shows the box at the position it was moved to.
 - The reorder view shows the new version and "Last changed by" with the steward's name.
-- After the archival scenario, the box's Priority cell is empty, and the reorder view does not show the box.
+- After the archival scenario, the box's Prio cell is empty, and the reorder view does not show the box.
 
 Audit records are covered by the RS tests; the testbed has no access to them so far.
 
