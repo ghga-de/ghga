@@ -222,18 +222,21 @@ async def test_repair_on_behalf_of_user(rig: PriorityRig):
 
 
 async def test_change_by_user(rig: PriorityRig):
-    """Test that a change sees the missing boxes, that the entries for unknown boxes
-    are dropped after it, and that the user who made it is recorded.
+    """Test that a change gets the repaired list and the version it was read at, and
+    that the user who made it is recorded.
     """
     listed = _make_box(days_ago=2)
     missing = _make_box(days_ago=1)
+    unknown = _make_box(days_ago=3)
     await _store_boxes(rig, listed, missing)
-    await rig.priority_dao.insert(_make_priority(version=1, entries=_entries(listed)))
-    unknown_box_id = uuid4()
+    await rig.priority_dao.insert(
+        _make_priority(version=1, entries=_entries(unknown, listed))
+    )
 
-    def change(box_ids: list[UUID]) -> list[UUID]:
+    def change(read_version: int, box_ids: list[UUID]) -> list[UUID]:
+        assert read_version == 1
         assert box_ids == [listed.id, missing.id]
-        return [unknown_box_id, missing.id, listed.id]
+        return [missing.id, listed.id]
 
     priority = await rig.priority_manager._update_priority(
         user_id=TEST_DS_ID, change=change
@@ -320,3 +323,179 @@ async def test_give_up_after_three_lost_races(
 
     assert lose_race.await_count == 3
     rig.audit_repository.log_box_priority_updated.assert_not_awaited()
+
+
+async def _store_lettered_boxes(
+    rig: PriorityRig, letters: str, *, version: int = 1
+) -> dict[str, models.ResearchDataUploadBox]:
+    """Store a box per letter and a priority list holding them in letter order."""
+    boxes = {
+        letter: _make_box(days_ago=len(letters) - index)
+        for index, letter in enumerate(letters)
+    }
+    await _store_boxes(rig, *boxes.values())
+    await rig.priority_dao.insert(
+        _make_priority(version=version, entries=_entries(*boxes.values()))
+    )
+    return boxes
+
+
+def _ids(boxes: dict[str, models.ResearchDataUploadBox], letters: str) -> list[UUID]:
+    """Get the IDs of the boxes with the given letters, in that order."""
+    return [boxes[letter].id for letter in letters]
+
+
+async def test_get_priority(rig: PriorityRig):
+    """Test that the stored list is returned without its ID"""
+    boxes = await _store_lettered_boxes(rig, "AB")
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+
+    priority = await rig.priority_manager.get_priority()
+
+    assert priority == models.UploadBoxPriorityResponse(
+        version=1,
+        changed_by=TEST_DS_ID,
+        last_changed=stored.last_changed,
+        entries=_entries(boxes["A"], boxes["B"]),
+    )
+
+
+async def test_get_priority_without_list(rig: PriorityRig):
+    """Test that an empty list with version 0 is returned if none is stored yet"""
+    priority = await rig.priority_manager.get_priority()
+
+    assert priority == models.UploadBoxPriorityResponse(
+        version=0, changed_by=None, last_changed=None, entries=[]
+    )
+
+
+async def test_set_order(rig: PriorityRig):
+    """Test that a new order replaces the stored one, and that the saving data
+    steward is recorded.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABC")
+
+    priority = await rig.priority_manager.set_order(
+        version=1, box_ids=_ids(boxes, "CAB"), user_id=TEST_DS_ID
+    )
+
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    assert stored.entries == _entries(*(boxes[letter] for letter in "CAB"))
+    assert stored.version == 2
+    assert stored.changed_by == TEST_DS_ID
+    assert priority == models.UploadBoxPriorityResponse.from_priority(stored)
+    rig.audit_repository.log_box_priority_updated.assert_awaited_once_with(
+        priority=stored, old_box_ids=_ids(boxes, "ABC"), user_id=TEST_DS_ID
+    )
+
+
+@pytest.mark.parametrize("request_version", [0, 2, 4])
+async def test_set_order_on_other_version(rig: PriorityRig, request_version: int):
+    """Test that a new order based on another version than the stored one is
+    rejected, and that the stored list stays unchanged.
+    """
+    boxes = await _store_lettered_boxes(rig, "AB", version=3)
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+
+    with pytest.raises(UploadBoxPriorityManagerPort.PriorityChangedError):
+        await rig.priority_manager.set_order(
+            version=request_version, box_ids=_ids(boxes, "BA"), user_id=TEST_DS_ID
+        )
+
+    assert await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY) == stored
+    rig.audit_repository.log_box_priority_updated.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "new_order", ["A", "ABX", "ABZ"], ids=["box_left_out", "unknown_box", "archived"]
+)
+async def test_set_order_with_other_boxes(rig: PriorityRig, new_order: str):
+    """Test that a new order that does not hold exactly the boxes that are not
+    archived is rejected.
+    """
+    boxes = await _store_lettered_boxes(rig, "AB")
+    boxes["X"] = _make_box(days_ago=0)
+    boxes["Z"] = _make_box(days_ago=0, state="archived")
+    await rig.box_dao.insert(boxes["Z"])
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+
+    with pytest.raises(UploadBoxPriorityManagerPort.PriorityChangedError):
+        await rig.priority_manager.set_order(
+            version=1, box_ids=_ids(boxes, new_order), user_id=TEST_DS_ID
+        )
+
+    assert await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY) == stored
+
+
+async def test_set_order_with_box_missing_from_list(rig: PriorityRig):
+    """Test that a new order may hold a box that the stored list is still missing,
+    because the page shows it at the end, where the repair puts it.
+    """
+    boxes = await _store_lettered_boxes(rig, "AB")
+    boxes["C"] = _make_box(days_ago=0)
+    await rig.box_dao.insert(boxes["C"])
+
+    priority = await rig.priority_manager.set_order(
+        version=1, box_ids=_ids(boxes, "CAB"), user_id=TEST_DS_ID
+    )
+
+    assert priority.version == 2
+    assert priority.entries == _entries(*(boxes[letter] for letter in "CAB"))
+
+
+async def test_first_save(rig: PriorityRig):
+    """Test that a new order before the first list is stored is based on version 0
+    and stores the first list.
+    """
+    first = _make_box(days_ago=2)
+    second = _make_box(days_ago=1)
+    await _store_boxes(rig, first, second)
+
+    priority = await rig.priority_manager.set_order(
+        version=0, box_ids=[second.id, first.id], user_id=TEST_DS_ID
+    )
+
+    assert priority.version == 1
+    assert priority.entries == _entries(second, first)
+
+
+async def test_save_without_change(rig: PriorityRig):
+    """Test that the stored order writes nothing and returns the stored list with the
+    same version.
+    """
+    boxes = await _store_lettered_boxes(rig, "AB")
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+
+    priority = await rig.priority_manager.set_order(
+        version=1, box_ids=_ids(boxes, "AB"), user_id=uuid4()
+    )
+
+    assert priority == models.UploadBoxPriorityResponse.from_priority(stored)
+    assert await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY) == stored
+    rig.audit_repository.log_box_priority_updated.assert_not_awaited()
+
+
+async def test_save_after_lost_race(rig: PriorityRig, monkeypatch: pytest.MonkeyPatch):
+    """Test that a new order that loses a race is rejected, because the other write
+    changed the version, and that the other write is kept.
+    """
+    boxes = await _store_lettered_boxes(rig, "ABC")
+    other_steward_id = uuid4()
+    original_update = rig.priority_dao.update
+
+    async def update_after_other_write(dto, *, precondition=None):
+        # Another write stores a new version before this write is stored
+        monkeypatch.setattr(rig.priority_dao, "update", original_update)
+        await original_update(dto.model_copy(update={"changed_by": other_steward_id}))
+        await original_update(dto, precondition=precondition)
+
+    monkeypatch.setattr(rig.priority_dao, "update", update_after_other_write)
+
+    with pytest.raises(UploadBoxPriorityManagerPort.PriorityChangedError):
+        await rig.priority_manager.set_order(
+            version=1, box_ids=_ids(boxes, "CBA"), user_id=TEST_DS_ID
+        )
+
+    stored = await rig.priority_dao.get_by_id(BOX_PRIORITY_EVENT_KEY)
+    assert stored.version == 2
+    assert stored.changed_by == other_steward_id
