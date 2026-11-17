@@ -1229,6 +1229,21 @@ async def test_dao_update_many(mongodb: MongoDbFixture):
             await dao.get_by_id(missing.id)
 
 
+async def test_dao_update_many_missing_in_input_order(mongodb: MongoDbFixture):
+    """Test that update_many names its missing IDs in the order they were passed."""
+    dao = await mongodb.dao_factory.get_dao(
+        name="example", dto_model=ExampleDto, id_field="id"
+    )
+    stored = ExampleDto(field_a="stored")
+    await dao.insert(stored)
+    missing = [ExampleDto(field_a=f"missing {n}") for n in range(6)]
+
+    with pytest.raises(BatchOperationError) as caught:
+        await dao.update_many([*missing[:3], stored, *missing[3:]])
+
+    assert list(caught.value.errors) == [dto.id for dto in missing]
+
+
 async def test_dao_update_many_write_concern_error(
     mongodb: MongoDbFixture, monkeypatch: pytest.MonkeyPatch
 ):
@@ -1289,7 +1304,7 @@ async def test_dao_update_many_ordered(mongodb: MongoDbFixture):
             await dao.update_many([missing, clashing, last_changed], ordered=True)
 
         assert isinstance(caught.value.__cause__, BulkWriteError)
-        assert set(caught.value.errors) == {missing.id, target.id}
+        assert list(caught.value.errors) == [target.id, missing.id]
         assert isinstance(caught.value.errors[missing.id], ResourceNotFoundError)
         error = caught.value.errors[target.id]
         assert isinstance(error, UniqueConstraintViolationError)

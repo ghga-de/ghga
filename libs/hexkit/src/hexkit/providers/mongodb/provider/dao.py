@@ -727,8 +727,12 @@ class MongoDbDao(Generic[Dto]):
         unattempted = set(errors) | set(skipped)
         attempted = [id_ for id_ in ids if id_ not in unattempted]
         if matched < len(attempted):
-            missing = set(attempted) - await self._existing_ids(attempted, extra)
-            errors |= {id_: ResourceNotFoundError(id_=id_) for id_ in missing}
+            existing = await self._existing_ids(attempted, extra)
+            errors |= {
+                id_: ResourceNotFoundError(id_=id_)
+                for id_ in attempted
+                if id_ not in existing
+            }
         if errors:
             cause = failures.__cause__ if failures else None
             raise BatchOperationError(errors=errors, not_attempted=skipped) from cause
