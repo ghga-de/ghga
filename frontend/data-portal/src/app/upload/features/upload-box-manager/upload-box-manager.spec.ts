@@ -50,6 +50,8 @@ class MockUploadBoxService {
   fileStateCounts = { isLoading: () => false, error: () => undefined };
   fileStateCountsByBox = () => ({});
   showFileStateCountsOf = vitest.fn();
+  boxPriority = { error: () => undefined };
+  prioritizedUploadBoxes = () => undefined;
   storageLabels = {
     value: () => ({}),
     isLoading: () => false,

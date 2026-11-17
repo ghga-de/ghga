@@ -18,6 +18,7 @@ import {
   getDatasetDetails,
   getDatasetSummary,
   metadataGlobalSummary,
+  savedUploadBoxPriority,
   searchResults,
   storageLabels,
   studyData,
@@ -30,6 +31,7 @@ import {
   uploadBox6Uploads,
   uploadBoxes,
   uploadBoxFileStateCounts,
+  uploadBoxPriority,
   pediatricLeukemiaDatasetDetails,
   pediatricLeukemiaFileIds,
   pediatricLeukemiaStudyData,
@@ -333,6 +335,16 @@ export const responses: { [endpoint: string]: ResponseValue } = {
 
   // Unknown upload box (catch-all, must stay after nested routes above)
   'GET /api/rs/upload-boxes/*': 404,
+
+  /**
+   * RS Upload Box Priority API
+   */
+
+  // Fetch the priority order of the upload boxes
+  'GET /api/rs/upload-box-priority': uploadBoxPriority,
+
+  // Replace the priority order
+  'PUT /api/rs/upload-box-priority': savedUploadBoxPriority,
 
   /**
    * RS Upload Grants API
