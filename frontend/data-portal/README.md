@@ -256,7 +256,7 @@ They can prove quite different things, so it is worth choosing deliberately:
 | "E2E" tests (Playwright) | the real app in a real browser, with the API served by the [MSW mocks](#local-development) | is the application assembled and wired correctly? |
 | GHGA archive test bed    | the real backend and database, in `testbed/` of this monorepo                              | does this flow actually work end to end?          |
 
-Unit tests are the default and carry most of the coverage: every branch and state, including the error paths, request shapes, state transitions, cache invalidation, rendering and event wiring all belong there.
+Unit tests are the default and carry most of the coverage: request shapes, state transitions, cache invalidation, rendering and event wiring, in every branch and state including the error paths all belong there.
 The two other levels each add something the level above cannot see, and each costs more to run.
 So put each assertion at the cheapest level that could see it break.
 
@@ -308,12 +308,13 @@ Within that boundary, however, these tests are considerably more real than unit 
   Mock handlers are registered per URL and query parameters, so a request the application makes that no handler matches surfaces immediately.
 
 What they cannot show is anything that depends on the backend actually changing state, because the mocks answer identically before and after a mutation.
-A test here may make a change and check how the page shows the mocked response, such as a notification or the switch back to a list: that is still wiring.
-It must not check that the change was kept, for example by reloading the page or reading the data again, since the mocks would show the old state.
+A test here may make a change and check what the page shows next, from the mocked response or from state the app updates itself, such as a notification or a row that a service changes in its own signals.
+It must not check anything that needs the data fetched again, such as the page after a reload, since the mocks would show the old state.
 Such flows belong in the archive test bed, which is more expensive to run.
 
 Keep the tests in this repository few and cheap, so they stay useful for quick feedback during frontend development.
-Write one journey along the main path per feature, and cover an error path here only when it needs the browser, such as a dialog that opens on a failure.
+Write one journey along the main path per user task, such as creating a box or changing the priority order.
+Cover an error path here only when it needs the browser, such as a dialog that opens on a failure.
 
 They need only the development server — the API is mocked in the browser — so the demo platform (`just up` in the monorepo) is not required for them and only competes for memory.
 If a run hangs with no output at all, that competition is the first thing to check; `just down` frees it.

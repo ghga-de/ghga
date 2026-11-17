@@ -57,17 +57,18 @@ It backs both the dev server and the Playwright tests, so this is also what boun
 Follows directly from the mocking philosophy above; see [Automated tests](README.md#automated-tests) for the full rationale.
 Put each assertion at the cheapest level that could see it break.
 
-- **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — every branch and state, including the error paths, request shapes, state transitions, cache invalidation, rendering and event wiring.
+- **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, state transitions, cache invalidation, rendering and event wiring, in every branch and state including the error paths.
   Services are tested against `HttpTestingController`, components against mocked services.
 - **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
 - **E2E tests here** (Playwright, `tests`): despite the name, they stop at the network boundary, since the MSW mocks serve them too.
   They boot the real app in a real browser with the real services and interceptors.
-  Write one journey along the main path per feature, and assert only what a unit test cannot see: routes and guards, requests through the real interceptors, overlays and focus, pointer input such as drag and drop, and how the page shows a mocked response.
+  Write one journey along the main path per user task, such as creating a box or changing the priority order.
+  Assert only what a unit test cannot see: that a route loads behind its guard, requests through the real interceptors, dialogs and menus opened from the page that uses them, focus, and pointer input such as drag and drop.
   Cover an error path here only when it needs the browser.
 - **Test bed** (`testbed/` in this monorepo): real backend and database, and the only level that can verify a flow whose outcome depends on the backend changing state.
 
-The practical consequence: a Playwright test here may make a change and check how the page shows the mocked response, such as a notification, but must **not** check that the change was kept.
-The mocks answer identically before and after the change, so reloading the page or reading the data again would show the old state.
+The practical consequence: a Playwright test here may make a change and check what the page shows next, from the mocked response or from state the app updates itself, such as a notification or a row that a service changes in its own signals.
+It must **not** check anything that needs the data fetched again, such as the page after a reload, since the mocks answer identically before and after the change.
 Leave those flows to the test bed, which is more expensive to run.
 
 ## Repo commands (pnpm)
