@@ -55,18 +55,19 @@ It backs both the dev server and the Playwright tests, so this is also what boun
 ## Test levels
 
 Follows directly from the mocking philosophy above; see [Automated tests](README.md#automated-tests) for the full rationale.
+Put each assertion at the cheapest level that could see it break.
 
-- **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — request shapes, cache invalidation, state transitions, rendering and event wiring.
+- **Unit tests** (Vitest, `*.spec.ts` next to the code): the default, and where most coverage belongs — every branch and state, including the error paths, request shapes, state transitions, cache invalidation, rendering and event wiring.
   Services are tested against `HttpTestingController`, components against mocked services.
 - **Launcher tests** (`node:test`, `run.test.js`): the pure functions of the `run.js` launcher, which is plain Node and no part of the Angular app; `pnpm test` runs them after the unit tests, `pnpm test:run` alone.
-- **E2E tests here** (Playwright, `tests`): a **smoke layer**, despite the name.
-  They stop at the network boundary, since the MSW mocks serve them too, but they boot the real app in a real browser with the real services and interceptors.
-  Use them for assembly and wiring, not for behaviour.
-  Keep them few and cheap.
+- **E2E tests here** (Playwright, `tests`): despite the name, they stop at the network boundary, since the MSW mocks serve them too.
+  They boot the real app in a real browser with the real services and interceptors.
+  Write one journey along the main path per feature, and assert only what a unit test cannot see: routes and guards, requests through the real interceptors, overlays and focus, pointer input such as drag and drop, and how the page shows a mocked response.
+  Cover an error path here only when it needs the browser.
 - **Test bed** (`testbed/` in this monorepo): real backend and database, and the only level that can verify a flow whose outcome depends on the backend changing state.
 
-The practical consequence: do **not** try to cover a "change something, then see the change reflected" flow with a Playwright test here.
-The mocks answer identically before and after the mutation, so such a test could only assert that a request was made — which a unit test already does more precisely and far more cheaply.
+The practical consequence: a Playwright test here may make a change and check how the page shows the mocked response, such as a notification, but must **not** check that the change was kept.
+The mocks answer identically before and after the change, so reloading the page or reading the data again would show the old state.
 Leave those flows to the test bed, which is more expensive to run.
 
 ## Repo commands (pnpm)
