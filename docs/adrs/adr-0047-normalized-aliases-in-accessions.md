@@ -1,6 +1,7 @@
 ---
 status: accepted
 date: 2026-10-20
+amended: 2026-11-12
 tags: [data, backend]
 ---
 
@@ -41,7 +42,7 @@ Before anything is minted, metldata refuses:
 - an alias that is not ASCII, since normalizing would hide its characters;
 - two aliases of a submission that are equal once normalized, across all classes.
 
-The rule is fixed: changing it would give an alias already accessioned a different accession in a later revision.
+**Amended 2026-11-12:** The rule is fixed: changing it would give an alias already accessioned a different accession at the next transformation.
 `FileAccession` in commons accepts exactly this alias block, and changes only together with the rule.
 
 ### Consequences
@@ -49,7 +50,8 @@ The rule is fixed: changing it would give an alias already accessioned a differe
 - An alias accession has one lowercase block after the study PID and a dataset PID has two, the fixed `DS` and a random block, so a pattern tells them apart.
 - Accessions need no escaping in URLs, file names or object storage keys.
 - Aliases such as `Sample 1` and `sample-1` collide, and the steward renames one.
-- dskit's `metadata amend` takes only submissions with flat accessions, so the alias accessions of a study-PID submission are minted once, by `submit`, and never re-derived.
+- **Amended 2026-11-12:** An alias accession is never stored: the accession map of a study-PID submission holds the study and dataset PIDs only, and the `add_accessions` transformation composes the other accessions from the study PID and the alias on every run.
+- **Amended 2026-11-12:** dskit's `metadata amend` takes only submissions with flat accessions, whose map keeps every accession, so no flat accession is ever composed.
 - The rule lives in metldata and its pattern in commons, so a reviewer of either checks the other.
 
 ### Alternatives

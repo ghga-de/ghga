@@ -19,9 +19,10 @@ import asyncio
 import json
 from copy import deepcopy
 from pathlib import Path
+from typing import Self
 
 import yaml
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from ghga_datasteward_kit.utils import load_config_yaml
 from metldata.accession_registry.accession_registry import AccessionRegistry
@@ -61,6 +62,27 @@ class MetadataConfig(
         default=...,
         description="Configuration for the metadata transformation workflow.",
     )
+
+    @model_validator(mode="after")
+    def share_study_class_name(self) -> Self:
+        """Give the add_accessions step the study class the accession registry uses,
+        so that the transformation finds the study PID where submit stored it.
+
+        Raises:
+            ValueError: if the add_accessions step sets a different study class.
+        """
+        add_accessions = self.workflow_config.add_accessions
+        if (
+            "study_class_name" in add_accessions.model_fields_set
+            and add_accessions.study_class_name != self.study_class_name
+        ):
+            raise ValueError(
+                "The add_accessions step sets the study class"
+                + f" '{add_accessions.study_class_name}', but the config sets"
+                + f" '{self.study_class_name}'. Set it only at the top level."
+            )
+        add_accessions.study_class_name = self.study_class_name
+        return self
 
 
 def submit_metadata(
