@@ -231,9 +231,9 @@ The [batch operations](../protocols/dao.qmd#batch-operations) of the DAO protoco
 The pymongo driver splits a batch above 100,000 operations or 48 MB into several messages, so only smaller batches take a single round-trip.
 
 A batch is not atomic, and there are no transactions yet to make it so.
-A `BatchOperationError` names every failed and every skipped ID, so the caller knows exactly what was written.
+A `BatchOperationError` names every failed, unconfirmed and skipped ID.
 A write concern error names every resource it leaves unconfirmed, with `DbTimeoutError` when it timed out and `DaoError` otherwise; those writes stay stored unless a failover rolls them back.
-After a timeout or a lost connection the outcome is unknown; `find_all` shows what arrived.
+Any other error leaves the outcome unknown, such as a timeout, a lost connection or a failure after the driver sent part of a split batch; `find_all` shows what arrived.
 
 ### Error Handling
 
