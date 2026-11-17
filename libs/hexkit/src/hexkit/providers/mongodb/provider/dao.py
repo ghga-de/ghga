@@ -695,6 +695,7 @@ class MongoDbDao(Generic[Dto]):
     ) -> set[ID]:
         """Return which of the IDs belong to stored documents that also match `extra`."""
         with translate_pymongo_errors():
+            # Every ID goes into one filter; chunks can follow if a caller needs more
             cursor = self._collection.find(
                 {"_id": {"$in": list(ids)}, **extra}, projection={"_id": True}
             )

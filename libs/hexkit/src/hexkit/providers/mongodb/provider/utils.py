@@ -21,7 +21,7 @@ Utilities for testing are located in `../testutils.py`.
 from contextlib import contextmanager
 from typing import Any
 
-from pymongo.errors import PyMongoError
+from pymongo.errors import DocumentTooLarge, PyMongoError
 
 from hexkit.protocols.dao import DaoError, DbTimeoutError, Dto
 
@@ -32,13 +32,16 @@ __all__ = ["document_to_dto", "dto_to_document", "translate_pymongo_errors"]
 def translate_pymongo_errors():
     """Catch PyMongoError and re-raise it as DbTimeoutError if it is a timeout error.
 
-    Non-timeout errors are re-raised as DaoError.
+    Non-timeout errors are re-raised as DaoError, and so is DocumentTooLarge, which
+    pymongo raises for a document or filter over 16 MB and which is no PyMongoError.
     """
     try:
         yield
     except PyMongoError as exc:
         if exc.timeout:  # denotes timeout-related errors in pymongo
             raise DbTimeoutError(str(exc)) from exc
+        raise DaoError(str(exc)) from exc
+    except DocumentTooLarge as exc:
         raise DaoError(str(exc)) from exc
 
 
