@@ -20,6 +20,7 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
+from pymongo import helpers_shared
 from pymongo.errors import BulkWriteError
 
 from hexkit.custom_types import ID
@@ -32,6 +33,7 @@ from hexkit.protocols.dao import (
 from hexkit.providers.mongodb.provider.dao import (
     DUPLICATE_KEY_ERRORS,
     MAX_TIME_MS_EXPIRED,
+    RETRYABLE_ERRORS,
     _errors_from_bulk_write,
     _insert_duplicate_error,
     _replace_duplicate_error,
@@ -260,3 +262,25 @@ def test_last_write_concern_error_decides(
     )
 
     assert all(type(failure) is expected for failure in error.errors.values())
+
+
+@pytest.mark.parametrize("ordered", [False, True])
+def test_retryable_write_concern_error_leaves_the_outcome_unknown(ordered: bool):
+    """Test that a write concern error at which pymongo stops the bulk write raises a
+    plain DaoError, since the later messages of a split batch were never sent.
+    """
+    concern = {"code": 189, "errmsg": "primary stepped down"}
+    bulk_error = bulk_write_error(duplicate_key(1, None), concern=concern)
+
+    with pytest.raises(DaoError, match="primary stepped down") as caught:
+        _errors_from_bulk_write(
+            bulk_error, IDS, ordered=ordered, duplicate_key=_insert_duplicate_error
+        )
+
+    assert type(caught.value) is DaoError
+    assert caught.value.__cause__ is bulk_error
+
+
+def test_retryable_errors_match_pymongo():
+    """Test that the copied codes are those at which pymongo stops a bulk write."""
+    assert RETRYABLE_ERRORS == helpers_shared._RETRYABLE_ERROR_CODES

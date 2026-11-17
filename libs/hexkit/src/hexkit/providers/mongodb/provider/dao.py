@@ -128,6 +128,12 @@ async def get_single_hit(
 DUPLICATE_KEY_ERRORS = frozenset({11000, 11001, 12582})
 # MongoDB's error code for a write that ran out of its maxTimeMS
 MAX_TIME_MS_EXPIRED = 50
+# The error codes at which pymongo stops a bulk write that got them as a write concern
+# error, such as after a failover, and sends none of its later messages. This copies
+# pymongo's private `_RETRYABLE_ERROR_CODES`, and a unit test compares the two.
+RETRYABLE_ERRORS = frozenset(
+    {6, 7, 89, 91, 134, 189, 262, 9001, 10058, 10107, 11600, 11602, 13435, 13436}
+)
 
 
 def _insert_duplicate_error(id_: ID, key_value: dict[str, Any] | None) -> DaoError:
@@ -179,8 +185,20 @@ def _errors_from_bulk_write(
 
     A write concern error does not undo the writes: each attempted resource without a
     write error of its own is named with the write concern's error, as its single
-    write raises it.
+    write raises it. pymongo stops a bulk write at a retryable write concern error,
+    though, so the later messages of a split batch were never sent, and the error does
+    not say which writes they held.
+
+    Raises:
+        DaoError: when pymongo stopped the bulk write at a retryable write concern
+            error, which leaves unknown which writes were applied.
     """
+    concern_errors = error.details.get("writeConcernErrors")
+    if concern_errors and concern_errors[-1].get("code") in RETRYABLE_ERRORS:
+        raise DaoError(
+            "The batch stopped at a write concern error, so which writes were applied"
+            + f" is unknown: {concern_errors[-1].get('errmsg')}"
+        ) from error
     errors: dict[ID, DaoError] = {}
     write_errors = error.details["writeErrors"]
     # Each failure gets the error that the single-resource method raises for it
