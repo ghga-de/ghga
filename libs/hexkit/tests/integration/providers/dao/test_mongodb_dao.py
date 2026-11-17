@@ -39,7 +39,11 @@ from hexkit.protocols.dao import (
     UniqueConstraintViolationError,
     UUID4Field,
 )
-from hexkit.providers.mongodb import MongoDbDaoFactory, MongoDbIndex
+from hexkit.providers.mongodb import (
+    ConfiguredMongoClient,
+    MongoDbDaoFactory,
+    MongoDbIndex,
+)
 from hexkit.providers.mongodb.testutils import (
     MongoDbFixture,
     mongodb_container_fixture,  # noqa: F401
@@ -1060,11 +1064,15 @@ async def counted_dao(
 ) -> AsyncIterator[tuple[Dao[ExampleDto], WriteCounter]]:
     """Yield an ExampleDto DAO whose client counts the write commands it sends."""
     counter = WriteCounter()
-    client: AsyncMongoClient = AsyncMongoClient(
-        str(mongodb.config.mongo_dsn.get_secret_value()),
-        uuidRepresentation="standard",
-        tz_aware=True,
-        event_listeners=[counter],
+
+    class CountingClient(AsyncMongoClient):
+        """A client with the configured options that reports its commands."""
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, event_listeners=[counter], **kwargs)
+
+    client = ConfiguredMongoClient.get_client(
+        config=mongodb.config, client_cls=CountingClient
     )
     try:
         factory = MongoDbDaoFactory(config=mongodb.config, client=client)
